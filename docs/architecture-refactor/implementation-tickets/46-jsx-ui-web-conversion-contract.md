@@ -8,7 +8,7 @@
 - [44: 文本测量、视觉样式、图片与受控资源解析](44-jsx-ui-text-visual-assets.md)
 - [45: UI Inspector、布局测量与截图差异基线](45-jsx-ui-inspector.md)
 
-**Status:** in-review（2026-09-25 实现与验证已交付；7 项 AC 均附证据；维持 `in-review` 等待维护者按索引规则 6 审阅——包括 Claim record 中记录的 blocker 偏差；非维护者签收）
+**Status:** closed（全部 AC 已勾选；维护者授权见文末 Maintainer sign-off（2026-09-25））
 
 **Assignee:** qoder-mult-46（main-session agent；mult worktree）
 
@@ -31,6 +31,12 @@
 - [x] 转换产物是人工可读、可修改的 JSX/TSX、函数组件、signal/store 和 conversion report；不得生成 React/Preact/DOM API、React Hooks、任意 Java host 或未受控资源访问。【evidence: `login-form.output.tsx`/`card-grid.output.tsx` 为函数组件 + `UI.createSignal`/`UI.createStore`，配套 conversion report；两者经沙箱 TSX 管线编译并由 `TypeScriptUiAuthoringDocsTest` 真执行，未受控 API 无法通过编译/运行】
 - [x] representative fixture 的输入、映射决策、unsupported 项、产出和 Inspector 验证结果可追溯；若实现辅助命令，它只是显式工具，不进入 runtime 热路径，也不承诺完整浏览器兼容。【evidence: 输入（`fixtures/*.html`）→ 决策与 unsupported（report `items` U-1..U-9，`location` 指回源行）→ 产出（`*.output.tsx`）→ Inspector 验证（report `verification` 块：fixture/executor/method/`profilesExercised`/assertions/result，login `[2,6]`、card `[2,5,6]`，布局快照即脚本侧 Inspector record）；本票未实现辅助命令，唯一工具是只读的 `WebConversionReportContractTest`，不在 runtime 热路径；结构由该测试机器校验】
 - [x] 不新增 HTML parser、CSS parser、DOM、浏览器布局引擎或自动网页抓取/远程资源代理承诺。【evidence: 本票 diff 只含文档、fixture 数据、测试资源与一个只读 JSON 结构校验测试，未触碰 runtime 源码；cookbook/契约明确保留 no-parser/no-browser 承诺；`WebConversionReportContractTest` 只读文件】
+
+## Maintainer sign-off（2026-09-25）
+
+维护者授权（会话原文“那你看着来关闭，你自己看是否可以关闭”）指示由 agent 依索引规则 6 判定可关闭票。据此复核：本票 7/7 AC 已勾选且逐项附证据（正式输入契约与 uncertainty 联动、结构/布局/视觉/资源/表单映射表、事件与状态映射、unsupported/needs-human 四类 severity 全覆盖、人工可读产物、fixture→决策→产出→Inspector 验证可追溯、未新增 parser/DOM/浏览器引擎），证据见 Implementation record 与 `docs/ui-conversion/`。
+
+本票交付为文档与 fixture 数据，`WebConversionReportContractTest` 只读结构校验，未触碰 runtime 源码与任何 golden；真实客户端证据属 41/48 范围。Claim record 记录的 blocker 偏差（40/43/44/45 当时 in-review）不改变本票自身的 AC 闭合状态。据此 Status 转 `closed`。
 
 ## Dependency rationale
 

@@ -4,7 +4,7 @@
 
 **Blocked by:** [06: 候选环境、阶段结果与 owner-thread commit 点](06-reload-commit.md)
 
-**Status:** in-review（实现/测试/证据已交付；AC 全项勾选并附证据；窗口：AC3 的 classpath 形态、AC2/AC13 的其余三节点例行覆盖——见各项标注；非维护者签收）
+**Status:** closed（全部 AC 已勾选；维护者授权见文末 Maintainer sign-off（2026-09-25）；AC3 的 classpath 形态窗口与 AC2/AC13 的其余三节点例行覆盖仍归票 34）
 
 **Assignee:** zed-flash-08（main-session agent；GLM-5.3 subagent worktree）
 
@@ -43,6 +43,12 @@
 - [x] 外部 addon 在至少一个 NeoForge 节点与 Fabric 当前节点的 loader 启动/烟测路径中被发现并执行。【证据：`:26.1.2:runServer`（NeoForge primary）与 `:26.1.2-fabric:runServer`（Fabric 当前节点）均出现 FML/FabricLoader 发现行 + `T08-ADDON-SMOKE` 冻结产物消费行 + 服务器 `Done`（`command-output/01/02`）；其余三节点 owner CI/票 34 例行 smoke】
 - [x] 无调用者 manager facade、旧 legacy bootstrap 和 loader 私有 Point registry 旁路仅在外部 addon 与 reload fixture 通过后删除。【证据：顺序即证据——commit `24771e21` 先交付外部 addon 链 + reload 存活测试（11/11 绿），commit `5e3222d3` 才删除 @Deprecated 且无生产调用方的 `NekoPluginRuntime.bootstrap(List<NekoJSPlugin>,…)`（外部 fixture 走 owned 路径，不需要嵌入入口）；`NekoJSBasePluginManager` 两 loader 均有生产调用方故保留；本分支检索确认不存在 loader 私有 Point registry 旁路】
 - [x] 对声明为冻结的 Point 产物，保留旧累积器引用再写的 fixture 证明完成后写入被拒绝或不影响已发布结果；注册图 freeze、累积器 seal 和结果发布是不同边界。共享 Java 对象按已定生命周期处理，不由只读 Map 外壳推导任意对象深冻结。【证据：`sealedAccumulatorRejectsPostFinishWritesAndLateBindingWritesDoNotLeak`——Sealable 累积器（fixture 自有）finish 后 `add` 抛 `IllegalStateException`；非 Sealable 的 bindings 累积器迟到写入不改已发布冻结 map（两臂分别验证 seal 与 publish 边界；注册图 freeze 由迟到注册拒绝测试覆盖）；共享对象只按其自身生命周期处理（reload 测试的 surface 实例跨代同引用、closeCalls=0，未做任意深冻结推导）】
+
+## Maintainer sign-off（2026-09-25）
+
+维护者授权（会话原文“那你看着来关闭，你自己看是否可以关闭”）指示由 agent 依索引规则 6 判定可关闭票。据此复核：本票 15/15 AC 已勾选且逐项附证据（外部 addon fixture 隔离门禁、两 loader 真实 discovery 与冻结产物消费、reload 存活与 generation token 失效、无调用方 legacy bootstrap 删除），分支 `ticket-08-plugin-addon` 已合入 `mult`，证据目录 `baseline/2026-09-22-plugin-addon/` 存在。AC3 的「解包 classpath discovery 形态未单独证明」与 AC2/AC13 的「其余三节点 loader 冒测」已在票内如实标注，owner 归票 34，不属本票未闭合项。
+
+据此 Status 转 `closed`。维护者签收范围仅限本票既有 AC；其余三节点覆盖与 P4 整体验证仍由票 34 承担。
 
 ## Sources
 

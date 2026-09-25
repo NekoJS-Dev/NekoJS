@@ -8,7 +8,7 @@
 - [43: 六档 Viewport Profile 与响应式布局系统](43-jsx-ui-viewport-profiles.md)
 - [44: 文本测量、视觉样式、图片与受控资源解析](44-jsx-ui-text-visual-assets.md)
 
-**Status:** in-review
+**Status:** closed（全部 AC 已勾选；维护者授权见文末 Maintainer sign-off（2026-09-25））
 
 **Assignee:** workbuddy-kimi-45（main-session agent；mult worktree）
 
@@ -44,6 +44,14 @@
 - **诚实未勾/限制**：AC4 的真实像素采集未接线（无 live Minecraft client，同 41/42/43/44 口径）；NeoForge host 的 `inspect()` 全链路只能在真实客户端验证（Minecraft-free smoke 已钉 collect/decorate/diff 契约）。
 - **验证**：焦点套件修复后 `:common:test`（SnapshotDifferTest 6、Ticket45InspectorOutputTest 5、NekoTypeScriptJsxRuntimeTest 13）与 `:26.2.0:test`/`:26.1.2:test`（Ticket45InspectorSmokeTest 各 3）全绿；全套无过滤器结果见下。
 - 全套（修复后无过滤器）：`:common:test :26.1.2:test :26.2.0:test :1.21.1:test :26.1.2-fabric:compileJava :26.2.0-fabric:compileJava` → BUILD SUCCESSFUL；common 1930 tests / 4 skipped / 0 失败，26.1.2 与 26.2.0 各 438 / 58 / 0，1.21.1 313 / 14 / 0；两 fabric 节点编译通过（票 42/44 的守卫剥离口径）。
+
+## Maintainer sign-off（2026-09-25）
+
+维护者授权（会话原文“那你看着来关闭，你自己看是否可以关闭”）指示由 agent 依索引规则 6 判定可关闭票。据此复核：本票 6/6 AC 已勾选且逐项附证据（fake/NeoForge 双路径同构 record、节点/样式/profile/裁剪/滚动/焦点/绑定/资源/错误相位定位、六档 profile 稳定 golden 且普通测试只读、截图仅作 provenance、差异报告排序与溯源、不依赖 46/47），实现随 `1136f30a` 批次落于 `mult`，交付与 review 修复记录见 Delivery record。
+
+限制如实保留：AC4 的真实像素采集未接线、NeoForge host 的 `inspect()` 全链路需真实客户端，均已在票内标注并归 41/48 范围，不构成本票 AC 未闭合。
+
+据此 Status 转 `closed`。
 
 ## Dependency rationale
 

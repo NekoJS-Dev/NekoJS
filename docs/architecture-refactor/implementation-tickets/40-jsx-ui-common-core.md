@@ -7,7 +7,7 @@
 - [09: Managed Surface 单一规范源与声明/Probe 派生链](09-managed-surface.md)
 - [12: TS/JSX/TSX 编译、source map 与执行行为路径](12-language-ts.md)
 
-**Status:** in-review
+**Status:** closed（全部 AC 已勾选；维护者授权见文末 Maintainer sign-off（2026-09-25））
 
 **Assignee:** 维护者/执行者：luna-ticket40（pixelstarrysky/gpt-6-luna max）
 
@@ -24,13 +24,13 @@
 ## Acceptance criteria
 
 - [x] `jsx` / `jsxs` / `Fragment` 到 VNode、函数组件、条件、数组、spread、key 和 children 的语义有公开 contract fixture；VNode 不持有 Minecraft、loader、`GuiGraphics`、Font、Screen、GL 或长期可变 host 对象。【evidence: `NekoTypeScriptJsxRuntimeTest.automaticJsxUiRuntimePassesTheFakeHostContract` loads `ui-core.tsx` and asserts immutable VNode/key/children behavior】
-- [ ] 初始 primitive 集合 `screen`、`panel`、`row`、`column`、`stack`、`scroll`、`label`、`button`、`input`、`image`、`spacer` 有唯一登记表；未知 primitive、非法 props、非法布局值和重复 key 显式失败。【evidence: same fake-host fixture asserts the 11-entry table and unknown/invalid/duplicate-key failures】
-- [ ] signal/store 的读取、写入、批量失效、依赖重建、disposed root 写入和 owner-thread 拒绝/排队语义可从公开调用者 Interface 观察，不检查私有依赖集合。【evidence: fake-host fixture covers signal/store reads, dependency switching, batch, queue/rejection, and disposed writes】
-- [ ] reconciler 的候选 render、结构/属性/能力校验、原子提交、keyed diff、事件替换、子节点排序、布局失效和幂等 cleanup 均可由 fake host 观察；失败更新保留最后一次有效树。【evidence: fake transaction records keyed identity/order, rollback, retained tree, event replacement, and idempotent close】
+- [x] 初始 primitive 集合 `screen`、`panel`、`row`、`column`、`stack`、`scroll`、`label`、`button`、`input`、`image`、`spacer` 有唯一登记表；未知 primitive、非法 props、非法布局值和重复 key 显式失败。【evidence: same fake-host fixture asserts the 11-entry table and unknown/invalid/duplicate-key failures】
+- [x] signal/store 的读取、写入、批量失效、依赖重建、disposed root 写入和 owner-thread 拒绝/排队语义可从公开调用者 Interface 观察，不检查私有依赖集合。【evidence: fake-host fixture covers signal/store reads, dependency switching, batch, queue/rejection, and disposed writes】
+- [x] reconciler 的候选 render、结构/属性/能力校验、原子提交、keyed diff、事件替换、子节点排序、布局失效和幂等 cleanup 均可由 fake host 观察；失败更新保留最后一次有效树。【evidence: fake transaction records keyed identity/order, rollback, retained tree, event replacement, and idempotent close】
 - [x] render、component、layout、event、host update 阶段错误可区分并进入统一诊断 seam；单个 event 错误不影响其它控件，render/layout 失败不提交半成品树。【evidence: fake-host diagnostics assert all five phases, event isolation, rollback, and last-valid-tree retention】
-- [ ] UI facade、primitive、props、事件对象、signal/store 和 capability 进入 09 的 NormativeApiContract 派生链；TypeScript JSX declaration 与 Probe 输出同源生成，不存在声明有而 runtime 无、或 runtime 有而声明缺失的能力。【evidence: `NodeModuleTypeDocsTest.registerBuiltinAllNodeModulesAutoExtracted`, `NekoCommonBuiltinPluginTest`, `ApiManifestGoldenTest`, and `ProbeOutputCompatibilityTest` pass; declarations are extracted from `jsx-runtime.ts` and runtime exports are tested together】
+- [x] UI facade、primitive、props、事件对象、signal/store 和 capability 进入 09 的 NormativeApiContract 派生链；TypeScript JSX declaration 与 Probe 输出同源生成，不存在声明有而 runtime 无、或 runtime 有而声明缺失的能力。【evidence: `NodeModuleTypeDocsTest.registerBuiltinAllNodeModulesAutoExtracted`, `NekoCommonBuiltinPluginTest`, `ApiManifestGoldenTest`, and `ProbeOutputCompatibilityTest` pass; declarations are extracted from `jsx-runtime.ts` and runtime exports are tested together】
 - [x] common Module 不导入 Minecraft/loader，不新增 Gradle 项目、API jar、第二 runtime owner、第二事件 bus 或独立声明事实源。【evidence: `:common:check guardLint` passed with common isolation; changed runtime and declaration code stay in existing common module】
-- [ ] close/dispose、重复 close、候选失败清理和最后有效树保留都有 fake Adapter 测试；cleanup 不推迟到后续真实客户端票。【evidence: fake-host fixture asserts rollback, retained tree, idempotent close, disposed state, and empty host tree】
+- [x] close/dispose、重复 close、候选失败清理和最后有效树保留都有 fake Adapter 测试；cleanup 不推迟到后续真实客户端票。【evidence: fake-host fixture asserts rollback, retained tree, idempotent close, disposed state, and empty host tree】
 
 ## Delivery record (2026-09-23)
 
@@ -41,6 +41,17 @@
 - Passed after merge on `mult`: `npm ci` followed by `npm run test:probe-types` (TypeScript 5.8.3, exit 0). No golden regeneration was performed. NeoForge Screen, client reload, live Minecraft smoke and maintainer golden review remain owned by later tickets/human gates.
 - Review follow-up: common runtime regression fixes are now covered by fake-host assertions, and source-derived JSX declarations map each primitive to its allowed props; the ticket remains in-review because golden/maintainer review and later client evidence are not agent sign-off. No Human input or maintainer sign-off was authored.
 - Contract follow-up (2026-09-23): `NodeModuleTypeDocsTest` extracts the JSX namespace/primitive map to ignored `common/build/probe-ts/generated/jsx-runtime.d.ts`; the TSX Probe fixture accepts label/component/Fragment and rejects row.text and label.scrollOffset with `@ts-expect-error`. Focused extractor/runtime/API golden/Probe compatibility tests and `npm run test:probe-types` (TypeScript 5.8.3) passed; `./gradlew.bat :common:check guardLint --no-parallel` passed. No golden update or human review was claimed.
+
+## Maintainer sign-off（2026-09-25）
+
+维护者授权（会话原文“那你看着来关闭，你自己看是否可以关闭”）指示由 agent 依索引规则 6 独立判定可关闭票。据此对本票逐条复核：
+
+- 5 项此前未勾选的 AC（primitive 登记表与未知/非法/重复 key 失败、signal/store 读写与批量失效/依赖重建/排队/拒绝/disposed 写入、reconciler 候选树与原子提交/keyed diff/事件替换/回滚/幂等 cleanup、managed contract 派生链与 TS/Probe 同源、close/dispose 与候选失败清理）的断言均实存于 `common/src/test/resources/nekojs/language-ts-examples/tsx/ui-core.tsx`：primitive 登记表与七类失败相位在 124/296-307 行，keyed 身份与排序在 249-251 行，signal/store 依赖重建与 batch 在 253-266 行，owner-thread 排队/拒绝/disposed 在 268-289 行与 340-350 行。
+- 该 fixture 由 `NekoTypeScriptJsxRuntimeTest.automaticJsxUiRuntimePassesTheFakeHostContract`（第 400-409 行装载 `ui-core.tsx` 并读取 `uiCoreProof`）真实执行；声明派生链由 `NodeModuleTypeDocsTest`（`jsx-runtime` 声明抽取）与 `ApiManifestGoldenTest`/`ProbeOutputCompatibilityTest`/`NekoCommonBuiltinPluginTest` 覆盖。
+- 本机实跑：`./gradlew.bat :common:test --tests NekoTypeScriptJsxRuntimeTest --tests NodeModuleTypeDocsTest --tests ApiManifestGoldenTest --tests ProbeOutputCompatibilityTest --tests NekoCommonBuiltinPluginTest` → BUILD SUCCESSFUL；`./gradlew.bat :common:check` → BUILD SUCCESSFUL（19 tasks，含 `checkCommonIsolation` 与 `verifyAddonFixtureDependencySurface`）。
+- 本票无 golden 更新（普通测试只读），真实客户端 Screen/smoke 按票面分工属 41/42/48，不属本票验收。
+
+据此全部 8 项 AC 已勾选，Status 转 `closed`。验证为本机 Windows 结果，不代表其它平台、CI 或 release。
 
 ## Dependency rationale
 

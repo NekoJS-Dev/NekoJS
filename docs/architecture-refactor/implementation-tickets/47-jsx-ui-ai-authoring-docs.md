@@ -7,7 +7,7 @@
 - [45: UI Inspector、布局测量与截图差异基线](45-jsx-ui-inspector.md)
 - [46: AI-assisted 网页转换映射与输入契约](46-jsx-ui-web-conversion-contract.md)
 
-**Status:** in-review
+**Status:** closed（全部 AC 已勾选；维护者授权见文末 Maintainer sign-off（2026-09-25））
 
 **Assignee:** workbuddy-kimi-47（main-session agent；mult worktree）
 
@@ -58,6 +58,12 @@ Review 记录不改项（判断级，理由在案）：`TypeScriptUiAuthoringDoc
 - 真实客户端证据属 41/48 范围；本票示例验证全部在 fake-host seam 完成。
 - 未触碰任何 golden（六档 Inspector golden、probe golden 均只读）。
 - 验证仅在本地 Windows 环境完成；CI 与五节点矩阵未运行。
+
+## Maintainer sign-off（2026-09-25）
+
+维护者授权（会话原文“那你看着来关闭，你自己看是否可以关闭”）指示由 agent 依索引规则 6 判定可关闭票。据此复核：本票 7/7 AC 已勾选且逐项附证据（全部 primitive/props/事件/状态/资源/capability 均引自冻结事实源、11 个 primitive 条目九 facet 齐备、自检清单 11 项、Inspector 七步局部修正协议、等价优先级与不承诺逐像素、示例经 `TypeScriptUiAuthoringDocsTest` 真执行、不宣称自动浏览器兼容层），交付物随 `1136f30a` 落地并在本票补齐 review 修复，验证见 Delivery record。
+
+遗留项如实保留：「响应式等价 / reactive」术语裁定与票 46 `reportVersion` 改名属维护者决策，已在文档首次出现处显式定义以消除歧义；真实客户端证据属 41/48；未触碰任何 golden。据此 Status 转 `closed`。
 
 ## Dependency rationale
 
