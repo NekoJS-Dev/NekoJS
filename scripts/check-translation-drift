@@ -75,29 +75,47 @@ printf '\n'
 # 1. Every English page: compare against the recorded source commit.
 # ---------------------------------------------------------------------------
 shopt -s nullglob
-for en_file in "$EN_DIR"/*.md; do
+# Translated files live under wiki/en_us/, plus README.en_us.md at the repo root.
+en_files=("$EN_DIR"/*.md)
+[ -f "$REPO_ROOT/README.en_us.md" ] && en_files+=("$REPO_ROOT/README.en_us.md")
+
+for en_file in "${en_files[@]}"; do
     en_name="$(basename "$en_file")"
 
     # `wiki/<something>.md` inside the "Source page" row
     source_page="$(grep -m1 'Source page' "$en_file" \
         | sed -n 's/.*`wiki\/\([^`]*\)`.*/\1/p')"
+    # Root-level documents record their source without the wiki/ prefix.
+    if [ -z "$source_page" ]; then
+        source_page="$(grep -m1 'Source document' "$en_file" \
+            | sed -n 's/.*`\([^`]*\.md\)`.*/\1/p')"
+        source_root="$REPO_ROOT"
+    else
+        source_root="$WIKI"
+    fi
     # `<hash>` inside the "Source version" row
     source_commit="$(grep -m1 'Source version' "$en_file" \
         | sed -n 's/.*commit `\([0-9a-f]\{7,40\}\)`.*/\1/p')"
 
+    # Display paths: a wiki page lives under wiki/en_us/, a root document does not.
+    case "$en_file" in
+        "$EN_DIR"/*) en_label="en_us/$en_name"; src_prefix="wiki/" ;;
+        *)           en_label="$en_name";       src_prefix="" ;;
+    esac
+
     if [ -z "$source_page" ] || [ -z "$source_commit" ]; then
-        printf 'NO METADATA  %-32s (cannot find source page or source commit)\n' "en_us/$en_name"
+        printf 'NO METADATA  %-32s (cannot find source page or source commit)\n' "$en_label"
         n_bad=$((n_bad + 1))
         continue
     fi
 
     translated_sources="$translated_sources|$source_page"
 
-    if [ ! -f "$WIKI/$source_page" ]; then
+    if [ ! -f "$source_root/$source_page" ]; then
         # The Chinese source is gone. Either it was deleted upstream, in which
         # case this translation should be deleted too, or it was renamed, in
         # which case the metadata needs to point at the new name.
-        printf 'ORPHANED     %-32s (source wiki/%s no longer exists)\n' "en_us/$en_name" "$source_page"
+        printf 'ORPHANED     %-32s (source %s%s no longer exists)\n' "$en_label" "$src_prefix" "$source_page"
         last_seen="$(git log -1 --format='%h %ad' --date=short -- "wiki/$source_page" 2>/dev/null)"
         if [ -n "$last_seen" ]; then
             printf '                 last seen in %s\n' "$last_seen"
@@ -107,23 +125,24 @@ for en_file in "$EN_DIR"/*.md; do
     fi
 
     if ! git cat-file -e "$source_commit^{commit}" 2>/dev/null; then
-        printf 'NO METADATA  %-32s (commit %s not found in this repository)\n' "en_us/$en_name" "$source_commit"
+        printf 'NO METADATA  %-32s (commit %s not found in this repository)\n' "$en_label" "$source_commit"
         n_bad=$((n_bad + 1))
         continue
     fi
 
-    changes="$(git log --oneline "$source_commit"..HEAD -- "wiki/$source_page" 2>/dev/null)"
+    rel="${source_root#$REPO_ROOT/}"; [ "$rel" = "$REPO_ROOT" ] && rel=""
+    changes="$(git log --oneline "$source_commit"..HEAD -- "${rel:+$rel/}$source_page" 2>/dev/null)"
 
     if [ -z "$changes" ]; then
         if [ "$QUIET" -eq 0 ]; then
-            printf 'UP TO DATE   %-32s (source wiki/%s unchanged since %s)\n' \
-                "en_us/$en_name" "$source_page" "$source_commit"
+            printf 'UP TO DATE   %-32s (source %s%s unchanged since %s)\n' \
+                "$en_label" "$src_prefix" "$source_page" "$source_commit"
         fi
         n_ok=$((n_ok + 1))
     else
         count="$(printf '%s\n' "$changes" | wc -l | tr -d ' ')"
-        printf 'STALE        %-32s (source wiki/%s changed in %s commit(s) since %s)\n' \
-            "en_us/$en_name" "$source_page" "$count" "$source_commit"
+        printf 'STALE        %-32s (source %s%s changed in %s commit(s) since %s)\n' \
+            "$en_label" "$src_prefix" "$source_page" "$count" "$source_commit"
         printf '%s\n' "$changes" | sed 's/^/                 /'
         n_stale=$((n_stale + 1))
     fi
