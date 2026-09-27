@@ -13,10 +13,11 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.network.ErrorSummaryDTO;
 
 /**
- * 将错误 DTO 的位置字段解析为“已验证的本机脚本文件”。
+ * 将错误位置解析为“已验证的本机脚本文件”。两个入口共用同一套校验：错误 DTO（wire 投影）
+ * 与票 30 frozen diagnostic record 的 {@link DiagnosticOpenAction} seam（票 27 消费）。
  *
  * <p>远端专用服务器永远不猜测本机路径；本机模式也必须位于 NekoJS script root 内，并通过
- * {@link NekoJSPaths#verifyInsideNekoRoot(Path)} 的 real-path 校验。列号只使用 DTO 的既有 line 字段；本类不会解析
+ * {@link NekoJSPaths#verifyInsideNekoRoot(Path)} 的 real-path 校验。列号只使用既有 line 字段；本类不会解析
  * fullDetails 来制造结构化列号。</p>
  */
 public final class LocalErrorSource {
@@ -39,11 +40,28 @@ public final class LocalErrorSource {
         if (error == null) {
             return Result.unavailable(Status.NO_ERROR);
         }
+        return resolveLocation(error.path(), error.line(), integratedSingleplayerServer);
+    }
+
+    /**
+     * 解析票 30 frozen diagnostic record 的 open-action seam（票 27 消费）：与 DTO 路径共用
+     * 同一套位置校验，动作的 source/line 语义以 record 为准，不引入第二套事实。
+     *
+     * @param integratedSingleplayerServer 必须由调用方显式传入：仅集成单人服务器的脚本根可视为本机路径
+     */
+    public Result resolve(DiagnosticOpenAction action, boolean integratedSingleplayerServer) {
+        if (action == null) {
+            return Result.unavailable(Status.NO_ERROR);
+        }
+        return resolveLocation(action.sourcePath(), action.line(), integratedSingleplayerServer);
+    }
+
+    /** DTO 投影与 open-action seam 共用的位置校验：path+line 到已验证本机脚本文件。 */
+    private Result resolveLocation(String rawPath, int requestedLine, boolean integratedSingleplayerServer) {
         if (!integratedSingleplayerServer) {
             // 远端判断先于任何路径解析；专用服务器路径可能是远端绝对路径，绝不能碰本机同名文件。
             return Result.unavailable(Status.REMOTE_SERVER);
         }
-        String rawPath = error.path();
         if (isInvalidText(rawPath)) {
             return Result.unavailable(Status.INVALID_PATH);
         }
@@ -71,7 +89,7 @@ public final class LocalErrorSource {
                 return Result.unavailable(Status.UNREADABLE_FILE);
             }
 
-            int line = error.line() > 0 ? error.line() : -1;
+            int line = requestedLine > 0 ? requestedLine : -1;
             return Result.local(verified, line);
         } catch (InvalidPathException e) {
             return Result.unavailable(Status.INVALID_PATH);

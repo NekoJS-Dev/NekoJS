@@ -92,7 +92,7 @@ class LocalErrorSourceTest {
 
     @Test
     void invalidUnknownVirtualNetworkAndTraversalPathsAreRejected() throws IOException {
-        assertStatus(LocalErrorSource.Status.NO_ERROR, source.resolve(null, true));
+        assertStatus(LocalErrorSource.Status.NO_ERROR, source.resolve((ErrorSummaryDTO) null, true));
 
         assertStatus(LocalErrorSource.Status.INVALID_PATH, source.resolve(dto(null, -1), true));
         assertStatus(LocalErrorSource.Status.INVALID_PATH, source.resolve(dto("", -1), true));

@@ -15,6 +15,12 @@ Stable `NEKO-` diagnostic codes. The code is the lookup key: wording may change 
 
 This page is being backfilled area by area; only areas with assigned codes are listed below.
 
+## 1xxx — Script loading and reload (ticket 27)
+
+| Code | Meaning |
+|---|---|
+| NEKO-1001 | A candidate plan's discard failed during candidate teardown; teardown continued, so the active generation is unaffected. |
+
 ## 8xxx — JSX UI inspector (ticket 45)
 
 | Code | Meaning |

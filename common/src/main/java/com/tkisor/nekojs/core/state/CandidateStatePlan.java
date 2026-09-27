@@ -17,7 +17,9 @@ package com.tkisor.nekojs.core.state;
  *       preflight 通过后 publish <b>不得抛出</b>——若违反契约抛出，reload 在 commit 点
  *       中止（global/shared 写集不发布、active 保留），但该计划自身的部分副作用不被回滚
  *       （spec 10：不承诺对计划内部副作用做深回滚）；</li>
- *   <li>publish 不得再进入 global/shared 视图写入（写集已冻结，联合预检已覆盖）。</li>
+ *   <li>publish 不得再进入 global/shared 视图写入（写集已冻结，联合预检已覆盖）；</li>
+ *   <li>{@link #discard()} 在候选失败/取消的丢弃路径调用：持有候选资源的计划在此释放，
+ *       active 不受影响（票 27 AC4）。</li>
  * </ul>
  */
 public interface CandidateStatePlan {
@@ -35,4 +37,18 @@ public interface CandidateStatePlan {
      * 联合发布：preflight 全部通过后在 commit 点执行。通过预检后不得抛出（见接口契约）。
      */
     void publish();
+
+    /**
+     * Candidate failure/cancellation release, invoked on the owner thread from the candidate
+     * discard path: the plan releases whatever candidate-scoped resources it collected while
+     * the active generation keeps serving untouched (publish never ran for this plan).
+     * Default no-op — only plans that hold candidate resources need to override.
+     *
+     * <p>Contract: idempotent and must not throw. A throwing discard is not rolled back (same
+     * boundary as {@link #publish()}); the joint boundary logs the failure and continues
+     * tearing the candidate down, so one misbehaving plan cannot block candidate cleanup
+     * (ticket 27 AC4).
+     */
+    default void discard() {
+    }
 }

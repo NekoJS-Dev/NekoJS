@@ -1,0 +1,29 @@
+# Ticket 27 AC7: declaration/golden derived-artifact coverage for the GUI/render domain
+# Same method as ticket 26 (command-output/08): grep the managed declaration artifacts
+# for this ticket's domain symbols.
+
+## ./common/src/test/resources/nekojs/golden/api-manifest-core.json
+-- hudRender: 0 hits
+-- worldRender: 0 hits
+-- screenRender: 0 hits
+-- DiagnosticOpenAction: 0 hits
+-- pendingCandidateRegistrations: 0 hits
+
+## probe expected declarations (*.expected.d.ts)
+./common/src/test/resources/nekojs/dynamic/dynamic-builders.expected.d.ts
+./common/src/test/resources/nekojs/dynamic/dynamic-registry-events.expected.d.ts
+./common/src/test/resources/nekojs/probe/legacy-bindings.expected.d.ts
+./common/src/test/resources/nekojs/probe/legacy-events.expected.d.ts
+./common/src/test/resources/nekojs/probe/probe-events.expected.d.ts
+-- ./common/src/test/resources/nekojs/dynamic/dynamic-builders.expected.d.ts / hudRender: 0
+-- ./common/src/test/resources/nekojs/dynamic/dynamic-builders.expected.d.ts / worldRender: 0
+-- ./common/src/test/resources/nekojs/dynamic/dynamic-builders.expected.d.ts / screenRender: 0
+-- ./common/src/test/resources/nekojs/dynamic/dynamic-registry-events.expected.d.ts / hudRender: 0
+-- ./common/src/test/resources/nekojs/dynamic/dynamic-registry-events.expected.d.ts / worldRender: 0
+-- ./common/src/test/resources/nekojs/dynamic/dynamic-registry-events.expected.d.ts / screenRender: 0
+-- ./common/src/test/resources/nekojs/probe/legacy-bindings.expected.d.ts / hudRender: 0
+-- ./common/src/test/resources/nekojs/probe/legacy-bindings.expected.d.ts / worldRender: 0
+-- ./common/src/test/resources/nekojs/probe/legacy-bindings.expected.d.ts / screenRender: 0
+
+## declaration-parity.txt
+./common/src/test/resources/nekojs/platform-gates/declaration-parity.txt: 0 render-member hits
