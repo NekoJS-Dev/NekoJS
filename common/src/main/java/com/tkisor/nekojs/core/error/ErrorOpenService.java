@@ -11,6 +11,8 @@ import com.tkisor.nekojs.network.ErrorSummaryDTO;
 
 /**
  * 把“点击时重新校验位置”和“异步分派”绑在一起，避免 UI 用选中时缓存的旧路径绕过检查。
+ * 两个入口共用同一套解析与分派：错误 DTO（wire 投影）与票 30 frozen diagnostic record 的
+ * {@link DiagnosticOpenAction} seam（票 27 消费）。
  */
 public final class ErrorOpenService {
     private final LocalErrorSource source;
@@ -41,6 +43,32 @@ public final class ErrorOpenService {
         }
     }
 
+    /**
+     * Ticket 30 open-action seam consumption (ticket 27): resolve and dispatch from the frozen
+     * diagnostic record's {@link DiagnosticOpenAction} instead of re-deriving the location from
+     * any other source. A {@code null} action (no locatable authored source) reports
+     * {@code LOCATION_UNAVAILABLE}/{@code NO_ERROR} without touching the opener.
+     */
+    public CompletableFuture<Result> openAsync(
+            DiagnosticOpenAction action,
+            boolean integratedSingleplayerServer,
+            Executor executor
+    ) {
+        Objects.requireNonNull(executor, "executor");
+        if (action == null) {
+            return CompletableFuture.completedFuture(
+                    Result.unavailable(LocalErrorSource.Status.NO_ERROR));
+        }
+        try {
+            return CompletableFuture.supplyAsync(
+                    () -> openNow(action, integratedSingleplayerServer),
+                    executor
+            );
+        } catch (RuntimeException e) {
+            return CompletableFuture.completedFuture(Result.failed(e.getClass().getSimpleName()));
+        }
+    }
+
     Result openNow(ErrorSummaryDTO error, boolean integratedSingleplayerServer) {
         LocalErrorSource.Result location;
         try {
@@ -48,6 +76,21 @@ public final class ErrorOpenService {
         } catch (RuntimeException e) {
             return Result.unavailable(LocalErrorSource.Status.IO_ERROR);
         }
+        return dispatch(location);
+    }
+
+    Result openNow(DiagnosticOpenAction action, boolean integratedSingleplayerServer) {
+        LocalErrorSource.Result location;
+        try {
+            location = source.resolve(action, integratedSingleplayerServer);
+        } catch (RuntimeException e) {
+            return Result.unavailable(LocalErrorSource.Status.IO_ERROR);
+        }
+        return dispatch(location);
+    }
+
+    /** Shared tail of both entry points: report an unavailable location or dispatch the opener. */
+    private Result dispatch(LocalErrorSource.Result location) {
         if (!location.available()) {
             return Result.unavailable(location.status());
         }
