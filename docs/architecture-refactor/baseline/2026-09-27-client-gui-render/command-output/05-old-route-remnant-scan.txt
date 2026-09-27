@@ -1,0 +1,58 @@
+# Ticket 27 AC9 evidence: old route / remnant scan (worktree NekoJS-mult-t27, 2026-09-27)
+# All greps over tracked source (src, common, versions, src/fabric); build dirs excluded.
+
+## 1. Built-in editor GUI / editor file-sync remnants (must be 0)
+-- OpenWorkspacePacket:
+   (0 hits)
+-- SaveScriptPacket:
+   (0 hits)
+-- FetchScriptRequestPacket:
+   (0 hits)
+-- FetchScriptResponsePacket:
+   (0 hits)
+-- FetchAllScriptsRequestPacket:
+   (0 hits)
+-- UploadAllScriptsPacket:
+   (0 hits)
+-- DownloadAllScriptsPacket:
+   (0 hits)
+-- SyncFeedbackPacket:
+   (0 hits)
+-- ScriptSyncService:
+   (0 hits)
+-- ScriptSyncFiles:
+   (0 hits)
+-- NekoWorkspaceScreen:
+   (0 hits)
+-- dashboardLoadServerScript:
+   (0 hits)
+
+## 2. Duplicate render dispatch handlers (production callers of ClientRenderRegistry.dispatch*)
+src/main\java\com\tkisor\nekojs\client\render\ClientRenderEvents.java:33:        ClientRenderRegistry.dispatchHud(
+src/main\java\com\tkisor\nekojs\client\render\ClientRenderEvents.java:49:            ClientRenderRegistry.dispatchHud(ClientRenderRegistry.HudLayer.NORMAL, ctx, event.getGuiGraphics());
+src/main\java\com\tkisor\nekojs\client\render\ClientRenderEvents.java:52:            ClientRenderRegistry.dispatchHud(ClientRenderRegistry.HudLayer.FOREGROUND, ctx, event.getGuiGraphics());
+src/main\java\com\tkisor\nekojs\client\render\ClientRenderEvents.java:79:        ClientRenderRegistry.dispatchWorld(layer, ctx);
+versions/1.21.1/src/main\java\com\tkisor\nekojs\client\render\ClientRenderEvents.java:31:        ClientRenderRegistry.dispatchHud(
+versions/1.21.1/src/main\java\com\tkisor\nekojs\client\render\ClientRenderEvents.java:47:            ClientRenderRegistry.dispatchHud(ClientRenderRegistry.HudLayer.NORMAL, ctx, event.getGuiGraphics());
+versions/1.21.1/src/main\java\com\tkisor\nekojs\client\render\ClientRenderEvents.java:50:            ClientRenderRegistry.dispatchHud(ClientRenderRegistry.HudLayer.FOREGROUND, ctx, event.getGuiGraphics());
+versions/1.21.1/src/main\java\com\tkisor\nekojs\client\render\ClientRenderEvents.java:72:        ClientRenderRegistry.dispatchWorld(layer, ctx);
+
+## 3. ClientRenderRegistry.clearAll() production callers (ticket 26 removal parity; expect 0)
+(0 hits in production roots)
+
+## 4. Dashboard screen construction sites (single GUI entry per node)
+src/main\java\com\tkisor\nekojs\client\gui\NekoErrorDashboardScreen.java:19:    public static NekoErrorDashboardScreen create(List<ErrorSummaryDTO> errors) {
+src/main\java\com\tkisor\nekojs\client\gui\NekoErrorDashboardScreen.java:20:        var screen = new NekoErrorDashboardScreen();
+src/main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:73:                McClientCompat.get().showScreen(NekoErrorDashboardScreen.create(errors));
+versions/1.21.1/src/main\java\com\tkisor\nekojs\client\gui\NekoErrorDashboardScreen.java:16:    public static NekoErrorDashboardScreen create(List<ErrorSummaryDTO> errors) {
+versions/1.21.1/src/main\java\com\tkisor\nekojs\client\gui\NekoErrorDashboardScreen.java:17:        var screen = new NekoErrorDashboardScreen();
+
+## 5. Legacy dashboard lang keys not referenced by code (old-UI remnants; deletion needs maintainer sign-off)
+-- nekojs.gui.dashboard.btn.log code refs:
+   (0 hits)
+-- nekojs.gui.dashboard.btn.copy code refs:
+   (0 hits)
+-- nekojs.gui.dashboard.btn.locate code refs:
+   (0 hits)
+-- nekojs.gui.dashboard.target code refs:
+   (0 hits)

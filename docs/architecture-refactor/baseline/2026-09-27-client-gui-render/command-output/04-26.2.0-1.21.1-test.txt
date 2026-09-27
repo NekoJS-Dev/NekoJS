@@ -1,0 +1,239 @@
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources UP-TO-DATE
+> Task :26.2.0:stonecutterPrepare UP-TO-DATE
+> Task :1.21.1:stonecutterPrepare UP-TO-DATE
+> Task :26.2.0:stonecutterGenerate UP-TO-DATE
+> Task :1.21.1:stonecutterGenerate UP-TO-DATE
+> Task :common:compileJava UP-TO-DATE
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes UP-TO-DATE
+> Task :common:jar UP-TO-DATE
+> Task :common:compileAddonFixtureJava UP-TO-DATE
+> Task :common-api-processor:compileJava UP-TO-DATE
+> Task :common-api-processor:classes UP-TO-DATE
+> Task :common:processAddonFixtureResources UP-TO-DATE
+> Task :common:addonFixtureClasses UP-TO-DATE
+> Task :common-api-processor:jar UP-TO-DATE
+> Task :common:externalAddonJar UP-TO-DATE
+> Task :26.2.0:createMinecraftArtifacts UP-TO-DATE
+> Task :1.21.1:createMinecraftArtifacts UP-TO-DATE
+> Task :1.21.1:compileJava UP-TO-DATE
+> Task :26.2.0:compileJava UP-TO-DATE
+> Task :1.21.1:generateModMetadata UP-TO-DATE
+> Task :1.21.1:processResources UP-TO-DATE
+> Task :1.21.1:classes UP-TO-DATE
+> Task :26.2.0:generateModMetadata
+> Task :26.2.0:processResources
+> Task :26.2.0:classes
+> Task :26.2.0:stonecutterPrepareTest
+> Task :1.21.1:stonecutterPrepareTest
+> Task :26.2.0:stonecutterGenerateTest
+> Task :1.21.1:stonecutterGenerateTest
+
+> Task :1.21.1:compileTestJava
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\event\Ticket24GameplayFamilyBusBehaviorTest.java:195: 警告: [unchecked] 未经检查的转换
+        DispatchEventBus<Object, Object> dispatch = (DispatchEventBus<Object, Object>) bus.bus();
+                                                                                              ^
+  需要: DispatchEventBus<Object,Object>
+  找到:    EventBus<Object>
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: 警告: [try] 可自动关闭的资源ManagerReset包含的成员方法 close() 可能抛出 InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: 警告: [try] 可自动关闭的资源ManagerReset包含的成员方法 close() 可能抛出 InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: 警告: [try] 可自动关闭的资源ManagerReset包含的成员方法 close() 可能抛出 InterruptedException
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:215: 警告: [try] 可自动关闭的资源ManagerReset包含的成员方法 close() 可能抛出 InterruptedException
+    private static final class ManagerReset implements AutoCloseable {
+                         ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: 警告: [try] 不能在相应的 try 语句的正文中引用可自动结束的资源ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: 警告: [try] 不能在相应的 try 语句的正文中引用可自动结束的资源ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: 警告: [try] 不能在相应的 try 语句的正文中引用可自动结束的资源ignored
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:56: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:72: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:95: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:155: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:110: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+        return new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(unhex(hex)), RegistryAccess.EMPTY);
+               ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:118: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:128: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:138: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:110: 警告: [deprecation] JsonParser中的JsonParser()已过时
+        com.google.gson.JsonParser parser = new com.google.gson.JsonParser();
+                                            ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:111: 警告: [deprecation] JsonParser中的parse(String)已过时
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":1}"));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:112: 警告: [deprecation] JsonParser中的parse(String)已过时
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":2}"));
+                                                        ^
+19 个警告
+
+> Task :1.21.1:processTestResources
+> Task :1.21.1:testClasses
+
+> Task :26.2.0:compileTestJava
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\event\Ticket24GameplayFamilyBusBehaviorTest.java:195: 警告: [unchecked] 未经检查的转换
+        DispatchEventBus<Object, Object> dispatch = (DispatchEventBus<Object, Object>) bus.bus();
+                                                                                              ^
+  需要: DispatchEventBus<Object,Object>
+  找到:    EventBus<Object>
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:52: 警告: [try] 不能在相应的 try 语句的正文中引用可自动结束的资源context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:62: 警告: [try] 不能在相应的 try 语句的正文中引用可自动结束的资源context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: 警告: [try] 可自动关闭的资源ManagerReset包含的成员方法 close() 可能抛出 InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: 警告: [try] 可自动关闭的资源ManagerReset包含的成员方法 close() 可能抛出 InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: 警告: [try] 可自动关闭的资源ManagerReset包含的成员方法 close() 可能抛出 InterruptedException
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:215: 警告: [try] 可自动关闭的资源ManagerReset包含的成员方法 close() 可能抛出 InterruptedException
+    private static final class ManagerReset implements AutoCloseable {
+                         ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: 警告: [try] 不能在相应的 try 语句的正文中引用可自动结束的资源ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: 警告: [try] 不能在相应的 try 语句的正文中引用可自动结束的资源ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: 警告: [try] 不能在相应的 try 语句的正文中引用可自动结束的资源ignored
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:56: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:72: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:95: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:155: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:110: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+        return new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(unhex(hex)), RegistryAccess.EMPTY);
+               ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:118: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:128: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:138: 警告: [deprecation] RegistryFriendlyByteBuf中的RegistryFriendlyByteBuf(ByteBuf,RegistryAccess)已过时
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:110: 警告: [deprecation] JsonParser中的JsonParser()已过时
+        com.google.gson.JsonParser parser = new com.google.gson.JsonParser();
+                                            ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:111: 警告: [deprecation] JsonParser中的parse(String)已过时
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":1}"));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:112: 警告: [deprecation] JsonParser中的parse(String)已过时
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":2}"));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:88: 警告: [deprecation] Block中的getExplosionResistance()已过时
+        float originalResistance = Blocks.STONE.getExplosionResistance();
+                                               ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:89: 警告: [deprecation] BlockStateBase中的getLightEmission()已过时
+        int originalLight = Blocks.STONE.defaultBlockState().getLightEmission();
+                                                            ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:104: 警告: [deprecation] Block中的getExplosionResistance()已过时
+        assertEquals(9.0f, Blocks.STONE.getExplosionResistance(), 0.0f);
+                                       ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:105: 警告: [deprecation] BlockStateBase中的getLightEmission()已过时
+        assertEquals(15, Blocks.STONE.defaultBlockState().getLightEmission());
+                                                         ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:114: 警告: [deprecation] Block中的getExplosionResistance()已过时
+        assertEquals(originalResistance, Blocks.STONE.getExplosionResistance(), 0.0f);
+                                                     ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:115: 警告: [deprecation] BlockStateBase中的getLightEmission()已过时
+        assertEquals(originalLight, Blocks.STONE.defaultBlockState().getLightEmission());
+                                                                    ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\Ticket39BlockModificationScriptE2ETest.java:74: 警告: [deprecation] BlockStateBase中的getLightEmission()已过时
+                .map(net.minecraft.world.level.block.state.BlockState::getLightEmission)
+                     ^
+D:\mcmodDemo\NekoJS-mult-t27\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\Ticket39ModificationExamplesTest.java:181: 警告: [deprecation] BlockStateBase中的getLightEmission()已过时
+                .map(net.minecraft.world.level.block.state.BlockState::getLightEmission)
+                     ^
+29 个警告
+
+> Task :26.2.0:processTestResources
+> Task :26.2.0:testClasses
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :1.21.1:test
+> Task :26.2.0:test
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS-mult-t27/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 22s
+40 actionable tasks: 12 executed, 28 up-to-date
