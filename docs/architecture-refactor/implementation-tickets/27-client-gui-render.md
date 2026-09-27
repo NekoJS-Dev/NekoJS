@@ -4,9 +4,11 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)、[30: 错误诊断、telemetry、workspace 与用户报告链路](30-diagnostics.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zed-flash-27（main-session agent；GLM-5.3 subagent worktree）
+
+**Claim record (2026-09-27):** worktree `../NekoJS-mult-t27` on branch `ticket-27-client-gui-render`（基于 mult HEAD）。预计改动范围：只读 error dashboard/错误报告 GUI 调用路径与 render/screen/world render Adapter 资源从注册、呈现到 generation 清理的完整路径 fixture、ClientEvents GUI/render 成员的 catalog/golden 只读核对、平台 client Adapter 挂载期与 render owner thread 分发断言、reload candidate 不可见/commit 后恰一次呈现/失败保留旧 active 的生命周期测试、票 30 已 closed 的 `DiagnosticOpenAction` 非 GUI seam 消费证据、按节点 capability（supported/partial/unavailable）矩阵、`baseline/2026-09-27-client-gui-render/` 证据。不修改：keybind/HUD/输入域（票 26 域）、Assets/Lang（29 域）、PostEffects（28 域）、JSX runtime（40–48 feature 票）；golden 只读，旧公开路径删除与发布性 golden 更新留维护者门禁（只备 parity/迁移/无消费者/旧新 diff 证据）。
 
 **Optional:** false
 
