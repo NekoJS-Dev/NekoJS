@@ -164,7 +164,26 @@ public final class GenerationGlobals implements AutoCloseable {
             if (privateWrites != null) privateWrites.discardOps();
             if (sharedWrites != null) sharedWrites.discardOps();
         }
+        discardPlans();
         plans.clear();
+    }
+
+    /**
+     * Releases candidate-scoped plans before their registrations are dropped (ticket 27 AC4):
+     * a failed or cancelled candidate must not leave pending resources behind. Failures of
+     * single plans are logged and skipped so one misbehaving plan cannot keep the candidate
+     * teardown from completing. Idempotent — publish already released committed plans.
+     */
+    private void discardPlans() {
+        for (CandidateStatePlan plan : List.copyOf(plans)) {
+            try {
+                plan.discard();
+            } catch (Throwable failure) {
+                com.tkisor.nekojs.NekoJS.LOGGER.warn(
+                        "[NEKO-1001] Candidate plan discard failed; candidate teardown continues — plan={}",
+                        plan.domain(), failure);
+            }
+        }
     }
 
     // ---- generation 生命周期 ----
@@ -181,6 +200,7 @@ public final class GenerationGlobals implements AutoCloseable {
         privateStore.evictGuestOwned(this);
         sharedStoreRef.evictGuestOwned(this);
         closeUiRoots("generation-close");
+        discardPlans();
         plans.clear();
     }
 

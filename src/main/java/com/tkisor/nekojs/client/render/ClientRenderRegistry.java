@@ -57,8 +57,10 @@ public final class ClientRenderRegistry {
     private static final Map<String, Entry> WORLD_RENDERERS = new ConcurrentHashMap<>();
 
     /**
-     * 候选 generation 的挂起批次：key = 构建中的候选 Context。批次只在候选构建期存在，
-     * commit 点或下一轮候选的首个注册时移除（见 {@link Candidate#publish()}）。
+     * 候选 generation 的挂起批次：key = 构建中的候选 Context。批次只在候选构建期存在：
+     * commit 点随 {@link Candidate#publish()} 移除；候选失败/取消时随
+     * {@link CandidateStatePlan#discard()} 在失败当刻移除（票 27 AC4），不再滞留到下一轮
+     * 候选的首个注册才被剪枝。
      */
     private static final Map<Context, Candidate> CANDIDATE_BATCHES = new ConcurrentHashMap<>();
 
@@ -105,7 +107,19 @@ public final class ClientRenderRegistry {
     public static void clearAll() {
         HUD_RENDERERS.clear();
         WORLD_RENDERERS.clear();
+        CANDIDATE_BATCHES.clear();
         activeContext = null;
+    }
+
+    /**
+     * Read-only lifecycle observation seam: how many pending candidate registration batches
+     * exist right now. A committed or failed/cancelled candidate leaves none behind — the
+     * batch is inert bookkeeping tied to a candidate Context, and a nonzero count after a
+     * candidate ended means candidate resources were not fully released (ticket 27 AC4).
+     * Deliberately a count: the map, its Context keys and the registered callbacks stay private.
+     */
+    public static int pendingCandidateRegistrations() {
+        return CANDIDATE_BATCHES.size();
     }
 
     /**
@@ -187,18 +201,20 @@ public final class ClientRenderRegistry {
         }
         Candidate existing = CANDIDATE_BATCHES.get(context);
         Candidate batch = existing != null ? existing : new Candidate(context);
-        CANDIDATE_BATCHES.put(context, batch);
-        // 与执行期首个注册同款剪枝：地图里最多留当前候选一个批次。失败候选（尤其本代
-        // 无注册、只经本方法建批次的空批次）不会走到 publish() 的 remove，若这里不剪，
-        // 它会以已销毁的 Context 为 key 永久滞留。
+        if (!batch.registered) {
+            // Register the plan first, put the map entry second: if the candidate is already
+            // tearing down (registerPlan throws), a fresh batch never enters the map at all.
+            batch.registered = true;
+            handle.registerPlan(batch);
+        }
+        // Same pruning as the execution-time first registration: at most one in-flight batch
+        // stays in the map. Candidate failure/cancel releases the batch through discard()
+        // (ticket 27 AC4); this prune is only the safety net that keeps the map bounded when
+        // a batch never became a registered plan.
         // ponytail: 单候选假设——CLIENT reload 由 ScriptManager 实例锁与 ClientReloadExecutor 串行化。
         Candidate current = batch;
+        CANDIDATE_BATCHES.put(context, current);
         CANDIDATE_BATCHES.values().removeIf(other -> other != current);
-        if (!current.registered) {
-            // 先置位再注册：registerPlan 抛出时整批候选已经失败，不再重试同一批次。
-            current.registered = true;
-            handle.registerPlan(current);
-        }
     }
 
     /**
@@ -327,6 +343,18 @@ public final class ClientRenderRegistry {
             WORLD_RENDERERS.clear();
             WORLD_RENDERERS.putAll(world);
             activeContext = context;
+            CANDIDATE_BATCHES.remove(context, this);
+        }
+
+        /**
+         * Candidate failure/cancellation (the discardCandidate path, owner thread): release
+         * the inert batch at failure time instead of letting it linger keyed by the dead
+         * candidate Context until the next round prunes it. The production renderer tables
+         * are untouched — publish never ran, so the old active keeps serving (ticket 27 AC4).
+         * Idempotent and non-throwing per the plan contract.
+         */
+        @Override
+        public void discard() {
             CANDIDATE_BATCHES.remove(context, this);
         }
     }
