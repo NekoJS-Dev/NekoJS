@@ -41,8 +41,10 @@ public interface CandidateStatePlan {
     /**
      * Candidate failure/cancellation release, invoked on the owner thread from the candidate
      * discard path: the plan releases whatever candidate-scoped resources it collected while
-     * the active generation keeps serving untouched (publish never ran for this plan).
-     * Default no-op — only plans that hold candidate resources need to override.
+     * the active generation keeps serving untouched. Also invoked from the generation
+     * {@code close()} path, where a plan may already have published — implementations must
+     * therefore treat a post-publish call as an idempotent no-op. Default no-op — only plans
+     * that hold candidate resources need to override.
      *
      * <p>Contract: idempotent and must not throw. A throwing discard is not rolled back (same
      * boundary as {@link #publish()}); the joint boundary logs the failure and continues

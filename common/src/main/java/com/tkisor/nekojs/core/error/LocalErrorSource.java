@@ -13,12 +13,14 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.network.ErrorSummaryDTO;
 
 /**
- * 将错误位置解析为“已验证的本机脚本文件”。两个入口共用同一套校验：错误 DTO（wire 投影）
- * 与票 30 frozen diagnostic record 的 {@link DiagnosticOpenAction} seam（票 27 消费）。
+ * Resolves an error location into a "verified local script file". Both entry points share one
+ * validation path: the error DTO (wire projection) and ticket 30's frozen diagnostic record
+ * via its {@link DiagnosticOpenAction} seam (consumed by ticket 27).
  *
  * <p>远端专用服务器永远不猜测本机路径；本机模式也必须位于 NekoJS script root 内，并通过
- * {@link NekoJSPaths#verifyInsideNekoRoot(Path)} 的 real-path 校验。列号只使用既有 line 字段；本类不会解析
- * fullDetails 来制造结构化列号。</p>
+ * {@link NekoJSPaths#verifyInsideNekoRoot(Path)} 的 real-path 校验。The column always comes
+ * from the existing {@code line} field; this class never parses {@code fullDetails} to invent
+ * a structured column.</p>
  */
 public final class LocalErrorSource {
     private final NekoJSPaths paths;
@@ -44,8 +46,9 @@ public final class LocalErrorSource {
     }
 
     /**
-     * 解析票 30 frozen diagnostic record 的 open-action seam（票 27 消费）：与 DTO 路径共用
-     * 同一套位置校验，动作的 source/line 语义以 record 为准，不引入第二套事实。
+     * Resolves ticket 30's frozen diagnostic record open-action seam (ticket 27 consumption):
+     * the same location validation as the DTO path; the action's source/line semantics come
+     * from the record — no second facts source.
      *
      * @param integratedSingleplayerServer 必须由调用方显式传入：仅集成单人服务器的脚本根可视为本机路径
      */
@@ -56,7 +59,7 @@ public final class LocalErrorSource {
         return resolveLocation(action.sourcePath(), action.line(), integratedSingleplayerServer);
     }
 
-    /** DTO 投影与 open-action seam 共用的位置校验：path+line 到已验证本机脚本文件。 */
+    /** Location validation shared by the DTO projection and the open-action seam: path+line → verified local script file. */
     private Result resolveLocation(String rawPath, int requestedLine, boolean integratedSingleplayerServer) {
         if (!integratedSingleplayerServer) {
             // 远端判断先于任何路径解析；专用服务器路径可能是远端绝对路径，绝不能碰本机同名文件。

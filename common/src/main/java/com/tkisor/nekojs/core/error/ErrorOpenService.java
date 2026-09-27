@@ -11,8 +11,9 @@ import com.tkisor.nekojs.network.ErrorSummaryDTO;
 
 /**
  * 把“点击时重新校验位置”和“异步分派”绑在一起，避免 UI 用选中时缓存的旧路径绕过检查。
- * 两个入口共用同一套解析与分派：错误 DTO（wire 投影）与票 30 frozen diagnostic record 的
- * {@link DiagnosticOpenAction} seam（票 27 消费）。
+ * Both entry points share one resolution-and-dispatch path: the error DTO (wire projection)
+ * and ticket 30's frozen diagnostic record via its {@link DiagnosticOpenAction} seam
+ * (consumed by ticket 27).
  */
 public final class ErrorOpenService {
     private final LocalErrorSource source;

@@ -57,10 +57,11 @@ public final class ClientRenderRegistry {
     private static final Map<String, Entry> WORLD_RENDERERS = new ConcurrentHashMap<>();
 
     /**
-     * 候选 generation 的挂起批次：key = 构建中的候选 Context。批次只在候选构建期存在：
-     * commit 点随 {@link Candidate#publish()} 移除；候选失败/取消时随
-     * {@link CandidateStatePlan#discard()} 在失败当刻移除（票 27 AC4），不再滞留到下一轮
-     * 候选的首个注册才被剪枝。
+     * 候选 generation 的挂起批次：key = 构建中的候选 Context。The batch exists only during
+     * candidate construction: removed at the commit point via {@link Candidate#publish()},
+     * and on candidate failure/cancellation removed at failure time via
+     * {@link CandidateStatePlan#discard()} (ticket 27 AC4) instead of lingering until the
+     * first registration of the next candidate round prunes it.
      */
     private static final Map<Context, Candidate> CANDIDATE_BATCHES = new ConcurrentHashMap<>();
 

@@ -180,7 +180,7 @@ public final class GenerationGlobals implements AutoCloseable {
                 plan.discard();
             } catch (Throwable failure) {
                 com.tkisor.nekojs.NekoJS.LOGGER.warn(
-                        "[NEKO-1001] Candidate plan discard failed; candidate teardown continues — plan={}",
+                        "[NEKO-1001] Candidate plan discard failed; candidate teardown continues; plan={}",
                         plan.domain(), failure);
             }
         }

@@ -150,3 +150,20 @@ BUILD SUCCESSFUL；tests=4 failures=0 errors=0
   - `common/src/test/java/com/tkisor/nekojs/core/error/Ticket27ErrorDashboardSnapshotTest.java`
   - `src/test/java/com/tkisor/nekojs/client/render/Ticket27ClientGuiRenderLifecycleTest.java`
   - `src/test/java/com/tkisor/nekojs/client/render/Ticket27ClientGuiRenderSurfaceTest.java`
+
+## 8. 主会话复核修正（2026-09-27，合并后）
+
+- 语言规则修正：三个生产文件中本次 diff 新写/改写的 Javadoc 译为英文
+  （ErrorOpenService 类文档扩展、LocalErrorSource 类文档与 resolve(action)/resolveLocation、
+  ClientRenderRegistry CANDIDATE_BATCHES 文档改写段）；各文件既有中文注释未动。
+- `CandidateStatePlan.discard()` Javadoc 修正与实现不符处：close() 路径也会对已发布计划
+  调用 discard，实现必须把 post-publish 调用视为幂等 no-op（原文「publish never ran for
+  this plan」不成立）。
+- NEKO-1001 消息分隔符修正：`— plan=`（em-dash 保留给摘要追加）→ `; plan=`。
+- 补 AC4 弹性测试：`GenerationGlobalsDiscardResilienceTest` 2 tests——单计划 discard 抛错
+  不阻断其余计划清理（失败记录后继续拆除）；publish + close-time discard 恰好一次释放
+  （幂等契约）。
+- 已知 judgement call 保留：ErrorOpenService 两个 openNow 变体的 resolve+catch 形状未再
+  抽取（共享尾 dispatch() 已提取，残余为 4 行局部形状，避免无谓扰动）；
+  `pendingCandidateRegistrations()` 为 AC5 要求的只读观察面（测试专用、零生产调用者，
+  REPORT §6 已标注）。
