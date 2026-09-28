@@ -1,0 +1,26 @@
+# Old/new no-op proof for the three EXISTING common declaration artifacts (2026-09-29)
+# Rerun on branch golden-decl-prep, worktree ../NekoJS-mult-tgold, base mult@973defbc.
+# All three artifacts reproduce byte-identical content: the recorded 0-hit gap is an
+# input-set property of the derivations, NOT stale goldens.
+
+## 1. api-manifest-core.json (guard test ApiManifestGoldenTest, explicit regen switch)
+command: ./gradlew.bat :common:test --tests "com.tkisor.nekojs.core.api.ApiManifestGoldenTest" -Dnekojs.golden.regenerate=true --console=plain
+result: 5 tests completed, 1 failed, 1 skipped
+  - coreApiSurfaceMatchesFrozenGolden: golden REWRITTEN then assumption-skipped (regen mode) -> git diff EMPTY
+  - regenerateSwitchIsOffForNonTrueValues: fails BY DESIGN whenever the switch is explicitly on
+    (pre-existing quirk of the documented regen command, not introduced by this change)
+git diff --numstat common/src/test/resources/nekojs/golden/api-manifest-core.json -> (no output: zero changes)
+
+## 2. probe *.expected.d.ts + probe-ts fixture (task :common:regenerateGoldens)
+command: ./gradlew.bat :common:regenerateGoldens --console=plain
+result: BUILD SUCCESSFUL
+git diff --numstat common/src/test/resources/nekojs common/src/test/probe-ts -> (no content rows)
+  Working-tree files were re-touched with LF endings while the index holds CRLF
+  (core.autocrlf); `git diff --numstat` shows ZERO content lines changed for every
+  file. The line-ending-only churn was reverted (git checkout) - nothing to review.
+
+## 3. declaration-parity.txt (gate ManagedDeclarationCoverageGateTest, no regen switch)
+command: ./gradlew.bat :common:test --tests "com.tkisor.nekojs.core.api.ManagedDeclarationCoverageGateTest" --console=plain
+result: BUILD SUCCESSFUL
+fixture rows unchanged: globals=ID,JsonIO,NBT,Performance,Platform,Registry,Text members=141
+signatures=150 (portable-core contract only; events are runtime-reflected outside this chain)

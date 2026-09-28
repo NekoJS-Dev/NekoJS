@@ -213,6 +213,11 @@ val platformGateTest = tasks.register<Test>("platformGateTest") {
     systemProperty("user.country", "US")
     systemProperty("user.timezone", "UTC")
     systemProperty("file.encoding", "UTF-8")
+    // golden 再生成开关（declared-event-surface golden）：与 :common:test 的透传惯例一致，
+    // 默认恒传 "false"（Boolean.getBoolean 只认显式 true），普通运行永远只读。
+    systemProperty("nekojs.golden.regenerate", System.getProperty("nekojs.golden.regenerate") ?: "false")
+    // golden 写回的共享树根：节点项目目录随 active 节点漂移，golden 统一住共享树 resources。
+    systemProperty("nekojs.test.sharedTree", rootProject.projectDir.absolutePath)
 }
 
 // 工单 33：非 processor 覆盖 gate 是节点 check 的一部分（Fabric processor 延期不得变成覆盖空白）。
