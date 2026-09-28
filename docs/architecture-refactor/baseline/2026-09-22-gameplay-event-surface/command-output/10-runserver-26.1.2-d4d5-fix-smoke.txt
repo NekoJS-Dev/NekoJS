@@ -1,0 +1,232 @@
+# Ticket 24 D4/D5 fix verification: REAL dedicated-server run on the primary NeoForge node 26.1.2
+# Date: 2026-09-28. Worktree ../NekoJS-mult-t24fx (branch ticket-24-defects, base mult@973defbc + fixes).
+#
+# Command: ./gradlew.bat :26.1.2:runServer --console=plain   (clean stop via RCON, exit 0)
+# Layout: versions/26.1.2/run/eula.txt + server.properties (RCON 127.0.0.1:25581, level-seed=t24smoke,
+#         online-mode off, local only, pause-when-empty-seconds=-1 so an empty server keeps ticking),
+#         nekojs/server_scripts/t24_d4d5_smoke.js (embedded below). Run directory deleted after this
+#         transcript was cut (T08 precedent); driver source embedded for reproducibility.
+#
+# D4 assertion (damagePre cancellation is a real lever):
+#   health 16.0 -> cancel-5 probe (script return true) -> health 16.0 (unchanged;
+#   pre-defect evidence: health dropped 16.0 -> 11.0 in the 2026-09-28 session), damagePost fires
+#   with healthDamage=0 -> apply-7 probe (no cancel) -> health 9.0, damagePost healthDamage=7.
+# D5 assertion (randomTick reachable for vanilla randomly-ticking blocks):
+#   vanilla grass_block random ticks fire within seconds of forceload (first markers at 22:30:34;
+#   11150+ ticks in the ~35s window at random_tick_speed 30; pre-defect evidence: a forceloaded
+#   grass block produced no marker in ~25s in the 2026-09-28 session while same-chunk events fired).
+#   Note: 26.x renamed the gamerule randomTickSpeed -> random_tick_speed (verified from GameRules
+#   bytecode; the old name answers 'Incorrect argument for command').
+#
+# One superseded preparation run (not evidence): identical layout without
+# pause-when-empty-seconds=-1; vanilla paused the empty server after 60s before probes ran.
+# Markers were verified in logs/nekojs/server.log (NekoJS per-type log; mirrored to latest.log).
+
+================== nekojs/server_scripts/t24_d4d5_smoke.js ==================
+// Ticket 24 D4/D5 fix verification (NeoForge 26.1.2 dedicated server, branch ticket-24-defects).
+// D4: EntityEvents.damagePre return true must negate the damage via setNewDamage(0):
+//     the cancelled probe leaves health unchanged and damagePost still fires with 0 damage.
+// D5: BlockEvents.randomTick must fire for a vanilla randomly-ticking block (grass_block
+//     patch placed via setblock in a forceloaded chunk).
+// Every 'T24FIX-' console line is a marker asserted in the verification transcript.
+
+console.log('T24FIX-SERVER-SCRIPT-LOADED')
+
+// ---- D4: spider damage probes ----
+EntityEvents.damagePre('minecraft:spider', event => {
+  console.log('T24FIX-DAMAGE-PRE: original=' + event.originalDamage)
+  if (Number(event.originalDamage) === 5) {
+    console.log('T24FIX-DAMAGE-CANCEL: cancelling the 5-damage probe (return true)')
+    return true
+  }
+})
+
+EntityEvents.damagePost('minecraft:spider', event => {
+  console.log('T24FIX-DAMAGE-POST: original=' + event.originalDamage
+    + ' healthDamage=' + event.healthDamage)
+})
+
+// ---- D5: vanilla random ticks (grass patch; event fires per randomly-ticking state) ----
+let t24fixRandomTickCount = 0
+BlockEvents.randomTick(event => {
+  if (t24fixRandomTickCount < 3) {
+    console.log('T24FIX-RANDOMTICK: pos=' + event.pos + ' block=' + event.block)
+  }
+  t24fixRandomTickCount++
+  if (t24fixRandomTickCount % 25 === 0) {
+    console.log('T24FIX-RANDOMTICK-COUNT: ' + t24fixRandomTickCount)
+  }
+})
+
+================== RCON driver (temporary tool, embedded for reproducibility) ==================
+# Ticket 24 D4/D5 fix-verification driver: waits for the dedicated server, forceloads
+# the probe area, drives the damage-cancel probes (health via /data get) and the vanilla
+# random-tick window (grass patch + random_tick_speed), prints each RCON exchange, then
+# stops the server. Temporary tool; embedded in the transcript for reproducibility.
+import socket
+import struct
+import sys
+import time
+
+
+def pkt(rid, ptype, payload):
+    body = struct.pack('<ii', rid, ptype) + payload.encode('utf-8') + b'\x00\x00'
+    return struct.pack('<i', len(body)) + body
+
+
+class Rcon:
+    def __init__(self, host, port, password):
+        self.s = socket.create_connection((host, port), timeout=10)
+        self.rid = 100
+        self.s.sendall(pkt(self.rid, 3, password))
+        length = struct.unpack('<i', self.recvn(4))[0]
+        data = self.recvn(length)
+        rid2 = struct.unpack('<i', data[:4])[0]
+        if rid2 == -1:
+            raise RuntimeError('rcon auth failed')
+
+    def recvn(self, n):
+        buf = b''
+        while len(buf) < n:
+            chunk = self.s.recv(n - len(buf))
+            if not chunk:
+                raise RuntimeError('rcon eof')
+            buf += chunk
+        return buf
+
+    def cmd(self, c, wait=1.0):
+        self.rid += 1
+        self.s.sendall(pkt(self.rid, 2, c))
+        self.s.settimeout(3)
+        out = ''
+        try:
+            while True:
+                length = struct.unpack('<i', self.recvn(4))[0]
+                data = self.recvn(length)
+                rid2, _ptype = struct.unpack('<ii', data[:8])
+                payload = data[8:-2].decode('utf-8', 'replace')
+                if rid2 == self.rid:
+                    out += payload
+                    if len(payload) < 4000:
+                        break
+        except socket.timeout:
+            pass
+        time.sleep(wait)
+        return out.strip()
+
+
+def wait_for(path, needle, timeout):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                if needle in f.read():
+                    return True
+        except FileNotFoundError:
+            pass
+        time.sleep(2)
+    return False
+
+
+def main():
+    log_path = sys.argv[1]
+    print('# waiting for server Done marker in %s' % log_path, flush=True)
+    if not wait_for(log_path, 'Done (', 480):
+        print('# FAIL: server never reached Done within 480s', flush=True)
+        sys.exit(2)
+    print('# server Done observed, connecting RCON', flush=True)
+    rcon = Rcon('127.0.0.1', 25581, 'nekojs-t24')
+
+    def run(label, cmd, wait=1.0):
+        resp = rcon.cmd(cmd, wait)
+        print('# RCON [%s] -> %s\n#   resp: %s' % (label, cmd, resp if resp else '(empty)'), flush=True)
+        return resp
+
+    run('noon', 'time set noon')
+    r = run('forceload', 'forceload add 0 0 40 40', wait=3.0)
+    if 'Marked' not in r:
+        print('# forceload response unexpected, continuing anyway', flush=True)
+
+    # D5 driver: 26.x renamed the gamerule (randomTickSpeed -> random_tick_speed, verified
+    # from GameRules bytecode); grass patch = 25 vanilla randomly-ticking states.
+    run('randomtickspeed', 'gamerule random_tick_speed 30')
+    for x in range(22, 27):
+        for z in range(22, 27):
+            rcon.cmd('setblock %d 60 %d minecraft:grass_block' % (x, z), 0.1)
+    print('# RCON [grass-patch] -> 25x setblock grass_block 22..26,60,22..26 sent', flush=True)
+    time.sleep(2.0)
+
+    # D4 driver: spider subject, cancelled 5-probe then applied 7-probe
+    run('spider', 'execute positioned 16 0 16 positioned over world_surface run summon minecraft:spider', wait=2.0)
+    run('health-1-before', 'data get entity @e[type=minecraft:spider,limit=1] Health')
+    run('damage-5-cancelled', 'execute as @e[type=minecraft:spider,limit=1] run damage @s 5 minecraft:generic')
+    run('health-2-after-cancel', 'data get entity @e[type=minecraft:spider,limit=1] Health')
+    run('damage-7-applied', 'execute as @e[type=minecraft:spider,limit=1] run damage @s 7 minecraft:generic')
+    run('health-3-after-applied', 'data get entity @e[type=minecraft:spider,limit=1] Health')
+
+    # D5 window: random ticks at speed 30 over the grass patch
+    print('# randomTick window: 20s', flush=True)
+    time.sleep(20)
+    run('forceload-remove', 'forceload remove all', 2.0)
+    print('# all probes sent, issuing stop', flush=True)
+    rcon.cmd('stop', 0.5)
+    print('# stop sent', flush=True)
+
+
+if __name__ == '__main__':
+    main()
+
+================== RCON session (driver stdout) ==================
+# waiting for server Done marker in D:/mcmodDemo/NekoJS-mult-t24fx/versions/26.1.2/run/logs/latest.log
+# server Done observed, connecting RCON
+# RCON [noon] -> time set noon
+#   resp: Set minecraft:overworld to time marker minecraft:noon
+# RCON [forceload] -> forceload add 0 0 40 40
+#   resp: Marked 9 chunks in Overworld from [0, 0] to [2, 2] to be force loaded
+# RCON [randomtickspeed] -> gamerule random_tick_speed 30
+#   resp: Gamerule random_tick_speed is now set to: 30
+# RCON [grass-patch] -> 25x setblock grass_block 22..26,60,22..26 sent
+# RCON [spider] -> execute positioned 16 0 16 positioned over world_surface run summon minecraft:spider
+#   resp: Summoned new Spider
+# RCON [health-1-before] -> data get entity @e[type=minecraft:spider,limit=1] Health
+#   resp: Spider has the following entity data: 16.0f
+# RCON [damage-5-cancelled] -> execute as @e[type=minecraft:spider,limit=1] run damage @s 5 minecraft:generic
+#   resp: Applied 5.0 damage to Spider
+# RCON [health-2-after-cancel] -> data get entity @e[type=minecraft:spider,limit=1] Health
+#   resp: Spider has the following entity data: 16.0f
+# RCON [damage-7-applied] -> execute as @e[type=minecraft:spider,limit=1] run damage @s 7 minecraft:generic
+#   resp: Applied 7.0 damage to Spider
+# RCON [health-3-after-applied] -> data get entity @e[type=minecraft:spider,limit=1] Health
+#   resp: Spider has the following entity data: 9.0f
+# randomTick window: 20s
+# RCON [forceload-remove] -> forceload remove all
+#   resp: Unmarked all force loaded chunks in Overworld
+# all probes sent, issuing stop
+# stop sent
+
+================== markers: logs/nekojs/server.log (excerpt, full lines) ==================
+[22:28:47] [INFO] T24FIX-SERVER-SCRIPT-LOADED
+[22:30:34] [INFO] T24FIX-RANDOMTICK: pos=BlockPos{x=0, y=63, z=0} block=Block{minecraft:grass_block}
+[22:30:34] [INFO] T24FIX-RANDOMTICK: pos=BlockPos{x=14, y=63, z=20} block=Block{minecraft:grass_block}
+[22:30:34] [INFO] T24FIX-RANDOMTICK: pos=BlockPos{x=3, y=70, z=27} block=Block{minecraft:grass_block}
+[22:30:46] [INFO] T24FIX-DAMAGE-PRE: original=5
+[22:30:46] [INFO] T24FIX-DAMAGE-CANCEL: cancelling the 5-damage probe (return true)
+[22:30:46] [INFO] T24FIX-DAMAGE-POST: original=5 healthDamage=0
+[22:30:48] [INFO] T24FIX-DAMAGE-PRE: original=7
+[22:30:48] [INFO] T24FIX-DAMAGE-POST: original=7 healthDamage=7
+[22:30:34] [INFO] T24FIX-RANDOMTICK-COUNT: 25
+[22:30:35] [INFO] T24FIX-RANDOMTICK-COUNT: 50
+[22:30:36] [INFO] T24FIX-RANDOMTICK-COUNT: 75
+... (T24FIX-RANDOMTICK-COUNT continues every 25 ticks; total 446 count lines)
+[22:31:10] [INFO] T24FIX-RANDOMTICK-COUNT: 11150
+
+================== server lifecycle: logs/latest.log (excerpt) ==================
+[289月2026 22:28:47.947] [Server thread/INFO] [net.minecraft.server.dedicated.DedicatedServer/]: Starting minecraft server version 26.1.2
+[289月2026 22:28:48.388] [Server thread/INFO] [net.minecraft.server.dedicated.DedicatedServer/]: Done (0.297s)! For help, type "help"
+[289月2026 22:28:48.388] [Server thread/INFO] [net.minecraft.server.dedicated.DedicatedServer/]: Starting remote control listener
+[289月2026 22:28:48.391] [Server thread/INFO] [net.minecraft.server.rcon.thread.RconThread/]: RCON running on 0.0.0.0:25581
+[289月2026 22:31:12.521] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Stopping server
+[289月2026 22:31:14.201] [Server thread/INFO] [net.minecraft.server.rcon.thread.GenericThread/]: Thread RCON Listener stopped
+
+# Assertion summary: D4 PASS (cancel = health unchanged + healthDamage 0; control damage applies),
+# D5 PASS (vanilla grass_block random ticks fire; count grows monotonically until forceload removed).
