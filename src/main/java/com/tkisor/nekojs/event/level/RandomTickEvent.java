@@ -12,8 +12,9 @@ import net.neoforged.bus.api.Event;
  * 方块随机 tick 事件（{@code BlockEvents.randomTick}）。
  *
  * <p>原版没有对应的 NeoForge 事件；由 {@code BlockBehaviourMixin} 在
- * {@code BlockBehaviour.randomTick} HEAD 注入并 post 到 {@code NeoForge.EVENT_BUS}。
- * 仅对 {@code isRandomlyTicking()} 为 true 的方块触发（对标原版/ KubeJS 语义）。
+ * {@code BlockBehaviour.BlockStateBase.randomTick} HEAD 注入并 post 到
+ * {@code NeoForge.EVENT_BUS}。仅对 {@code isRandomlyTicking()} 为 true 的方块触发
+ * （对标原版/ KubeJS 语义）。
  */
 public class RandomTickEvent extends Event {
     private final ServerLevel level;

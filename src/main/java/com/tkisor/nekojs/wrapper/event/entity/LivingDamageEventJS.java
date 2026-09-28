@@ -12,12 +12,13 @@ import net.minecraft.world.entity.LivingEntity;
  * <p>NeoForge 侧直传原生 {@code LivingDamageEvent.Pre/Post}（成员同形）；fabric 侧由
  * {@code FabricEntityEventBindings} 从 {@code ServerLivingEntityEvents} 转换。
  *
- * <p><b>已知能力差异</b>：NeoForge 的 Pre 允许脚本改写伤害量（{@code setNewDamageAmount}），
- * fabric 的 {@code ALLOW_DAMAGE} 只能整体放行/拒绝——damagePre 在 fabric 上仅支持取消
- * （监听器返回 {@code true} = 免除本次伤害），不支持改数值。
+ * <p><b>已知能力差异</b>：NeoForge 的 Pre 允许脚本改写伤害量（{@code setNewDamage}），
+ * 取消（返回 {@code true}）由桥映射为 {@code setNewDamage(0)}——伤害归零但原生伤害链
+ * 仍走完（damagePost 仍以 0 伤害触发）；fabric 的 {@code ALLOW_DAMAGE} 只能整体放行/拒绝
+ * ——damagePre 在 fabric 上取消 = 免除本次伤害，不支持改数值。
  */
 @Doc("Fired when a living entity is about to take / just took damage (EntityEvents.damagePre / damagePost).")
-@Doc("damagePre is cancellable (return true to negate the damage); damagePost is not.")
+@Doc("damagePre is cancellable (return true to negate the damage; on NeoForge the damage becomes 0 and damagePost still fires); damagePost is not cancellable.")
 @Getter
 public class LivingDamageEventJS {
 

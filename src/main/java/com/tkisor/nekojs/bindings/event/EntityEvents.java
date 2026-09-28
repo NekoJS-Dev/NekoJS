@@ -1,6 +1,7 @@
 //? if neoforge {
 package com.tkisor.nekojs.bindings.event;
 
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
@@ -22,8 +23,13 @@ import java.util.function.Function;
 public interface EntityEvents {
     EventGroup GROUP = EventGroup.of("EntityEvents");
 
+    // damagePre：LivingDamageEvent.Pre 不实现 ICancellableEvent（21.1.227/26.1.2.71/
+    // 26.2.0.57 一致），predicate 走默认会把总线冻成不可取消——脚本 return true 静默
+    // no-op（ticket 24 D4）。显式建可取消总线，取消由 FORGE_BRIDGE 映射为 setNewDamage(0)
+    //（伤害归零，原生伤害链仍走完：damagePost 仍以 0 伤害触发）。
     EventBusJS<LivingDamageEvent.Pre, EntityType<?>> DAMAGE_PRE =
-            GROUP.server("damagePre", LivingDamageEvent.Pre.class, dispatchByEntity(LivingDamageEvent::getEntity));
+            GROUP.add("damagePre", ScriptType.SERVER, EventBusJS.of(
+                    LivingDamageEvent.Pre.class, true, dispatchByEntity(LivingDamageEvent::getEntity)));
     EventBusJS<LivingDamageEvent.Post, EntityType<?>> DAMAGE_POST =
             GROUP.server("damagePost", LivingDamageEvent.Post.class, dispatchByEntity(LivingDamageEvent::getEntity));
 
@@ -63,7 +69,8 @@ public interface EntityEvents {
     }
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
-            .bind(DAMAGE_PRE)
+            // 取消 = setNewDamage(0)：原生 Pre 无 ICancellableEvent 取消面，伤害归零即取消
+            .bindCancellable(DAMAGE_PRE, event -> event.setNewDamage(0))
             .bind(DAMAGE_POST)
             .bind(DEATH)
             .bind(DROPS)

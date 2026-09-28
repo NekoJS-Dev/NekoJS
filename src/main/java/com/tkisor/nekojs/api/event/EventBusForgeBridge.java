@@ -62,6 +62,28 @@ public class EventBusForgeBridge {
     }
 
     /**
+     * 绑定一个显式可取消总线，并把脚本的取消结果经 {@code cancelAction} 写回原生事件。
+     *
+     * <p>用于原生事件不实现 {@link ICancellableEvent}、但自带等效取消杠杆的家族总线
+     * （如 {@code LivingDamageEvent.Pre} 的 {@code setNewDamage(0)}）：监听器返回
+     * {@code true} 时总线 post 返回真，由本方法把该结果转成对原生事件的写回。
+     * {@code busJS} 的底层总线必须可取消，否则取消恒不可见（静默 no-op），绑定时即失败。
+     */
+    public <E extends Event> EventBusForgeBridge bindCancellable(EventBusJS<E, ?> busJS, Consumer<E> cancelAction) {
+        Objects.requireNonNull(cancelAction, "cancelAction");
+        if (!(busJS.bus() instanceof CancellableEventBus)) {
+            throw new IllegalArgumentException(
+                    "bindCancellable requires a cancellable bus: " + busJS.eventType().getName());
+        }
+        Consumer<E> listener = event -> {
+            if (busJS.post(event)) {
+                cancelAction.accept(event);
+            }
+        };
+        return bindImpl(busJS.eventType(), listener, EventPriority.NORMAL, false);
+    }
+
+    /**
      * 绑定一个带谓词过滤的 NekoJS 总线：仅当原生事件通过 {@code filter} 时才投递给脚本。
      *
      * <p>用于双逻辑侧事件（{@code PlayerTickEvent}/{@code LevelTickEvent}/

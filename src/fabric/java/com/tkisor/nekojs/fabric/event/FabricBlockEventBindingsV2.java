@@ -199,7 +199,8 @@ public final class FabricBlockEventBindingsV2 {
 
     /**
      * 方块随机 tick：{@code MixinBlockBehaviourRandomTick} 在
-     * {@code BlockBehaviour#randomTick} HEAD 调用（与 NeoForge 侧既有 mixin 同点孪生）。
+     * {@code BlockBehaviour.BlockStateBase#randomTick} HEAD 调用（与 NeoForge 侧既有
+     * mixin 同点孪生；接口 default randomTick 会被原版覆写绕过，见 ticket 24 D5）。
      */
     public static void postRandomTick(ServerLevel level, BlockPos pos, BlockState state,
                                       RandomSource random) {

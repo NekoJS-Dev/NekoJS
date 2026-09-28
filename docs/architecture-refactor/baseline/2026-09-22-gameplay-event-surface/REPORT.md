@@ -212,3 +212,59 @@ goldens、api-manifest 均原样）；`platformGateTest` 三节点复验无 drif
   （catalog/能力立场逐节点钉住）、1.21.1=本票先前全套件+本轮未复跑）。
 - 剩余（显式记录，owner 票 34）：客户端侧 / PlayerEvents 真机路径；fabric 节点 runtime
   冒烟；26.2.0 真机冒烟。D4/D5 修复待维护者裁定（同 D2 通道）。
+## 9. D4/D5 缺陷修复（2026-09-29，维护者裁定 FIX BOTH）
+
+执行者：ticket-24-defects 修复轮（GLM-5.3 subagent worktree `../NekoJS-mult-t24fx`，
+分支 `ticket-24-defects`，基于 mult@973defbc）。D4/D5 由 2026-09-28 真机冒烟轮发现
+（记录在 `ticket-24-smoke-evidence` 分支的 §8/command-output/08，未随 mult HEAD 合并），
+2026-09-29 维护者裁定两项均修。本轮首次在 production 主源码落改动。
+
+### 9.1 D4：damagePre 取消静默 no-op（NeoForge）
+
+- 根因：`LivingDamageEvent.Pre` 不实现 `ICancellableEvent`（21.1.227 / 26.1.2.71 /
+  26.2.0.57 三版 sources 已核），`EventGroup.server` 的默认 predicate 把 DAMAGE_PRE 总线
+  冻成不可取消，脚本 return true 被忽略。
+- 修复：`EntityEvents.DAMAGE_PRE` 显式建可取消总线（`EventBusJS.of(type, true, dispatch)`
+  与 D2/broken 同型）；`EventBusForgeBridge` 新增 `bindCancellable(bus, cancelAction)`
+  ——post 返回真（脚本取消）时执行 cancelAction，绑定点把取消映射为
+  `event.setNewDamage(0)`（伤害归零，原生伤害链走完：damagePost 仍以 0 触发）。
+  不可取消总线绑入 `bindCancellable` 即抛 IAE，杜绝同类静默 no-op 复发。共享树单点
+  覆盖 1.21.1/26.1.2/26.2.0（三版 API 同形）；fabric 侧 ALLOW_DAMAGE 反转接线本就
+  正确，零改动（能力行已在 catalog-snapshot 更新语义注记）。
+- 红→绿：新 `Ticket24DamagePreCancelSemanticsTest`（真家族总线：canCancel +
+  取消短路可观察）修复前 2 用例红（canCancel=false 断言红 + 非 CancellableEventBus
+  CCE）；`EventBusForgeBridgeCancelActionTest`（桥映射腿，red=缺重载的编译失败）。
+- 真机：command-output/10（spider：取消 5 伤后血量 16.0 不变、damagePost
+  healthDamage=0；对照 7 伤正常 16.0→9.0、healthDamage=7）。
+
+### 9.2 D5：randomTick 对原版随机 tick 方块不可达（两 loader）
+
+- 根因：两 loader 孪生 mixin 注入 `BlockBehaviour` 接口 default `randomTick`（空体），
+  而 `BlockStateBase.randomTick` 虚分派到具体方块覆写——原版随机 tick 方块全部覆写
+  （CropBlock/草方块等，1.21.1/26.1.2/26.2.0 三版 javap 实证），接口 default 永不执行。
+- 修复：两孪生 mixin 改注入 `BlockBehaviour.BlockStateBase.randomTick(ServerLevel,
+  BlockPos, RandomSource)` 漏斗（ServerLevel 逐位置虚分派的必经点，26.1.2 ServerLevel
+  字节码 INVOKE 实证）；加 `isRandomlyTicking()` 守卫维持「仅自然随机 tick 方块」的
+  文档语义（ServerLevel 对区段内任意位置都调漏斗）+ `hasListeners()` 高频短路。
+  类名/json 注册不变（两 resources 根与 fabric json 均仍列原名）。
+- 红→绿：新 `BlockRandomTickInjectionSiteTest`（反射实证漏斗形状 + 源 trace 断言两
+  孪生注入漏斗并保留两守卫）——旧 mixin 下 source-trace 用例红，新 mixin 绿。
+- 真机：command-output/10（forceload + `random_tick_speed 30`（26.x 改名已核）+ 草方块：
+  秒级出 marker，35s 窗口 11150+ 次 grass_block 随机 tick；对照 2026-09-28 会话同设置
+  0 marker）。wiki 示例的石头示例改为小麦（石头不 isRandomlyTicking，永不触发）。
+
+### 9.3 表更与验证
+
+- catalog-snapshot.md：damagePre 行注记更新为「取消=桥映射 setNewDamage(0)，damagePost
+  仍以 0 触发；fabric 整体免除」（cancel 列本行本就记 true，修复后与运行面一致）；
+  表头补显式可取消例外说明。
+- 冻结测试两处随行为更新（有意变更）：`Ticket24GameplayEventCatalogTest` damagePre
+  cancellable 期望加显式例外（与 D2/broken 同型）；PhaseTrace EntityEvents 由 13 个
+  `.bind(` 改为 12+1（`.bindCancellable(`）。零 golden 文件改动。
+- 验证：`:26.1.2:test` 456/0/0/58、`:1.21.1:test` 321/0/0/14、`:26.2.0:test` 456/0/0/58、
+  `:26.1.2-fabric:test` 254/0/0/25、`:26.2.0-fabric:test` 254/0/0/25（--continue 全绿）、
+  `guardLint` 绿、`:26.1.2:runServer` 真机 transcript（command-output/10，run 目录已清）。
+  `:common:check` 未跑（common 模块零改动）。
+- 与并行会话的边界：D2（BlockEvents.broken）修复是另一未提交工作，本分支不含、未触碰
+  BlockEvents/BlockBrokenEventJS/FabricBlockEventBindings；Catalog/PhaseTrace 两测试的
+  同行编辑为各自缺陷的独立必要更新，合并时语义叠加。
