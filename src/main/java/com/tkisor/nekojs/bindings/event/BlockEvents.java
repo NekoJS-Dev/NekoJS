@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.bindings.event;
 
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
@@ -37,7 +38,8 @@ public final class BlockEvents {
 
     /** 方块被破坏（脚本 {@code BlockEvents.broken}），载荷为加载器中立的 {@link BlockBrokenEventJS}。 */
     public static final EventBusJS<BlockBrokenEventJS, Block> BROKEN =
-            GROUP.server("broken", BlockBrokenEventJS.class, dispatchByBlock(BlockBrokenEventJS::getBlock));
+            GROUP.add("broken", ScriptType.SERVER, EventBusJS.of(
+                    BlockBrokenEventJS.class, true, dispatchByBlock(BlockBrokenEventJS::getBlock)));
 
     // modification（posted-object 模式，不挂任何总线事件：平台侧在服务器启动与
     // /nekojs reload server 时手动 post）。载荷 BlockModificationEventJS 是 26.x

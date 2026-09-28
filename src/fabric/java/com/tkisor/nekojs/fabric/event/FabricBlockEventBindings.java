@@ -39,7 +39,7 @@ public final class FabricBlockEventBindings {
                     DispatchKey.of(Block.class, event -> event.getBlock())));
 
     public static void register() {
-        // Fabric 的 BEFORE 事件返回 false = 取消破坏，正好对应 NekoJS 脚本 return false
+        // Fabric BEFORE expects false to stop the break; the script bus returns true on cancellation.
         PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) ->
                 !BlockEvents.BROKEN.post(new BlockBrokenEventJS(level, pos, state, player)));
         UseBlockCallback.EVENT.register((player, level, hand, hit) -> {

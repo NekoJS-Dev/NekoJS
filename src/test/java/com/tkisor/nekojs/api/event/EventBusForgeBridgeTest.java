@@ -9,11 +9,13 @@ import net.neoforged.bus.api.BusBuilder;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.ICancellableEvent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -32,6 +34,7 @@ class EventBusForgeBridgeTest {
 
     /** 最简事件子类：{@link Event} 为抽象类、构造器 protected，子类可直接继承。 */
     public static class TestEvent extends Event {}
+    public static class CancellableTestEvent extends Event implements ICancellableEvent {}
 
     @BeforeAll
     static void initPlatformStub() {
@@ -90,6 +93,19 @@ class EventBusForgeBridgeTest {
         forgeBus.post(new TestEvent());
 
         assertEquals("received", received.get());
+    }
+
+    @Test
+    void transformedCancellationWritesBackToNativeEvent() {
+        IEventBus forgeBus = BusBuilder.builder().build();
+        EventBusJS<String, Object> target = EventBusJS.of(String.class, true);
+        ((CancellableEventBus<String>) target.bus()).listen((Predicate<String>) event -> true);
+        EventBusForgeBridge.create(forgeBus).bindTransformed(target, event -> "broken", CancellableTestEvent.class);
+
+        CancellableTestEvent nativeEvent = new CancellableTestEvent();
+        forgeBus.post(nativeEvent);
+
+        assertTrue(nativeEvent.isCanceled(), "a cancelled neutral payload must cancel its native source event");
     }
 
     private static final class StubPlatform implements IPlatform {

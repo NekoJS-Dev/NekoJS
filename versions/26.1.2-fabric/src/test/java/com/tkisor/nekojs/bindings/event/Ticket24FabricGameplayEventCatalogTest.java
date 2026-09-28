@@ -203,12 +203,8 @@ class Ticket24FabricGameplayEventCatalogTest {
     private static Map<String, Map<String, Expected>> expectedFamilies() {
         Map<String, Map<String, Expected>> families = new LinkedHashMap<>();
         put(families, "BlockEvents",
-                // broken：共享层声明（GROUP.server + predicate）——fabric 无 external
-                // cancellability predicate，bus 为不可取消。已知接线矛盾：fabric 桥把
-                // !BROKEN.post(...) 接进可取消的 PlayerBlockBreakEvents.BEFORE，但 post
-                // 恒 false（不可取消总线），脚本取消实际被静默忽略——缺陷记录见票 24
-                // REPORT（修复=行为变更，需维护者裁定，不属本票盘点范围）。
-                new Expected("broken", BlockBrokenEventJS.class, ScriptType.SERVER, Block.class, false),
+                // broken explicitly uses a cancellable bus; Fabric BEFORE negates the cancellation result.
+                new Expected("broken", BlockBrokenEventJS.class, ScriptType.SERVER, Block.class, true),
                 new Expected("rightClicked", BlockRightClickEventJS.class, ScriptType.SERVER, Block.class, true),
                 new Expected("leftClicked", BlockLeftClickEventJS.class, ScriptType.SERVER, Block.class, true),
                 new Expected("portalSpawn", BlockPortalSpawnEventJS.class, ScriptType.SERVER, Block.class, true),

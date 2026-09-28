@@ -159,7 +159,8 @@ class Ticket24GameplayEventCatalogTest {
                 if (!actualNames.contains(name)) continue;
                 Expected want = wanted.get(name);
                 EventCatalogEntry entry = actual.get(name);
-                boolean wantCancellable = ICancellableEvent.class.isAssignableFrom(want.payload());
+                boolean wantCancellable = ICancellableEvent.class.isAssignableFrom(want.payload())
+                        || ("BlockEvents".equals(family) && "broken".equals(name));
                 if (entry.eventType() != want.payload()) {
                     failures.add(family + "." + name + " payload drifted: expected "
                             + want.payload().getSimpleName() + " but catalog carries "
@@ -232,11 +233,7 @@ class Ticket24GameplayEventCatalogTest {
 
     private static void putNeoforgeFamilies(Map<String, Map<String, Expected>> families) {
         // BlockEvents: neutral declarations (broken/modification) + NeoForge adapter-layer members, all SERVER.
-        // known defect (recorded, not fixed here): broken is documented cancellable
-        // (wiki event reference + BlockBrokenEventJS @Doc) but its neutral payload does not
-        // implement ICancellableEvent, so the predicate freezes the bus non-cancellable
-        // on every loader — script cancellation of broken is a silent no-op. Fixing it is
-        // a public-behavior change that needs a maintainer ruling (ticket 24 REPORT).
+        // broken uses an explicit cancellable bus because its neutral payload is not a native event.
         put(families, "BlockEvents",
                 new Expected("broken", BlockBrokenEventJS.class, ScriptType.SERVER, Block.class),
                 new Expected("entityPlaced", BlockEvent.EntityPlaceEvent.class, ScriptType.SERVER, Block.class),

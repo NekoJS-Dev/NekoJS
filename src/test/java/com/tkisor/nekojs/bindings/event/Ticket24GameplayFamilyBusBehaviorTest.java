@@ -3,6 +3,7 @@ package com.tkisor.nekojs.bindings.event;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.CancellableEventBus;
+import com.tkisor.nekojs.api.event.DispatchCancellableEventBus;
 import com.tkisor.nekojs.api.event.DispatchEventBus;
 import com.tkisor.nekojs.api.event.EventBus;
 import com.tkisor.nekojs.api.event.EventBusJS;
@@ -220,6 +221,31 @@ class Ticket24GameplayFamilyBusBehaviorTest {
 
         assertEquals(1, seen.size());
         assertSame(payload, seen.get(0), "the wrapper payload instance is delivered untouched");
+    }
+
+    @Test
+    void nativeBlockBreakCanReceiveCancellation() throws ClassNotFoundException {
+        ClassLoader loader = getClass().getClassLoader();
+        Class<?> nativeBreak;
+        try {
+            nativeBreak = Class.forName("net.neoforged.neoforge.event.level.block.BreakBlockEvent", false, loader);
+        } catch (ClassNotFoundException oldVersion) {
+            nativeBreak = Class.forName("net.neoforged.neoforge.event.level.BlockEvent$BreakEvent", false, loader);
+        }
+        assertTrue(net.neoforged.bus.api.ICancellableEvent.class.isAssignableFrom(nativeBreak),
+                "the transformed bridge only writes back to cancellable native break events");
+    }
+
+    @Test
+    void blockBrokenListenerCanCancelTheNativeBreak() {
+        EventBusJS<Object, Object> bus = cast(BlockEvents.BROKEN);
+        assertTrue(bus.canCancel(), "broken must preserve the cancellable native break contract");
+        DispatchCancellableEventBus<Object, Object> dispatch = (DispatchCancellableEventBus<Object, Object>) bus.bus();
+        Object key = new Object();
+        registered.add(new Registered(dispatch, dispatch.listen(key, event -> true)));
+
+        assertTrue(bus.post(new StandIn("broken"), key));
+        assertFalse(bus.post(new StandIn("other"), new Object()));
     }
 
     @Test
