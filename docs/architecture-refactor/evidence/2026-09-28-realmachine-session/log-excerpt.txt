@@ -1,0 +1,94 @@
+[289月2026 21:45:10.348] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources, mod/nekojs, mod/graalmc, mod/neoforge, mod/jei, nekojs
+[289月2026 21:45:24.751] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources, mod/nekojs, mod/graalmc, mod/neoforge, mod/jei, nekojs
+ > 10 |     console.info('T24-PLAYER loggedIn: ' + event.player.name)
+   12 |     console.info('T24-PLAYER loggedIn (payload read failed)')
+script-diagnostic id=nekojs:rt/SERVER/event-cb-preflight/25074993 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=true source=server_scripts/t24_d2_broken_cancel.js:10:50 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/server_scripts/t24_d2_broken_cancel.js cause=NekoEsmLinkException: PlayerEvents callback: 'player' not in PlayerEvents.loggedIn at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\server_scripts\t24_d2_broken_cancel.js:10:50
+[289月2026 21:46:42.672] [Worker-Main-34/ERROR] [NekoJS/]: [server] 脚本执行失败: nekojs:server/t27_dashboard_sample_error.js
+位置: server_scripts/t27_dashboard_sample_error.js:4:7
+//# sourceURL=server_scripts/t27_dashboard_sample_error.js
+堆栈: at anonymous (server_scripts/t27_dashboard_sample_error.js:4)
+script-diagnostic id=nekojs:server/t27_dashboard_sample_error.js type=server phase=EXECUTION owner=Script Execution Environment generation=1 candidate=true source=server_scripts/t27_dashboard_sample_error.js:2:7 module=server_scripts/t27_dashboard_sample_error.js cacheRevision=c00bbdd48bb5fff97ea04471e0748924d30350fb880b45041a14781623c35ec6 cause=PolyglotException: Error: T27 dashboard sample: intentional error for the read-only error GUI smoke
+[289月2026 21:46:54.286] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.player
+[289月2026 21:46:54.500] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-PLAYER loggedIn (payload read failed)
+[289月2026 21:46:55.464] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.iron_golem
+[289月2026 21:46:55.485] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:46:55.650] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:46:55.687] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.villager
+[289月2026 21:46:57.441] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.villager
+[289月2026 21:46:57.606] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.villager
+[289月2026 21:46:57.607] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.horse
+[289月2026 21:46:57.612] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.cat
+[289月2026 21:46:57.613] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.villager
+[289月2026 21:46:57.614] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.cat
+[289月2026 21:46:57.617] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.iron_golem
+[289月2026 21:46:58.007] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.horse
+[289月2026 21:47:32.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:47:33.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:47:37.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:47:39.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:47:40.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:47:43.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:47:44.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:47:49.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:47:51.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:47:52.500] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:47:53.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:47:56.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:05.500] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:06.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:07.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:10.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:11.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:14.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:18.500] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:19.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:20.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:21.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:24.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:29.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:33.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:35.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:42.500] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:48:58.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:49:05.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:49:07.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:49:14.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:49:15.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:49:19.500] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:49:20.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:49:22.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:49:26.296] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:49:26.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.item
+[289月2026 21:49:32.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:49:37.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:49:39.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:49:46.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.item
+[289月2026 21:49:54.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.item
+[289月2026 21:50:00.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:50:02.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:50:06.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:50:07.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:50:08.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:50:14.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-BROKEN fired (cancelling via return true) (x4)
+[289月2026 21:50:15.500] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-BROKEN fired (cancelling via return true) (x4)
+[289月2026 21:50:16.088] [Server thread/INFO] [NekoJS/]: [server] T24-BROKEN fired (cancelling via return true) (x8)
+[289月2026 21:50:16.163] [Render thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:50:16.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-BROKEN fired (cancelling via return true) (x2)
+[289月2026 21:50:17.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:50:21.500] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:50:23.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:50:29.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:50:31.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:50:32.187] [Server thread/INFO] [NekoJS/]: [server] T24-BROKEN fired (cancelling via return true) (x2)
+[289月2026 21:50:32.314] [Render thread/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:50:32.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-BROKEN fired (cancelling via return true) (x4)
+[289月2026 21:50:33.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-BROKEN fired (cancelling via return true) (x14)
+[289月2026 21:50:34.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-BROKEN fired (cancelling via return true) (x2)
+[289月2026 21:50:39.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:50:46.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:51:00.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:51:01.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:51:03.500] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:51:08.498] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:51:10.500] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
+[289月2026 21:51:12.499] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY joinLevel: entity.minecraft.slime
