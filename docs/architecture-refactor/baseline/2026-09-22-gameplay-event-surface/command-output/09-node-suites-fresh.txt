@@ -1,0 +1,35 @@
+# Ticket 24 AC9 evidence closure: per-node suites never run for this ticket, fresh on the merged tree
+# Date: 2026-09-28. Worktree ../NekoJS-mult-t24s (branch ticket-24-smoke-evidence, base mult@64f5ea95).
+#
+# Command: ./gradlew.bat :26.1.2-fabric:test :26.2.0-fabric:test :26.2.0:test --continue --console=plain
+# Result: BUILD SUCCESSFUL in 28s, exit 0 (0 FAILED). Compile outputs were warm from the runServer
+#         evidence run minutes earlier; test tasks all executed (fresh result XML below).
+#
+# Fabric capability stance context (already pinned by node-local catalog tests, re-verified here by the
+# full suites): capability/goal families absent on fabric nodes, tick*/useItem* render members
+# unavailable, Ticket24FabricGameplayEventCatalogTest present and green on BOTH fabric nodes.
+#
+# Fresh result XML summaries (per node, from build/test-results/test/):
+#   :26.1.2-fabric:test  tests=251 failures=0 errors=0 skipped=25
+#   :26.2.0-fabric:test  tests=251 failures=0 errors=0 skipped=25
+#   :26.2.0:test  tests=448 failures=0 errors=0 skipped=58
+#
+# Ticket24 tests included in each run:
+#   26.1.2-fabric: Ticket24FabricGameplayEventCatalogTest, Ticket24GameplayEventPhaseTraceTest
+#   26.2.0-fabric: Ticket24FabricGameplayEventCatalogTest, Ticket24GameplayEventPhaseTraceTest
+#   26.2.0: Ticket24GameplayEventCatalogTest, Ticket24GameplayEventPhaseTraceTest, Ticket24GameplayEventReloadLifecycleTest, Ticket24GameplayFamilyBusBehaviorTest
+#
+# Build tail (from the gradle log):
+================== gradle tail ==================
+> Task :26.2.0:test
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS-mult-t24s/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 28s
+51 actionable tasks: 29 executed, 7 from cache, 15 up-to-date
