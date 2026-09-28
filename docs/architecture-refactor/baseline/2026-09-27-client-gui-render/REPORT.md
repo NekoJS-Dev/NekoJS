@@ -68,7 +68,7 @@ Worktree：`D:/mcmodDemo/NekoJS-mult-t27`（分支 `ticket-27-client-gui-render`
 | AC3 平台 client Adapter 在正确注册期挂载 render/screen 资源并按 render owner thread 分发；Adapter 持 MC/loader 类型，shared 作者契约不引入平台类型 | **满足** | `platformRenderAdapterMountsOnTheClientDistOnly`（`ClientRenderEvents` `@EventBusSubscriber(value=[CLIENT])` 反射断言——mod 构造期挂载、dedicated server 不订阅）；`sharedRenderRegistrationSurfaceCarriesNoPlatformTypes`（`ClientRenderRegistry`/`RenderRegistrationBusJS` 签名+字段 0 个 `net.minecraft`/`net.neoforged` 类型，渲染上下文以 Object 透传；MC 面包装类 0 个 loader 类型）；分发线程契约由 `ClientRenderRegistry` javadoc + `ClientReloadExecutor`（CLIENT owner thread = Render 线程）承载，harness 经真实 reload 路径驱动同一注册表 |
 | AC4 reload candidate 阶段新 GUI/render 资源与 listener 对生产路由不可见；commit 后旧 generation 停止接收、新 generation 恰好呈现一次；失败或取消时旧 active 继续可用且候选资源全部清理 | **满足（本票修复项，红→绿）** | `Ticket27ClientGuiRenderLifecycleTest` 4 tests：`aRejectedCandidateReleasesItsPendingRendererBatchAtFailureTime` + `aCandidateKilledDuringExecutionReleasesItsPendingBatchAndKeepsTheOldActive`（修复前红：`expected: <0> but was: <1>`，见 §4；修复后失败当刻批次释放、旧 active 继续服务、下一轮正常提交）、`worldRenderPresentationsSwapExactlyOnceAtTheCommitPoint`（候选期生产路由观察 `[[], ['first']]`、commit 恰一次、空批退役）、`screenRenderAndHudListenersFollowTheSameCandidateBoundary`（候选期 pending 不可见、commit 接管、空代退役）。渲染器恰一次呈现由 `List` 探针（本帧真正被调用的 id）断言；候选不可见性复用票 26 已合并语义并由本票 fixture 复验 |
 | AC5 GUI 操作、render context、取消和错误呈现可从调用者 Interface 观察；不依赖私有屏幕字段、Renderer 对象身份或未公开平台集合 | **满足** | 全部断言走公开面：`DashboardView.Canvas` 捕获/`ErrorDashboardModel` 快照/`ErrorOpenService.Result`/`LocalErrorSource.Result`（GUI）；`dispatchHud/dispatchWorld` List 探针、`hasHud/hasWorld`、`hasListeners()`、`pendingCandidateRegistrations()` 只读计数（新增发布面，刻意为计数而非集合）；无私有字段反射、无回调对象身份断言 |
-| AC6 平台/版本 Adapter 按节点既定支持等级与声明能力验证真实差异；不可用时 supported/partial/unavailable 明示；不自动补 Fabric parity | **部分满足（不勾选）** | 已核实（只读）：NeoForge 三节点 ClientEvents 含全部 GUI/render 成员（golden 行），fabric 两节点 ClientEvents 仅 `tick,tickPost,tickPre`——GUI/render 能力在 fabric 显式缺席（unavailable，fixture 断言 golden 行，不做静默 parity）；`ClientRenderRegistry`/`RenderRegistrationBusJS` 为 1.21.1+26.x 共享树文件（1.21.1 仅 `ClientRenderEvents`/两个 context wrapper 孪生，层分发差异）。**缺**：未新造 capability 矩阵条目（owner 票 31/32）；`:26.1.2-fabric:test`/`:26.2.0-fabric:test` 未跑（本票未触 fabric 专属文件） |
+| AC6 平台/版本 Adapter 按节点既定支持等级与声明能力验证真实差异；不可用时 supported/partial/unavailable 明示；不自动补 Fabric parity | **满足（2026-09-28 证据收口勾选）** | 初轮已核实（只读）：NeoForge 三节点 ClientEvents 含全部 GUI/render 成员（golden 行），fabric 两节点 ClientEvents 仅 `tick,tickPost,tickPre`——GUI/render 能力在 fabric 显式缺席（unavailable，fixture 断言 golden 行，不做静默 parity）；`ClientRenderRegistry`/`RenderRegistrationBusJS` 为 1.21.1+26.x 共享树文件（1.21.1 仅 `ClientRenderEvents`/两个 context wrapper 孪生，层分发差异）。收口轮补齐两缺口：fabric 两节点全量套件真跑双绿（§9 `11`/`12`）；五节点能力表建于本票 baseline（`CAPABILITY-MATRIX.md`，supported/unavailable/not verified 明示+逐格证据），详见 §9 |
 | AC7 调用者 Interface、Adapter 契约、runtime member、TS/Python declaration、contract/golden 和节点 runtime smoke 可互相追溯；普通测试只读 golden | **部分满足（declaration 面不勾选）** | 已交付：runtime member fixture（经生产注册路径读 catalog metadata 与字段单例）+ golden 只读断言 + `platformGateTest` 绿（无 member-drift，golden 未改）。**缺口（实证）**：`api-manifest-core.json`、probe `*.expected.d.ts`、`declaration-parity.txt` 对本票域 0 命中（`command-output/10-declaration-coverage.txt`），与票 26/28 AC7 同类——owner 09/33/34；节点 runtime smoke（真机 GUI/渲染出图）未做——owner 票 34 |
 | AC8 PostEffects、Assets、recipe/loot/tags/JEI/capability/goal/keybind/HUD 等 owner 不被并入；不重复声明其事件或 binding | **满足** | 本票 diff 不含上述域文件（`KeyBindEvents`/`PostEffect*`/`DataGeneratorJS`/`LangGeneratorJS` 等零改动）；surface fixture 的跨组 identity 断言 + golden 断言（render 成员不在其他组出现）钉住唯一 owner；`ClientRenderDomainOwner` 只管渲染器注册（票 26 交付，本票未改其文件） |
 | AC9 旧 render/目标 GUI 入口、重复 handler、不受测 wrapper 或绕过 Runtime Root 的资源装配只能在替代路径 parity、公开迁移表、旧 route 无消费者和维护者确认后删除；不保留长期双路径。内置 workspace/编辑器 GUI 与编辑文件同步不因"旧公开路径"理由保留 | **不勾选（维护者 sign-off 门禁）** | 本票**零删除**；已备证据：渲染分发 handler 唯一（生产调用点仅平台 Adapter）、GUI 入口唯一、内置编辑器链路 11 个符号生产源码 0 命中、`clearAll()` 生产调用者 0（`command-output/05-old-route-remnant-scan.txt`）；残留项（旧 UI lang key、日志入口、wire 演进）与删除条件见 MIGRATION §3/§4，待维护者裁定 |
@@ -120,8 +120,8 @@ BUILD SUCCESSFUL；tests=4 failures=0 errors=0
 | 项 | 状态 | owner / 说明 |
 |---|---|---|
 | 真机 GUI/render smoke（只读面板实际出图、渲染器实际绘制、VS Code 打开真机验证） | **not run**：无头 JVM 无法驱动 `RenderGuiEvent`/真实 Screen；尝试过的替代（26.1.2 版本树测试树全绿）只覆盖注册/生命周期语义 | 票 34 P4（命令示例：`gradlew :26.1.2:runClient` + `/nekojs view_all_errors`，本轮未执行） |
-| `:26.1.2-fabric:test` / `:26.2.0-fabric:test` | not run（本票零 fabric 专属文件改动；fabric 的 GUI/render 缺席由 golden 只读断言承载） | 合并门 / 票 31/32 |
-| capability 矩阵新条目 | 未新造 | 票 31/32 |
+| `:26.1.2-fabric:test` / `:26.2.0-fabric:test` | **已收口（2026-09-28）**：两节点全量真跑各 tests=251 failures=0 errors=0（`command-output/11`/`12`）——共享树含本票合并改动在 fabric 节点编译并通过，零回归 | 原「not run」缺口关闭（§9） |
+| capability 矩阵新条目 | **已收口（2026-09-28）**：五节点能力表建于本票 baseline（`CAPABILITY-MATRIX.md`，supported/unavailable/not verified 逐格附证据）；全局矩阵仍归票 31/32 | 本票域内关闭（§9）；全局矩阵归票 31/32 |
 | TS/Python declaration 收录 | 0 命中实证（同票 26/28 缺口） | Managed Surface/Probe owner（09/33/34）；`npm run test:probe-types` 因零声明改动未跑 |
 | NEKO-1001 登记 | 已按 coding.md 在 `wiki/en_us/Error-Reference.md` 同变更登记（该注册表在本分支存在，任务简报的“注册表不存在”前提与实际不符，已按实际证据处理） | 合并门复核 |
 | `runGameTestServer` / Minecraft MCP 实机证据 | not run | 票 34 |
@@ -167,3 +167,57 @@ BUILD SUCCESSFUL；tests=4 failures=0 errors=0
   抽取（共享尾 dispatch() 已提取，残余为 4 行局部形状，避免无谓扰动）；
   `pendingCandidateRegistrations()` 为 AC5 要求的只读观察面（测试专用、零生产调用者，
   REPORT §6 已标注）。
+
+## 9. 证据收口（2026-09-28，AC6）
+
+收口轮（evidence-only，零生产/golden/测试代码改动）：worktree `D:/mcmodDemo/NekoJS-mult-t27s`
+（分支 `ticket-27-smoke-evidence`，基线 mult@`64f5ea95`＝本票含 review-fix 的合并态）。目标：
+关闭 AC6 两个已记录缺口——fabric 节点套件 not run、能力表缺失。
+
+### 9.1 本轮命令与结果（`command-output/11`–`16`，均本 worktree 真跑，Windows 本机）
+
+| # | 命令 | 结果 |
+|---|---|---|
+| 11 | `gradlew :26.1.2-fabric:test --rerun --console=plain` | **BUILD SUCCESSFUL**；tests=251 failures=0 errors=0 skipped=25（skips 为票 27 域外既有 assumption 跳过） |
+| 12 | `gradlew :26.2.0-fabric:test --rerun --console=plain` | **BUILD SUCCESSFUL**；tests=251 failures=0 errors=0 skipped=25（同 11 档案） |
+| 13 | `gradlew :26.2.0:test --rerun --console=plain` | **BUILD SUCCESSFUL**；tests=448 failures=0 errors=0 skipped=58；Ticket27 Lifecycle 4/0、Surface 4/0（合并态复跑） |
+| 14 | `gradlew :1.21.1:test --rerun --console=plain` | **BUILD SUCCESSFUL**；tests=313 failures=0 errors=0 skipped=14；DashboardView 12/0、Layout 5/0、Text 4/0（合并态复跑） |
+| 15 | `gradlew :common:test --tests '*Ticket27*' --tests '*GenerationGlobalsDiscardResilience*' --rerun --console=plain` | **BUILD SUCCESSFUL**；DiagnosticOpenActionConsume 4/0、ErrorDashboardSnapshot 2/0、GenerationGlobalsDiscardResilience 2/0（合并态复跑） |
+| 16 | `gradlew :26.1.2:test --rerun --console=plain` | **BUILD SUCCESSFUL**；tests=448 failures=0 errors=0 skipped=58；Ticket27 Lifecycle 4/0、Surface 4/0（合并态复跑） |
+
+计数取自各节点 `build/test-results/test/*.xml` 的 JUnit 汇总（tests/failures/errors/skipped
+求和）。fabric 全量首跑（11/12）验证共享树（含本票合并的 common discard/close 改动与无守卫
+render/dashboard 类）在两 fabric 节点编译并通过；13–16 为合并态（`64f5ea95`）上的新鲜绿
+transcript（03/04/09 产于合并前 worktree/commit）。
+
+### 9.2 五节点能力表（AC6 判定基础）
+
+完整表与逐格证据：同目录 **`CAPABILITY-MATRIX.md`**（本票 baseline 内，非全局矩阵）。摘要：
+
+| 能力域 | 1.21.1 | 26.1.2 | 26.2.0 | 26.1.2-fabric | 26.2.0-fabric |
+|---|---|---|---|---|---|
+| render/screen callback 面 | supported | supported | supported | unavailable（显式） | unavailable（显式） |
+| error dashboard GUI | supported | supported | supported | unavailable（文本降级） | unavailable（文本降级） |
+| open/locate seam 本体（common） | supported（节点无关） | 同左 | 同左 | 同左 | 同左 |
+| open/locate 玩家入口 | supported | supported | supported | unavailable | unavailable |
+
+判定来源：golden 五节点行（`event-surface-domains.txt` L24–28）+ surface fixture 断言
+（fabric 显式缺席）+ 1.21.1 孪生 diff（`ClientRenderEvents` 三 stage→三 layer 映射、Screen
+1.21.1/26.x GUI API 适配、逻辑层共享零 override）+ fabric 求值树核对（`ClientEvents`/
+`ClientRenderEvents`/Screen/`NekoJSNetwork` 被守卫排除；`FabricClientEventBindings` 既定
+子集；`FabricNekoJSCommands` 文本降级 javadoc L46）+ 上表六条新鲜 transcript。真机出图与
+declaration 面超出 AC6 判据，按 not verified 记录并归 owner（见 §9.3）。
+
+### 9.3 AC6 判定与剩余缺口
+
+**AC6 勾选**：既定支持等级的真实差异已有实证（五节点 golden + 求值树 + 孪生 + 全量套件），
+能力呈现已存在并以 supported/unavailable/not verified 明示，fabric 缺席全部显式标注、
+零自动 parity，无 experimental 记为 primary。初轮两缺口（fabric not run、能力表缺失）关闭。
+
+**不属 AC6、保持原状的缺口**（不动 AC1/AC7/AC9）：
+
+| 项 | owner |
+|---|---|
+| 真机 GUI/render 出图、VS Code 打开真机验证（本表 supported 限于无头证据级） | 票 34 |
+| declaration 面（TS/Python）0 命中 | 09/33/34（AC7 域） |
+| 全局 capability 矩阵（超出本票 baseline 范围） | 票 31/32（已关票；本票域内以 baseline 表呈现） |

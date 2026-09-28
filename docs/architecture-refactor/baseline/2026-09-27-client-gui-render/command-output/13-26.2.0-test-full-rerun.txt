@@ -1,0 +1,219 @@
+# Ticket 27 AC6 evidence round 2 (2026-09-28): fabric node suites + merged-tree re-runs
+# Command: ./gradlew.bat :26.2.0:test --rerun --console=plain
+# Result: BUILD SUCCESSFUL; tests=448 failures=0 errors=0 skipped=58 (Ticket27 Lifecycle 4/0,
+#         Surface 4/0; skips are pre-existing, outside the ticket-27 domain)
+# Worktree: D:/mcmodDemo/NekoJS-mult-t27s (branch ticket-27-smoke-evidence, base mult@64f5ea95)
+# Windows local machine; not representative of other platforms/CI/release.
+
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources
+> Task :common:compileJava UP-TO-DATE
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes UP-TO-DATE
+> Task :common:jar UP-TO-DATE
+> Task :common:compileAddonFixtureJava UP-TO-DATE
+> Task :common:processAddonFixtureResources UP-TO-DATE
+> Task :common:addonFixtureClasses UP-TO-DATE
+> Task :common:externalAddonJar UP-TO-DATE
+> Task :common-api-processor:compileJava FROM-CACHE
+> Task :common-api-processor:classes
+> Task :common-api-processor:jar
+> Task :26.2.0:stonecutterPrepare
+> Task :26.2.0:stonecutterGenerate
+
+> Task :26.2.0:createMinecraftArtifacts
+Performing periodic cache maintenance on C:\Users\11515\.gradle\caches\neoformruntime
+Cleaning intermediate results cache in C:\Users\11515\.gradle\caches\neoformruntime\intermediate_results
+ Maximum age: 744h
+ Maximum cache size: 10 GiB
+ [0;2;3m330 files found[0m
+ [0;2;3m3.3 GiB overall size[0m
+ [0;2;3m0 expired keys found[0m
+[0;2;3m Deleted 39 outdated lock files
+Loaded 157 artifacts from D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+[1m*** Started working on [4mdownloadManifest[0m[0m
+  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
+ [1m[92mDONE [0m Completed [4mdownloadManifest[0m in 0.98s
+[1m*** Started working on [4mdownloadJson[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.00s
+[1m*** Started working on [4mdownloadClient[0m[0m
+[1m*** Started working on [4mdownloadServer[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.04s
+ [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.04s
+[1m*** Started working on [4mpreProcessJar[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpreProcessJar[0m in 0.00s
+[1m*** Started working on [4mdecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
+[1m*** Started working on [4mpatch[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
+[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
+[1m*** Started working on [4mtransformSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mtransformSources[0m in 0.00s
+[1m*** Started working on [4mrecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.00s
+[1m*** Started working on [4mmergeWithSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmergeWithSources[0m in 0.00s
+Total runtime: 1.89s
+
+
+> Task :26.2.0:compileJava
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\api\inject\ItemStackExtension.java:156: ¾¯¸æ: [deprecation] ItemStackÖĞµÄgetEnchantments()ÒÑ¹ıÊ±
+        return self().getEnchantments().getLevel(enchantment) >= level;
+                     ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\wrapper\event\server\ItemModificationJS.java:44: ¾¯¸æ: [this-escape] ¿ÉÄÜÔÚÍêÈ«³õÊ¼»¯×ÓÀàÖ®Ç°ÌÓÒİÁË 'this'
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+                                                                               ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:64: ¾¯¸æ: [this-escape] ¿ÉÄÜÔÚÍêÈ«³õÊ¼»¯×ÓÀàÖ®Ç°ÌÓÒİÁË 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+3 ¸ö¾¯¸æ
+
+> Task :26.2.0:generateModMetadata
+> Task :26.2.0:processResources
+> Task :26.2.0:classes
+> Task :26.2.0:stonecutterPrepareTest
+> Task :26.2.0:stonecutterGenerateTest
+
+> Task :26.2.0:compileTestJava
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\event\Ticket24GameplayFamilyBusBehaviorTest.java:195: ¾¯¸æ: [unchecked] Î´¾­¼ì²éµÄ×ª»»
+        DispatchEventBus<Object, Object> dispatch = (DispatchEventBus<Object, Object>) bus.bus();
+                                                                                              ^
+  ĞèÒª: DispatchEventBus<Object,Object>
+  ÕÒµ½:    EventBus<Object>
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:52: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:62: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:215: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+    private static final class ManagerReset implements AutoCloseable {
+                         ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:56: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:72: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:95: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:155: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:110: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        return new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(unhex(hex)), RegistryAccess.EMPTY);
+               ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:118: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:128: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:138: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:110: ¾¯¸æ: [deprecation] JsonParserÖĞµÄJsonParser()ÒÑ¹ıÊ±
+        com.google.gson.JsonParser parser = new com.google.gson.JsonParser();
+                                            ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:111: ¾¯¸æ: [deprecation] JsonParserÖĞµÄparse(String)ÒÑ¹ıÊ±
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":1}"));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:112: ¾¯¸æ: [deprecation] JsonParserÖĞµÄparse(String)ÒÑ¹ıÊ±
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":2}"));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:88: ¾¯¸æ: [deprecation] BlockÖĞµÄgetExplosionResistance()ÒÑ¹ıÊ±
+        float originalResistance = Blocks.STONE.getExplosionResistance();
+                                               ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:89: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+        int originalLight = Blocks.STONE.defaultBlockState().getLightEmission();
+                                                            ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:104: ¾¯¸æ: [deprecation] BlockÖĞµÄgetExplosionResistance()ÒÑ¹ıÊ±
+        assertEquals(9.0f, Blocks.STONE.getExplosionResistance(), 0.0f);
+                                       ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:105: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+        assertEquals(15, Blocks.STONE.defaultBlockState().getLightEmission());
+                                                         ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:114: ¾¯¸æ: [deprecation] BlockÖĞµÄgetExplosionResistance()ÒÑ¹ıÊ±
+        assertEquals(originalResistance, Blocks.STONE.getExplosionResistance(), 0.0f);
+                                                     ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:115: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+        assertEquals(originalLight, Blocks.STONE.defaultBlockState().getLightEmission());
+                                                                    ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\Ticket39BlockModificationScriptE2ETest.java:74: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+                .map(net.minecraft.world.level.block.state.BlockState::getLightEmission)
+                     ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\Ticket39ModificationExamplesTest.java:181: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+                .map(net.minecraft.world.level.block.state.BlockState::getLightEmission)
+                     ^
+29 ¸ö¾¯¸æ
+
+> Task :26.2.0:processTestResources
+> Task :26.2.0:testClasses
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :26.2.0:test
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS-mult-t27s/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 26s
+29 actionable tasks: 13 executed, 1 from cache, 15 up-to-date
+26.2.0 exit=0

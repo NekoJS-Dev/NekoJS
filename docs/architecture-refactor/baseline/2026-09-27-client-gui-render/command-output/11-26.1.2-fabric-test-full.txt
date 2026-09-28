@@ -1,0 +1,203 @@
+# Ticket 27 AC6 evidence round 2 (2026-09-28): fabric node suites + merged-tree re-runs
+# Command: ./gradlew.bat :26.1.2-fabric:test --rerun --console=plain
+# Result: BUILD SUCCESSFUL; tests=251 failures=0 errors=0 skipped=25 (skips are pre-existing
+#         assumption-based skips outside the ticket-27 GUI/render domain)
+# Worktree: D:/mcmodDemo/NekoJS-mult-t27s (branch ticket-27-smoke-evidence, base mult@64f5ea95)
+# Windows local machine; not representative of other platforms/CI/release.
+
+Starting a Gradle Daemon, 1 incompatible and 1 stopped Daemons could not be reused, use --status for details
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders FROM-CACHE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins FROM-CACHE
+> Task :buildSrc:compilePluginsBlocks FROM-CACHE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors FROM-CACHE
+> Task :buildSrc:generateScriptPluginAdapters FROM-CACHE
+> Task :buildSrc:compileKotlin FROM-CACHE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors
+> Task :buildSrc:processResources
+> Task :buildSrc:classes
+> Task :buildSrc:jar
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :26.1.2-fabric:stonecutterPrepare
+> Task :26.1.2-fabric:stonecutterGenerate
+> Task :common:compileJava FROM-CACHE
+> Task :common:processResources
+> Task :common:classes
+> Task :common:compileAddonFixtureJava FROM-CACHE
+> Task :common:processAddonFixtureResources
+> Task :common:addonFixtureClasses
+> Task :common:externalAddonJar
+> Task :common:jar
+> Task :26.1.2-fabric:extractIcuClasses
+
+> Task :26.1.2-fabric:compileJava
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()': 找不到com.google.errorprone.annotations.DoNotCall的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotMock' 的批注方法 'value()': 找不到com.google.errorprone.annotations.DoNotMock的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.1.2-fabric\build\generated\stonecutter\main\java\com\tkisor\nekojs\wrapper\event\server\ItemModificationJS.java:44: 警告: [this-escape] 可能在完全初始化子类之前逃逸了 'this'
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+                                                                               ^
+D:\mcmodDemo\NekoJS-mult-t27s\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricItemEventBindingsV2.java:41: 警告: [deprecation] ItemEvents中的PICKED_UP_PRE已过时
+                || ItemEvents.PICKED_UP_PRE.hasListeners();
+                             ^
+D:\mcmodDemo\NekoJS-mult-t27s\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricItemEventBindingsV2.java:49: 警告: [deprecation] ItemEvents中的PICKED_UP_PRE已过时
+            cancelled = ItemEvents.PICKED_UP_PRE.post(payload, item);
+                                  ^
+D:\mcmodDemo\NekoJS-mult-t27s\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricPlayerEventBindings.java:41: 警告: [deprecation] PlayerEvents中的INVENTORY_OPENED已过时
+        PlayerEvents.INVENTORY_OPENED.post(new PlayerContainerEventJS(player, menu));
+                    ^
+D:\mcmodDemo\NekoJS-mult-t27s\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricPlayerEventBindings.java:47: 警告: [deprecation] PlayerEvents中的INVENTORY_CLOSED已过时
+        PlayerEvents.INVENTORY_CLOSED.post(new PlayerContainerEventJS(player, menu));
+                    ^
+D:\mcmodDemo\NekoJS-mult-t27s\src\fabric\java\com\tkisor\nekojs\fabric\mixin\MixinServerGamePacketListenerItemInteract.java:54: 警告: [deprecation] ServerLevel中的getEntityOrPart(int)已过时
+        Entity target = this.player.level().getEntityOrPart(packet.entityId());
+                                           ^
+51 个警告
+
+> Task :26.1.2-fabric:generateModMetadata
+> Task :26.1.2-fabric:processResources
+> Task :26.1.2-fabric:classes
+> Task :26.1.2-fabric:stonecutterPrepareTest
+> Task :26.1.2-fabric:stonecutterGenerateTest
+
+> Task :26.1.2-fabric:compileTestJava
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:52: 警告: [try] 不能在相应的 try 语句的正文中引用可自动结束的资源context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:62: 警告: [try] 不能在相应的 try 语句的正文中引用可自动结束的资源context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: 警告: [try] 可自动关闭的资源ManagerReset包含的成员方法 close() 可能抛出 InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: 警告: [try] 可自动关闭的资源ManagerReset包含的成员方法 close() 可能抛出 InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: 警告: [try] 可自动关闭的资源ManagerReset包含的成员方法 close() 可能抛出 InterruptedException
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:215: 警告: [try] 可自动关闭的资源ManagerReset包含的成员方法 close() 可能抛出 InterruptedException
+    private static final class ManagerReset implements AutoCloseable {
+                         ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: 警告: [try] 不能在相应的 try 语句的正文中引用可自动结束的资源ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: 警告: [try] 不能在相应的 try 语句的正文中引用可自动结束的资源ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: 警告: [try] 不能在相应的 try 语句的正文中引用可自动结束的资源ignored
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:110: 警告: [deprecation] JsonParser中的JsonParser()已过时
+        com.google.gson.JsonParser parser = new com.google.gson.JsonParser();
+                                            ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:111: 警告: [deprecation] JsonParser中的parse(String)已过时
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":1}"));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t27s\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:112: 警告: [deprecation] JsonParser中的parse(String)已过时
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":2}"));
+                                                        ^
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()': 找不到com.google.errorprone.annotations.DoNotCall的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotMock' 的批注方法 'value()': 找不到com.google.errorprone.annotations.DoNotMock的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+33 个警告
+
+> Task :26.1.2-fabric:processTestResources
+> Task :26.1.2-fabric:testClasses
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/org.joml/joml/1.10.8/fc0a71dad90a2cf41d82a76156a0e700af8e4f8d/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762963/dd59af0c156c118b9aae5893e38127c1c709d401/graal-1504336-8762963.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :26.1.2-fabric:test
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS-mult-t27s/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 3s
+26 actionable tasks: 18 executed, 8 from cache
+26.1.2-fabric exit=0
