@@ -27,7 +27,7 @@ dispatch = 定向分发键类型（`-` = 非定向）；cancel = 总线可取消
 | rightClicked | PlayerInteractEvent.RightClickBlock | SERVER | Block | true | 双逻辑侧：SERVER 总线带 `!isClientSide` 过滤（fabric：BlockRightClickEventJS，同形） |
 | placed | BlockEvent.EntityPlaceEvent | SERVER | Block | true | fabric：BlockPlacedEventJS |
 | leftClicked | PlayerInteractEvent.LeftClickBlock | SERVER | Block | true | fabric：BlockLeftClickEventJS |
-| randomTick | RandomTickEvent（NekoJS） | SERVER | Block | false | fabric：BlockRandomTickEventJS |
+| randomTick | RandomTickEvent（NekoJS） | SERVER | Block | false | fabric：BlockRandomTickEventJS。D5（2026-09-28 冒烟，REPORT §8.3）：两 loader mixin 注入在接口 default `randomTick` HEAD，被原版方块覆写绕过——原版随机 tick 方块上事件不可达 |
 | blockEntityTick | BlockEntityTickEvent（NekoJS） | SERVER | BlockEntityType | false | |
 | modification | BlockModificationEventJS | SERVER | - | false | posted-object 模式（>=26 才有；1.21.1 无此成员）；票 39 域 |
 
@@ -99,7 +99,7 @@ placed/entityPlaced/fluidPlaced 额外显式可取消（中立 payload）。
 
 | 成员 | payload | side | dispatch | cancel | 备注 |
 |---|---|---|---|---|---|
-| damagePre | LivingDamageEvent.Pre | SERVER | EntityType | true | 可改伤害值（setNewDamage）；fabric：LivingDamageEventJS 仅可取消 |
+| damagePre | LivingDamageEvent.Pre | SERVER | EntityType | **false** | 2026-09-28 冒烟更正（D4，REPORT §8.3）：Pre 在 NeoForge 21.1.227/26.1.2.71 均不实现 ICancellableEvent，总线不可取消，脚本 return true 静默 no-op（真机实测：取消标记打印后 5 伤害仍生效 16.0→11.0）；改伤害用 setNewDamage。本表原记 `true` 为手抄错误（冻结测试按谓词动态求值一直为 false、一直绿）。fabric：LivingDamageEventJS 仍可取消 |
 | damagePost | LivingDamageEvent.Post | SERVER | EntityType | false | |
 | death | LivingDeathEvent | SERVER | EntityType | true | |
 | drops | LivingDropsEvent | SERVER | EntityType | true | fabric：LivingDropsEventJS（drops 恒空列表，已知数据面差异） |

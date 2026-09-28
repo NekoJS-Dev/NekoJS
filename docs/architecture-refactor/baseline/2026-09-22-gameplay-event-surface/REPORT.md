@@ -143,3 +143,72 @@ goldens、api-manifest 均原样）；`platformGateTest` 三节点复验无 drif
   cancellability predicate + 平台 stub）为真实测试环境修复、未删任何断言；catalog 快照经
   真实注册入口派生、八族齐全；D1（票 33 fabric 门禁低估）/D2（broken 取消静默 no-op，
   待维护者裁决）/D3（declaration 零覆盖）维持记录不动。
+
+## 8. 证据收口（2026-09-28，AC9）
+
+执行者：zed-flash-24（GLM-5.3 subagent worktree `../NekoJS-mult-t24s`，分支
+`ticket-24-smoke-evidence`，基于 mult@64f5ea95）——本票实现合并后的 AC9 证据补齐轮，
+生产主源码零改动；AC5/AC8 与 goldens 未触碰。
+
+### 8.1 真机 runtime smoke（26.1.2 NeoForge dedicated server，command-output/08）
+
+- `./gradlew.bat :26.1.2:runServer --console=plain`（BUILD SUCCESSFUL in 59s，clean stop）：
+  真实 FML/NeoForge 26.1.2.71 游戏进程；冒烟脚本放
+  `versions/26.1.2/run/nekojs/{startup_scripts,server_scripts}`，本机 RCON（127.0.0.1:25581）
+  驱动探针后 `stop` 干净关服（ServerEvents 停机链完整，LevelEvents.unloaded×3）。transcript
+  内嵌两份冒烟脚本与 RCON driver 源码，可复现。
+- 命中的家族/成员（marker 全录于 transcript，逐行带原始 log 行号）：
+  - STARTUP：脚本加载、GoalEvents.register / CapabilityEvents.register posting site 各一次；
+  - modification（posted-object，票 39 域接线）：Item/Block 两个合法 posting 点均真跑
+    （reload DOMAIN_PLAN 线程 + ServerAboutToStart applyInitialPlan）；
+  - LevelEvents：loaded×3 维度、tickPre 首 tick、explosionStart（summon tnt 真实爆炸）、
+    unloaded×3（stop）；
+  - CommandEvents.command：HIGHEST 先于 NORMAL（逐命令可见，行号 21413→21414 连续）；
+    listener return true 取消 say——被取消命令零广播、对照命令正常广播；
+  - EntityEvents（summon spider 为载体）：finalizeSpawn、joinLevel（spider+tnt）、damagePre
+    载荷 originalDamage=5/7/1000、damagePost、death、drops、leaveLevel 全链；
+  - BlockEvents：blockEntityTick（setblock hopper 真实 tick）；
+  - PlayerEvents：无客户端不可驱动（loggedIn 监听已挂、marker 预期缺席）→ 客户端侧归票 34。
+- 两次准备运行（脚本成员名修正、forceload 策略——现代 dedicated server 无玩家不保持区块
+  加载）过程留档于 transcript 头注，不属证据本体。
+
+### 8.2 节点套件（command-output/09）
+
+- `:26.1.2-fabric:test` 251 tests / 0 fail 0 error / 25 skipped（此前本票只跑过
+  `--tests "*Ticket24*"` 过滤）；
+- `:26.2.0-fabric:test` 251 tests / 0 fail 0 error / 25 skipped（本票从未跑过）；
+- `:26.2.0:test` 448 tests / 0 fail 0 error / 58 skipped（本票从未跑过全套件）。
+- 命令：`./gradlew.bat :26.1.2-fabric:test :26.2.0-fabric:test :26.2.0:test --continue
+  --console=plain` → BUILD SUCCESSFUL in 28s（编译产物刚被 runServer 轮预热；三个 :test
+  任务均真实执行，XML 时间戳与计数见 transcript）。fabric 能力立场（capability/goal 缺席、
+  useItem*/tick* 不可用、CommandEvents.command 缺席）随含 Ticket24FabricGameplayEventCatalogTest
+  的全套件复验。
+
+### 8.3 冒烟新发现（记录不修——修复=生产行为变更，待维护者裁定）
+
+- **D4（damagePre 取消静默 no-op + snapshot 表 cancel 列手抄错误）**：
+  `LivingDamageEvent.Pre` 在 NeoForge 21.1.227 与 26.1.2.71 均不实现 ICancellableEvent
+  （sources 已核），cancellability predicate 把总线冻成不可取消；真机实测：脚本取消分支
+  打印 `T24-ENTITY-DAMAGE-CANCEL` 并 return true 后，5 伤害仍生效（生命 16.0→11.0）、
+  damagePost 仍触发。脚本侧正确改伤入口是 `setNewDamage(0)`。
+  `catalog-snapshot.md` 的 damagePre cancel 列原记 `true`，与冻结测试的动态求值（false，
+  测试一直绿）和真机均不符——属手抄错误，本轮已就地更正并加注。与 D2（broken）同类：
+  文档面与运行面不一致，修复需维护者裁定。
+- **D5（randomTick 对原版随机 tick 方块不可达）**：两 loader 孪生 mixin 均注入
+  `BlockBehaviour` 接口 default `randomTick` HEAD，而 `BlockStateBase.randomTick` 虚分派到
+  具体方块覆写（草方块=SpreadingSnowyBlock.randomTick）；接口 default 体为空，且原版无任何
+  「随机 tick 却不覆写 randomTick」的方块（minecraft-patched-26.1.2.71 源扫描 0 命中）→
+  事件在原版随机 tick 方块上永不可达。真机：forceload 区显式放置草方块 + ~25s 窗口无
+  marker，同区块 blockEntityTick/level tick/entity 事件全部命中。fabric 孪生 mixin 注释
+  已载明「子类覆写不经过基类」（作为已知语义），但该成员在目录/wiki 面按可用家族展示，
+  换注入点属生产行为变更，待维护者裁定。另记：26.x 的 `randomTickSpeed` gamerule 名已变
+  （探针报 `Incorrect argument`），票 34 真机脚本注意。
+- AC5/AC8 状态不受本轮影响（D2 维护者裁定、declaration 归 09/33/34，均未触碰）。
+
+### 8.4 AC9 判定与剩余缺口
+
+- 真机 dedicated-server 冒烟（26.1.2）+ 本票从未跑过的 26.2.0(+fabric 双节点) 全套件均绿
+  → AC9 勾选（按支持等级记录：26.1.2=真机冒烟+全套件、26.2.0=全套件、fabric 两节点=全套件
+  （catalog/能力立场逐节点钉住）、1.21.1=本票先前全套件+本轮未复跑）。
+- 剩余（显式记录，owner 票 34）：客户端侧 / PlayerEvents 真机路径；fabric 节点 runtime
+  冒烟；26.2.0 真机冒烟。D4/D5 修复待维护者裁定（同 D2 通道）。

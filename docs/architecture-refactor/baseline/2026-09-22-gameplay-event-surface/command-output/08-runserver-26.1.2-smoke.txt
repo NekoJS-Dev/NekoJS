@@ -1,0 +1,430 @@
+# Ticket 24 AC9 runtime smoke: REAL dedicated-server run on the primary NeoForge node 26.1.2
+# Date: 2026-09-28. Worktree ../NekoJS-mult-t24s (branch ticket-24-smoke-evidence, base mult@64f5ea95).
+#
+# Command: ./gradlew.bat :26.1.2:runServer --console=plain   (BUILD SUCCESSFUL in 59s, exit 0)
+# Layout: versions/26.1.2/run/eula.txt + server.properties (RCON 127.0.0.1:25581, level-seed=t24smoke,
+#         online-mode off, local only), nekojs/startup_scripts/t24_goal_capability_smoke.startup.js,
+#         nekojs/server_scripts/t24_event_smoke.js. Run directory deleted after this transcript was cut
+#         (T08 precedent); the smoke scripts are embedded below in full.
+# Driver: a minimal Python RCON client (embedded below) waits for the server 'Done (' marker, then
+#         drives the families headlessly (no client) and finally issues 'stop' for a clean shutdown.
+#
+# Preparation runs before this evidence run (both superseded, not part of the evidence):
+#   run 1: server script had event.level.dimension().location() (example-script pattern) - GraalJS
+#          cannot call that accessor on ResourceKey (TypeError); fixed to String(event.level.dimension()).
+#          That run already proved STARTUP/GOAL/CAPABILITY/MODIFICATION markers and LevelEvents.tick.
+#   run 2: RCON probes without forceload - 'That position is not loaded' (no players keep chunks
+#          loaded on a modern dedicated server); fixed by forceloading the probe area. Also served as
+#          the first damage/cancel observation round (health sequence identical to run 3).
+#
+# Marker families asserted below (all observed unless noted):
+#   STARTUP: script load, GoalEvents.register posting site, CapabilityEvents.register posting site
+#   SERVER script load; ItemEvents/BlockEvents modification posting sites (posted-object; both
+#          legitimate posting points fire: reload DOMAIN_PLAN phase on Worker-Main and
+#          ServerAboutToStart applyInitialPlan on Server thread)
+#   LevelEvents: loaded x3 dims, tickPre first, explosionStart (primed TNT), unloaded x3 on stop
+#   CommandEvents.command: HIGHEST listener before NORMAL listener on EVERY command (priority),
+#          listener 'return true' cancels a matching say (broadcast absent; control say broadcast present)
+#   EntityEvents (spider subject): finalizeSpawn, joinLevel (spider + tnt), damagePre payload
+#          (originalDamage 5/7/1000), damagePost, death, drops, leaveLevel
+#   BlockEvents: blockEntityTick (hopper placed via setblock); modification above
+#   PlayerEvents: NOT drivable without a client - loggedIn listener registered, marker expectedly absent
+#          (owner: ticket 34 real-game client-side smoke)
+# Findings (recorded, NOT fixed - production change out of this round's scope):
+#   D4: EntityEvents.damagePre cancellation is a silent no-op on NeoForge: LivingDamageEvent.Pre does
+#       NOT implement ICancellableEvent on 21.1.227 nor 26.1.2.71 (sources verified), so the bus is
+#       non-cancellable and the script's 'return true' is ignored: the cancel marker prints, damage is
+#       still applied (health 16.0 -> 11.0), damagePost still fires. The modification path is
+#       setNewDamage(0). catalog-snapshot.md's damagePre cancel cell said 'true' - corrected to false
+#       (the frozen catalog test derives cancellability dynamically from ICancellableEvent, so the
+#       test was and stays green; only the hand-copied doc cell was wrong).
+#   D5: BlockEvents.randomTick never fires for vanilla randomly-ticking blocks: both twin mixins inject
+#       at HEAD of the BlockBehaviour interface default randomTick, but BlockStateBase.randomTick
+#       dispatches VIRTUALLY to the concrete block override (SpreadingSnowyBlock.randomTick for grass);
+#       the interface default body is empty, and NO vanilla block randomly-ticks without overriding
+#       randomTick (source scan of minecraft-patched-26.1.2.71: 0 hits). Smoke: explicit grass_block
+#       placed at 24,60,24 in a forceloaded chunk, ~25 s window (randomTickSpeed 3; the 'gamerule
+#       randomTickSpeed 30' probe itself failed with 'Incorrect argument' - gamerule renamed in 26.x),
+#       no T24-BLOCK-RANDOMTICK-FIRST, while blockEntityTick/level tick/entity events in the same
+#       chunks all fired. The fabric twin mixin comment documents the override-bypass as accepted
+#       semantics; for vanilla blocks the member is therefore effectively unreachable on both loaders.
+#
+================== nekojs/startup_scripts/t24_goal_capability_smoke.startup.js ==================
+// Ticket 24 AC9 runtime smoke, STARTUP part (NeoForge 26.1.2 dedicated server).
+// Adapted from baseline examples/goal-capability-events.startup.js: registration
+// posting sites only, no actual goal/capability registration (keep the world clean).
+// Every 'T24-' console line is a marker asserted in
+// baseline/2026-09-22-gameplay-event-surface/command-output/08-runserver-26.1.2-smoke.txt.
+
+console.log('T24-STARTUP-SCRIPT-LOADED')
+
+// GoalEvents.register posting site (GoalEvents.postRegister, fired once per loader entry).
+GoalEvents.register(event => {
+  console.log('T24-GOAL-REGISTER-POSTED')
+})
+
+// CapabilityEvents.register posting site (NekoJSMod.onRegisterCapabilities, mod bus).
+CapabilityEvents.register(event => {
+  console.log('T24-CAPABILITY-REGISTER-POSTED')
+})
+
+================== nekojs/server_scripts/t24_event_smoke.js ==================
+// Ticket 24 AC9 runtime smoke, SERVER part (NeoForge 26.1.2 dedicated server).
+// Adapted from baseline examples/gameplay-events.js to families drivable without a
+// client: Level, Command, Entity (spawn/damage/death/drops), Block (randomTick /
+// blockEntityTick), Item+Block modification posting sites, Goal/Capability are in the
+// startup script. PlayerEvents needs a real client (ticket 34); the loggedIn marker
+// below is registered so a future client-side run flips it.
+// Every 'T24-' console line is a marker asserted in
+// baseline/2026-09-22-gameplay-event-surface/command-output/08-runserver-26.1.2-smoke.txt.
+
+console.log('T24-SERVER-SCRIPT-LOADED')
+
+// ---- posted-object families: posting-site liveness only (ticket 39 owns the semantics) ----
+ItemEvents.modification(event => {
+  console.log('T24-ITEM-MODIFICATION-POSTED')
+})
+
+BlockEvents.modification(event => {
+  console.log('T24-BLOCK-MODIFICATION-POSTED')
+})
+
+// ---- LevelEvents: per-dimension load/unload, first tick, explosion (TNT) ----
+LevelEvents.loaded(event => {
+  // dimension() is a ResourceKey; print its string form (JS cannot call its location accessor).
+  console.log('T24-LEVEL-LOADED: ' + String(event.level.dimension()))
+})
+
+LevelEvents.unloaded(event => {
+  console.log('T24-LEVEL-UNLOADED: ' + String(event.level.dimension()))
+})
+
+let t24LevelTickSeen = false
+LevelEvents.tickPre(event => {
+  if (!t24LevelTickSeen) {
+    t24LevelTickSeen = true
+    console.log('T24-LEVEL-TICK-FIRST')
+  }
+})
+
+LevelEvents.explosionStart(event => {
+  console.log('T24-LEVEL-EXPLOSION')
+})
+
+// ---- CommandEvents: priority order (HIGHEST listener first) and cancel-by-return-true ----
+CommandEvents.command('HIGHEST', event => {
+  console.log('T24-CMD-HIGHEST: ' + event.parseResults.reader.getString())
+})
+
+CommandEvents.command(event => {
+  const input = String(event.parseResults.reader.getString())
+  console.log('T24-CMD-NORMAL: ' + input)
+  if (input.includes('t24-cancelme')) {
+    console.log('T24-CMD-CANCEL: returning true for: ' + input)
+    return true
+  }
+})
+
+// ---- EntityEvents: spider as the test subject (no daylight burn), tnt for the explosion leg ----
+EntityEvents.finalizeSpawn('minecraft:spider', event => {
+  console.log('T24-ENTITY-FINALIZE-SPAWN: spider')
+})
+
+EntityEvents.joinLevel('minecraft:spider', event => {
+  console.log('T24-ENTITY-JOIN: spider')
+})
+
+EntityEvents.joinLevel('minecraft:tnt', event => {
+  console.log('T24-ENTITY-JOIN: tnt')
+})
+
+EntityEvents.damagePre('minecraft:spider', event => {
+  console.log('T24-ENTITY-DAMAGE-PRE: original=' + event.originalDamage)
+  // Cancel exactly the 5-damage probe: the RCON health query after it must stay 16.0.
+  if (Number(event.originalDamage) === 5) {
+    console.log('T24-ENTITY-DAMAGE-CANCEL: cancelling the 5-damage probe')
+    return true
+  }
+})
+
+EntityEvents.damagePost('minecraft:spider', event => {
+  console.log('T24-ENTITY-DAMAGE-POST')
+})
+
+EntityEvents.death('minecraft:spider', event => {
+  console.log('T24-ENTITY-DEATH: spider died')
+})
+
+EntityEvents.drops('minecraft:spider', event => {
+  console.log('T24-ENTITY-DROPS: ' + event.drops.size() + ' drops')
+})
+
+EntityEvents.leaveLevel('minecraft:spider', event => {
+  console.log('T24-ENTITY-LEAVE: spider left the level')
+})
+
+// ---- BlockEvents headless members: randomTick (grass spreading) and blockEntityTick (hopper) ----
+let t24RandomTickSeen = false
+BlockEvents.randomTick(event => {
+  if (!t24RandomTickSeen) {
+    t24RandomTickSeen = true
+    console.log('T24-BLOCK-RANDOMTICK-FIRST')
+  }
+})
+
+let t24BeTickSeen = false
+BlockEvents.blockEntityTick(event => {
+  if (!t24BeTickSeen) {
+    t24BeTickSeen = true
+    console.log('T24-BLOCK-BE-TICK-FIRST')
+  }
+})
+
+// ---- PlayerEvents: NOT drivable on a clientless dedicated server (owner: ticket 34) ----
+PlayerEvents.loggedIn(event => {
+  console.log('T24-PLAYER-LOGGEDIN: ' + event.entity.getGameProfile().getName())
+})
+
+================== RCON driver (temporary tool, embedded for reproducibility) ==================
+# Ticket 24 AC9 runtime smoke driver, v2: waits for the dedicated server to come up,
+# forceloads the probe area (no players keep chunks loaded), drives the event families
+# through RCON commands, prints each exchange, then stops the server.
+# Evidence transcript: command-output/08-runserver-26.1.2-smoke.txt.
+import socket
+import struct
+import sys
+import time
+
+
+def pkt(rid, ptype, payload):
+    body = struct.pack('<ii', rid, ptype) + payload.encode('utf-8') + b'\x00\x00'
+    return struct.pack('<i', len(body)) + body
+
+
+class Rcon:
+    def __init__(self, host, port, password):
+        self.s = socket.create_connection((host, port), timeout=10)
+        self.rid = 100
+        self.s.sendall(pkt(self.rid, 3, password))
+        length = struct.unpack('<i', self.recvn(4))[0]
+        data = self.recvn(length)
+        rid2 = struct.unpack('<i', data[:4])[0]
+        if rid2 == -1:
+            raise RuntimeError('rcon auth failed')
+
+    def recvn(self, n):
+        buf = b''
+        while len(buf) < n:
+            chunk = self.s.recv(n - len(buf))
+            if not chunk:
+                raise RuntimeError('rcon eof')
+            buf += chunk
+        return buf
+
+    def cmd(self, c, wait=1.0):
+        self.rid += 1
+        self.s.sendall(pkt(self.rid, 2, c))
+        self.s.settimeout(3)
+        out = ''
+        try:
+            while True:
+                length = struct.unpack('<i', self.recvn(4))[0]
+                data = self.recvn(length)
+                rid2, _ptype = struct.unpack('<ii', data[:8])
+                payload = data[8:-2].decode('utf-8', 'replace')
+                if rid2 == self.rid:
+                    out += payload
+                    if len(payload) < 4000:
+                        break
+        except socket.timeout:
+            pass
+        time.sleep(wait)
+        return out.strip()
+
+
+def wait_for(path, needle, timeout):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                if needle in f.read():
+                    return True
+        except FileNotFoundError:
+            pass
+        time.sleep(2)
+    return False
+
+
+def main():
+    log_path = sys.argv[1]
+    print('# waiting for server Done marker in %s' % log_path, flush=True)
+    if not wait_for(log_path, 'Done (', 480):
+        print('# FAIL: server never reached Done within 480s', flush=True)
+        sys.exit(2)
+    print('# server Done observed, connecting RCON', flush=True)
+    rcon = Rcon('127.0.0.1', 25581, 'nekojs-t24')
+
+    def run(label, cmd, wait=1.0):
+        resp = rcon.cmd(cmd, wait)
+        print('# RCON [%s] -> %s\n#   resp: %s' % (label, cmd, resp if resp else '(empty)'), flush=True)
+        return resp
+
+    run('noon', 'time set noon')
+    # CommandEvents: control (must broadcast) vs cancel (must NOT broadcast)
+    run('cmd-control', 'say T24-CMD-CONTROL say executed')
+    run('cmd-cancelme', 'say t24-cancelme this must not broadcast')
+    # keep probe chunks loaded without players
+    r = run('forceload', 'forceload add 0 0 40 40', wait=3.0)
+    if 'not loaded' in r or 'Marked' not in r:
+        print('# forceload response unexpected, continuing anyway', flush=True)
+
+    # BlockEvents.randomTick driver: seed t24smoke spawns in ocean (hopper landed at
+    # y=64 = sea level), so place a randomly-ticking grass block explicitly and raise
+    # randomTickSpeed so the marker fires within the bounded run.
+    run('randomtickspeed', 'gamerule randomTickSpeed 30')
+    r = run('grass', 'setblock 24 60 24 minecraft:grass_block')
+
+    # BlockEvents.blockEntityTick driver: hopper ticks every tick once placed
+    r = run('hopper', 'execute positioned 8 0 8 positioned over world_surface run setblock ~ ~ ~ minecraft:hopper')
+    if 'Changed the block' not in r:
+        run('hopper-fallback', 'setblock 8 -60 8 minecraft:hopper')
+    # LevelEvents.explosionStart driver: tnt fuse ~4s, kept away from the hopper
+    r = run('tnt', 'execute positioned 40 0 40 positioned over world_surface run summon minecraft:tnt')
+    if 'Unable' in r or 'not loaded' in r:
+        run('tnt-fallback', 'summon minecraft:tnt 40 -58 40')
+    # EntityEvents driver: spider as test subject
+    r = run('spider', 'execute positioned 16 0 16 positioned over world_surface run summon minecraft:spider')
+    if 'Unable' in r or 'not loaded' in r:
+        run('spider-fallback', 'summon minecraft:spider 16 -58 16')
+    run('health-1', 'data get entity @e[type=minecraft:spider,limit=1] Health')
+    run('damage-cancelled-probe', 'execute as @e[type=minecraft:spider,limit=1] run damage @s 5 minecraft:generic')
+    run('health-2', 'data get entity @e[type=minecraft:spider,limit=1] Health')
+    run('damage-applied-probe', 'execute as @e[type=minecraft:spider,limit=1] run damage @s 7 minecraft:generic')
+    run('health-3', 'data get entity @e[type=minecraft:spider,limit=1] Health')
+    run('kill-probe', 'execute as @e[type=minecraft:spider,limit=1] run damage @s 1000 minecraft:generic')
+    run('spider-gone', 'execute if entity @e[type=minecraft:spider]')
+    # give randomTick + tnt some time before shutdown
+    time.sleep(10)
+    run('forceload-remove', 'forceload remove all', 2.0)
+    print('# all probes sent, issuing stop', flush=True)
+    rcon.cmd('stop', 0.5)
+    print('# stop sent', flush=True)
+
+
+if __name__ == '__main__':
+    main()
+
+================== RCON session (driver stdout) ==================
+# waiting for server Done marker in C:/Users/11515/AppData/Local/Temp/t24-runserver-full.log
+# server Done observed, connecting RCON
+# RCON [noon] -> time set noon
+#   resp: Set minecraft:overworld to time marker minecraft:noon
+# RCON [cmd-control] -> say T24-CMD-CONTROL say executed
+#   resp: (empty)
+# RCON [cmd-cancelme] -> say t24-cancelme this must not broadcast
+#   resp: (empty)
+# RCON [forceload] -> forceload add 0 0 40 40
+#   resp: Marked 9 chunks in Overworld from [0, 0] to [2, 2] to be force loaded
+# RCON [randomtickspeed] -> gamerule randomTickSpeed 30
+#   resp: Incorrect argument for command
+gamerule randomTickSpeed 30<--[HERE]
+# RCON [grass] -> setblock 24 60 24 minecraft:grass_block
+#   resp: Changed the block at 24, 60, 24
+# RCON [hopper] -> execute positioned 8 0 8 positioned over world_surface run setblock ~ ~ ~ minecraft:hopper
+#   resp: Changed the block at 8, 65, 8
+# RCON [tnt] -> execute positioned 40 0 40 positioned over world_surface run summon minecraft:tnt
+#   resp: Summoned new Primed TNT
+# RCON [spider] -> execute positioned 16 0 16 positioned over world_surface run summon minecraft:spider
+#   resp: Summoned new Spider
+# RCON [health-1] -> data get entity @e[type=minecraft:spider,limit=1] Health
+#   resp: Spider has the following entity data: 16.0f
+# RCON [damage-cancelled-probe] -> execute as @e[type=minecraft:spider,limit=1] run damage @s 5 minecraft:generic
+#   resp: Applied 5.0 damage to Spider
+# RCON [health-2] -> data get entity @e[type=minecraft:spider,limit=1] Health
+#   resp: Spider has the following entity data: 11.0f
+# RCON [damage-applied-probe] -> execute as @e[type=minecraft:spider,limit=1] run damage @s 7 minecraft:generic
+#   resp: Applied 7.0 damage to Spider
+# RCON [health-3] -> data get entity @e[type=minecraft:spider,limit=1] Health
+#   resp: Spider has the following entity data: 4.0f
+# RCON [kill-probe] -> execute as @e[type=minecraft:spider,limit=1] run damage @s 1000 minecraft:generic
+#   resp: Applied 1000.0 damage to Spider
+# RCON [spider-gone] -> execute if entity @e[type=minecraft:spider]
+#   resp: Test failed
+# RCON [forceload-remove] -> forceload remove all
+#   resp: Unmarked all force loaded chunks in Overworld
+# all probes sent, issuing stop
+# stop sent
+
+================== Server log excerpt: every T24 marker line + lifecycle (line numbers from the full gradle log) ==================
+ 21287: [21:20:25] [modloading-worker-0/INFO] [NekoJS/]: [startup] T24-STARTUP-SCRIPT-LOADED
+ 21312: [21:20:25] [modloading-sync-worker/INFO] [NekoJS/]: [startup] T24-GOAL-REGISTER-POSTED
+ 21316: [21:20:25] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] T24-CAPABILITY-REGISTER-POSTED
+ 21339: [21:20:27] [Worker-Main-4/INFO] [NekoJS/]: [server] T24-SERVER-SCRIPT-LOADED
+ 21340: [21:20:27] [Worker-Main-4/INFO] [NekoJS/]: [server] T24-ITEM-MODIFICATION-POSTED
+ 21341: [21:20:27] [Worker-Main-4/INFO] [NekoJS/]: [server] T24-BLOCK-MODIFICATION-POSTED
+ 21348: [21:20:27] [Server thread/INFO] [minecraft/DedicatedServer]: Starting minecraft server version 26.1.2
+ 21379: [21:20:27] [Server thread/INFO] [NekoJS/]: [server] T24-ITEM-MODIFICATION-POSTED
+ 21383: [21:20:27] [Server thread/INFO] [NekoJS/]: [server] T24-BLOCK-MODIFICATION-POSTED
+ 21384: [21:20:27] [Server thread/INFO] [NekoJS/]: [server] T24-LEVEL-LOADED: ResourceKey[minecraft:dimension / minecraft:overworld]
+ 21385: [21:20:27] [Server thread/INFO] [NekoJS/]: [server] T24-LEVEL-LOADED: ResourceKey[minecraft:dimension / minecraft:the_nether]
+ 21389: [21:20:27] [Server thread/INFO] [minecraft/DedicatedServer]: Done (0.307s)! For help, type "help"
+ 21392: [21:20:27] [Server thread/INFO] [minecraft/RconThread]: RCON running on 0.0.0.0:25581
+ 21394: [21:20:27] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-LEVEL-LOADED: ResourceKey[minecraft:dimension / minecraft:the_end]
+ 21405: [21:20:28] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-LEVEL-TICK-FIRST
+ 21407: [21:20:29] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: time set noon
+ 21409: [21:20:29] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: time set noon
+ 21410: [21:20:30] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: say T24-CMD-CONTROL say executed
+ 21411: [21:20:30] [Server thread/INFO] [minecraft/MinecraftServer]: [Not Secure] [Rcon] T24-CMD-CONTROL say executed
+ 21412: [21:20:30] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: say T24-CMD-CONTROL say executed
+ 21413: [21:20:31] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: say t24-cancelme this must not broadcast
+ 21414: [21:20:31] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: say t24-cancelme this must not broadcast
+ 21415: [21:20:31] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-CMD-CANCEL: returning true for: say t24-cancelme this must not broadcast
+ 21416: [21:20:32] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: forceload add 0 0 40 40
+ 21417: [21:20:32] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: forceload add 0 0 40 40
+ 21424: [21:20:33] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-BLOCK-BE-TICK-FIRST
+ 21425: [21:20:36] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: gamerule randomTickSpeed 30
+ 21426: [21:20:36] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: gamerule randomTickSpeed 30
+ 21427: [21:20:37] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: setblock 24 60 24 minecraft:grass_block
+ 21429: [21:20:37] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: setblock 24 60 24 minecraft:grass_block
+ 21430: [21:20:38] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: execute positioned 8 0 8 positioned over world_surface run setblock ~ ~ ~ minecraft:hopper
+ 21432: [21:20:38] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: execute positioned 8 0 8 positioned over world_surface run setblock ~ ~ ~ minecraft:hopper
+ 21433: [21:20:39] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: execute positioned 40 0 40 positioned over world_surface run summon minecraft:tnt
+ 21434: [21:20:39] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: execute positioned 40 0 40 positioned over world_surface run summon minecraft:tnt
+ 21436: [21:20:39] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY-JOIN: tnt
+ 21437: [21:20:40] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: execute positioned 16 0 16 positioned over world_surface run summon minecraft:spider
+ 21438: [21:20:40] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: execute positioned 16 0 16 positioned over world_surface run summon minecraft:spider
+ 21439: [21:20:40] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY-FINALIZE-SPAWN: spider
+ 21441: [21:20:40] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY-JOIN: spider
+ 21442: [21:20:41] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: data get entity @e[type=minecraft:spider,limit=1] Health
+ 21443: [21:20:41] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: data get entity @e[type=minecraft:spider,limit=1] Health
+ 21444: [21:20:42] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: execute as @e[type=minecraft:spider,limit=1] run damage @s 5 minecraft:generic
+ 21445: [21:20:42] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: execute as @e[type=minecraft:spider,limit=1] run damage @s 5 minecraft:generic
+ 21446: [21:20:42] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY-DAMAGE-PRE: original=5
+ 21447: [21:20:42] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY-DAMAGE-CANCEL: cancelling the 5-damage probe
+ 21449: [21:20:42] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY-DAMAGE-POST
+ 21450: [21:20:43] [Server thread/INFO] [NekoJS/]: [server] T24-LEVEL-EXPLOSION
+ 21451: [21:20:43] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: data get entity @e[type=minecraft:spider,limit=1] Health
+ 21452: [21:20:43] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: data get entity @e[type=minecraft:spider,limit=1] Health
+ 21453: [21:20:44] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: execute as @e[type=minecraft:spider,limit=1] run damage @s 7 minecraft:generic
+ 21454: [21:20:44] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: execute as @e[type=minecraft:spider,limit=1] run damage @s 7 minecraft:generic
+ 21455: [21:20:44] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY-DAMAGE-PRE: original=7
+ 21457: [21:20:44] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY-DAMAGE-POST
+ 21458: [21:20:45] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: data get entity @e[type=minecraft:spider,limit=1] Health
+ 21459: [21:20:45] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: data get entity @e[type=minecraft:spider,limit=1] Health
+ 21460: [21:20:46] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: execute as @e[type=minecraft:spider,limit=1] run damage @s 1000 minecraft:generic
+ 21461: [21:20:46] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: execute as @e[type=minecraft:spider,limit=1] run damage @s 1000 minecraft:generic
+ 21462: [21:20:46] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY-DAMAGE-PRE: original=1000
+ 21463: [21:20:46] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY-DEATH: spider died
+ 21464: [21:20:46] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY-DROPS: 0 drops
+ 21466: [21:20:46] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-ENTITY-DAMAGE-POST
+ 21467: [21:20:47] [Server thread/INFO] [NekoJS/]: [server] T24-ENTITY-LEAVE: spider left the level
+ 21468: [21:20:47] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: execute if entity @e[type=minecraft:spider]
+ 21469: [21:20:47] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: execute if entity @e[type=minecraft:spider]
+ 21470: [21:20:58] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: forceload remove all
+ 21472: [21:20:58] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: forceload remove all
+ 21473: [21:21:00] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-HIGHEST: stop
+ 21476: [21:21:00] [Server thread/INFO] [minecraft/MinecraftServer]: Stopping server
+ 21487: [21:21:00] [Server thread/INFO] [NekoJS/]: [server] T24-CMD-NORMAL: stop
+ 21488: [21:21:00] [Server thread/INFO] [NekoJS/]: [server] T24-LEVEL-UNLOADED: ResourceKey[minecraft:dimension / minecraft:overworld]
+ 21489: [21:21:00] [Server thread/INFO] [NekoJS/]: [server] T24-LEVEL-UNLOADED: ResourceKey[minecraft:dimension / minecraft:the_nether]
+ 21496: [21:21:00] [Thread-0/INFO] [NekoJS/]: [server] T24-LEVEL-UNLOADED: ResourceKey[minecraft:dimension / minecraft:the_end]
