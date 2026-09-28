@@ -224,3 +224,30 @@ fabric 侧 `nekojs/data` 无任何发布物、无 `.nekojs-datagen`。
   调用）；单测只覆盖 JSON 字符串形式，而 `@Param` 文档宣称 "JS object (auto-serialized)"。修法涉及
   host-object 序列化边界（`JsonObjectAdapter` 对 Map/host object 的转换路径），属生产行为变更，
   留维护者分诊；示例已改用 `JSON.stringify` 规避并在注释中说明。
+
+### D-B 修复（2026-09-29，维护者裁定 FIX IT；worktree `../NekoJS-mult-t23fx`，分支 `ticket-23-serialization`）
+
+- **实际到达类型（真 Graal Context 探针，按 `NekoSandboxFactory.build` 同款接线）**：JS 对象实参在
+  `Object` 形参上到达为宿主代理 `com.oracle.truffle.polyglot.PolyglotMap`（`java.util.Map`，其
+  `toString()` 即 `[object Object]`）、数组为 `PolyglotList`（`List`）、数字/布尔为 `Integer/Double/
+  Boolean`、字符串为 `String`、`null/undefined` 为 Java `null`——**从不**到达为
+  `graal.graalvm.polyglot.Value`，故原 `instanceof Value` 分支对 in-context 脚本调用不可达
+  （探针输出全文见 `command-output/10`）。
+- **修复机制**：共享转换收敛到 `JsonObjectAdapter.convertHostValueToJson(Object)`（null→JSON null、
+  `Value`/既有 `JsonElement` 直通、`String`/`Boolean`/`Number`→primitive、`Map`→对象、`List`→数组、
+  其余类型显式英语拒绝，不再静默 `String.valueOf`）；`DataGeneratorJS.json` 边界：`null/undefined`
+  显式拒绝（`value must not be null or undefined...`），`String` 实参维持 JSON 字符串形原样透传，
+  其余走共享转换。`JsonObject` 直传调用方（`BlockModelGenerator`、1.21.1 `NekoJSClient`）经
+  `JsonElement` 分支输出与原先逐字节一致。
+- **红→绿**：新增真引擎用例 `DataGeneratorJsJsonRealEngineTest`（真 GraalJS Context + 生产同款
+  HostAccess/ClassFilter/interop 选项，绑定 `DataGeneratorJS` 后由 JS 调用 `gen.json(...)`）：
+  修复前 4/5 红（盘上 `[object Object]`/`[object Array` 解析失败、`null` 未拒绝），修复后 5/5 绿；
+  `DataGenerationBatchTest` 9/9 同步复核。transcript `command-output/10`。
+- **兄弟路径核查**：`LangGeneratorJS`（`add(String,String)`/`addAll(Map)`）不经此边界，`Map` 形参
+  映射本就可用（`AdvancedJavaInteropSmokeTest` 钉住），无同款缺陷；插件 `generateAssets` 与脚本
+  `ClientEvents.generateAssets` 共用同一 `DataGeneratorJS.json`，本修复同时覆盖；`AssetGeneratorJS`
+  自身走 `Value` 形参（票 29 域，未触碰）。另记录（未修，超出 D-B 边界）：loot 包装器族
+  `LootTableJS.toJsonElement(Object)` 对 JS 对象实参同样盲于 Map 代理，但为显式抛错而非静默写坏，
+  供后续票分诊。
+- 验证：`:common:check` BUILD SUCCESSFUL（1m15s）、`:26.1.2:test` BUILD SUCCESSFUL
+  （448 用例 0 失败 58 skip，票 08 基线 flake 本轮未复现）——结果明细见 `command-output/10`。

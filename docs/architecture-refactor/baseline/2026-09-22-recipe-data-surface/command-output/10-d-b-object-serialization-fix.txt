@@ -1,0 +1,80 @@
+=== Ticket 23 defect D-B fix: json(path, {jsObject}) serialized as [object Object] ===
+Worktree ../NekoJS-mult-t23fx (branch ticket-23-serialization), 2026-09-29, maintainer ruling FIX IT.
+
+Root cause (real-engine probe): values proxied from GraalJS into an Object-typed host parameter
+arrive as host Map/List proxies (PolyglotMap/PolyglotList), never as graal.graalvm.polyglot.Value,
+so the old `value instanceof Value` branch was unreachable from in-context script calls and the
+String.valueOf fallback wrote the proxy's JS toString() verbatim: "[object Object]".
+
+--- [1] Runtime-type probe (temporary scratch test DataGeneratorJsInteropProbeTest, real GraalJS
+       Context wired like NekoSandboxFactory.build: NekoSharedHostAccess + ClassFilter + same
+       interop options; host method probeObject(Object) reports the arriving class) ---
+    [PROBE] probe.probeObject({a:1, b:{c:[1,2]}})  ==>  com.oracle.truffle.polyglot.PolyglotMap | toString=[object Object] | isValue=false | isMap=true | isList=false | isString=false
+    [PROBE] probe.probeObject([1,2,3])  ==>  com.oracle.truffle.polyglot.PolyglotList | toString=[object Array] | isValue=false | isMap=false | isList=true | isString=false
+    [PROBE] probe.probeObject(42)  ==>  java.lang.Integer | toString=42 | isValue=false | isMap=false | isList=false | isString=false
+    [PROBE] probe.probeObject(3.5)  ==>  java.lang.Double | toString=3.5 | isValue=false | isMap=false | isList=false | isString=false
+    [PROBE] probe.probeObject(true)  ==>  java.lang.Boolean | toString=true | isValue=false | isMap=false | isList=false | isString=false
+    [PROBE] probe.probeObject('plain text')  ==>  java.lang.String | toString=plain text | isValue=false | isMap=false | isList=false | isString=true
+    [PROBE] probe.probeObject('{"a":1}')  ==>  java.lang.String | toString={"a":1} | isValue=false | isMap=false | isList=false | isString=true
+    [PROBE] probe.probeObject(null)  ==>  java-null
+    [PROBE] probe.probeObject(undefined)  ==>  java-null
+    [PROBE] probe.probeObject(new Date(0))  ==>  com.oracle.truffle.polyglot.PolyglotMap | toString=[Date 1970-01-01T00:00:00.000Z] | isValue=false | isMap=true | isList=false | isString=false
+    [PROBE] probe.probeObject(new Map([['a',1]]))  ==>  com.oracle.truffle.polyglot.PolyglotMap | toString=[Map] | isValue=false | isMap=true | isList=false | isString=false
+    [PROBE] probe.probeObject(function f(){})  ==>  com.oracle.truffle.polyglot.PolyglotMapAndFunction | toString=function f(){} | isValue=false | isMap=true | isList=false | isString=false
+    [PROBE] probe.probeObject({n: 1099511627776, m: Number.MAX_SAFE_INTEGER, d: 1/3})  ==>  com.oracle.truffle.polyglot.PolyglotMap | toString=[object Object] | isValue=false | isMap=true | isList=false | isString=false
+    [PROBE] probe.probeObject(new Foo())  ==>  com.oracle.truffle.polyglot.PolyglotMap | toString=[object Object] | isValue=false | isMap=true | isList=false | isString=false
+(The scratch probe was deleted before commit; its output is preserved here. The permanent
+real-engine fixture is common/src/test/java/com/tkisor/nekojs/wrapper/DataGeneratorJsJsonRealEngineTest.java.)
+
+--- [2] RED run BEFORE the fix (new real-engine fixture DataGeneratorJsJsonRealEngineTest) ---
+command: gradlew.bat :common:test --tests "com.tkisor.nekojs.wrapper.DataGeneratorJsJsonRealEngineTest" --console=plain -i
+DataGeneratorJsJsonRealEngineTest > jsTopLevelArrayNumberAndBooleanSerializeAsJson() FAILED
+    com.google.gson.JsonSyntaxException: com.google.gson.stream.MalformedJsonException: Unterminated array at line 1 column 10 path $[1]
+        com.google.gson.stream.MalformedJsonException: Unterminated array at line 1 column 10 path $[1]
+DataGeneratorJsJsonRealEngineTest > jsObjectSerializesToProperJsonThroughTheRealEngine() FAILED
+    com.google.gson.JsonSyntaxException: com.google.gson.stream.MalformedJsonException: Unterminated array at line 1 column 10 path $[1]
+        com.google.gson.stream.MalformedJsonException: Unterminated array at line 1 column 10 path $[1]
+DataGeneratorJsJsonRealEngineTest > jsNestedObjectWithNullMembersAndMixedArraysSerializesFully() FAILED
+    com.google.gson.JsonSyntaxException: com.google.gson.stream.MalformedJsonException: Unterminated array at line 1 column 10 path $[1]
+        com.google.gson.stream.MalformedJsonException: Unterminated array at line 1 column 10 path $[1]
+DataGeneratorJsJsonRealEngineTest > nullAndUndefinedAreExplicitlyRejected() FAILED
+    org.opentest4j.AssertionFailedError: Expected graal.graalvm.polyglot.PolyglotException to be thrown, but nothing was thrown.
+6 tests completed, 4 failed
+BUILD FAILED in 15s
+(On-disk file contents at this point were the literal strings "[object Object]" for object
+arguments and "[object Array]" for array arguments — matching the 2026-09-28 runServer smoke
+recorded in command-output/07.)
+
+--- [3] GREEN run AFTER the fix ---
+command: gradlew.bat :common:test --tests DataGeneratorJsJsonRealEngineTest --tests DataGenerationBatchTest --tests DataGeneratorJsInteropProbeTest --console=plain --rerun-tasks -i
+BUILD SUCCESSFUL in 32s
+JUnit XML result counts:
+  DataGeneratorJsJsonRealEngineTest: tests="5" skipped="0" failures="0" errors="0"
+  DataGenerationBatchTest: tests="9" skipped="0" failures="0" errors="0"
+  DataGeneratorJsInteropProbeTest: tests="1" skipped="0" failures="0" errors="0"
+
+--- [4] Full verification ---
+command: gradlew.bat :common:check --console=plain
+BUILD SUCCESSFUL in 1m 15s (19 actionable tasks: 3 executed, 16 up-to-date)
+
+command: gradlew.bat :26.1.2:test --console=plain
+BUILD SUCCESSFUL in 30s
+JUnit XML aggregate: 448 tests, 0 failed, 58 skipped
+(Ticket08LoaderDiscoveryTest baseline flake did not reproduce this round; consistent with the
+26.2.0 evidence round in command-output/09.)
+
+--- Fix summary ---
+- JsonObjectAdapter.convertHostValueToJson(Object): shared conversion for values received on
+  Object-typed parameters — null -> JsonNull, Value/JsonElement pass through, String/Boolean/
+  Number -> primitive, Map -> JsonObject, List -> JsonArray, anything else is rejected with an
+  English IllegalArgumentException instead of being silently stringified.
+- DataGeneratorJS.json: null/undefined (Java null) explicitly rejected in English ("value must
+  not be null or undefined (path: ...)"); String arguments keep the JSON-string verbatim
+  passthrough form; all other shapes go through convertHostValueToJson.
+- Sibling check: LangGeneratorJS (add/addAll(Map)) does not use this boundary and Map-typed
+  parameters already work (AdvancedJavaInteropSmokeTest); plugin generateAssets and script
+  ClientEvents.generateAssets share DataGeneratorJS.json and are covered by the same fix;
+  AssetGeneratorJS uses Value-typed parameters (ticket 29 domain, untouched). Related but out
+  of D-B scope, recorded not fixed: the loot wrapper family LootTableJS.toJsonElement(Object)
+  is likewise blind to Map proxies, but fails with an explicit exception instead of writing
+  garbage.

@@ -7,7 +7,6 @@ import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.core.JsonObjectAdapter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import graal.graalvm.polyglot.Value;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -89,9 +88,20 @@ public final class DataGeneratorJS {
     @Param(name = "path", value = "relative path inside the pack root; must not escape it")
     @Param(name = "value", value = "JS object, JS array, or JSON string")
     public void json(String path, Object value) {
-        String content = value instanceof Value graalValue
-                ? JsonObjectAdapter.convertValueToJson(graalValue).toString()
-                : value instanceof String text ? text : String.valueOf(value);
+        // JS null/undefined arrive as Java null; a literal "null" file is never what a script
+        // author wants, so reject at the boundary instead of serializing downstream garbage.
+        if (value == null) {
+            throw new IllegalArgumentException(
+                    "value must not be null or undefined (path: " + path
+                            + "); pass a JS object, JS array, or a JSON string");
+        }
+        // A String argument is the pre-encoded JSON-string form and is written verbatim;
+        // structural validation stays with the generation batch. All other shapes go through
+        // the shared host-value conversion: on the real engine, script objects arrive as
+        // Map/List host proxies, never as Value (ticket 23 D-B).
+        String content = value instanceof String text
+                ? text
+                : JsonObjectAdapter.convertHostValueToJson(value).toString();
         write(path, content);
     }
 
