@@ -1,0 +1,73 @@
+# Ticket 23 AC11 runtime smoke, fabric node (26.1.2-fabric): the generateData/lootTables/tags
+# domain is deliberately NOT ported to fabric; a script referencing ServerEvents.generateData
+# must fail LOUDLY, not silently no-op.
+#
+# Command: ./gradlew.bat :26.1.2-fabric:runServer --console=plain   (worktree ../NekoJS-mult-t23s)
+# Preparation (game dir = versions/26.1.2-fabric/run-server/, loom convention): smoke script at
+#   versions/26.1.2-fabric/run-server/nekojs/server_scripts/t23_fabric_unavailable.js
+# (content embedded below) plus a dev eula.txt (eula=true); bounded run, game process
+# terminated after `Done (...)`.
+#
+# ---------------- script used ----------------
+# // Ticket 23 runtime smoke (AC11 evidence, fabric node): the generateData/lootTables/tags
+# // domain is deliberately NOT ported to fabric. A script referencing ServerEvents.generateData
+# // must fail LOUDLY at load time (unknown member on the fabric event group) instead of
+# // silently registering a listener that never fires. The evidence transcript asserts the
+# // loud failure names this file, and that the server still starts (error isolation).
+#
+# ServerEvents.generateData('after_mods', event => {
+#   console.info('T23-FABRIC-UNAVAILABLE: generateData listener ran (must NOT happen)')
+# })
+# ---------------- end script ----------------
+#
+# Kept lines: fabric entrypoint, SERVER script discovery (2 scripts found: scaffold + smoke),
+# BOTH failure layers (binding preflight + execution), and the completed server start.
+# Raw log line numbers noted where useful.
+
+[21:17:27] [main/INFO] (NekoJS-Fabric) NekoJS fabric entrypoint reached.
+[21:17:27] [main/INFO] (NekoJS-Fabric)   platform: loader=fabric v0.19.3, mc=26.1.2, dev=true, client=false
+[21:17:29] [main/INFO] (NekoJS-Fabric) NekoJS nekojs fabric bootstrap done (startup scripts loaded, registry drained).
+[21:17:31] [Server thread/INFO] (NekoJS) 正在为 SERVER 注册 11 个事件组...
+[21:17:31] [Server thread/INFO] (NekoJS) [server] 正在重载 SERVER 脚本... (x2)
+[21:17:31] [Server thread/INFO] (NekoJS) [server] 发现了 2 个 SERVER 脚本。
+[21:17:31] [Server thread/INFO] (NekoJS) [server] Hello, World! (Loaded server example script)
+
+# ---- loud failure, layer 1: ESM binding preflight (RESOLVE_LINK), names the member + file ----
+[21:17:31] [Server thread/ERROR] (NekoJS) [server] Script binding-preflight binding-member ServerEvents.generateData callback exception:
+环境: SERVER
+位置: server_scripts/t23_fabric_unavailable.js:7:14
+原因: Binding 'ServerEvents' has no member 'generateData'.
+
+   5 | // loud failure names this file, and that the server still starts (error isolation).
+   6 |
+ > 7 | ServerEvents.generateData('after_mods', event => {
+     |              ^
+   8 |   console.info('T23-FABRIC-UNAVAILABLE: generateData listener ran (must NOT happen)')
+   9 | })
+script-diagnostic id=nekojs:rt/SERVER/binding-preflight binding-member ServerEvents.generateData/9e232366 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=true source=server_scripts/t23_fabric_unavailable.js:7:14 module=D:/mcmodDemo/NekoJS-mult-t23s/versions/26.1.2-fabric/run-server/nekojs/server_scripts/t23_fabric_unavailable.js cause=NekoEsmLinkException: Binding 'ServerEvents' has no member 'generateData'. at D:\mcmodDemo\NekoJS-mult-t23s\versions\26.1.2-fabric\run-server\nekojs\server_scripts\t23_fabric_unavailable.js:7:14
+# (the same preflight error is reported a second time with 频次: 连续发生了 2 次 — dedup counter;
+#  omitted here, identical content)
+
+# ---- loud failure, layer 2: execution, the listener body never runs ----
+[21:17:31] [Server thread/ERROR] (NekoJS) [server] 脚本执行失败: nekojs:server/t23_fabric_unavailable.js
+环境: SERVER
+位置: server_scripts/t23_fabric_unavailable.js:9:1
+原因: generateData
+
+   7 | ServerEvents.generateData('after_mods', event => {
+   8 |   console.info('T23-FABRIC-UNAVAILABLE: generateData listener ran (must NOT happen)')
+ > 9 | })
+     | ^
+
+堆栈: at anonymous (server_scripts/t23_fabric_unavailable.js:9)
+script-diagnostic id=nekojs:server/t23_fabric_unavailable.js type=server phase=EXECUTION owner=Script Execution Environment generation=1 candidate=true source=server_scripts/t23_fabric_unavailable.js:7:1 module=server_scripts/t23_fabric_unavailable.js cacheRevision=a9fbf3de8957d606ec33f88cac9c9bedd85722dd6aea8a9905aa06a32dd430ef cause=PolyglotException: TypeError: invokeMember (generateData) on com.tkisor.nekojs.api.event.EventGroupJS@40b08c54 failed due to: Unknown identifier: generateData
+
+# ---- the never-marker really never ran; the server still starts (error isolation) ----
+# grep "T23-FABRIC-UNAVAILABLE" over the whole log matches ONLY the quoted script source in the
+# error reports above — the console.info line itself never executed.
+[21:17:31] [Server thread/INFO] (Minecraft) Starting minecraft server version 26.1.2
+[21:17:32] [NekoJS-Log-Flusher/INFO] (NekoJS) [server] SERVER 脚本重载完毕。 (x2)
+[21:17:33] [Server thread/INFO] (Minecraft) Done (2.231s)! For help, type "help"
+
+# Post-run: versions/26.1.2-fabric/run-server/nekojs/data exists (created by initFolders) but
+# contains NO published files, and no .nekojs-datagen state dir exists on the fabric side.

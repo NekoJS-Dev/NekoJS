@@ -1,0 +1,128 @@
+# Ticket 23 AC11 runtime smoke, primary NeoForge node (26.1.2): real `runServer` driving the
+# delivered generateData pipeline end-to-end.
+#
+# Command: ./gradlew.bat :26.1.2:runServer --console=plain   (worktree ../NekoJS-mult-t23s, branch ticket-23-smoke-evidence)
+# Preparation (game dir = versions/26.1.2/run/, MDG default): smoke script at
+#   versions/26.1.2/run/nekojs/server_scripts/t23_smoke.js  (full content embedded below).
+# The run was bounded: after `Done (...)` plus all markers appeared, the game process was
+# terminated and the gradle task ended non-zero (expected for a killed dev run).
+#
+# Three runs were executed with this one script; runs 1-2 are kept below as DIAGNOSTIC
+# findings (they uncovered two real script-surface defects, recorded in the ticket):
+#   run 1: event.json('nekojs:loot_tables/...')  -> listener dispatch OK, write rejected
+#          ("Illegal char <:>") — DataGeneratorJS takes pack-root-relative PATHS, the id
+#          form used by baseline examples/generate-data.js does NOT work.
+#   run 2: event.json(path, {js object})         -> listener dispatch OK, but the JS-object
+#          value form serializes as literal "[object Object]" on the real GraalJS runtime
+#          (unit tests only cover the JSON-string form); validation rejected the candidate
+#          and the WHOLE batch failed with full retention (live failure-path evidence).
+#   run 3: event.json(path, JSON.stringify(obj)) -> GREEN, the transcript below.
+#
+# ---------------- run 3 (green) — script used ----------------
+# // Ticket 23 runtime smoke (AC11 evidence): drives the delivered recipe/data/loot/tags
+# // pipeline end-to-end on a real dedicated server. Markers use the T23-SMOKE prefix and
+# // are asserted, in order, against the server log in the evidence transcript.
+# // Content only references vanilla ids so datapack JSON parses on a stock registry.
+#
+# ServerEvents.lootTables(event => {
+#   console.info('T23-SMOKE: lootTables phase entered')
+# })
+#
+# ServerEvents.generateData('after_mods', event => {
+#   event.json('nekojs/loot_tables/blocks/t23_smoke_ore.json', JSON.stringify({
+#     type: 'minecraft:block',
+#     pools: [{
+#       rolls: 1,
+#       entries: [{ type: 'minecraft:item', name: 'minecraft:diamond' }]
+#     }]
+#   }))
+#   event.text('nekojs/t23_smoke/generated-by.txt', 't23 runServer smoke')
+#   const readBack = event.getJson('nekojs/loot_tables/blocks/t23_smoke_ore.json')
+#   console.info('T23-SMOKE: generateData read-back present=' + (readBack !== null))
+# })
+#
+# ServerEvents.recipes(event => {
+#   console.info('T23-SMOKE: recipes phase entered')
+# })
+#
+# ServerEvents.afterRecipes(event => {
+#   console.info('T23-SMOKE: afterRecipes observed committed total=' + event.count())
+# })
+# ---------------- end script ----------------
+#
+# Kept lines: mod loading of nekojs/jei, SERVER script discovery + event-group
+# registration, the full marker chain (order is the assertion), recipe load, Done.
+# Log line numbers are from the raw redirected console output (21k+ lines total).
+
+[21:13:45] [main/DEBUG] [ne.ne.fm.ja.FMLModContainer/LOADING]: Creating FMLModContainer instance for nekojs with entrypoints [com.tkisor.nekojs.NekoJSMod]
+[21:13:45] [main/DEBUG] [ne.ne.fm.ja.FMLModContainer/LOADING]: Creating FMLModContainer instance for jei with entrypoints [mezz.jei.neoforge.JustEnoughItems]
+[21:13:46] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [NekoJS] NekoJS plugin runtime bootstrapped once (assembly)
+[21:13:49] [Worker-Main-1/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组...
+[21:13:49] [Worker-Main-1/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... (x2)
+[21:13:49] [Worker-Main-1/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本。
+[21:13:49] [Worker-Main-1/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[21:13:49] [Worker-Main-1/INFO] [NekoJS/]: [server] SERVER 脚本重载完毕。 (x2)
+[21:13:49] [Worker-Main-1/INFO] [NekoJS/]: [server] T23-SMOKE: lootTables phase entered
+[21:13:49] [Worker-Main-1/INFO] [NekoJS/]: [server] T23-SMOKE: generateData read-back present=true
+[21:13:49] [main/INFO] [minecraft/RecipeManager]: Loaded 1515 recipes
+[21:13:49] [main/INFO] [ne.ne.ne.co.cr.RecipePriorityManager/]: Loaded 0 recipe priority overrides
+[21:13:49] [main/DEBUG] [NekoJS/]: Filtered out 0 recipes that did not meet conditions
+[21:13:49] [main/INFO] [NekoJS/]: [server] generateData stage 'after_mods' published 2 file(s); skipped 0 user-owned file(s)
+[21:13:49] [main/INFO] [NekoJS/]: [server] T23-SMOKE: recipes phase entered
+[21:13:49] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T23-SMOKE: afterRecipes observed committed total=1515
+[21:13:50] [Server thread/INFO] [minecraft/DedicatedServer]: Done (0.287s)! For help, type "help"
+
+# Marker order assertion (raw log line numbers, run 3):
+#   21337 lootTables phase entered            (loot JSON pass, first in the reload)
+#   21338 generateData read-back present=true (script wrote + read back candidates)
+#   21343 generateData stage 'after_mods' published 2 file(s); skipped 0 user-owned
+#   21344 recipes phase entered               (recipe pipeline, after data publish)
+#   21379 afterRecipes observed committed total=1515  (AFTER "Loaded 1515 recipes", post-commit)
+#   21383 Done (0.287s)
+# grep -a -c "ERROR" over the whole run-3 log = 0.
+
+# ---------------- post-run artifact verification (run 3) ----------------
+# $ find versions/26.1.2/run/nekojs/data -type f | sort
+# versions/26.1.2/run/nekojs/data/nekojs/loot_tables/blocks/t23_smoke_ore.json
+# versions/26.1.2/run/nekojs/data/nekojs/t23_smoke/generated-by.txt
+# $ cat versions/26.1.2/run/nekojs/data/nekojs/loot_tables/blocks/t23_smoke_ore.json
+# {"type":"minecraft:block","pools":[{"rolls":1,"entries":[{"type":"minecraft:item","name":"minecraft:diamond"}]}]}
+# $ cat versions/26.1.2/run/nekojs/data/nekojs/t23_smoke/generated-by.txt
+# t23 runServer smoke
+# $ find versions/26.1.2/run/nekojs/.nekojs-datagen | sort   (staged-vs-published layout)
+# versions/26.1.2/run/nekojs/.nekojs-datagen
+# versions/26.1.2/run/nekojs/.nekojs-datagen/after_mods
+# versions/26.1.2/run/nekojs/.nekojs-datagen/after_mods/manifest.json
+# $ cat versions/26.1.2/run/nekojs/.nekojs-datagen/after_mods/manifest.json
+# {"version":2,"stage":"after_mods","files":[{"path":"nekojs/loot_tables/blocks/t23_smoke_ore.json","sha256":"fbddbe29cc0a6073f33885b827ce435b3b4d3be2447bf11c21becf7075501447"},{"path":"nekojs/t23_smoke/generated-by.txt","sha256":"8aff2b688147ce7703787036b8d515544bb8e71d18c8dd53b39dba7b33929d8e"}]}
+# $ sha256sum <both published files>
+# fbddbe29cc0a6073f33885b827ce435b3b4d3be2447bf11c21becf7075501447  nekojs/loot_tables/blocks/t23_smoke_ore.json
+# 8aff2b688147ce7703787036b8d515544bb8e71d18c8dd53b39dba7b33929d8e  nekojs/t23_smoke/generated-by.txt
+# -> manifest sha256 entries match the published files byte-for-byte; the state dir holds
+#    ONLY manifest.json (candidate/ and backup/ removed on the successful publish), and no
+#    .nekojs-datagen exists inside the pack-visible data root.
+
+# ---------------- run 1 diagnostic (defect A: id-form path) ----------------
+# [server] Script event mode=dispatch bus=...DataGeneratorJS key=after_mods callback exception:
+# 位置: server_scripts/t23_smoke.js:15:3  原因: nekojs:loot_tables/blocks/t23_smoke_ore.json
+# cause=PolyglotException: Illegal char <:> at index 6: nekojs:loot_tables/blocks/t23_smoke_ore.json
+# -> the listener DID dispatch on key after_mods; DataGeneratorJS.json rejects the id form.
+#    The delivered baseline example examples/generate-data.js uses exactly this form and
+#    therefore cannot run as written (recorded in the ticket, not fixed here).
+
+# ---------------- run 2 diagnostic (defect B: JS-object value; live failure retention) ----------------
+# [server] Script event ... key=after_mods callback exception:
+# 位置: server_scripts/t23_smoke.js:26:1  原因: Cannot read property "pools" from null
+#   (getJson returned null because the candidate content was not JSON — see below)
+# [main/ERROR] [NekoJS/]: [server] generateData batch failed; nothing was published and the previous active data is retained:
+# java.lang.IllegalStateException: generateData candidate validation failed for stage 'after_mods';
+#   nothing was published and the previous active data is retained:
+#   nekojs/loot_tables/blocks/t23_smoke_ore.json: invalid JSON (Unterminated array at line 1 column 10 path $[1])
+# 	at ...DataGenerationBatch.validate(DataGenerationBatch.java:171)
+# 	at ...DataGenerationBatch.publish(DataGenerationBatch.java:233)
+# 	at ...PluginGenerationHooks.runGenerateData(PluginGenerationHooks.java:71)
+# 	at ...ServerEventListener.postGenerateData(ServerEventListener.java:211)
+# Candidate retained for diagnostics contained: 5b6f626a65637420 4f626a6563745d  = "[object Object]"
+# -> event.json(path, {js object}) serializes via String.valueOf on the real runtime and
+#    produces "[object Object]"; only the JSON-string form is covered by unit tests and
+#    works. Whole-batch failure retention + per-listener error isolation both observed live.
