@@ -1,0 +1,25 @@
+# Ticket 23 AC11 evidence completion: NeoForge 26.2.0 node test suite on the merged tree
+# (the 26.2.0 node had no recorded full-suite run in the ticket 23 evidence; 26.1.2 / 1.21.1 /
+# 26.1.2-fabric were covered on 2026-09-22, see 02a-02c).
+#
+# Command: ./gradlew.bat :26.2.0:test --console=plain   (worktree ../NekoJS-mult-t23s, branch
+# ticket-23-smoke-evidence, base mult@64f5ea95 — ticket 23 implementation merged)
+# Result: BUILD SUCCESSFUL in 25s
+# Aggregate counts from versions/26.2.0/build/test-results/test/*.xml (88 result files):
+#   tests=448  skipped=58  failures=0  errors=0
+# (the known Ticket08LoaderDiscoveryTest order-sensitive flake recorded on 2026-09-22 did not
+#  reproduce in this run; 0 failures across the whole node)
+
+> Task :26.2.0:test
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS-mult-t23s/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+BUILD SUCCESSFUL in 25s
+29 actionable tasks: 11 executed, 3 from cache, 15 up-to-date
+
+# Count aggregation command (for the record):
+#   grep -h "tests=" versions/26.2.0/build/test-results/test/*.xml \
+#     | sed -E 's/.*tests="([0-9]+)" skipped="([0-9]+)" failures="([0-9]+)" errors="([0-9]+)".*/\1 \2 \3 \4/' \
+#     | awk '{t+=$1; s+=$2; f+=$3; e+=$4} END {print "tests="t" skipped="s" failures="f" errors="e}'

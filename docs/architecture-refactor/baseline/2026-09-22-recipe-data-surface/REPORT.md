@@ -150,3 +150,66 @@
   `duplicateJsonObjectKeysFailValidationInsteadOfSilentlyLastWinning`。
 - manifest 不可读降级（编码规范：fallback 必须可观察）：`readManifest` 静默回退现补 WARN
   日志，说明「所有 active 文件按 user-owned 处理，不会覆盖任何文件」。
+
+## 证据收口（2026-09-28，in-review 轮）
+
+执行者：ticket-23-smoke-evidence worktree（`../NekoJS-mult-t23s`，基于 mult@64f5ea95 合并树）。
+目标：AC11 未勾选项中可无头运行的证据——真 `runServer` runtime smoke（artifact + 次序）、
+fabric 显式缺席路径、26.2.0 节点全量 test。AC1（declaration 派生）不在本轮范围，未动。
+
+### 1. 命令与结果（真实执行）
+
+| 命令 | 结果 |
+|---|---|
+| `./gradlew.bat :26.1.2:runServer --console=plain`（game dir `versions/26.1.2/run/`，冒烟脚本 `run/nekojs/server_scripts/t23_smoke.js`） | **绿**（第 3 轮；进程在 `Done (0.287s)` + 全部 marker 出现后有界终止，gradle 非零退出属预期）。`command-output/07` |
+| `./gradlew.bat :26.1.2-fabric:runServer --console=plain`（game dir `versions/26.1.2-fabric/run-server/`，脚本 `t23_fabric_unavailable.js`，dev eula.txt） | **绿**：显式缺席双层报错 + 服务器 `Done (2.231s)`，有界终止。`command-output/08` |
+| `./gradlew.bat :26.2.0:test --console=plain` | **BUILD SUCCESSFUL**，448 tests / 0 failed / 0 errors / 58 skipped（XML 聚合）。`command-output/09` |
+
+### 2. 26.1.2 runtime smoke 断言明细（`command-output/07`）
+
+- **次序**（原始日志行号）：`21337 lootTables phase entered → 21338 generateData read-back
+  present=true → 21343 generateData stage 'after_mods' published 2 file(s); skipped 0
+  user-owned file(s) → 21344 recipes phase entered → 21379 afterRecipes observed committed
+  total=1515 → 21383 Done (0.287s)`；与票内 fixture 钉住的 lootTables→generateData→recipes→
+  afterRecipes(提交后) 次序一致（afterRecipes 晚于 `Loaded 1515 recipes`）。
+- **artifact**：`run/nekojs/data/nekojs/loot_tables/blocks/t23_smoke_ore.json` 与
+  `.../nekojs/t23_smoke/generated-by.txt` 存在且内容正确；manifest（v2，stage `after_mods`）
+  的 sha256 与实文件逐一相符。
+- **staged/published 布局**：成功发布后 `.nekojs-datagen/after_mods/` 仅剩 `manifest.json`
+  （candidate/backup 已清），active 根（pack 可见）内无 `.nekojs-datagen`；运行 2 的失败批次
+  按设计保留候选区供诊断，`[object Object]` 原文已录入 `command-output/07`（候选区随后被
+  下一轮 `open()` 按设计清除）。
+- **失败路径（运行 2 附带真证）**：校验拒绝非法 JSON 候选 → 整批失败
+  `generateData batch failed; nothing was published and the previous active data is retained`
+  （完整栈经 `DataGenerationBatch.validate → publish → PluginGenerationHooks.runGenerateData →
+  ServerEventListener.postGenerateData`）；监听器内脚本异常按 listener 隔离并给出
+  script-diagnostic 定位（source 行列 + cacheRevision），服务器继续启动。
+- **插件 `generateData`**：当前无生产插件实现该 hook，运行期为脚本单侧真实闭环（聚合语义
+  `DataGenerationAggregationTest` 已在 JVM 层覆盖）；如实记录，不冒充。
+- 全日志（第 3 轮）`grep -c ERROR` = 0。
+
+### 3. fabric 显式缺席（`command-output/08`）
+
+引用 `ServerEvents.generateData` 的脚本在两层报错：binding preflight
+（`NekoEsmLinkException: Binding 'ServerEvents' has no member 'generateData'`，定位
+`t23_fabric_unavailable.js:7:14`）与 execution（`TypeError: invokeMember (generateData) on
+EventGroupJS ... Unknown identifier: generateData`）；marker 未执行；服务器照常 `Done`。
+fabric 侧 `nekojs/data` 无任何发布物、无 `.nekojs-datagen`。
+
+### 4. 本轮发现缺陷（记录，未修——owner 本票域维护者 triage）
+
+- **D-A（示例不可运行）**：`DataGeneratorJS.json` 只收 pack 根相对路径（`ns/dir/file.json`），
+  `ns:dir/file` id 形被 `Path.of` 以 `Illegal char <:>` 拒绝；而基线示例
+  `examples/generate-data.js` 恰用 id 形——按现状脚本会在运行期报错（第 1 轮实录）。
+- **D-B（JS 对象实参未序列化）**：`json(path, jsObject)` 的对象实参在真 GraalJS 运行期不命中
+  `value instanceof Value` 分支，落到 `String.valueOf` 写出字面 `[object Object]`，随后被校验
+  拒绝（第 2 轮实录，候选内容已录入 `command-output/07`）；既有单测只用 JSON 字符串形，故未
+  暴露。`@Param` 文档声明「JS object (auto-serialized)」与实现不符。JSON 字符串形可用（第 3 轮）。
+- 修复建议（供 triage）：`json` 增加对象/MAP 形实参的真实序列化 + 真引擎用例；示例改路径形
+  或实现处支持 id 形；二者其一即可让示例闭环。
+
+### 5. 仍开放项与 owner
+
+`runGameTestServer`、JEI 真集成（viewer 保持 conditional）、插件 `generateData` hook 真机装载
+——票 34/维护者；D-A/D-B 缺陷修复——本票域维护者 triage。冒烟 run 目录用后即删
+（`versions/*/run*` 均被根 `.gitignore` 排除，未入库）。
