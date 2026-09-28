@@ -96,8 +96,11 @@ class Ticket24GameplayEventPhaseTraceTest {
                 "PlayerEvents: 17 platform buses bound (inventoryChanged is listener-posted, not bridged)");
         assertEquals(2, count(code(MAIN + "/bindings/event/CommandEvents.java"), ".bind("),
                 "CommandEvents: register + command both bridged");
-        assertEquals(13, count(code(MAIN + "/bindings/event/EntityEvents.java"), ".bind("),
-                "EntityEvents: all 13 platform buses bound");
+        assertEquals(12, count(code(MAIN + "/bindings/event/EntityEvents.java"), ".bind("),
+                "EntityEvents: 12 plain binds + DAMAGE_PRE via bindCancellable (13 wired buses)");
+        assertEquals(1, count(code(MAIN + "/bindings/event/EntityEvents.java"), ".bindCancellable("),
+                "DAMAGE_PRE is the one entity bus cancelled through an adapter cancel action"
+                        + " (D4: Pre has no ICancellableEvent face; cancel maps to setNewDamage(0))");
         assertEquals(12, count(code(MAIN + "/bindings/event/NeoForgeBlockEvents.java"), ".bind("),
                 "BlockEvents adapter: 12 plain binds + BROKEN via bindTransformed (13 wired buses)");
         assertEquals(1, count(code(MAIN + "/bindings/event/NeoForgeBlockEvents.java"), ".bindTransformed("),

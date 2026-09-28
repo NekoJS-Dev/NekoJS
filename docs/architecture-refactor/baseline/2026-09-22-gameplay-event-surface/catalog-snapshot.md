@@ -10,7 +10,8 @@
 
 列含义：payload = catalog eventType；side = SERVER/CLIENT/STARTUP（单一 side）；
 dispatch = 定向分发键类型（`-` = 非定向）；cancel = 总线可取消性（NeoForge 由
-`ICancellableEvent` predicate 决定，fabric 由显式 `EventBusJS.of(..., true, ...)` 决定）。
+`ICancellableEvent` predicate 决定，例外为显式 `EventBusJS.of(..., true, ...)` 声明的
+总线（broken/damagePre，D2/D4 修复）；fabric 同为显式声明）。
 
 ## BlockEvents
 
@@ -99,7 +100,7 @@ placed/entityPlaced/fluidPlaced 额外显式可取消（中立 payload）。
 
 | 成员 | payload | side | dispatch | cancel | 备注 |
 |---|---|---|---|---|---|
-| damagePre | LivingDamageEvent.Pre | SERVER | EntityType | true | 可改伤害值（setNewDamage）；fabric：LivingDamageEventJS 仅可取消 |
+| damagePre | LivingDamageEvent.Pre | SERVER | EntityType | true | 可改伤害值（setNewDamage）；取消=桥映射 setNewDamage(0)（伤害链走完，damagePost 仍以 0 触发；D4 修复）；fabric：仅可取消（整体免除），不可改值 |
 | damagePost | LivingDamageEvent.Post | SERVER | EntityType | false | |
 | death | LivingDeathEvent | SERVER | EntityType | true | |
 | drops | LivingDropsEvent | SERVER | EntityType | true | fabric：LivingDropsEventJS（drops 恒空列表，已知数据面差异） |

@@ -159,7 +159,11 @@ class Ticket24GameplayEventCatalogTest {
                 if (!actualNames.contains(name)) continue;
                 Expected want = wanted.get(name);
                 EventCatalogEntry entry = actual.get(name);
-                boolean wantCancellable = ICancellableEvent.class.isAssignableFrom(want.payload());
+                boolean wantCancellable = ICancellableEvent.class.isAssignableFrom(want.payload())
+                        // D4 fix (maintainer ruled 2026-09-29): damagePre is explicitly cancellable
+                        // because its native Pre carries the cancel lever setNewDamage(0), not
+                        // ICancellableEvent (same exception shape as BlockEvents.broken / D2)
+                        || ("EntityEvents".equals(family) && "damagePre".equals(name));
                 if (entry.eventType() != want.payload()) {
                     failures.add(family + "." + name + " payload drifted: expected "
                             + want.payload().getSimpleName() + " but catalog carries "
