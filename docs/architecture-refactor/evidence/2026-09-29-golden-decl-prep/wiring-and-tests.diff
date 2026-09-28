@@ -1,0 +1,871 @@
+diff --git a/buildSrc/src/main/kotlin/nekojs.fabric-node.gradle.kts b/buildSrc/src/main/kotlin/nekojs.fabric-node.gradle.kts
+index 648268a6e..5dc220ac3 100644
+--- a/buildSrc/src/main/kotlin/nekojs.fabric-node.gradle.kts
++++ b/buildSrc/src/main/kotlin/nekojs.fabric-node.gradle.kts
+@@ -213,6 +213,11 @@ val platformGateTest = tasks.register<Test>("platformGateTest") {
+     systemProperty("user.country", "US")
+     systemProperty("user.timezone", "UTC")
+     systemProperty("file.encoding", "UTF-8")
++    // golden 再生成开关（declared-event-surface golden）：与 :common:test 的透传惯例一致，
++    // 默认恒传 "false"（Boolean.getBoolean 只认显式 true），普通运行永远只读。
++    systemProperty("nekojs.golden.regenerate", System.getProperty("nekojs.golden.regenerate") ?: "false")
++    // golden 写回的共享树根：节点项目目录随 active 节点漂移，golden 统一住共享树 resources。
++    systemProperty("nekojs.test.sharedTree", rootProject.projectDir.absolutePath)
+ }
+ 
+ // 工单 33：非 processor 覆盖 gate 是节点 check 的一部分（Fabric processor 延期不得变成覆盖空白）。
+diff --git a/buildSrc/src/main/kotlin/nekojs.neoforge-node.gradle.kts b/buildSrc/src/main/kotlin/nekojs.neoforge-node.gradle.kts
+index 6086fb989..a4a53f75b 100644
+--- a/buildSrc/src/main/kotlin/nekojs.neoforge-node.gradle.kts
++++ b/buildSrc/src/main/kotlin/nekojs.neoforge-node.gradle.kts
+@@ -294,6 +294,11 @@ val platformGateTest = tasks.register<Test>("platformGateTest") {
+     systemProperty("user.country", "US")
+     systemProperty("user.timezone", "UTC")
+     systemProperty("file.encoding", "UTF-8")
++    // golden 再生成开关（declared-event-surface golden）：与 :common:test 的透传惯例一致，
++    // 默认恒传 "false"（Boolean.getBoolean 只认显式 true），普通运行永远只读。
++    systemProperty("nekojs.golden.regenerate", System.getProperty("nekojs.golden.regenerate") ?: "false")
++    // golden 写回的共享树根：节点项目目录随 active 节点漂移，golden 统一住共享树 resources。
++    systemProperty("nekojs.test.sharedTree", rootProject.projectDir.absolutePath)
+ }
+ 
+ // 工单 33：非 processor 覆盖 gate 是节点 check 的一部分（Fabric processor 延期不得变成覆盖空白）。
+diff --git a/src/test/java/com/tkisor/nekojs/platform/DeclaredEventSurfaceGoldenTest.java b/src/test/java/com/tkisor/nekojs/platform/DeclaredEventSurfaceGoldenTest.java
+new file mode 100644
+index 000000000..2a31056d1
+--- /dev/null
++++ b/src/test/java/com/tkisor/nekojs/platform/DeclaredEventSurfaceGoldenTest.java
+@@ -0,0 +1,360 @@
++package com.tkisor.nekojs.platform;
++
++import com.tkisor.nekojs.api.JSTypeAdapter;
++import com.tkisor.nekojs.api.ScriptType;
++import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
++import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
++import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
++import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
++import com.tkisor.nekojs.api.data.Binding;
++import com.tkisor.nekojs.api.event.EventGroup;
++import com.tkisor.nekojs.api.plugin.IPluginRuntime;
++import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
++import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
++import com.tkisor.nekojs.api.surface.ApiRuntimeView;
++import com.tkisor.nekojs.api.surface.ApiSymbolId;
++import com.tkisor.nekojs.api.surface.EnvironmentKey;
++import com.tkisor.nekojs.probe.backend.typescript.AdapterAliasGenerator;
++import com.tkisor.nekojs.probe.backend.typescript.EventDeclarationGenerator;
++import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
++import org.junit.jupiter.api.Assumptions;
++import org.junit.jupiter.api.Tag;
++import org.junit.jupiter.api.Test;
++
++import java.io.IOException;
++import java.io.InputStream;
++import java.nio.charset.StandardCharsets;
++import java.nio.file.Files;
++import java.nio.file.Path;
++import java.util.ArrayList;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.TreeMap;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertFalse;
++import static org.junit.jupiter.api.Assertions.assertNotNull;
++import static org.junit.jupiter.api.Assertions.assertTrue;
++
++/**
++ * Declared-event-surface golden (tickets 23/24/27 shared declaration gap): freezes the
++ * TypeScript declarations of the recipe/data, gameplay and client GUI/render event domains,
++ * derived from <b>this node's real registration entry points</b> through the same production
++ * chain the probe uses — {@link NekoScriptCatalog#events} (catalog derivation) →
++ * {@link EventDeclarationGenerator} (TS declaration renderer).
++ *
++ * <p><b>Why this golden lives in the node tree.</b> The recorded gap (ticket 23 AC1, ticket 24
++ * AC8, ticket 27 AC7) is zero hits for these domains in the common declaration goldens
++ * ({@code api-manifest-core.json}, probe {@code *.expected.d.ts}, {@code declaration-parity.txt}).
++ * That is an input-set property, not staleness: those derivations reflect the portable-core
++ * contract only ({@code CoreManagedApiBootstrap.buildContract}: 7 facades + data types +
++ * {@code ScriptEventRegistrationEvent}), and the engine modules must stay free of Minecraft
++ * dependencies (ADR-0007), so the MC-facing event families can never enter them. The runtime
++ * reflection that does see the families ({@code EventContractReflector} from
++ * {@code IPluginRuntime.eventGroups()}) feeds callback-schema validation only, never a
++ * declaration golden. This test closes that wiring gap at the level where the families are
++ * reachable: per node, from the real registration hooks.
++ *
++ * <p><b>Input</b> (identical to {@code EventSurfaceDomainGateTest}, shared through
++ * {@link EventRegistrationSurfaces}): every {@code @RegisterNekoJSPlugin} class on the node
++ * classpath (plus the fabric built-in list), driven through {@code registerEvents} and
++ * {@code registerClientEvents} into fresh registries. Only the three ticket domains are
++ * frozen: {@code ServerEvents}/{@code RecipeViewerEvents} (23), the eight gameplay families
++ * (24), {@code ClientEvents} (27). Other domains keep their existing gates — this golden does
++ * not become a second cross-domain baseline.
++ *
++ * <p><b>Goldens</b>: {@code src/test/resources/golden/events-declared/<node>.<side>-events.d.ts}
++ * with one file per script side ({@code startup}/{@code server}/{@code client}) — production
++ * renders one declaration document per side, and each golden stays a standalone valid
++ * {@code .d.ts}. One set per node: the registered surface genuinely differs across nodes (e.g.
++ * fabric {@code ClientEvents} has no render members yet, STARTUP-only groups such as
++ * {@code CapabilityEvents} appear in the startup file only). Ordinary runs are read-only;
++ * regeneration runs through the shared explicit workflow:
++ * {@code ./gradlew :<node>:platformGateTest -Dnekojs.golden.regenerate=true}, then review the
++ * old/new diff per managed-surface REGENERATE.md §3.
++ */
++@Tag("platform-gate")
++class DeclaredEventSurfaceGoldenTest {
++
++    /** In-scope groups, grouped by owning ticket domain. Order is part of the golden layout. */
++    private static final List<String> RECIPE_DATA_GROUPS = List.of("ServerEvents", "RecipeViewerEvents");
++    private static final List<String> GAMEPLAY_GROUPS = List.of(
++            "BlockEvents", "ItemEvents", "LevelEvents", "PlayerEvents",
++            "CommandEvents", "CapabilityEvents", "GoalEvents", "EntityEvents");
++    private static final List<String> CLIENT_GUI_RENDER_GROUPS = List.of("ClientEvents");
++
++    private static final List<String> IN_SCOPE;
++    static {
++        List<String> all = new ArrayList<>();
++        all.addAll(RECIPE_DATA_GROUPS);
++        all.addAll(GAMEPLAY_GROUPS);
++        all.addAll(CLIENT_GUI_RENDER_GROUPS);
++        IN_SCOPE = List.copyOf(all);
++    }
++
++    private static final String GOLDEN_DIR = "/golden/events-declared/";
++    private static final String PRESENCE_FIXTURE = "/nekojs/platform-gates/event-surface-domains.txt";
++    private static final String REPORT_DIR = "build/nekojs-gates";
++
++    @org.junit.jupiter.api.BeforeAll
++    static void initPlatformStub() {
++        // EventDeclarationGenerator 的 import 过滤（ProbeConfigLoader.isRelevantClassDefault）读
++        // Platform.defaultScanPackages()——裸 JVM 需要先装一个最小 Platform 桩（同 Ticket24 的
++        // @BeforeAll 模式；已初始化时复用，不重复 init）。scan packages 必须镜像本 loader 真实
++        // Platform 实现（NeoForgePlatform/FabricPlatform），否则 neoforge 侧 import 集合会随
++        // 「谁先初始化了 Platform」漂移——golden 就不是确定性的了。
++        final String loader = EventRegistrationSurfaces.loaderId();
++        final List<String> scanPackages = "fabric".equals(loader)
++                ? List.of("net.minecraft")
++                : List.of("net.minecraft", "net.neoforged", "com.mojang");
++        try {
++            com.tkisor.nekojs.platform.Platform.init(new com.tkisor.nekojs.platform.IPlatform() {
++                @Override public boolean isClient() { return false; }
++                @Override public boolean isDevelopment() { return true; }
++                @Override public String getMcVersion() { return "test"; }
++                @Override public java.nio.file.Path getGameDir() {
++                    return com.tkisor.nekojs.TestGameDirs.unique("nekojs-declared-events-golden");
++                }
++                @Override public Map<String, com.tkisor.nekojs.platform.IModInfo> getMods() { return Map.of(); }
++                @Override public com.tkisor.nekojs.platform.IModInfo getInfo(String modID) { return null; }
++                @Override public String getLoaderId() { return "test"; }
++                @Override public String getLoaderVersion() { return "0"; }
++                @Override public List<String> defaultScanPackages() { return scanPackages; }
++            });
++        } catch (IllegalStateException alreadyInitialized) {
++            // same-JVM reuse of an already initialized platform stub is fine
++        }
++    }
++
++    @Test
++    void declaredEventSurfaceMatchesFrozenGoldens() throws Exception {
++        String node = EventRegistrationSurfaces.nodeId();
++        assertTrue(node != null && !node.isBlank(),
++                "golden 必须知道自己在哪个节点运行（platformGateTest 注入 -Dnekojs.node=<node>）");
++        String loader = EventRegistrationSurfaces.loaderId();
++        assertFalse("unknown".equals(loader), "节点必须能判定自己的 loader");
++
++        // 跨节点在场事实复用票 33 只读基线：本节点「应注册」的在册组 = present 行；not-verified
++        // 的组（如 fabric 的 CapabilityEvents）不属于本节点声明面，不进 golden 也不算缺失。
++        Map<String, Boolean> presence = readPresenceFixture(node);
++        List<String> expectedGroups = IN_SCOPE.stream()
++                .filter(group -> presence.getOrDefault(group, false)).toList();
++        assertFalse(expectedGroups.isEmpty(), "票 33 基线没有把任何在册组标记为本节点 present");
++
++        Map<String, EventGroup> registered = driveRealRegistration(loader);
++        assertFalse(registered.isEmpty(), "节点真实注册入口没有产出任何事件组");
++
++        List<String> missing = expectedGroups.stream().filter(g -> !registered.containsKey(g)).toList();
++        assertTrue(missing.isEmpty(),
++                "三个票据域的事件组在本节点注册面缺失（成员删除＝契约变更；若整组移除请更新票 33 基线、"
++                        + "本测试与 golden）: " + missing);
++        List<String> undeclared = IN_SCOPE.stream()
++                .filter(group -> registered.containsKey(group) && Boolean.FALSE.equals(presence.get(group))).toList();
++        assertTrue(undeclared.isEmpty(),
++                "运行时注册了在册组但票 33 基线记为 not-verified/未登记（先更新基线再生成 golden）: "
++                        + undeclared);
++
++        // Production renders one declaration document per script side (startup/server/client);
++        // each golden file stays a standalone, valid .d.ts (no cross-side concatenation).
++        Map<ScriptType, String> rendered = new TreeMap<>();
++        int totalMembers = 0;
++        for (ScriptType side : List.of(ScriptType.STARTUP, ScriptType.SERVER, ScriptType.CLIENT)) {
++            String declaration = render(registered, expectedGroups, side);
++            assertFalse(declaration.isBlank(), side + " 侧声明不能为空");
++            rendered.put(side, declaration);
++            totalMembers += countMembers(declaration, expectedGroups);
++        }
++
++        // 可读性断言：每个在册组都必须渲染出 namespace（防“空 golden 全绿”）。STARTUP 组
++        // （如 CapabilityEvents/GoalEvents）只出现在 startup 侧文件，SERVER/CLIENT 同理按 side 过滤。
++        String all = String.join("\n", rendered.values());
++        for (String group : expectedGroups) {
++            assertTrue(all.contains("namespace " + group + " {"),
++                    "组 " + group + " 未渲染为 TS namespace（本节点注册面有它）");
++        }
++        assertTrue(totalMembers > 0, "声明成员数为 0——golden 会退化为空壳");
++
++        emitReport(node, registered, expectedGroups, rendered);
++
++        if (regenerateEnabled()) {
++            Path dir = sharedGoldenDir();
++            Files.createDirectories(dir);
++            for (Map.Entry<ScriptType, String> entry : rendered.entrySet()) {
++                Files.writeString(dir.resolve(goldenName(node, entry.getKey())), entry.getValue(),
++                        StandardCharsets.UTF_8);
++            }
++            Assumptions.abort("goldens regenerated for node " + node + "; review the diff before committing");
++        }
++
++        for (Map.Entry<ScriptType, String> entry : rendered.entrySet()) {
++            String golden = GOLDEN_DIR + goldenName(node, entry.getKey());
++            assertEquals(readGolden(golden), normalize(entry.getValue()),
++                    entry.getKey() + " 侧事件声明与 golden 不一致（" + golden + "）。"
++                            + "事件面变更是契约变更：先改实现/注册入口，再以 -Dnekojs.golden.regenerate=true "
++                            + "重跑 platformGateTest 再生成，并按 REGENERATE.md §3 留旧新 diff 与审阅记录");
++        }
++    }
++
++    // ---- 真实注册面驱动（与 EventSurfaceDomainGateTest 同一发现/调用输入） ----
++
++    /**
++     * Drives every contributor's registration hooks and merges the registered groups.
++     * Registration errors are hard failures (the golden must not silently shrink).
++     */
++    private static Map<String, EventGroup> driveRealRegistration(String loader) throws IOException {
++        List<String> contributors = EventRegistrationSurfaces.pluginContributors(loader);
++        assertFalse(contributors.isEmpty(), "节点必须能发现事件注册入口（node=" + loader + "）");
++
++        Map<String, EventGroup> merged = new TreeMap<>();
++        List<String> failures = new ArrayList<>();
++        for (String className : contributors) {
++            for (String hook : List.of("registerEvents", "registerClientEvents")) {
++                EventRegistrationSurfaces.Registration registration =
++                        EventRegistrationSurfaces.invokeRegistration(className, hook);
++                if (registration.error() != null) {
++                    failures.add(className + "#" + hook + ": " + registration.error());
++                    continue;
++                }
++                merged.putAll(registration.groups());
++            }
++        }
++        assertTrue(failures.isEmpty(),
++                "事件注册入口抛错，声明面输入不完整（golden 不允许在缺证据时冻结）:\n"
++                        + String.join("\n", failures));
++        return merged;
++    }
++
++    private static String render(Map<String, EventGroup> groups, List<String> expectedGroups, ScriptType side) {
++        Map<String, EventGroup> inScope = new TreeMap<>();
++        for (String name : expectedGroups) {
++            EventGroup group = groups.get(name);
++            if (group != null) inScope.put(name, group);
++        }
++        List<EventCatalogEntry> entries = NekoScriptCatalog.events(new StubRuntime(inScope), side);
++        TypeAliasRegistry aliases = new TypeAliasRegistry();
++        return new EventDeclarationGenerator(aliases, new AdapterAliasGenerator(aliases))
++                .generate(entries, side);
++    }
++
++    private static int countMembers(String declaration, List<String> groups) {
++        int count = 0;
++        for (String group : groups) {
++            int start = declaration.indexOf("namespace " + group + " {");
++            if (start < 0) continue;
++            int end = declaration.indexOf("\n    }", start);
++            String body = end < 0 ? declaration.substring(start) : declaration.substring(start, end);
++            for (String line : body.split("\n")) {
++                if (line.trim().startsWith("function ")) count++;
++            }
++        }
++        return count;
++    }
++
++    // ---- golden 支撑 ----
++
++    private static String goldenName(String node, ScriptType side) {
++        return node + "." + side.name.toLowerCase() + "-events.d.ts";
++    }
++
++    private static boolean regenerateEnabled() {
++        return Boolean.getBoolean("nekojs.golden.regenerate");
++    }
++
++    /** Shared version-tree root, injected by the platformGateTest wiring (rootProject dir). */
++    private static Path sharedGoldenDir() {
++        String root = System.getProperty("nekojs.test.sharedTree");
++        assertTrue(root != null && !root.isBlank(),
++                "再生成模式需要 -Dnekojs.test.sharedTree=<共享树根>（platformGateTest 注入）");
++        return Path.of(root).resolve("src/test/resources/golden/events-declared");
++    }
++
++    private static String readGolden(String name) {
++        try (InputStream in = DeclaredEventSurfaceGoldenTest.class.getResourceAsStream(name)) {
++            if (in == null) {
++                throw new IllegalStateException("缺少 golden " + name
++                        + "。首次落盘/有意变更请跑：./gradlew :<node>:platformGateTest"
++                        + " -Dnekojs.golden.regenerate=true，审阅 diff 后提交（REGENERATE.md §3）");
++            }
++            return new String(in.readAllBytes(), StandardCharsets.UTF_8).replace("\r\n", "\n");
++        } catch (IOException error) {
++            throw new IllegalStateException("读取 golden " + name + " 失败: " + error.getMessage(), error);
++        }
++    }
++
++    private static String normalize(String value) {
++        return value.replace("\r\n", "\n");
++    }
++
++    // ---- 逐项输出落盘（与票 33 gate 同目录，供 CI 汇总） ----
++
++    private static void emitReport(String node, Map<String, EventGroup> registered,
++                                   List<String> expectedGroups, Map<ScriptType, String> rendered) throws IOException {
++        Path dir = Path.of(REPORT_DIR);
++        Files.createDirectories(dir);
++        StringBuilder json = new StringBuilder();
++        json.append("{\n  \"check\": \"declared-event-surface\",\n");
++        json.append("  \"owner\": \"Managed Surface/Probe owner; build convention owner (wiring)\",\n");
++        json.append("  \"node\": \"").append(node).append("\",\n");
++        json.append("  \"scope\": \"tickets 23/24/27 domains\",\n");
++        json.append("  \"groups\": [");
++        json.append(String.join(",", expectedGroups.stream().map(g -> "\"" + g + "\"").toList()));
++        json.append("],\n  \"registeredInScope\": ").append(
++                expectedGroups.stream().filter(registered::containsKey).count()).append(",\n");
++        for (Map.Entry<ScriptType, String> entry : rendered.entrySet()) {
++            json.append("  \"").append(entry.getKey().name.toLowerCase()).append("Members\": ")
++                    .append(countMembers(entry.getValue(), expectedGroups)).append(",\n");
++        }
++        json.delete(json.length() - 2, json.length()).append("\n}\n");
++        Files.writeString(dir.resolve("declared-event-surface-" + node + ".json"), json.toString());
++    }
++
++    /**
++     * Reads the ticket-33 cross-node presence baseline (the reviewed snapshot of which domains
++     * each node really registers) and returns {@code group -> present?} for this node. Null for
++     * groups the baseline does not mention at all for this node.
++     */
++    private static Map<String, Boolean> readPresenceFixture(String node) throws IOException {
++        try (InputStream in = DeclaredEventSurfaceGoldenTest.class.getResourceAsStream(PRESENCE_FIXTURE)) {
++            assertNotNull(in, "缺少票 33 在场基线 " + PRESENCE_FIXTURE);
++            Map<String, Boolean> result = new LinkedHashMap<>();
++            for (String raw : new String(in.readAllBytes(), StandardCharsets.UTF_8).split("\n")) {
++                String line = raw.trim();
++                if (line.isEmpty() || line.startsWith("#")) continue;
++                String[] parts = line.split("\\|");
++                if (parts.length < 2) continue;
++                String group = parts[0].trim();
++                String[] nodeAndState = parts[1].split("=", 2);
++                if (nodeAndState.length != 2 || !node.equals(nodeAndState[0].trim())) continue;
++                result.put(group, "present".equals(nodeAndState[1].trim()));
++            }
++            return result;
++        }
++    }
++
++    /** Catalog derivation needs only the event-group view (same stub shape as ticket 24's test). */
++    private static final class StubRuntime implements IPluginRuntime {
++        private final Map<String, EventGroup> eventGroups;
++
++        StubRuntime(Map<String, EventGroup> eventGroups) {
++            this.eventGroups = eventGroups;
++        }
++
++        @Override public Map<String, Binding> bindings(ScriptType type) { return Map.of(); }
++        @Override public Map<String, EventGroup> eventGroups() { return eventGroups; }
++        @Override public List<JSTypeAdapter<?>> adapters() { return List.of(); }
++        @Override public List<TypeDocCatalogEntry> typeDocs() { return List.of(); }
++        @Override public List<ManualDeclarationCatalogEntry> manualDeclarations() { return List.of(); }
++        @Override public Map<String, String> nodeModules() { return Map.of(); }
++        @Override public Map<String, RecipeNamespaceEntry> recipeNamespaces() { return Map.of(); }
++        @Override public void beforeRecipeLoading(RecipeLifecycleContext context) {}
++        @Override public void afterRecipes(RecipeLifecycleContext context) {}
++        @Override public void fireInit() {}
++        @Override public void fireInitStartup() {}
++        @Override public void fireAfterInit() {}
++        @Override public void fireBeforeScriptsLoaded(ScriptType type) {}
++        @Override public void fireAfterScriptsLoaded(ScriptType type) {}
++        @Override public ApiRuntimeView apiRuntime(EnvironmentKey environment) { return null; }
++        @Override public Object managedApiImplementation(ApiSymbolId globalId) { return null; }
++    }
++}
+diff --git a/src/test/java/com/tkisor/nekojs/platform/EventRegistrationSurfaces.java b/src/test/java/com/tkisor/nekojs/platform/EventRegistrationSurfaces.java
+new file mode 100644
+index 000000000..eab07805d
+--- /dev/null
++++ b/src/test/java/com/tkisor/nekojs/platform/EventRegistrationSurfaces.java
+@@ -0,0 +1,177 @@
++package com.tkisor.nekojs.platform;
++
++import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
++import com.tkisor.nekojs.api.event.EventGroup;
++import com.tkisor.nekojs.api.event.EventGroupRegistry;
++
++import java.io.IOException;
++import java.lang.reflect.InvocationTargetException;
++import java.lang.reflect.Method;
++import java.nio.file.Files;
++import java.nio.file.Path;
++import java.util.ArrayList;
++import java.util.HashMap;
++import java.util.List;
++import java.util.Map;
++
++/**
++ * Shared driver for the node platform-gate tests: discovers the node's real event-registration
++ * entry points and invokes their {@code registerEvents}/{@code registerClientEvents} hooks into
++ * a fresh {@link EventGroupRegistry}.
++ *
++ * <p>Extracted from {@code EventSurfaceDomainGateTest} (ticket 33) so the declared-event-surface
++ * golden test drives the exact same discovery input instead of a second, drifting copy. The
++ * discovery contract is frozen there: neoforge = every {@link RegisterNekoJSPlugin} class on the
++ * test classpath (the {@code NeoForgePluginLoader} scan scope), fabric = those classes plus the
++ * {@code FabricPluginLoader.BUILTIN_PLUGINS} built-in list. No runtime gating ({@code clientOnly},
++ * {@code requiredMods}) is applied — this proves the registration surface, not runtime activation.
++ */
++final class EventRegistrationSurfaces {
++
++    private EventRegistrationSurfaces() {}
++
++    /** Node identity injected by Gradle ({@code -Dnekojs.node}); baselines are keyed by node, not loader. */
++    static String nodeId() {
++        return System.getProperty("nekojs.node");
++    }
++
++    static String loaderId() {
++        if (loadQuiet("com.tkisor.nekojs.platform.FabricPlatform") != null) return "fabric";
++        if (loadQuiet("com.tkisor.nekojs.platform.NeoForgePlatform") != null) return "neoforge";
++        return "unknown";
++    }
++
++    /**
++     * Event-registration entry points: the union of the node's real plugin-discovery inputs.
++     */
++    @SuppressWarnings("unchecked")
++    static List<String> pluginContributors(String loader) throws IOException {
++        java.util.TreeSet<String> names = new java.util.TreeSet<>();
++        for (String className : classNamesInPackage("com.tkisor.nekojs")) {
++            Class<?> type = loadQuiet(className);
++            if (type == null) continue;
++            if (type.getAnnotation(RegisterNekoJSPlugin.class) != null) {
++                names.add(className);
++            }
++        }
++        if ("fabric".equals(loader)) {
++            Class<?> fabricLoader = loadQuiet("com.tkisor.nekojs.fabric.FabricPluginLoader");
++            if (fabricLoader != null) {
++                try {
++                    var field = fabricLoader.getDeclaredField("BUILTIN_PLUGINS");
++                    field.setAccessible(true);
++                    for (Class<?> type : (List<Class<?>>) field.get(null)) names.add(type.getName());
++                } catch (ReflectiveOperationException | RuntimeException error) {
++                    throw new IllegalStateException("无法读取 FabricPluginLoader.BUILTIN_PLUGINS："
++                            + describe(error));
++                }
++            }
++        }
++        return new ArrayList<>(names);
++    }
++
++    /**
++     * Result of driving one registration hook: the registered groups, or a {@link #failed}
++     * marker when the holder class cannot initialize or the hook throws.
++     */
++    record Registration(Map<String, EventGroup> groups, String error) {
++        static Registration failure(String detail) {
++            return new Registration(Map.of(), detail);
++        }
++    }
++
++    /**
++     * Invokes one registration hook on a fresh registry and reads back the registered groups.
++     * A missing hook (the holder is not a Contributor) yields empty groups and no error.
++     */
++    static Registration invokeRegistration(String className, String hookName) {
++        Map<String, EventGroup> out = new java.util.LinkedHashMap<>();
++        Method method;
++        Object instance;
++        Class<?> type;
++        try {
++            type = Class.forName(className, true, EventRegistrationSurfaces.class.getClassLoader());
++            instance = type.getDeclaredConstructor().newInstance();
++            method = findMethod(type, hookName);
++        } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
++            return Registration.failure(describe(error));
++        }
++        if (method == null) return new Registration(out, null);
++        EventGroupRegistry registry = new EventGroupRegistry.Impl();
++        try {
++            method.invoke(instance, registry);
++        } catch (InvocationTargetException | IllegalAccessException | RuntimeException error) {
++            Throwable cause = error instanceof InvocationTargetException ite && ite.getCause() != null
++                    ? ite.getCause() : error;
++            return Registration.failure(cause.getClass().getName() + ": " + cause.getMessage());
++        }
++        out.putAll(registry.view());
++        return new Registration(out, null);
++    }
++
++    private static Method findMethod(Class<?> type, String name) {
++        for (Method method : type.getMethods()) {
++            if (!method.getName().equals(name)) continue;
++            if (method.getParameterCount() != 1) continue;
++            if (!EventGroupRegistry.class.isAssignableFrom(method.getParameterTypes()[0])) continue;
++            return method;
++        }
++        return null;
++    }
++
++    static String describe(Throwable error) {
++        Throwable cause = error;
++        while (cause.getCause() != null && cause.getCause() != cause) cause = cause.getCause();
++        return error.getClass().getName() + ": " + error.getMessage()
++                + (cause != error ? " (root: " + cause + ")" : "");
++    }
++
++    // ---- classpath scan (directory and jar forms) ----
++
++    private static final Map<String, List<String>> PACKAGE_CACHE = new HashMap<>();
++
++    /** Recursively enumerates every class under a package prefix on the classpath. */
++    private static List<String> classNamesInPackage(String packagePrefix) throws IOException {
++        List<String> cached = PACKAGE_CACHE.get(packagePrefix);
++        if (cached != null) return cached;
++        String prefix = packagePrefix.replace('.', '/') + "/";
++        java.util.TreeSet<String> names = new java.util.TreeSet<>();
++        for (String entry : System.getProperty("java.class.path").split(java.io.File.pathSeparator)) {
++            if (entry.isBlank()) continue;
++            java.io.File path = new java.io.File(entry);
++            if (!path.exists()) continue;
++            if (path.isDirectory()) {
++                Path base = path.toPath().resolve(packagePrefix.replace('.', '/'));
++                if (!Files.isDirectory(base)) continue;
++                try (var stream = Files.walk(base)) {
++                    stream.filter(p -> p.toString().endsWith(".class")).forEach(p -> {
++                        String relative = path.toPath().relativize(p).toString()
++                                .replace(java.io.File.separatorChar, '/');
++                        names.add(relative.substring(0, relative.length() - ".class".length())
++                                .replace('/', '.'));
++                    });
++                }
++            } else if (entry.endsWith(".jar")) {
++                try (java.util.jar.JarFile jar = new java.util.jar.JarFile(path)) {
++                    var entries = jar.entries();
++                    while (entries.hasMoreElements()) {
++                        String name = entries.nextElement().getName();
++                        if (!name.startsWith(prefix) || !name.endsWith(".class")) continue;
++                        names.add(name.substring(0, name.length() - ".class".length()).replace('/', '.'));
++                    }
++                }
++            }
++        }
++        List<String> result = new ArrayList<>(names);
++        PACKAGE_CACHE.put(packagePrefix, result);
++        return result;
++    }
++
++    private static Class<?> loadQuiet(String name) {
++        try {
++            return Class.forName(name, false, EventRegistrationSurfaces.class.getClassLoader());
++        } catch (ClassNotFoundException | LinkageError error) {
++            return null;
++        }
++    }
++}
+diff --git a/src/test/java/com/tkisor/nekojs/platform/EventSurfaceDomainGateTest.java b/src/test/java/com/tkisor/nekojs/platform/EventSurfaceDomainGateTest.java
+index 0f2eaf550..30cef4e76 100644
+--- a/src/test/java/com/tkisor/nekojs/platform/EventSurfaceDomainGateTest.java
++++ b/src/test/java/com/tkisor/nekojs/platform/EventSurfaceDomainGateTest.java
+@@ -1,14 +1,11 @@
+ package com.tkisor.nekojs.platform;
+ 
+ import com.tkisor.nekojs.api.event.EventGroup;
+-import com.tkisor.nekojs.api.event.EventGroupRegistry;
+ import org.junit.jupiter.api.Tag;
+ import org.junit.jupiter.api.Test;
+ 
+ import java.io.IOException;
+ import java.io.InputStream;
+-import java.lang.reflect.InvocationTargetException;
+-import java.lang.reflect.Method;
+ import java.nio.charset.StandardCharsets;
+ import java.nio.file.Files;
+ import java.nio.file.Path;
+@@ -25,14 +22,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
+ /**
+  * 工单 33（W9）event/surface 覆盖 gate —— Fabric {@code common-api-processor} 延期后的
+  * 非 processor 替代门禁之二：驱动<b>节点真实的事件注册入口</b>，枚举注册进
+- * {@link EventGroupRegistry} 的 domain 与 bus 成员。
++ * {@link com.tkisor.nekojs.api.event.EventGroupRegistry} 的 domain 与 bus 成员。
+  *
+  * <p><b>owner</b>：Managed Surface/Probe owner（coverage ledger + contract fixture）；
+  * build convention owner 负责接线。<b>输入</b>：本节点 classpath 上真实编译出的核心插件
+  * （neoforge={@code NekoJSCorePlugin}，fabric={@code FabricCorePlugin}，即
+  * {@code @RegisterNekoJSPlugin(priority = CORE_PRIORITY)} 的节点事件注册入口）与其
+  * {@code registerEvents}/{@code registerClientEvents} 钩子，注册进本次测试新建的
+- * {@link EventGroupRegistry.Impl}（不读进程级全局，也不依赖其它测试的类初始化副作用）。
++ * {@link com.tkisor.nekojs.api.event.EventGroupRegistry.Impl}（不读进程级全局，也不依赖其它测试的类初始化副作用）。
+  * <b>逐项输出</b>：注册到的每个 domain、holder 入口、bus 成员、client-events 是否可观测，
+  * 与只读基线 {@code /nekojs/platform-gates/event-surface-domains.txt} 对比；另落
+  * {@code build/nekojs-gates/event-surface-<loader>.json} 供 CI 汇总进同一报告。
+@@ -59,9 +56,9 @@ class EventSurfaceDomainGateTest {
+ 
+     @Test
+     void eventSurfaceMatchesFixtureAndReportsMissingDomains() throws Exception {
+-        String loader = loaderId();
++        String loader = EventRegistrationSurfaces.loaderId();
+         assertTrue(!"unknown".equals(loader), "节点必须能判定自己的 loader（FabricPlatform/NeoForgePlatform）");
+-        String node = nodeId();
++        String node = EventRegistrationSurfaces.nodeId();
+         assertTrue(node != null && !node.isBlank(),
+                 "gate 必须知道自己在哪个节点运行（Gradle 注入 -Dnekojs.node=<node>）");
+ 
+@@ -69,7 +66,7 @@ class EventSurfaceDomainGateTest {
+         List<String> gaps = new ArrayList<>();
+         Map<String, String> rows = new TreeMap<>();
+ 
+-        List<String> contributors = pluginContributors(loader);
++        List<String> contributors = EventRegistrationSurfaces.pluginContributors(loader);
+         assertTrue(!contributors.isEmpty(),
+                 "节点必须能发现事件注册入口（neoforge 注解扫描 / fabric 内置清单）（node=" + loader + "）");
+ 
+@@ -77,19 +74,17 @@ class EventSurfaceDomainGateTest {
+         // 也避免"同一静态 GROUP 实例被注册两次"这种测试自身制造的重复 bus。
+         for (String className : contributors) {
+             record(registrations, className,
+-                    invokeAndRecord(className, REGISTER_EVENTS, new EventGroupRegistry.Impl()),
++                    EventRegistrationSurfaces.invokeRegistration(className, REGISTER_EVENTS),
+                     "server", gaps, node);
+         }
+ 
+         // client-events 通道：MC client 类在裸 JVM 可能无法初始化——失败必须显式记录，不能静默省略。
+         Map<String, String> clientFailures = new LinkedHashMap<>();
+         for (String className : contributors) {
+-            Map<String, String> invocation = invokeAndRecord(className, REGISTER_CLIENT_EVENTS,
+-                    new EventGroupRegistry.Impl());
+-            String error = invocation.get("error");
+-            if (error != null) {
+-                if (isMissingHook(invocation)) continue;
+-                clientFailures.put(className, error);
++            EventRegistrationSurfaces.Registration invocation =
++                    EventRegistrationSurfaces.invokeRegistration(className, REGISTER_CLIENT_EVENTS);
++            if (invocation.error() != null) {
++                clientFailures.put(className, invocation.error());
+                 continue;
+             }
+             record(registrations, className, invocation, "client", gaps, node);
+@@ -190,199 +185,42 @@ class EventSurfaceDomainGateTest {
+     private record Registration(String key, String group, String holder, String channel, List<String> buses) {}
+ 
+     private static void record(Map<String, Registration> target, String className,
+-                               Map<String, String> invocation, String channel,
++                               EventRegistrationSurfaces.Registration invocation, String channel,
+                                List<String> gaps, String loader) {
+-        String error = invocation.get("error");
++        String error = invocation.error();
+         if (error != null) {
+             gaps.add("registration-failed holder=" + className + " node=" + loader
+                     + " channel=" + channel + " owner=build convention owner"
+                     + " :: 节点事件注册入口抛错，事件面无法建立：" + error);
+             return;
+         }
+-        for (Map.Entry<String, String> entry : invocation.entrySet()) {
++        for (Map.Entry<String, EventGroup> entry : invocation.groups().entrySet()) {
+             String groupName = entry.getKey();
+-            List<String> merged = entry.getValue().isBlank()
+-                    ? new ArrayList<>() : new ArrayList<>(List.of(entry.getValue().split(",")));
++            List<String> merged = new ArrayList<>(entry.getValue().viewBuses().keySet().stream().toList());
+             Registration existing = target.get(groupName);
+             if (existing != null) {
+                 merged.addAll(existing.buses());
+-                merged = new ArrayList<>(new TreeSet<>(merged));
+             }
++            merged = new ArrayList<>(new TreeSet<>(merged));
+             target.put(groupName, new Registration(groupName, groupName, className, channel, merged));
+         }
+     }
+ 
+-    /**
+-     * 调用节点的某个事件注册钩子，返回 {@code group 名 -> "buses csv"}；
+-     * 钩子不存在（该节点无此通道）返回空表，钩子抛错返回 {@code {"error": ...}}。
+-     */
+-    private static Map<String, String> invokeAndRecord(String className, String methodName,
+-                                                       EventGroupRegistry registry) {
+-        Map<String, String> out = new LinkedHashMap<>();
+-        Object instance;
+-        Method method;
+-        try {
+-            Class<?> type = Class.forName(className, true,
+-                    EventSurfaceDomainGateTest.class.getClassLoader());
+-            instance = type.getDeclaredConstructor().newInstance();
+-            method = findMethod(type, methodName);
+-        } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
+-            out.put("error", describe(error));
+-            return out;
+-        }
+-        if (method == null) return out;
+-        try {
+-            method.invoke(instance, registry);
+-        } catch (InvocationTargetException | IllegalAccessException | RuntimeException error) {
+-            Throwable cause = error instanceof InvocationTargetException ite && ite.getCause() != null
+-                    ? ite.getCause() : error;
+-            out.clear();
+-            out.put("error", cause.getClass().getName() + ": " + cause.getMessage());
+-            return out;
+-        }
+-        for (Map.Entry<String, EventGroup> entry : registry.view().entrySet()) {
+-            List<String> buses = new ArrayList<>(entry.getValue().viewBuses().keySet());
+-            buses.sort(String::compareTo);
+-            out.put(entry.getKey(), String.join(",", buses));
+-        }
+-        return out;
+-    }
+-
+-    private static Method findMethod(Class<?> type, String name) {
+-        for (Method method : type.getMethods()) {
+-            if (!method.getName().equals(name)) continue;
+-            if (method.getParameterCount() != 1) continue;
+-            if (!EventGroupRegistry.class.isAssignableFrom(method.getParameterTypes()[0])) continue;
+-            return method;
+-        }
+-        return null;
+-    }
+-
+-    /** 无该钩子（非 Contributor）不是失败；只有实例化/调用抛错才是。 */
+-    private static boolean isMissingHook(Map<String, String> invocation) {
+-        return invocation.isEmpty();
+-    }
+-
+-    private static String describe(Throwable error) {
+-        Throwable cause = error;
+-        while (cause.getCause() != null && cause.getCause() != cause) cause = cause.getCause();
+-        return error.getClass().getName() + ": " + error.getMessage()
+-                + (cause != error ? " (root: " + cause + ")" : "");
+-    }
+-
+-    // ---- 节点事实源 ----
+-
+-    /** 节点身份（Gradle 注入 -Dnekojs.node=<node>）；基线按节点而非 loader 组织，
+-     *  因为同 loader 的不同 MC 节点可以有合法的不同事件面。 */
+-    private static String nodeId() {
+-        return System.getProperty("nekojs.node");
+-    }
+-
+-    private static String loaderId() {
+-        if (loadQuiet("com.tkisor.nekojs.platform.FabricPlatform") != null) return "fabric";
+-        if (loadQuiet("com.tkisor.nekojs.platform.NeoForgePlatform") != null) return "neoforge";
+-        return "unknown";
+-    }
+-
+-    private static String corePluginClass(String loader) {
+-        String name = "fabric".equals(loader)
+-                ? "com.tkisor.nekojs.fabric.FabricCorePlugin"
+-                : "com.tkisor.nekojs.core.NekoJSCorePlugin";
+-        return loadQuiet(name) != null ? name : null;
+-    }
+-
+-    /**
+-     * 事件注册入口清单：节点真实插件发现输入的并集 ——
+-     * neoforge = classpath 上带 {@code @RegisterNekoJSPlugin} 的类（{@code NeoForgePluginLoader} 的扫描口径）；
+-     * fabric = 上述注解类 ∪ {@code FabricPluginLoader.BUILTIN_PLUGINS}（内置清单，与
+-     * {@code QueryToolCapabilityMatrixTest} 同款事实源）。
+-     */
+-    @SuppressWarnings("unchecked")
+-    private static List<String> pluginContributors(String loader) throws IOException {
+-        java.util.TreeSet<String> names = new java.util.TreeSet<>();
+-        for (String className : classNamesInPackage("com.tkisor.nekojs")) {
+-            Class<?> type = loadQuiet(className);
+-            if (type == null) continue;
+-            if (type.getAnnotation(com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin.class) != null) {
+-                names.add(className);
+-            }
+-        }
+-        if ("fabric".equals(loader)) {
+-            Class<?> fabricLoader = loadQuiet("com.tkisor.nekojs.fabric.FabricPluginLoader");
+-            if (fabricLoader != null) {
+-                try {
+-                    var field = fabricLoader.getDeclaredField("BUILTIN_PLUGINS");
+-                    field.setAccessible(true);
+-                    for (Class<?> type : (List<Class<?>>) field.get(null)) names.add(type.getName());
+-                } catch (ReflectiveOperationException | RuntimeException error) {
+-                    throw new IllegalStateException("无法读取 FabricPluginLoader.BUILTIN_PLUGINS："
+-                            + describe(error));
+-                }
+-            }
+-        }
+-        return new ArrayList<>(names);
+-    }
+-
+-    private static final Map<String, List<String>> PACKAGE_CACHE = new java.util.HashMap<>();
+-
+-    /** 递归枚举 classpath 上某个包前缀下的全部类名（目录与 jar 两种形态）。 */
+-    private static List<String> classNamesInPackage(String packagePrefix) throws IOException {
+-        List<String> cached = PACKAGE_CACHE.get(packagePrefix);
+-        if (cached != null) return cached;
+-        String prefix = packagePrefix.replace('.', '/') + "/";
+-        java.util.TreeSet<String> names = new java.util.TreeSet<>();
+-        for (String entry : System.getProperty("java.class.path").split(java.io.File.pathSeparator)) {
+-            if (entry.isBlank()) continue;
+-            java.io.File path = new java.io.File(entry);
+-            if (!path.exists()) continue;
+-            if (path.isDirectory()) {
+-                Path base = path.toPath().resolve(packagePrefix.replace('.', '/'));
+-                if (!Files.isDirectory(base)) continue;
+-                try (var stream = Files.walk(base)) {
+-                    stream.filter(p -> p.toString().endsWith(".class")).forEach(p -> {
+-                        String relative = path.toPath().relativize(p).toString()
+-                                .replace(java.io.File.separatorChar, '/');
+-                        names.add(relative.substring(0, relative.length() - ".class".length())
+-                                .replace('/', '.'));
+-                    });
+-                }
+-            } else if (entry.endsWith(".jar")) {
+-                try (java.util.jar.JarFile jar = new java.util.jar.JarFile(path)) {
+-                    var entries = jar.entries();
+-                    while (entries.hasMoreElements()) {
+-                        String name = entries.nextElement().getName();
+-                        if (!name.startsWith(prefix) || !name.endsWith(".class")) continue;
+-                        names.add(name.substring(0, name.length() - ".class".length()).replace('/', '.'));
+-                    }
+-                }
+-            }
+-        }
+-        List<String> result = new ArrayList<>(names);
+-        PACKAGE_CACHE.put(packagePrefix, result);
+-        return result;
+-    }
+-
+-    private static Class<?> loadQuiet(String name) {
+-        try {
+-            return Class.forName(name, false, EventSurfaceDomainGateTest.class.getClassLoader());
+-        } catch (ClassNotFoundException | LinkageError error) {
+-            return null;
+-        }
+-    }
++    // ---- 节点事实源（发现/驱动逻辑在 EventRegistrationSurfaces，与 declaration golden 测试共享）----
+ 
+     // ---- 逐项输出落盘 ----
+ 
+     private static void emitReport(String node, Map<String, Registration> registrations,
+                                    Map<String, String> clientFailures,
+                                    Map<String, String> rows, List<String> gaps) throws IOException {
+-        String loader = loaderId();
++        String loader = EventRegistrationSurfaces.loaderId();
+         Path dir = Path.of(REPORT_DIR);
+         Files.createDirectories(dir);
+         StringBuilder json = new StringBuilder();
+         json.append("{\n  \"check\": \"event-surface\",\n");
+         json.append("  \"owner\": \"Managed Surface/Probe owner; build convention owner (wiring)\",\n");
+         json.append("  \"node\": \"").append(node).append("\",\n");
+-        json.append("  \"input\": \"").append(String.join(",", pluginContributors(loader))).append("\",\n");
++        json.append("  \"input\": \"").append(String.join(",", EventRegistrationSurfaces.pluginContributors(loader))).append("\",\n");
+         json.append("  \"domains\": ").append(registrations.size()).append(",\n");
+         json.append("  \"clientEventsNotVerified\": [\n");
+         int c = 0;
