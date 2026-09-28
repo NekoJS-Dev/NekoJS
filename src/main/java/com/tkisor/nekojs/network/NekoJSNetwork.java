@@ -39,6 +39,11 @@ public class NekoJSNetwork {
         //（26.x 4 参 / 1.21.1 3 参 + flow 判别）下沉进 McPlatformCompat 实现。
         McPlatformCompat.get().registerScriptPayload(registrar);
 
+        // Dynamic Registry 批事务同步包（票 21 平台接线）：同一 RegisterPayloadHandlersEvent /
+        // 同一 channel "1" 的第 7 个 payload 类型（双向）——只在带动态注册面的节点由 compat
+        // 实现真正注册（Nf261/Nf262），其余节点保持票 17 冻结的显式子集（默认空实现）。
+        McPlatformCompat.get().registerDynamicSyncPayload(registrar);
+
         // 多人脚本包分发：配置阶段 payload（S2C）——服务器在 PackSyncConfigurationTask
         // （RegisterConfigurationTasksEvent 官方入口，免 mixin）中推送哈希清单 + bundle。
         registrar.configurationToClient(PackHashListPayload.TYPE, PackHashListPayload.STREAM_CODEC, PackSyncMessageHandler::handleHashListOnClient);

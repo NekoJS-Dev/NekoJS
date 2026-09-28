@@ -33,6 +33,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *       {@code ShowErrorListPacket}（错误面板/显示域）在 {@code src/fabric} 零引用：
  *       不伪造编辑器/dashboard/客户端显示 parity。</li>
  * </ul>
+ *
+ * <p><b>受管增项（2026-09-29，票 21 平台接线 review 分支）</b>：NeoForge 面在同一
+ * {@code RegisterPayloadHandlersEvent} 注册点新增第 7 个 payload 类型
+ * {@code nekojs:dynamic_registry_sync}（双向，Dynamic Registry 批事务同步）——经
+ * {@code McPlatformCompat.Impl#registerDynamicSyncPayload} 门面（26.x 实现侧真正注册，
+ * 1.21.1 默认空实现＝该节点无动态注册面）。同一 channel、同一注册点、纯增量类型；
+ * fabric 显式子集（恰 6 调用/5 类型）不变。旧/新 diff 与影响面见
+ * {@code docs/architecture-refactor/evidence/2026-09-29-ticket21-wire-prep/}。该增项的
+ * 生效以维护者对本 review pack 的裁决为准。
  */
 class NetworkRegistrationSourceTraceTest {
 
@@ -136,6 +145,12 @@ class NetworkRegistrationSourceTraceTest {
         // 这里钉住「确实经门面注册」这一方向事实。
         assertTrue(source.contains("McPlatformCompat.get().registerScriptPayload(registrar)"),
                 "the bidirectional script payload must be registered through the version compat facade");
+        // 受管增项（票 21 平台接线）：动态注册批事务 payload 同样经 compat 门面注册在
+        // 同一 loader 事件/同一 channel——不出现第二注册点（26.x 实现侧注册，
+        // 1.21.1 默认空实现）。wire golden 见 DynamicSyncPayloadWireFormatTest。
+        assertTrue(source.contains("McPlatformCompat.get().registerDynamicSyncPayload(registrar)"),
+                "the dynamic registry sync payload must register at the same single loader event"
+                        + " through the version compat facade (no second registration point)");
     }
 
     /** AC2 的「方向」钉住：fabric 侧显式子集的注册方向。 */

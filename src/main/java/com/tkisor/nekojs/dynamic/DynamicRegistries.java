@@ -134,6 +134,29 @@ public final class DynamicRegistries {
     }
 
     /**
+     * Rollback surgery for the ticket 21 activation adapter: unregisters exactly the
+     * entries a degraded activation attempt newly registered (keyed by registry key
+     * like {@code minecraft:item}) and drops their claims and item specs. Entries the
+     * attempt merely re-claimed keep serving — they were legitimately registered by an
+     * earlier batch. Must be called on the transaction owner thread.
+     */
+    static void rollbackEntries(Map<String, List<Identifier>> newlyRegisteredByRegistryKey) {
+        for (Map.Entry<String, List<Identifier>> entry : newlyRegisteredByRegistryKey.entrySet()) {
+            switch (entry.getKey()) {
+                case "minecraft:item" -> {
+                    ITEMS.unregisterTrusted(entry.getValue());
+                    entry.getValue().forEach(id -> ITEM_SPECS.remove(id.toString()));
+                }
+                case "minecraft:sound_event" -> SOUND_EVENTS.unregisterTrusted(entry.getValue());
+                case "minecraft:mob_effect" -> MOB_EFFECTS.unregisterTrusted(entry.getValue());
+                default -> NekoJS.LOGGER.warn(
+                        "DynamicRegistry rollback asked for an unknown registry key '{}'; {} id(s) left untouched",
+                        entry.getKey(), entry.getValue().size());
+            }
+        }
+    }
+
+    /**
      * Reapplies default components to all dynamic items against fresh registries.
      * Called from {@code RegistryDataCollectorMixin} at RETURN of
      * {@code collectGameRegistries}: the vanilla component rebuild bound each

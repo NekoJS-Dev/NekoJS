@@ -1,0 +1,8 @@
+$ ./gradlew.bat :26.2.0:compileJava :26.2.0:compileTestJava
+BUILD SUCCESSFUL (shared tree second neoforge node; new guarded files compile on both 26.x nodes)
+
+$ ./gradlew.bat :1.21.1:compileJava :1.21.1:compileTestJava
+BUILD SUCCESSFUL (dynamic face absent via >=26 guards; compat default method keeps Nf1211 source-compatible)
+
+$ ./gradlew.bat :26.1.2-fabric:compileJava :26.1.2-fabric:compileTestJava :26.2.0-fabric:compileJava
+BUILD SUCCESSFUL (fabric explicit subset untouched; neoforge-guarded payload/wire classes not evaluated on fabric nodes)

@@ -8,6 +8,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -96,6 +97,21 @@ final class DynamicRegistrySet<T> {
      */
     void clearWorldRegistrations() {
         var ids = bookkeeping.idsByMode(DynamicRegisterMode.WORLD).stream().map(Identifier::parse).toList();
+        if (ids.isEmpty()) return;
+        RegistrySurgery.unregisterAll(asMapped(), ids, id -> ResourceKey.create(registryKey, id));
+        for (Identifier id : ids) {
+            bookkeeping.remove(id.toString());
+        }
+    }
+
+    /**
+     * Rollback surgery (ticket 21 activation adapter): unregisters the given ids —
+     * the ones a degraded activation attempt newly registered — with full index
+     * surgery and drops their claims. Callers must only pass ids that came through
+     * {@link #ensureRegistered}; the mode-based filter of {@link #clearWorldRegistrations}
+     * does not apply (rollback is per activation attempt, not per mode).
+     */
+    void unregisterTrusted(List<Identifier> ids) {
         if (ids.isEmpty()) return;
         RegistrySurgery.unregisterAll(asMapped(), ids, id -> ResourceKey.create(registryKey, id));
         for (Identifier id : ids) {

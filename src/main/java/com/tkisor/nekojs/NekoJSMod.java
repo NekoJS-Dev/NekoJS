@@ -203,6 +203,11 @@ public class NekoJSMod extends NekoJS {
             // 无渲染器注册」时也提交一个空批次，从而在 commit 点退役旧 generation 的渲染器
             // ——没有这个收集器，空批次永远不到 commit，旧表就换不掉。
             root.registerDomainCollector(new com.tkisor.nekojs.client.render.ClientRenderDomainOwner());
+            // 票 21：动态注册批事务的客户端接线（断线丢弃 staged prepare 的 hook 安装）。
+            // 守卫理由与上方 facade 注册行同款：动态注册面是 >=26 NeoForge 面。
+//? if >=26 {
+            com.tkisor.nekojs.dynamic.DynamicRegistryClientSync.install();
+//?}
             NekoJSClient.register(modEventBus, root);
         }
     }
