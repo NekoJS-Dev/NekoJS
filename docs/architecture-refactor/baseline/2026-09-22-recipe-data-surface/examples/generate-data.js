@@ -15,22 +15,24 @@
 
 // stage-keyed listener (the dispatch key is the stage, 'after_mods' today)
 ServerEvents.generateData('after_mods', event => {
-  // 1) write a datapack JSON (JS object or JSON string both work)
-  event.json('nekojs:loot_tables/blocks/ruby_ore.json', {
+  // 1) write a datapack JSON. Paths are relative to the pack root ('nekojs/data'),
+  //    slash-separated — 'ns:path' ids are NOT accepted here. Pass the JSON as a string
+  //    via JSON.stringify (verified by the runServer smoke; see baseline command-output/07).
+  event.json('nekojs/loot_tables/blocks/ruby_ore.json', JSON.stringify({
     type: 'minecraft:block',
     pools: [{
       rolls: 1,
       entries: [{ type: 'minecraft:item', name: 'nekojs:ruby' }]
     }]
-  })
+  }))
 
   // 2) write raw text (mcmeta, .txt, anything non-JSON)
   event.text('nekojs/notes/generated-by.txt', 'nekojs generateData example')
 
   // 3) read back what THIS batch produced (reads the candidate area before publish,
   //    the published active root after publish — same call either way)
-  const loot = event.getJson('nekojs:loot_tables/blocks/ruby_ore.json')
-  if (loot.pools.length !== 1) {
-    throw new Error(`unexpected pool count: ${loot.pools.length}`)
+  const loot = event.getJson('nekojs/loot_tables/blocks/ruby_ore.json')
+  if (loot === null || loot.pools.length !== 1) {
+    throw new Error('unexpected loot table read-back')
   }
 })

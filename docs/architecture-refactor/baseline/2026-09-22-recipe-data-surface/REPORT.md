@@ -213,3 +213,14 @@ fabric 侧 `nekojs/data` 无任何发布物、无 `.nekojs-datagen`。
 `runGameTestServer`、JEI 真集成（viewer 保持 conditional）、插件 `generateData` hook 真机装载
 ——票 34/维护者；D-A/D-B 缺陷修复——本票域维护者 triage。冒烟 run 目录用后即删
 （`versions/*/run*` 均被根 `.gitignore` 排除，未入库）。
+
+### D-A 修复与 D-B 分诊（2026-09-28，主会话证据合并轮）
+
+- **D-A（已修，示例文件）**：`examples/generate-data.js` 原用 `ns:path` 形式（`nekojs:loot_tables/...`）
+  ——`DataGeneratorJS` 只接受 pack 根相对斜杠路径，示例按原样无法运行。已改为冒烟验证过的形式
+  （`nekojs/loot_tables/...` + `JSON.stringify`，读回判空），与 command-output/07 的绿色路径一致。
+- **D-B（记录待分诊，生产缺陷）**：`event.json(path, {jsObject})` 的 JS 对象形式在真实 GraalJS
+  上经 `String.valueOf` 序落盘为字面 `[object Object]`（`instanceof Value` 分支未命中 in-context
+  调用）；单测只覆盖 JSON 字符串形式，而 `@Param` 文档宣称 "JS object (auto-serialized)"。修法涉及
+  host-object 序列化边界（`JsonObjectAdapter` 对 Map/host object 的转换路径），属生产行为变更，
+  留维护者分诊；示例已改用 `JSON.stringify` 规避并在注释中说明。
