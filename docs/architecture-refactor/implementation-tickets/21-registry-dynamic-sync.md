@@ -71,3 +71,16 @@
 - 接管处置：保留并修复前次运行的 txn 雏形（3 处实现/测试缺陷，含 abortInFlight 的 pump 复活真 bug 与 onCommit 重复提交分类次序）；**撤销**前次的 `plan.onPublish(Consumer)` 观察者接缝（违反票 16 `DynamicPlanInertnessTest` 执行通道门），改为 facade pull 队列——门未放宽。
 - 验证：`:common:check` 全绿（含隔离，最终源码状态复跑）；`:common:test --tests "com.tkisor.nekojs.core.dynamic.*"` 84/84（票 16 存量回归 + 票 21 新增）；`:26.1.2:test` 354/0（节点 sanity；附带修复共享测试树 `Ticket08LoaderDiscoveryTest` 的裸 `Platform.init` 守卫缺失——本票 common jar 内容变化移动 JUnit 类扫描顺序后暴露的既有缺陷，对齐兄弟测试 try/catch 惯例，测试-only）。红→绿证据两份（batch-abort / commit-once）。未跑：真机多人 smoke、`runGameTestServer`、guardLint（未触碰守卫/build 文件）、其余节点（版本树生产源零改动）——详见 baseline REPORT §3。
 - 遗留：平台激活接线（payload+Adapter+pump 驱动，owner network+维护者）、`DynamicDefinition` 跨进程 codec、NEKO- 码表缺口（owner 票 30）、AC9 维护者 sign-off、AC10「已通过 gate 的生产示例」部分满足。
+
+## Review pack note（2026-09-29，平台接线预备）
+
+维护者裁决「现在备方案+diff」：平台接线 review pack 已备于分支 `ticket-21-wire-prep`
+（基于 mult@`973defbc`，未合并未推送）。内容：设计（批事务协议骑既有 register-once
+通道族——单条双向 payload `nekojs:dynamic_registry_sync` + common JSON codec）、26.x
+共享树真实现（`NeoForgeDynamicRegistryAdapter`/`NeoForgeDynamicSyncTransport` +
+服务端/客户端接线，三类候选类型 surgery 复用既有 `DynamicRegistries` 冻结旁路路径，
+无类型被标 unavailable）、冻结 wire gate 的受管更新（`NetworkRegistrationSourceTraceTest`
+纯增量方向钉住 + javadoc，fabric 恰 6 调用/5 类型子集断言原样未动）、wire golden 从
+第一天钉住（`DynamicSyncPayloadWireFormatTest`，26.1.2 实测 hex）。证据与裁决事项见
+`evidence/2026-09-29-ticket21-wire-prep/REPORT.md`。AC8/AC10 的平台接线缺口以此 pack
+的维护者裁决 + 真机 smoke（owner 34）为闭环路径；裁决前本票注记与能力表口径不变。

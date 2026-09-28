@@ -1,0 +1,5 @@
+$ ./gradlew.bat :26.1.2:test --rerun   (clean final-state rerun)
+BUILD SUCCESSFUL
+
+[test-results aggregate] total tests=458, failed=0, errors=0, skipped=58
+(skips are pre-existing environment-conditional suites, unrelated to this change)

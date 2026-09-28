@@ -1,0 +1,7 @@
+$ ./gradlew.bat :common:check   (final source state)
+
+BUILD SUCCESSFUL in 2s
+19 actionable tasks: 2 executed, 17 up-to-date
+
+$ ./gradlew.bat :26.1.2:test --rerun   (clean final-state rerun; aggregate below)
+BUILD SUCCESSFUL

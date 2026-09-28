@@ -1,0 +1,401 @@
+# Ticket 21 wire-gate old/new diff (review pack 2026-09-29)
+# Frozen gate file: NetworkRegistrationSourceTraceTest (ticket 17, +15/-0, no assertion relaxed)
+# New wire golden: DynamicSyncPayloadWireFormatTest (payload pinned from day one)
+# New wiring trace: DynamicSyncWiringSourceTraceTest (registration only in compat impls; both handlers hop; single codec)
+
+diff --git a/src/test/java/com/tkisor/nekojs/dynamic/DynamicSyncWiringSourceTraceTest.java b/src/test/java/com/tkisor/nekojs/dynamic/DynamicSyncWiringSourceTraceTest.java
+new file mode 100644
+index 000000000..a17cd0506
+--- /dev/null
++++ b/src/test/java/com/tkisor/nekojs/dynamic/DynamicSyncWiringSourceTraceTest.java
+@@ -0,0 +1,180 @@
++//? if neoforge {
++//? if >=26 {
++package com.tkisor.nekojs.dynamic;
++
++import org.junit.jupiter.api.Test;
++
++import java.io.IOException;
++import java.nio.charset.StandardCharsets;
++import java.nio.file.Files;
++import java.nio.file.Path;
++import java.util.List;
++import java.util.stream.Stream;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertFalse;
++import static org.junit.jupiter.api.Assertions.assertTrue;
++
++/**
++ * Ticket 21 platform wiring source-trace fixture (ticket 17 trace style, plain file
++ * reads): pins the wiring discipline so later changes cannot bend the dynamic registry
++ * sync face —
++ *
++ * <ul>
++ *   <li><b>register-once</b>: the {@code playBidirectional} registration of
++ *       {@code DynamicRegistrySyncPacket} lives only in the two 26.x node compat impls
++ *       (Nf261/Nf262PlatformCompat) — zero registration calls in the shared
++ *       assembly/event/reload faces;</li>
++ *   <li><b>receive-side hop</b>: both handlers (DynamicRegistrySyncWire.handleOnServer /
++ *       DynamicRegistryClientSync.handleOnClient) must {@code enqueueWork} onto the
++ *       platform main thread before touching the coordinator/participant (both are
++ *       owner-thread-only by contract);</li>
++ *   <li><b>no second channel / no second model</b>: protocol messages are encoded by
++ *       common's {@code DynamicSyncWireCodec} into a single JSON body on the existing
++ *       payload — the dynamic package registers no custom channel and hand-rolls no
++ *       second wire encoding.</li>
++ * </ul>
++ */
++class DynamicSyncWiringSourceTraceTest {
++
++    // ---- repo root location (node test CWD = versions/<node>; walk up to the controller script) ----
++
++    private static Path repoRoot() {
++        Path dir = Path.of("").toAbsolutePath();
++        while (dir != null) {
++            if (Files.isRegularFile(dir.resolve("stonecutter.gradle.kts"))
++                    && Files.isDirectory(dir.resolve("src"))) {
++                return dir;
++            }
++            dir = dir.getParent();
++        }
++        throw new IllegalStateException("cannot locate repo root from " + Path.of("").toAbsolutePath());
++    }
++
++    private static String read(Path path) {
++        try {
++            return Files.readString(path, StandardCharsets.UTF_8);
++        } catch (IOException e) {
++            throw new IllegalStateException("cannot read " + path, e);
++        }
++    }
++
++    /** Keeps code lines only (drops javadoc/line-comment shapes). */
++    private static String codeLinesOnly(String source) {
++        StringBuilder out = new StringBuilder(source.length());
++        for (String line : source.split("\n", -1)) {
++            String trimmed = line.trim();
++            if (trimmed.startsWith("*") || trimmed.startsWith("/*") || trimmed.startsWith("//")) {
++                continue;
++            }
++            out.append(line).append('\n');
++        }
++        return out.toString();
++    }
++
++    private static int countOccurrences(String haystack, String needle) {
++        int count = 0;
++        int index = 0;
++        while ((index = haystack.indexOf(needle, index)) >= 0) {
++            count++;
++            index += needle.length();
++        }
++        return count;
++    }
++
++    // ---- register-once: registration lives only in the two node compat impls ----
++
++    @Test
++    void syncPayloadRegistrationLivesExactlyInTheTwoNodeCompatImpls() {
++        Path root = repoRoot();
++        int registrations = 0;
++        List<Path> roots = List.of(
++                root.resolve("src/main/java"),
++                root.resolve("common/src/main/java"),
++                root.resolve("versions/26.1.2/src/main/java"),
++                root.resolve("versions/26.2.0/src/main/java"));
++        for (Path dir : roots) {
++            if (!Files.isDirectory(dir)) {
++                continue;
++            }
++            try (Stream<Path> walk = Files.walk(dir)) {
++                for (Path file : walk.filter(p -> p.toString().endsWith(".java")).toList()) {
++                    String code = codeLinesOnly(read(file));
++                    registrations += countOccurrences(code, "DynamicRegistrySyncPacket.TYPE");
++                }
++            } catch (IOException e) {
++                throw new IllegalStateException(e);
++            }
++        }
++        // Exactly one registration per node compat impl (the payload class's own TYPE is a declaration, not counted here)
++        assertEquals(2, registrations,
++                "the dynamic sync payload registers exactly in Nf261/Nf262 compat impls");
++        String nf261 = read(root.resolve(
++                "versions/26.1.2/src/main/java/com/tkisor/nekojs/platform/compat/Nf261PlatformCompat.java"));
++        String nf262 = read(root.resolve(
++                "versions/26.2.0/src/main/java/com/tkisor/nekojs/platform/compat/Nf262PlatformCompat.java"));
++        // Exactly two playBidirectional calls per 26.x compat impl: script_payload + dynamic_registry_sync
++        assertEquals(2, countOccurrences(codeLinesOnly(nf261), "playBidirectional("),
++                "Nf261 registers script_payload + dynamic_registry_sync, nothing else");
++        assertEquals(2, countOccurrences(codeLinesOnly(nf262), "playBidirectional("),
++                "Nf262 registers script_payload + dynamic_registry_sync, nothing else");
++    }
++
++    @Test
++    void assemblyAndEventFacesContainNoRegistrationCalls() {
++        Path root = repoRoot();
++        List<Path> wiringFaces = List.of(
++                root.resolve("src/main/java/com/tkisor/nekojs/dynamic/DynamicRegistrySyncWire.java"),
++                root.resolve("src/main/java/com/tkisor/nekojs/dynamic/DynamicRegistryClientSync.java"),
++                root.resolve("src/main/java/com/tkisor/nekojs/dynamic/NeoForgeDynamicSyncTransport.java"),
++                root.resolve("src/main/java/com/tkisor/nekojs/dynamic/NeoForgeDynamicRegistryAdapter.java"),
++                root.resolve("src/main/java/com/tkisor/nekojs/dynamic/DynamicRegistryFacade.java"));
++        for (Path path : wiringFaces) {
++            String code = codeLinesOnly(read(path));
++            for (String token : List.of("playBidirectional(", "PayloadTypeRegistry",
++                    "registerGlobalReceiver", "playToClient(", "configurationToClient(")) {
++                assertFalse(code.contains(token),
++                        () -> path.getFileName() + " must not register payloads itself"
++                                + " (registration stays in the loader-native compat entry): '" + token + "'");
++            }
++        }
++    }
++
++    // ---- receive-side hop: both handlers enqueueWork before entering the owner-thread-only state machines ----
++
++    @Test
++    void bothReceiveHandlersHopThePlatformMainThreadBeforeTouchingTheProtocolState() {
++        Path root = repoRoot();
++        String serverHandler = read(root.resolve(
++                "src/main/java/com/tkisor/nekojs/dynamic/DynamicRegistrySyncWire.java"));
++        assertTrue(serverHandler.contains("context.enqueueWork(() ->"),
++                "the server receive handler must hop enqueueWork before the coordinator call");
++        String clientHandler = read(root.resolve(
++                "src/main/java/com/tkisor/nekojs/dynamic/DynamicRegistryClientSync.java"));
++        assertTrue(clientHandler.contains("context.enqueueWork(() ->"),
++                "the client receive handler must hop enqueueWork before the participant call");
++    }
++
++    // ---- no second model: wire encoding goes through the single common codec ----
++
++    @Test
++    void wireEncodingGoesThroughTheSingleCommonCodec() {
++        Path root = repoRoot();
++        try (Stream<Path> walk = Files.walk(root.resolve("src/main/java/com/tkisor/nekojs/dynamic"))) {
++            for (Path file : walk.filter(p -> p.toString().endsWith(".java")).toList()) {
++                String code = codeLinesOnly(read(file));
++                assertEquals(0, countOccurrences(code, "new JsonObject"),
++                        () -> file.getFileName() + " must not hand-roll a second JSON wire encoding");
++                assertTrue(code.contains("DynamicSyncWireCodec.encode")
++                        || !code.contains("DynamicRegistrySyncPacket(")
++                        || file.getFileName().toString().equals("DynamicRegistrySyncWire.java")
++                        || file.getFileName().toString().equals("DynamicRegistryClientSync.java"),
++                        () -> file.getFileName() + " sends payloads only through the common codec");
++            }
++        } catch (IOException e) {
++            throw new IllegalStateException(e);
++        }
++    }
++}
++//?}
++//?}
+diff --git a/src/test/java/com/tkisor/nekojs/network/DynamicSyncPayloadWireFormatTest.java b/src/test/java/com/tkisor/nekojs/network/DynamicSyncPayloadWireFormatTest.java
+new file mode 100644
+index 000000000..06305e9ee
+--- /dev/null
++++ b/src/test/java/com/tkisor/nekojs/network/DynamicSyncPayloadWireFormatTest.java
+@@ -0,0 +1,171 @@
++//? if neoforge {
++//? if >=26 {
++package com.tkisor.nekojs.network;
++
++import com.tkisor.nekojs.core.dynamic.plan.DynamicDefinition;
++import com.tkisor.nekojs.core.dynamic.plan.DynamicDefinitionType;
++import com.tkisor.nekojs.core.dynamic.plan.DynamicItemBuilder;
++import com.tkisor.nekojs.core.dynamic.txn.DynamicSyncMessage;
++import com.tkisor.nekojs.core.dynamic.txn.DynamicSyncReply;
++import com.tkisor.nekojs.core.dynamic.txn.DynamicSyncWireCodec;
++import net.minecraft.core.RegistryAccess;
++import net.minecraft.network.RegistryFriendlyByteBuf;
++import io.netty.buffer.ByteBuf;
++import io.netty.buffer.Unpooled;
++import org.junit.jupiter.api.Test;
++
++import java.util.List;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertTrue;
++
++/**
++ * Ticket 21 platform wiring wire golden (an addition under the ticket 17 AC2 discipline,
++ * not a change to it): pins the id, codec and wire format of the dynamic registry
++ * batch-transaction payload {@code nekojs:dynamic_registry_sync} from day one — the body
++ * is a single UTF-8 JSON string (varint length + bytes), with the JSON itself produced by
++ * common's {@code DynamicSyncWireCodec} (bodies asserted separately).
++ *
++ * <p>The golden constants are measured encode output from the 26.1.2 active node (the
++ * capture run is archived in this ticket's evidence directory). The test compiles and
++ * runs only on nodes with the dynamic registry face (26.x NeoForge); 1.21.1/fabric nodes
++ * have no such payload class (explicit-subset discipline). Any change to the payload id,
++ * field order or JSON shape turns this test red — a managed change must go through the
++ * wire migration table and the fixture gate.
++ */
++class DynamicSyncPayloadWireFormatTest {
++
++    private static final String DYNAMIC_SYNC_ID = "nekojs:dynamic_registry_sync";
++
++    /** varint(52) + ASCII: {"v":1,"kind":"COMMIT","generation":12,"entries":[]} */
++    private static final String COMMIT_HEX =
++            "347b2276223a312c226b696e64223a22434f4d4d4954222c2267656e65726174696f6e223a3132"
++                    + "2c22656e7472696573223a5b5d7d";
++
++    /** varint(182) + ASCII: single-entry PREPARE (fireResistant/maxStackSize/mode/rarity readings + sha256 fingerprint). */
++    private static final String PREPARE_HEX =
++            "b6027b2276223a312c226b696e64223a2250524550415245222c2267656e65726174696f6e223a3132"
++                    + "2c22656e7472696573223a5b7b22646566696e6974696f6e223a7b2274797065223a224954454d222c"
++                    + "226964223a226d796d6f643a72756279222c226d6f6465223a22574f524c44222c2272656164696e67"
++                    + "73223a5b2266697265526573697374616e743d66616c7365222c226d6178537461636b53697a653d"
++                    + "3136222c226d6f64653d776f726c64222c227261726974793d65706963225d2c2266696e6765727072"
++                    + "696e74223a22613734363931353533386137356135613664346465303631643937336139376335"
++                    + "63633736316261343939386139386331336134616234316562326433376561227d2c226f776e6572"
++                    + "223a227365727665725f736372697074732f6d61696e2e6a73227d5d7d";
++
++    /** varint(51) + ASCII: {"v":1,"kind":"ACK","generation":12,"accepted":true} */
++    private static final String ACK_HEX =
++            "347b2276223a312c226b696e64223a2241434b222c2267656e65726174696f6e223a31322c2261"
++                    + "63636570746564223a747275657d";
++
++    // ---- sample construction (identical to the capture run) ----
++
++    private static DynamicDefinition sampleItem() {
++        DynamicItemBuilder builder = new DynamicItemBuilder();
++        builder.setMaxStackSize(16);
++        builder.setRarity("epic");
++        return DynamicDefinition.of(DynamicDefinitionType.ITEM, "mymod:ruby", builder);
++    }
++
++    private static String commitBody() {
++        return DynamicSyncWireCodec.encodeServerMessage(
++                new DynamicSyncMessage(DynamicSyncMessage.Kind.COMMIT, 12L, List.of(), null));
++    }
++
++    private static String prepareBody() {
++        return DynamicSyncWireCodec.encodeServerMessage(new DynamicSyncMessage(
++                DynamicSyncMessage.Kind.PREPARE, 12L,
++                List.of(new DynamicSyncMessage.Entry(sampleItem(), "server_scripts/main.js")), null));
++    }
++
++    private static String ackBody() {
++        return DynamicSyncWireCodec.encodeReply(DynamicSyncReply.ack(12L, true, null));
++    }
++
++    // ---- codec helpers (decode single-arg; encode is buf-first, value-after across the dependency set) ----
++
++    private static String encodeHex(String body) {
++        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
++        try {
++            DynamicRegistrySyncPacket.CODEC.encode(buf, new DynamicRegistrySyncPacket(body));
++            byte[] bytes = new byte[buf.readableBytes()];
++            buf.readBytes(bytes);
++            StringBuilder sb = new StringBuilder(bytes.length * 2);
++            for (byte b : bytes) {
++                sb.append(String.format("%02x", b));
++            }
++            return sb.toString();
++        } finally {
++            buf.release();
++        }
++    }
++
++    private static RegistryFriendlyByteBuf bufOf(String hex) {
++        byte[] out = new byte[hex.length() / 2];
++        for (int i = 0; i < out.length; i++) {
++            out[i] = (byte) Integer.parseInt(hex.substring(i * 2, i * 2 + 2), 16);
++        }
++        return new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(out), RegistryAccess.EMPTY);
++    }
++
++    // ---- id pin ----
++
++    @Test
++    void payloadIdIsPinnedFromDayOne() {
++        assertEquals(DYNAMIC_SYNC_ID, DynamicRegistrySyncPacket.TYPE.id().toString());
++    }
++
++    // ---- encode side: byte-identical to the golden hex ----
++
++    @Test
++    void commitEncodesToGoldenWireBytes() {
++        assertEquals(COMMIT_HEX, encodeHex(commitBody()));
++    }
++
++    @Test
++    void prepareEncodesToGoldenWireBytes() {
++        assertEquals(PREPARE_HEX, encodeHex(prepareBody()));
++    }
++
++    @Test
++    void ackEncodesToGoldenWireBytes() {
++        assertEquals(ACK_HEX, encodeHex(ackBody()));
++    }
++
++    // ---- decode side: golden bytes decode to the equivalent payload ----
++
++    @Test
++    void goldenBytesDecodeToEquivalentPayloadsAndBodies() {
++        for (String[] pair : List.of(new String[] {COMMIT_HEX, commitBody()},
++                new String[] {PREPARE_HEX, prepareBody()}, new String[] {ACK_HEX, ackBody()})) {
++            RegistryFriendlyByteBuf buf = bufOf(pair[0]);
++            try {
++                DynamicRegistrySyncPacket decoded = DynamicRegistrySyncPacket.CODEC.decode(buf);
++                assertEquals(pair[1], decoded.json());
++                assertEquals(0, buf.readableBytes(), "golden bytes must be fully consumed");
++            } finally {
++                buf.release();
++            }
++        }
++    }
++
++    // ---- round trip through the common protocol model ----
++
++    @Test
++    void goldenBodiesDecodeThroughTheCommonCodec() {
++        DynamicSyncMessage prepared = DynamicSyncWireCodec.decodeServerMessage(prepareBody());
++        assertEquals(DynamicSyncMessage.Kind.PREPARE, prepared.kind());
++        assertEquals(12L, prepared.generation());
++        assertEquals(1, prepared.entries().size());
++        assertEquals("minecraft:item|mymod:ruby", prepared.entries().get(0).key());
++        assertTrue(prepared.entries().get(0).definition().readings().contains("maxStackSize=16"));
++
++        DynamicSyncMessage commit = DynamicSyncWireCodec.decodeServerMessage(commitBody());
++        assertEquals(DynamicSyncMessage.Kind.COMMIT, commit.kind());
++
++        DynamicSyncReply ack = DynamicSyncWireCodec.decodeReply(ackBody());
++        assertEquals(Boolean.TRUE, ack.accepted());
++    }
++}
++//?}
++//?}
+diff --git a/src/test/java/com/tkisor/nekojs/network/NetworkRegistrationSourceTraceTest.java b/src/test/java/com/tkisor/nekojs/network/NetworkRegistrationSourceTraceTest.java
+index c1267932b..616780ed6 100644
+--- a/src/test/java/com/tkisor/nekojs/network/NetworkRegistrationSourceTraceTest.java
++++ b/src/test/java/com/tkisor/nekojs/network/NetworkRegistrationSourceTraceTest.java
+@@ -33,6 +33,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
+  *       {@code ShowErrorListPacket}（错误面板/显示域）在 {@code src/fabric} 零引用：
+  *       不伪造编辑器/dashboard/客户端显示 parity。</li>
+  * </ul>
++ *
++ * <p><b>受管增项（2026-09-29，票 21 平台接线 review 分支）</b>：NeoForge 面在同一
++ * {@code RegisterPayloadHandlersEvent} 注册点新增第 7 个 payload 类型
++ * {@code nekojs:dynamic_registry_sync}（双向，Dynamic Registry 批事务同步）——经
++ * {@code McPlatformCompat.Impl#registerDynamicSyncPayload} 门面（26.x 实现侧真正注册，
++ * 1.21.1 默认空实现＝该节点无动态注册面）。同一 channel、同一注册点、纯增量类型；
++ * fabric 显式子集（恰 6 调用/5 类型）不变。旧/新 diff 与影响面见
++ * {@code docs/architecture-refactor/evidence/2026-09-29-ticket21-wire-prep/}。该增项的
++ * 生效以维护者对本 review pack 的裁决为准。
+  */
+ class NetworkRegistrationSourceTraceTest {
+ 
+@@ -136,6 +145,12 @@ class NetworkRegistrationSourceTraceTest {
+         // 这里钉住「确实经门面注册」这一方向事实。
+         assertTrue(source.contains("McPlatformCompat.get().registerScriptPayload(registrar)"),
+                 "the bidirectional script payload must be registered through the version compat facade");
++        // 受管增项（票 21 平台接线）：动态注册批事务 payload 同样经 compat 门面注册在
++        // 同一 loader 事件/同一 channel——不出现第二注册点（26.x 实现侧注册，
++        // 1.21.1 默认空实现）。wire golden 见 DynamicSyncPayloadWireFormatTest。
++        assertTrue(source.contains("McPlatformCompat.get().registerDynamicSyncPayload(registrar)"),
++                "the dynamic registry sync payload must register at the same single loader event"
++                        + " through the version compat facade (no second registration point)");
+     }
+ 
+     /** AC2 的「方向」钉住：fabric 侧显式子集的注册方向。 */

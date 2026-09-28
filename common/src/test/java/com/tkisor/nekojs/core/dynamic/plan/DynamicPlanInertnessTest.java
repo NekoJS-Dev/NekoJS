@@ -110,7 +110,8 @@ class DynamicPlanInertnessTest {
         assertEquals(2, DynamicAdapterRequest.class.getDeclaredConstructors().length,
                 "构造器只有数据装配两条（record 规范构造器 + 由定义派生的便捷构造器），无第二执行入口");
         DynamicAdapterRequest request = new DynamicAdapterRequest(7L, "minecraft:item", "mymod:ruby",
-                DynamicRegisterMode.WORLD, "server_scripts/main.js", "fp", DynamicAdapterRequest.ACTION_REGISTER);
+                DynamicRegisterMode.WORLD, "server_scripts/main.js", "fp", DynamicAdapterRequest.ACTION_REGISTER,
+                List.of("maxStackSize=64"));
         assertEquals("register", request.action());
         assertEquals(7L, request.generation(), "generation-scoped");
         assertNotNull(request.registryKey());
