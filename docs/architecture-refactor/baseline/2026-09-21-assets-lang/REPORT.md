@@ -251,3 +251,62 @@ docs/architecture-refactor/implementation-tickets/29-assets.md         （票据
 - 最小示例：同目录 `examples/assets-and-generated-langs.js`。
 - 回归引入点：`c8066519` / `59919f87`（`git show c8066519 -- src/main/java/com/tkisor/nekojs/core/NekoJSCorePlugin.java`
   的 diff 里可见 `-        registry.register("Assets", new AssetGeneratorJS());`）。
+
+## 8. 按节点能力表（AC8 补充，2026-09-29 证据收口轮）
+
+本轮（证据包 `evidence/2026-09-29-ticket29-assets-fixture/`，worktree `NekoJS-mult-t29fx`
+分支 `ticket-29-assets-fixture`）补齐 §5 里 AC8 的两个缺口：**未对 fabric 跑 Assets/Lang 的
+source trace**、**`Assets` 绑定在 1.21.1 的缺席未记录为 capability 条目**。本表只覆盖票 29
+域（assets/lang 生成面），按 AC8 要求以 supported / unavailable 明示五节点真实差异；
+**不是**全局 capability 矩阵（那属票 31/32），fabric 缺席一律显式标注、不做静默 parity。
+
+### 8.1 能力矩阵
+
+| 能力域 | 1.21.1 (NeoForge) | 26.1.2 (NeoForge) | 26.2.0 (NeoForge) | 26.1.2-fabric | 26.2.0-fabric |
+|---|---|---|---|---|---|
+| ① `ClientEvents.generateAssets` 事件 + plugin generate-assets Hook 聚合 | supported | supported | supported | unavailable（显式） | unavailable（显式） |
+| ② `ClientEvents.lang` 事件 + `generatedLangs()` 声明/脚本键聚合 | supported | supported | supported | unavailable（显式） | unavailable（显式） |
+| ③ `Assets` typed binding（blockState/blockModel/itemModel/texture） | **unavailable（显式）**——`>=26` 守卫求值移除 | supported | supported | unavailable（显式） | unavailable（显式） |
+
+公共 seam（`NekoJSPlugin#generatedLangs()`、`PluginGenerationHooks#resolveGeneratedLangs`、
+`LangGeneratorJS.isValidLangCode`、`AssetGeneratorJS`/`DataGeneratorJS`/`LangGeneratorJS` 实现
+本体）住在 `common`，节点无关；①/② 在 fabric 的 unavailable 指**触发面**（无 client
+generation 生命周期、无对应事件总线），不是 common 实现缺失。
+
+### 8.2 单元格证据（判定基础：source trace fixture + golden 回读，均可执行复核）
+
+钉住本表的 fixture：
+
+- **共享树 `Ticket29AssetsLangCapabilityTraceTest`**（`src/test/.../core/`，
+  `//? if neoforge` + `//? if >=26` 守卫，26.1.2/26.2.0 执行，5 tests）：
+  - `eventSurfaceGoldenPinsAssetsAndLangStancePerNode`——只读回票 33 golden
+    （`src/test/resources/nekojs/platform-gates/event-surface-domains.txt`）的五节点
+    `ClientEvents` 行：1.21.1/26.1.2/26.2.0 均含 `generateAssets` 与 `lang` 各恰一次
+    （L24–L26）；26.1.2-fabric/26.2.0-fabric 仅 `tick,tickPost,tickPre`（L27–L28），
+    两个成员显式缺席＝「documented unavailable, no silent parity」；
+  - `assetsBindingRegistrationIsGuardedOutOf1211AndFabricByShape`——守卫栈扫描
+    `NekoJSCorePlugin.java` 的 `new AssetGeneratorJS()` 注册行：活跃守卫栈恰含
+    `neoforge` 与 `>=26` ⇒ 1.21.1 求值移除该行、fabric 树根本不含该类；
+  - `generateAssetsAndLangDeclarationsStayInsideTheNeoForgeOnlyClientEventsGroup`——
+    `ClientEvents.java` 的 `GROUP.client("generateAssets"`/`GROUP.client("lang"` 声明行
+    处于文件级 `neoforge` 守卫内 ⇒ fabric 求值树整组缺席；
+  - `fabricTreesRegisterNoAssetsBindingAndBridgeNeitherAssetsNorLang`——扫
+    `src/fabric/java` 与两个 fabric 版本树：`new AssetGeneratorJS(`/`register("Assets"`
+    零命中；`FabricClientEventBindings` 的 `CLIENT_EVENTS.client(...)` 总集合恰为
+    `{tickPre,tickPost,tick}`（javadoc 自述 generateAssets/lang 等随 fabric 桥逐个加入）；
+  - `on26xNeoForgeBothEventsAndTheAssetsBindingResolve`——26.x 运行时腿：经生产
+    `NekoJSCorePlugin#registerBinding` 解析到 `Assets` 绑定（valueType 精确
+    `AssetGeneratorJS`），且 `ClientEvents.GENERATE_ASSETS/LANG` 两总线
+    eventName/scriptType 正确。
+- **1.21.1 节点本地 `Ticket29AssetsAbsentOn1211Test`**（`versions/1.21.1/src/test/.../core/`，
+  无守卫、仅该节点执行，1 test）：同一条生产 `registerBinding` 路径在 1.21.1 上
+  `viewRegistered().get("Assets")` 为 **null**，而 `ClientEvents.GENERATE_ASSETS/LANG`
+  两总线仍解析——「事件在、typed binding 缺席」这一行由此从 guard 推断升级为运行时断言。
+
+### 8.3 not verified（如实记录）
+
+| 项 | 节点 | blocker / owner |
+|---|---|---|
+| fabric 真机/GameTest smoke（而非 source trace 级证据） | fabric 两节点 | 本表 fabric 判定基于 golden 行（真实节点求值产物）+ 源树扫描；运行时 smoke 归票 31/32 fabric 面 |
+| AC6 真机资源 reload 恰好一次 + resource manager 回读 | 全部五节点 | 仍归票 34 真机轮（同 §5，本表不改变该判定） |
+| 26.2.0 本表 fixture 的独立执行 | 26.2.0 | 共享树 fixture 与 26.1.2 同源同守卫（>=26 真值两节点一致）；本轮验证腿为 26.1.2 + 1.21.1 + 26.1.2-fabric（见证据包 transcripts） |
