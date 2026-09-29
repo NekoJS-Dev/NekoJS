@@ -1,0 +1,6 @@
+# Artifact inventory (run 01 output, 2026-09-29)
+e79dc424d862d243  2854727  versions/1.21.1/build/libs/nekojs-neoforge-1.21.1-1.1.0-preview3.jar
+93052b1684cadaef  17920849  versions/26.1.2-fabric/build/libs/nekojs-fabric-26.1.2-1.1.0-preview3.jar
+cd893bf56d4eff8e  3028337  versions/26.1.2/build/libs/nekojs-neoforge-26.1.2-1.1.0-preview3.jar
+8013883243743489  17920848  versions/26.2.0-fabric/build/libs/nekojs-fabric-26.2-1.1.0-preview3.jar
+edad1edd45a9a47c  3028357  versions/26.2.0/build/libs/nekojs-neoforge-26.2.0-1.1.0-preview3.jar

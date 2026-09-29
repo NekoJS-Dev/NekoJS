@@ -1,0 +1,49 @@
+=== node 1.21.1
+source-roots: 1.21.1 java=2 resources=6
+  java      build/generated/stonecutter/main/java
+  java      src/main/java
+  resources ../../src/main/resources-legacy
+  resources build/generated/sources/modMetadata
+  resources build/generated/stonecutter/generated/resources
+  resources build/generated/stonecutter/main/resources
+  resources src/generated/resources
+  resources src/main/resources
+=== node 26.1.2
+source-roots: 26.1.2 java=2 resources=6
+  java      ../../src/main/java
+  java      src/main/java
+  resources ../../src/generated/resources
+  resources ../../src/main/resources
+  resources ../../src/main/resources-modern
+  resources build/generated/sources/modMetadata
+  resources src/generated/resources
+  resources src/main/resources
+=== node 26.2.0
+source-roots: 26.2.0 java=2 resources=6
+  java      build/generated/stonecutter/main/java
+  java      src/main/java
+  resources ../../src/main/resources-modern
+  resources build/generated/sources/modMetadata
+  resources build/generated/stonecutter/generated/resources
+  resources build/generated/stonecutter/main/resources
+  resources src/generated/resources
+  resources src/main/resources
+=== node 26.1.2-fabric
+source-roots: 26.1.2-fabric java=3 resources=4
+  java      ../../src/fabric/java
+  java      build/generated/stonecutter/main/java
+  java      src/main/java
+  resources ../../src/fabric/resources
+  resources build/generated/sources/modMetadata
+  resources build/generated/stonecutter/main/resources
+  resources src/main/resources
+=== node 26.2.0-fabric
+source-roots: 26.2.0-fabric java=3 resources=4
+  java      ../../src/fabric/java
+  java      build/generated/stonecutter/main/java
+  java      src/main/java
+  resources ../../src/fabric/resources
+  resources build/generated/sources/modMetadata
+  resources build/generated/stonecutter/main/resources
+  resources src/main/resources
+SOURCE_ROOTS_EXIT=0

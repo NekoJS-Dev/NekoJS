@@ -1,0 +1,907 @@
+Starting a Gradle Daemon (subsequent builds will be faster)
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders FROM-CACHE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins FROM-CACHE
+> Task :buildSrc:compilePluginsBlocks FROM-CACHE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors FROM-CACHE
+> Task :buildSrc:generateScriptPluginAdapters FROM-CACHE
+> Task :buildSrc:compileKotlin FROM-CACHE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors
+> Task :buildSrc:processResources
+> Task :buildSrc:classes
+> Task :buildSrc:jar
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources
+> Task :26.1.2:stonecutterPrepare
+> Task :26.2.0:stonecutterPrepare
+
+> Task :guardLint
+guardLint: ÊØÎÀ¿é 341£¬É¨Ãè 487 ¸öÎÄ¼ş£»³¬ÏŞ»íÃâ 0 ¸ö£»¾¯¸æ 0 Ìõ
+
+> Task :1.21.1:stonecutterPrepare
+> Task :26.2.0:stonecutterGenerate
+> Task :26.1.2:stonecutterGenerate
+> Task :1.21.1:stonecutterGenerate
+> Task :common:compileJava FROM-CACHE
+> Task :common:processResources
+> Task :common:classes
+> Task :common:jar
+> Task :common:compileAddonFixtureJava FROM-CACHE
+> Task :common-api-processor:compileJava FROM-CACHE
+> Task :common-api-processor:classes
+> Task :common:processAddonFixtureResources
+> Task :common:addonFixtureClasses
+> Task :common-api-processor:jar
+> Task :common:externalAddonJar
+
+> Task :26.2.0:createMinecraftArtifacts
+Loaded 157 artifacts from D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+[1m*** Started working on [4mdownloadManifest[0m[0m
+  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
+
+> Task :26.1.2-fabric:validateAccessWidener
+
+> Task :26.1.2:createMinecraftArtifacts
+Loaded 141 artifacts from D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+[1m*** Started working on [4mdownloadManifest[0m[0m
+Waiting for lock on downloadManifest_5014bdd0ad2a5e976245ebd187d1027b7a1c2dee.
+> Task :26.2.0-fabric:validateAccessWidener
+
+> Task :1.21.1:createMinecraftArtifacts
+Loaded 145 artifacts from D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+[1m*** Started working on [4mdownloadJson[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.03s
+[1m*** Started working on [4mdownloadServer[0m[0m
+[1m*** Started working on [4mdownloadClientMappings[0m[0m
+[1m*** Started working on [4mdownloadClient[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.04s
+ [1m[92mDONE [0m Completed [4mdownloadClientMappings[0m in 0.04s
+ [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.04s
+[1m*** Started working on [4mmergeMappings[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmergeMappings[0m in 0.00s
+[1m*** Started working on [4mstripClient[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mstripClient[0m in 0.00s
+[1m*** Started working on [4mextractServer[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mextractServer[0m in 0.00s
+[1m*** Started working on [4mstripServer[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mstripServer[0m in 0.00s
+[1m*** Started working on [4mmerge[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmerge[0m in 0.00s
+[1m*** Started working on [4mrename[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrename[0m in 0.00s
+[1m*** Started working on [4mdecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
+[1m*** Started working on [4minject[0m[0m
+ [1m[92mREUSE[0m Used cache of [4minject[0m in 0.00s
+[1m*** Started working on [4mpatch[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
+[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
+[1m*** Started working on [4mtransformSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mtransformSources[0m in 0.00s
+[1m*** Started working on [4mrecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.01s
+[1m*** Started working on [4msourcesWithNeoForge[0m[0m
+ [1m[92mREUSE[0m Used cache of [4msourcesWithNeoForge[0m in 0.00s
+[1m*** Started working on [4mcompiledWithNeoForge[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mcompiledWithNeoForge[0m in 0.00s
+[1m*** Started working on [4msourcesAndCompiledWithNeoForge[0m[0m
+ [1m[92mREUSE[0m Used cache of [4msourcesAndCompiledWithNeoForge[0m in 0.00s
+
+> Task :26.1.2-fabric:stonecutterPrepare
+> Task :26.2.0-fabric:stonecutterPrepare
+
+> Task :1.21.1:createMinecraftArtifacts
+Total runtime: 1.90s
+
+
+> Task :26.1.2-fabric:stonecutterGenerate
+> Task :26.2.0-fabric:stonecutterGenerate
+
+> Task :26.2.0:createMinecraftArtifacts
+ [1m[92mDONE [0m Completed [4mdownloadManifest[0m in 0.95s
+[1m*** Started working on [4mdownloadJson[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.01s
+[1m*** Started working on [4mdownloadServer[0m[0m
+[1m*** Started working on [4mdownloadClient[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.08s
+ [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.08s
+[1m*** Started working on [4mpreProcessJar[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpreProcessJar[0m in 0.00s
+[1m*** Started working on [4mdecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
+[1m*** Started working on [4mpatch[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
+[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
+[1m*** Started working on [4mtransformSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mtransformSources[0m in 0.00s
+[1m*** Started working on [4mrecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.00s
+[1m*** Started working on [4mmergeWithSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmergeWithSources[0m in 0.00s
+Total runtime: 2.84s
+
+
+> Task :26.1.2:createMinecraftArtifacts
+  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
+ [1m[92mDONE [0m Completed [4mdownloadManifest[0m in 1.88s
+[1m*** Started working on [4mdownloadJson[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.02s
+[1m*** Started working on [4mdownloadServer[0m[0m
+[1m*** Started working on [4mdownloadClient[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.04s
+ [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.04s
+[1m*** Started working on [4mpreProcessJar[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpreProcessJar[0m in 0.00s
+[1m*** Started working on [4mdecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
+[1m*** Started working on [4mpatch[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
+[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
+[1m*** Started working on [4mtransformSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mtransformSources[0m in 0.00s
+[1m*** Started working on [4mrecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.00s
+[1m*** Started working on [4mmergeWithSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmergeWithSources[0m in 0.00s
+Total runtime: 3.27s
+
+
+> Task :26.1.2-fabric:compileJava
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()': ÕÒ²»µ½com.google.errorprone.annotations.InlineMeµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()': ÕÒ²»µ½com.google.errorprone.annotations.InlineMeµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()': ÕÒ²»µ½com.google.errorprone.annotations.InlineMeµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()': ÕÒ²»µ½com.google.errorprone.annotations.InlineMeµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()': ÕÒ²»µ½com.google.errorprone.annotations.InlineMeµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()': ÕÒ²»µ½com.google.errorprone.annotations.DoNotCallµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotMock' µÄÅú×¢·½·¨ 'value()': ÕÒ²»µ½com.google.errorprone.annotations.DoNotMockµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2-fabric\build\generated\stonecutter\main\java\com\tkisor\nekojs\wrapper\event\server\ItemModificationJS.java:44: ¾¯¸æ: [this-escape] ¿ÉÄÜÔÚÍêÈ«³õÊ¼»¯×ÓÀàÖ®Ç°ÌÓÒİÁË 'this'
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+                                                                               ^
+D:\mcmodDemo\NekoJS-mult-t34\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricItemEventBindingsV2.java:41: ¾¯¸æ: [deprecation] ItemEventsÖĞµÄPICKED_UP_PREÒÑ¹ıÊ±
+                || ItemEvents.PICKED_UP_PRE.hasListeners();
+                             ^
+D:\mcmodDemo\NekoJS-mult-t34\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricItemEventBindingsV2.java:49: ¾¯¸æ: [deprecation] ItemEventsÖĞµÄPICKED_UP_PREÒÑ¹ıÊ±
+            cancelled = ItemEvents.PICKED_UP_PRE.post(payload, item);
+                                  ^
+D:\mcmodDemo\NekoJS-mult-t34\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricPlayerEventBindings.java:41: ¾¯¸æ: [deprecation] PlayerEventsÖĞµÄINVENTORY_OPENEDÒÑ¹ıÊ±
+        PlayerEvents.INVENTORY_OPENED.post(new PlayerContainerEventJS(player, menu));
+                    ^
+D:\mcmodDemo\NekoJS-mult-t34\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricPlayerEventBindings.java:47: ¾¯¸æ: [deprecation] PlayerEventsÖĞµÄINVENTORY_CLOSEDÒÑ¹ıÊ±
+        PlayerEvents.INVENTORY_CLOSED.post(new PlayerContainerEventJS(player, menu));
+                    ^
+D:\mcmodDemo\NekoJS-mult-t34\src\fabric\java\com\tkisor\nekojs\fabric\mixin\MixinServerGamePacketListenerItemInteract.java:54: ¾¯¸æ: [deprecation] ServerLevelÖĞµÄgetEntityOrPart(int)ÒÑ¹ıÊ±
+        Entity target = this.player.level().getEntityOrPart(packet.entityId());
+                                           ^
+51 ¸ö¾¯¸æ
+
+> Task :26.2.0-fabric:compileJava
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()': ÕÒ²»µ½com.google.errorprone.annotations.InlineMeµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()': ÕÒ²»µ½com.google.errorprone.annotations.InlineMeµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()': ÕÒ²»µ½com.google.errorprone.annotations.InlineMeµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()': ÕÒ²»µ½com.google.errorprone.annotations.InlineMeµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()': ÕÒ²»µ½com.google.errorprone.annotations.InlineMeµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()': ÕÒ²»µ½com.google.errorprone.annotations.DoNotCallµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotMock' µÄÅú×¢·½·¨ 'value()': ÕÒ²»µ½com.google.errorprone.annotations.DoNotMockµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0-fabric\build\generated\stonecutter\main\java\com\tkisor\nekojs\wrapper\event\server\ItemModificationJS.java:44: ¾¯¸æ: [this-escape] ¿ÉÄÜÔÚÍêÈ«³õÊ¼»¯×ÓÀàÖ®Ç°ÌÓÒİÁË 'this'
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+                                                                               ^
+D:\mcmodDemo\NekoJS-mult-t34\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricItemEventBindingsV2.java:41: ¾¯¸æ: [deprecation] ItemEventsÖĞµÄPICKED_UP_PREÒÑ¹ıÊ±
+                || ItemEvents.PICKED_UP_PRE.hasListeners();
+                             ^
+D:\mcmodDemo\NekoJS-mult-t34\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricItemEventBindingsV2.java:49: ¾¯¸æ: [deprecation] ItemEventsÖĞµÄPICKED_UP_PREÒÑ¹ıÊ±
+            cancelled = ItemEvents.PICKED_UP_PRE.post(payload, item);
+                                  ^
+D:\mcmodDemo\NekoJS-mult-t34\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricPlayerEventBindings.java:41: ¾¯¸æ: [deprecation] PlayerEventsÖĞµÄINVENTORY_OPENEDÒÑ¹ıÊ±
+        PlayerEvents.INVENTORY_OPENED.post(new PlayerContainerEventJS(player, menu));
+                    ^
+D:\mcmodDemo\NekoJS-mult-t34\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricPlayerEventBindings.java:47: ¾¯¸æ: [deprecation] PlayerEventsÖĞµÄINVENTORY_CLOSEDÒÑ¹ıÊ±
+        PlayerEvents.INVENTORY_CLOSED.post(new PlayerContainerEventJS(player, menu));
+                    ^
+D:\mcmodDemo\NekoJS-mult-t34\src\fabric\java\com\tkisor\nekojs\fabric\mixin\MixinServerGamePacketListenerItemInteract.java:54: ¾¯¸æ: [deprecation] ServerLevelÖĞµÄgetEntityOrPart(int)ÒÑ¹ıÊ±
+        Entity target = this.player.level().getEntityOrPart(packet.entityId());
+                                           ^
+51 ¸ö¾¯¸æ
+
+> Task :26.2.0:compileJava
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\api\inject\ItemStackExtension.java:156: ¾¯¸æ: [deprecation] ItemStackÖĞµÄgetEnchantments()ÒÑ¹ıÊ±
+        return self().getEnchantments().getLevel(enchantment) >= level;
+                     ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\wrapper\event\server\ItemModificationJS.java:44: ¾¯¸æ: [this-escape] ¿ÉÄÜÔÚÍêÈ«³õÊ¼»¯×ÓÀàÖ®Ç°ÌÓÒİÁË 'this'
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+                                                                               ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:64: ¾¯¸æ: [this-escape] ¿ÉÄÜÔÚÍêÈ«³õÊ¼»¯×ÓÀàÖ®Ç°ÌÓÒİÁË 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+3 ¸ö¾¯¸æ
+
+> Task :26.1.2:compileJava
+D:\mcmodDemo\NekoJS-mult-t34\src\main\java\com\tkisor\nekojs\api\inject\ItemStackExtension.java:156: ¾¯¸æ: [deprecation] ItemStackÖĞµÄgetEnchantments()ÒÑ¹ıÊ±
+        return self().getEnchantments().getLevel(enchantment) >= level;
+                     ^
+D:\mcmodDemo\NekoJS-mult-t34\src\main\java\com\tkisor\nekojs\wrapper\event\server\ItemModificationJS.java:44: ¾¯¸æ: [this-escape] ¿ÉÄÜÔÚÍêÈ«³õÊ¼»¯×ÓÀàÖ®Ç°ÌÓÒİÁË 'this'
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+                                                                               ^
+D:\mcmodDemo\NekoJS-mult-t34\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:64: ¾¯¸æ: [this-escape] ¿ÉÄÜÔÚÍêÈ«³õÊ¼»¯×ÓÀàÖ®Ç°ÌÓÒİÁË 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+3 ¸ö¾¯¸æ
+
+> Task :1.21.1:compileJava
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\src\main\java\com\tkisor\nekojs\villager\VillagerTradeManager.java:325: ¾¯¸æ: [deprecation] UnsafeÖĞµÄstaticFieldBase(Field)ÒÑ¹ıÊ±
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                   ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\src\main\java\com\tkisor\nekojs\villager\VillagerTradeManager.java:325: ¾¯¸æ: [deprecation] UnsafeÖĞµÄstaticFieldOffset(Field)ÒÑ¹ıÊ±
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                                                  ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\event\server\ItemModificationJS.java:32: ¾¯¸æ: [this-escape] ¿ÉÄÜÔÚÍêÈ«³õÊ¼»¯×ÓÀàÖ®Ç°ÌÓÒİÁË 'this'
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+                                                                               ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\event\server\VillagerTradeDomainOwner.java:442: ¾¯¸æ: [deprecation] UnsafeÖĞµÄstaticFieldBase(Field)ÒÑ¹ıÊ±
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                   ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\event\server\VillagerTradeDomainOwner.java:442: ¾¯¸æ: [deprecation] UnsafeÖĞµÄstaticFieldOffset(Field)ÒÑ¹ıÊ±
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                                                  ^
+
+> Task :26.2.0:generateModMetadata
+> Task :26.1.2:generateModMetadata
+> Task :26.1.2:processResources
+> Task :26.2.0:processResources
+> Task :26.2.0:classes
+> Task :26.1.2:classes
+> Task :26.2.0:jarJar NO-SOURCE
+> Task :26.1.2:jarJar NO-SOURCE
+> Task :26.2.0:jar
+> Task :26.2.0:assemble
+> Task :26.1.2:jar
+> Task :26.1.2:assemble
+> Task :26.2.0:stonecutterPrepareTest
+> Task :26.2.0:stonecutterGenerateTest
+
+> Task :1.21.1:compileJava
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\EntityTypeBuilder.java:213: ¾¯¸æ: [unchecked] Î´¾­¼ì²éµÄ×ª»»
+                () -> (EntityType<? extends net.minecraft.world.entity.Mob>) (EntityType<?>) this.get(),
+                                                                             ^
+  ĞèÒª: EntityType<? extends Mob>
+  ÕÒµ½:    EntityType<CAP#1>
+  ÆäÖĞ, CAP#1ÊÇĞÂÀàĞÍ±äÁ¿:
+    CAP#1´Ó?µÄ²¶»ñÀ©Õ¹Entity
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:60: ¾¯¸æ: [this-escape] ¿ÉÄÜÔÚÍêÈ«³õÊ¼»¯×ÓÀàÖ®Ç°ÌÓÒİÁË 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\ScriptPackDataManager.java:381: ¾¯¸æ: [deprecation] UnsafeÖĞµÄobjectFieldOffset(Field)ÒÑ¹ıÊ±
+        return theUnsafe().getObject(target, theUnsafe().objectFieldOffset(field));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\ScriptPackDataManager.java:386: ¾¯¸æ: [deprecation] UnsafeÖĞµÄobjectFieldOffset(Field)ÒÑ¹ıÊ±
+        theUnsafe().putObject(target, theUnsafe().objectFieldOffset(field), value);
+                                                 ^
+9 ¸ö¾¯¸æ
+
+> Task :26.1.2:compileTestJava
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\bindings\event\Ticket24GameplayFamilyBusBehaviorTest.java:196: ¾¯¸æ: [unchecked] Î´¾­¼ì²éµÄ×ª»»
+        DispatchEventBus<Object, Object> dispatch = (DispatchEventBus<Object, Object>) bus.bus();
+                                                                                              ^
+  ĞèÒª: DispatchEventBus<Object,Object>
+  ÕÒµ½:    EventBus<Object>
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\bindings\event\Ticket24GameplayFamilyBusBehaviorTest.java:243: ¾¯¸æ: [unchecked] Î´¾­¼ì²éµÄ×ª»»
+        DispatchCancellableEventBus<Object, Object> dispatch = (DispatchCancellableEventBus<Object, Object>) bus.bus();
+                                                                                                                    ^
+  ĞèÒª: DispatchCancellableEventBus<Object,Object>
+  ÕÒµ½:    EventBus<Object>
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:52: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:62: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+
+> Task :1.21.1:generateModMetadata
+> Task :1.21.1:processResources
+> Task :1.21.1:classes
+> Task :1.21.1:jarJar NO-SOURCE
+
+> Task :26.2.0:compileTestJava
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\event\Ticket24GameplayFamilyBusBehaviorTest.java:196: ¾¯¸æ: [unchecked] Î´¾­¼ì²éµÄ×ª»»
+        DispatchEventBus<Object, Object> dispatch = (DispatchEventBus<Object, Object>) bus.bus();
+                                                                                              ^
+  ĞèÒª: DispatchEventBus<Object,Object>
+  ÕÒµ½:    EventBus<Object>
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\event\Ticket24GameplayFamilyBusBehaviorTest.java:243: ¾¯¸æ: [unchecked] Î´¾­¼ì²éµÄ×ª»»
+        DispatchCancellableEventBus<Object, Object> dispatch = (DispatchCancellableEventBus<Object, Object>) bus.bus();
+                                                                                                                    ^
+  ĞèÒª: DispatchCancellableEventBus<Object,Object>
+  ÕÒµ½:    EventBus<Object>
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:52: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:62: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:215: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+    private static final class ManagerReset implements AutoCloseable {
+                         ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\DynamicSyncPayloadWireFormatTest.java:88: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\DynamicSyncPayloadWireFormatTest.java:108: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        return new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(out), RegistryAccess.EMPTY);
+               ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:56: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:72: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:95: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:155: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:110: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        return new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(unhex(hex)), RegistryAccess.EMPTY);
+               ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:118: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:128: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:138: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+
+> Task :1.21.1:jar
+> Task :1.21.1:assemble
+
+> Task :26.1.2:compileTestJava
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:215: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+    private static final class ManagerReset implements AutoCloseable {
+                         ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\network\DynamicSyncPayloadWireFormatTest.java:88: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\network\DynamicSyncPayloadWireFormatTest.java:108: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        return new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(out), RegistryAccess.EMPTY);
+               ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:56: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:72: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:95: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:155: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:110: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        return new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(unhex(hex)), RegistryAccess.EMPTY);
+               ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:118: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:128: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:138: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:110: ¾¯¸æ: [deprecation] JsonParserÖĞµÄJsonParser()ÒÑ¹ıÊ±
+        com.google.gson.JsonParser parser = new com.google.gson.JsonParser();
+                                            ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:111: ¾¯¸æ: [deprecation] JsonParserÖĞµÄparse(String)ÒÑ¹ıÊ±
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":1}"));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:112: ¾¯¸æ: [deprecation] JsonParserÖĞµÄparse(String)ÒÑ¹ıÊ±
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":2}"));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:88: ¾¯¸æ: [deprecation] BlockÖĞµÄgetExplosionResistance()ÒÑ¹ıÊ±
+        float originalResistance = Blocks.STONE.getExplosionResistance();
+                                               ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:89: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+        int originalLight = Blocks.STONE.defaultBlockState().getLightEmission();
+                                                            ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:104: ¾¯¸æ: [deprecation] BlockÖĞµÄgetExplosionResistance()ÒÑ¹ıÊ±
+        assertEquals(9.0f, Blocks.STONE.getExplosionResistance(), 0.0f);
+                                       ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:105: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+        assertEquals(15, Blocks.STONE.defaultBlockState().getLightEmission());
+                                                         ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:114: ¾¯¸æ: [deprecation] BlockÖĞµÄgetExplosionResistance()ÒÑ¹ıÊ±
+        assertEquals(originalResistance, Blocks.STONE.getExplosionResistance(), 0.0f);
+                                                     ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:115: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+        assertEquals(originalLight, Blocks.STONE.defaultBlockState().getLightEmission());
+                                                                    ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\wrapper\event\server\Ticket39BlockModificationScriptE2ETest.java:74: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+                .map(net.minecraft.world.level.block.state.BlockState::getLightEmission)
+                     ^
+D:\mcmodDemo\NekoJS-mult-t34\src\test\java\com\tkisor\nekojs\wrapper\event\server\Ticket39ModificationExamplesTest.java:181: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+                .map(net.minecraft.world.level.block.state.BlockState::getLightEmission)
+                     ^
+32 ¸ö¾¯¸æ
+
+> Task :1.21.1:stonecutterPrepareTest
+> Task :26.1.2:processTestResources
+> Task :26.1.2:testClasses
+> Task :26.1.2-fabric:extractIcuClasses
+> Task :26.2.0-fabric:extractIcuClasses
+> Task :26.1.2-fabric:generateModMetadata
+
+> Task :26.2.0:compileTestJava
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:110: ¾¯¸æ: [deprecation] JsonParserÖĞµÄJsonParser()ÒÑ¹ıÊ±
+        com.google.gson.JsonParser parser = new com.google.gson.JsonParser();
+                                            ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:111: ¾¯¸æ: [deprecation] JsonParserÖĞµÄparse(String)ÒÑ¹ıÊ±
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":1}"));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:112: ¾¯¸æ: [deprecation] JsonParserÖĞµÄparse(String)ÒÑ¹ıÊ±
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":2}"));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:88: ¾¯¸æ: [deprecation] BlockÖĞµÄgetExplosionResistance()ÒÑ¹ıÊ±
+        float originalResistance = Blocks.STONE.getExplosionResistance();
+                                               ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:89: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+        int originalLight = Blocks.STONE.defaultBlockState().getLightEmission();
+                                                            ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:104: ¾¯¸æ: [deprecation] BlockÖĞµÄgetExplosionResistance()ÒÑ¹ıÊ±
+        assertEquals(9.0f, Blocks.STONE.getExplosionResistance(), 0.0f);
+                                       ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:105: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+        assertEquals(15, Blocks.STONE.defaultBlockState().getLightEmission());
+                                                         ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:114: ¾¯¸æ: [deprecation] BlockÖĞµÄgetExplosionResistance()ÒÑ¹ıÊ±
+        assertEquals(originalResistance, Blocks.STONE.getExplosionResistance(), 0.0f);
+                                                     ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\BlockModificationEventJSTest.java:115: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+        assertEquals(originalLight, Blocks.STONE.defaultBlockState().getLightEmission());
+                                                                    ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\Ticket39BlockModificationScriptE2ETest.java:74: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+                .map(net.minecraft.world.level.block.state.BlockState::getLightEmission)
+                     ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\Ticket39ModificationExamplesTest.java:181: ¾¯¸æ: [deprecation] BlockStateBaseÖĞµÄgetLightEmission()ÒÑ¹ıÊ±
+                .map(net.minecraft.world.level.block.state.BlockState::getLightEmission)
+                     ^
+32 ¸ö¾¯¸æ
+
+> Task :26.2.0-fabric:generateModMetadata
+> Task :26.1.2-fabric:processResources
+> Task :26.1.2-fabric:classes
+> Task :26.2.0-fabric:processResources
+> Task :26.2.0-fabric:classes
+> Task :26.1.2-fabric:processIncludeJars
+> Task :26.2.0-fabric:processIncludeJars
+> Task :26.2.0:processTestResources
+> Task :26.2.0:testClasses
+> Task :1.21.1:stonecutterGenerateTest
+
+> Task :1.21.1:compileTestJava
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\event\Ticket24GameplayFamilyBusBehaviorTest.java:196: ¾¯¸æ: [unchecked] Î´¾­¼ì²éµÄ×ª»»
+        DispatchEventBus<Object, Object> dispatch = (DispatchEventBus<Object, Object>) bus.bus();
+                                                                                              ^
+  ĞèÒª: DispatchEventBus<Object,Object>
+  ÕÒµ½:    EventBus<Object>
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\event\Ticket24GameplayFamilyBusBehaviorTest.java:243: ¾¯¸æ: [unchecked] Î´¾­¼ì²éµÄ×ª»»
+        DispatchCancellableEventBus<Object, Object> dispatch = (DispatchCancellableEventBus<Object, Object>) bus.bus();
+                                                                                                                    ^
+  ĞèÒª: DispatchCancellableEventBus<Object,Object>
+  ÕÒµ½:    EventBus<Object>
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:215: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+    private static final class ManagerReset implements AutoCloseable {
+                         ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:56: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:72: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:95: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\NetworkPayloadDefenseLineTest.java:155: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+                            new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
+                            ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:110: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        return new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(unhex(hex)), RegistryAccess.EMPTY);
+               ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:118: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:128: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\network\PayloadWireFormatGoldenTest.java:138: ¾¯¸æ: [deprecation] RegistryFriendlyByteBufÖĞµÄRegistryFriendlyByteBuf(ByteBuf,RegistryAccess)ÒÑ¹ıÊ±
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                                      ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:110: ¾¯¸æ: [deprecation] JsonParserÖĞµÄJsonParser()ÒÑ¹ıÊ±
+        com.google.gson.JsonParser parser = new com.google.gson.JsonParser();
+                                            ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:111: ¾¯¸æ: [deprecation] JsonParserÖĞµÄparse(String)ÒÑ¹ıÊ±
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":1}"));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\1.21.1\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:112: ¾¯¸æ: [deprecation] JsonParserÖĞµÄparse(String)ÒÑ¹ıÊ±
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":2}"));
+                                                        ^
+20 ¸ö¾¯¸æ
+
+> Task :1.21.1:processTestResources
+> Task :1.21.1:testClasses
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+> Task :26.2.0:platformGateTest
+> Task :26.1.2:platformGateTest
+> Task :26.1.2-fabric:jar
+> Task :26.2.0-fabric:jar
+> Task :26.1.2-fabric:stonecutterPrepareTest
+> Task :26.1.2-fabric:assemble
+> Task :26.2.0-fabric:stonecutterPrepareTest
+> Task :26.2.0-fabric:assemble
+> Task :26.2.0-fabric:stonecutterGenerateTest
+> Task :26.1.2-fabric:stonecutterGenerateTest
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+
+> Task :verifyExternalAddonIsolation
+verifyExternalAddonIsolation: 5 production jars carry no fixture content; fixture jar metadata complete
+
+> Task :1.21.1:platformGateTest
+
+> Task :26.2.0-fabric:compileTestJava
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()': ÕÒ²»µ½com.google.errorprone.annotations.InlineMeµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+
+> Task :26.1.2-fabric:compileTestJava
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()': ÕÒ²»µ½com.google.errorprone.annotations.InlineMeµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'imports()'
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:52: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:62: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:215: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+    private static final class ManagerReset implements AutoCloseable {
+                         ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+
+> Task :26.2.0-fabric:compileTestJava
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:52: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:62: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:215: ¾¯¸æ: [try] ¿É×Ô¶¯¹Ø±ÕµÄ×ÊÔ´ManagerReset°üº¬µÄ³ÉÔ±·½·¨ close() ¿ÉÄÜÅ×³ö InterruptedException
+    private static final class ManagerReset implements AutoCloseable {
+                         ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:103: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:125: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+        try (ManagerReset ignored = new ManagerReset();
+                          ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\core\Ticket08LoaderDiscoveryTest.java:142: ¾¯¸æ: [try] ²»ÄÜÔÚÏàÓ¦µÄ try Óï¾äµÄÕıÎÄÖĞÒıÓÃ¿É×Ô¶¯½áÊøµÄ×ÊÔ´ignored
+            try (ManagerReset ignored = new ManagerReset();
+                              ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:110: ¾¯¸æ: [deprecation] JsonParserÖĞµÄJsonParser()ÒÑ¹ıÊ±
+        com.google.gson.JsonParser parser = new com.google.gson.JsonParser();
+                                            ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:111: ¾¯¸æ: [deprecation] JsonParserÖĞµÄparse(String)ÒÑ¹ıÊ±
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":1}"));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.2.0-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:112: ¾¯¸æ: [deprecation] JsonParserÖĞµÄparse(String)ÒÑ¹ıÊ±
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":2}"));
+                                                        ^
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()': ÕÒ²»µ½com.google.errorprone.annotations.DoNotCallµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotMock' µÄÅú×¢·½·¨ 'value()': ÕÒ²»µ½com.google.errorprone.annotations.DoNotMockµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+33 ¸ö¾¯¸æ
+
+> Task :26.1.2-fabric:compileTestJava
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:110: ¾¯¸æ: [deprecation] JsonParserÖĞµÄJsonParser()ÒÑ¹ıÊ±
+        com.google.gson.JsonParser parser = new com.google.gson.JsonParser();
+                                            ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:111: ¾¯¸æ: [deprecation] JsonParserÖĞµÄparse(String)ÒÑ¹ıÊ±
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":1}"));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult-t34\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\clientdata\ClientDataSyncDomainTest.java:112: ¾¯¸æ: [deprecation] JsonParserÖĞµÄparse(String)ÒÑ¹ıÊ±
+        ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":2}"));
+                                                        ^
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()': ÕÒ²»µ½com.google.errorprone.annotations.DoNotCallµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'InlineMe' µÄÅú×¢·½·¨ 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotMock' µÄÅú×¢·½·¨ 'value()': ÕÒ²»µ½com.google.errorprone.annotations.DoNotMockµÄÀàÎÄ¼ş
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): ¾¯¸æ: [classfile] ÎŞ·¨ÕÒµ½ÀàĞÍ 'DoNotCall' µÄÅú×¢·½·¨ 'value()'
+33 ¸ö¾¯¸æ
+
+> Task :26.2.0-fabric:processTestResources
+> Task :26.2.0-fabric:testClasses
+> Task :26.1.2-fabric:processTestResources
+> Task :26.1.2-fabric:testClasses
+> Task :26.2.0-fabric:platformGateTest
+> Task :26.1.2-fabric:platformGateTest
+> Task :26.2.0:test
+> Task :26.1.2:test
+
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/org.joml/joml/1.10.8/fc0a71dad90a2cf41d82a76156a0e700af8e4f8d/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/org.joml/joml/1.10.8/fc0a71dad90a2cf41d82a76156a0e700af8e4f8d/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+
+> Task :1.21.1:test
+> Task :26.1.2:verifyDevModSourceSets
+> Task :26.1.2:check
+> Task :26.1.2:build
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762963/dd59af0c156c118b9aae5893e38127c1c709d401/graal-1504336-8762963.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762963/dd59af0c156c118b9aae5893e38127c1c709d401/graal-1504336-8762963.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :26.2.0:verifyDevModSourceSets
+> Task :26.2.0:check
+> Task :26.2.0:build
+> Task :26.1.2:nbtSmokeTest
+> Task :26.2.0:nbtSmokeTest
+> Task :26.2.0-fabric:test
+> Task :26.1.2-fabric:test
+> Task :1.21.1:verifyDevModSourceSets
+> Task :1.21.1:check
+> Task :1.21.1:build
+> Task :1.21.1:nbtSmokeTest
+> Task :26.1.2-fabric:verifyFabricRuntimeArtifact
+> Task :26.1.2-fabric:check
+> Task :26.1.2-fabric:build
+> Task :26.2.0-fabric:verifyFabricRuntimeArtifact
+> Task :26.2.0-fabric:check
+> Task :26.2.0-fabric:build
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS-mult-t34/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 48s
+95 actionable tasks: 86 executed, 9 from cache
+EXIT=0

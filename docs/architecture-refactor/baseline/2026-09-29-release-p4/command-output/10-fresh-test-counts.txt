@@ -1,0 +1,10 @@
+# Fresh five-node test counts from JUnit XML (this worktree, branch ticket-34-release-p4, base mult@28283cc4, 2026-09-29)
+# Produced by run 01-five-node-build-gates.txt (:<node>:build executes test via check).
+1.21.1: tests=341 failures=0 errors=0 skipped=14
+26.1.2: tests=490 failures=0 errors=0 skipped=58
+26.2.0: tests=490 failures=0 errors=0 skipped=58
+26.1.2-fabric: tests=269 failures=0 errors=0 skipped=25
+26.2.0-fabric: tests=269 failures=0 errors=0 skipped=25
+common: tests=1963 failures=0 errors=0 skipped=4
+common-api-processor: tests=13 failures=0 errors=0 skipped=0
+# processor result timestamp source: run 03-common-check-processor.txt

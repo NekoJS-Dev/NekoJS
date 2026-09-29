@@ -1,0 +1,76 @@
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources UP-TO-DATE
+> Task :common:compileJava UP-TO-DATE
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes UP-TO-DATE
+> Task :common:jar UP-TO-DATE
+> Task :common-api-processor:compileJava UP-TO-DATE
+> Task :common-api-processor:classes UP-TO-DATE
+> Task :common-api-processor:jar UP-TO-DATE
+> Task :26.1.2:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2:stonecutterGenerate UP-TO-DATE
+> Task :26.1.2:createMinecraftArtifacts UP-TO-DATE
+> Task :26.1.2:compileJava UP-TO-DATE
+> Task :26.1.2:generateModMetadata UP-TO-DATE
+> Task :26.1.2:processResources UP-TO-DATE
+> Task :26.1.2:classes UP-TO-DATE
+> Task :26.1.2:compileTestJava UP-TO-DATE
+> Task :26.1.2:processTestResources UP-TO-DATE
+> Task :26.1.2:testClasses UP-TO-DATE
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+> Task :26.1.2:platformGateTest
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS-mult-t34/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 4s
+24 actionable tasks: 1 executed, 23 up-to-date
+EXIT=0
+warning: in the working copy of 'src/test/resources/golden/events-declared/26.1.2.client-events.d.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/test/resources/golden/events-declared/26.1.2.server-events.d.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/test/resources/golden/events-declared/26.1.2.startup-events.d.ts', LF will be replaced by CRLF the next time Git touches it
+ M src/test/resources/golden/events-declared/26.1.2.client-events.d.ts
+ M src/test/resources/golden/events-declared/26.1.2.server-events.d.ts
+ M src/test/resources/golden/events-declared/26.1.2.startup-events.d.ts
+
+# Roundtrip verdict (ticket 34 AC5 spot-check):
+# :26.1.2:platformGateTest -Dnekojs.golden.regenerate=true completed green.
+# git diff on src/test/resources/golden/events-declared/ shows ZERO content hunks;
+# the only delta was EOL normalization (generator writes LF, working copy CRLF),
+# confirmed by empty 'git diff --ignore-cr-at-eol --stat'. Files restored via git checkout.
+# Conclusion: checked-in events-declared goldens on 26.1.2 are exactly what
+# regeneration produces; no hand-patched output. Content no-op.
