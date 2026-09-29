@@ -1,0 +1,37 @@
+# Server log excerpt for the bounded hotfix spot-check (session of transcripts/01).
+# Source: versions/26.1.2/run/logs/latest.log (run dir deleted after excerpting).
+# Console capture ended with: "BUILD SUCCESSFUL in 1m 50s" (gradle exit 0).
+# Headings inserted; log lines verbatim (trial-machine locale timestamps).
+
+---------- boot: mod list includes this branch's classes ----------
+[299月2026 22:31:03.951] [main/INFO] [net.neoforged.fml.loading.FMLLoader/]: Starting FancyModLoader version 11.0.13 (DEDICATED_SERVER in DEV)
+[299月2026 22:31:03.951] [main/INFO] [net.neoforged.fml.loading.FMLLoader/]: Game directory: D:\mcmodDemo\NekoJS-mult-taddr\versions\26.1.2\run
+[299月2026 22:31:04.126] [main/INFO] [net.neoforged.fml.loading.moddiscovery.locators.InDevFolderLocator/CORE]: Got mod coordinates nekojs%%D:\mcmodDemo\NekoJS-mult-taddr\versions\26.1.2\build\classes\java\main;... (worktree build output, i.e. the hotfix code)
+     Mod List:
+		Name Version (Mod Id)
+
+		GraalMC 25.1.3.7 (graalmc)
+		Just Enough Items 29.5.0.26 (jei)
+		Minecraft 26.1.2 (minecraft)
+		NekoJS 1.1.0-preview3 (nekojs)
+		NeoForge 26.1.2.71 (neoforge)
+
+---------- boot completes; mod construction + RegisterEvent (argument-type registration) ran without failure ----------
+[299月2026 22:31:15.742] [Server thread/INFO] [net.minecraft.server.dedicated.DedicatedServer/]: Done (1.906s)! For help, type "help"
+[299月2026 22:31:15.744] [Server thread/INFO] [net.minecraft.server.rcon.thread.RconThread/]: RCON running on 0.0.0.0:25892
+[299月2026 22:31:16.178] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] ADDRFIX36-OK
+
+---------- RCON session (commands of transcripts/01), then reload, then clean stop ----------
+[299月2026 22:32:21.952] [RCON Listener #1/INFO] [net.minecraft.server.rcon.thread.GenericThread/]: Thread RCON Client /127.0.0.1 started
+[299月2026 22:32:38.138] [Server thread/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组...
+[299月2026 22:32:38.177] [Server thread/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本。
+[299月2026 22:32:39.179] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] SERVER 脚本重载完毕。 (x2)
+[299月2026 22:32:42.212] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: [Rcon: Stopping the server]
+[299月2026 22:32:42.252] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Stopping server
+[299月2026 22:32:42.357] [Server thread/INFO] [net.minecraft.server.rcon.thread.GenericThread/]: Thread RCON Listener stopped
+[299月2026 22:32:42.358] [main/INFO] [net.neoforged.fml.ModLoader/]: Clearing ModLoader
+
+---------- session hygiene ----------
+# Whole-session grep: zero ERROR lines, zero "Unrecognized argument type" occurrences
+# (expected — no client joined; the crash path needs a real client tree sync, see README
+# verification boundary and the maintainer re-trial handoff).

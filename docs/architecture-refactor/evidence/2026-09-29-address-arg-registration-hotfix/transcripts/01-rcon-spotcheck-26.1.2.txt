@@ -1,0 +1,95 @@
+# Ticket 36 address-arg hotfix spot-check: one bounded headless runServer session on :26.1.2
+# (NeoForge), worktree D:/mcmodDemo/NekoJS-mult-taddr, branch hotfix-address-arg (fix applied),
+# baseline mult@ca52f90f. Layout (deleted after excerpting, T08/T24/F1-F4 precedent):
+# versions/26.1.2/run/ (eula + server.properties: RCON 127.0.0.1:25892 pwd hotfix36,
+# server-port 25891, online-mode off, level-seed=addrfix36, pause-when-empty-seconds=-1)
+# + run/nekojs/server_scripts/addrfix36.js marker script (ADDRFIX36-OK).
+# Driver: minimal Python RCON client (same shape as the F1-F4 pack's, source embedded below).
+
+================== RCON driver (temporary tool, embedded for reproducibility) ==================
+import socket
+import struct
+import time
+
+
+def pkt(rid, ptype, payload):
+    body = struct.pack('<ii', rid, ptype) + payload.encode('utf-8') + b'\x00\x00'
+    return struct.pack('<i', len(body)) + body
+
+
+class Rcon:
+    def __init__(self, host, port, password):
+        self.s = socket.create_connection((host, port), timeout=10)
+        self.rid = 100
+        self.s.sendall(pkt(self.rid, 3, password))
+        length = struct.unpack('<i', self.recvn(4))[0]
+        data = self.recvn(length)
+        rid2 = struct.unpack('<i', data[:4])[0]
+        if rid2 == -1:
+            raise RuntimeError('rcon auth failed')
+
+    def recvn(self, n):
+        buf = b''
+        while len(buf) < n:
+            chunk = self.s.recv(n - len(buf))
+            if not chunk:
+                raise RuntimeError('rcon eof')
+            buf += chunk
+        return buf
+
+    def cmd(self, c, wait=1.0):
+        self.rid += 1
+        self.s.sendall(pkt(self.rid, 2, c))
+        self.s.settimeout(3)
+        out = ''
+        try:
+            while True:
+                length = struct.unpack('<i', self.recvn(4))[0]
+                data = self.recvn(length)
+                out += data[8:-2].decode('utf-8', 'replace')
+        except socket.timeout:
+            pass
+        time.sleep(wait)
+        return out.strip()
+
+
+r = Rcon('127.0.0.1', 25892, 'hotfix36')
+print('### bare /nekojs root (F3 usage still intact)')
+print(r.cmd('nekojs'))
+print('### F1: unquoted host:port must reach the dispatcher, not fail at parse')
+print(r.cmd('nekojs trust 127.0.0.1:25565'))
+print('### F1: quoted form unchanged')
+print(r.cmd('nekojs trust "127.0.0.1:25565"'))
+print('### F1: port-less form unchanged')
+print(r.cmd('nekojs trust 10.0.0.2'))
+print('### marker script ran during server start (query reload result surface)')
+print(r.cmd('nekojs reload server'))
+print('### stopping server')
+r.cmd('stop', wait=3.0)   # connection EOF on shutdown is expected
+===============================================================================================
+
+================== session responses (verbatim) ==================
+### bare /nekojs root (F3 usage still intact)
+Usage: /nekojs <reload|test|error|view_all_errors|packs|registry|hand|inventory|trust|probe>. Run /help nekojs for the full command list.
+
+### F1: unquoted host:port must reach the dispatcher, not fail at parse
+Run /nekojs trust on a client process (e.g. in a singleplayer world).
+
+### F1: quoted form unchanged
+Run /nekojs trust on a client process (e.g. in a singleplayer world).
+
+### F1: port-less form unchanged
+Run /nekojs trust on a client process (e.g. in a singleplayer world).
+
+### marker script ran during server start (query reload result surface)
+NekoJS server reload committed: generation=2 phase=COMMIT - no errors.
+
+### stopping server
+(driver socket hit EOF after `stop` was accepted; server log confirms the Rcon stop)
+==================================================================
+
+Note on what this session can and cannot show: RCON dispatch never builds
+ClientboundCommandsPacket, so it exercises F1's parse behavior (and the registration not
+breaking dispatch) but NOT the client-sync path. The registration executing without failure
+during mod construction is covered by the clean boot (a mis-registered DeferredRegister aborts
+mod loading before "Done"); the wire half needs a real client join — see README handoff note.

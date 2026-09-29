@@ -126,3 +126,22 @@ F3 根 executes）由树形测试 + source-trace 测试 + live spot-check 三面
 - wiki `命令.md` 是否补记 trust 地址可用未引号 host:port、reload `<file>` 三种等价路径写法：
   一行文档事，留维护者裁决（避免本包触发翻译同步面）。
 - `server/server_scripts/foo.js` 双前缀叠加等病态写法未专门支持（各剥离一次，行为确定）。
+
+## 2026-09-29 post-merge addendum: F1 introduced a client-sync regression (fixed by hotfix)
+
+The pack's F1 `AddressArgument` shipped without argument-type serialization registration.
+RCON dispatch never serializes the command tree, so this pack's verification legs (RCON
+spot-check + JVM tests) could not see it; the 2026-09-29 ticket-36 maintainer trial found
+that every real client world entry failed during the configuration phase with
+`IllegalArgumentException: Unrecognized argument type com.tkisor.nekojs.command.AddressArgument`
+(`Couldn't place player in world`, world entry blocked). Fixed on branch `hotfix-address-arg`
+by registering the argument type for client sync on all five nodes — NeoForge via a
+`COMMAND_ARGUMENT_TYPE` `DeferredRegister` paired with `ArgumentTypeInfos.registerByClass`
+(shared `NekoJSArgumentTypes`), fabric via `ArgumentTypeRegistry.registerArgumentType` (the
+fabric path is the same vanilla serialization; it was equally affected). Root cause, fix,
+verification, and the machine-verification boundary (real-client re-trial handed back to the
+maintainer) are recorded in
+[`../2026-09-29-address-arg-registration-hotfix/README.md`](../2026-09-29-address-arg-registration-hotfix/README.md).
+Lesson for future command packs: any change to command-tree argument types requires a
+client-sync leg — console/RCON dispatch alone is structurally blind to serialization
+failures.
