@@ -1,0 +1,165 @@
+# Ticket 20 AC4 live-watchdog smoke: server log excerpts (same session as 01-rcon-session-watchdog-chain.txt)
+# Source: gradle-runserver.log (./gradlew.bat :26.1.2:runServer --console=plain stdout, 21800 lines total,
+#          kept in a temp dir outside the repo). [Lnnnn] = line number in that full log. Java stack frames
+#          are elided per contiguous run; the RCON one-line form of each failure is in transcript 01.
+
+================== boot: run-dir engine config applied + first active generation (P0) ==================
+# Worker-Main-11 = boot first load (ownership model); liveness markers every 5s from here on
+[L21228] [11:20:51] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[L21382] [11:20:55] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... (x2)
+[L21383] [11:20:55] [Worker-Main-11/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组...
+[L21384] [11:20:55] [Worker-Main-11/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本。
+[L21385] [11:20:55] [Worker-Main-11/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[L21386] [11:20:55] [Worker-Main-11/INFO] [NekoJS/]: [server] T20W-GOOD loaded (marker: a generation just (re)loaded this script)
+[L21387] [11:20:55] [Worker-Main-11/INFO] [NekoJS/]: [server] SERVER 脚本重载完毕。 (x2)
+[L21447] [11:21:01] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21448] [11:21:06] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21449] [11:21:11] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21450] [11:21:16] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21451] [11:21:21] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21452] [11:21:26] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+
+================== P1: FILE sanity reload of the good script on a healthy active ==================
+[L21462] [11:22:11] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21463] [11:22:11] [Server thread/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本。
+[L21464] [11:22:11] [Server thread/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本文件 server/t20w-good.js，受影响入口 1 个...
+[L21465] [11:22:11] [Server thread/INFO] [NekoJS/]: [server] T20W-GOOD loaded (marker: a generation just (re)loaded this script)
+[L21466] [11:22:12] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] SERVER 脚本文件 server/t20w-good.js 重载完毕。
+[L21467] [11:22:17] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21468] [11:22:22] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+
+================== P2 (Leg A): full reload -> candidate gen 2 watchdog-killed, old active keeps serving ==================
+# watchdog fired ~3s into the runaway eval (server 3141ms behind); script-diagnostic generation=2 candidate=true;
+afterwards T20W-ALIVE markers continue - the discarded candidate did not touch the active generation
+[L21469] [11:22:25] [Server thread/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组...
+[L21470] [11:22:25] [Server thread/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... (x2)
+[L21471] [11:22:25] [Server thread/INFO] [NekoJS/]: [server] 发现了 3 个 SERVER 脚本。
+[L21472] [11:22:25] [Server thread/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[L21473] [11:22:25] [Server thread/INFO] [NekoJS/]: [server] T20W-GOOD loaded (marker: a generation just (re)loaded this script)
+[L21474] [11:22:25] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-RUNAWAY entering infinite loop (watchdog should interrupt)
+[L21475] [11:22:28] [Server thread/ERROR] [NekoJS/]: [server] 脚本执行失败: nekojs:server/t20w-runaway.js
+[L21476] 环境: SERVER
+[L21477] 位置: server_scripts/t20w-runaway.js:8:1
+[L21478] 原因: Execution got interrupted.
+[L21479] 
+[L21480] while (true) { /* spin forever */ }
+[L21481] 
+[L21482] 堆栈: at anonymous (server_scripts/t20w-runaway.js:8)
+[L21483] script-diagnostic id=nekojs:server/t20w-runaway.js type=server phase=EXECUTION owner=Script Execution Environment generation=2 candidate=true source=server_scripts/t20w-runaway.js:6:1 module=server_scripts/t20w-runaway.js cacheRevision=0f689cfc24497189e596aca392313bdee82822f9680a96ea41629d6cbb1e829e cause=PolyglotException: Execution got interrupted.
+[L21484] [11:22:28] [Server thread/ERROR] [NekoJS/]: Reloading server scripts failed
+[L21485] com.tkisor.nekojs.core.lifecycle.NekoReloadException: reload failed: type=server generation=2 phase=EXECUTION source=server/t20w-runaway.js owner=ScriptManager[server] domain=candidate-killed error=java.lang.RuntimeException: SERVER candidate context was terminated by script resource limits (runaway watchdog / statement limit) during reload
+[L21486] 	... stack elided (32 frames; full log kept outside the repo)
+[L21518] Caused by: java.lang.RuntimeException: SERVER candidate context was terminated by script resource limits (runaway watchdog / statement limit) during reload
+[L21519] 	... stack elided (1 frames; full log kept outside the repo)
+[L21520] 	... 30 more
+[L21521] [11:22:28] [Server thread/WARN] [minecraft/MinecraftServer]: Can't keep up! Is the server overloaded? Running 3141ms or 62 ticks behind
+[L21522] [11:22:28] [Server thread/ERROR] [NekoJS/]: [server] SERVER 脚本事务重载失败，候选 generation 已关闭，active 环境保持不变
+[L21559] [11:22:28] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21560] [11:22:32] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21561] [11:22:37] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21562] [11:22:42] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+
+================== P3 (Leg A): second explicit full reload -> identical failure, no generation bump, no auto retry ==================
+# candidate generation stays 2 (generation never advanced between the failed reloads); markers continue
+[L21563] [11:22:44] [Server thread/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组...
+[L21564] [11:22:44] [Server thread/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... (x2)
+[L21565] [11:22:44] [Server thread/INFO] [NekoJS/]: [server] 发现了 3 个 SERVER 脚本。
+[L21566] [11:22:44] [Server thread/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[L21567] [11:22:44] [Server thread/INFO] [NekoJS/]: [server] T20W-GOOD loaded (marker: a generation just (re)loaded this script)
+[L21568] [11:22:45] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-RUNAWAY entering infinite loop (watchdog should interrupt)
+[L21569] [11:22:47] [Server thread/ERROR] [NekoJS/]: [server] 脚本执行失败: nekojs:server/t20w-runaway.js
+[L21570] 环境: SERVER
+[L21571] 位置: server_scripts/t20w-runaway.js:8:1
+[L21572] 原因: Execution got interrupted.
+[L21573] 
+[L21574] while (true) { /* spin forever */ }
+[L21575] 
+[L21576] 堆栈: at anonymous (server_scripts/t20w-runaway.js:8)
+[L21577] script-diagnostic id=nekojs:server/t20w-runaway.js type=server phase=EXECUTION owner=Script Execution Environment generation=2 candidate=true source=server_scripts/t20w-runaway.js:6:1 module=server_scripts/t20w-runaway.js cacheRevision=0f689cfc24497189e596aca392313bdee82822f9680a96ea41629d6cbb1e829e cause=PolyglotException: Execution got interrupted.
+[L21578] [11:22:47] [Server thread/ERROR] [NekoJS/]: Reloading server scripts failed
+[L21579] com.tkisor.nekojs.core.lifecycle.NekoReloadException: reload failed: type=server generation=2 phase=EXECUTION source=server/t20w-runaway.js owner=ScriptManager[server] domain=candidate-killed error=java.lang.RuntimeException: SERVER candidate context was terminated by script resource limits (runaway watchdog / statement limit) during reload
+[L21580] 	... stack elided (32 frames; full log kept outside the repo)
+[L21612] Caused by: java.lang.RuntimeException: SERVER candidate context was terminated by script resource limits (runaway watchdog / statement limit) during reload
+[L21613] 	... stack elided (1 frames; full log kept outside the repo)
+[L21614] 	... 30 more
+[L21615] [11:22:47] [Server thread/WARN] [minecraft/MinecraftServer]: Can't keep up! Is the server overloaded? Running 3049ms or 60 ticks behind
+[L21616] [11:22:47] [Server thread/ERROR] [NekoJS/]: [server] SERVER 脚本事务重载失败，候选 generation 已关闭，active 环境保持不变
+[L21653] [11:22:48] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21654] [11:22:52] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21655] [11:22:57] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21656] [11:23:02] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+
+================== P4 (Leg B): single-file reload of the runaway script -> watchdog kills the ACTIVE runtime (isolation) ==================
+# single-file reload evaluates on the ACTIVE context (reloadScriptFile -> getOrCreateContext);
+script-diagnostic generation=1 candidate=false is the active-kill vocabulary (contrast candidate=true above);
+the command still answered "reload completed ... (1 error(s) remain)" - see README finding W1
+[L21656] [11:23:02] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21657] [11:23:02] [Server thread/INFO] [NekoJS/]: [server] 发现了 3 个 SERVER 脚本。
+[L21658] [11:23:02] [Server thread/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本文件 server/t20w-runaway.js，受影响入口 1 个...
+[L21659] [11:23:03] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-RUNAWAY entering infinite loop (watchdog should interrupt)
+[L21660] [11:23:05] [Server thread/ERROR] [NekoJS/]: [server] 脚本执行失败: nekojs:server/t20w-runaway.js
+[L21661] 环境: SERVER
+[L21662] 位置: server_scripts/t20w-runaway.js:8:1
+[L21663] 原因: Execution got interrupted.
+[L21664] 
+[L21665] while (true) { /* spin forever */ }
+[L21666] 
+[L21667] 堆栈: at anonymous (server_scripts/t20w-runaway.js:8)
+[L21668] script-diagnostic id=nekojs:server/t20w-runaway.js type=server phase=EXECUTION owner=Script Execution Environment generation=1 candidate=false source=server_scripts/t20w-runaway.js:6:1 module=server_scripts/t20w-runaway.js cacheRevision=0f689cfc24497189e596aca392313bdee82822f9680a96ea41629d6cbb1e829e cause=PolyglotException: Execution got interrupted.
+[L21669] [11:23:05] [Server thread/WARN] [minecraft/MinecraftServer]: Can't keep up! Is the server overloaded? Running 2960ms or 59 ticks behind
+[L21670] [11:23:06] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] SERVER 脚本文件 server/t20w-runaway.js 重载完毕。
+
+================== silence proof 1: isolation window 11:23:06 -> 11:23:26 contains ZERO NekoJS runtime lines ==================
+# dispatch to the killed active is skipped (isContextDead), the liveness marker stops dead at 11:23:02,
+and nothing rebuilds or retries on its own; the next NekoJS line in the full log is P6 at 11:23:26 (L21671)
+[L21670] [11:23:06] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] SERVER 脚本文件 server/t20w-runaway.js 重载完毕。
+
+================== P6 (AC4 core): explicit full reload while isolated -> candidate created, killed again, isolation persists ==================
+# candidate gen 2 executed good.js then hit the runaway again (candidate=true);
+failure keeps the "; active generation remains isolated; explicit full reload is required." wording (transcript 01);
+the follow-up FILE reload 2s later was still refused at PREPARATION with the same isolation wording
+[L21671] [11:23:26] [Server thread/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组...
+[L21672] [11:23:26] [Server thread/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... (x2)
+[L21673] [11:23:26] [Server thread/INFO] [NekoJS/]: [server] 发现了 3 个 SERVER 脚本。
+[L21674] [11:23:26] [Server thread/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[L21675] [11:23:26] [Server thread/INFO] [NekoJS/]: [server] T20W-GOOD loaded (marker: a generation just (re)loaded this script)
+[L21676] [11:23:27] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-RUNAWAY entering infinite loop (watchdog should interrupt)
+[L21677] [11:23:29] [Server thread/ERROR] [NekoJS/]: [server] 脚本执行失败: nekojs:server/t20w-runaway.js
+[L21678] 环境: SERVER
+[L21679] 位置: server_scripts/t20w-runaway.js:8:1
+[L21680] 原因: Execution got interrupted.
+[L21681] 
+[L21682] while (true) { /* spin forever */ }
+[L21683] 
+[L21684] 堆栈: at anonymous (server_scripts/t20w-runaway.js:8)
+[L21685] script-diagnostic id=nekojs:server/t20w-runaway.js type=server phase=EXECUTION owner=Script Execution Environment generation=2 candidate=true source=server_scripts/t20w-runaway.js:6:1 module=server_scripts/t20w-runaway.js cacheRevision=0f689cfc24497189e596aca392313bdee82822f9680a96ea41629d6cbb1e829e cause=PolyglotException: Execution got interrupted.
+[L21686] [11:23:29] [Server thread/ERROR] [NekoJS/]: Reloading server scripts failed
+[L21687] com.tkisor.nekojs.core.lifecycle.NekoReloadException: reload failed: type=server generation=2 phase=EXECUTION source=server/t20w-runaway.js owner=ScriptManager[server] domain=candidate-killed error=java.lang.RuntimeException: SERVER candidate context was terminated by script resource limits (runaway watchdog / statement limit) during reload
+[L21688] 	... stack elided (32 frames; full log kept outside the repo)
+[L21720] Caused by: java.lang.RuntimeException: SERVER candidate context was terminated by script resource limits (runaway watchdog / statement limit) during reload
+[L21721] 	... stack elided (1 frames; full log kept outside the repo)
+[L21722] 	... 30 more
+[L21723] [11:23:29] [Server thread/WARN] [minecraft/MinecraftServer]: Can't keep up! Is the server overloaded? Running 3020ms or 60 ticks behind
+[L21724] [11:23:30] [NekoJS-Log-Flusher/ERROR] [NekoJS/]: [server] SERVER 脚本事务重载失败，候选 generation 已关闭，active 环境保持不变
+
+================== silence proof 2: no-auto-recovery window 11:23:30 -> 11:23:59 contains ZERO NekoJS runtime lines ==================
+# 25s driver observation window plus margins: no timer markers, no rebuild, no automatic second candidate
+[L21724] [11:23:30] [NekoJS-Log-Flusher/ERROR] [NekoJS/]: [server] SERVER 脚本事务重载失败，候选 generation 已关闭，active 环境保持不变
+
+================== P7: runaway removed, explicit full reload commits generation 2 and recovers ==================
+# discovery back to 2 scripts; "SERVER 脚本重载完毕" + COMMIT; T20W-ALIVE resumes at 11:24:04
+[L21761] [11:23:59] [Server thread/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组...
+[L21762] [11:23:59] [Server thread/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... (x2)
+[L21763] [11:23:59] [Server thread/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本。
+[L21764] [11:23:59] [Server thread/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[L21765] [11:23:59] [Server thread/INFO] [NekoJS/]: [server] T20W-GOOD loaded (marker: a generation just (re)loaded this script)
+[L21766] [11:23:59] [Server thread/DEBUG] [NekoJS/]: Filtered out 0 recipes that did not meet conditions
+[L21767] [11:23:59] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] SERVER 脚本重载完毕。 (x2)
+[L21768] [11:24:04] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21769] [11:24:09] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+[L21770] [11:24:14] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T20W-ALIVE active generation still dispatching
+
+================== clean shutdown ==================
+[L21773] [11:24:18] [Server thread/INFO] [minecraft/MinecraftServer]: Stopping server
+[L21799] BUILD SUCCESSFUL in 4m 5s
+[L21800] 24 actionable tasks: 15 executed, 9 from cache
