@@ -1,0 +1,36 @@
+# Regression evidence (read-only excerpt): real client world entry blocked on 26.1.2.
+# Source: MAIN checkout D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/logs/2026-09-29-1.log.gz
+# (the rotated session from the 2026-09-29 ticket-36 maintainer trial, commit 150617ba merged).
+# Reproduced twice in that session (22:03:05 and 22:03:19); first occurrence shown in full.
+# Log prose timestamps are in the trial machine's locale; kept verbatim.
+
+[299月2026 22:03:05.658] [Server thread/INFO] [net.minecraft.server.players.PlayerList/]: Dev[local:E:8035e9fe] logged in with entity id 24 at (-4.555284879556654, -60.0, -2.247226390268812)
+[299月2026 22:03:05.732] [Server thread/ERROR] [net.minecraft.server.network.ServerConfigurationPacketListenerImpl/]: Couldn't place player in world
+java.lang.IllegalArgumentException: Unrecognized argument type com.tkisor.nekojs.command.AddressArgument@dcbe97e (class com.tkisor.nekojs.command.AddressArgument)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.synchronization.ArgumentTypeInfos.byClass(ArgumentTypeInfos.java:169) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.synchronization.ArgumentTypeInfos.unpack(ArgumentTypeInfos.java:176) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.network.protocol.game.ClientboundCommandsPacket.createEntry(ClientboundCommandsPacket.java:169) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.network.protocol.game.ClientboundCommandsPacket.createEntries(ClientboundCommandsPacket.java:106) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.network.protocol.game.ClientboundCommandsPacket.<init>(ClientboundCommandsPacket.java:48) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.Commands.sendCommands(Commands.java:429) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.players.PlayerList.sendPlayerPermissionLevel(PlayerList.java:594) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.players.PlayerList.sendPlayerPermissionLevel(PlayerList.java:486) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.players.PlayerList.placeNewPlayer(PlayerList.java:195) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.network.config.PrepareSpawnTask$Ready.spawn(PrepareSpawnTask.java:192) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.network.config.PrepareSpawnTask.spawnPlayer(PrepareSpawnTask.java:88) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.network.ServerConfigurationPacketListenerImpl.handleConfigurationFinished(ServerConfigurationPacketListenerImpl.java:221) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.network.protocol.configuration.ServerboundFinishConfigurationPacket.handle(ServerboundFinishConfigurationPacket.java:21) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.network.protocol.configuration.ServerboundFinishConfigurationPacket.handle(ServerboundFinishConfigurationPacket.java:8) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.network.protocol.PacketProcessor$ListenerAndPacket.handle(PacketProcessor.java:64) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.network.protocol.PacketProcessor.processQueuedPackets(PacketProcessor.java:50) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.MinecraftServer.processPacketsAndTick(MinecraftServer.java:1035) [minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.client.server.IntegratedServer.processPacketsAndTick(IntegratedServer.java:119) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java:778) [minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.MinecraftServer.lambda$spin$0(MinecraftServer.java:302) [minecraft-patched-26.1.2.71.jar:?]
+	at java.base/java.lang.Thread.run(Thread.java:1474) [?:?]
+[299月2026 22:03:05.746] [Server thread/INFO] [net.minecraft.server.network.ServerGamePacketListenerImpl/]: Dev lost connection: 无效的玩家数据
+[299月2026 22:03:05.747] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Dev退出了游戏
+
+# Note: the trial session was singleplayer (IntegratedServer, local Dev player) — the same
+# sendCommands path runs on dedicated servers for every real client join. World entry is
+# blocked either way: handleConfigurationFinished -> placeNewPlayer -> sendCommands -> throw.

@@ -3,6 +3,7 @@ package com.tkisor.nekojs.fabric;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.bindings.static_access.ScriptEventsJS;
+import com.tkisor.nekojs.command.AddressArgument;
 import com.tkisor.nekojs.core.DefaultScriptEventBridge;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
@@ -21,6 +22,9 @@ import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptBootstrap;
 import com.tkisor.nekojs.script.WorkspaceGenerator;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.ArgumentTypeRegistry;
+import net.minecraft.commands.synchronization.SingletonArgumentInfo;
+import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,6 +111,15 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         FabricPackSync.registerServer();
         FabricPlayNetwork.registerServer();
         FabricPDataSync.registerServer();
+        // AddressArgument wire registration: vanilla ClientboundCommandsPacket resolves argument
+        // infos via ArgumentTypeInfos.BY_CLASS plus a numeric command_argument_type registry id —
+        // the same client-sync contract as the NeoForge side (NekoJSArgumentTypes). An unmapped
+        // class throws "Unrecognized argument type" during world entry; fabric's
+        // ArgumentTypeRegistry fills both maps. Runs here so it precedes any server start.
+        ArgumentTypeRegistry.registerArgumentType(
+                Identifier.fromNamespaceAndPath(NekoJS.MODID, "address"),
+                AddressArgument.class,
+                SingletonArgumentInfo.contextFree(AddressArgument::address));
         // /nekojs 指令树（FabricNekoJSCommands，与共享树 NeoForge 版同名同语义的 fabric 子集）
         FabricNekoJSCommands.registerCallback(NekoJSFabricMod::runtimeRootOrNull);
         initializeWorkspace();

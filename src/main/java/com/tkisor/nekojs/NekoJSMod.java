@@ -5,6 +5,7 @@ import com.tkisor.nekojs.bindings.event.CapabilityEvents;
 import com.tkisor.nekojs.bindings.event.GoalEvents;
 import com.tkisor.nekojs.bindings.static_access.ScriptEventsJS;
 import com.tkisor.nekojs.client.NekoJSClient;
+import com.tkisor.nekojs.command.NekoJSArgumentTypes;
 import com.tkisor.nekojs.command.NekoJSCommands;
 import com.tkisor.nekojs.core.NeoForgePluginLoader;
 import com.tkisor.nekojs.core.NeoForgeRuntimeBootstrap;
@@ -57,6 +58,9 @@ public class NekoJSMod extends NekoJS {
         NekoJSMod.modEventBus = modEventBus;
 
         NeoForgeRuntimeBootstrap.setup();
+        // Custom argument types must map to wire infos before any client command sync
+        // (AddressArgument in /nekojs trust); console dispatch alone never exercises it.
+        NekoJSArgumentTypes.register(modEventBus);
         registerEventListeners(modEventBus);
         // 新一轮启动的注册 epoch：丢弃并诊断上一轮残留（ticket 15 AC2）
         RegistryEventAdapter.beginBoot();
