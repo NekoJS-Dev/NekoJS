@@ -1,0 +1,456 @@
+[299月2026 10:09:26.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-REGISTERED id=t26:dash key=R handle=true
+[299月2026 10:09:30.812] [Render thread/INFO] [NekoJS/]: [client] T26-REGISTERED id=t26:dash key=R handle=true
+[299月2026 10:11:33.535] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:33.536] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:33.597] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:11:34.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:34.677] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:34.678] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:34.831] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:11:35.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:35.075] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:35.076] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:35.232] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:11:35.381] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:35.382] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:35.382] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:35.880] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x10)
+[299月2026 10:11:35.881] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:35.930] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:11:35.930] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:35.979] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:11:35.979] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:36.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:11:36.030] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:36.081] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:11:36.082] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:36.130] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:11:36.131] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:36.174] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:11:36.175] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:36.225] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:36.327] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click (x3)
+[299月2026 10:11:36.328] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:36.427] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:11:37.004] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:37.429] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:37.430] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:37.581] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:11:37.724] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:37.725] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:37.725] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:37.874] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:11:38.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:38.329] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:38.330] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:38.379] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:11:38.481] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:38.481] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:38.481] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:38.582] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:11:38.623] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:38.623] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:38.624] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:38.725] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:11:38.825] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:38.825] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:38.826] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:38.924] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:11:39.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:41.079] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:41.079] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:41.129] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:11:41.231] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:41.231] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:41.231] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:41.323] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:11:42.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:54.982] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:54.982] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:55.011] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:11:55.180] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:11:55.274] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:11:55.274] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:11:55.276] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:11:55.423] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:11:56.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:27.526] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:27.526] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:27.677] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:12:27.930] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:27.930] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:27.931] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:28.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:12:28.073] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:28.327] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:28.327] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:28.328] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:28.479] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:12:28.873] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:28.873] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:28.874] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:29.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:12:30.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:31.973] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:31.973] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:32.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:32.125] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:12:32.278] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:32.278] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:32.278] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:32.430] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:12:33.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:34.630] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:34.630] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:34.730] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:12:35.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:35.077] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:35.077] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:35.581] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x10)
+[299月2026 10:12:35.581] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:35.631] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:35.632] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:35.673] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:35.673] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:35.723] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:35.723] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:35.774] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:35.774] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:35.824] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:35.824] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:35.875] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:35.875] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:35.924] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:35.925] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:35.975] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:35.975] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:36.025] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.076] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:36.077] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.127] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:36.127] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.176] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:36.177] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.229] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:36.229] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.279] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:36.280] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.330] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:36.330] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.330] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:36.381] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:36.381] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.423] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:36.424] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.473] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:36.473] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.522] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:36.523] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.523] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:36.573] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:36.573] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.624] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:36.624] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.674] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:36.674] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.675] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:36.725] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:36.726] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.775] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:36.825] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:36.826] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.826] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:36.926] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:12:36.976] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:36.977] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:36.977] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:37.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:37.078] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:37.180] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:37.180] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:37.180] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:37.280] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:12:37.331] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:37.331] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:37.331] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:37.423] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:12:37.523] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:37.523] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:37.523] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:37.624] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:12:37.724] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:37.726] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:37.726] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:37.826] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:12:37.978] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:37.978] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:37.978] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:38.004] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:38.077] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:38.523] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:38.523] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:38.523] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:38.625] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:12:38.727] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:38.727] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:38.727] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:38.778] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:12:38.928] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:38.929] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:38.929] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:39.004] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:12:39.123] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:39.124] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:39.124] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:39.226] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:12:39.327] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:12:39.327] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:12:39.327] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:12:39.427] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:12:40.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:07.885] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] NekoJS CLIENT reload scheduled on the client thread.
+[299月2026 10:16:08.591] [Render thread/INFO] [NekoJS/]: [client] T26-REGISTERED id=t26:dash key=R handle=true
+[299月2026 10:16:08.627] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] NekoJS client reload committed: generation=3 phase=COMMIT (2 error(s) remain)
+[299月2026 10:16:12.628] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:12.628] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:12.729] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:13.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:13.080] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:13.080] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:13.182] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:14.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:14.032] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:14.032] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:14.425] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x8)
+[299月2026 10:16:14.527] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:14.527] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:14.528] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:14.628] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:14.728] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:14.728] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:14.729] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:14.830] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:14.931] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:14.932] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:14.932] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:15.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:15.630] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:15.631] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:15.631] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:15.782] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:16:15.882] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:15.883] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:15.883] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:15.978] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:16.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:16.179] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:16.180] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:16.283] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:16.482] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:16.483] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:16.483] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:16.533] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:17.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:17.729] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:17.730] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:17.879] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:16:18.004] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:18.029] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:18.030] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:18.181] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:16:19.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:20.980] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:20.981] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:21.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:21.484] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x9)
+[299月2026 10:16:21.485] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:21.530] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:21.530] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:21.580] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:21.581] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:21.632] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:21.633] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:21.682] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:21.683] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:21.731] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:21.731] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:21.781] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:21.782] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:21.832] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:21.833] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:21.882] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:21.882] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:21.926] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:21.926] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:21.975] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:21.976] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:22.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:22.026] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:22.075] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:22.076] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:22.127] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:22.128] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:22.177] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:22.177] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:22.228] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:22.328] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click (x3)
+[299月2026 10:16:22.328] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:22.378] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:22.379] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:22.430] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:22.430] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:22.480] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:22.531] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click (x2)
+[299月2026 10:16:22.531] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:22.580] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:22.580] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:22.632] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:22.632] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:22.681] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:22.832] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:22.832] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:22.832] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:22.925] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:23.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:23.278] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:23.278] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:23.378] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:23.480] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:23.481] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:23.481] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:23.579] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:23.681] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:23.681] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:23.681] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:23.774] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:23.875] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:23.875] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:23.875] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:23.976] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:24.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:24.029] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:24.030] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:24.178] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:16:24.326] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:24.327] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:24.327] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:24.432] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:25.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:25.427] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:25.427] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:25.528] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:25.728] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:25.729] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:25.729] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:25.830] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:26.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:26.076] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:26.076] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:26.180] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:27.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:28.477] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:28.477] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:28.577] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:28.679] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:28.679] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:28.679] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:28.830] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:16:28.931] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:28.931] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:28.931] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:29.004] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:29.126] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:29.126] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:29.126] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:29.225] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:30.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:31.574] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:31.574] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:31.676] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:31.827] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:31.828] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:31.828] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:32.004] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x4)
+[299月2026 10:16:32.323] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x6)
+[299月2026 10:16:32.324] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:32.374] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:32.374] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:32.425] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:32.425] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:32.474] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:32.474] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:32.524] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:32.525] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:32.576] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:32.576] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:32.626] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:32.626] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:32.677] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:32.677] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:32.728] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:32.729] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:32.778] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:32.779] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:32.829] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:32.829] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:32.879] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:32.880] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:32.929] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:32.929] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:32.979] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:32.979] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:33.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:33.030] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:33.080] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:33.081] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:33.131] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:33.132] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:33.173] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:33.173] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:33.224] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:33.225] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:33.275] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:33.275] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:33.326] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:33.326] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:33.377] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:33.377] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:33.426] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:33.426] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:33.476] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 10:16:33.477] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:33.528] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:34.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click (x10)
+[299月2026 10:16:34.874] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click (x3)
+[299月2026 10:16:34.874] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:35.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:16:35.179] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:35.179] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:35.179] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:35.280] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:35.473] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:35.474] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:35.474] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:35.575] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:35.776] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:35.777] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:35.777] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:35.876] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:36.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:36.729] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:36.729] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:36.929] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x4)
+[299月2026 10:16:37.003] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:39.329] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:39.329] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:39.477] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x3)
+[299月2026 10:16:39.681] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:39.682] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:39.682] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:39.781] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:40.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 10:16:51.877] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 10:16:51.878] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 10:16:51.978] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash (x2)
+[299月2026 10:16:52.002] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
