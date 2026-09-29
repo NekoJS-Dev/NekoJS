@@ -53,11 +53,47 @@ public final class UiColor {
     public static Optional<UiColor> parse(Object value) {
         if (value instanceof Number number) {
             double raw = number.doubleValue();
-            if (raw != Math.floor(raw) || raw < Integer.MIN_VALUE || raw > 0xFFFFFFFFL) return Optional.empty();
-            return Optional.of(new UiColor((int) (long) raw));
+            if (!fitsArgbNumberRange(raw)) return Optional.empty();
+            return Optional.of(new UiColor(argbBits(raw)));
         }
         if (value instanceof String string) return parseString(string);
         return Optional.empty();
+    }
+
+    /**
+     * Coerces a script color number to ARGB int bits for painter-style seams
+     * (defect D6): an integral value in the int32/uint32 range is read as ARGB
+     * bits. Script hex literals such as {@code 0xFFFFFF00} are unsigned values
+     * above {@code Integer.MAX_VALUE}; declaring the parameter as a Java
+     * {@code int} saturates them to {@code 0x7FFFFFFF} (translucent white) at the
+     * engine conversion boundary, so script-facing color parameters must accept
+     * {@link Number} and normalize through this method.
+     *
+     * @param value the script-supplied color number ({@code null} from JS {@code null}/{@code undefined})
+     * @return the ARGB bits (unsigned literals wrap to negative int32s)
+     * @throws IllegalArgumentException when the value is null, fractional or outside
+     *         the int32/uint32 color range
+     */
+    public static int argbBits(Number value) {
+        if (value == null) {
+            throw new IllegalArgumentException("color must not be null");
+        }
+        double raw = value.doubleValue();
+        if (!fitsArgbNumberRange(raw)) {
+            throw new IllegalArgumentException(
+                    "color must be an integral number in the int32/uint32 ARGB range: " + raw);
+        }
+        return argbBits(raw);
+    }
+
+    /** Reads an already-range-checked integral double as ARGB bits (low 32 bits). */
+    private static int argbBits(double raw) {
+        return (int) (long) raw;
+    }
+
+    /** Shared numeric rule: integral and inside [int32 min, uint32 max]. */
+    private static boolean fitsArgbNumberRange(double raw) {
+        return raw == Math.floor(raw) && raw >= Integer.MIN_VALUE && raw <= 0xFFFFFFFFL;
     }
 
     /** Parses {@code #RGB}, {@code #RRGGBB}, {@code #AARRGGBB} (case-insensitive) or a named color. */

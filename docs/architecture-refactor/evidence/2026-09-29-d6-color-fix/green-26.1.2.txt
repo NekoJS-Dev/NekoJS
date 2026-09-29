@@ -1,0 +1,35 @@
+D6 GREEN run - 26.1.2 node (full suite)
+=======================================
+Date: 2026-09-29
+Branch: ticket-26-color-fix (base mult@60e113a3)
+Commands:
+  ./gradlew :26.1.2:test
+  ./gradlew :26.2.0:compileTestJava :26.1.2-fabric:compileTestJava :26.2.0-fabric:compileTestJava
+
+:26.1.2:test
+  BUILD SUCCESSFUL
+  Aggregate (versions/26.1.2/build/test-results/test, 96 XML files):
+    tests=479 failures=0 errors=0 skipped=58
+
+New suites on this node:
+  com.tkisor.nekojs.wrapper.client.PainterJSScriptColorBoundaryTest (7 tests, all passed)
+    - uint32TextColorLiteralReachesGraphicsSinkAsArgbBits:
+      JS painter.text('T26 yellow', 4, 4, 0xFFFFFF00) -> graphics sink receives -256
+      (pre-fix it received 2147483647; same production PainterJS, real GraalJS context,
+       recorder subclass of GuiGraphicsExtractor allocated via Unsafe.allocateInstance)
+    - uint32RectAndOutlineColorsReachGraphicsSink:
+      0xFF55FF55 -> fill receives 0xFF55FF55 bits; 0x80FF0000 -> outline same bits
+    - gradientEndsKeepIndependentArgbBits: top 0xFFFFFF00 -> -256, bottom 0xFF0000FF bits
+    - currentColorSetterNormalizesUint32ForColorlessDraws:
+      painter.color(0xFFFFFF00).rect(...) -> fill receives -256
+    - negativeInt32FromBitwiseMathPassesThrough: (0xFFFFFF00 | 0) -> -256 unchanged
+    - javaIntCallersStayBehaviorCompatible: Java int (-256) callers unchanged
+    - badColorFormsAreRejectedWithEnglishMessages: null / 1.5 / 0x1FFFFFFFF
+      rejected with "color must not be null" / "int32/uint32 ARGB range"
+  com.tkisor.nekojs.client.render.Ticket26ColorParameterSurfaceTest (3 tests, all passed)
+    - painter / hudRenderContext / worldRenderContext color seams stay Number-typed;
+      every int-typed twin (the exact pre-fix D6 signature) is absent
+
+Shared-tree compile on the other nodes that evaluate the same sources:
+  :26.2.0:compileTestJava :26.1.2-fabric:compileTestJava :26.2.0-fabric:compileTestJava
+  BUILD SUCCESSFUL in 28s

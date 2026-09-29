@@ -4,6 +4,7 @@ package com.tkisor.nekojs.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.tkisor.nekojs.api.ui.UiColor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -46,19 +47,22 @@ public class WorldRenderContextJS {
     /**
      * 绘制一条 3D 线段（世界坐标 → 世界空间 GPU 渲染）。
      *
-     * @param argbColor ARGB 颜色（如 {@code 0xFF00FF00}）
+     * @param argbColor ARGB 颜色（如 {@code 0xFF00FF00}），{@link Number} 收值按
+     *        uint32 读位（缺陷 D6：≥ 2³¹ 的无符号字面量落入 Java {@code int} 参数
+     *        会被引擎饱和成 {@code 0x7FFFFFFF}）
      * @param lineWidth 线宽（像素，最小 1）
      */
     public WorldRenderContextJS line(
             double x1, double y1, double z1,
             double x2, double y2, double z2,
-            int argbColor,
+            Number argbColor,
             float lineWidth
     ) {
-        int a = (argbColor >>> 24) & 0xFF;
-        int r = (argbColor >>> 16) & 0xFF;
-        int g = (argbColor >>> 8) & 0xFF;
-        int b = argbColor & 0xFF;
+        int argb = UiColor.argbBits(argbColor);
+        int a = (argb >>> 24) & 0xFF;
+        int r = (argb >>> 16) & 0xFF;
+        int g = (argb >>> 8) & 0xFF;
+        int b = argb & 0xFF;
 
         // 线段方向作为 per-vertex 法线（RenderType.LINES 的屏幕空间扩展依据）
         float dx = (float) (x2 - x1);
@@ -90,7 +94,7 @@ public class WorldRenderContextJS {
     public WorldRenderContextJS line(
             double x1, double y1, double z1,
             double x2, double y2, double z2,
-            int argbColor
+            Number argbColor
     ) {
         return line(x1, y1, z1, x2, y2, z2, argbColor, 1f);
     }
@@ -99,7 +103,7 @@ public class WorldRenderContextJS {
     public WorldRenderContextJS box(
             double minX, double minY, double minZ,
             double maxX, double maxY, double maxZ,
-            int argbColor
+            Number argbColor
     ) {
         line(minX, minY, minZ, maxX, minY, minZ, argbColor);
         line(maxX, minY, minZ, maxX, minY, maxZ, argbColor);
