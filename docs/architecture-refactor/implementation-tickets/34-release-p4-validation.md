@@ -4,9 +4,11 @@
 
 **Blocked by:** [33: CI 用途子集与 Fabric processor 延期替代 gate](33-build-ci-processor-gate.md)、[04: P4 前性能发布政策确认](04-perf-release-policy.md)、[39: Runtime Item/Block modification 候选计划与 snapshot ownership](39-item-block-modification.md)、[08: 真实外部 PluginAddon 从 discovery 到贡献消费与 reload 存活](08-plugin-addon.md)、[18: PData 与 ClientData 数据同步路径保护和 generation 边界](18-data-sync.md)、[20: 管理命令权限、生命周期入口与阶段诊断结果](20-runtime-commands.md)、[23: Recipe/数据生成/loot/tags/recipe viewer 既有事件域路径](23-recipe-data-surface.md)、[24: Block/Item/Level/Player/Command/Capability/goal/实体行为既有事件面覆盖路径](24-gameplay-event-surface.md)、[25: DataMap 与 EntitySelectors 查询 binding/Adapter/declaration 路径](25-query-tools.md)、[30: 错误诊断、telemetry、workspace 与用户报告链路](30-diagnostics.md)、[15: 启动期注册、typed Builder 与连带注册垂直收口](15-registry-startup.md)、[21: Dynamic Registry 多人 prepare/ack/commit 门禁](21-registry-dynamic-sync.md)、[22: Villager Trades 声明事件与稳定查询](22-villager-trades.md)、[26: CLIENT 输入与 HUD callback 生命周期](26-client-input-hud.md)、[27: CLIENT GUI 与 render Adapter 资源呈现清理](27-client-gui-render.md)、[28: PostEffects 声明事件与运行 binding 分离](28-post-effects.md)、[29: Assets/Lang 资源生成与回读收口](29-assets.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zed-flash-34（main-session agent；GLM-5.3 subagent worktree）
+
+**Claim record (2026-09-29):** worktree `../NekoJS-mult-t34` on branch `ticket-34-release-p4`（基于 mult HEAD）。预计改动范围：五节点 build/check/artifact、contract/golden 一致性审计、runtime smoke 汇总(消费各票 baseline/evidence 已有 transcript+补必要缺口)、coverage ledger 汇编、能力矩阵收口、物理架构一致性审计(实施交接单规则自动清单+例外说明)、跨领域真实集成四链路核对、性能 gate 状态对照(消费票 04 政策与票 35 结果——35 并行进行时本票先出其余部分,性能节以 35 为准)、`baseline/2026-09-29-release-p4/` 证据。不代替各域票的验收;失败按节点/输入/期望/实际/owner 记录并阻塞 release,不降级。
 
 **Optional:** false
 
