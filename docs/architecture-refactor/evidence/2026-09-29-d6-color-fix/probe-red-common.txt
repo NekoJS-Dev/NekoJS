@@ -1,0 +1,46 @@
+D6 probe RED run (before the fix)
+=================================
+Date: 2026-09-29
+Branch: ticket-26-color-fix (base mult@60e113a3)
+Command: ./gradlew :common:test --tests "com.tkisor.nekojs.api.ui.ScriptColorBoundaryRealEngineTest"
+Probe: real GraalJS Context wired like NekoSandboxFactory.build
+       (NekoSharedHostAccess + ClassFilter + js.nashorn-compat / js.strict /
+        js.foreign-object-prototype / js.ecmascript-version=latest),
+       host probe exposes the then-production seam shape: public int color(int color).
+
+Console tail
+------------
+ScriptColorBoundaryRealEngineTest > uint32DecimalLiteralArrivesAsArgbBits() FAILED
+    org.opentest4j.AssertionFailedError at ScriptColorBoundaryRealEngineTest.java:72
+
+ScriptColorBoundaryRealEngineTest > uint32HexLiteralArrivesAsArgbBits() FAILED
+    org.opentest4j.AssertionFailedError at ScriptColorBoundaryRealEngineTest.java:62
+
+3 tests completed, 2 failed
+
+> Task :common:test FAILED
+
+BUILD FAILED in 34s
+
+Failure messages (from TEST-*.xml)
+----------------------------------
+1) uint32HexLiteralArrivesAsArgbBits
+   org.opentest4j.AssertionFailedError:
+   0xFFFFFF00 must arrive as its int32 bits (yellow), not a saturated value
+   ==> expected: <-256> but was: <2147483647>
+
+2) uint32DecimalLiteralArrivesAsArgbBits
+   org.opentest4j.AssertionFailedError:
+   4294967040 must arrive as its int32 bits, not a saturated value
+   ==> expected: <-256> but was: <2147483647>
+
+3) negativeInt32LiteralPassesThrough PASSED (control: -256 and -1 arrive unchanged,
+   proving the loss only affects unsigned values >= 2^31).
+
+Mechanism conclusion
+--------------------
+GraalJS host number->int conversion saturates out-of-range values to
+Integer.MAX_VALUE (0x7FFFFFFF = 50%-translucent white) instead of wrapping to
+the int32 bit pattern. This matches the real-machine observation
+(yellow -> white, green -> white) from the 2026-09-29 ticket-26 session:
+painter.text(..., 0xFFFFFF00) and ctx.text(..., 0xFF55FF55) painted 0x7FFFFFFF.

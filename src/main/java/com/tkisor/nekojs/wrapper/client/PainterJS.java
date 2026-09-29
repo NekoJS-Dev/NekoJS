@@ -4,6 +4,7 @@ package com.tkisor.nekojs.wrapper.client;
 
 import com.tkisor.nekojs.api.ui.FontAdapter;
 import com.tkisor.nekojs.api.ui.TextLayouter;
+import com.tkisor.nekojs.api.ui.UiColor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -15,8 +16,10 @@ import net.minecraft.world.item.ItemStack;
  * {@link GuiGraphicsExtractor} 渲染状态模型）。所有坐标以 GUI 缩放后的像素为单位
  * （{@code getWidth()/getHeight()} 为缩放后屏幕尺寸）。
  *
- * <p>颜色参数为 ARGB int（如 {@code 0x80FF0000} = 半透明红）；省略颜色时使用
- * {@code color()/resetColor()} 设置的当前色（默认不透明白）。
+ * <p>颜色参数为 ARGB（如 {@code 0x80FF0000} = 半透明红），以 {@link Number} 接收并按
+ * uint32 读位（{@link UiColor#argbBits}）：脚本字面量 {@code 0xFF......} 是 ≥ 2³¹ 的
+ * 无符号数，直接落入 Java {@code int} 参数会被引擎饱和成 {@code 0x7FFFFFFF}（半透明白，
+ * 缺陷 D6）。省略颜色时使用 {@code color()/resetColor()} 设置的当前色（默认不透明白）。
  */
 public class PainterJS {
     private final GuiGraphicsExtractor guiGraphics;
@@ -64,9 +67,9 @@ public class PainterJS {
         return guiGraphics.guiHeight();
     }
 
-    /** 设置默认颜色（ARGB），供省略颜色参数的绘制方法使用。 */
-    public PainterJS color(int color) {
-        this.currentColor = color;
+    /** 设置默认颜色（ARGB，{@link Number} 收值经 {@link UiColor#argbBits} 按 uint32 读位，见类注释）。 */
+    public PainterJS color(Number color) {
+        this.currentColor = UiColor.argbBits(color);
         return this;
     }
 
@@ -82,8 +85,8 @@ public class PainterJS {
         return this;
     }
 
-    public PainterJS rect(int x, int y, int width, int height, int color) {
-        guiGraphics.fill(x, y, x + width, y + height, color);
+    public PainterJS rect(int x, int y, int width, int height, Number color) {
+        guiGraphics.fill(x, y, x + width, y + height, UiColor.argbBits(color));
         return this;
     }
 
@@ -93,25 +96,28 @@ public class PainterJS {
         return this;
     }
 
-    public PainterJS outline(int x, int y, int width, int height, int color) {
-        guiGraphics.outline(x, y, x + width, y + height, color);
+    public PainterJS outline(int x, int y, int width, int height, Number color) {
+        guiGraphics.outline(x, y, x + width, y + height, UiColor.argbBits(color));
         return this;
     }
 
     /** 垂直渐变矩形。 */
-    public PainterJS gradient(int x, int y, int width, int height, int colorTop, int colorBottom) {
-        guiGraphics.fillGradient(x, y, x + width, y + height, colorTop, colorBottom);
+    public PainterJS gradient(int x, int y, int width, int height, Number colorTop, Number colorBottom) {
+        guiGraphics.fillGradient(x, y, x + width, y + height,
+                UiColor.argbBits(colorTop), UiColor.argbBits(colorBottom));
         return this;
     }
 
     /** 水平渐变矩形（逐列插值，宽度不宜过大）。 */
-    public PainterJS gradientH(int x, int y, int width, int height, int colorLeft, int colorRight) {
+    public PainterJS gradientH(int x, int y, int width, int height, Number colorLeft, Number colorRight) {
         if (width <= 0) {
             return this;
         }
+        int left = UiColor.argbBits(colorLeft);
+        int right = UiColor.argbBits(colorRight);
         float max = width > 1 ? width - 1 : 1;
         for (int i = 0; i < width; i++) {
-            guiGraphics.fill(x + i, y, x + i + 1, y + height, lerpColor(colorLeft, colorRight, i / max));
+            guiGraphics.fill(x + i, y, x + i + 1, y + height, lerpColor(left, right, i / max));
         }
         return this;
     }
@@ -130,8 +136,8 @@ public class PainterJS {
         return this;
     }
 
-    public PainterJS text(String text, int x, int y, int color) {
-        guiGraphics.text(font, text, x, y, color);
+    public PainterJS text(String text, int x, int y, Number color) {
+        guiGraphics.text(font, text, x, y, UiColor.argbBits(color));
         return this;
     }
 
@@ -141,8 +147,8 @@ public class PainterJS {
         return this;
     }
 
-    public PainterJS centerText(String text, int x, int y, int color) {
-        guiGraphics.centeredText(font, text, x, y, color);
+    public PainterJS centerText(String text, int x, int y, Number color) {
+        guiGraphics.centeredText(font, text, x, y, UiColor.argbBits(color));
         return this;
     }
 

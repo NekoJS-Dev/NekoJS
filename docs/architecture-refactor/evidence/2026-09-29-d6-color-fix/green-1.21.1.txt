@@ -1,0 +1,25 @@
+D6 GREEN run - 1.21.1 node (full suite, twin trees)
+==================================================
+Date: 2026-09-29
+Branch: ticket-26-color-fix (base mult@60e113a3)
+Command: ./gradlew :1.21.1:test
+
+BUILD SUCCESSFUL in 17s
+Aggregate (versions/1.21.1/build/test-results/test, 71 XML files):
+  tests=334 failures=0 errors=0 skipped=14
+
+Notes:
+  - The 1.21.1 PainterJS / HudRenderContextJS / WorldRenderContextJS twins
+    (versions/1.21.1/src) carry the same Number color seam; the shared-tree
+    PainterJSScriptColorBoundaryTest evaluates for this node through the
+    //? if >=26 guard's else branch (recorder subclasses net.minecraft.client.gui.GuiGraphics,
+    overrides drawString/fill/fillGradient/hLine/vLine) and passed 7/7
+    (TEST-com.tkisor.nekojs.wrapper.client.PainterJSScriptColorBoundaryTest.xml:
+     7 testcases, 0 failures, 0 errors).
+  - Ticket26ColorParameterSurfaceTest passed 3/3 against the twin classes.
+  - Existing suites (e.g. PainterJSTextMembersTest over the twin PainterJS)
+    stay green: Java int callers are behavior-compatible through autoboxing.
+
+guardLint (guards added in the shared test):
+  ./gradlew guardLint
+  BUILD SUCCESSFUL in 2s

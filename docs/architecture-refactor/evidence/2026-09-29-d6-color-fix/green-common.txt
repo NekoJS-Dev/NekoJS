@@ -1,0 +1,24 @@
+D6 GREEN run - common
+=====================
+Date: 2026-09-29
+Branch: ticket-26-color-fix (base mult@60e113a3)
+Command: ./gradlew :common:check
+
+BUILD SUCCESSFUL in 1m 3s
+19 actionable tasks: 3 executed, 16 from cache
+
+Aggregate test result (common/build/test-results/test, 269 XML files):
+  tests=1956 failures=0 errors=0 skipped=4
+
+Relevant suites:
+  com.tkisor.nekojs.api.ui.ScriptColorBoundaryRealEngineTest (3 tests, all passed)
+    - intParametersSaturateInsteadOfWrapping: engine characterization pinned
+      (probe.color(0xFFFFFF00) and probe.color(4294967040) both return 2147483647
+       on the int seam; production seams no longer rely on this)
+    - uint32LiteralsArriveAsArgbBitsThroughNumberSeam: Number seam + UiColor.argbBits
+      returns -256 / -256 / -1 for 0xFFFFFF00 / 4294967040 / 0xFFFFFFFF
+    - int32RangeValuesPassThroughNumberSeamUnchanged: -256 / 5 / 0 unchanged
+  com.tkisor.nekojs.api.ui.UiColorTest (argbBits additions, all passed)
+    - argbBitsReadsUint32ScriptLiteralsAsBits
+    - argbBitsPassesInt32ValuesThroughUnchanged
+    - argbBitsRejectsBadColorNumbersInEnglish

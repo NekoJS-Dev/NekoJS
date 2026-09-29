@@ -2,6 +2,7 @@
 //（可用 tools/extract_evaluated.py 重新提取核对）；26.x 侧行为变更时须同步本文件。
 package com.tkisor.nekojs.client.render;
 
+import com.tkisor.nekojs.api.ui.UiColor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -14,7 +15,10 @@ import net.minecraft.world.item.ItemStack;
  * （移植自 Katton 的 HUD draw helpers，命名对齐 {@code PainterJS}；
  * {@code drawText}/{@code fillRect}/{@code drawTexture} 为任务规格别名）。
  *
- * <p>颜色参数为 ARGB int（如 {@code 0x80FF0000} = 半透明红）。
+ * <p>颜色参数为 ARGB（如 {@code 0x80FF0000} = 半透明红），以 {@link Number} 接收并按
+ * uint32 读位（{@link UiColor#argbBits}）：脚本字面量 {@code 0xFF......} 是 ≥ 2³¹ 的
+ * 无符号数，直接落入 Java {@code int} 参数会被引擎饱和成 {@code 0x7FFFFFFF}（半透明白，
+ * 缺陷 D6，与 {@code PainterJS} 同一治理）。
  */
 public class HudRenderContextJS {
     private final GuiGraphics graphics;
@@ -48,9 +52,9 @@ public class HudRenderContextJS {
         return graphics;
     }
 
-    /** 设置默认颜色（ARGB），供省略颜色参数的绘制方法使用。 */
-    public HudRenderContextJS color(int color) {
-        this.currentColor = color;
+    /** 设置默认颜色（ARGB，{@link Number} 收值按 uint32 读位），供省略颜色参数的绘制方法使用。 */
+    public HudRenderContextJS color(Number color) {
+        this.currentColor = UiColor.argbBits(color);
         return this;
     }
 
@@ -66,13 +70,13 @@ public class HudRenderContextJS {
         return this;
     }
 
-    public HudRenderContextJS text(String text, int x, int y, int color) {
-        graphics.drawString(font, text, x, y, color);
+    public HudRenderContextJS text(String text, int x, int y, Number color) {
+        graphics.drawString(font, text, x, y, UiColor.argbBits(color));
         return this;
     }
 
-    /** 任务规格别名：{@link #text(String, int, int, int)}。 */
-    public HudRenderContextJS drawText(String text, int x, int y, int color) {
+    /** 任务规格别名：{@link #text(String, int, int, Number)}。 */
+    public HudRenderContextJS drawText(String text, int x, int y, Number color) {
         return text(text, x, y, color);
     }
 
@@ -82,8 +86,8 @@ public class HudRenderContextJS {
         return this;
     }
 
-    public HudRenderContextJS centerText(String text, int x, int y, int color) {
-        graphics.drawCenteredString(font, text, x, y, color);
+    public HudRenderContextJS centerText(String text, int x, int y, Number color) {
+        graphics.drawCenteredString(font, text, x, y, UiColor.argbBits(color));
         return this;
     }
 
@@ -93,13 +97,13 @@ public class HudRenderContextJS {
         return this;
     }
 
-    public HudRenderContextJS rect(int x, int y, int width, int height, int color) {
-        graphics.fill(x, y, x + width, y + height, color);
+    public HudRenderContextJS rect(int x, int y, int width, int height, Number color) {
+        graphics.fill(x, y, x + width, y + height, UiColor.argbBits(color));
         return this;
     }
 
-    /** 任务规格别名：{@link #rect(int, int, int, int, int)}。 */
-    public HudRenderContextJS fillRect(int x, int y, int width, int height, int color) {
+    /** 任务规格别名：{@link #rect(int, int, int, int, Number)}。 */
+    public HudRenderContextJS fillRect(int x, int y, int width, int height, Number color) {
         return rect(x, y, width, height, color);
     }
 
@@ -108,17 +112,19 @@ public class HudRenderContextJS {
         return outline(x, y, width, height, currentColor);
     }
 
-    public HudRenderContextJS outline(int x, int y, int width, int height, int color) {
-        graphics.hLine(x, x + width - 1, y, color);
-        graphics.hLine(x, x + width - 1, y + height - 1, color);
-        graphics.vLine(x, y, y + height - 1, color);
-        graphics.vLine(x + width - 1, y, y + height - 1, color);
+    public HudRenderContextJS outline(int x, int y, int width, int height, Number color) {
+        int argb = UiColor.argbBits(color);
+        graphics.hLine(x, x + width - 1, y, argb);
+        graphics.hLine(x, x + width - 1, y + height - 1, argb);
+        graphics.vLine(x, y, y + height - 1, argb);
+        graphics.vLine(x + width - 1, y, y + height - 1, argb);
         return this;
     }
 
     /** 垂直渐变矩形。 */
-    public HudRenderContextJS gradient(int x, int y, int width, int height, int colorTop, int colorBottom) {
-        graphics.fillGradient(x, y, x + width, y + height, colorTop, colorBottom);
+    public HudRenderContextJS gradient(int x, int y, int width, int height, Number colorTop, Number colorBottom) {
+        graphics.fillGradient(x, y, x + width, y + height,
+                UiColor.argbBits(colorTop), UiColor.argbBits(colorBottom));
         return this;
     }
 
