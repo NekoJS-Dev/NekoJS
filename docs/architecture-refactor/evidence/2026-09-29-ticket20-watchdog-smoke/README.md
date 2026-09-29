@@ -101,3 +101,28 @@ AC4 原文：「active watchdog 隔离后的 reload 命令尝试显式创建 can
 （`candidate=true/false` 词汇与票 07 实现一致），隔离后的 reload 显式建 candidate，候选失败
 隔离保持、无自动二次恢复，显式 reload 恢复。命令/运行时状态机未发现违背 AC 的行为；
 1 项用户面文案发现（W1）留维护者裁决。
+
+## W1 修复（2026-09-29，维护者已批准，同日落地）
+
+维护者批准后，W1 在 worktree `D:/mcmodDemo/NekoJS-mult-t20w1`（分支 `ticket-20-w1-wording`，
+基线 `mult@236f7c16`）落地：
+
+- **机制**：`NekoRuntimeRoot.reloadFile` 在 `reloadScriptFile` 返回后**出口**复查
+  `manager.isActiveFailed()`。入口检查已证明 reload 开始时 active 健康，因此此处
+  失败即「本次 reload 的求值杀死了 active」——`ScriptExecutor.executeEntry` 吞掉 kill
+  异常（仅记错误面板 + 错误日志，无异常冒泡），状态机（隔离真实生效）不变，仅把结果
+  从 `successFile` 降级为携带 FILE 阶段与 source 的失败。错误消息
+  `script evaluation was terminated by the watchdog and the active generation is isolated`
+  遵循已合并的 F2 规则（消息进命令面，类名只留日志）。
+- **JVM 侧**：`NekoRuntimeRootReloadResultTest.fileReloadThatWatchdogKillsTheActiveReportsIsolationFailure`
+  （red→green 验证：无修复时以 W1 精确签名失败——`a reload whose evaluation killed the
+  active must not report success (W1) ==> expected: false but was: true`；修复后 4/4 通过）。
+  同时断言 P5 既有隔离拒绝措辞不变、真实成功措辞不变。`:common:check` 全绿。
+- **live 侧**（`command-output/03-rcon-session-w1-wording.txt`，端口 25903/25904）：
+  P4 腿 RCON 响应由
+  `NekoJS server script reload completed: generation=1 phase=FILE source=t20w-runaway.js (1 error(s) remain)`
+  变为
+  `reload failed: type=server generation=1 phase=FILE source=t20w-runaway.js owner=ScriptManager[server] error=script evaluation was terminated by the watchdog and the active generation is isolated; active generation remains isolated; explicit full reload is required.`
+  服务器日志同链复核：`generation=1 candidate=false` kill → `重载完毕`（吞没点）→
+  19:37:44–19:38:04 零 `T20W-ALIVE`（隔离保持）→ 显式 reload 提交恢复 → RCON `stop`
+  干净停服。P1 真实成功与 P5 拒绝措辞逐字不变。

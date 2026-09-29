@@ -232,6 +232,16 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             if (type == ScriptType.TEST) {
                 manager.flushReadyNodeTimers();
             }
+            // A kill during this reload's evaluation does not propagate as an exception
+            // (ScriptExecutor records it in the error panel), but it isolates the active
+            // generation. The entry check above proved the active was healthy when the
+            // reload started, so a failed active here means THIS reload killed it — the
+            // result must report failure, not a completed reload over an isolated runtime.
+            if (manager.isActiveFailed()) {
+                return ReloadResult.failure(type, manager.generationId(), ReloadPhase.FILE, file.toString(),
+                        new IllegalStateException(
+                                "script evaluation was terminated by the watchdog and the active generation is isolated"));
+            }
             if (type == ScriptType.STARTUP) {
                 return new ReloadResult(type, true, null, manager.generationId(), ReloadPhase.STARTUP, file.toString());
             }
