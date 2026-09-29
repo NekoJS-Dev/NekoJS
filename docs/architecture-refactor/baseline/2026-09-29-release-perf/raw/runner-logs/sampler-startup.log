@@ -1,0 +1,30 @@
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult-t35\versions\26.1.2\run
+[session] startup-1-warmup started pid=15784
+[session] startup-1-warmup Done(2.456) wall=453980ms
+[sample] "pid":15784,"ts_utc":"2026-09-29T12:42:11.9963589Z","forced_kill":false,"timeout":null,"rev":"28283cc4","node":"26.1.2","stop_channel":"rcon","wall_total_ms":455277,"wall_done_ms":453980,"kind":"warmup","index":1,"killed":false,"done_s":"2.456","tag":"startup-1-warmup","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult-t35\versions\26.1.2\run
+[session] startup-2-warmup started pid=13260
+[session] startup-2-warmup Done(0.271) wall=13193ms
+[sample] "pid":13260,"ts_utc":"2026-09-29T12:42:26.4116466Z","forced_kill":false,"timeout":null,"rev":"28283cc4","node":"26.1.2","stop_channel":"rcon","wall_total_ms":14371,"wall_done_ms":13193,"kind":"warmup","index":2,"killed":false,"done_s":"0.271","tag":"startup-2-warmup","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult-t35\versions\26.1.2\run
+[session] startup-3-formal started pid=23364
+[session] startup-3-formal Done(0.279) wall=12889ms
+[sample] "pid":23364,"ts_utc":"2026-09-29T12:42:40.4365369Z","forced_kill":false,"timeout":null,"rev":"28283cc4","node":"26.1.2","stop_channel":"rcon","wall_total_ms":13984,"wall_done_ms":12889,"kind":"formal","index":3,"killed":false,"done_s":"0.279","tag":"startup-3-formal","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult-t35\versions\26.1.2\run
+[session] startup-4-formal started pid=17344
+[session] startup-4-formal Done(0.356) wall=17446ms
+[sample] "pid":17344,"ts_utc":"2026-09-29T12:42:59.3814525Z","forced_kill":false,"timeout":null,"rev":"28283cc4","node":"26.1.2","stop_channel":"rcon","wall_total_ms":18902,"wall_done_ms":17446,"kind":"formal","index":4,"killed":false,"done_s":"0.356","tag":"startup-4-formal","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult-t35\versions\26.1.2\run
+[session] startup-5-formal started pid=18524
+[session] startup-5-formal Done(0.370) wall=17435ms
+[sample] "pid":18524,"ts_utc":"2026-09-29T12:43:18.1184607Z","forced_kill":false,"timeout":null,"rev":"28283cc4","node":"26.1.2","stop_channel":"rcon","wall_total_ms":18697,"wall_done_ms":17435,"kind":"formal","index":5,"killed":false,"done_s":"0.370","tag":"startup-5-formal","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult-t35\versions\26.1.2\run
+[session] startup-6-formal started pid=22456
+[session] startup-6-formal Done(0.326) wall=17097ms
+[sample] "pid":22456,"ts_utc":"2026-09-29T12:43:36.8530346Z","forced_kill":false,"timeout":null,"rev":"28283cc4","node":"26.1.2","stop_channel":"rcon","wall_total_ms":18696,"wall_done_ms":17097,"kind":"formal","index":6,"killed":false,"done_s":"0.326","tag":"startup-6-formal","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult-t35\versions\26.1.2\run
+[session] startup-7-formal started pid=4604
+[session] startup-7-formal Done(0.376) wall=17694ms
+[sample] "pid":4604,"ts_utc":"2026-09-29T12:43:55.7938134Z","forced_kill":false,"timeout":null,"rev":"28283cc4","node":"26.1.2","stop_channel":"rcon","wall_total_ms":18910,"wall_done_ms":17694,"kind":"formal","index":7,"killed":false,"done_s":"0.376","tag":"startup-7-formal","mode":"startup"
+[done] stdin-ok= -> D:\mcmodDemo\NekoJS-mult-t35\bench\perf\out\20260929T123434Z-startup-26.1.2
+EXIT=0

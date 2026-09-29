@@ -1,0 +1,95 @@
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources
+> Task :26.1.2:stonecutterPrepare
+> Task :1.21.1:stonecutterPrepare
+> Task :26.1.2:stonecutterGenerate
+> Task :1.21.1:stonecutterGenerate
+> Task :26.1.2:createMinecraftArtifacts FAILED
+> Task :1.21.1:createMinecraftArtifacts FAILED
+> Task :common:compileJava
+注: D:\mcmodDemo\NekoJS-mult-t35\common\src\main\java\com\tkisor\nekojs\api\event\EventBusJS.java使用了未经检查或不安全的操作。
+注: 有关详细信息, 请使用 -Xlint:unchecked 重新编译。
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS-mult-t35/build/reports/problems/problems-report.html
+
+FAILURE: Build completed with 2 failures.
+
+1: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':26.1.2:createMinecraftArtifacts' (registered by plugin 'nekojs.neoforge-node').
+> Error while evaluating property 'artifactManifestEntries' of task ':26.1.2:createMinecraftArtifacts'.
+   > Could not resolve all artifacts for configuration ':26.1.2:neoFormRuntimeExternalTools'.
+      > Could not resolve net.neoforged:neoform-runtime:2.0.18.
+        Required by:
+            project ':26.1.2'
+         > Could not resolve net.neoforged:neoform-runtime:2.0.18.
+            > Could not get resource 'https://maven.neoforged.net/releases/net/neoforged/neoform-runtime/2.0.18/neoform-runtime-2.0.18.pom'.
+               > Could not GET 'https://maven.neoforged.net/releases/net/neoforged/neoform-runtime/2.0.18/neoform-runtime-2.0.18.pom'.
+                  > Got socket exception during request. It might be caused by SSL misconfiguration
+                     > Connection reset
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+==============================================================================
+
+2: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':1.21.1:createMinecraftArtifacts' (registered by plugin 'nekojs.neoforge-node').
+> Error while evaluating property 'artifactManifestEntries' of task ':1.21.1:createMinecraftArtifacts'.
+   > Could not resolve all artifacts for configuration ':1.21.1:neoFormRuntimeExternalTools'.
+      > Could not resolve net.neoforged:neoform-runtime:2.0.18.
+        Required by:
+            project ':1.21.1'
+         > Could not resolve net.neoforged:neoform-runtime:2.0.18.
+            > Could not get resource 'https://maven.neoforged.net/releases/net/neoforged/neoform-runtime/2.0.18/neoform-runtime-2.0.18.pom'.
+               > Could not GET 'https://maven.neoforged.net/releases/net/neoforged/neoform-runtime/2.0.18/neoform-runtime-2.0.18.pom'.
+                  > Got socket exception during request. It might be caused by SSL misconfiguration
+                     > Connection reset
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+==============================================================================
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 1m 17s
+17 actionable tasks: 8 executed, 9 up-to-date
+EXIT=1
