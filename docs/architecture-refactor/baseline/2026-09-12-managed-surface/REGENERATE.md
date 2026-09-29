@@ -16,7 +16,7 @@
 | query 域 capability matrix golden | `src/test/resources/golden/query/capability-matrix-neoforge.txt`、`capability-matrix-fabric.txt` | `QueryToolCapabilityMatrixTest`（loader 探针自动选 golden；fabric 行经由 `:26.1.2-fabric:test` 消费） | capability 探针矩阵：类存在性 + source trace 判定的 supported/partial/unavailable（ticket 25） |
 | startup registry typed Builder 契约 golden | `src/test/resources/golden/registry/startup-builders.d.ts`（26.x）、`startup-builders-1.21.1.d.ts`（1.21.1 成员面有真实差异，按版本各冻一份） | `RegistryBuilderSurfaceGoldenTest`（根测试树，守卫按版本选 golden；fluid 条目不进 golden——NeoForge 面，守卫内内存断言） | 生产 `registry_types` 同款 builder 清单 → `RegistryBuilderContract` 反射 → `RegistryBuilderSurfaces.derive` → `RegistryBuilderTsRenderer`（probe TS 后端同一渲染器）（ticket 15） |
 | 运行期动态注册声明 golden | `common/src/test/resources/nekojs/dynamic/dynamic-registry-events.expected.d.ts`、`dynamic-builders.expected.d.ts` | `DynamicRegistryEventsDeclarationGoldenTest`（经 `ProbeGoldenSupport`，住 probe 包以复用本表 regenerate 入口） | facade 事件声明：`NekoScriptCatalog.events`（`DynamicRegistryEvents.GROUP`）→ `EventDeclarationGenerator`；动态 Builder 声明：`DynamicBuilderSurfaces.derive()` → `RegistryBuilderTsRenderer`（ticket 16） |
-| 节点声明事件面 golden（票 23/24/27 域） | `src/test/resources/golden/events-declared/<node>.<startup\|server\|client>-events.d.ts`（每节点 × 每脚本侧一份；跨节点在场事实复用 `nekojs/platform-gates/event-surface-domains.txt` 的 present 行） | `DeclaredEventSurfaceGoldenTest`（根测试树，`platform-gate` tag，随各节点 `:<node>:platformGateTest` 运行；regenerate 开关 `-Dnekojs.golden.regenerate=true` 透传进 gate JVM，写回共享树） | 节点真实注册入口（`EventRegistrationSurfaces`：注解扫描 ∪ fabric 内置清单 → `registerEvents`/`registerClientEvents`）→ `NekoScriptCatalog.events` → `EventDeclarationGenerator`（生产 probe 同链）。只冻 recipe/data（ServerEvents/RecipeViewerEvents）、gameplay 八族、ClientEvents 三域；审阅材料见 `evidence/2026-09-29-golden-decl-prep/`（2026-09-29 备审批次） |
+| 节点声明事件面 golden（票 23/24/26/27 域） | `src/test/resources/golden/events-declared/<node>.<startup\|server\|client>-events.d.ts`（每节点 × 每脚本侧一份；跨节点在场事实复用 `nekojs/platform-gates/event-surface-domains.txt` 的 present 行） | `DeclaredEventSurfaceGoldenTest`（根测试树，`platform-gate` tag，随各节点 `:<node>:platformGateTest` 运行；regenerate 开关 `-Dnekojs.golden.regenerate=true` 透传进 gate JVM，写回共享树） | 节点真实注册入口（`EventRegistrationSurfaces`：注解扫描 ∪ fabric 内置清单 → `registerEvents`/`registerClientEvents`）→ `NekoScriptCatalog.events` → `EventDeclarationGenerator`（生产 probe 同链）。只冻 recipe/data（ServerEvents/RecipeViewerEvents）、gameplay 八族、ClientEvents、KeyBindEvents（票 26，2026-09-29 扩展；`Assets` binding 与 `generatedLangs()` 是 binding/plugin 面，不属本家族派生）四域；审阅材料见 `evidence/2026-09-29-golden-decl-prep/`（首批复审批）与 `evidence/2026-09-29-golden-decl-ext/`（票 26 扩展批） |
 
 > 动态注册两行（ticket 16 落地，owner registry-dynamic）冻结的是**声明形状**：事件声明的组名
 > `DynamicRegistryEvents`／成员名 `dynamicRegistry` 是票面命名的记录义务（spec 08 工作名
@@ -44,7 +44,7 @@
 ./gradlew :common:test --tests "com.tkisor.nekojs.core.api.ApiManifestGoldenTest" \
     -Dnekojs.golden.regenerate=true --console=plain
 
-# 节点声明事件面 golden（票 23/24/27 域；每节点各跑一次，写回共享树 resources）：
+# 节点声明事件面 golden（票 23/24/26/27 域；每节点各跑一次，写回共享树 resources）：
 ./gradlew :<node>:platformGateTest -Dnekojs.golden.regenerate=true --console=plain
 
 # regenerate 后必须重跑 TS 契约校验（probe-ts golden 被 tsc 消费）：

@@ -43,6 +43,7 @@ import { $BaseMapCodec, $PrimitiveCodec, $RecordCodecBuilder, $RecordCodecBuilde
 import { $AttachedData } from "java:com/tkisor/nekojs/api/data";
 import { $BlockExtension, $BlockStateExtension, $EntityExtension, $ItemExtension, $LevelExtension, $LivingEntityExtension, $MutableComponentExtension, $PlayerExtension, $ServerExtension } from "java:com/tkisor/nekojs/api/inject";
 import { $BlockSpec, $BlockStateSpec, $EntitySpec, $ItemSpec, $LevelSpec, $LivingEntitySpec, $MutableComponentSpec, $PlayerSpec, $ServerSpec } from "java:com/tkisor/nekojs/api/spec/inject";
+import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
 import { $PostEffectEventJS } from "java:com/tkisor/nekojs/client/posteffect";
 import { $DataGeneratorJS, $LangGeneratorJS } from "java:com/tkisor/nekojs/wrapper";
 import { $PainterJS, $ScreenRenderEventJS } from "java:com/tkisor/nekojs/wrapper/client";
@@ -463,6 +464,16 @@ declare global {
     namespace ItemEvents {
         function tooltip(handler: ((event: $ItemTooltipEvent) => void)): void;
         function tooltip(extra: $Item, handler: ((event: $ItemTooltipEvent) => void)): void;
+    }
+
+    namespace KeyBindEvents {
+        function pressed(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function pressed(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function released(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function released(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function tick(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function tick(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function register(handler: ((event: $Object) => void)): void;
     }
 
     namespace RecipeViewerEvents {

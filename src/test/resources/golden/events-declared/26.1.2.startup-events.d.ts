@@ -45,6 +45,7 @@ import { $BlockExtension, $BlockStateExtension, $EntityExtension, $ItemExtension
 import { $RecipeBuilder, $RecipeCreationContext, $RecipeEntryJS, $RecipeFilter, $RecipeJsonBuilder, $RecipeJsonValue, $RecipeLifecycleContext } from "java:com/tkisor/nekojs/api/recipe";
 import { $RecipeFieldDefinition, $RecipeFieldKind, $RecipeFieldRole, $RecipeTypeDefinition, $RecipeTypeDefinitionRegistry, $RecipeTypeDefinitionRegistry$Builder } from "java:com/tkisor/nekojs/api/recipe/definition";
 import { $BlockSpec, $BlockStateSpec, $EntitySpec, $ItemSpec, $LevelSpec, $LivingEntitySpec, $MutableComponentSpec, $PlayerSpec, $ServerSpec } from "java:com/tkisor/nekojs/api/spec/inject";
+import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
 import { $PostEffectEventJS } from "java:com/tkisor/nekojs/client/posteffect";
 import { $BlockEntityTickEvent, $RandomTickEvent } from "java:com/tkisor/nekojs/event/level";
 import { $DataGeneratorJS, $LangGeneratorJS, $RecipeRegistryProxy } from "java:com/tkisor/nekojs/wrapper";
@@ -563,6 +564,16 @@ declare global {
         function entityInteracted(extra: $Item, handler: ((event: $PlayerInteractEvent$EntityInteract) => void)): void;
         function foodEaten(handler: ((event: $LivingEntityUseItemEvent$Finish) => void)): void;
         function foodEaten(extra: $Item, handler: ((event: $LivingEntityUseItemEvent$Finish) => void)): void;
+    }
+
+    namespace KeyBindEvents {
+        function pressed(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function pressed(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function released(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function released(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function tick(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function tick(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function register(handler: ((event: $Object) => void)): void;
     }
 
     namespace LevelEvents {

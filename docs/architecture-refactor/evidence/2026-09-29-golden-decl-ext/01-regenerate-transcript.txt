@@ -1,0 +1,26 @@
+# Golden regeneration (explicit switch), all five nodes
+# Command: ./gradlew.bat :1.21.1:platformGateTest :26.1.2:platformGateTest :26.2.0:platformGateTest :26.1.2-fabric:platformGateTest :26.2.0-fabric:platformGateTest -Dnekojs.golden.regenerate=true --console=plain
+# Date: 2026-09-29, worktree ../NekoJS-mult-tgext (branch golden-decl-ext)
+# Note: this capture is the tail window of the build log; the :26.1.2:platformGateTest task
+# line scrolled past it. Its execution is evidenced below: only that gate JVM writes the
+# 26.1.2.* golden files, and they were rewritten by this run (numstat +11 each).
+
+> Task :26.2.0:platformGateTest
+> Task :26.2.0-fabric:platformGateTest
+> Task :26.1.2-fabric:platformGateTest
+> Task :1.21.1:platformGateTest
+BUILD SUCCESSFUL in 54s
+
+# Post-regeneration git diff --numstat, captured before the REGENERATE.md registry edit
+# (content changes; 1.21.1 files + all five server-side files were line-ending-only
+# retouches, verified content-identical via 'git diff --ignore-cr-at-eol' and reverted,
+# mirroring evidence/2026-09-29-golden-decl-prep handling):
+20	10	src/test/java/com/tkisor/nekojs/platform/DeclaredEventSurfaceGoldenTest.java
+13	0	src/test/resources/golden/events-declared/26.1.2-fabric.client-events.d.ts
+13	0	src/test/resources/golden/events-declared/26.1.2-fabric.startup-events.d.ts
+11	0	src/test/resources/golden/events-declared/26.1.2.client-events.d.ts
+11	0	src/test/resources/golden/events-declared/26.1.2.startup-events.d.ts
+13	0	src/test/resources/golden/events-declared/26.2.0-fabric.client-events.d.ts
+13	0	src/test/resources/golden/events-declared/26.2.0-fabric.startup-events.d.ts
+11	0	src/test/resources/golden/events-declared/26.2.0.client-events.d.ts
+11	0	src/test/resources/golden/events-declared/26.2.0.startup-events.d.ts

@@ -1,0 +1,99 @@
+diff --git a/docs/architecture-refactor/baseline/2026-09-12-managed-surface/REGENERATE.md b/docs/architecture-refactor/baseline/2026-09-12-managed-surface/REGENERATE.md
+index a46dda52..43c7d065 100644
+--- a/docs/architecture-refactor/baseline/2026-09-12-managed-surface/REGENERATE.md
++++ b/docs/architecture-refactor/baseline/2026-09-12-managed-surface/REGENERATE.md
+@@ -16,7 +16,7 @@
+ | query 域 capability matrix golden | `src/test/resources/golden/query/capability-matrix-neoforge.txt`、`capability-matrix-fabric.txt` | `QueryToolCapabilityMatrixTest`（loader 探针自动选 golden；fabric 行经由 `:26.1.2-fabric:test` 消费） | capability 探针矩阵：类存在性 + source trace 判定的 supported/partial/unavailable（ticket 25） |
+ | startup registry typed Builder 契约 golden | `src/test/resources/golden/registry/startup-builders.d.ts`（26.x）、`startup-builders-1.21.1.d.ts`（1.21.1 成员面有真实差异，按版本各冻一份） | `RegistryBuilderSurfaceGoldenTest`（根测试树，守卫按版本选 golden；fluid 条目不进 golden——NeoForge 面，守卫内内存断言） | 生产 `registry_types` 同款 builder 清单 → `RegistryBuilderContract` 反射 → `RegistryBuilderSurfaces.derive` → `RegistryBuilderTsRenderer`（probe TS 后端同一渲染器）（ticket 15） |
+ | 运行期动态注册声明 golden | `common/src/test/resources/nekojs/dynamic/dynamic-registry-events.expected.d.ts`、`dynamic-builders.expected.d.ts` | `DynamicRegistryEventsDeclarationGoldenTest`（经 `ProbeGoldenSupport`，住 probe 包以复用本表 regenerate 入口） | facade 事件声明：`NekoScriptCatalog.events`（`DynamicRegistryEvents.GROUP`）→ `EventDeclarationGenerator`；动态 Builder 声明：`DynamicBuilderSurfaces.derive()` → `RegistryBuilderTsRenderer`（ticket 16） |
+-| 节点声明事件面 golden（票 23/24/27 域） | `src/test/resources/golden/events-declared/<node>.<startup\|server\|client>-events.d.ts`（每节点 × 每脚本侧一份；跨节点在场事实复用 `nekojs/platform-gates/event-surface-domains.txt` 的 present 行） | `DeclaredEventSurfaceGoldenTest`（根测试树，`platform-gate` tag，随各节点 `:<node>:platformGateTest` 运行；regenerate 开关 `-Dnekojs.golden.regenerate=true` 透传进 gate JVM，写回共享树） | 节点真实注册入口（`EventRegistrationSurfaces`：注解扫描 ∪ fabric 内置清单 → `registerEvents`/`registerClientEvents`）→ `NekoScriptCatalog.events` → `EventDeclarationGenerator`（生产 probe 同链）。只冻 recipe/data（ServerEvents/RecipeViewerEvents）、gameplay 八族、ClientEvents 三域；审阅材料见 `evidence/2026-09-29-golden-decl-prep/`（2026-09-29 备审批次） |
++| 节点声明事件面 golden（票 23/24/26/27 域） | `src/test/resources/golden/events-declared/<node>.<startup\|server\|client>-events.d.ts`（每节点 × 每脚本侧一份；跨节点在场事实复用 `nekojs/platform-gates/event-surface-domains.txt` 的 present 行） | `DeclaredEventSurfaceGoldenTest`（根测试树，`platform-gate` tag，随各节点 `:<node>:platformGateTest` 运行；regenerate 开关 `-Dnekojs.golden.regenerate=true` 透传进 gate JVM，写回共享树） | 节点真实注册入口（`EventRegistrationSurfaces`：注解扫描 ∪ fabric 内置清单 → `registerEvents`/`registerClientEvents`）→ `NekoScriptCatalog.events` → `EventDeclarationGenerator`（生产 probe 同链）。只冻 recipe/data（ServerEvents/RecipeViewerEvents）、gameplay 八族、ClientEvents、KeyBindEvents（票 26，2026-09-29 扩展；`Assets` binding 与 `generatedLangs()` 是 binding/plugin 面，不属本家族派生）四域；审阅材料见 `evidence/2026-09-29-golden-decl-prep/`（首批复审批）与 `evidence/2026-09-29-golden-decl-ext/`（票 26 扩展批） |
+ 
+ > 动态注册两行（ticket 16 落地，owner registry-dynamic）冻结的是**声明形状**：事件声明的组名
+ > `DynamicRegistryEvents`／成员名 `dynamicRegistry` 是票面命名的记录义务（spec 08 工作名
+@@ -44,7 +44,7 @@
+ ./gradlew :common:test --tests "com.tkisor.nekojs.core.api.ApiManifestGoldenTest" \
+     -Dnekojs.golden.regenerate=true --console=plain
+ 
+-# 节点声明事件面 golden（票 23/24/27 域；每节点各跑一次，写回共享树 resources）：
++# 节点声明事件面 golden（票 23/24/26/27 域；每节点各跑一次，写回共享树 resources）：
+ ./gradlew :<node>:platformGateTest -Dnekojs.golden.regenerate=true --console=plain
+ 
+ # regenerate 后必须重跑 TS 契约校验（probe-ts golden 被 tsc 消费）：
+diff --git a/src/test/java/com/tkisor/nekojs/platform/DeclaredEventSurfaceGoldenTest.java b/src/test/java/com/tkisor/nekojs/platform/DeclaredEventSurfaceGoldenTest.java
+index 2a31056d..3f77f646 100644
+--- a/src/test/java/com/tkisor/nekojs/platform/DeclaredEventSurfaceGoldenTest.java
++++ b/src/test/java/com/tkisor/nekojs/platform/DeclaredEventSurfaceGoldenTest.java
+@@ -38,11 +38,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
+ import static org.junit.jupiter.api.Assertions.assertTrue;
+ 
+ /**
+- * Declared-event-surface golden (tickets 23/24/27 shared declaration gap): freezes the
+- * TypeScript declarations of the recipe/data, gameplay and client GUI/render event domains,
+- * derived from <b>this node's real registration entry points</b> through the same production
+- * chain the probe uses — {@link NekoScriptCatalog#events} (catalog derivation) →
+- * {@link EventDeclarationGenerator} (TS declaration renderer).
++ * Declared-event-surface golden (tickets 23/24/27 shared declaration gap, extended 2026-09-29 with
++ * ticket 26's KeyBindEvents): freezes the TypeScript declarations of the recipe/data, gameplay,
++ * client GUI/render and keybind event domains, derived from <b>this node's real registration entry
++ * points</b> through the same production chain the probe uses — {@link NekoScriptCatalog#events}
++ * (catalog derivation) → {@link EventDeclarationGenerator} (TS declaration renderer).
+  *
+  * <p><b>Why this golden lives in the node tree.</b> The recorded gap (ticket 23 AC1, ticket 24
+  * AC8, ticket 27 AC7) is zero hits for these domains in the common declaration goldens
+@@ -59,10 +59,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
+  * <p><b>Input</b> (identical to {@code EventSurfaceDomainGateTest}, shared through
+  * {@link EventRegistrationSurfaces}): every {@code @RegisterNekoJSPlugin} class on the node
+  * classpath (plus the fabric built-in list), driven through {@code registerEvents} and
+- * {@code registerClientEvents} into fresh registries. Only the three ticket domains are
++ * {@code registerClientEvents} into fresh registries. Only the four ticket domains are
+  * frozen: {@code ServerEvents}/{@code RecipeViewerEvents} (23), the eight gameplay families
+- * (24), {@code ClientEvents} (27). Other domains keep their existing gates — this golden does
+- * not become a second cross-domain baseline.
++ * (24), {@code ClientEvents} (27), {@code KeyBindEvents} (26 — its direct-registration member
++ * {@code register} freezes the same way as {@code ClientEvents.hudRender}: both are
++ * {@code EventBusJS} members of the group, and the family freezes what the renderer declares,
++ * not the call semantics). Other domains keep their existing gates — this golden does not
++ * become a second cross-domain baseline. The ticket-29 assets faces split at this boundary:
++ * the event members {@code ClientEvents.generateAssets}/{@code lang} are already frozen through
++ * {@code ClientEvents}, while the {@code Assets} typed binding and the plugin-only
++ * {@code generatedLangs()} are not event-group members ({@link NekoScriptCatalog#events} derives
++ * from {@code eventGroups()} only) and stay outside this family's charter.
+  *
+  * <p><b>Goldens</b>: {@code src/test/resources/golden/events-declared/<node>.<side>-events.d.ts}
+  * with one file per script side ({@code startup}/{@code server}/{@code client}) — production
+@@ -83,6 +90,8 @@ class DeclaredEventSurfaceGoldenTest {
+             "BlockEvents", "ItemEvents", "LevelEvents", "PlayerEvents",
+             "CommandEvents", "CapabilityEvents", "GoalEvents", "EntityEvents");
+     private static final List<String> CLIENT_GUI_RENDER_GROUPS = List.of("ClientEvents");
++    /** Ticket 26 client input: the keybind group (the ClientEvents members of 26 are in scope via ClientEvents). */
++    private static final List<String> CLIENT_INPUT_HUD_GROUPS = List.of("KeyBindEvents");
+ 
+     private static final List<String> IN_SCOPE;
+     static {
+@@ -90,6 +99,7 @@ class DeclaredEventSurfaceGoldenTest {
+         all.addAll(RECIPE_DATA_GROUPS);
+         all.addAll(GAMEPLAY_GROUPS);
+         all.addAll(CLIENT_GUI_RENDER_GROUPS);
++        all.addAll(CLIENT_INPUT_HUD_GROUPS);
+         IN_SCOPE = List.copyOf(all);
+     }
+ 
+@@ -147,7 +157,7 @@ class DeclaredEventSurfaceGoldenTest {
+ 
+         List<String> missing = expectedGroups.stream().filter(g -> !registered.containsKey(g)).toList();
+         assertTrue(missing.isEmpty(),
+-                "三个票据域的事件组在本节点注册面缺失（成员删除＝契约变更；若整组移除请更新票 33 基线、"
++                "四个票据域的事件组在本节点注册面缺失（成员删除＝契约变更；若整组移除请更新票 33 基线、"
+                         + "本测试与 golden）: " + missing);
+         List<String> undeclared = IN_SCOPE.stream()
+                 .filter(group -> registered.containsKey(group) && Boolean.FALSE.equals(presence.get(group))).toList();
+@@ -296,7 +306,7 @@ class DeclaredEventSurfaceGoldenTest {
+         json.append("{\n  \"check\": \"declared-event-surface\",\n");
+         json.append("  \"owner\": \"Managed Surface/Probe owner; build convention owner (wiring)\",\n");
+         json.append("  \"node\": \"").append(node).append("\",\n");
+-        json.append("  \"scope\": \"tickets 23/24/27 domains\",\n");
++        json.append("  \"scope\": \"tickets 23/24/26/27 domains\",\n");
+         json.append("  \"groups\": [");
+         json.append(String.join(",", expectedGroups.stream().map(g -> "\"" + g + "\"").toList()));
+         json.append("],\n  \"registeredInScope\": ").append(

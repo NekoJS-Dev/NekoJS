@@ -1,0 +1,37 @@
+# Per-node honesty checks on the regenerated goldens (2026-09-29)
+
+## 1. KeyBindEvents namespace presence per golden file (grep -l 'namespace KeyBindEvents')
+26.1.2.client-events.d.ts
+26.1.2-fabric.startup-events.d.ts
+26.2.0.client-events.d.ts
+26.1.2-fabric.client-events.d.ts
+26.2.0.startup-events.d.ts
+26.2.0-fabric.client-events.d.ts
+26.1.2.startup-events.d.ts
+26.2.0-fabric.startup-events.d.ts
+
+## 2. 1.21.1 goldens: zero KeyBindEvents hits (class guarded //? if neoforge && >=26; ticket-33 baseline row: not-verified)
+src/test/resources/golden/events-declared/1.21.1.startup-events.d.ts:0
+src/test/resources/golden/events-declared/1.21.1.client-events.d.ts:0
+src/test/resources/golden/events-declared/1.21.1.server-events.d.ts:0
+
+## 3. Server-side goldens on 26.x: zero KeyBindEvents hits (CLIENT-typed buses never enter the server document; same production semantics as ClientEvents)
+src/test/resources/golden/events-declared/26.1.2.server-events.d.ts:0
+src/test/resources/golden/events-declared/26.1.2-fabric.server-events.d.ts:0
+src/test/resources/golden/events-declared/26.2.0.server-events.d.ts:0
+src/test/resources/golden/events-declared/26.2.0-fabric.server-events.d.ts:0
+
+## 4. Frozen member set on every node that has it (matches ticket-33 baseline buses=pressed,register,released,tick)
+    namespace KeyBindEvents {
+        function pressed(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function pressed(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function released(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function released(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function tick(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function tick(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function register(handler: ((event: $Object) => void)): void;
+    }
+
+## 5. Fabric twin payload imports (independent fabric KeyBindEventJS reaches fabric client input types via reflection BFS)
+import { $KeyMapping, $KeyMapping$Category } from "java:net/minecraft/client";
+import { $InputWithModifiers, $KeyEvent, $MouseButtonEvent, $MouseButtonInfo } from "java:net/minecraft/client/input";

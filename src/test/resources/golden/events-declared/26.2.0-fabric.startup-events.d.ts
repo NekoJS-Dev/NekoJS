@@ -1,5 +1,6 @@
 import { $RecipeBuilder, $RecipeCreationContext, $RecipeEntryJS, $RecipeFilter, $RecipeJsonBuilder, $RecipeJsonValue, $RecipeLifecycleContext } from "java:com/tkisor/nekojs/api/recipe";
 import { $RecipeFieldDefinition, $RecipeFieldKind, $RecipeFieldRole, $RecipeTypeDefinition, $RecipeTypeDefinitionRegistry, $RecipeTypeDefinitionRegistry$Builder } from "java:com/tkisor/nekojs/api/recipe/definition";
+import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
 import { $RecipeRegistryProxy } from "java:com/tkisor/nekojs/wrapper";
 import { $GoalRegistry$GoalBuilderJS } from "java:com/tkisor/nekojs/wrapper/entity";
 import { $BlockBrokenEventJS } from "java:com/tkisor/nekojs/wrapper/event/block";
@@ -44,6 +45,8 @@ import { $ZipConstants, $ZipEntry, $ZipFile } from "java:java/util/zip";
 import { $ChatFormatting, $CrashReport, $CrashReportCategory, $CrashReportDetail, $ReportType, $ReportedException, $SystemReport } from "java:net/minecraft";
 import { $Advancement, $AdvancementHolder, $AdvancementNode, $AdvancementProgress, $AdvancementRequirements, $AdvancementRewards, $AdvancementTree, $AdvancementTree$Listener, $AdvancementType, $CriterionProgress, $DisplayInfo } from "java:net/minecraft/advancements";
 import { $Criterion, $CriterionTrigger } from "java:net/minecraft/advancements/triggers";
+import { $KeyMapping, $KeyMapping$Category } from "java:net/minecraft/client";
+import { $InputWithModifiers, $KeyEvent, $MouseButtonEvent, $MouseButtonInfo } from "java:net/minecraft/client/input";
 import { $CacheableFunction, $CommandBuildContext, $CommandResultCallback, $CommandSigningContext, $CommandSource, $CommandSourceStack, $Commands, $Commands$ParseFunction, $ExecutionCommandSource, $SharedSuggestionProvider, $SharedSuggestionProvider$ElementSuggestionType, $SharedSuggestionProvider$TextCoordinates } from "java:net/minecraft/commands";
 import { $ArgumentSignatures, $ArgumentSignatures$Entry, $ArgumentSignatures$Signer, $EntityAnchorArgument$Anchor, $NbtPathArgument$NbtPath } from "java:net/minecraft/commands/arguments";
 import { $EntitySelector } from "java:net/minecraft/commands/arguments/selector";
@@ -280,6 +283,16 @@ declare global {
         function entityInteracted(handler: ((event: $PlayerEntityInteractEventJS) => void)): void;
         function entityInteracted(extra: $Item, handler: ((event: $PlayerEntityInteractEventJS) => void)): void;
         function modification(handler: ((event: $ItemModificationEventJS) => void)): void;
+    }
+
+    namespace KeyBindEvents {
+        function pressed(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function pressed(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function released(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function released(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function tick(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function tick(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function register(handler: ((event: $Object) => void)): void;
     }
 
     namespace LevelEvents {

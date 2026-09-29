@@ -38,11 +38,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Declared-event-surface golden (tickets 23/24/27 shared declaration gap): freezes the
- * TypeScript declarations of the recipe/data, gameplay and client GUI/render event domains,
- * derived from <b>this node's real registration entry points</b> through the same production
- * chain the probe uses — {@link NekoScriptCatalog#events} (catalog derivation) →
- * {@link EventDeclarationGenerator} (TS declaration renderer).
+ * Declared-event-surface golden (tickets 23/24/27 shared declaration gap, extended 2026-09-29 with
+ * ticket 26's KeyBindEvents): freezes the TypeScript declarations of the recipe/data, gameplay,
+ * client GUI/render and keybind event domains, derived from <b>this node's real registration entry
+ * points</b> through the same production chain the probe uses — {@link NekoScriptCatalog#events}
+ * (catalog derivation) → {@link EventDeclarationGenerator} (TS declaration renderer).
  *
  * <p><b>Why this golden lives in the node tree.</b> The recorded gap (ticket 23 AC1, ticket 24
  * AC8, ticket 27 AC7) is zero hits for these domains in the common declaration goldens
@@ -59,10 +59,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p><b>Input</b> (identical to {@code EventSurfaceDomainGateTest}, shared through
  * {@link EventRegistrationSurfaces}): every {@code @RegisterNekoJSPlugin} class on the node
  * classpath (plus the fabric built-in list), driven through {@code registerEvents} and
- * {@code registerClientEvents} into fresh registries. Only the three ticket domains are
+ * {@code registerClientEvents} into fresh registries. Only the four ticket domains are
  * frozen: {@code ServerEvents}/{@code RecipeViewerEvents} (23), the eight gameplay families
- * (24), {@code ClientEvents} (27). Other domains keep their existing gates — this golden does
- * not become a second cross-domain baseline.
+ * (24), {@code ClientEvents} (27), {@code KeyBindEvents} (26 — its direct-registration member
+ * {@code register} freezes the same way as {@code ClientEvents.hudRender}: both are
+ * {@code EventBusJS} members of the group, and the family freezes what the renderer declares,
+ * not the call semantics). Other domains keep their existing gates — this golden does not
+ * become a second cross-domain baseline. The ticket-29 assets faces split at this boundary:
+ * the event members {@code ClientEvents.generateAssets}/{@code lang} are already frozen through
+ * {@code ClientEvents}, while the {@code Assets} typed binding and the plugin-only
+ * {@code generatedLangs()} are not event-group members ({@link NekoScriptCatalog#events} derives
+ * from {@code eventGroups()} only) and stay outside this family's charter.
  *
  * <p><b>Goldens</b>: {@code src/test/resources/golden/events-declared/<node>.<side>-events.d.ts}
  * with one file per script side ({@code startup}/{@code server}/{@code client}) — production
@@ -83,6 +90,8 @@ class DeclaredEventSurfaceGoldenTest {
             "BlockEvents", "ItemEvents", "LevelEvents", "PlayerEvents",
             "CommandEvents", "CapabilityEvents", "GoalEvents", "EntityEvents");
     private static final List<String> CLIENT_GUI_RENDER_GROUPS = List.of("ClientEvents");
+    /** Ticket 26 client input: the keybind group (the ClientEvents members of 26 are in scope via ClientEvents). */
+    private static final List<String> CLIENT_INPUT_HUD_GROUPS = List.of("KeyBindEvents");
 
     private static final List<String> IN_SCOPE;
     static {
@@ -90,6 +99,7 @@ class DeclaredEventSurfaceGoldenTest {
         all.addAll(RECIPE_DATA_GROUPS);
         all.addAll(GAMEPLAY_GROUPS);
         all.addAll(CLIENT_GUI_RENDER_GROUPS);
+        all.addAll(CLIENT_INPUT_HUD_GROUPS);
         IN_SCOPE = List.copyOf(all);
     }
 
@@ -147,7 +157,7 @@ class DeclaredEventSurfaceGoldenTest {
 
         List<String> missing = expectedGroups.stream().filter(g -> !registered.containsKey(g)).toList();
         assertTrue(missing.isEmpty(),
-                "三个票据域的事件组在本节点注册面缺失（成员删除＝契约变更；若整组移除请更新票 33 基线、"
+                "四个票据域的事件组在本节点注册面缺失（成员删除＝契约变更；若整组移除请更新票 33 基线、"
                         + "本测试与 golden）: " + missing);
         List<String> undeclared = IN_SCOPE.stream()
                 .filter(group -> registered.containsKey(group) && Boolean.FALSE.equals(presence.get(group))).toList();
@@ -296,7 +306,7 @@ class DeclaredEventSurfaceGoldenTest {
         json.append("{\n  \"check\": \"declared-event-surface\",\n");
         json.append("  \"owner\": \"Managed Surface/Probe owner; build convention owner (wiring)\",\n");
         json.append("  \"node\": \"").append(node).append("\",\n");
-        json.append("  \"scope\": \"tickets 23/24/27 domains\",\n");
+        json.append("  \"scope\": \"tickets 23/24/26/27 domains\",\n");
         json.append("  \"groups\": [");
         json.append(String.join(",", expectedGroups.stream().map(g -> "\"" + g + "\"").toList()));
         json.append("],\n  \"registeredInScope\": ").append(

@@ -1,0 +1,17 @@
+# Read-only guard re-run after regeneration (roundtrip proof), all five nodes
+# Command: ./gradlew.bat :1.21.1:platformGateTest :26.1.2:platformGateTest :26.2.0:platformGateTest :26.1.2-fabric:platformGateTest :26.2.0-fabric:platformGateTest --console=plain
+# Date: 2026-09-29
+
+> Task :26.2.0-fabric:platformGateTest
+> Task :26.1.2-fabric:platformGateTest
+> Task :26.2.0:platformGateTest
+> Task :26.1.2:platformGateTest
+> Task :1.21.1:platformGateTest
+BUILD SUCCESSFUL in 9s
+
+# Per-node gate report (versions/<node>/build/nekojs-gates/declared-event-surface-<node>.json):
+{"check": "declared-event-surface", "owner": "Managed Surface/Probe owner; build convention owner (wiring)", "node": "1.21.1", "scope": "tickets 23/24/26/27 domains", "groups": ["ServerEvents", "RecipeViewerEvents", "BlockEvents", "ItemEvents", "LevelEvents", "PlayerEvents", "CommandEvents", "CapabilityEvents", "GoalEvents", "EntityEvents", "ClientEvents"], "registeredInScope": 11, "startupMembers": 156, "serverMembers": 120, "clientMembers": 34}
+{"check": "declared-event-surface", "owner": "Managed Surface/Probe owner; build convention owner (wiring)", "node": "26.1.2", "scope": "tickets 23/24/26/27 domains", "groups": ["ServerEvents", "RecipeViewerEvents", "BlockEvents", "ItemEvents", "LevelEvents", "PlayerEvents", "CommandEvents", "CapabilityEvents", "GoalEvents", "EntityEvents", "ClientEvents", "KeyBindEvents"], "registeredInScope": 12, "startupMembers": 164, "serverMembers": 121, "clientMembers": 41}
+{"check": "declared-event-surface", "owner": "Managed Surface/Probe owner; build convention owner (wiring)", "node": "26.2.0", "scope": "tickets 23/24/26/27 domains", "groups": ["ServerEvents", "RecipeViewerEvents", "BlockEvents", "ItemEvents", "LevelEvents", "PlayerEvents", "CommandEvents", "CapabilityEvents", "GoalEvents", "EntityEvents", "ClientEvents", "KeyBindEvents"], "registeredInScope": 12, "startupMembers": 164, "serverMembers": 121, "clientMembers": 41}
+{"check": "declared-event-surface", "owner": "Managed Surface/Probe owner; build convention owner (wiring)", "node": "26.1.2-fabric", "scope": "tickets 23/24/26/27 domains", "groups": ["ServerEvents", "RecipeViewerEvents", "BlockEvents", "ItemEvents", "LevelEvents", "PlayerEvents", "CommandEvents", "GoalEvents", "EntityEvents", "ClientEvents", "KeyBindEvents"], "registeredInScope": 11, "startupMembers": 97, "serverMembers": 77, "clientMembers": 19}
+{"check": "declared-event-surface", "owner": "Managed Surface/Probe owner; build convention owner (wiring)", "node": "26.2.0-fabric", "scope": "tickets 23/24/26/27 domains", "groups": ["ServerEvents", "RecipeViewerEvents", "BlockEvents", "ItemEvents", "LevelEvents", "PlayerEvents", "CommandEvents", "GoalEvents", "EntityEvents", "ClientEvents", "KeyBindEvents"], "registeredInScope": 11, "startupMembers": 97, "serverMembers": 77, "clientMembers": 19}
