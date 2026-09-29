@@ -25,16 +25,25 @@ Ticket 35 (`35-release-perf-compare.md`, status in-progress) is running the poli
 re-test in a parallel worktree. Its landing directory is
 `docs/architecture-refactor/baseline/2026-09-29-release-perf/`.
 
-**Status at this pack's close: that directory does not exist yet** (checked at authoring time and
-again at commit time). Therefore:
+**Status at this pack's close: that directory did not exist** (checked at authoring time and
+again at commit time). **Consumed 2026-09-29 (main session, post-merge of ticket 35) per the
+consumer instruction above — ticket 35's report landed and closed its ticket with per-AC
+annotations:**
 
-- The perf gate verdict for this release candidate is **pending-35** and is carried as blocking
-  (FAILURES-LEDGER F-perf) until ticket 35's report lands and is consumed per policy.
-- When it lands, this section's consumer instruction is: record the two blocking means (startup,
-  reload) against the thresholds above with the sample counts, `env-snapshot` comparison, and the
-  observe-only deltas vs the P0 baseline; any over-threshold value blocks the candidate as-is.
-- This pack did not run its own perf sampling (would duplicate 35's harness and violate the
-  single-consumption intent), and did not touch any threshold or number.
+- **startup: PASS** — 5 formal samples, `wall_done_ms` mean **16512.2 ms ≤ 41173 ms** (margin
+  24660.8 ms; per-sample 12889/17446/17435/17097/17694; baseline mean 21979.2 → −24.9%).
+- **reload: PASS** — 5 formal samples, `marker_ms` mean **278.0 ms ≤ 285.3 ms** (margin 7.3 ms —
+  thin; per-sample 353/266/266/268/237, first-reload dominates; steady-4 mean 234.3 ms).
+- All 21 sessions valid (no forced_kill/timeout, RCON stops); nothing culled (probe's 1393 ms
+  outlier retained). Observe-only deltas vs P0 baseline recorded in 35's REPORT §4.3–4.7
+  (tick identical; adapter within the baseline's own 1.4× cross-session band; eval tighter;
+  heap same band; probe 390 vs 389 files). Environment drift recorded in 35's REPORT §2
+  (isolated GRADLE_USER_HOME recreated cold; Docker stopped — quieter than baseline's noise
+  profile; favorable, no protocol change).
+- **Verdict: the perf gate is GREEN for this release candidate.** The F-perf entry in the
+  failures ledger is resolved; the release-blocking set reduces to F1 (probe-types jsx
+  pre-existing red). Release-handoff note: reload's 7.3 ms margin — a noisier future
+  environment should re-test before final release conclusions (35's REPORT §8).
 
 ## 3. What is already green around the perf gate
 
