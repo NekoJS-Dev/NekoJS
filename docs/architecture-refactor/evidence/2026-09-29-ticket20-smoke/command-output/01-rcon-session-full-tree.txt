@@ -1,0 +1,267 @@
+# Ticket 20 live-command smoke, round 1: full /nekojs tree as console over RCON
+# Date: 2026-09-29. Worktree D:/mcmodDemo/NekoJS-mult-t20e (branch ticket-20-smoke, base mult@197853fd).
+# Node: 26.1.2 NeoForge dedicated server, ./gradlew.bat :26.1.2:runServer --console=plain (BUILD SUCCESSFUL in 3m 29s, exit 0).
+# Run dir: versions/26.1.2/run (eula + server.properties RCON 127.0.0.1:25892 pw smoke20, server-port 25891,
+#          online-mode off, level-seed=t20smoke, pause-when-empty-seconds=-1). Deleted after this transcript was cut (T08/T24 precedent).
+# Run-dir scripts: nekojs/server_scripts/{t20-good.js, t20-bad.js, t20-single.js} - good = success marker,
+#          bad = deliberate ReferenceError (error tracker entry), single = single-file reload target. Full sources embedded below.
+# Driver: minimal Python RCON client (adapted from baseline/2026-09-22-gameplay-event-surface/command-output/08-runserver-26.1.2-smoke.txt);
+#          waits for 'Done (' then drives the tree, removes the bad script, reloads, re-checks, stops the server.
+
+================== run-dir script sources ==================
+--- nekojs/server_scripts/t20-good.js ---
+// Ticket 20 command smoke, success side: one marker line per load/reload.
+console.log('T20-SMOKE-OK good script loaded')
+--- nekojs/server_scripts/t20-single.js ---
+// Ticket 20 command smoke, single-file reload target (/nekojs reload server <file>).
+console.log('T20-SMOKE-OK single-file reload target loaded')
+--- nekojs/server_scripts/t20-bad.js (removed by the driver in phase C) ---
+// Ticket 20 command smoke, deliberate load-time error: ReferenceError on an
+// undefined symbol so the reload commits and the error tracker records it.
+t20UndefinedSmokeFunction()
+
+================== RCON driver round 1 (temporary tool, embedded for reproducibility) ==================
+# Ticket 20 live-command smoke driver: waits for the dedicated server 'Done ('
+# marker, then exercises the full /nekojs command tree over RCON as the console
+# sender, prints every exchange, removes the deliberate error script, reloads,
+# re-checks the error surface, and stops the server cleanly.
+import os
+import socket
+import struct
+import sys
+import time
+
+
+def pkt(rid, ptype, payload):
+    body = struct.pack('<ii', rid, ptype) + payload.encode('utf-8') + b'\x00\x00'
+    return struct.pack('<i', len(body)) + body
+
+
+class Rcon:
+    def __init__(self, host, port, password):
+        self.s = socket.create_connection((host, port), timeout=10)
+        self.rid = 100
+        self.s.sendall(pkt(self.rid, 3, password))
+        length = struct.unpack('<i', self.recvn(4))[0]
+        data = self.recvn(length)
+        rid2 = struct.unpack('<i', data[:4])[0]
+        if rid2 == -1:
+            raise RuntimeError('rcon auth failed')
+
+    def recvn(self, n):
+        buf = b''
+        while len(buf) < n:
+            chunk = self.s.recv(n - len(buf))
+            if not chunk:
+                raise RuntimeError('rcon eof')
+            buf += chunk
+        return buf
+
+    def cmd(self, c, wait=1.0):
+        self.rid += 1
+        self.s.sendall(pkt(self.rid, 2, c))
+        self.s.settimeout(3)
+        out = ''
+        try:
+            while True:
+                length = struct.unpack('<i', self.recvn(4))[0]
+                data = self.recvn(length)
+                rid2, _ptype = struct.unpack('<ii', data[:8])
+                payload = data[8:-2].decode('utf-8', 'replace')
+                if rid2 == self.rid:
+                    out += payload
+                    if len(payload) < 4000:
+                        break
+        except socket.timeout:
+            pass
+        time.sleep(wait)
+        return out.strip()
+
+
+def wait_for(path, needle, timeout):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                if needle in f.read():
+                    return True
+        except FileNotFoundError:
+            pass
+        time.sleep(2)
+    return False
+
+
+def main():
+    log_path = sys.argv[1]
+    scripts_dir = sys.argv[2]
+    print('# waiting for server Done marker in %s' % log_path, flush=True)
+    if not wait_for(log_path, 'Done (', 600):
+        print('# FAIL: server never reached Done within 600s', flush=True)
+        sys.exit(2)
+    print('# server Done observed, connecting RCON', flush=True)
+    rcon = Rcon('127.0.0.1', 25892, 'smoke20')
+
+    def run(label, cmd, wait=1.2):
+        resp = rcon.cmd(cmd, wait)
+        print('# RCON [%s] -> %s\n#   resp: %s' % (label, cmd, resp if resp else '(empty)'), flush=True)
+        return resp
+
+    print('# ==== phase B: tree with a deliberate script error present ====', flush=True)
+    run('help-tree', 'help nekojs', 1.0)
+    run('bare-literal', 'nekojs')
+    run('error-with-error', 'nekojs error')
+    run('view-all-errors-console', 'nekojs view_all_errors')
+    run('reload-default', 'nekojs reload', 8.0)
+    run('reload-server', 'nekojs reload server', 8.0)
+    run('reload-server-file', 'nekojs reload server t20-single.js', 8.0)
+    run('reload-server-file-nested', 'nekojs reload server server_scripts/t20-single.js', 8.0)
+    run('reload-startup', 'nekojs reload startup')
+    run('reload-startup-file', 'nekojs reload startup t20-single.js')
+    run('reload-client', 'nekojs reload client')
+    run('reload-client-file', 'nekojs reload client t20-single.js')
+    run('reload-test', 'nekojs reload test')
+    run('test-command', 'nekojs test')
+    run('registry', 'nekojs registry')
+    run('registry-stale', 'nekojs registry stale')
+    run('packs', 'nekojs packs')
+    run('packs-enable-unknown', 'nekojs packs enable no_such_pack')
+    run('packs-disable-unknown', 'nekojs packs disable no_such_pack')
+    run('hand-console', 'nekojs hand')
+    run('inventory-console', 'nekojs inventory')
+    run('trust-dedicated', 'nekojs trust 127.0.0.1:25565')
+    run('probe-list', 'nekojs probe list')
+    run('probe-default', 'nekojs probe', 15.0)
+    run('probe-typescript', 'nekojs probe typescript', 15.0)
+    run('probe-all', 'nekojs probe all', 20.0)
+    run('probe-bad-language', 'nekojs probe cobol', 5.0)
+    run('probe-config-reload', 'nekojs probe reload')
+    run('probe-enable', 'nekojs probe enable')
+    run('probe-disable', 'nekojs probe disable')
+    run('probe-while-disabled', 'nekojs probe', 8.0)
+    run('probe-reenable', 'nekojs probe enable')
+    run('probe-reset-config', 'nekojs probe reset_config', 20.0)
+
+    print('# ==== phase C: remove the deliberate error script, reload, re-check ====', flush=True)
+    bad = os.path.join(scripts_dir, 't20-bad.js')
+    if os.path.exists(bad):
+        os.remove(bad)
+        print('# removed %s' % bad, flush=True)
+    else:
+        print('# WARN: %s not found (already removed?)' % bad, flush=True)
+    run('reload-after-fix', 'nekojs reload server', 8.0)
+    run('error-after-fix', 'nekojs error')
+
+    print('# all probes sent, issuing stop', flush=True)
+    rcon.cmd('stop', 0.5)
+    print('# stop sent', flush=True)
+
+
+if __name__ == '__main__':
+    main()
+
+================== RCON session round 1 (driver stdout) ==================
+# waiting for server Done marker in C:/Users/11515/AppData/Local/Temp/t20smoke/gradle-runserver.log
+# server Done observed, connecting RCON
+# ==== phase B: tree with a deliberate script error present ====
+# RCON [help-tree] -> help nekojs
+#   resp: /nekojs reload [startup|server|client|test]
+/nekojs test
+/nekojs error
+/nekojs view_all_errors
+/nekojs packs [enable|disable]
+/nekojs registry [stale]
+/nekojs hand
+/nekojs inventory
+/nekojs trust <address>
+/nekojs probe [all|list|reload|reset_config|enable|disable|<language>]
+# RCON [bare-literal] -> nekojs
+#   resp: Unknown or incomplete command. See below for error
+nekojs<--[HERE]
+# RCON [error-with-error] -> nekojs error
+#   resp: §c[NekoJS] ⚠ Warning: The engine currently has 1 active script error(s).
+  §a▶ §n[Click here to open Error Dashboard]
+# RCON [view-all-errors-console] -> nekojs view_all_errors
+#   resp: A player is required to run this command here
+# RCON [reload-default] -> nekojs reload
+#   resp: NekoJS server reload committed: generation=2 phase=COMMIT (1 error(s) remain)
+# RCON [reload-server] -> nekojs reload server
+#   resp: NekoJS server reload committed: generation=3 phase=COMMIT (1 error(s) remain)
+# RCON [reload-server-file] -> nekojs reload server t20-single.js
+#   resp: Reloading NekoJS server script t20-single.js...
+NekoJS server script reload completed: generation=3 phase=FILE source=t20-single.js (1 error(s) remain)
+# RCON [reload-server-file-nested] -> nekojs reload server server_scripts/t20-single.js
+#   resp: Reloading NekoJS server script server_scripts/t20-single.js...
+reload failed: type=server generation=3 phase=FILE source=server_scripts\t20-single.js owner=ScriptManager[server] error=java.io.IOException: Unsupported or missing script file: server_scripts\t20-single.js; active runtime was not switched; use a full reload to reconcile it.
+# RCON [reload-startup] -> nekojs reload startup
+#   resp: STARTUP scripts cannot be reloaded from a runtime command; restart the game/loader.
+# RCON [reload-startup-file] -> nekojs reload startup t20-single.js
+#   resp: STARTUP scripts cannot be reloaded from a runtime command; restart the game/loader.
+# RCON [reload-client] -> nekojs reload client
+#   resp: Client script reload is only available in an integrated client runtime.
+# RCON [reload-client-file] -> nekojs reload client t20-single.js
+#   resp: Client script reload is only available in an integrated client runtime.
+# RCON [reload-test] -> nekojs reload test
+#   resp: NekoJS TEST scripts are not configured.
+# RCON [test-command] -> nekojs test
+#   resp: NekoJS TEST scripts are not configured.
+# RCON [registry] -> nekojs registry
+#   resp: sound_event: 0 registered, 0 stale
+mob_effect: 0 registered, 0 stale
+item: 0 registered, 0 stale
+# RCON [registry-stale] -> nekojs registry stale
+#   resp: No stale dynamic registry entries.
+# RCON [packs] -> nekojs packs
+#   resp: No script packs found (looked in nekojs/packs/ and <world>/nekojs_packs/).
+# RCON [packs-enable-unknown] -> nekojs packs enable no_such_pack
+#   resp: No script pack with id 'no_such_pack'. Use /nekojs packs to list.
+# RCON [packs-disable-unknown] -> nekojs packs disable no_such_pack
+#   resp: No script pack with id 'no_such_pack'. Use /nekojs packs to list.
+# RCON [hand-console] -> nekojs hand
+#   resp: A player is required to run this command here
+# RCON [inventory-console] -> nekojs inventory
+#   resp: A player is required to run this command here
+# RCON [trust-dedicated] -> nekojs trust 127.0.0.1:25565
+#   resp: Expected whitespace to end one argument, but found trailing data
+... 127.0.0.1:25565<--[HERE]
+# RCON [probe-list] -> nekojs probe list
+#   resp: Registered probe backends:
+  - typescript:builtin (NekoJS (built-in))
+  - python:builtin (NekoJS (built-in))
+# RCON [probe-default] -> nekojs probe
+#   resp: Generating probe (typescript:builtin)...
+Probe generated: 390 files in 1355ms
+  Output: .neko_probe\typescript
+# RCON [probe-typescript] -> nekojs probe typescript
+#   resp: Generating probe (typescript:builtin)...
+Probe generated: 390 files in 364ms
+  Output: .neko_probe\typescript
+# RCON [probe-all] -> nekojs probe all
+#   resp: Generating probe (python:builtin, typescript:builtin)...
+Probe generated: 769 files in 515ms
+  Output: .neko_probe\python, .neko_probe\typescript
+# RCON [probe-bad-language] -> nekojs probe cobol
+#   resp: No probe backend matched. Use /nekojs probe list.
+# RCON [probe-config-reload] -> nekojs probe reload
+#   resp: Probe config (probe.toml) reloaded.
+# RCON [probe-enable] -> nekojs probe enable
+#   resp: Probe enabled.
+# RCON [probe-disable] -> nekojs probe disable
+#   resp: Probe disabled.
+# RCON [probe-while-disabled] -> nekojs probe
+#   resp: Generating probe (typescript:builtin)...
+  backend failed: probe disabled in probe.toml
+# RCON [probe-reenable] -> nekojs probe enable
+#   resp: Probe enabled.
+# RCON [probe-reset-config] -> nekojs probe reset_config
+#   resp: Editor configs reset (2 backend(s)); regenerating probe...
+Generating probe (typescript:builtin)...
+Probe generated: 390 files in 201ms
+  Output: .neko_probe\typescript
+# ==== phase C: remove the deliberate error script, reload, re-check ====
+# removed D:/mcmodDemo/NekoJS-mult-t20e/versions/26.1.2/run/nekojs/server_scripts\t20-bad.js
+# RCON [reload-after-fix] -> nekojs reload server
+#   resp: NekoJS server reload committed: generation=4 phase=COMMIT - no errors.
+# RCON [error-after-fix] -> nekojs error
+#   resp: §a[NekoJS] ✔ The runtime environment is healthy. No script errors found!
+# all probes sent, issuing stop
+# stop sent

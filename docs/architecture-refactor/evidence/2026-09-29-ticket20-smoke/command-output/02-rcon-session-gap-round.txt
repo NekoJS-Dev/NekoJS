@@ -1,0 +1,127 @@
+# Ticket 20 live-command smoke, round 2: gap coverage (trust address forms, named probe backends,
+# nonexistent single-file reload). Same server layout as round 1, fresh boot (second runServer session,
+# BUILD SUCCESSFUL in 1m 3s, exit 0, clean stop).
+
+================== RCON driver round 2 (temporary tool, embedded for reproducibility) ==================
+# Ticket 20 live-command smoke driver, round 2 (gap coverage): trust address
+# argument forms, named probe backends, nonexistent single-file reload.
+import socket
+import struct
+import sys
+import time
+
+
+def pkt(rid, ptype, payload):
+    body = struct.pack('<ii', rid, ptype) + payload.encode('utf-8') + b'\x00\x00'
+    return struct.pack('<i', len(body)) + body
+
+
+class Rcon:
+    def __init__(self, host, port, password):
+        self.s = socket.create_connection((host, port), timeout=10)
+        self.rid = 100
+        self.s.sendall(pkt(self.rid, 3, password))
+        length = struct.unpack('<i', self.recvn(4))[0]
+        data = self.recvn(length)
+        rid2 = struct.unpack('<i', data[:4])[0]
+        if rid2 == -1:
+            raise RuntimeError('rcon auth failed')
+
+    def recvn(self, n):
+        buf = b''
+        while len(buf) < n:
+            chunk = self.s.recv(n - len(buf))
+            if not chunk:
+                raise RuntimeError('rcon eof')
+            buf += chunk
+        return buf
+
+    def cmd(self, c, wait=1.0):
+        self.rid += 1
+        self.s.sendall(pkt(self.rid, 2, c))
+        self.s.settimeout(3)
+        out = ''
+        try:
+            while True:
+                length = struct.unpack('<i', self.recvn(4))[0]
+                data = self.recvn(length)
+                rid2, _ptype = struct.unpack('<ii', data[:8])
+                payload = data[8:-2].decode('utf-8', 'replace')
+                if rid2 == self.rid:
+                    out += payload
+                    if len(payload) < 4000:
+                        break
+        except socket.timeout:
+            pass
+        time.sleep(wait)
+        return out.strip()
+
+
+def wait_for(path, needle, timeout):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                if needle in f.read():
+                    return True
+        except FileNotFoundError:
+            pass
+        time.sleep(2)
+    return False
+
+
+def main():
+    log_path = sys.argv[1]
+    print('# waiting for server Done marker in %s' % log_path, flush=True)
+    if not wait_for(log_path, 'Done (', 600):
+        print('# FAIL: server never reached Done within 600s', flush=True)
+        sys.exit(2)
+    print('# server Done observed, connecting RCON', flush=True)
+    rcon = Rcon('127.0.0.1', 25892, 'smoke20')
+
+    def run(label, cmd, wait=1.2):
+        resp = rcon.cmd(cmd, wait)
+        print('# RCON [%s] -> %s\n#   resp: %s' % (label, cmd, resp if resp else '(empty)'), flush=True)
+        return resp
+
+    run('trust-portless', 'nekojs trust 127.0.0.1')
+    run('trust-quoted-hostport', 'nekojs trust "127.0.0.1:25565"')
+    run('trust-unquoted-hostport', 'nekojs trust 127.0.0.1:25565')
+    run('probe-ts-named', 'nekojs probe typescript builtin', 15.0)
+    run('probe-py-named', 'nekojs probe python builtin', 15.0)
+    run('probe-named-missing', 'nekojs probe typescript no_such_backend', 5.0)
+    run('reload-server-missing-file', 'nekojs reload server no_such_file.js', 5.0)
+
+    print('# round-2 probes sent, issuing stop', flush=True)
+    rcon.cmd('stop', 0.5)
+    print('# stop sent', flush=True)
+
+
+if __name__ == '__main__':
+    main()
+
+================== RCON session round 2 (driver stdout) ==================
+# waiting for server Done marker in C:/Users/11515/AppData/Local/Temp/t20smoke/gradle-runserver.log
+# server Done observed, connecting RCON
+# RCON [trust-portless] -> nekojs trust 127.0.0.1
+#   resp: Run /nekojs trust on a client process (e.g. in a singleplayer world).
+# RCON [trust-quoted-hostport] -> nekojs trust "127.0.0.1:25565"
+#   resp: Run /nekojs trust on a client process (e.g. in a singleplayer world).
+# RCON [trust-unquoted-hostport] -> nekojs trust 127.0.0.1:25565
+#   resp: Expected whitespace to end one argument, but found trailing data
+... 127.0.0.1:25565<--[HERE]
+# RCON [probe-ts-named] -> nekojs probe typescript builtin
+#   resp: Generating probe (typescript:builtin)...
+Probe generated: 390 files in 455ms
+  Output: .neko_probe\typescript
+# RCON [probe-py-named] -> nekojs probe python builtin
+#   resp: Generating probe (python:builtin)...
+Probe generated: 379 files in 284ms
+  Output: .neko_probe\python
+# RCON [probe-named-missing] -> nekojs probe typescript no_such_backend
+#   resp: No probe backend matched. Use /nekojs probe list.
+# RCON [reload-server-missing-file] -> nekojs reload server no_such_file.js
+#   resp: Reloading NekoJS server script no_such_file.js...
+reload failed: type=server generation=1 phase=FILE source=no_such_file.js owner=ScriptManager[server] error=java.io.IOException: Unsupported or missing script file: no_such_file.js; active runtime was not switched; use a full reload to reconcile it.
+# round-2 probes sent, issuing stop
+# stop sent
