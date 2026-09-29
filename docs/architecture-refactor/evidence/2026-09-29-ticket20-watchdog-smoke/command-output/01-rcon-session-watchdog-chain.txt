@@ -1,0 +1,287 @@
+# Ticket 20 AC4 live-watchdog smoke: RCON session (single run, full marker chain)
+# Date: 2026-09-29. Worktree D:/mcmodDemo/NekoJS-mult-t20w (branch ticket-20-watchdog-smoke, base mult@225344f8).
+# Node: 26.1.2 NeoForge dedicated server, ./gradlew.bat :26.1.2:runServer --console=plain
+#        (BUILD SUCCESSFUL in 4m 5s, exit 0, clean RCON "stop").
+# Run dir: versions/26.1.2/run (eula + server.properties: RCON 127.0.0.1:25902 pw t20w, server-port 25901,
+#          online-mode off, level-seed=t20w, pause-when-empty-seconds=-1). Deleted after the transcripts were cut
+#          (T08/T24/2026-09-29-ticket20-smoke precedent). Driver/gradle logs kept outside the repo in a temp dir.
+# Watchdog source: run-dir nekojs/config/engine.toml sets scriptRunawayTimeoutSeconds=3 (wall-clock
+#          SyncEvalWatchdog arms per script entry; ticket 07), scriptStatementLimit=0 so the kill is
+#          unambiguously attributed to the runaway watchdog, not the statement budget.
+# Scripts: nekojs/server_scripts/t20w-good.js present at boot (active-generation liveness witness);
+#          t20w-runaway.js written by the driver mid-session (P2) and removed before P7.
+#          The mod also auto-scaffolds nekojs/server_scripts/src/main.js ("Hello, World!" example),
+#          so discovery counts are 2 (boot) / 3 (runaway present) / 2 (after removal).
+# Phases:  P1 sanity; P2/P3 candidate-kill leg (full reload, active retained); P4 active-isolation leg
+#          (single-file reload evaluates on the ACTIVE context); P5 isolation observables; P6 AC4 core
+#          (explicit candidate while isolated, fails, isolation persists, no auto recovery); P7 explicit recovery.
+
+================== run-dir script and config sources ==================
+--- nekojs/config/engine.toml ---
+# Ticket 20 AC4 live-watchdog smoke (run-dir config, deleted with the run dir).
+# Wall-clock watchdog at 3s so a deliberate while(true){} server script is
+# interrupted during evaluation; statement-limit path disabled (0) so the kill
+# is unambiguously attributed to the runaway watchdog. Full key set per
+# SandboxConfigLoader schema (missing keys would be auto-appended at boot).
+allowThreads = false
+allowReflection = false
+allowAsm = false
+allowFsWriteOutsideNekojs = false
+
+enableEsmAuthoring = true
+conciseScriptErrorLogs = true
+jsxAutomaticRuntime = false
+scriptMemberValidation = true
+scriptEvaluationTimeoutSeconds = 30
+scriptStatementLimit = 0
+scriptRunawayTimeoutSeconds = 3
+
+[packSync]
+mode = "off"
+allowUnsigned = false
+
+[dynamicRegistry]
+enabled = false
+--- nekojs/server_scripts/t20w-good.js ---
+// Ticket 20 AC4 live-watchdog smoke: healthy SERVER script.
+// Marker on load plus a repeating liveness marker, so "active generation still
+// serving" vs "dispatch stopped (isolated active)" is observable in the log.
+console.log('T20W-GOOD loaded (marker: a generation just (re)loaded this script)')
+setInterval(() => console.log('T20W-ALIVE active generation still dispatching'), 5000)
+--- nekojs/server_scripts/t20w-runaway.js (written by the driver at P2, removed before P7) ---
+(file already removed at P7; content as written by the driver:)
+// Ticket 20 AC4 live-watchdog smoke: deliberate infinite loop. With
+// scriptRunawayTimeoutSeconds=3 the wall-clock watchdog interrupts this
+// evaluation; a full reload discards the candidate, a single-file reload
+// (evaluated on the active context) isolates the active runtime.
+console.log('T20W-RUNAWAY entering infinite loop (watchdog should interrupt)')
+while (true) { /* spin forever */ }
+
+================== RCON driver (temporary tool, embedded for reproducibility) ==================
+# Ticket 20 AC4 live-watchdog smoke driver (temporary tool, embedded verbatim
+# into the evidence transcript for reproducibility).
+#
+# Waits for the dedicated server 'Done (' marker, then drives the watchdog
+# marker chain over RCON as the console sender:
+#   P1  sanity: error surface + single-file reload of the good script
+#   P2  Leg A: write runaway script, full reload -> candidate killed by the
+#       wall-clock watchdog, old active must keep serving
+#   P3  Leg A: second explicit full reload -> new candidate fails identically,
+#       no auto retry, no generation bump
+#   P4  Leg B: single-file reload of the runaway script -> evaluated on the
+#       ACTIVE context -> watchdog isolates the active (dispatch stops)
+#   P5  isolation observables: FILE reload refused, error surface
+#   P6  AC4 core: full reload explicitly creates a candidate while isolated,
+#       runaway still present -> candidate fails again, isolation persists,
+#       observation window must show no auto recovery
+#   P7  explicit recovery: remove runaway, full reload commits, markers resume
+# Then stops the server cleanly.
+import os
+import socket
+import struct
+import sys
+import time
+
+
+def pkt(rid, ptype, payload):
+    body = struct.pack('<ii', rid, ptype) + payload.encode('utf-8') + b'\x00\x00'
+    return struct.pack('<i', len(body)) + body
+
+
+class Rcon:
+    def __init__(self, host, port, password):
+        self.s = socket.create_connection((host, port), timeout=10)
+        self.rid = 100
+        self.s.sendall(pkt(self.rid, 3, password))
+        length = struct.unpack('<i', self.recvn(4))[0]
+        data = self.recvn(length)
+        rid2 = struct.unpack('<i', data[:4])[0]
+        if rid2 == -1:
+            raise RuntimeError('rcon auth failed')
+
+    def recvn(self, n):
+        buf = b''
+        while len(buf) < n:
+            chunk = self.s.recv(n - len(buf))
+            if not chunk:
+                raise RuntimeError('rcon eof')
+            buf += chunk
+        return buf
+
+    def cmd(self, c, timeout=90.0, quiet=0.0):
+        # Long overall deadline for the FIRST response packet: a reload that a
+        # 3s watchdog must interrupt takes seconds before the command answers.
+        self.rid += 1
+        self.s.sendall(pkt(self.rid, 2, c))
+        deadline = time.time() + timeout
+        out = ''
+        try:
+            while True:
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    break
+                self.s.settimeout(remaining)
+                length = struct.unpack('<i', self.recvn(4))[0]
+                data = self.recvn(length)
+                rid2, _ptype = struct.unpack('<ii', data[:8])
+                payload = data[8:-2].decode('utf-8', 'replace')
+                if rid2 == self.rid:
+                    out += payload
+                    if len(payload) < 4000:
+                        break
+        except socket.timeout:
+            pass
+        time.sleep(quiet)
+        return out.strip()
+
+
+def wait_for(path, needle, timeout):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                if needle in f.read():
+                    return True
+        except FileNotFoundError:
+            pass
+        time.sleep(2)
+    return False
+
+
+def stamp():
+    return time.strftime('%H:%M:%S')
+
+
+def main():
+    log_path = sys.argv[1]
+    scripts_dir = sys.argv[2]
+    print('# [%s] waiting for server Done marker in %s' % (stamp(), log_path), flush=True)
+    if not wait_for(log_path, 'Done (', 600):
+        print('# [%s] FAIL: server never reached Done within 600s' % stamp(), flush=True)
+        sys.exit(2)
+    print('# [%s] server Done observed, connecting RCON 127.0.0.1:25902' % stamp(), flush=True)
+    rcon = Rcon('127.0.0.1', 25902, 't20w')
+
+    def run(label, cmd, timeout=90.0, quiet=1.5):
+        resp = rcon.cmd(cmd, timeout, quiet)
+        print('# [%s] RCON [%s] -> %s\n#   resp: %s' % (stamp(), label, cmd, resp if resp else '(empty)'), flush=True)
+        return resp
+
+    def observe(seconds, why):
+        # Observation window: server log side (markers/kill lines) is cut later
+        # from the gradle log; here we only bound the window in wall clock.
+        print('# [%s] observing %ds: %s' % (stamp(), seconds, why), flush=True)
+        time.sleep(seconds)
+        print('# [%s] observation window ended' % stamp(), flush=True)
+
+    good = os.path.join(scripts_dir, 't20w-good.js')
+    runaway = os.path.join(scripts_dir, 't20w-runaway.js')
+
+    print('# [%s] ==== P1: sanity on the healthy active generation ====' % stamp(), flush=True)
+    run('error-healthy', 'nekojs error')
+    run('file-reload-good-sanity', 'nekojs reload server t20w-good.js')
+    observe(12, 'active generation liveness markers before any kill')
+
+    print('# [%s] ==== P2 (Leg A): write runaway, full reload -> candidate must be watchdog-killed, old active keeps serving ====' % stamp(), flush=True)
+    with open(runaway, 'w', encoding='utf-8', newline='\n') as f:
+        f.write("// Ticket 20 AC4 live-watchdog smoke: deliberate infinite loop. With\r\n"
+                "// scriptRunawayTimeoutSeconds=3 the wall-clock watchdog interrupts this\r\n"
+                "// evaluation; a full reload discards the candidate, a single-file reload\r\n"
+                "// (evaluated on the active context) isolates the active runtime.\r\n"
+                "console.log('T20W-RUNAWAY entering infinite loop (watchdog should interrupt)')\r\n"
+                "while (true) { /* spin forever */ }\r\n")
+    print('# [%s] wrote %s' % (stamp(), runaway), flush=True)
+    run('reload-full-runaway-1', 'nekojs reload server', quiet=3.0)
+    run('error-after-candidate-kill', 'nekojs error')
+    observe(12, 'old active generation must still dispatch (candidate was discarded)')
+
+    print('# [%s] ==== P3 (Leg A): second explicit full reload -> fails identically, no auto retry ====' % stamp(), flush=True)
+    run('reload-full-runaway-2', 'nekojs reload server', quiet=3.0)
+    observe(12, 'old active generation still serving after second failed candidate')
+
+    print('# [%s] ==== P4 (Leg B): single-file reload of the runaway -> watchdog kills the ACTIVE runtime (isolation) ====' % stamp(), flush=True)
+    run('file-reload-runaway-active-kill', 'nekojs reload server t20w-runaway.js', quiet=3.0)
+    observe(15, 'active is now isolated: dispatch must have STOPPED (no liveness markers)')
+
+    print('# [%s] ==== P5: isolation observables ====' % stamp(), flush=True)
+    run('error-while-isolated', 'nekojs error')
+    run('file-reload-good-refused-while-isolated', 'nekojs reload server t20w-good.js')
+
+    print('# [%s] ==== P6 (AC4 core): explicit full reload while isolated -> candidate fails again, isolation persists, no auto recovery ====' % stamp(), flush=True)
+    run('reload-full-isolated-runaway', 'nekojs reload server', quiet=3.0)
+    run('file-reload-good-still-refused', 'nekojs reload server t20w-good.js')
+    observe(25, 'no auto recovery window: dead active stays isolated, nothing rebuilds it')
+
+    print('# [%s] ==== P7: remove runaway, explicit full reload must commit and recover ====' % stamp(), flush=True)
+    if os.path.exists(runaway):
+        os.remove(runaway)
+        print('# [%s] removed %s' % (stamp(), runaway), flush=True)
+    else:
+        print('# [%s] WARN: %s not found' % (stamp(), runaway), flush=True)
+    run('reload-full-after-fix', 'nekojs reload server', quiet=3.0)
+    run('error-after-recovery', 'nekojs error')
+    observe(15, 'recovered generation must dispatch again (liveness markers resume)')
+
+    print('# [%s] all phases done, issuing stop' % stamp(), flush=True)
+    rcon.cmd('stop', 10.0, 0.5)
+    print('# [%s] stop sent' % stamp(), flush=True)
+
+
+if __name__ == '__main__':
+    main()
+
+================== RCON session (driver stdout, verbatim) ==================
+# [11:22:09] waiting for server Done marker in C:/Users/11515/AppData/Local/Temp/t20wsmoke/gradle-runserver.log
+# [11:22:09] server Done observed, connecting RCON 127.0.0.1:25902
+# [11:22:09] ==== P1: sanity on the healthy active generation ====
+# [11:22:11] RCON [error-healthy] -> nekojs error
+#   resp: §a[NekoJS] ✔ The runtime environment is healthy. No script errors found!
+# [11:22:12] RCON [file-reload-good-sanity] -> nekojs reload server t20w-good.js
+#   resp: Reloading NekoJS server script t20w-good.js...
+NekoJS server script reload completed: generation=1 phase=FILE source=t20w-good.js - no errors.
+# [11:22:12] observing 12s: active generation liveness markers before any kill
+# [11:22:24] observation window ended
+# [11:22:24] ==== P2 (Leg A): write runaway, full reload -> candidate must be watchdog-killed, old active keeps serving ====
+# [11:22:24] wrote D:/mcmodDemo/NekoJS-mult-t20w/versions/26.1.2/run/nekojs/server_scripts\t20w-runaway.js
+# [11:22:31] RCON [reload-full-runaway-1] -> nekojs reload server
+#   resp: reload failed: type=server generation=2 phase=EXECUTION source=server/t20w-runaway.js owner=ScriptManager[server] domain=candidate-killed error=java.lang.RuntimeException: SERVER candidate context was terminated by script resource limits (runaway watchdog / statement limit) during reload; candidate was discarded and the active generation remains unchanged.
+# [11:22:32] RCON [error-after-candidate-kill] -> nekojs error
+#   resp: §a[NekoJS] ✔ The runtime environment is healthy. No script errors found!
+# [11:22:32] observing 12s: old active generation must still dispatch (candidate was discarded)
+# [11:22:44] observation window ended
+# [11:22:44] ==== P3 (Leg A): second explicit full reload -> fails identically, no auto retry ====
+# [11:22:50] RCON [reload-full-runaway-2] -> nekojs reload server
+#   resp: reload failed: type=server generation=2 phase=EXECUTION source=server/t20w-runaway.js owner=ScriptManager[server] domain=candidate-killed error=java.lang.RuntimeException: SERVER candidate context was terminated by script resource limits (runaway watchdog / statement limit) during reload; candidate was discarded and the active generation remains unchanged.
+# [11:22:50] observing 12s: old active generation still serving after second failed candidate
+# [11:23:02] observation window ended
+# [11:23:02] ==== P4 (Leg B): single-file reload of the runaway -> watchdog kills the ACTIVE runtime (isolation) ====
+# [11:23:08] RCON [file-reload-runaway-active-kill] -> nekojs reload server t20w-runaway.js
+#   resp: Reloading NekoJS server script t20w-runaway.js...
+NekoJS server script reload completed: generation=1 phase=FILE source=t20w-runaway.js (1 error(s) remain)
+# [11:23:08] observing 15s: active is now isolated: dispatch must have STOPPED (no liveness markers)
+# [11:23:23] observation window ended
+# [11:23:23] ==== P5: isolation observables ====
+# [11:23:25] RCON [error-while-isolated] -> nekojs error
+#   resp: §c[NekoJS] ⚠ Warning: The engine currently has 1 active script error(s).
+  §a▶ §n[Click here to open Error Dashboard]
+# [11:23:26] RCON [file-reload-good-refused-while-isolated] -> nekojs reload server t20w-good.js
+#   resp: Reloading NekoJS server script t20w-good.js...
+reload failed: type=server generation=1 phase=PREPARATION source=t20w-good.js owner=ScriptManager[server]; active generation remains isolated; explicit full reload is required.
+# [11:23:26] ==== P6 (AC4 core): explicit full reload while isolated -> candidate fails again, isolation persists, no auto recovery ====
+# [11:23:32] RCON [reload-full-isolated-runaway] -> nekojs reload server
+#   resp: reload failed: type=server generation=2 phase=EXECUTION source=server/t20w-runaway.js owner=ScriptManager[server] domain=candidate-killed error=java.lang.RuntimeException: SERVER candidate context was terminated by script resource limits (runaway watchdog / statement limit) during reload; active generation remains isolated; explicit full reload is required.
+# [11:23:34] RCON [file-reload-good-still-refused] -> nekojs reload server t20w-good.js
+#   resp: Reloading NekoJS server script t20w-good.js...
+reload failed: type=server generation=1 phase=PREPARATION source=t20w-good.js owner=ScriptManager[server]; active generation remains isolated; explicit full reload is required.
+# [11:23:34] observing 25s: no auto recovery window: dead active stays isolated, nothing rebuilds it
+# [11:23:59] observation window ended
+# [11:23:59] ==== P7: remove runaway, explicit full reload must commit and recover ====
+# [11:23:59] removed D:/mcmodDemo/NekoJS-mult-t20w/versions/26.1.2/run/nekojs/server_scripts\t20w-runaway.js
+# [11:24:02] RCON [reload-full-after-fix] -> nekojs reload server
+#   resp: NekoJS server reload committed: generation=2 phase=COMMIT - no errors.
+# [11:24:03] RCON [error-after-recovery] -> nekojs error
+#   resp: §a[NekoJS] ✔ The runtime environment is healthy. No script errors found!
+# [11:24:03] observing 15s: recovered generation must dispatch again (liveness markers resume)
+# [11:24:18] observation window ended
+# [11:24:18] all phases done, issuing stop
+# [11:24:19] stop sent
