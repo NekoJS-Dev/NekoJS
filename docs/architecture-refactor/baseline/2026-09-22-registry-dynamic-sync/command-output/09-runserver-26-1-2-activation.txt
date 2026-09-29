@@ -1,0 +1,313 @@
+# Ticket 21 AC10 single-node ACTIVATION smoke: REAL dedicated-server run on the primary
+# NeoForge node 26.1.2, with the [dynamicRegistry] gate ON.
+# Date: 2026-09-29. Worktree ../NekoJS-mult-t21d (branch ticket-21-ac10-demo, base mult@b26b39c1).
+#
+# Command: ./gradlew.bat :26.1.2:runServer --console=plain   (BUILD SUCCESSFUL in 34s, exit 0)
+# Gate: versions/26.1.2/run/nekojs/config/engine.toml [dynamicRegistry] enabled = true — RUN DIR
+#       ONLY (repo default stays false; the repo tree itself is untouched by the run config).
+# Layout: run-dir server.properties (RCON 127.0.0.1:25581 pw nekojs-t21, level-seed=t21demo,
+#         online-mode off, pause-when-empty-seconds=60, loopback only),
+#         nekojs/server_scripts/t21_activation_demo.js (embedded below in full; run-dir-only,
+#         not added to the repo example set). Fresh world + fresh logs for this run; run-dir
+#         artifacts deleted after the transcript was cut (T08 precedent).
+# Driver: minimal Python RCON client (embedded below), started BEFORE the server so the probe
+#         sequence fires within ~1 s of 'Done (' — that timing matters, see finding A3.
+#
+# What this closes (AC10 single-node leg): an ACTIVATED production demonstration on top of the
+# merged platform wiring (2026-09-29, ticket-21-wire-prep pack). With the gate on, a SERVER batch
+# declared on DynamicRegistryEvents.dynamicRegistry goes
+#     declaration staged -> ledger batch committed -> adapter prepareActivation executed ->
+#     single-node commit path (no remote participants -> "commit proceeds without acks") ->
+#     adapter activate = REAL DynamicRegistries surgery -> new registry entries LIVE and
+#     script-observable (Item.id / Item.of read the live BuiltInRegistries.ITEM) and
+#     platform-observable (/nekojs registry counts + stale bookkeeping).
+# The reload leg: '/nekojs reload server' -> candidate re-collect -> joint ledger commit ->
+# per-tick pumpActivation stages the new plan -> the transaction re-runs prepare+activate ->
+# idempotent re-claim (same fingerprint), entry stays live, counts/stale unchanged.
+#
+# Marker map (all observed in this run; line numbers in the excerpts below):
+#   [boot]   T21-DEMO-SCRIPT-LOADED gen1790646924573 / T21-DECLARE-STAGED (candidate collection
+#            runs the pending listener during the server-script load itself)
+#            'DynamicRegistry activation engine bound at server start' INFO  (gate read, engine attached)
+#            'DynamicRegistry inert candidate batch 2 committed' INFO        (ledger publish, initial collection)
+#            'DynamicRegistry activation prepare accepted' DEBUG x4         (two boot transactions, finding A1)
+#            T21-TICK-1 -> T21-ACTIVATION-LIVE ... at tick 1                (script reads the live registry)
+#            /nekojs registry: item 1 / sound_event 1 / mob_effect 0, 0 stale
+#   [reload] 正在重载 SERVER 脚本 -> T21-DEMO-SCRIPT-LOADED gen1790646930736 -> T21-DECLARE-STAGED gen2
+#            -> SERVER 脚本重载完毕 (joint commit) -> T21-TICK-1 gen2 at +1 ms
+#            'activation prepare accepted' DEBUG x2 at the SAME tick         (tick pump staged + ran the txn)
+#            T21-ACTIVATION-LIVE gen2 (entry live across the reload, re-claim idempotent)
+#            /nekojs registry: identical counts, 0 stale
+#   [stop]   RCON 'stop' -> clean shutdown ('Stopping server', BUILD SUCCESSFUL)
+#
+# Findings (recorded, NOT fixed — production change is out of this round's scope):
+#   A1 DOUBLE BOOT TRANSACTION + '<unknown>' owner on the initial-collection leg: every boot
+#      stages TWO transactions for the same declarations. The server-script load is itself a
+#      reload transaction whose candidate collection executes the pending dynamicRegistry listener
+#      (definitions attributed to 'nekojs:server/t21_activation_demo.js'); then
+#      'server-registry-ready' posts the same — now active — listener on the bus, where script-id
+#      attribution is absent (definitions recorded with owner '<unknown>'). Fingerprints are
+#      identical, so the second transaction idempotently re-claims (registry counts stay 1/1/0,
+#      no partial/mixed state). Cosmetic bookkeeping noise in the wiring + facade, not a
+#      correctness violation; prepare log ordering shows both pairs plainly.
+#   A2 MISLEADING COMMIT-TIME LOG WORDING: collectInitial still logs '... inert local plan only —
+#      activation is gated by the transaction/sync gate' AFTER the engine is bound and the batch
+#      was handed to the activation transaction (INFO at 09:55:25.353 vs prepare at .357). The
+#      facade message predates the platform wiring merge and is wrong for gate-on runs. Cosmetic
+#      only — activation itself proceeds.
+#   A3 EMPTY-SERVER PAUSE SUSPENDS THE PER-TICK PUMP (preparation run 2026-09-29 09:52,
+#      superseded by this evidence run): with pause-when-empty-seconds=60 (vanilla default), a
+#      '/nekojs reload server' issued while the server is empty-paused (probe fired at +71 s)
+#      commits the LEDGER batch ('reload committed ... no errors') but no ServerTickEvent.Post
+#      fires while paused -> no pumpActivation -> no prepare/activate transaction, no script tick
+#      markers; /nekojs registry counts stay unchanged (boot entries keep serving), zero partial
+#      state. The staged plan waits in the pull queue and is pumped on the first tick after
+#      unpause (e.g. a player joining); a stop-while-paused discards it at the close boundary
+#      (clearActivationEngine), and the next boot's initial collection re-declares and activates.
+#      Net effect: reload-driven activation of an empty paused dedicated server is deferred, not
+#      lost — a latency behavior worth knowing for ticket 34's real-machine smoke, not a
+#      correctness violation. The evidence run below probes within the 60 s window, so its
+#      reload leg shows the unpaused pump path.
+#
+# Not claimed here (honest boundary; owner 34): no remote participant ever existed in this run —
+#   only the single-node commit path ('no remote participants; commit proceeds without acks')
+#   was exercised. PREPARE/ACK wire traffic, STATE_SYNC catch-up, LAN-host exclusion and
+#   client-side surgery remain JVM-fixture-proven only (evidence/2026-09-29-ticket21-wire-prep
+#   REPORT §5). The coordinator's phaseLog/commit records are in-memory with no public query
+#   surface yet; the commit is observed here through the adapter's DEBUG prepare lines plus the
+#   live registry outcome, not through a coordinator log line.
+
+================== nekojs/server_scripts/t21_activation_demo.js ==================
+// Ticket 21 AC10 single-node ACTIVATION demo (26.1.2 dedicated server, gate ON).
+// Run-dir-only smoke script: NOT committed to the repo's example set — the transcript
+// under baseline/2026-09-22-registry-dynamic-sync/command-output/ embeds it in full.
+// Every 'T21-' console line is a marker asserted in that transcript.
+//
+// What this proves beyond the ticket 16 inert declaration face: with
+// nekojs/config/engine.toml [dynamicRegistry] enabled = true, the SERVER batch
+// declared on DynamicRegistryEvents.dynamicRegistry is committed by the ledger and
+// then ACTIVATED by the ticket 21 batch transaction (single node = no remote
+// participants, so the coordinator commits without acks) through the real
+// NeoForgeDynamicRegistryAdapter surgery path.
+//
+// INSTANCE distinguishes script generations: the initial server-start load and the
+// post-'nekojs reload server' load each re-run this file; their markers must show
+// different INSTANCE tokens (reload-driven collect -> joint commit -> per-tick
+// pumpActivation -> idempotent re-claim, the entry stays live across the reload).
+
+const INSTANCE = 'gen' + Date.now()
+console.log('T21-DEMO-SCRIPT-LOADED ' + INSTANCE)
+
+// Part 1 — declaration surface (the delivered example's batch form, Item + SoundEvent).
+// This only STAGES an inert candidate plan; the registry surgery happens later,
+// after the ledger commit, inside the activation transaction.
+DynamicRegistryEvents.dynamicRegistry(event => {
+  event.item('t21:demo_ruby', b => { b.maxStackSize = 16; b.rarity = 'epic' })
+  event.soundEvent('t21:demo_boom', b => { b.setFixedRange(16) })
+  console.log('T21-DECLARE-STAGED ' + INSTANCE + ': item t21:demo_ruby + soundEvent t21:demo_boom')
+})
+
+// Part 2 — LIVE registry observation from the script. The initial batch activates at
+// ServerAboutToStart (initial collection pumps directly), the reload batch at the
+// next server-tick pump; both precede or trail the first tickPost by at most one
+// tick, so the observation retries for a few ticks before declaring failure.
+// Item.id() reads the live BuiltInRegistries.ITEM, so a non-null result here is
+// direct script-visible proof the adapter's surgery executed.
+let ticks = 0
+let observed = false
+ServerEvents.tickPost(event => {
+  ticks++
+  if (ticks <= 2) {
+    console.log('T21-TICK-' + ticks + ' ' + INSTANCE)
+  }
+  if (observed) return
+  const item = Item.id('t21:demo_ruby')
+  if (item === null) {
+    if (ticks >= 5) {
+      observed = true
+      console.log('T21-ACTIVATION-MISSING ' + INSTANCE
+        + ': Item.id(t21:demo_ruby) returned null after ' + ticks + ' ticks — the batch did not activate')
+    }
+    return
+  }
+  observed = true
+  let detail = ''
+  try {
+    const stack = Item.of('t21:demo_ruby', 2)
+    detail = ', registered key ' + String(Item.idOf(item))
+      + ', ItemStack ' + String(stack) + ', maxStackSize ' + stack.getMaxStackSize()
+  } catch (e) {
+    detail = ' (stack detail read failed: ' + e + ')'
+  }
+  console.log('T21-ACTIVATION-LIVE ' + INSTANCE + ': Item.id resolved t21:demo_ruby at tick ' + ticks + detail)
+})
+
+================== RCON driver (temporary tool, embedded for reproducibility) ==================
+# Ticket 21 AC10 activation demo driver: waits for the dedicated server 'Done ('
+# marker, probes the dynamic registry state through RCON, reloads the SERVER script
+# domain (exercises the reload-driven collect -> commit -> per-tick pump -> idempotent
+# re-activation leg), probes again, then stops the server cleanly.
+# Evidence transcript: baseline/2026-09-22-registry-dynamic-sync/command-output/09-runserver-26-1-2-activation.txt
+import socket
+import struct
+import sys
+import time
+
+RUN_LOG = sys.argv[1] if len(sys.argv) > 1 else 'versions/26.1.2/run/logs/latest.log'
+
+
+def pkt(rid, ptype, payload):
+    body = struct.pack('<ii', rid, ptype) + payload.encode('utf-8') + b'\x00\x00'
+    return struct.pack('<i', len(body)) + body
+
+
+class Rcon:
+    def __init__(self, host, port, password):
+        self.s = socket.create_connection((host, port), timeout=10)
+        self.rid = 100
+        self.s.sendall(pkt(self.rid, 3, password))
+        length = struct.unpack('<i', self.recvn(4))[0]
+        data = self.recvn(length)
+        rid2 = struct.unpack('<i', data[:4])[0]
+        if rid2 == -1:
+            raise RuntimeError('rcon auth failed')
+
+    def recvn(self, n):
+        buf = b''
+        while len(buf) < n:
+            chunk = self.s.recv(n - len(buf))
+            if not chunk:
+                raise RuntimeError('rcon eof')
+            buf += chunk
+        return buf
+
+    def cmd(self, c, wait=1.0):
+        self.rid += 1
+        self.s.sendall(pkt(self.rid, 2, c))
+        self.s.settimeout(3)
+        out = ''
+        try:
+            while True:
+                length = struct.unpack('<i', self.recvn(4))[0]
+                data = self.recvn(length)
+                body = data[8:].decode('utf-8', 'replace')
+                if not body:
+                    break
+                out += body
+                if len(out) > 4096:
+                    break
+        except socket.timeout:
+            pass
+        time.sleep(wait)
+        return out
+
+
+def wait_for_done(path, timeout_s=420):
+    start = time.time()
+    while time.time() - start < timeout_s:
+        try:
+            with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                text = f.read()
+            if 'Done (' in text:
+                return True
+            if 'System dump' in text or 'Failed to start' in text:
+                return False
+        except FileNotFoundError:
+            pass
+        time.sleep(2)
+    return False
+
+
+def main():
+    if not wait_for_done(RUN_LOG):
+        print('# ERROR: server Done marker not observed (or server failed)', flush=True)
+        sys.exit(2)
+    print('# server Done observed, connecting RCON', flush=True)
+    rcon = Rcon('127.0.0.1', 25581, 'nekojs-t21')
+    probes = [
+        ('registry-initial', 'nekojs registry', 1.0),
+        ('reload-server', 'nekojs reload server', 5.0),
+        ('registry-post-reload', 'nekojs registry', 1.0),
+    ]
+    for label, cmd, wait in probes:
+        resp = rcon.cmd(cmd, wait)
+        print('# RCON [%s] -> %s\n#   resp: %s' % (label, cmd, resp if resp else '(empty)'), flush=True)
+    print('# all probes sent, issuing stop', flush=True)
+    try:
+        rcon.cmd('stop', 0.5)
+    except RuntimeError as e:
+        # 'stop' tears the RCON listener down before a reply is sent (connection eof)
+        print('# stop reply absent (expected, listener shuts down first): %s' % e, flush=True)
+    print('# stop sent', flush=True)
+
+
+if __name__ == '__main__':
+    main()
+
+================== RCON session (driver stdout) ==================
+# server Done observed, connecting RCON
+# RCON [registry-initial] -> nekojs registry
+#   resp: sound_event: 1 registered, 0 stale
+mob_effect: 0 registered, 0 stale
+item: 1 registered, 0 stale
+
+
+# RCON [reload-server] -> nekojs reload server
+#   resp: NekoJS server reload committed: generation=2 phase=COMMIT - no errors.
+
+# RCON [registry-post-reload] -> nekojs registry
+#   resp: sound_event: 1 registered, 0 stale
+mob_effect: 0 registered, 0 stale
+item: 1 registered, 0 stale
+
+# all probes sent, issuing stop
+# stop reply absent (expected, listener shuts down first): rcon eof
+# stop sent
+
+================== Server log excerpt: T21 markers + activation lifecycle (line numbers from run/logs/latest.log) ==================
+61:[09:55:24.601] [Worker-Main-10/INFO] [NekoJS/]: [server] T21-DEMO-SCRIPT-LOADED gen1790646924573
+62:[09:55:24.610] [Worker-Main-10/INFO] [NekoJS/]: [server] T21-DECLARE-STAGED gen1790646924573: item t21:demo_ruby + soundEvent t21:demo_boom
+68:[09:55:25.131] [Server thread/INFO] [net.minecraft.server.dedicated.DedicatedServer/]: Starting minecraft server version 26.1.2
+77:[09:55:25.350] [Server thread/INFO] [NekoJS/]: DynamicRegistry activation engine bound at server start (ack timeout 10000 ms, payload rides the existing register-once channel family)
+78:[09:55:25.353] [Server thread/INFO] [NekoJS/]: DynamicRegistry inert candidate batch 2 committed (trigger 'server-registry-ready', 2 definition(s)); inert local plan only — activation is gated by the transaction/sync gate
+81:[09:55:25.884] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T21-DECLARE-STAGED gen1790646924573: item t21:demo_ruby + soundEvent t21:demo_boom
+85:[09:55:25.956] [Server thread/INFO] [net.minecraft.server.dedicated.DedicatedServer/]: Done (0.640s)! For help, type "help"
+88:[09:55:25.958] [Server thread/INFO] [net.minecraft.server.rcon.thread.RconThread/]: RCON running on 0.0.0.0:25581
+97:[09:55:26.148] [Server thread/INFO] [NekoJS/]: [server] T21-TICK-1 gen1790646924573
+98:[09:55:26.214] [Server thread/INFO] [NekoJS/]: [server] T21-ACTIVATION-LIVE gen1790646924573: Item.id resolved t21:demo_ruby at tick 1, registered key t21:demo_ruby, ItemStack 2 t21:demo_ruby, maxStackSize 16
+100:[09:55:26.885] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T21-TICK-2 gen1790646924573
+101:[09:55:30.707] [Server thread/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组...
+102:[09:55:30.715] [Server thread/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... (x2)
+103:[09:55:30.722] [Server thread/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本。
+105:[09:55:30.738] [Server thread/INFO] [NekoJS/]: [server] T21-DEMO-SCRIPT-LOADED gen1790646930736
+106:[09:55:30.742] [Server thread/INFO] [NekoJS/]: [server] T21-DECLARE-STAGED gen1790646930736: item t21:demo_ruby + soundEvent t21:demo_boom
+107:[09:55:30.775] [Server thread/INFO] [NekoJS/]: [server] SERVER 脚本重载完毕。 (x2)
+108:[09:55:30.776] [Server thread/INFO] [NekoJS/]: [server] T21-TICK-1 gen1790646930736
+109:[09:55:30.777] [Server thread/INFO] [NekoJS/]: [server] T21-ACTIVATION-LIVE gen1790646930736: Item.id resolved t21:demo_ruby at tick 1, registered key t21:demo_ruby, ItemStack 2 t21:demo_ruby, maxStackSize 16
+110:[09:55:30.884] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] T21-TICK-2 gen1790646930736
+111:[09:55:42.787] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: [Rcon: Stopping the server]
+112:[09:55:42.815] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Stopping server
+(note: line 104, elided, is the example server script's 'Hello, World!' line; the '(x2)' suffixes
+ are the log flusher coalescing duplicates, not double execution — the flusher repeats console.log
+ output already printed on the worker thread, which is why DECLARE-STAGED/TICK-2 appear twice at
+ boot.)
+
+================== Adapter prepare markers, DEBUG level (line numbers from run/logs/debug.log) ==================
+21333:[09:55:25.357] [Server thread/DEBUG] [NekoJS/]: DynamicRegistry activation prepare accepted t21:demo_ruby (WORLD, nekojs:server/t21_activation_demo.js)
+21334:[09:55:25.357] [Server thread/DEBUG] [NekoJS/]: DynamicRegistry activation prepare accepted t21:demo_boom (WORLD, nekojs:server/t21_activation_demo.js)
+21335:[09:55:25.362] [Server thread/DEBUG] [NekoJS/]: DynamicRegistry activation prepare accepted t21:demo_ruby (WORLD, <unknown>)
+21336:[09:55:25.362] [Server thread/DEBUG] [NekoJS/]: DynamicRegistry activation prepare accepted t21:demo_boom (WORLD, <unknown>)
+21372:[09:55:30.777] [Server thread/DEBUG] [NekoJS/]: DynamicRegistry activation prepare accepted t21:demo_ruby (WORLD, nekojs:server/t21_activation_demo.js)
+21373:[09:55:30.777] [Server thread/DEBUG] [NekoJS/]: DynamicRegistry activation prepare accepted t21:demo_boom (WORLD, nekojs:server/t21_activation_demo.js)
+Reading: boot runs TWO transactions back to back (finding A1 — script-load candidate collect
+with owner attribution, then the 'server-registry-ready' active-bus collection with '<unknown>'
+owner); the reload leg runs exactly ONE transaction (the per-tick pump staged the reloaded plan
+on the tick right after the joint commit — same millisecond as T21-TICK-1 gen2). activate() then
+executes the real DynamicRegistries surgery; its outcome is the live registry read at line 98/109
+plus the /nekojs registry counts above (activate itself logs nothing on the success path).
+
+================== Gradle run result ==================
+> Task :26.1.2:runServer
+BUILD SUCCESSFUL in 34s
+24 actionable tasks: 1 executed, 23 up-to-date
+(exit 0; server shut down cleanly via the RCON 'stop')

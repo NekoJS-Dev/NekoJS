@@ -1,14 +1,20 @@
 // server_scripts/dynamic_registry.js —— 服务器运行期动态注册「批事务」生产最小示例
 // （ticket 21 / AC10，由 16 号候选计划 fixture 转换而来）
 //
-// ⚠ 激活门禁现状（诚实例，2026-09-22）：
+// ⚠ 激活门禁现状（诚实例，2026-09-29 更新）：
 //   本示例的声明面（DynamicRegistryEvents.dynamicRegistry + 类型直达 Builder）与
 //   事务管线（preflight → 同 key fingerprint 冲突 → 服务端 prepare → 客户端
 //   prepare/ack → 受控 commit）已经由 ticket 21 的 common 层事务实现与 JVM 测试
-//   证明；但**平台侧激活（真实数值 ID 分配 / registry surgery / 网络 payload 传输）
-//   尚未接线**：没有任何候选类型通过「目标 Adapter + 事务 + 同步」三门，三类均记
-//   not verified 并阻塞公开激活。生产环境中本示例当前的可见效果与 ticket 16 相同
-//   ——声明进入 inert 候选计划与账本（claim/stale/exposed 可查询），不发生热更新。
+//   证明。平台接线已于 2026-09-29 合入（wire 备审包：nekojs:dynamic_registry_sync
+//   payload + NeoForgeDynamicRegistryAdapter 真实注册手术 + 逐 tick pump），且单节点
+//   「已激活」真机演示已跑通（gate 开启的 26.1.2 dedicated server，Item+SoundEvent
+//   经真实 surgery 后 LIVE 且脚本/平台可观察，见
+//   ../command-output/09-runserver-26-1-2-activation.txt）。但 gate 默认仍关
+//   （engine.toml [dynamicRegistry]），真多人同步（客户端 prepare/ack、STATE_SYNC
+//   追平、客户端 surgery）尚未真机验证（owner 票 34），MobEffect 未在真机演示中
+//   声明——能力表「真机同步 not verified」口径不变，公开激活仍阻塞。gate 关闭的
+//   生产环境中本示例的可见效果与 ticket 16 相同——声明进入 inert 候选计划与账本
+//   （claim/stale/exposed 可查询），不发生热更新。
 //
 // 启动期注册 vs 动态注册（迁移时先分清）：
 //   * 启动期 `RegistryEvents.register(...)`：boot 期一次性注册，参与 vanilla
