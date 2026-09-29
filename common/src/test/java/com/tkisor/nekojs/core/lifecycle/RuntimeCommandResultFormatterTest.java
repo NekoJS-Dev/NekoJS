@@ -50,8 +50,38 @@ class RuntimeCommandResultFormatterTest {
                 new IllegalStateException("resource follow-up error"));
         assertTrue(message.contains("server reload committed (generation=12 phase=COMMIT)"));
         assertTrue(message.contains("post-reload recipe/pack processing failed"));
-        assertTrue(message.contains("IllegalStateException: resource follow-up error"));
+        assertTrue(message.contains("resource follow-up error"));
+        assertFalse(message.contains("IllegalStateException"),
+                "user-facing failure text must carry the message only, not the exception class name (F2)");
         assertFalse(message.startsWith("reload failed"));
+    }
+
+    @Test
+    void singleFileReloadFailureReportsMessageWithoutExceptionClassName() {
+        var failure = NekoRuntimeRoot.ReloadResult.failure(ScriptType.SERVER, 3, ReloadPhase.FILE,
+                "server_scripts/t20-single.js", new java.io.IOException("Unsupported or missing script file: x"));
+
+        String message = RuntimeCommandResultFormatter.reloadResult(failure, false);
+        assertTrue(message.contains("phase=FILE source=server_scripts/t20-single.js"));
+        assertTrue(message.contains("error=Unsupported or missing script file: x"));
+        assertFalse(message.contains("java.io.IOException"),
+                "user-facing failure text must not embed the exception class name (F2)");
+        assertTrue(message.contains("active runtime was not switched"),
+                "single-file failure keeps its consequence sentence");
+    }
+
+    @Test
+    void failureReportsFallBackToSimpleClassNameWhenMessageIsMissing() {
+        var noMessage = NekoRuntimeRoot.ReloadResult.failure(ScriptType.SERVER, 3, ReloadPhase.PREPARATION,
+                null, new IllegalStateException());
+        assertTrue(RuntimeCommandResultFormatter.reloadResult(noMessage, false).contains("error=IllegalStateException"));
+
+        var report = new ReloadFailureReport(
+                ScriptType.SERVER, 13, ReloadPhase.EXECUTION, "server_scripts/broken.js",
+                "ScriptManager[SERVER]", "script-execution",
+                new IllegalStateException("candidate failed"));
+        assertFalse(report.describe().contains("java.lang.IllegalStateException"),
+                "candidate failure descriptions must also stay message-only (F2)");
     }
 
     @Test

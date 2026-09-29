@@ -1,0 +1,127 @@
+# Ticket 20 F1-F4 fix spot-check: one bounded headless runServer session on :26.1.2 (NeoForge),
+# worktree D:/mcmodDemo/NekoJS-mult-t20fix, branch ticket-20-command-ux (fix pack applied).
+# Layout: versions/26.1.2/run/ (eula + server.properties: RCON 127.0.0.1:25892 pwd smoke20,
+# server-port 25891, online-mode off, level-seed=t20f1fix, pause-when-empty-seconds=-1);
+# run/nekojs/server_scripts/t20f1.js marker script (T20F1-OK).
+# Driver: minimal Python RCON client (same as 2026-09-29-ticket20-smoke round 2), source below.
+
+================== RCON driver (temporary tool, embedded for reproducibility) ==================
+# Ticket 20 F1-F4 fix spot-check driver (bounded single session): bare-root usage (F3),
+# trust address forms (F1), nested vs bare reload paths (F4), clean failure text (F2).
+import socket
+import struct
+import sys
+import time
+
+
+def pkt(rid, ptype, payload):
+    body = struct.pack('<ii', rid, ptype) + payload.encode('utf-8') + b'\x00\x00'
+    return struct.pack('<i', len(body)) + body
+
+
+class Rcon:
+    def __init__(self, host, port, password):
+        self.s = socket.create_connection((host, port), timeout=10)
+        self.rid = 100
+        self.s.sendall(pkt(self.rid, 3, password))
+        length = struct.unpack('<i', self.recvn(4))[0]
+        data = self.recvn(length)
+        rid2 = struct.unpack('<i', data[:4])[0]
+        if rid2 == -1:
+            raise RuntimeError('rcon auth failed')
+
+    def recvn(self, n):
+        buf = b''
+        while len(buf) < n:
+            chunk = self.s.recv(n - len(buf))
+            if not chunk:
+                raise RuntimeError('rcon eof')
+            buf += chunk
+        return buf
+
+    def cmd(self, c, wait=1.0):
+        self.rid += 1
+        self.s.sendall(pkt(self.rid, 2, c))
+        self.s.settimeout(3)
+        out = ''
+        try:
+            while True:
+                length = struct.unpack('<i', self.recvn(4))[0]
+                data = self.recvn(length)
+                rid2, _ptype = struct.unpack('<ii', data[:8])
+                payload = data[8:-2].decode('utf-8', 'replace')
+                if rid2 == self.rid:
+                    out += payload
+                    if len(payload) < 4000:
+                        break
+        except socket.timeout:
+            pass
+        time.sleep(wait)
+        return out.strip()
+
+
+def wait_for(path, needle, timeout):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                if needle in f.read():
+                    return True
+        except FileNotFoundError:
+            pass
+        time.sleep(2)
+    return False
+
+
+def main():
+    log_path = sys.argv[1]
+    print('# waiting for server Done marker in %s' % log_path, flush=True)
+    if not wait_for(log_path, 'Done (', 600):
+        print('# FAIL: server never reached Done within 600s', flush=True)
+        sys.exit(2)
+    print('# server Done observed, connecting RCON', flush=True)
+    rcon = Rcon('127.0.0.1', 25892, 'smoke20')
+
+    def run(label, cmd, wait=1.2):
+        resp = rcon.cmd(cmd, wait)
+        print('# RCON [%s] -> %s\n#   resp: %s' % (label, cmd, resp if resp else '(empty)'), flush=True)
+        return resp
+
+    run('f3-bare-root', 'nekojs')
+    run('f1-unquoted-hostport', 'nekojs trust 127.0.0.1:25565')
+    run('f1-portless', 'nekojs trust 127.0.0.1')
+    run('f1-quoted-hostport', 'nekojs trust "127.0.0.1:25565"')
+    run('f4-nested-path', 'nekojs reload server server_scripts/t20f1.js', 8.0)
+    run('f4-bare-path', 'nekojs reload server t20f1.js', 8.0)
+    run('f2-missing-file', 'nekojs reload server no_such_file.js', 5.0)
+
+    print('# spot-check sent, issuing stop', flush=True)
+    rcon.cmd('stop', 0.5)
+    print('# stop sent', flush=True)
+
+
+if __name__ == '__main__':
+    main()
+
+================== RCON session (driver stdout) ==================
+# waiting for server Done marker in C:/Users/11515/AppData/Local/Temp/t20f1fix/gradle-runserver.log
+# server Done observed, connecting RCON
+# RCON [f3-bare-root] -> nekojs
+#   resp: Usage: /nekojs <reload|test|error|view_all_errors|packs|registry|hand|inventory|trust|probe>. Run /help nekojs for the full command list.
+# RCON [f1-unquoted-hostport] -> nekojs trust 127.0.0.1:25565
+#   resp: Run /nekojs trust on a client process (e.g. in a singleplayer world).
+# RCON [f1-portless] -> nekojs trust 127.0.0.1
+#   resp: Run /nekojs trust on a client process (e.g. in a singleplayer world).
+# RCON [f1-quoted-hostport] -> nekojs trust "127.0.0.1:25565"
+#   resp: Run /nekojs trust on a client process (e.g. in a singleplayer world).
+# RCON [f4-nested-path] -> nekojs reload server server_scripts/t20f1.js
+#   resp: Reloading NekoJS server script server_scripts/t20f1.js...
+NekoJS server script reload completed: generation=1 phase=FILE source=server_scripts\t20f1.js - no errors.
+# RCON [f4-bare-path] -> nekojs reload server t20f1.js
+#   resp: Reloading NekoJS server script t20f1.js...
+NekoJS server script reload completed: generation=1 phase=FILE source=t20f1.js - no errors.
+# RCON [f2-missing-file] -> nekojs reload server no_such_file.js
+#   resp: Reloading NekoJS server script no_such_file.js...
+reload failed: type=server generation=1 phase=FILE source=no_such_file.js owner=ScriptManager[server] error=Unsupported or missing script file: no_such_file.js; active runtime was not switched; use a full reload to reconcile it.
+# spot-check sent, issuing stop
+# stop sent

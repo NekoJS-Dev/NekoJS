@@ -127,4 +127,32 @@ class RuntimeCommandLifecycleSourceTraceTest {
         assertTrue(formatter.contains("public static String postReloadFailure"));
         assertTrue(formatter.contains("reload committed (generation="));
     }
+
+    /**
+     * Ticket-20 smoke fixes F1/F3 mirrored across all three command twins: the trust address
+     * argument must use AddressArgument (unquoted host:port parses), and the bare /nekojs root
+     * must execute a usage fallback. Source-trace mirror covers the fabric twin, whose tree is
+     * not constructible in a null-fixture register test.
+     */
+    @Test
+    void commandTwinsShareTrustAddressArgumentAndBareRootUsage() {
+        Path root = repoRoot();
+        for (Path path : List.of(root.resolve("src/main/java/com/tkisor/nekojs/command/NekoJSCommands.java"),
+                root.resolve("versions/1.21.1/src/main/java/com/tkisor/nekojs/command/NekoJSCommands.java"),
+                root.resolve("src/fabric/java/com/tkisor/nekojs/fabric/FabricNekoJSCommands.java"))) {
+            String source = read(path);
+            assertTrue(source.contains("AddressArgument.address()"),
+                    path + " must accept unquoted host:port trust addresses (F1)");
+            assertFalse(source.contains("argument(\"address\", StringArgumentType.string())"),
+                    path + " must not parse the trust address as a word-only string (F1)");
+            assertTrue(source.contains("sendRootUsage(context.getSource(), dispatcher)"),
+                    path + " must execute a usage fallback on the bare root literal (F3)");
+            assertTrue(source.contains("nekojs.command.usage"),
+                    path + " must render the usage fallback through the lang key (F3)");
+        }
+
+        String argument = read(root.resolve("src/main/java/com/tkisor/nekojs/command/AddressArgument.java"));
+        assertTrue(argument.contains("implements ArgumentType<String>"),
+                "the shared AddressArgument must stay brigadier-only so every node compiles it");
+    }
 }

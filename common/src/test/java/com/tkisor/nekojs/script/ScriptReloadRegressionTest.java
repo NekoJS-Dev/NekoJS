@@ -31,6 +31,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
@@ -240,6 +241,47 @@ class ScriptReloadRegressionTest {
                 manager.close();
             }
             engine.close();
+        }
+    }
+
+    /**
+     * 票 20 smoke F4：单文件 reload 接受三种等价写法——裸文件名、{@code server/<file>}
+     * （id 风格前缀）与 {@code server_scripts/<file>}（物理目录形态，用户直觉路径）。
+     * 后者此前被解析成 {@code <scripts>/server_scripts/<file>} 而拒绝。
+     */
+    @Test
+    void singleFileReloadAcceptsBareIdAndScriptsDirPathForms() throws Exception {
+        NekoJSPaths paths = NekoJSPaths.get();
+        Path serverDir = paths.serverScripts();
+        Files.createDirectories(serverDir);
+        Path entry = serverDir.resolve("forms-entry.mjs");
+        Files.writeString(entry, "TestRecorder.record('loaded');\n");
+
+        TestRecorder recorder = new TestRecorder();
+        Engine engine = Engine.newBuilder().build();
+        ScriptManager manager = null;
+        try {
+            manager = newManager(paths, recorder, engine);
+            manager.discoverScripts();
+            manager.loadScripts();
+            assertEquals("loaded", recorder.value(), "initial load must execute the entry");
+
+            manager.reloadScriptFile("forms-entry.mjs");
+            manager.reloadScriptFile("server/forms-entry.mjs");
+            manager.reloadScriptFile("server_scripts/forms-entry.mjs");
+            assertEquals("loaded", recorder.value(), "every accepted path form must re-run the entry");
+
+            ScriptManager activeManager = manager;
+            IOException rejected = assertThrows(IOException.class,
+                    () -> activeManager.reloadScriptFile("server_scripts/no_such_file.mjs"));
+            assertTrue(rejected.getMessage().contains("Unsupported or missing script file"),
+                    "missing files must keep the stable failure message");
+        } finally {
+            if (manager != null) {
+                manager.close();
+            }
+            engine.close();
+            Files.deleteIfExists(entry);
         }
     }
 

@@ -41,6 +41,6 @@ public record ReloadFailureReport(
                 + (sourceLocation == null ? "" : " source=" + sourceLocation)
                 + " owner=" + owner
                 + " domain=" + domain
-                + " error=" + (error == null ? "unknown" : error);
+                + " error=" + (error == null ? "unknown" : RuntimeCommandResultFormatter.errorMessage(error));
     }
 }

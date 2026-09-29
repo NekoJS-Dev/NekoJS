@@ -1428,6 +1428,13 @@ public final class ScriptManager implements AutoCloseable {
             if (normalizedText.startsWith(rootPrefix)) {
                 normalizedText = normalizedText.substring(rootPrefix.length());
             }
+            // Also accept the physical directory form (nekojs/<type>_scripts/...): the command's
+            // file argument is resolved against the scripts dir, so a user-typed root-relative
+            // path must not double the directory segment.
+            String scriptsDirPrefix = ScriptTypeEnv.scriptsDir(scriptType).getFileName() + "/";
+            if (normalizedText.startsWith(scriptsDirPrefix)) {
+                normalizedText = normalizedText.substring(scriptsDirPrefix.length());
+            }
             Path relative = Path.of(normalizedText).normalize();
             if (relative.isAbsolute() || relative.startsWith("..")) {
                 throw new IOException("Invalid script file path: " + filePath);
