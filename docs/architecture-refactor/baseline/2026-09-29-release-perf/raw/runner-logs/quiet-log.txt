@@ -1,0 +1,24 @@
+2026-09-29T12:34:28Z QUIET: no sampling-class process above idle threshold
+2026-09-29T12:34:28Z   idle: java pid=9144 cpu=0.3%-of-core
+2026-09-29T12:34:28Z   idle: java pid=16848 cpu=1.6%-of-core
+2026-09-29T12:34:28Z   idle: java pid=18268 cpu=0.6%-of-core
+2026-09-29T12:34:28Z   idle: java pid=19136 cpu=0.6%-of-core
+2026-09-29T12:34:28Z   idle: powershell pid=2168 cpu=1.2%-of-core
+2026-09-29T12:44:17Z QUIET: no sampling-class process above idle threshold
+2026-09-29T12:44:17Z   idle: java pid=9144 cpu=0%-of-core
+2026-09-29T12:44:17Z   idle: java pid=16848 cpu=0%-of-core
+2026-09-29T12:44:17Z   idle: java pid=18268 cpu=0%-of-core
+2026-09-29T12:44:17Z   idle: java pid=19136 cpu=0.3%-of-core
+2026-09-29T12:44:17Z   idle: powershell pid=20640 cpu=0.6%-of-core
+2026-09-29T12:49:38Z QUIET: no sampling-class process above idle threshold
+2026-09-29T12:49:38Z   idle: java pid=9144 cpu=0%-of-core
+2026-09-29T12:49:38Z   idle: java pid=16848 cpu=0%-of-core
+2026-09-29T12:49:38Z   idle: java pid=18268 cpu=0%-of-core
+2026-09-29T12:49:38Z   idle: java pid=19136 cpu=0%-of-core
+2026-09-29T12:49:38Z   idle: powershell pid=20996 cpu=0.9%-of-core
+2026-09-29T12:50:35Z QUIET: no sampling-class process above idle threshold
+2026-09-29T12:50:35Z   idle: java pid=9144 cpu=0.3%-of-core
+2026-09-29T12:50:35Z   idle: java pid=16848 cpu=0%-of-core
+2026-09-29T12:50:35Z   idle: java pid=18268 cpu=0.3%-of-core
+2026-09-29T12:50:35Z   idle: java pid=19136 cpu=0.3%-of-core
+2026-09-29T12:50:35Z   idle: powershell pid=8524 cpu=1.2%-of-core
