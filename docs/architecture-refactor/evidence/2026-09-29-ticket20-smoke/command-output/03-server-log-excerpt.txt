@@ -1,0 +1,71 @@
+# Ticket 20 live-command smoke: server-log excerpts (both runServer sessions, full gradle logs kept out of the repo;
+# line numbers are from the uncut gradle console logs). Shows per-generation diagnostics for the deliberate error,
+# success markers per generation, command-triggered reloads running on the Server thread, and clean shutdown.
+
+================== run 1: boot-time error block in full context (gradle log lines 21382-21418) ==================
+[10:16:18] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... (x2)
+[10:16:18] [Worker-Main-15/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组...
+[10:16:18] [Worker-Main-15/INFO] [NekoJS/]: [server] 发现了 4 个 SERVER 脚本。
+[10:16:18] [Worker-Main-15/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[10:16:18] [Worker-Main-15/ERROR] [NekoJS/]: [server] Script binding-preflight unknown-identifier t20UndefinedSmokeFunction callback exception:
+环境: SERVER
+位置: server_scripts/t20-bad.js:3:1
+原因: Unknown identifier 't20UndefinedSmokeFunction'.
+
+   1 | // Ticket 20 command smoke, deliberate load-time error: ReferenceError on an
+   2 | // undefined symbol so the reload commits and the error tracker records it.
+ > 3 | t20UndefinedSmokeFunction()
+     | ^
+script-diagnostic id=nekojs:rt/SERVER/binding-preflight unknown-identifier t20UndefinedSmokeFunction/88b2b770 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=true source=server_scripts/t20-bad.js:3:1 module=D:/mcmodDemo/NekoJS-mult-t20e/versions/26.1.2/run/nekojs/server_scripts/t20-bad.js cause=NekoEsmLinkException: Unknown identifier 't20UndefinedSmokeFunction'. at D:\mcmodDemo\NekoJS-mult-t20e\versions\26.1.2\run\nekojs\server_scripts\t20-bad.js:3:1
+[10:16:18] [Worker-Main-15/ERROR] [NekoJS/]: [server] Script binding-preflight unknown-identifier t20UndefinedSmokeFunction callback exception:
+环境: SERVER
+位置: server_scripts/t20-bad.js:3:1
+原因: Unknown identifier 't20UndefinedSmokeFunction'.
+频次: 连续发生了 2 次
+
+   1 | // Ticket 20 command smoke, deliberate load-time error: ReferenceError on an
+   2 | // undefined symbol so the reload commits and the error tracker records it.
+ > 3 | t20UndefinedSmokeFunction()
+     | ^
+script-diagnostic id=nekojs:rt/SERVER/binding-preflight unknown-identifier t20UndefinedSmokeFunction/88b2b770 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=true source=server_scripts/t20-bad.js:3:1 module=D:/mcmodDemo/NekoJS-mult-t20e/versions/26.1.2/run/nekojs/server_scripts/t20-bad.js cause=NekoEsmLinkException: Unknown identifier 't20UndefinedSmokeFunction'. at D:\mcmodDemo\NekoJS-mult-t20e\versions\26.1.2\run\nekojs\server_scripts\t20-bad.js:3:1
+[10:16:18] [Worker-Main-15/ERROR] [NekoJS/]: [server] 脚本执行失败: nekojs:server/t20-bad.js
+环境: SERVER
+位置: server_scripts/t20-bad.js:5:1
+原因: "t20UndefinedSmokeFunction" is not defined
+
+t20UndefinedSmokeFunction
+
+堆栈: at anonymous (server_scripts/t20-bad.js:5)
+script-diagnostic id=nekojs:server/t20-bad.js type=server phase=EXECUTION owner=Script Execution Environment generation=1 candidate=true source=server_scripts/t20-bad.js:3:1 module=server_scripts/t20-bad.js cacheRevision=0fb1efcd714ef4451d9338866c8ee55e804cb8eb1690c2277f3c4b3f30ff77b8 cause=PolyglotException: ReferenceError: "t20UndefinedSmokeFunction" is not defined
+[10:16:18] [Worker-Main-15/INFO] [NekoJS/]: [server] T20-SMOKE-OK good script loaded
+[10:16:18] [Worker-Main-15/INFO] [NekoJS/]: [server] T20-SMOKE-OK single-file reload target loaded
+[10:16:18] [Worker-Main-15/INFO] [NekoJS/]: [server] SERVER 脚本重载完毕。 (x2)
+
+================== run 1: every T20 marker / reload / diagnostic line (grep -n) ==================
+21395:script-diagnostic id=nekojs:rt/SERVER/binding-preflight unknown-identifier t20UndefinedSmokeFunction/88b2b770 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=true source=server_scripts/t20-bad.js:3:1 module=D:/mcmodDemo/NekoJS-mult-t20e/versions/26.1.2/run/nekojs/server_scripts/t20-bad.js cause=NekoEsmLinkException: Unknown identifier 't20UndefinedSmokeFunction'. at D:\mcmodDemo\NekoJS-mult-t20e\versions\26.1.2\run\nekojs\server_scripts\t20-bad.js:3:1
+21406:script-diagnostic id=nekojs:rt/SERVER/binding-preflight unknown-identifier t20UndefinedSmokeFunction/88b2b770 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=true source=server_scripts/t20-bad.js:3:1 module=D:/mcmodDemo/NekoJS-mult-t20e/versions/26.1.2/run/nekojs/server_scripts/t20-bad.js cause=NekoEsmLinkException: Unknown identifier 't20UndefinedSmokeFunction'. at D:\mcmodDemo\NekoJS-mult-t20e\versions\26.1.2\run\nekojs\server_scripts\t20-bad.js:3:1
+21415:script-diagnostic id=nekojs:server/t20-bad.js type=server phase=EXECUTION owner=Script Execution Environment generation=1 candidate=true source=server_scripts/t20-bad.js:3:1 module=server_scripts/t20-bad.js cacheRevision=0fb1efcd714ef4451d9338866c8ee55e804cb8eb1690c2277f3c4b3f30ff77b8 cause=PolyglotException: ReferenceError: "t20UndefinedSmokeFunction" is not defined
+21416:[10:16:18] [Worker-Main-15/INFO] [NekoJS/]: [server] T20-SMOKE-OK good script loaded
+21417:[10:16:18] [Worker-Main-15/INFO] [NekoJS/]: [server] T20-SMOKE-OK single-file reload target loaded
+21463:[10:16:25] [Server thread/INFO] [minecraft/DedicatedServer]: Done (5.730s)! For help, type "help"
+21466:[10:16:25] [Server thread/INFO] [minecraft/RconThread]: RCON running on 0.0.0.0:25892
+21492:script-diagnostic id=nekojs:rt/SERVER/binding-preflight unknown-identifier t20UndefinedSmokeFunction/88b2b770 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=2 candidate=true source=server_scripts/t20-bad.js:3:1 module=D:/mcmodDemo/NekoJS-mult-t20e/versions/26.1.2/run/nekojs/server_scripts/t20-bad.js cause=NekoEsmLinkException: Unknown identifier 't20UndefinedSmokeFunction'. at D:\mcmodDemo\NekoJS-mult-t20e\versions\26.1.2\run\nekojs\server_scripts\t20-bad.js:3:1
+21503:script-diagnostic id=nekojs:rt/SERVER/binding-preflight unknown-identifier t20UndefinedSmokeFunction/88b2b770 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=2 candidate=true source=server_scripts/t20-bad.js:3:1 module=D:/mcmodDemo/NekoJS-mult-t20e/versions/26.1.2/run/nekojs/server_scripts/t20-bad.js cause=NekoEsmLinkException: Unknown identifier 't20UndefinedSmokeFunction'. at D:\mcmodDemo\NekoJS-mult-t20e\versions\26.1.2\run\nekojs\server_scripts\t20-bad.js:3:1
+21512:script-diagnostic id=nekojs:server/t20-bad.js type=server phase=EXECUTION owner=Script Execution Environment generation=2 candidate=true source=server_scripts/t20-bad.js:3:1 module=server_scripts/t20-bad.js cacheRevision=0fb1efcd714ef4451d9338866c8ee55e804cb8eb1690c2277f3c4b3f30ff77b8 cause=PolyglotException: ReferenceError: "t20UndefinedSmokeFunction" is not defined
+21513:[10:16:30] [Server thread/INFO] [NekoJS/]: [server] T20-SMOKE-OK good script loaded
+21514:[10:16:30] [Server thread/INFO] [NekoJS/]: [server] T20-SMOKE-OK single-file reload target loaded
+21530:script-diagnostic id=nekojs:rt/SERVER/binding-preflight unknown-identifier t20UndefinedSmokeFunction/88b2b770 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=3 candidate=true source=server_scripts/t20-bad.js:3:1 module=D:/mcmodDemo/NekoJS-mult-t20e/versions/26.1.2/run/nekojs/server_scripts/t20-bad.js cause=NekoEsmLinkException: Unknown identifier 't20UndefinedSmokeFunction'. at D:\mcmodDemo\NekoJS-mult-t20e\versions\26.1.2\run\nekojs\server_scripts\t20-bad.js:3:1
+21541:script-diagnostic id=nekojs:rt/SERVER/binding-preflight unknown-identifier t20UndefinedSmokeFunction/88b2b770 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=3 candidate=true source=server_scripts/t20-bad.js:3:1 module=D:/mcmodDemo/NekoJS-mult-t20e/versions/26.1.2/run/nekojs/server_scripts/t20-bad.js cause=NekoEsmLinkException: Unknown identifier 't20UndefinedSmokeFunction'. at D:\mcmodDemo\NekoJS-mult-t20e\versions\26.1.2\run\nekojs\server_scripts\t20-bad.js:3:1
+21550:script-diagnostic id=nekojs:server/t20-bad.js type=server phase=EXECUTION owner=Script Execution Environment generation=3 candidate=true source=server_scripts/t20-bad.js:3:1 module=server_scripts/t20-bad.js cacheRevision=0fb1efcd714ef4451d9338866c8ee55e804cb8eb1690c2277f3c4b3f30ff77b8 cause=PolyglotException: ReferenceError: "t20UndefinedSmokeFunction" is not defined
+21551:[10:16:39] [Server thread/INFO] [NekoJS/]: [server] T20-SMOKE-OK good script loaded
+21552:[10:16:39] [Server thread/INFO] [NekoJS/]: [server] T20-SMOKE-OK single-file reload target loaded
+21557:[10:16:47] [Server thread/INFO] [NekoJS/]: [server] T20-SMOKE-OK single-file reload target loaded
+21592:[10:18:53] [Server thread/INFO] [NekoJS/]: [server] T20-SMOKE-OK good script loaded
+21593:[10:18:53] [Server thread/INFO] [NekoJS/]: [server] T20-SMOKE-OK single-file reload target loaded
+21598:[10:19:02] [Server thread/INFO] [minecraft/MinecraftServer]: Stopping server
+
+================== run 2: lifecycle + command evidence lines ==================
+21341:[10:20:37] [Worker-Main-13/INFO] [NekoJS/]: [server] T20-SMOKE-OK good script loaded
+21342:[10:20:37] [Worker-Main-13/INFO] [NekoJS/]: [server] T20-SMOKE-OK single-file reload target loaded
+21387:[10:20:38] [Server thread/INFO] [minecraft/DedicatedServer]: Done (0.303s)! For help, type "help"
+21422:[10:21:25] [Server thread/INFO] [minecraft/MinecraftServer]: Stopping server
