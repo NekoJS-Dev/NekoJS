@@ -1,0 +1,40 @@
+位置: client_scripts/t36-06-client.js:60:3
+script-diagnostic id=nekojs:rt/CLIENT/binding-preflight unknown-identifier ctx/1918714c type=client phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=false source=client_scripts/t36-06-client.js:60:3 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/client_scripts/t36-06-client.js cause=NekoEsmLinkException: Unknown identifier 'ctx'. Did you mean 'com'? at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\client_scripts\t36-06-client.js:60:3
+位置: client_scripts/t36-06-client.js:60:3
+script-diagnostic id=nekojs:rt/CLIENT/binding-preflight unknown-identifier ctx/1918714c type=client phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=false source=client_scripts/t36-06-client.js:60:3 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/client_scripts/t36-06-client.js cause=NekoEsmLinkException: Unknown identifier 'ctx'. Did you mean 'com'? at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\client_scripts\t36-06-client.js:60:3
+[299月2026 22:40:24.575] [NekoJS-Log-Flusher/ERROR] [NekoJS/]: [startup] Script event mode=normal bus=com.tkisor.nekojs.wrapper.registry.gen.RegistryEventJS event=com.tkisor.nekojs.wrapper.registry.gen.RegistryEventJS script=nekojs:startup/t36-01-startup.js thread=modloading-sync-worker callback exception:
+位置: startup_scripts/t36-01-startup.js:31:3
+堆栈: at :=> (startup_scripts/t36-01-startup.js:31)
+script-diagnostic id=nekojs:rt/STARTUP/startup_scripts/t36-01-startup.js type=startup phase=EXECUTION owner=Script Execution Environment generation=1 candidate=false source=startup_scripts/t36-01-startup.js:31:3 module=startup_scripts/t36-01-startup.js cacheRevision=3a8bf04c9d4261bf356d3160d52fbf482f4a46339e2799ecb3a3646d2daffd2e cause=PolyglotException: unknown type name 'art' (searched every registry; node neoforge:26.1.2)
+位置: client_scripts/t36-06-client.js:60:3
+script-diagnostic id=nekojs:rt/CLIENT/binding-preflight unknown-identifier ctx/1918714c type=client phase=RESOLVE_LINK owner=Module Resolution/Cache generation=2 candidate=true source=client_scripts/t36-06-client.js:60:3 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/client_scripts/t36-06-client.js cause=NekoEsmLinkException: Unknown identifier 'ctx'. Did you mean 'com'? at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\client_scripts\t36-06-client.js:60:3
+位置: client_scripts/t36-06-client.js:60:3
+script-diagnostic id=nekojs:rt/CLIENT/binding-preflight unknown-identifier ctx/1918714c type=client phase=RESOLVE_LINK owner=Module Resolution/Cache generation=2 candidate=true source=client_scripts/t36-06-client.js:60:3 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/client_scripts/t36-06-client.js cause=NekoEsmLinkException: Unknown identifier 'ctx'. Did you mean 'com'? at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\client_scripts\t36-06-client.js:60:3
+位置: server_scripts/t36-03-villager-trades-add-and-query.js:61:38
+script-diagnostic id=nekojs:rt/SERVER/binding-preflight chain-member length/bebbbae6 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=true source=server_scripts/t36-03-villager-trades-add-and-query.js:61:38 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/server_scripts/t36-03-villager-trades-add-and-query.js cause=NekoEsmLinkException: Type chain: no member 'length' on List at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\server_scripts\t36-03-villager-trades-add-and-query.js:61:38
+位置: server_scripts/t36-03-villager-trades-add-and-query.js:61:38
+script-diagnostic id=nekojs:rt/SERVER/binding-preflight chain-member length/bebbbae6 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=true source=server_scripts/t36-03-villager-trades-add-and-query.js:61:38 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/server_scripts/t36-03-villager-trades-add-and-query.js cause=NekoEsmLinkException: Type chain: no member 'length' on List at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\server_scripts\t36-03-villager-trades-add-and-query.js:61:38
+位置: server_scripts/t36-05-gameplay-server-events.js:34:43
+script-diagnostic id=nekojs:rt/SERVER/event-cb-preflight/60279715 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=true source=server_scripts/t36-05-gameplay-server-events.js:34:43 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/server_scripts/t36-05-gameplay-server-events.js cause=NekoEsmLinkException: EntityEvents callback: 'damageSource' not in EntityEvents.death at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\server_scripts\t36-05-gameplay-server-events.js:34:43
+[299月2026 22:46:16.211] [Worker-Main-20/ERROR] [NekoJS/]: [server] 脚本执行失败: nekojs:server/t36-09-declaration.ts
+位置: server_scripts/t36-09-declaration.ts:29:2
+堆栈: at anonymous (server_scripts/t36-09-declaration.ts:29)
+script-diagnostic id=nekojs:server/t36-09-declaration.ts type=server phase=EXECUTION owner=Script Execution Environment generation=1 candidate=true source=server_scripts/t36-09-declaration.ts:27:13 module=server_scripts/t36-09-declaration.ts cacheRevision=3226538164acdfb89a988bd0ea067de0a974745d70336a438b906a995a758468 cause=PolyglotException: Components not bound yet
+com.tkisor.nekojs.core.lifecycle.NekoReloadException: reload failed: type=server generation=1 phase=STATE_PLAN owner=ScriptManager[server] domain=state-plan-preflight:item-block-modification error=candidate state plan 'item-block-modification' failed joint preflight
+Caused by: com.tkisor.nekojs.core.state.GlobalStateException: candidate state plan 'item-block-modification' failed joint preflight
+com.tkisor.nekojs.core.lifecycle.NekoReloadException: reload failed: type=server generation=1 phase=STATE_PLAN owner=ScriptManager[server] domain=state-plan-preflight:item-block-modification error=candidate state plan 'item-block-modification' failed joint preflight
+Caused by: com.tkisor.nekojs.core.state.GlobalStateException: candidate state plan 'item-block-modification' failed joint preflight
+[299月2026 22:46:20.997] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:20.999] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:21.254] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:21.255] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:21.453] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:21.454] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:21.603] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:21.604] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:21.757] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:21.759] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:21.905] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:22.003] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:22.004] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:22.147] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click

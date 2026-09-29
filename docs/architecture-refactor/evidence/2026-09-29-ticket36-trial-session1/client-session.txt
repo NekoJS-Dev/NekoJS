@@ -1,0 +1,523 @@
+[299月2026 22:40:09.662] [main/INFO] [net.neoforged.fml.startup.Entrypoint/]: JVM Uptime at startup: 141ms
+[299月2026 22:40:09.678] [main/INFO] [net.neoforged.fml.loading.FMLLoader/]: Starting FancyModLoader version 11.0.13 (CLIENT in DEV)
+[299月2026 22:40:09.679] [main/INFO] [net.neoforged.fml.loading.FMLLoader/]: Game directory: D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run
+[299月2026 22:40:09.746] [main/INFO] [net.neoforged.fml.loading.EarlyServiceDiscovery/]: Found 2 early service jars (out of 110) in 25ms
+[299月2026 22:40:09.747] [main/INFO] [net.neoforged.fml.loading.FMLLoader/]: Loading FML Early Services:
+[299月2026 22:40:09.748] [main/INFO] [net.neoforged.fml.loading.FMLLoader/]:  - C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.neoforged.fancymodloader/earlydisplay/11.0.13/491a1bedecb33802fa118cae384b60f91f6f0241/earlydisplay-11.0.13.jar
+[299月2026 22:40:09.750] [main/INFO] [net.neoforged.fml.loading.FMLLoader/]:  - C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.neoforged.fancymodloader/loader/11.0.13/c9c89eaf35535990110088224d188748d81eaecf/loader-11.0.13.jar
+[299月2026 22:40:09.755] [main/INFO] [net.neoforged.fml.loading.ImmediateWindowHandler/]: Loading ImmediateWindowProvider fmlearlywindow
+[299月2026 22:40:10.344] [ForkJoinPool.commonPool-worker-3/INFO] [net.neoforged.fml.loading.moddiscovery.locators.GameLocator/]: Detected a joined NeoForge and Minecraft configuration. Applying filtering...
+[299月2026 22:40:10.373] [fml-loadingscreen/INFO] [net.neoforged.fml.earlydisplay.render.LoadingScreenRenderer/]: GL info: Intel(R) Iris(R) Xe Graphics GL version 3.3.0 - Build 31.0.101.3251, Intel
+[299月2026 22:40:10.440] [ForkJoinPool.commonPool-worker-3/INFO] [net.neoforged.fml.loading.moddiscovery.locators.InDevFolderLocator/CORE]: Got mod coordinates nekojs%%D:\mcmodDemo\NekoJS-mult\versions\26.1.2\build\classes\java\main;nekojs%%D:\mcmodDemo\NekoJS-mult\versions\26.1.2\build\resources\main;nekojs%%D:\mcmodDemo\NekoJS-mult\common\build\classes\java\main;nekojs%%D:\mcmodDemo\NekoJS-mult\common\build\resources\main from env
+[299月2026 22:40:10.624] [ForkJoinPool.commonPool-worker-3/INFO] [net.neoforged.fml.loading.moddiscovery.locators.JarInJarDependencyLocator/]: Found 2 dependencies adding them to mods collection
+[299月2026 22:40:10.627] [ForkJoinPool.commonPool-worker-3/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/]: 
+     Mod List:
+		Name Version (Mod Id)
+
+		GraalMC 25.1.3.7 (graalmc)
+		Just Enough Items 29.5.0.26 (jei)
+		Minecraft 26.1.2 (minecraft)
+		NekoJS 1.1.0-preview3 (nekojs)
+		NeoForge 26.1.2.71 (neoforge)
+[299月2026 22:40:10.919] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.7 Source=file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.17.3+mixin.0.8.7/41c4a3984a80f4679e759fb9f495587acc5cdac7/sponge-mixin-0.17.3+mixin.0.8.7.jar Service=FML Env=CLIENT
+[299月2026 22:40:10.955] [main/INFO] [net.neoforged.fml.loading.FMLLoader/]: Loading FML Plugins:
+[299月2026 22:40:10.956] [main/INFO] [net.neoforged.fml.loading.FMLLoader/]:  - C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.neoforged/neoforge/26.1.2.71/2fb61eae2ea7b55fe17d0dba69cab130beb0a054/neoforge-26.1.2.71-universal.jar > net.neoforged.neoforge-coremods-26.1.2.71.jar
+[299月2026 22:40:11.082] [main/INFO] [net.neoforged.fml.loading.FMLLoader/]: Building game content classloader:
+ - graalmc (jar(C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar))
+ - jei (jar(C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/jei-238222/7920926/3341cfa3b1139c3a5793df3fb05ff2a4001e3b69/jei-238222-7920926.jar))
+ - minecraft (composite(filtered(jar(D:/mcmodDemo/NekoJS-mult/versions/26.1.2/build/moddev/artifacts/minecraft-patched-26.1.2.71.jar)), filtered(jar(D:/mcmodDemo/NekoJS-mult/versions/26.1.2/build/moddev/artifacts/minecraft-patched-26.1.2.71.jar))))
+ - mixinextras.neoforge (jar(C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.neoforged/neoforge/26.1.2.71/2fb61eae2ea7b55fe17d0dba69cab130beb0a054/neoforge-26.1.2.71-universal.jar > mixinextras-neoforge-0.5.4.jar))
+ - nekojs (composite(folder(D:/mcmodDemo/NekoJS-mult/versions/26.1.2/build/classes/java/main), folder(D:/mcmodDemo/NekoJS-mult/versions/26.1.2/build/resources/main), folder(D:/mcmodDemo/NekoJS-mult/common/build/classes/java/main), folder(D:/mcmodDemo/NekoJS-mult/common/build/resources/main)))
+ - neoforge (composite(filtered(jar(C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.neoforged/neoforge/26.1.2.71/2fb61eae2ea7b55fe17d0dba69cab130beb0a054/neoforge-26.1.2.71-universal.jar))))
+ - net.neoforged.fml.generated (empty(VirtualJar/net.neoforged.fml.generated))
+[299月2026 22:40:11.100] [main/INFO] [net.neoforged.fml.loading.FMLLoader/]: Built game content classloader in 34ms
+[299月2026 22:40:11.722] [main/INFO] [MixinExtras|Service/]: Initializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.5.4).
+[299月2026 22:40:12.991] [Datafixer Bootstrap/INFO] [com.mojang.datafixers.DataFixerBuilder/]: 294 Datafixer optimizations took 502 milliseconds
+[299月2026 22:40:19.832] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [teleport, location] and [teleport, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[299月2026 22:40:19.834] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [teleport, location] and [teleport, targets] with inputs: [0.1 -0.5 .9, 0 0 0]
+[299月2026 22:40:19.839] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [teleport, destination] and [teleport, targets] with inputs: [Player, 0123, @e, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[299月2026 22:40:19.841] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [teleport, targets] and [teleport, destination] with inputs: [Player, 0123, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[299月2026 22:40:19.843] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [teleport, targets, location] and [teleport, targets, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[299月2026 22:40:19.845] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [time, set, time] and [time, set, timemarker] with inputs: [0, 0s, 0d, 0t]
+[299月2026 22:40:19.848] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [time, set, timemarker] and [time, set, time] with inputs: [012]
+[299月2026 22:40:19.851] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [time, of, clock, set, time] and [time, of, clock, set, timemarker] with inputs: [0, 0s, 0d, 0t]
+[299月2026 22:40:19.852] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [time, of, clock, set, timemarker] and [time, of, clock, set, time] with inputs: [012]
+[299月2026 22:40:19.854] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [waypoint, modify, waypoint, color, reset] and [waypoint, modify, waypoint, color, color] with inputs: [reset]
+[299月2026 22:40:19.958] [modloading-worker-0/INFO] [net.neoforged.neoforge.common.NeoForgeMod/NEOFORGE-MOD]: NeoForge mod loading, version 26.1.2.71, for MC 26.1.2
+[299月2026 22:40:20.001] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[299月2026 22:40:20.058] [modloading-worker-0/INFO] [mezz.jei.library.load.PluginCaller/]: Sending ConfigManager...
+[299月2026 22:40:20.062] [modloading-worker-0/INFO] [mezz.jei.library.load.PluginCaller/]: Sending ConfigManager took 3.248 milliseconds
+[299月2026 22:40:20.586] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[299月2026 22:40:21.576] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [NekoJS] NekoJS plugin runtime bootstrapped once (assembly)
+[299月2026 22:40:21.576] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] 发现了 2 个 STARTUP 脚本。
+[299月2026 22:40:21.576] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] 发现了 17 个 SERVER 脚本。
+[299月2026 22:40:21.576] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] 发现了 4 个 CLIENT 脚本。
+[299月2026 22:40:22.974] [modloading-worker-0/INFO] [NekoJS/]: 正在为 STARTUP 注册 17 个事件组...
+[299月2026 22:40:23.442] [modloading-sync-worker/INFO] [NekoJS/]: 正在为 CLIENT 注册 17 个事件组...
+[299月2026 22:40:23.576] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] Hello, World! (Loaded startup example script)
+[299月2026 22:40:23.679] [modloading-sync-worker/INFO] [NekoJS/]: [client] Hello, World! (Loaded client example script)
+[299月2026 22:40:23.704] [modloading-sync-worker/INFO] [NekoJS/]: [client] T26-REGISTERED id=t26:dash key=R handle=true
+[299月2026 22:40:23.718] [modloading-sync-worker/ERROR] [NekoJS/]: [client] Script binding-preflight unknown-identifier ctx callback exception:
+环境: CLIENT
+位置: client_scripts/t36-06-client.js:60:3
+原因: Unknown identifier 'ctx'. Did you mean 'com'?
+
+   58 | // 旧 generation 的渲染器继续服务。
+   59 | ClientEvents.hudRender('demo:badge', { layer: 'foreground', priority: 100 }, (ctx, gui) => {
+ > 60 |   ctx.rect(4, 18, 96, 12, 0x40000000)
+     |   ^
+   61 |   ctx.text('DASH READY', 6, 20, 0xFF55FF55)
+   62 | })
+script-diagnostic id=nekojs:rt/CLIENT/binding-preflight unknown-identifier ctx/1918714c type=client phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=false source=client_scripts/t36-06-client.js:60:3 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/client_scripts/t36-06-client.js cause=NekoEsmLinkException: Unknown identifier 'ctx'. Did you mean 'com'? at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\client_scripts\t36-06-client.js:60:3
+[299月2026 22:40:23.756] [modloading-sync-worker/ERROR] [NekoJS/]: [client] Script binding-preflight unknown-identifier ctx callback exception:
+环境: CLIENT
+位置: client_scripts/t36-06-client.js:60:3
+原因: Unknown identifier 'ctx'. Did you mean 'com'?
+频次: 连续发生了 2 次
+
+   58 | // 旧 generation 的渲染器继续服务。
+   59 | ClientEvents.hudRender('demo:badge', { layer: 'foreground', priority: 100 }, (ctx, gui) => {
+ > 60 |   ctx.rect(4, 18, 96, 12, 0x40000000)
+     |   ^
+   61 |   ctx.text('DASH READY', 6, 20, 0xFF55FF55)
+   62 | })
+script-diagnostic id=nekojs:rt/CLIENT/binding-preflight unknown-identifier ctx/1918714c type=client phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=false source=client_scripts/t36-06-client.js:60:3 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/client_scripts/t36-06-client.js cause=NekoEsmLinkException: Unknown identifier 'ctx'. Did you mean 'com'? at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\client_scripts\t36-06-client.js:60:3
+[299月2026 22:40:23.758] [modloading-sync-worker/INFO] [NekoJS/]: [client] legacy global.handoff = undefined
+[299月2026 22:40:23.759] [modloading-sync-worker/INFO] [NekoJS/]: [client] explicit shared.handoff = undefined
+[299月2026 22:40:23.764] [modloading-sync-worker/INFO] [com.tkisor.nekojs.client.posteffect.PostEffectManager/]: Installed client post-effect generation 0 (0 definition(s), 0 removed, 0 re-declared)
+[299月2026 22:40:24.302] [Render thread/INFO] [com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService/]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[299月2026 22:40:24.332] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Setting user: Dev
+[299月2026 22:40:24.472] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Backend library: LWJGL version 3.4.1+2
+[299月2026 22:40:24.575] [NekoJS-Log-Flusher/ERROR] [NekoJS/]: [startup] Script event mode=normal bus=com.tkisor.nekojs.wrapper.registry.gen.RegistryEventJS event=com.tkisor.nekojs.wrapper.registry.gen.RegistryEventJS script=nekojs:startup/t36-01-startup.js thread=modloading-sync-worker callback exception:
+环境: STARTUP
+位置: startup_scripts/t36-01-startup.js:31:3
+原因: unknown type name 'art' (searched every registry; node neoforge:26.1.2)
+
+   29 |   event.custom('mymod:art', 'art', b => { b.width = 32; b.height = 32 });
+   30 | 
+ > 31 |   // 4) 裸 Supplier 高级入口：Runtime 校验返回值（非空）、实际类型与重复 ID；
+     |   ^
+   32 |   //    不承诺任意 Supplier 副作用的指纹/回滚
+   33 |   event.register('minecraft:villager_type', 'mymod:scholar', () => 'raw-scholar');
+
+堆栈: at :=> (startup_scripts/t36-01-startup.js:31)
+script-diagnostic id=nekojs:rt/STARTUP/startup_scripts/t36-01-startup.js type=startup phase=EXECUTION owner=Script Execution Environment generation=1 candidate=false source=startup_scripts/t36-01-startup.js:31:3 module=startup_scripts/t36-01-startup.js cacheRevision=3a8bf04c9d4261bf356d3160d52fbf482f4a46339e2799ecb3a3646d2daffd2e cause=PolyglotException: unknown type name 'art' (searched every registry; node neoforge:26.1.2)
+[299月2026 22:40:24.575] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] legacy global.serverOnly = undefined
+[299月2026 22:40:24.638] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Using optional rendering extensions: GL_ARB_buffer_storage, GL_KHR_debug, GL_ARB_vertex_attrib_binding, GL_ARB_direct_state_access, GL_EXT_texture_filter_anisotropic
+[299月2026 22:40:25.446] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources, mod/nekojs, mod/graalmc, mod/neoforge, mod/jei, nekojs
+[299月2026 22:40:25.578] [resourceLoad/INFO] [net.minecraft.client.gui.font.providers.UnihexProvider/]: Found unifont_all_no_pua-17.0.01.hex, loading
+[299月2026 22:40:25.672] [resourceLoad/INFO] [net.minecraft.client.gui.font.providers.UnihexProvider/]: Found unifont_pua-17.0.01.hex, loading
+[299月2026 22:40:25.982] [resourceLoad/INFO] [net.minecraft.client.gui.font.providers.UnihexProvider/]: Found unifont_jp_patch-17.0.01.hex, loading
+[299月2026 22:40:28.536] [Render thread/WARN] [net.minecraft.client.sounds.SoundEngine/]: Missing sound for event: mymod:boom
+[299月2026 22:40:28.536] [Render thread/WARN] [net.minecraft.client.sounds.SoundEngine/]: Missing sound for event: mymod:ping
+[299月2026 22:40:28.788] [Render thread/INFO] [com.mojang.blaze3d.audio.Library/]: OpenAL initialized on device OpenAL Soft on 扬声器 (Realtek(R) Audio)
+[299月2026 22:40:28.792] [Render thread/INFO] [net.minecraft.client.sounds.SoundEngine/SOUNDS]: Sound engine started
+[299月2026 22:40:28.792] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
+[299月2026 22:40:28.824] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 128x128x0 minecraft:textures/atlas/decorated_pot.png-atlas
+[299月2026 22:40:28.828] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 2048x1024x0 minecraft:textures/atlas/armor_trims.png-atlas
+[299月2026 22:40:28.939] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
+[299月2026 22:40:28.967] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x512x0 minecraft:textures/atlas/shield_patterns.png-atlas
+[299月2026 22:40:28.979] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 2048x2048x4 minecraft:textures/atlas/blocks.png-atlas
+[299月2026 22:40:30.060] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x512x0 minecraft:textures/atlas/chest.png-atlas
+[299月2026 22:40:30.177] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x128x0 minecraft:textures/atlas/celestials.png-atlas
+[299月2026 22:40:30.178] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x512x0 minecraft:textures/atlas/banner_patterns.png-atlas
+[299月2026 22:40:30.181] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x512x0 minecraft:textures/atlas/beds.png-atlas
+[299月2026 22:40:30.184] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x512x0 minecraft:textures/atlas/items.png-atlas
+[299月2026 22:40:30.245] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x1024x0 minecraft:textures/atlas/gui.png-atlas
+[299月2026 22:40:30.326] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 128x64x0 minecraft:textures/atlas/map_decorations.png-atlas
+[299月2026 22:40:30.328] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x0 minecraft:textures/atlas/signs.png-atlas
+[299月2026 22:40:30.330] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x512x0 minecraft:textures/atlas/shulker_boxes.png-atlas
+[299月2026 22:40:30.443] [Render thread/INFO] [net.neoforged.neoforge.client.entity.animation.json.AnimationLoader/]: Loaded 0 entity animations
+[299月2026 22:40:30.726] [Render thread/INFO] [NekoJS/]: 正在为 CLIENT 注册 17 个事件组...
+[299月2026 22:40:30.737] [Render thread/INFO] [NekoJS/]: [client] 正在重载 CLIENT 脚本... (x2)
+[299月2026 22:40:30.748] [Render thread/INFO] [NekoJS/]: [client] 发现了 4 个 CLIENT 脚本。
+[299月2026 22:40:30.763] [Render thread/INFO] [NekoJS/]: [client] Hello, World! (Loaded client example script)
+[299月2026 22:40:30.768] [Render thread/INFO] [NekoJS/]: [client] T26-REGISTERED id=t26:dash key=R handle=true
+[299月2026 22:40:30.776] [Render thread/ERROR] [NekoJS/]: [client] Script binding-preflight unknown-identifier ctx callback exception:
+环境: CLIENT
+位置: client_scripts/t36-06-client.js:60:3
+原因: Unknown identifier 'ctx'. Did you mean 'com'?
+
+   58 | // 旧 generation 的渲染器继续服务。
+   59 | ClientEvents.hudRender('demo:badge', { layer: 'foreground', priority: 100 }, (ctx, gui) => {
+ > 60 |   ctx.rect(4, 18, 96, 12, 0x40000000)
+     |   ^
+   61 |   ctx.text('DASH READY', 6, 20, 0xFF55FF55)
+   62 | })
+script-diagnostic id=nekojs:rt/CLIENT/binding-preflight unknown-identifier ctx/1918714c type=client phase=RESOLVE_LINK owner=Module Resolution/Cache generation=2 candidate=true source=client_scripts/t36-06-client.js:60:3 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/client_scripts/t36-06-client.js cause=NekoEsmLinkException: Unknown identifier 'ctx'. Did you mean 'com'? at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\client_scripts\t36-06-client.js:60:3
+[299月2026 22:40:30.794] [Render thread/ERROR] [NekoJS/]: [client] Script binding-preflight unknown-identifier ctx callback exception:
+环境: CLIENT
+位置: client_scripts/t36-06-client.js:60:3
+原因: Unknown identifier 'ctx'. Did you mean 'com'?
+频次: 连续发生了 2 次
+
+   58 | // 旧 generation 的渲染器继续服务。
+   59 | ClientEvents.hudRender('demo:badge', { layer: 'foreground', priority: 100 }, (ctx, gui) => {
+ > 60 |   ctx.rect(4, 18, 96, 12, 0x40000000)
+     |   ^
+   61 |   ctx.text('DASH READY', 6, 20, 0xFF55FF55)
+   62 | })
+script-diagnostic id=nekojs:rt/CLIENT/binding-preflight unknown-identifier ctx/1918714c type=client phase=RESOLVE_LINK owner=Module Resolution/Cache generation=2 candidate=true source=client_scripts/t36-06-client.js:60:3 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/client_scripts/t36-06-client.js cause=NekoEsmLinkException: Unknown identifier 'ctx'. Did you mean 'com'? at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\client_scripts\t36-06-client.js:60:3
+[299月2026 22:40:30.795] [Render thread/INFO] [NekoJS/]: [client] legacy global.handoff = undefined
+[299月2026 22:40:30.796] [Render thread/INFO] [NekoJS/]: [client] explicit shared.handoff = undefined
+[299月2026 22:40:30.800] [Render thread/INFO] [com.tkisor.nekojs.client.posteffect.PostEffectManager/]: Installed client post-effect generation 1 (0 definition(s), 0 removed, 0 re-declared)
+[299月2026 22:40:30.805] [Render thread/INFO] [NekoJS/]: [client] legacy global.serverOnly = undefined
+[299月2026 22:40:30.809] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x256x0 jei:textures/atlas/gui.png-atlas
+[299月2026 22:40:31.576] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] CLIENT 脚本重载完毕。 (x2)
+[299月2026 22:46:15.924] [Worker-Main-20/INFO] [NekoJS/]: 正在为 SERVER 注册 17 个事件组...
+[299月2026 22:46:15.941] [Worker-Main-20/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... (x2)
+[299月2026 22:46:15.952] [Worker-Main-20/INFO] [NekoJS/]: [server] 发现了 17 个 SERVER 脚本。
+[299月2026 22:46:15.970] [Worker-Main-20/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[299月2026 22:46:15.975] [Worker-Main-20/ERROR] [NekoJS/]: [server] Script binding-preflight chain-member length callback exception:
+环境: SERVER
+位置: server_scripts/t36-03-villager-trades-add-and-query.js:61:38
+原因: no member 'length' on List
+
+   59 |     console.info('trade sets: ' + result.tradeSetIds)
+   60 |     console.info('level_1 count: ' + result.countOf('minecraft:farmer/level_1'))
+ > 61 |     if (result.unrestoredListingKeys.length > 0) {
+     |                                      ^
+   62 |       // Declared earlier, not declared any more: still active in the registry, recorded here
+   63 |       // instead of being physically deleted by the reload.
+script-diagnostic id=nekojs:rt/SERVER/binding-preflight chain-member length/bebbbae6 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=true source=server_scripts/t36-03-villager-trades-add-and-query.js:61:38 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/server_scripts/t36-03-villager-trades-add-and-query.js cause=NekoEsmLinkException: Type chain: no member 'length' on List at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\server_scripts\t36-03-villager-trades-add-and-query.js:61:38
+[299月2026 22:46:16.006] [Worker-Main-20/ERROR] [NekoJS/]: [server] Script binding-preflight chain-member length callback exception:
+环境: SERVER
+位置: server_scripts/t36-03-villager-trades-add-and-query.js:61:38
+原因: no member 'length' on List
+频次: 连续发生了 2 次
+
+   59 |     console.info('trade sets: ' + result.tradeSetIds)
+   60 |     console.info('level_1 count: ' + result.countOf('minecraft:farmer/level_1'))
+ > 61 |     if (result.unrestoredListingKeys.length > 0) {
+     |                                      ^
+   62 |       // Declared earlier, not declared any more: still active in the registry, recorded here
+   63 |       // instead of being physically deleted by the reload.
+script-diagnostic id=nekojs:rt/SERVER/binding-preflight chain-member length/bebbbae6 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=true source=server_scripts/t36-03-villager-trades-add-and-query.js:61:38 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/server_scripts/t36-03-villager-trades-add-and-query.js cause=NekoEsmLinkException: Type chain: no member 'length' on List at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\server_scripts\t36-03-villager-trades-add-and-query.js:61:38
+[299月2026 22:46:16.195] [Worker-Main-20/ERROR] [NekoJS/]: [server] Script event-cb-preflight callback exception:
+环境: SERVER
+位置: server_scripts/t36-05-gameplay-server-events.js:34:43
+原因: 'damageSource' not in EntityEvents.death
+
+   32 | // ---- 2) EntityEvents：按实体类型定向 + 生命周期代表 ----
+   33 | EntityEvents.death('minecraft:zombie', event => {
+ > 34 |   console.log('a zombie died to ' + event.damageSource.getMsgId())
+     |                                           ^
+   35 | })
+   36 |
+script-diagnostic id=nekojs:rt/SERVER/event-cb-preflight/60279715 type=server phase=RESOLVE_LINK owner=Module Resolution/Cache generation=1 candidate=true source=server_scripts/t36-05-gameplay-server-events.js:34:43 module=D:/mcmodDemo/NekoJS-mult/versions/26.1.2/run/nekojs/server_scripts/t36-05-gameplay-server-events.js cause=NekoEsmLinkException: EntityEvents callback: 'damageSource' not in EntityEvents.death at D:\mcmodDemo\NekoJS-mult\versions\26.1.2\run\nekojs\server_scripts\t36-05-gameplay-server-events.js:34:43
+[299月2026 22:46:16.211] [Worker-Main-20/ERROR] [NekoJS/]: [server] 脚本执行失败: nekojs:server/t36-09-declaration.ts
+环境: SERVER
+位置: server_scripts/t36-09-declaration.ts:29:2
+原因: Components not bound yet
+
+   27 | const gem = Item.of('minecraft:diamond', 2)
+   28 | console.info('trial item: ' + gem.getId() + ' x' + gem.getCount())
+ > 29 | 
+     |  ^
+   30 | const empty = Item.empty()
+   31 | console.info('trial empty stack: ' + (empty === undefined ? 'undefined' : 'ok'))
+
+堆栈: at anonymous (server_scripts/t36-09-declaration.ts:29)
+script-diagnostic id=nekojs:server/t36-09-declaration.ts type=server phase=EXECUTION owner=Script Execution Environment generation=1 candidate=true source=server_scripts/t36-09-declaration.ts:27:13 module=server_scripts/t36-09-declaration.ts cacheRevision=3226538164acdfb89a988bd0ea067de0a974745d70336a438b906a995a758468 cause=PolyglotException: Components not bound yet
+[299月2026 22:46:16.211] [Worker-Main-20/INFO] [NekoJS/]: [server] === ticket-36 trial: capability inventory (presence of global bindings only) ===
+[299月2026 22:46:16.211] [Worker-Main-20/INFO] [NekoJS/]: [server] [capability] RegistryEvents: present
+[299月2026 22:46:16.213] [Worker-Main-20/INFO] [NekoJS/]: [server] [capability] ServerEvents: present
+[299月2026 22:46:16.214] [Worker-Main-20/INFO] [NekoJS/]: [server] [capability] BlockEvents: present
+[299月2026 22:46:16.214] [Worker-Main-20/INFO] [NekoJS/]: [server] [capability] ItemEvents: present
+[299月2026 22:46:16.214] [Worker-Main-20/INFO] [NekoJS/]: [server] [capability] PlayerEvents: present
+[299月2026 22:46:16.215] [Worker-Main-20/INFO] [NekoJS/]: [server] [capability] EntityEvents: present
+[299月2026 22:46:16.215] [Worker-Main-20/INFO] [NekoJS/]: [server] [capability] LevelEvents: present
+[299月2026 22:46:16.216] [Worker-Main-20/INFO] [NekoJS/]: [server] [capability] CommandEvents: present
+[299月2026 22:46:16.216] [Worker-Main-20/INFO] [NekoJS/]: [server] [capability] VillagerTrades: present
+[299月2026 22:46:16.216] [Worker-Main-20/INFO] [NekoJS/]: [server] [capability] DynamicRegistry: present
+[299月2026 22:46:16.216] [Worker-Main-20/INFO] [NekoJS/]: [server] [capability] DynamicRegistryEvents: present
+[299月2026 22:46:16.217] [Worker-Main-20/INFO] [NekoJS/]: [server] [capability] KeyBindEvents: present
+[299月2026 22:46:16.217] [Worker-Main-20/INFO] [NekoJS/]: [server] [capability] ClientEvents: present
+[299月2026 22:46:16.275] [Worker-Main-20/INFO] [NekoJS/]: [server] === cross-check: .neko_probe/typescript/@side-only/server/{events,bindings} must agree with the rows above ===
+[299月2026 22:46:16.276] [Worker-Main-20/INFO] [NekoJS/]: [server] declared 2 trade declaration(s)
+[299月2026 22:46:16.279] [Worker-Main-20/INFO] [NekoJS/]: [server] this batch will touch 0 trade declaration(s)
+[299月2026 22:46:16.279] [Worker-Main-20/ERROR] [NekoJS/]: [server] SERVER 脚本事务重载失败，候选 generation 已关闭，active 环境保持不变
+com.tkisor.nekojs.core.lifecycle.NekoReloadException: reload failed: type=server generation=1 phase=STATE_PLAN owner=ScriptManager[server] domain=state-plan-preflight:item-block-modification error=candidate state plan 'item-block-modification' failed joint preflight
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadFailure(ScriptManager.java:1209) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:939) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.doReloadScripts(ScriptManager.java:779) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScripts(ScriptManager.java:752) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot.reload(NekoRuntimeRoot.java:209) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.listener.ServerEventListener.onServerResourceReload(ServerEventListener.java:177) ~[main/:?]
+	at net.neoforged.bus.EventBus.post(EventBus.java:360) ~[bus-8.0.5.jar:?]
+	at net.neoforged.bus.EventBus.post(EventBus.java:328) ~[bus-8.0.5.jar:?]
+	at TRANSFORMER/neoforge@26.1.2.71/net.neoforged.neoforge.event.EventHooks.onResourceReload(EventHooks.java:839) ~[neoforge-26.1.2.71-universal.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.ReloadableServerResources.lambda$loadResources$2(ReloadableServerResources.java:139) ~[minecraft-patched-26.1.2.71.jar:?]
+	at java.base/java.util.concurrent.CompletableFuture$UniCompose.tryFire(CompletableFuture.java:1171) ~[?:?]
+	at java.base/java.util.concurrent.CompletableFuture.postComplete(CompletableFuture.java:531) ~[?:?]
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1794) [?:?]
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.exec(CompletableFuture.java:1781) [?:?]
+	at java.base/java.util.concurrent.ForkJoinTask.doExec(ForkJoinTask.java:511) [?:?]
+	at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1450) [?:?]
+	at java.base/java.util.concurrent.ForkJoinPool.runWorker(ForkJoinPool.java:2019) [?:?]
+	at java.base/java.util.concurrent.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:187) [?:?]
+Caused by: com.tkisor.nekojs.core.state.GlobalStateException: candidate state plan 'item-block-modification' failed joint preflight
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.state.GenerationGlobals.preflightJoint(GenerationGlobals.java:126) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:937) ~[nekojs-1.1.0-preview3.jar:?]
+	... 16 more
+Caused by: java.lang.NullPointerException: Components not bound yet
+	at java.base/java.util.Objects.requireNonNull(Objects.java:246) ~[?:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.core.Holder$Reference.components(Holder.java:273) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.world.item.Item.components(Item.java:160) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.lambda$baselineItemComponents$0(ModificationDomainOwner.java:374) ~[main/:?]
+	at java.base/java.util.HashMap.computeIfAbsent(HashMap.java:1229) ~[?:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.baselineItemComponents(ModificationDomainOwner.java:374) ~[main/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.preflightItem(ModificationDomainOwner.java:172) ~[main/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.preflight(ModificationDomainOwner.java:158) ~[main/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.modification.ModificationCandidatePlan.preflight(ModificationCandidatePlan.java:144) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.state.GenerationGlobals.preflightJoint(GenerationGlobals.java:121) ~[nekojs-1.1.0-preview3.jar:?]
+	... 17 more
+[299月2026 22:46:16.307] [Worker-Main-20/ERROR] [NekoJS/]: [server] Script overload failed: 
+com.tkisor.nekojs.core.lifecycle.NekoReloadException: reload failed: type=server generation=1 phase=STATE_PLAN owner=ScriptManager[server] domain=state-plan-preflight:item-block-modification error=candidate state plan 'item-block-modification' failed joint preflight
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadFailure(ScriptManager.java:1209) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:939) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.doReloadScripts(ScriptManager.java:779) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScripts(ScriptManager.java:752) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot.reload(NekoRuntimeRoot.java:209) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.listener.ServerEventListener.onServerResourceReload(ServerEventListener.java:177) ~[main/:?]
+	at net.neoforged.bus.EventBus.post(EventBus.java:360) ~[bus-8.0.5.jar:?]
+	at net.neoforged.bus.EventBus.post(EventBus.java:328) ~[bus-8.0.5.jar:?]
+	at TRANSFORMER/neoforge@26.1.2.71/net.neoforged.neoforge.event.EventHooks.onResourceReload(EventHooks.java:839) ~[neoforge-26.1.2.71-universal.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.ReloadableServerResources.lambda$loadResources$2(ReloadableServerResources.java:139) ~[minecraft-patched-26.1.2.71.jar:?]
+	at java.base/java.util.concurrent.CompletableFuture$UniCompose.tryFire(CompletableFuture.java:1171) ~[?:?]
+	at java.base/java.util.concurrent.CompletableFuture.postComplete(CompletableFuture.java:531) ~[?:?]
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1794) [?:?]
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.exec(CompletableFuture.java:1781) [?:?]
+	at java.base/java.util.concurrent.ForkJoinTask.doExec(ForkJoinTask.java:511) [?:?]
+	at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1450) [?:?]
+	at java.base/java.util.concurrent.ForkJoinPool.runWorker(ForkJoinPool.java:2019) [?:?]
+	at java.base/java.util.concurrent.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:187) [?:?]
+Caused by: com.tkisor.nekojs.core.state.GlobalStateException: candidate state plan 'item-block-modification' failed joint preflight
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.state.GenerationGlobals.preflightJoint(GenerationGlobals.java:126) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:937) ~[nekojs-1.1.0-preview3.jar:?]
+	... 16 more
+Caused by: java.lang.NullPointerException: Components not bound yet
+	at java.base/java.util.Objects.requireNonNull(Objects.java:246) ~[?:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.core.Holder$Reference.components(Holder.java:273) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.world.item.Item.components(Item.java:160) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.lambda$baselineItemComponents$0(ModificationDomainOwner.java:374) ~[main/:?]
+	at java.base/java.util.HashMap.computeIfAbsent(HashMap.java:1229) ~[?:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.baselineItemComponents(ModificationDomainOwner.java:374) ~[main/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.preflightItem(ModificationDomainOwner.java:172) ~[main/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.preflight(ModificationDomainOwner.java:158) ~[main/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.modification.ModificationCandidatePlan.preflight(ModificationCandidatePlan.java:144) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.state.GenerationGlobals.preflightJoint(GenerationGlobals.java:121) ~[nekojs-1.1.0-preview3.jar:?]
+	... 17 more
+[299月2026 22:46:16.547] [Render thread/INFO] [net.minecraft.world.item.crafting.RecipeManager/]: Loaded 1515 recipes
+[299月2026 22:46:16.563] [Render thread/INFO] [net.minecraft.advancements.AdvancementTree/]: Loaded 1617 advancements
+[299月2026 22:46:16.565] [Render thread/INFO] [net.neoforged.neoforge.common.crafting.RecipePriorityManager/]: Loaded 0 recipe priority overrides
+[299月2026 22:46:16.576] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] generateData stage 'after_mods' published 0 file(s); skipped 0 user-owned file(s)
+[299月2026 22:46:16.806] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Starting integrated minecraft server version 26.1.2
+[299月2026 22:46:16.807] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Generating keypair
+[299月2026 22:46:16.916] [Server thread/INFO] [NekoJS/]: DynamicRegistry activation engine stays unbound: [dynamicRegistry] disabled (ticket 16 inert declaration surface only)
+[299月2026 22:46:16.918] [Server thread/INFO] [NekoJS/]: DynamicRegistry inert candidate batch 2 committed (trigger 'server-registry-ready', 0 definition(s)); inert local plan only — activation is gated by the transaction/sync gate
+[299月2026 22:46:17.104] [Server thread/INFO] [net.minecraft.server.level.progress.LoggingLevelLoadListener/]: Loading 0 persistent chunks...
+[299月2026 22:46:17.115] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:overworld
+[299月2026 22:46:17.137] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_end
+[299月2026 22:46:17.148] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_nether
+[299月2026 22:46:17.172] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (world): All chunks are saved
+[299月2026 22:46:17.172] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[299月2026 22:46:17.172] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[299月2026 22:46:17.172] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage: All dimensions are saved
+[299月2026 22:46:17.174] [Server thread/INFO] [net.neoforged.neoforge.server.permission.PermissionAPI/]: Successfully initialized permission handler neoforge:default_handler
+[299月2026 22:46:17.670] [Server thread/INFO] [net.minecraft.server.level.progress.LoggingLevelLoadListener/]: Loading 49 chunks for player spawn...
+[299月2026 22:46:17.671] [Server thread/INFO] [net.minecraft.server.level.progress.LoggingLevelLoadListener/]: 准备生成区域中：16%
+[299月2026 22:46:17.676] [Server thread/INFO] [net.minecraft.server.level.progress.LoggingLevelLoadListener/]: 准备生成区域中：16%
+[299月2026 22:46:17.876] [Server thread/INFO] [net.minecraft.server.level.progress.LoggingLevelLoadListener/]: Time elapsed: 772 ms
+[299月2026 22:46:18.138] [Server thread/INFO] [net.minecraft.server.players.PlayerList/]: Dev[local:E:81bab565] logged in with entity id 1 at (10.5, -60.0, -1.5)
+[299月2026 22:46:18.219] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Dev加入了游戏
+[299月2026 22:46:18.360] [Render thread/WARN] [net.minecraft.client.multiplayer.ClientPacketListener/]: Ignoring chat session from Dev due to missing Services public key
+[299月2026 22:46:18.363] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] [NekoJS] ? 警告：引擎目前存在 2 个脚本运行错误。\n  ? [点击此处打开错误列表]
+[299月2026 22:46:18.371] [Render thread/INFO] [net.minecraft.advancements.AdvancementTree/]: Loaded 2 advancements
+[299月2026 22:46:18.371] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Changing view distance to 16, from 10
+[299月2026 22:46:18.375] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Changing simulation distance to 12, from 0
+[299月2026 22:46:18.439] [Render thread/INFO] [net.minecraft.client.renderer.DynamicUniformStorage/]: Resizing Dynamic Transforms UBO, capacity limit of 2 reached during a single frame. New capacity will be 4.
+[299月2026 22:46:18.496] [Render thread/INFO] [net.minecraft.client.renderer.DynamicUniformStorage/]: Resizing Dynamic Transforms UBO, capacity limit of 4 reached during a single frame. New capacity will be 8.
+[299月2026 22:46:18.663] [Render thread/INFO] [net.minecraft.client.renderer.DynamicUniformStorage/]: Resizing Chunk Sections UBO, capacity limit of 2 reached during a single frame. New capacity will be 8.
+[299月2026 22:46:19.190] [Render thread/INFO] [net.minecraft.client.renderer.DynamicUniformStorage/]: Resizing Chunk Sections UBO, capacity limit of 8 reached during a single frame. New capacity will be 16.
+[299月2026 22:46:19.274] [Render thread/INFO] [net.minecraft.client.renderer.DynamicUniformStorage/]: Resizing Chunk Sections UBO, capacity limit of 16 reached during a single frame. New capacity will be 32.
+[299月2026 22:46:19.483] [Render thread/INFO] [net.minecraft.client.renderer.DynamicUniformStorage/]: Resizing Chunk Sections UBO, capacity limit of 32 reached during a single frame. New capacity will be 64.
+[299月2026 22:46:19.928] [Render thread/INFO] [net.minecraft.client.renderer.DynamicUniformStorage/]: Resizing Dynamic Transforms UBO, capacity limit of 8 reached during a single frame. New capacity will be 16.
+[299月2026 22:46:20.210] [Render thread/INFO] [net.minecraft.client.renderer.DynamicUniformStorage/]: Resizing Chunk Sections UBO, capacity limit of 64 reached during a single frame. New capacity will be 128.
+[299月2026 22:46:20.997] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:20.998] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:20.999] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:21.000] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:21.000] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:21.056] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:21.057] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:21.174] [Render thread/INFO] [net.minecraft.client.renderer.DynamicUniformStorage/]: Resizing Chunk Sections UBO, capacity limit of 128 reached during a single frame. New capacity will be 256.
+[299月2026 22:46:21.253] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:21.254] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:21.255] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:21.255] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:21.255] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:21.256] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:21.324] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:21.325] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:21.346] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:21.347] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:21.453] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:21.453] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:21.453] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:21.454] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:21.455] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:21.455] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:21.512] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:21.513] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:21.575] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:21.603] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:21.604] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:21.604] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:21.605] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:21.605] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:21.648] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:21.649] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:21.757] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:21.757] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:21.758] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:21.759] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:21.760] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:21.760] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:21.802] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:21.802] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:21.905] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:21.905] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:22.001] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:22.003] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:22.003] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:22.004] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:22.004] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:22.004] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:22.047] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:22.048] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:22.146] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:22.147] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:22.147] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:22.148] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:22.148] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:22.148] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:22.204] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:22.204] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:22.298] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:22.299] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:22.299] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:22.299] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:22.300] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:22.300] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:22.351] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:22.351] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:22.454] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:22.455] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:22.552] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:22.553] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:22.553] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:22.554] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:22.555] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:22.556] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:22.576] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:22.603] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:22.701] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:22.701] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:22.702] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:22.703] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:22.703] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:22.703] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:22.757] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:22.758] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:22.851] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:22.851] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:22.852] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:22.853] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:22.853] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:22.853] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:22.900] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:22.901] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:23.000] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:23.000] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:23.001] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:23.002] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:23.002] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:23.003] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:23.053] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:23.054] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:23.151] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:23.152] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:23.153] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:23.153] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:23.154] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:23.154] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:23.215] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:23.215] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:23.299] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:23.299] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:23.300] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:23.300] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:23.300] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:23.301] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:23.348] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:23.349] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:23.449] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:23.450] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:23.450] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:23.451] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:23.451] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:23.451] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:23.502] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:23.502] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:23.558] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:23.558] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:23.559] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:23.559] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:23.559] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:23.559] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:23.576] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:23.601] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:23.700] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:23.701] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:23.701] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:23.701] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:23.701] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:23.702] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:23.749] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:23.749] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:23.851] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:23.852] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:23.852] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:23.852] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:23.852] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:23.852] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:23.901] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:23.901] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:24.001] [Render thread/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:24.001] [Render thread/INFO] [NekoJS/]: [client] T26-CONSUMECLICK poll consumed a click
+[299月2026 22:46:24.003] [Render thread/INFO] [NekoJS/]: [client] dash triggered by polling
+[299月2026 22:46:24.003] [Render thread/INFO] [NekoJS/]: [client] T26-PRESSED id=t26:dash down=true
+[299月2026 22:46:24.003] [Render thread/INFO] [NekoJS/]: [client] T26-HELD id=t26:dash
+[299月2026 22:46:24.003] [Render thread/INFO] [NekoJS/]: [client] pressed demo:dash down=true
+[299月2026 22:46:24.052] [Render thread/INFO] [NekoJS/]: [client] held demo:dash
+[299月2026 22:46:24.052] [Render thread/INFO] [NekoJS/]: [client] T26-RELEASED id=t26:dash
+[299月2026 22:46:24.277] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[299月2026 22:46:24.294] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:overworld
+[299月2026 22:46:24.313] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_end
+[299月2026 22:46:24.313] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_nether
+[299月2026 22:46:24.575] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] released demo:dash
+[299月2026 22:46:25.526] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Stopping server
+[299月2026 22:46:25.526] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving players
+[299月2026 22:46:25.536] [Server thread/INFO] [net.minecraft.server.network.ServerGamePacketListenerImpl/]: Dev lost connection: 连接中断
+[299月2026 22:46:25.536] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Dev退出了游戏
+[299月2026 22:46:25.547] [Server thread/INFO] [net.minecraft.server.network.ServerCommonPacketListenerImpl/]: Stopping singleplayer server as player logged out
+[299月2026 22:46:25.548] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving worlds
+[299月2026 22:46:25.893] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:overworld
+[299月2026 22:46:26.702] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_end
+[299月2026 22:46:26.711] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_nether
+[299月2026 22:46:26.723] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (world): All chunks are saved
+[299月2026 22:46:26.723] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[299月2026 22:46:26.723] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[299月2026 22:46:26.723] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage: All dimensions are saved
+[299月2026 22:46:27.268] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Stopping!
