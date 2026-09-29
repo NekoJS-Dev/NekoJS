@@ -37,8 +37,8 @@ invented.
 | Fact source | Path | What it proves |
 |---|---|---|
 | JSX runtime implementation | `common/src/main/resources/nekojs/node/modules/jsx-runtime.ts` | Primitive registry, prop validation, layout engine, signal/store, events, root lifecycle |
-| Managed declaration (generated) | `common/build/probe-ts/generated/jsx-runtime.d.ts` (extracted by `NodeModuleTypeDocs.extractTS`, asserted in `NodeModuleTypeDocsTest`) | The TypeScript surface AI typechecks against |
-| Probe golden + gate | `common/src/test/probe-ts/generated/index.d.ts`, `common/src/test/probe-ts/jsx-primitive-props.tsx`, `npm run test:probe-types` | Frozen managed declaration the probe gate enforces |
+| Managed declaration (generated) | `common/build/probe-ts/generated/jsx-runtime.d.ts` (extracted by `NodeModuleTypeDocs.extractTS`, asserted in `NodeModuleTypeDocsTest`) | Extraction output for inspection; identical content is frozen as the committed golden below |
+| Probe golden + gate | `common/src/test/probe-ts/generated/index.d.ts`, `common/src/test/probe-ts/generated/jsx-runtime.d.ts` (kept identical to the extraction by `JsxRuntimeProbeDeclarationGoldenTest`), `common/src/test/probe-ts/jsx-primitive-props.tsx`, `npm run test:probe-types` | Frozen managed declaration the probe gate enforces; the jsx-runtime golden is the TypeScript surface the gate (and AI authoring) typechecks against, green on a fresh checkout |
 | Fake-host runtime proof | `common/src/test/resources/nekojs/language-ts-examples/tsx/ui-core.tsx`, executed by `NekoTypeScriptJsxRuntimeTest#automaticJsxUiRuntimePassesTheFakeHostContract` | Observable runtime behavior: profiles, keyed reorder, thread queueing, error retention |
 | Authoring proof fixture | `common/src/test/resources/nekojs/language-ts-examples/tsx/ui-authoring-docs-proof.tsx`, executed by `TypeScriptUiAuthoringDocsTest` | Every section 5 catalog example in this document and both `docs/ui-conversion/` outputs run and pass |
 | Color grammar | `common/src/main/java/com/tkisor/nekojs/api/ui/UiColor.java` | Controlled color forms |

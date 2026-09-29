@@ -10,5 +10,5 @@
     "skipLibCheck": false,
     "typeRoots": ["./generated"]
   },
-  "include": ["managed-api-usage.ts", "jsx-primitive-props.tsx", "generated/**/*.d.ts", "../../../build/probe-ts/generated/**/*.d.ts"]
+  "include": ["managed-api-usage.ts", "jsx-primitive-props.tsx", "generated/**/*.d.ts"]
 }
