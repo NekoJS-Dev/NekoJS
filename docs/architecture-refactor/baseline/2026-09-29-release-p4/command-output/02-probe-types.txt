@@ -1,0 +1,19 @@
+
+> test:probe-types
+> tsc -p common/src/test/probe-ts/tsconfig.json --noEmit
+
+common/src/test/probe-ts/jsx-primitive-props.tsx(1,41): error TS2307: Cannot find module 'nekojs/jsx-runtime' or its corresponding type declarations.
+common/src/test/probe-ts/jsx-primitive-props.tsx(3,15): error TS2875: This JSX tag requires the module path 'nekojs/jsx-runtime' to exist, but none could be found. Make sure you have types for the appropriate package installed.
+common/src/test/probe-ts/jsx-primitive-props.tsx(3,15): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(4,13): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(4,52): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(5,49): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(18,1): error TS2578: Unused '@ts-expect-error' directive.
+common/src/test/probe-ts/jsx-primitive-props.tsx(20,1): error TS2578: Unused '@ts-expect-error' directive.
+common/src/test/probe-ts/jsx-primitive-props.tsx(22,1): error TS2578: Unused '@ts-expect-error' directive.
+common/src/test/probe-ts/jsx-primitive-props.tsx(29,21): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(30,21): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(31,19): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(32,19): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(32,44): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+EXIT=2

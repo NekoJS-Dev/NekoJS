@@ -1,0 +1,21 @@
+== 1.21.1: versions/1.21.1/build/libs/nekojs-neoforge-1.21.1-1.1.0-preview3.jar
+  nekojs.mixins.json
+  META-INF/accesstransformer.cfg
+  META-INF/neoforge.mods.toml
+  com/tkisor/nekojs/NekoJS.class
+== 26.1.2: versions/26.1.2/build/libs/nekojs-neoforge-26.1.2-1.1.0-preview3.jar
+  nekojs-dynamic.mixins.json
+  nekojs.interface_injection.json
+  nekojs.mixins.json
+  pack.mcmeta
+  META-INF/accesstransformer.cfg
+  META-INF/neoforge.mods.toml
+  com/tkisor/nekojs/NekoJS.class
+== 26.2.0: versions/26.2.0/build/libs/nekojs-neoforge-26.2.0-1.1.0-preview3.jar
+  nekojs-dynamic.mixins.json
+  nekojs.interface_injection.json
+  nekojs.mixins.json
+  pack.mcmeta
+  META-INF/accesstransformer.cfg
+  META-INF/neoforge.mods.toml
+  com/tkisor/nekojs/NekoJS.class

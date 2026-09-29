@@ -1,0 +1,32 @@
+== 26.1.2-fabric artifact: versions/26.1.2-fabric/build/libs/nekojs-fabric-26.1.2-1.1.0-preview3.jar
+  required OK: fabric.mod.json
+  required OK: nekojs-fabric.accesswidener
+  required OK: nekojs-fabric.mixins.json
+  required OK: nekojs-fabric-shared.mixins.json
+  required OK: nekojs-fabric-dynamic.mixins.json
+  required OK: com/tkisor/nekojs/fabric/NekoJSFabricMod.class
+  required OK: com/tkisor/nekojs/fabric/NekoJSFabricClient.class
+  required OK: com/tkisor/nekojs/NekoJS.class
+  forbidden absent OK: META-INF/accesstransformer.cfg
+  forbidden absent OK: META-INF/neoforge.mods.toml
+  forbidden absent OK: nekojs.mixins.json
+  forbidden absent OK: nekojs-dynamic.mixins.json
+  forbidden absent OK: nekojs.interface_injection.json
+  no NeoForge-named entries OK
+  fabric-api minimum OK (>= 0.155.2+26.1.2)
+== 26.2.0-fabric artifact: versions/26.2.0-fabric/build/libs/nekojs-fabric-26.2-1.1.0-preview3.jar
+  required OK: fabric.mod.json
+  required OK: nekojs-fabric.accesswidener
+  required OK: nekojs-fabric.mixins.json
+  required OK: nekojs-fabric-shared.mixins.json
+  required OK: nekojs-fabric-dynamic.mixins.json
+  required OK: com/tkisor/nekojs/fabric/NekoJSFabricMod.class
+  required OK: com/tkisor/nekojs/fabric/NekoJSFabricClient.class
+  required OK: com/tkisor/nekojs/NekoJS.class
+  forbidden absent OK: META-INF/accesstransformer.cfg
+  forbidden absent OK: META-INF/neoforge.mods.toml
+  forbidden absent OK: nekojs.mixins.json
+  forbidden absent OK: nekojs-dynamic.mixins.json
+  forbidden absent OK: nekojs.interface_injection.json
+  no NeoForge-named entries OK
+  fabric-api minimum OK (>= 0.159.0+26.2)
