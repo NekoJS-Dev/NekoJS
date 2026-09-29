@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.dynamic.plan;
 
+import com.tkisor.nekojs.core.bridge.ScriptNumberCoercion;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import graal.graalvm.polyglot.proxy.ProxyObject;
@@ -157,7 +158,13 @@ public final class DynamicBuilderSurface implements ProxyObject {
 
     // ---- 值装配 ----
 
-    /** JS 值 → setter/方法参数。错误信息带成员名与期望类型（错误面由契约派生）。 */
+    /**
+     * JS 值 → setter/方法参数。错误信息带成员名与期望类型（错误面由契约派生）。
+     * Numeric members normalize through {@link ScriptNumberCoercion} (D6 policy):
+     * script numbers are doubles and {@code asInt/asLong/asFloat} lossy checks reject
+     * valid values like {@code fixedRange = 0.7} with a raw engine exception
+     * (2026-09-29 float-coercion hotfix).
+     */
     static Object coerce(Value value, Class<?> target, String what) {
         if (value.isNull()) {
             if (target.isPrimitive()) {
@@ -166,13 +173,13 @@ public final class DynamicBuilderSurface implements ProxyObject {
             return null;
         }
         if (target == int.class || target == Integer.class) {
-            return requireNumber(value, what).asInt();
+            return ScriptNumberCoercion.toInt(value, what);
         }
         if (target == long.class || target == Long.class) {
-            return requireNumber(value, what).asLong();
+            return ScriptNumberCoercion.toLong(value, what);
         }
         if (target == float.class || target == Float.class) {
-            return requireNumber(value, what).asFloat();
+            return ScriptNumberCoercion.toFloat(value, what);
         }
         if (target == double.class || target == Double.class) {
             return requireNumber(value, what).asDouble();

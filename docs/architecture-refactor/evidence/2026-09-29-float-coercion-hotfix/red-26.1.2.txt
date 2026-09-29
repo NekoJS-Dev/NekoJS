@@ -1,0 +1,47 @@
+Red run, 2026-09-29, worktree NekoJS-mult-tfloat @ ca52f90f + new boundary tests (fix NOT yet applied).
+
+command:
+  ./gradlew :26.1.2:test \
+    --tests "com.tkisor.nekojs.wrapper.event.server.ModificationFloatCoercionBoundaryTest" \
+    --tests "com.tkisor.nekojs.wrapper.registry.BuilderFloatCoercionBoundaryTest" --rerun
+
+console (verbatim failures list):
+  ModificationFloatCoercionBoundaryTest > nonFiniteFloatIsRejectedLegiblyWithMemberContext() FAILED
+  ModificationFloatCoercionBoundaryTest > productionDeliveryFormAcceptsFractionalFloats() FAILED
+  ModificationFloatCoercionBoundaryTest > explicitSetterFormAcceptsTheSameFractionalFloats() FAILED
+  ModificationFloatCoercionBoundaryTest > floatBeyondFloatRangeIsRejectedInsteadOfSilentlyCollapsingToInfinity() FAILED
+  ModificationFloatCoercionBoundaryTest > intBeyondIntRangeIsRejectedLegibly() FAILED
+  ModificationFloatCoercionBoundaryTest > fractionalFloatPropertyWriteNarrowsInsteadOfThrowingLossyCoercion() FAILED
+  ModificationFloatCoercionBoundaryTest > fractionalIntIsRejectedLegiblyWithMemberContext() FAILED
+  BuilderFloatCoercionBoundaryTest > nonFiniteFloatIsRejectedLegiblyWithMemberContext() FAILED
+  BuilderFloatCoercionBoundaryTest > integralDoubleStillNarrowstoInt() FAILED
+  BuilderFloatCoercionBoundaryTest > explicitSetterFormAcceptsTheSameFractionalFloats() FAILED
+  BuilderFloatCoercionBoundaryTest > fractionalFloatPropertyWriteNarrowsInsteadOfThrowingLossyCoercion() FAILED
+  BuilderFloatCoercionBoundaryTest > fractionalIntIsRejectedLegiblyWithMemberContext() FAILED
+  > Task :26.1.2:test FAILED
+  BUILD FAILED in 40s
+
+  note: two tests that only pin call-level behavior (integralDoubleStillNarrowsToInt /
+  nonFinite via engine path) also failed at red time for fixture reasons that are
+  themselves part of the defect surface:
+    - BuilderFloatCoercionBoundaryTest.integralDoubleStillNarrowstoInt was written with
+      b.lightLevel = 16.0, tripping BlockBuilder's own [0, 15] setter validation
+      ("lightLevel must be in [0, 15] but got 16"); corrected to 7.0 before the green run.
+    - ModificationFloatCoercionBoundaryTest.integralDoubleAndPlainIntStillNarrowToInt
+      (lightLevel = 7 / 16.0) PASSED at red time and is not listed above.
+
+JUnit XML failure messages (versions/26.1.2/build/test-results/test/, captured at red time):
+  graal.graalvm.polyglot.PolyglotException: Cannot convert '0.9'(language: Java, type: java.lang.Double) to Java type 'float' using Value.asFloat(): Invalid or lossy primitive coercion. You can ensure that the value can be converted using Value.fitsInFloat().
+  org.opentest4j.AssertionFailedError: Expected java.lang.RuntimeException to be thrown, but nothing was thrown.
+    [block.friction = NaN: asFloat() ACCEPTS NaN today -> silently stored, no rejection]
+  org.opentest4j.AssertionFailedError: fractional int must be rejected legibly with member context: Cannot convert '2.5'(language: Java, type: java.lang.Double) to Java type 'int' using Value.asInt(): Invalid or lossy primitive coercion. You can ensure that the value can be converted using Value.fitsInInt(). ==> expected: <true> but was: <false>
+  org.opentest4j.AssertionFailedError: out-of-int-range value must be rejected legibly with member context: Cannot convert '1.0E10'(language: Java, type: java.lang.Double) to Java type 'int' using Value.asInt(): Invalid or lossy primitive coercion. You can ensure that the value can be converted using Value.fitsInInt(). ==> expected: <true> but was: <false>
+  org.opentest4j.AssertionFailedError: over-range double must be rejected legibly with member context: Cannot convert '1.0E40'(language: Java, type: java.lang.Double) to Java type 'float' using Value.asFloat(): Invalid or lossy primitive coercion. You can ensure that the value can be converted using Value.fitsInFloat(). ==> expected: <true> but was: <false>
+
+The first message is byte-for-byte the exception class/message recorded in the trial
+server log (versions/26.1.2/run/logs/2026-09-29-1.log.gz, line 260), which poisoned the
+whole DOMAIN_PLAN phase:
+  com.tkisor.nekojs.core.lifecycle.NekoReloadException: reload failed: type=server
+  generation=1 phase=DOMAIN_PLAN owner=ScriptManager[server]
+  domain=domain-collect:item-block-modification
+  error=server candidate domain collection failed for 'item-block-modification'

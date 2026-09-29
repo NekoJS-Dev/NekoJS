@@ -1,0 +1,17 @@
+Red run, 2026-09-29, worktree NekoJS-mult-tfloat @ ca52f90f + new boundary test (fix NOT yet applied).
+
+command:
+  ./gradlew :common:test --tests "com.tkisor.nekojs.core.dynamic.plan.DynamicBuilderNumberCoercionTest" --rerun
+
+console (verbatim failures list):
+  DynamicBuilderNumberCoercionTest > explicitSetterFormAcceptsTheSameFractionalFloats() FAILED
+  DynamicBuilderNumberCoercionTest > fractionalFloatPropertyWriteNarrowsInsteadOfThrowingLossyCoercion() FAILED
+  > Task :common:test FAILED
+  BUILD FAILED in 11s
+
+JUnit XML failure messages (common/build/test-results/test/, captured at red time):
+  graal.graalvm.polyglot.PolyglotException: Cannot convert '0.7'(language: Java, type: java.lang.Double) to Java type 'float' using Value.asFloat(): Invalid or lossy primitive coercion. You can ensure that the value can be converted using Value.fitsInFloat().
+
+Same engine seam as the modification-domain trigger, confirmed on the common (pure JVM)
+dynamic-builder surface: DynamicSoundEventBuilder.setFixedRange(Float) via
+DynamicBuilderSurface.coerce.
