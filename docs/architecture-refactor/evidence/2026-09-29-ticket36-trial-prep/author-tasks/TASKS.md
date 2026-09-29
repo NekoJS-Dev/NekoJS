@@ -144,3 +144,13 @@
    的取消仍是静默 no-op；D2 修复已于 2026-09-29 合入 mult（显式可取消 keyed 总线 + bridge
    回写，2026-09-28 真机会话验证方块不被破坏）——试做时应以修复后行为为准，
    05 内「不要依赖取消」的旧注释按修复后语义解读。
+6. **04 浮点收窄缺陷（已热修，2026-09-29）**：试做会话实跑任务 4 时，
+   `block.friction = 0.9`（及一切不能在 double↔float 精确往返的脚本数值）被
+   `Value.asFloat()` 的「无损」检查以原始 `PolyglotException` 拒绝，整轮 server
+   reload 在 DOMAIN_PLAN 阶段失败（`server candidate domain collection failed for
+   'item-block-modification'`）——任务 4 的 block 半边被阻。热修
+   `hotfix-float-coercion`（证据
+   `../2026-09-29-float-coercion-hotfix/README.md`）已把三个 ProxyObject surface
+   （modification / 启动期 builder / dynamic builder）的数值装配统一改为显式收窄；
+   试做重跑任务 4 请基于含该热修的构建，`04-item-block-modification.js` 原样应 reload
+   成功。

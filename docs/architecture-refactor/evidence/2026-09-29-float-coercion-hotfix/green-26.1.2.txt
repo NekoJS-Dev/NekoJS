@@ -1,0 +1,8 @@
+> Task :26.1.2:testClasses UP-TO-DATE
+> Task :26.1.2:test
+BUILD SUCCESSFUL in 4s
+
+# command: ./gradlew :26.1.2:test --tests "...ModificationFloatCoercionBoundaryTest" --tests "...BuilderFloatCoercionBoundaryTest" --rerun
+# per-suite JUnit XML summary (versions/26.1.2/build/test-results/test/)
+# ModificationFloatCoercionBoundaryTest: tests="9" skipped="0" failures="0" errors="0"
+# BuilderFloatCoercionBoundaryTest:      tests="5" skipped="0" failures="0" errors="0"
