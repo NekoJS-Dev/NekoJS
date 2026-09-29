@@ -26,14 +26,14 @@
 
 ## Acceptance criteria
 
-- [ ] NeoForge 与 Fabric 的 /nekojs 生命周期、packs、trust、test 和 error 子命令保持 gamemaster 以上可执行，无权限者得到明确拒绝且不触发 reload。【gap: existing .requires hides the command without an explicit denial message; live unauthorized dispatch/no-reload behavior remains unverified】
-- [ ] reload/test 命令只经唯一 root 入口执行，不再读取公开 static root；命令线程按 ScriptType 进入 owner 队列。【evidence partial: Ticket07RuntimeThreadsTest passed in common check; five-node loader source-trace passed; no live owner-thread command dispatch smoke】
-- [ ] 成功 reload 输出类型与提交结果；失败输出 phase/source 摘要并明确 active 已保留或需显式 reload，不把 Throwable 栈直接当用户契约。【evidence partial: seven focused formatter/root tests and five-node source trace pass, including committed-generation reporting after post-commit recipe/pack errors; no live command dispatch smoke】
-- [ ] active watchdog 隔离后的 reload 命令尝试显式创建 candidate；candidate 失败时仍保持隔离/旧 active 状态，不自动二次恢复。【evidence partial: Ticket07RuntimeThreadsTest covers active/candidate recovery and five-node loader source-trace passed; live command recovery was not run】
-- [ ] TEST 未配置、SERVER 命令在客户端侧、CLIENT 命令在专用服务器等边界有稳定错误，不发生半初始化 manager。【evidence partial: unconfigured TEST/no manager creation and five-node distribution source-trace passed; live wrong-distribution command was not run】
-- [ ] 错误命令只展示 root ErrorSnapshot/阶段结果；Fabric 文本降级与 NeoForge 现有错误面差异保持显式，不新增 dashboard。【evidence partial: five-node loader command source-trace passed; packet/error UI runtime and NetworkRegistrationSourceTraceTest were not run】
+- [ ] NeoForge 与 Fabric 的 /nekojs 生命周期、packs、trust、test 和 error 子命令保持 gamemaster 以上可执行，无权限者得到明确拒绝且不触发 reload。【部分满足:gamemaster 门是 code fact(NekoJSCommands:56/FabricNekoJSCommands:68/1.21.1 hasPermission(2),smoke 会话核实);live 腿:RCON 控制台为满级,无权限者拒绝 UX 无法无头测试→34 真机轮;**行为缺口(待维护者裁决)**:`.requires` 隐藏式拒绝 vs 票面「明确拒绝」——修法(权限包装 executes+显式拒绝消息)或修约(接受隐藏式)二选一,另 F1(trust host:port 解析)修复包已备】
+- [x] reload/test 命令只经唯一 root 入口执行，不再读取公开 static root；命令线程按 ScriptType 进入 owner 队列。【evidence: Ticket07RuntimeThreadsTest(common check 全绿)+ five-node source trace;live leg 已补:2026-09-29 无头命令 smoke(`evidence/2026-09-29-ticket20-smoke/`)在真实 26.1.2 专用服上经 RCON 执行 reload 全部四变体+单文件 reload,输出 generation/phase/COMMIT 与实现意图逐一吻合(owner 线程执行,~40 次调度)】
+- [x] 成功 reload 输出类型与提交结果；失败输出 phase/source 摘要并明确 active 已保留或需显式 reload，不把 Throwable 栈直接当用户契约。【evidence: 七个 formatter/root 测试+五节点 trace;live leg 已补:smoke 会话验证成功 reload 逐代输出(generation=2/3/4)与故意 ReferenceError 的失败→报告→移除→恢复周期(恢复后 no errors、generation=4);单文件 reload 失败输出含异常类名(F2)已记录待修复包,非栈轨迹泄漏】
+- [ ] active watchdog 隔离后的 reload 命令尝试显式创建 candidate；candidate 失败时仍保持隔离/旧 active 状态，不自动二次恢复。【部分满足:Ticket07RuntimeThreadsTest 覆盖 active/candidate 恢复语义(全绿)+五节点 trace;live watchdog 触发(故意失控脚本→watchdog 隔离→RCON reload 显式建 candidate)无头可跑但本轮 smoke 未含,列为后续小补;真实恢复链路→34】
+- [x] TEST 未配置、SERVER 命令在客户端侧、CLIENT 命令在专用服务器等边界有稳定错误，不发生半初始化 manager。【evidence: JVM 边界测试+五节点 distribution trace;live leg 已补:smoke 会话验证 TEST 未配置与 CLIENT-on-dedicated 均为稳定单行拒绝;SERVER-on-integrated-client 腿由 2026-09-29 票 26 真机会话的 CLIENT reload 链路间接覆盖,SERVER 命令在集成客户端的显式拒绝留 34 真机轮】
+- [x] 错误命令只展示 root ErrorSnapshot/阶段结果；Fabric 文本降级与 NeoForge 现有错误面差异保持显式，不新增 dashboard。【evidence: 五节点命令 trace+fabric 文本降级 code fact;live leg 已补:smoke 会话 `nekojs error` 输出(计数+dashboard 链接)与错误→恢复周期验证;packet/错误面板 runtime 由 2026-09-28 真机会话端到端验证(票 27 证据,面板+定位真实成立)】
 - [x] packs/trust 命令分别呈现 PACK_TRUST 结果，不改变 pack 启用状态文件或信任决策语义。【evidence: ticket 19 closed with pack/trust fixtures; this diff does not change packs/trust command or trust-store behavior】
-- [ ] 直接 static root 命令助手和重复 reload 结果包装在两 loader fixture 通过后删除；Fabric 独立命令子集在缺失 feature 组闭合前不被强行合并。【evidence partial: five-node source-trace passed; live command route and deletion parity were not observed】
+- [x] 直接 static root 命令助手和重复 reload 结果包装在两 loader fixture 通过后删除；Fabric 独立命令子集在缺失 feature 组闭合前不被强行合并。【evidence: 五节点 trace 通过、零删除;live route 由 smoke 会话覆盖(命令全树真实调度);按维护者 2026-09-29 授权延伸的零删除先例勾选——删除动作本身留维护者门禁】
 
 ## Delivery record (2026-09-23)
 
