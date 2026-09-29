@@ -186,3 +186,34 @@ not verified 不改写为 unavailable；三类不展示为可用能力（示例�
 - `DynamicCandidateRegistryPlan` 的 `add` 与 `stageExistingDefinition` 重复冲突检查合并为
   `stageUnique`（消息不再漂移，sync 路径现在同样带双 owner/双定义定位）。
 - `commitCurrent` 降级 detail 的 `e.getMessage()` 空值回退为类名（与包内既有模式一致）。
+
+## 单节点激活真机 smoke（2026-09-29，AC10 单节点腿）
+
+平台接线（wire 备审包，维护者 2026-09-29 批准合入）之后，本票补做了 AC10 缺失的
+「已激活生产能力」演示：26.1.2 dedicated server 真机运行，run 目录 engine.toml 开启
+`[dynamicRegistry]`（仓库默认仍 false）。声明批（Item + SoundEvent，SERVER 脚本）经
+账本 commit → Adapter prepare → 单节点 commit 路径（无远程参与者、无 ack）→
+`NeoForgeDynamicRegistryAdapter` 真实 surgery → 新条目 LIVE 且脚本可观察
+（`Item.id`/`Item.of` 读 live `BuiltInRegistries.ITEM`）与平台可观察
+（`/nekojs registry` 计数）；`/nekojs reload server` 腿证明 reload 驱动的逐 tick
+`pumpActivation` 在 joint commit 后的下一 tick 重新走完事务（同 fingerprint 幂等重
+claim，条目跨 reload 存活、计数/stale 不变）。证据：
+`command-output/09-runserver-26-1-2-activation.txt`（RCON 驱动、有界运行、完整
+transcript；脚本与驱动内嵌）。
+
+记录的观察（未修复，生产修复不在本轮范围，详见 transcript Findings）：
+
+- **A1** 每次启动对同一声明跑两个事务：脚本装载本身是 reload 事务（候选收集带 owner
+  归因），`server-registry-ready` 初次收集经 active 总线再收集一次（owner 记为
+  `<unknown>`）；同 fingerprint 幂等重 claim，计数不变——记账噪声非正确性问题。
+- **A2** `collectInitial` 的 INFO 文案在 gate 开启时已过时（「inert only — activation
+  is gated」在引擎已绑定并激活的运行中仍打印）——纯文案缺陷。
+- **A3** 空服暂停（`pause-when-empty-seconds=60`）期间 `ServerTickEvent.Post` 不触发：
+  暂停中 `/nekojs reload server` 只 commit 账本批，激活事务延迟到下一非暂停 tick
+  （玩家加入）；stop-while-paused 经 close 边界丢弃，下次启动初次收集重新激活——
+  延迟行为非正确性违背，票 34 真机 smoke 需知晓。
+
+边界（诚实口径）：本 smoke 只覆盖单节点 commit 路径；真多人 PREPARE/ack/STATE_SYNC/
+客户端 surgery 仍归票 34。MobEffect 真机单节点激活未在本轮声明（只演示了 Item +
+SoundEvent），能力表「真机同步 not verified」口径不变（§4.1 的「平台 Adapter 未实现」
+表述已被 2026-09-29 接线合并取代）。

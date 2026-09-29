@@ -4,7 +4,7 @@
 
 **Blocked by:** [16: Dynamic Registry inert 定义计划与 typed Builder](16-registry-dynamic-local.md)、[17: 网络注册一次、wire 不变与脚本自定义通道 owner 调度](17-network-sync.md)、[10: 按类型 global、显式 shared 与候选顶层写集联合提交](10-global-state.md)
 
-**Status:** in-review（实现/测试/证据已交付；AC9 不勾选（维护者 sign-off 门禁）、AC10 部分满足未勾选；平台激活接线为记录缺口，见 baseline REPORT §4）
+**Status:** in-review（实现/测试/证据已交付；AC9 不勾选（维护者 sign-off 门禁）；平台接线已合入（2026-09-29 wire 备审包）+ AC10 单节点激活真机演示已补做（`command-output/09-runserver-26-1-2-activation.txt`），真多人同步演示归票 34）
 
 **Assignee:** zed-flash-21（main-session agent；GLM-5.3 subagent worktree）
 
@@ -33,7 +33,7 @@
 - [x] 同 key 冲突、缺失声明 stale/retired、普通 reload 不物理删除的行为与本地票集成后仍成立；未来 replace/update 未实现时不得静默覆盖旧 active。【evidence: `DynamicRegistryActivationFacadeTest.boundEngineActivatesCommittedBatchesAndKeepsTicket16LedgerSemantics`（engine 绑定下 stale 标记/不物理删除/同定义幂等重 claim 全保留）+ `sameKeyChangedDefinitionFailsReloadAndOldActiveKeepsServing`（联合边界冲突、旧 active 服务、零静默覆盖）；客户端侧本地冲突整消息拒绝（`conflictingTargetStateIsRejectedAsAWhole`）】
 - [x] contract/golden、TS/Python declaration、transaction/reload/delete-cleanup fixture、capability/source-trace 和跨节点 runtime smoke 只对通过目标 Adapter、事务与同步 gate 的既有候选类型作出结论；未验证类型记录 not verified 并阻塞公开开放，不因缺测改写为 unavailable。【evidence: 三类候选类型（Item/SoundEvent/MobEffect）批事务语义经 JVM 双 Adapter 31 用例验证，但目标平台 Adapter/真机同步未实现未接线 ⇒ 能力表全部记 **not verified** 并阻塞公开激活（baseline REPORT §5；示例/迁移材料同口径）；contract/golden 与 TS/Python declaration 零改动（git diff 只含 common 源/测试与 docs）；票 17 wire gate（`NetworkRegistrationSourceTraceTest` 恰 6 调用/5 类型）未触碰——新增同步 payload 会破坏该冻结 gate，已记录为平台接线阻塞项而非越权放宽】
 - [ ] 旧 unsafe live mutation、静态 DynamicRegistry 全局入口和不安全 server-only 路径只有在批事务、失败回滚、迁移表和旧 route 无消费者全部闭合并获维护者确认后才能删除。【**不勾选（门禁）**：维护者删除确认是发布门禁（Human input note）。本票已备：批事务/失败保留证据（AC1/AC2）、迁移表（baseline MIGRATION §5）、旧 route 消费者清单沿用票 16 REPORT §6 且本票零改动零新消费者；旧面零删除、零双写】
-- [ ] 本票只将已通过类型事务/同步 gate 的 16 号候选计划 fixture 转为生产最小示例与迁移材料；清楚说明启动期与动态注册的区别、失败保留和同 key changed definition 限制；16 的关闭不反向依赖这些激活验收。【**部分满足**：示例（`baseline/2026-09-22-registry-dynamic-sync/examples/dynamic-registry-transaction.js`）与迁移材料（同目录 MIGRATION.md）已交付，头注三段清楚区分启动期 vs 动态注册选型、失败保留、同 key changed definition 限制，且票 16 保持 closed 不反向依赖（其证据链未引用本票任何激活验收）。2026-09-29 更新:维护者已批准并合入 wire 备审包(ticket-21-wire-prep,单一注册点新增 nekojs:dynamic_registry_sync payload、三类候选类型真实注册手术、gate 默认关)——平台接线已交付,「已激活生产能力」的示例演示可在 gate 开启的单节点场景补做(单节点 commit 路径已具备),真多人同步演示仍归票 34】
+- [x] 本票只将已通过类型事务/同步 gate 的 16 号候选计划 fixture 转为生产最小示例与迁移材料；清楚说明启动期与动态注册的区别、失败保留和同 key changed definition 限制；16 的关闭不反向依赖这些激活验收。【示例（`baseline/2026-09-22-registry-dynamic-sync/examples/dynamic-registry-transaction.js`）与迁移材料（同目录 MIGRATION.md）已交付，头注三段清楚区分启动期 vs 动态注册选型、失败保留、同 key changed definition 限制，且票 16 保持 closed 不反向依赖（其证据链未引用本票任何激活验收）。2026-09-29：维护者批准并合入 wire 备审包（ticket-21-wire-prep）后，单节点「已激活生产能力」演示已补做——26.1.2 dedicated server、run 目录 gate 开启（仓库默认仍关），声明批（Item+SoundEvent）经账本 commit → Adapter prepare → 单节点 commit 路径 → 真实 surgery → 条目 LIVE 且脚本/平台双面可观察，reload 腿证明逐 tick pump 幂等重激活；证据 `baseline/2026-09-22-registry-dynamic-sync/command-output/09-runserver-26-1-2-activation.txt`（含 A1–A3 观察记录：启动双事务/`<unknown>` owner、过时 INFO 文案、空服暂停延迟 pump——均未修复，见 transcript Findings）。边界：MobEffect 未在本真机演示中声明、跨节点 PREPARE/ack/STATE_SYNC/客户端 surgery 未验证——真多人同步演示归票 34，能力表 not verified 口径不变】
 
 ## Sources
 
