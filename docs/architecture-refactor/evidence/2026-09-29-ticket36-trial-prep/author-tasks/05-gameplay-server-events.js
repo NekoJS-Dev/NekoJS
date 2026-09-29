@@ -85,8 +85,8 @@ ItemEvents.modification(event => {
 // ---- 6) BlockEvents：中立载荷 + dispatch by block id ----
 BlockEvents.broken('minecraft:diamond_ore', event => {
   console.log('diamond ore broken by ' + event.player.getName().getString())
-  // 已知缺陷（票 24 REPORT D2）：broken 的取消当前在所有加载器上均为静默 no-op
-  // （总线不可取消），wiki 的「可取消」记载与实现不符——维护者裁定前不要依赖取消。
+  // D2 已修复（2026-09-29 合入 mult）：broken 可取消（return true 阻止破坏，
+  // 2026-09-28 真机会话验证）。本文件起草于修复前的基线，旧注释已按修复后语义更正。
 })
 
 BlockEvents.rightClicked('minecraft:crafting_table', event => {
