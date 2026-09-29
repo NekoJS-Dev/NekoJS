@@ -26,7 +26,7 @@ public final class RuntimeCommandResultFormatter {
                 + " phase=" + result.phase()
                 + source(result.sourceLocation())
                 + " owner=ScriptManager[" + result.type().name + "]"
-                + (result.error() == null ? "" : " error=" + result.error());
+                + (result.error() == null ? "" : " error=" + errorMessage(result.error()));
         if (activeIsolated) {
             return message + "; active generation remains isolated; explicit full reload is required.";
         }
@@ -44,7 +44,7 @@ public final class RuntimeCommandResultFormatter {
     public static String postReloadFailure(NekoRuntimeRoot.ReloadResult result, String stage, Throwable failure) {
         return "NekoJS " + result.type().name + " reload committed (generation=" + result.generation()
                 + " phase=" + result.phase() + "); post-reload " + stage + " failed"
-                + (failure == null ? "." : ": " + failure);
+                + (failure == null ? "." : ": " + errorMessage(failure));
     }
 
     public static String testResult(NekoRuntimeRoot.TestRunResult result) {
@@ -58,5 +58,15 @@ public final class RuntimeCommandResultFormatter {
 
     private static String source(String sourceLocation) {
         return sourceLocation == null || sourceLocation.isBlank() ? "" : " source=" + sourceLocation;
+    }
+
+    /**
+     * User-facing error text: the message only. The exception class name stays in logs
+     * (callers log the throwable); a null/blank message falls back to the simple class name
+     * so the failure line never ends up with an empty reason.
+     */
+    static String errorMessage(Throwable error) {
+        String message = error.getMessage();
+        return message == null || message.isBlank() ? error.getClass().getSimpleName() : message;
     }
 }

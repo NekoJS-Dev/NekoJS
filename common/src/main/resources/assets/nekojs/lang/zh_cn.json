@@ -1,6 +1,7 @@
 {
   "nekojs.command.reloading": "§e[NekoJS] 正在重载脚本...",
   "nekojs.command.reload.fatal": "§c[NekoJS] ✖ 重载发生致命崩溃！请查看后台日志。",
+  "nekojs.command.usage": "用法：/nekojs <%s>。运行 /help nekojs 查看完整命令列表。",
   "nekojs.command.error.healthy": "§a[NekoJS] ✔ 当前运行环境非常健康，没有任何脚本错误！",
   "nekojs.command.error.none": "§a[NekoJS] ✔ 当前没有脚本错误！",
   "nekojs.error.tracker.warning": "§c[NekoJS] ⚠ 警告：引擎目前存在 %s 个脚本运行错误。",

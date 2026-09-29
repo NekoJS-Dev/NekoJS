@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.mojang.brigadier.tree.CommandNode;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
@@ -49,6 +50,7 @@ public final class NekoJSCommands {
         dispatcher.register(
                 Commands.literal("nekojs")
                         .requires(source -> source.hasPermission(2))
+                        .executes(context -> sendRootUsage(context.getSource(), dispatcher))
 
                         .then(reloadCommand(root))
 
@@ -94,11 +96,20 @@ public final class NekoJSCommands {
                         .then(packsCommand())
 
                         .then(Commands.literal("trust")
-                                .then(Commands.argument("address", StringArgumentType.string())
-                                        .executes(context -> trustServer(context.getSource(), StringArgumentType.getString(context, "address")))))
+                                .then(Commands.argument("address", AddressArgument.address())
+                                        .executes(context -> trustServer(context.getSource(), AddressArgument.getAddress(context, "address")))))
 
                         .then(probeCommand())
         );
+    }
+
+    /** Bare /nekojs: list the registered subtree instead of brigadier's "Unknown or incomplete command". */
+    private static int sendRootUsage(CommandSourceStack source, CommandDispatcher<CommandSourceStack> dispatcher) {
+        String subtree = dispatcher.getRoot().getChild("nekojs").getChildren().stream()
+                .map(CommandNode::getName)
+                .collect(Collectors.joining("|"));
+        source.sendSuccess(() -> Component.translatable("nekojs.command.usage", Component.literal(subtree)), false);
+        return 1;
     }
 
     /**

@@ -1,0 +1,11 @@
+# 26.1.2 runServer spot-check server-log excerpt (2026-09-29, fix branch ticket-20-command-ux)
+# Full gradle log kept outside the repo (temp dir); run dir versions/26.1.2/run/ deleted after capture (T08/T24 precedent).
+# Marker script: run/nekojs/server_scripts/t20f1.js -> console.log('T20F1-OK')
+
+[11:20:00] [Worker-Main-13/INFO] [NekoJS/]: [server] T20F1-OK
+[11:20:05] [Server thread/INFO] [minecraft/DedicatedServer]: Done (4.506s)! For help, type "help"
+[11:20:12] [Server thread/INFO] [NekoJS/]: [server] T20F1-OK
+[11:20:20] [Server thread/INFO] [NekoJS/]: [server] T20F1-OK
+[11:20:33] [Server thread/INFO] [minecraft/MinecraftServer]: Stopping server
+
+# Boot: Done in 4.506s; command-triggered single-file reloads ran on Server thread (11:20:12 nested form, 11:20:20 bare form); clean RCON stop at 11:20:33; gradle BUILD SUCCESSFUL in 57s, exit 0.

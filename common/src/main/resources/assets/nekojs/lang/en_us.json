@@ -1,6 +1,7 @@
 {
   "nekojs.command.reloading": "§e[NekoJS] Reloading scripts...",
   "nekojs.command.reload.fatal": "§c[NekoJS] ✖ A fatal error occurred during reload! Check the console logs.",
+  "nekojs.command.usage": "Usage: /nekojs <%s>. Run /help nekojs for the full command list.",
   "nekojs.command.error.healthy": "§a[NekoJS] ✔ The runtime environment is healthy. No script errors found!",
   "nekojs.command.error.none": "§a[NekoJS] ✔ No script errors at the moment!",
   "nekojs.error.tracker.warning": "§c[NekoJS] ⚠ Warning: The engine currently has %s active script error(s).",
