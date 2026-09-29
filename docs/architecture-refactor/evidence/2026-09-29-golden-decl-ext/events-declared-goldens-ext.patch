@@ -1,0 +1,260 @@
+diff --git a/src/test/resources/golden/events-declared/26.1.2-fabric.client-events.d.ts b/src/test/resources/golden/events-declared/26.1.2-fabric.client-events.d.ts
+index 299646e4..c8d263b7 100644
+--- a/src/test/resources/golden/events-declared/26.1.2-fabric.client-events.d.ts
++++ b/src/test/resources/golden/events-declared/26.1.2-fabric.client-events.d.ts
+@@ -1,3 +1,4 @@
++import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
+ import { $ClientTickEventJS } from "java:com/tkisor/nekojs/wrapper/event/client";
+ import { $ItemTooltipEventJS } from "java:com/tkisor/nekojs/wrapper/event/item";
+ import { $RecipeViewerCategoryListJS, $RecipeViewerEntryListJS, $RecipeViewerInformationJS, $RecipeViewerRecipeListJS } from "java:com/tkisor/nekojs/wrapper/viewer";
+@@ -34,6 +35,8 @@ import { $BaseStream, $Collector, $Collector$Characteristics, $DoubleStream, $Do
+ import { $ZipConstants, $ZipEntry, $ZipFile } from "java:java/util/zip";
+ import { $ChatFormatting, $CrashReport, $CrashReportCategory, $CrashReportDetail, $ReportType, $ReportedException, $SystemReport } from "java:net/minecraft";
+ import { $Advancement, $AdvancementHolder, $AdvancementNode, $AdvancementProgress, $AdvancementRequirements, $AdvancementRewards, $AdvancementTree, $AdvancementTree$Listener, $AdvancementType, $Criterion, $CriterionProgress, $CriterionTrigger, $CriterionTrigger$Listener, $DisplayInfo } from "java:net/minecraft/advancements";
++import { $KeyMapping, $KeyMapping$Category } from "java:net/minecraft/client";
++import { $InputWithModifiers, $KeyEvent, $MouseButtonEvent, $MouseButtonInfo } from "java:net/minecraft/client/input";
+ import { $CacheableFunction, $CommandBuildContext, $CommandResultCallback, $CommandSigningContext, $CommandSource, $CommandSourceStack, $Commands, $Commands$ParseFunction, $ExecutionCommandSource, $SharedSuggestionProvider, $SharedSuggestionProvider$ElementSuggestionType, $SharedSuggestionProvider$TextCoordinates } from "java:net/minecraft/commands";
+ import { $ArgumentSignatures, $ArgumentSignatures$Entry, $ArgumentSignatures$Signer, $EntityAnchorArgument$Anchor, $NbtPathArgument$NbtPath } from "java:net/minecraft/commands/arguments";
+ import { $EntitySelector } from "java:net/minecraft/commands/arguments/selector";
+@@ -265,6 +268,16 @@ declare global {
+         function tooltip(extra: $Item, handler: ((event: $ItemTooltipEventJS) => void)): void;
+     }
+ 
++    namespace KeyBindEvents {
++        function pressed(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function pressed(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function register(handler: ((event: $Object) => void)): void;
++    }
++
+     namespace RecipeViewerEvents {
+         function addEntries(handler: ((event: $RecipeViewerEntryListJS) => void)): void;
+         function addEntries(extra: string, handler: ((event: $RecipeViewerEntryListJS) => void)): void;
+diff --git a/src/test/resources/golden/events-declared/26.1.2-fabric.startup-events.d.ts b/src/test/resources/golden/events-declared/26.1.2-fabric.startup-events.d.ts
+index c2f8c2e3..cf529a47 100644
+--- a/src/test/resources/golden/events-declared/26.1.2-fabric.startup-events.d.ts
++++ b/src/test/resources/golden/events-declared/26.1.2-fabric.startup-events.d.ts
+@@ -1,5 +1,6 @@
+ import { $RecipeBuilder, $RecipeCreationContext, $RecipeEntryJS, $RecipeFilter, $RecipeJsonBuilder, $RecipeJsonValue, $RecipeLifecycleContext } from "java:com/tkisor/nekojs/api/recipe";
+ import { $RecipeFieldDefinition, $RecipeFieldKind, $RecipeFieldRole, $RecipeTypeDefinition, $RecipeTypeDefinitionRegistry, $RecipeTypeDefinitionRegistry$Builder } from "java:com/tkisor/nekojs/api/recipe/definition";
++import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
+ import { $RecipeRegistryProxy } from "java:com/tkisor/nekojs/wrapper";
+ import { $GoalRegistry$GoalBuilderJS } from "java:com/tkisor/nekojs/wrapper/entity";
+ import { $BlockBrokenEventJS } from "java:com/tkisor/nekojs/wrapper/event/block";
+@@ -43,6 +44,8 @@ import { $BaseStream, $Collector, $Collector$Characteristics, $DoubleStream, $Do
+ import { $ZipConstants, $ZipEntry, $ZipFile } from "java:java/util/zip";
+ import { $ChatFormatting, $CrashReport, $CrashReportCategory, $CrashReportDetail, $ReportType, $ReportedException, $SystemReport } from "java:net/minecraft";
+ import { $Advancement, $AdvancementHolder, $AdvancementNode, $AdvancementProgress, $AdvancementRequirements, $AdvancementRewards, $AdvancementTree, $AdvancementTree$Listener, $AdvancementType, $Criterion, $CriterionProgress, $CriterionTrigger, $CriterionTrigger$Listener, $DisplayInfo } from "java:net/minecraft/advancements";
++import { $KeyMapping, $KeyMapping$Category } from "java:net/minecraft/client";
++import { $InputWithModifiers, $KeyEvent, $MouseButtonEvent, $MouseButtonInfo } from "java:net/minecraft/client/input";
+ import { $CacheableFunction, $CommandBuildContext, $CommandResultCallback, $CommandSigningContext, $CommandSource, $CommandSourceStack, $Commands, $Commands$ParseFunction, $ExecutionCommandSource, $SharedSuggestionProvider, $SharedSuggestionProvider$ElementSuggestionType, $SharedSuggestionProvider$TextCoordinates } from "java:net/minecraft/commands";
+ import { $ArgumentSignatures, $ArgumentSignatures$Entry, $ArgumentSignatures$Signer, $EntityAnchorArgument$Anchor, $NbtPathArgument$NbtPath } from "java:net/minecraft/commands/arguments";
+ import { $EntitySelector } from "java:net/minecraft/commands/arguments/selector";
+@@ -324,6 +327,16 @@ declare global {
+         function modification(handler: ((event: $ItemModificationEventJS) => void)): void;
+     }
+ 
++    namespace KeyBindEvents {
++        function pressed(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function pressed(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function register(handler: ((event: $Object) => void)): void;
++    }
++
+     namespace LevelEvents {
+         function loaded(handler: ((event: $LevelEventJS) => void)): void;
+         function unloaded(handler: ((event: $LevelEventJS) => void)): void;
+diff --git a/src/test/resources/golden/events-declared/26.1.2.client-events.d.ts b/src/test/resources/golden/events-declared/26.1.2.client-events.d.ts
+index 9fdf3bd6..d17f3be9 100644
+--- a/src/test/resources/golden/events-declared/26.1.2.client-events.d.ts
++++ b/src/test/resources/golden/events-declared/26.1.2.client-events.d.ts
+@@ -43,6 +43,7 @@ import { $BaseMapCodec, $PrimitiveCodec, $RecordCodecBuilder, $RecordCodecBuilde
+ import { $AttachedData } from "java:com/tkisor/nekojs/api/data";
+ import { $BlockExtension, $BlockStateExtension, $EntityExtension, $ItemExtension, $LevelExtension, $LivingEntityExtension, $MutableComponentExtension, $PlayerExtension, $ServerExtension } from "java:com/tkisor/nekojs/api/inject";
+ import { $BlockSpec, $BlockStateSpec, $EntitySpec, $ItemSpec, $LevelSpec, $LivingEntitySpec, $MutableComponentSpec, $PlayerSpec, $ServerSpec } from "java:com/tkisor/nekojs/api/spec/inject";
++import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
+ import { $PostEffectEventJS } from "java:com/tkisor/nekojs/client/posteffect";
+ import { $DataGeneratorJS, $LangGeneratorJS } from "java:com/tkisor/nekojs/wrapper";
+ import { $PainterJS, $ScreenRenderEventJS } from "java:com/tkisor/nekojs/wrapper/client";
+@@ -465,6 +466,16 @@ declare global {
+         function tooltip(extra: $Item, handler: ((event: $ItemTooltipEvent) => void)): void;
+     }
+ 
++    namespace KeyBindEvents {
++        function pressed(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function pressed(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function register(handler: ((event: $Object) => void)): void;
++    }
++
+     namespace RecipeViewerEvents {
+         function addEntries(handler: ((event: $RecipeViewerEntryListJS) => void)): void;
+         function addEntries(extra: string, handler: ((event: $RecipeViewerEntryListJS) => void)): void;
+diff --git a/src/test/resources/golden/events-declared/26.1.2.startup-events.d.ts b/src/test/resources/golden/events-declared/26.1.2.startup-events.d.ts
+index 37ea66d5..410db11b 100644
+--- a/src/test/resources/golden/events-declared/26.1.2.startup-events.d.ts
++++ b/src/test/resources/golden/events-declared/26.1.2.startup-events.d.ts
+@@ -45,6 +45,7 @@ import { $BlockExtension, $BlockStateExtension, $EntityExtension, $ItemExtension
+ import { $RecipeBuilder, $RecipeCreationContext, $RecipeEntryJS, $RecipeFilter, $RecipeJsonBuilder, $RecipeJsonValue, $RecipeLifecycleContext } from "java:com/tkisor/nekojs/api/recipe";
+ import { $RecipeFieldDefinition, $RecipeFieldKind, $RecipeFieldRole, $RecipeTypeDefinition, $RecipeTypeDefinitionRegistry, $RecipeTypeDefinitionRegistry$Builder } from "java:com/tkisor/nekojs/api/recipe/definition";
+ import { $BlockSpec, $BlockStateSpec, $EntitySpec, $ItemSpec, $LevelSpec, $LivingEntitySpec, $MutableComponentSpec, $PlayerSpec, $ServerSpec } from "java:com/tkisor/nekojs/api/spec/inject";
++import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
+ import { $PostEffectEventJS } from "java:com/tkisor/nekojs/client/posteffect";
+ import { $BlockEntityTickEvent, $RandomTickEvent } from "java:com/tkisor/nekojs/event/level";
+ import { $DataGeneratorJS, $LangGeneratorJS, $RecipeRegistryProxy } from "java:com/tkisor/nekojs/wrapper";
+@@ -565,6 +566,16 @@ declare global {
+         function foodEaten(extra: $Item, handler: ((event: $LivingEntityUseItemEvent$Finish) => void)): void;
+     }
+ 
++    namespace KeyBindEvents {
++        function pressed(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function pressed(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function register(handler: ((event: $Object) => void)): void;
++    }
++
+     namespace LevelEvents {
+         function loaded(handler: ((event: $LevelEvent$Load) => void)): void;
+         function unloaded(handler: ((event: $LevelEvent$Unload) => void)): void;
+diff --git a/src/test/resources/golden/events-declared/26.2.0-fabric.client-events.d.ts b/src/test/resources/golden/events-declared/26.2.0-fabric.client-events.d.ts
+index fbba755b..ebb7d11b 100644
+--- a/src/test/resources/golden/events-declared/26.2.0-fabric.client-events.d.ts
++++ b/src/test/resources/golden/events-declared/26.2.0-fabric.client-events.d.ts
+@@ -1,3 +1,4 @@
++import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
+ import { $ClientTickEventJS } from "java:com/tkisor/nekojs/wrapper/event/client";
+ import { $ItemTooltipEventJS } from "java:com/tkisor/nekojs/wrapper/event/item";
+ import { $RecipeViewerCategoryListJS, $RecipeViewerEntryListJS, $RecipeViewerInformationJS, $RecipeViewerRecipeListJS } from "java:com/tkisor/nekojs/wrapper/viewer";
+@@ -35,6 +36,8 @@ import { $ZipConstants, $ZipEntry, $ZipFile } from "java:java/util/zip";
+ import { $ChatFormatting, $CrashReport, $CrashReportCategory, $CrashReportDetail, $ReportType, $ReportedException, $SystemReport } from "java:net/minecraft";
+ import { $Advancement, $AdvancementHolder, $AdvancementNode, $AdvancementProgress, $AdvancementRequirements, $AdvancementRewards, $AdvancementTree, $AdvancementTree$Listener, $AdvancementType, $CriterionProgress, $DisplayInfo } from "java:net/minecraft/advancements";
+ import { $Criterion, $CriterionTrigger } from "java:net/minecraft/advancements/triggers";
++import { $KeyMapping, $KeyMapping$Category } from "java:net/minecraft/client";
++import { $InputWithModifiers, $KeyEvent, $MouseButtonEvent, $MouseButtonInfo } from "java:net/minecraft/client/input";
+ import { $CacheableFunction, $CommandBuildContext, $CommandResultCallback, $CommandSigningContext, $CommandSource, $CommandSourceStack, $Commands, $Commands$ParseFunction, $ExecutionCommandSource, $SharedSuggestionProvider, $SharedSuggestionProvider$ElementSuggestionType, $SharedSuggestionProvider$TextCoordinates } from "java:net/minecraft/commands";
+ import { $ArgumentSignatures, $ArgumentSignatures$Entry, $ArgumentSignatures$Signer, $EntityAnchorArgument$Anchor, $NbtPathArgument$NbtPath } from "java:net/minecraft/commands/arguments";
+ import { $EntitySelector } from "java:net/minecraft/commands/arguments/selector";
+@@ -223,6 +226,16 @@ declare global {
+         function tooltip(extra: $Item, handler: ((event: $ItemTooltipEventJS) => void)): void;
+     }
+ 
++    namespace KeyBindEvents {
++        function pressed(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function pressed(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function register(handler: ((event: $Object) => void)): void;
++    }
++
+     namespace RecipeViewerEvents {
+         function addEntries(handler: ((event: $RecipeViewerEntryListJS) => void)): void;
+         function addEntries(extra: string, handler: ((event: $RecipeViewerEntryListJS) => void)): void;
+diff --git a/src/test/resources/golden/events-declared/26.2.0-fabric.startup-events.d.ts b/src/test/resources/golden/events-declared/26.2.0-fabric.startup-events.d.ts
+index 62881ad8..f9022684 100644
+--- a/src/test/resources/golden/events-declared/26.2.0-fabric.startup-events.d.ts
++++ b/src/test/resources/golden/events-declared/26.2.0-fabric.startup-events.d.ts
+@@ -1,5 +1,6 @@
+ import { $RecipeBuilder, $RecipeCreationContext, $RecipeEntryJS, $RecipeFilter, $RecipeJsonBuilder, $RecipeJsonValue, $RecipeLifecycleContext } from "java:com/tkisor/nekojs/api/recipe";
+ import { $RecipeFieldDefinition, $RecipeFieldKind, $RecipeFieldRole, $RecipeTypeDefinition, $RecipeTypeDefinitionRegistry, $RecipeTypeDefinitionRegistry$Builder } from "java:com/tkisor/nekojs/api/recipe/definition";
++import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
+ import { $RecipeRegistryProxy } from "java:com/tkisor/nekojs/wrapper";
+ import { $GoalRegistry$GoalBuilderJS } from "java:com/tkisor/nekojs/wrapper/entity";
+ import { $BlockBrokenEventJS } from "java:com/tkisor/nekojs/wrapper/event/block";
+@@ -44,6 +45,8 @@ import { $ZipConstants, $ZipEntry, $ZipFile } from "java:java/util/zip";
+ import { $ChatFormatting, $CrashReport, $CrashReportCategory, $CrashReportDetail, $ReportType, $ReportedException, $SystemReport } from "java:net/minecraft";
+ import { $Advancement, $AdvancementHolder, $AdvancementNode, $AdvancementProgress, $AdvancementRequirements, $AdvancementRewards, $AdvancementTree, $AdvancementTree$Listener, $AdvancementType, $CriterionProgress, $DisplayInfo } from "java:net/minecraft/advancements";
+ import { $Criterion, $CriterionTrigger } from "java:net/minecraft/advancements/triggers";
++import { $KeyMapping, $KeyMapping$Category } from "java:net/minecraft/client";
++import { $InputWithModifiers, $KeyEvent, $MouseButtonEvent, $MouseButtonInfo } from "java:net/minecraft/client/input";
+ import { $CacheableFunction, $CommandBuildContext, $CommandResultCallback, $CommandSigningContext, $CommandSource, $CommandSourceStack, $Commands, $Commands$ParseFunction, $ExecutionCommandSource, $SharedSuggestionProvider, $SharedSuggestionProvider$ElementSuggestionType, $SharedSuggestionProvider$TextCoordinates } from "java:net/minecraft/commands";
+ import { $ArgumentSignatures, $ArgumentSignatures$Entry, $ArgumentSignatures$Signer, $EntityAnchorArgument$Anchor, $NbtPathArgument$NbtPath } from "java:net/minecraft/commands/arguments";
+ import { $EntitySelector } from "java:net/minecraft/commands/arguments/selector";
+@@ -282,6 +285,16 @@ declare global {
+         function modification(handler: ((event: $ItemModificationEventJS) => void)): void;
+     }
+ 
++    namespace KeyBindEvents {
++        function pressed(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function pressed(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function register(handler: ((event: $Object) => void)): void;
++    }
++
+     namespace LevelEvents {
+         function loaded(handler: ((event: $LevelEventJS) => void)): void;
+         function unloaded(handler: ((event: $LevelEventJS) => void)): void;
+diff --git a/src/test/resources/golden/events-declared/26.2.0.client-events.d.ts b/src/test/resources/golden/events-declared/26.2.0.client-events.d.ts
+index 1c27eb56..006e373c 100644
+--- a/src/test/resources/golden/events-declared/26.2.0.client-events.d.ts
++++ b/src/test/resources/golden/events-declared/26.2.0.client-events.d.ts
+@@ -43,6 +43,7 @@ import { $BaseMapCodec, $PrimitiveCodec, $RecordCodecBuilder, $RecordCodecBuilde
+ import { $AttachedData } from "java:com/tkisor/nekojs/api/data";
+ import { $BlockExtension, $BlockStateExtension, $EntityExtension, $ItemExtension, $LevelExtension, $LivingEntityExtension, $MutableComponentExtension, $PlayerExtension, $ServerExtension } from "java:com/tkisor/nekojs/api/inject";
+ import { $BlockSpec, $BlockStateSpec, $EntitySpec, $ItemSpec, $LevelSpec, $LivingEntitySpec, $MutableComponentSpec, $PlayerSpec, $ServerSpec } from "java:com/tkisor/nekojs/api/spec/inject";
++import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
+ import { $PostEffectEventJS } from "java:com/tkisor/nekojs/client/posteffect";
+ import { $DataGeneratorJS, $LangGeneratorJS } from "java:com/tkisor/nekojs/wrapper";
+ import { $PainterJS, $ScreenRenderEventJS } from "java:com/tkisor/nekojs/wrapper/client";
+@@ -429,6 +430,16 @@ declare global {
+         function tooltip(extra: $Item, handler: ((event: $ItemTooltipEvent) => void)): void;
+     }
+ 
++    namespace KeyBindEvents {
++        function pressed(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function pressed(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function register(handler: ((event: $Object) => void)): void;
++    }
++
+     namespace RecipeViewerEvents {
+         function addEntries(handler: ((event: $RecipeViewerEntryListJS) => void)): void;
+         function addEntries(extra: string, handler: ((event: $RecipeViewerEntryListJS) => void)): void;
+diff --git a/src/test/resources/golden/events-declared/26.2.0.startup-events.d.ts b/src/test/resources/golden/events-declared/26.2.0.startup-events.d.ts
+index 06a320be..9a4b9909 100644
+--- a/src/test/resources/golden/events-declared/26.2.0.startup-events.d.ts
++++ b/src/test/resources/golden/events-declared/26.2.0.startup-events.d.ts
+@@ -45,6 +45,7 @@ import { $BlockExtension, $BlockStateExtension, $EntityExtension, $ItemExtension
+ import { $RecipeBuilder, $RecipeCreationContext, $RecipeEntryJS, $RecipeFilter, $RecipeJsonBuilder, $RecipeJsonValue, $RecipeLifecycleContext } from "java:com/tkisor/nekojs/api/recipe";
+ import { $RecipeFieldDefinition, $RecipeFieldKind, $RecipeFieldRole, $RecipeTypeDefinition, $RecipeTypeDefinitionRegistry, $RecipeTypeDefinitionRegistry$Builder } from "java:com/tkisor/nekojs/api/recipe/definition";
+ import { $BlockSpec, $BlockStateSpec, $EntitySpec, $ItemSpec, $LevelSpec, $LivingEntitySpec, $MutableComponentSpec, $PlayerSpec, $ServerSpec } from "java:com/tkisor/nekojs/api/spec/inject";
++import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
+ import { $PostEffectEventJS } from "java:com/tkisor/nekojs/client/posteffect";
+ import { $BlockEntityTickEvent, $RandomTickEvent } from "java:com/tkisor/nekojs/event/level";
+ import { $DataGeneratorJS, $LangGeneratorJS, $RecipeRegistryProxy } from "java:com/tkisor/nekojs/wrapper";
+@@ -528,6 +529,16 @@ declare global {
+         function foodEaten(extra: $Item, handler: ((event: $LivingEntityUseItemEvent$Finish) => void)): void;
+     }
+ 
++    namespace KeyBindEvents {
++        function pressed(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function pressed(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function released(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function tick(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
++        function register(handler: ((event: $Object) => void)): void;
++    }
++
+     namespace LevelEvents {
+         function loaded(handler: ((event: $LevelEvent$Load) => void)): void;
+         function unloaded(handler: ((event: $LevelEvent$Unload) => void)): void;

@@ -1,3 +1,4 @@
+import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
 import { $ClientTickEventJS } from "java:com/tkisor/nekojs/wrapper/event/client";
 import { $ItemTooltipEventJS } from "java:com/tkisor/nekojs/wrapper/event/item";
 import { $RecipeViewerCategoryListJS, $RecipeViewerEntryListJS, $RecipeViewerInformationJS, $RecipeViewerRecipeListJS } from "java:com/tkisor/nekojs/wrapper/viewer";
@@ -34,6 +35,8 @@ import { $BaseStream, $Collector, $Collector$Characteristics, $DoubleStream, $Do
 import { $ZipConstants, $ZipEntry, $ZipFile } from "java:java/util/zip";
 import { $ChatFormatting, $CrashReport, $CrashReportCategory, $CrashReportDetail, $ReportType, $ReportedException, $SystemReport } from "java:net/minecraft";
 import { $Advancement, $AdvancementHolder, $AdvancementNode, $AdvancementProgress, $AdvancementRequirements, $AdvancementRewards, $AdvancementTree, $AdvancementTree$Listener, $AdvancementType, $Criterion, $CriterionProgress, $CriterionTrigger, $CriterionTrigger$Listener, $DisplayInfo } from "java:net/minecraft/advancements";
+import { $KeyMapping, $KeyMapping$Category } from "java:net/minecraft/client";
+import { $InputWithModifiers, $KeyEvent, $MouseButtonEvent, $MouseButtonInfo } from "java:net/minecraft/client/input";
 import { $CacheableFunction, $CommandBuildContext, $CommandResultCallback, $CommandSigningContext, $CommandSource, $CommandSourceStack, $Commands, $Commands$ParseFunction, $ExecutionCommandSource, $SharedSuggestionProvider, $SharedSuggestionProvider$ElementSuggestionType, $SharedSuggestionProvider$TextCoordinates } from "java:net/minecraft/commands";
 import { $ArgumentSignatures, $ArgumentSignatures$Entry, $ArgumentSignatures$Signer, $EntityAnchorArgument$Anchor, $NbtPathArgument$NbtPath } from "java:net/minecraft/commands/arguments";
 import { $EntitySelector } from "java:net/minecraft/commands/arguments/selector";
@@ -263,6 +266,16 @@ declare global {
     namespace ItemEvents {
         function tooltip(handler: ((event: $ItemTooltipEventJS) => void)): void;
         function tooltip(extra: $Item, handler: ((event: $ItemTooltipEventJS) => void)): void;
+    }
+
+    namespace KeyBindEvents {
+        function pressed(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function pressed(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function released(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function released(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function tick(handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function tick(extra: string, handler: ((event: $KeyBindEvents$KeyBindEventJS) => void)): void;
+        function register(handler: ((event: $Object) => void)): void;
     }
 
     namespace RecipeViewerEvents {
