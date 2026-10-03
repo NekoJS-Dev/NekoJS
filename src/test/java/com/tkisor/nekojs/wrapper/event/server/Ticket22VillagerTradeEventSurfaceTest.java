@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -223,6 +224,23 @@ class Ticket22VillagerTradeEventSurfaceTest {
                 "the unavailable outcome carries a reason");
     }
 
+    @Test
+    void candidateCollectionBeforeServerBindingStaysInert() throws Exception {
+        Assumptions.assumeTrue(VanillaRegistryProbe.available(),
+                "needs vanilla registry class initialization for the version adapter");
+        Class<?> ownerClass = loadQuiet("com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner");
+        assertNotNull(ownerClass, "each node must provide its VillagerTradeDomainOwner adapter");
+
+        Object owner = ownerClass.getDeclaredConstructor().newInstance();
+        RecordingHandle handle = new RecordingHandle(ScriptType.SERVER, true);
+        assertDoesNotThrow(() -> ownerClass
+                .getMethod("collect", com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector.Handle.class)
+                .invoke(owner, handle));
+        assertNotNull(handle.plan, "the empty plan still joins the candidate boundary");
+        assertTrue(handle.collectedDeclarations.isEmpty(), "unbound collection must not dispatch trade listeners");
+    }
+
+
     private static com.tkisor.nekojs.core.villager.VillagerTradeApplier rejectingApplier() {
         return new com.tkisor.nekojs.core.villager.VillagerTradeApplier() {
             @Override public String adapterId() { return "probe"; }
@@ -244,12 +262,18 @@ class Ticket22VillagerTradeEventSurfaceTest {
     /** Minimal collect handle: records the dispatched payload's collected declarations. */
     private static final class RecordingHandle implements com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector.Handle {
         private final ScriptType scriptType;
+        private final boolean rejectDispatch;
         private VillagerTradeCandidatePlan plan;
         private com.tkisor.nekojs.core.villager.VillagerTradeDomainState state;
         private List<String> collectedDeclarations = List.of();
 
         RecordingHandle(ScriptType scriptType) {
+            this(scriptType, false);
+        }
+
+        RecordingHandle(ScriptType scriptType, boolean rejectDispatch) {
             this.scriptType = scriptType;
+            this.rejectDispatch = rejectDispatch;
         }
 
         @Override public graal.graalvm.polyglot.Context candidateContext() { return null; }
@@ -286,6 +310,9 @@ class Ticket22VillagerTradeEventSurfaceTest {
 
         @Override
         public void dispatch(EventBusJS<?, ?> bus, Object event) {
+            if (rejectDispatch) {
+                throw new AssertionError("unbound trade collection must not dispatch listeners");
+            }
             execute(null, event);
         }
 
