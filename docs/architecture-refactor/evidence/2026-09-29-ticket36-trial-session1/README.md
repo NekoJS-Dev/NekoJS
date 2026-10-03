@@ -54,7 +54,7 @@ run 目录)。本场为**首场部分会话**:进世界验证 + 输入链复验 
 
 | 项 | 结果 | 证据 |
 |---|---|---|
-| F-T1 修订启动注册 | ✅ 未再出现 `unknown type name 'art'`；修订脚本进入启动收集流程。注册 pass 未触发的 `mymod:art` 是现有启动期注册时机观察，不是类型名解析失败 | `versions/26.1.2/run/logs/latest.log` 02:29:44 附近 |
+| F-T1 修订启动注册 | ⚠️ 未再出现 `unknown type name 'art'`，证明过期类型名错误已消除；但日志同时显示 registration pass 未触发，`mymod:art` 的实际注册效果仍未验证，不能据此关闭任务 1 | `versions/26.1.2/run/logs/latest.log` 02:29:44 附近 |
 | F-T2 双参数 HUD preflight | ✅ 无 `Unknown identifier 'ctx'/'gui'`；CLIENT 注册成功并持续显示 | `latest.log` 的 `T26-REGISTERED`，维护者目视 HUD |
 | D6 颜色与真实输入 | ✅ 黄/绿/白 HUD 可见；R 单击、长按、`consumeClick`、PRESSED/HELD/RELEASED 均出现；CLIENT reload 后 HUD 保持 | `latest.log` 02:31 前后的 T26 标记 + 维护者操作 |
 | Item/Block modification 初始时序 | ✅ 启动输出 `NekoJS modifications applied at startup (5 item(s), 3 block(s))`；服务器 reload 输出 `... applied at commit (5 item(s), 3 block(s))` | `latest.log` 02:31:53、02:31:59、02:41:08 |
