@@ -1,0 +1,84 @@
+=== Ticket 34 / F1 fix — probe-types verification transcript (worktree NekoJS-mult-tpt, branch probe-types-fix, base mult@ca52f90f) ===
+Date: 2026-09-29. Shell: Git Bash on Windows. All commands run from repo root unless noted.
+
+=== [1] Baseline reproduction (fresh npm ci; NO gradle test run before; common/build/probe-ts absent) ===
+$ npm ci
+added 1 package, and audited 2 packages in 2s / found 0 vulnerabilities
+
+$ npm run test:probe-types
+
+> test:probe-types
+> tsc -p common/src/test/probe-ts/tsconfig.json --noEmit
+
+common/src/test/probe-ts/jsx-primitive-props.tsx(1,41): error TS2307: Cannot find module 'nekojs/jsx-runtime' or its corresponding type declarations.
+common/src/test/probe-ts/jsx-primitive-props.tsx(3,15): error TS2875: This JSX tag requires the module path 'nekojs/jsx-runtime' to exist, but none could be found. Make sure you have types for the appropriate package installed.
+common/src/test/probe-ts/jsx-primitive-props.tsx(3,15): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(4,13): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(4,52): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(5,49): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(18,1): error TS2578: Unused '@ts-expect-error' directive.
+common/src/test/probe-ts/jsx-primitive-props.tsx(20,1): error TS2578: Unused '@ts-expect-error' directive.
+common/src/test/probe-ts/jsx-primitive-props.tsx(22,1): error TS2578: Unused '@ts-expect-error' directive.
+common/src/test/probe-ts/jsx-primitive-props.tsx(29,21): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(30,21): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(31,19): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(32,19): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+common/src/test/probe-ts/jsx-primitive-props.tsx(32,44): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+
+=> 14 errors (1x TS2307, 1x TS2875, 9x TS7026, 3x TS2578), exit 2. Matches P4 FAILURES-LEDGER F1
+   and baseline/2026-09-29-release-p4/command-output/02-probe-types.txt byte-for-byte.
+   NOTE: errors are in common/src/test/probe-ts/jsx-primitive-props.tsx (the probe fixture the
+   ledger names), NOT in language-ts-examples/tsx/ui-core.tsx — that fixture is not part of the
+   probe program at all.
+
+=== [2] Root-cause probe: generate the build artifact, re-run gate (pre-fix tsconfig) ===
+$ ./gradlew.bat :common:test --tests com.tkisor.nekojs.core.compiler.NodeModuleTypeDocsTest --console=plain
+BUILD SUCCESSFUL — NodeModuleTypeDocsTest#extractsJsxNamespaceForProbeTypeCheck wrote
+common/build/probe-ts/generated/jsx-runtime.d.ts (ambient 'declare module nekojs/jsx-runtime')
+with export namespace JSX { interface IntrinsicElements ... })
+
+$ npm run test:probe-types  ->  exit 0 (no errors)
+
+=> The gate is green iff that JUnit side-effect artifact exists; the npm script itself has no
+   way to produce it. The P4 pack's run 01 (five-node build gates) runs no :common:test, so the
+   artifact was absent for run 02 — the recorded reproduction.
+
+=== [3] Fix verification: committed golden + tsconfig seam ===
+$ npm run test:probe-types   (golden committed, build artifact present)
+exit 0
+
+$ rm -rf common/build/probe-ts && npm run test:probe-types   (fresh-checkout equivalence)
+exit 0 — order-independent: no gradle preamble required anymore
+
+=== [4] Drift guard: new golden test com.tkisor.nekojs.probe.JsxRuntimeProbeDeclarationGoldenTest ===
+$ ./gradlew.bat :common:test --tests com.tkisor.nekojs.probe.JsxRuntimeProbeDeclarationGoldenTest --rerun
+BUILD SUCCESSFUL (assertion mode; golden byte-identical to extractTS(jsx-runtime.ts), CRLF-normalized)
+
+Negative control (temporary one-line append to the committed golden, then --rerun):
+> Task :common:test FAILED
+JsxRuntimeProbeDeclarationGoldenTest > extractedJsxRuntimeDeclarationMatchesGolden() FAILED
+BUILD FAILED in 3s
+Golden restored; re-run BUILD SUCCESSFUL; npm run test:probe-types exit 0.
+
+=== [5] Golden generated through the existing workflow (not hand-patched) ===
+$ ./gradlew.bat :common:test --tests com.tkisor.nekojs.probe.JsxRuntimeProbeDeclarationGoldenTest -Dnekojs.golden.regenerate=true
+BUILD SUCCESSFUL; wrote src/test/probe-ts/generated/jsx-runtime.d.ts; content verified identical
+to BOTH extraction outputs (new test's build/probe-ts-actual/jsx-runtime.d.ts and
+NodeModuleTypeDocsTest's build/probe-ts/generated/jsx-runtime.d.ts).
+
+$ ./gradlew.bat :common:regenerateGoldens
+BUILD SUCCESSFUL. Probe goldens rewrite produced line-ending-only churn on this CRLF checkout
+(git diff --ignore-cr-at-eol empty) — pre-existing Windows regen behavior; reverted to keep
+this change single-topic.
+
+=== [6] Neighboring gates (CI shape for common changes) ===
+$ ./gradlew.bat :common:check :common-api-processor:test --console=plain
+BUILD SUCCESSFUL in 1m 25s (first run) / BUILD SUCCESSFUL (final re-run after all file states settled)
+
+$ ./gradlew.bat guardLint --console=plain
+BUILD SUCCESSFUL
+
+=== [7] Untouched-by-construction ===
+common/src/main/resources/nekojs/node/modules/jsx-runtime.ts: never opened for edit in this
+worktree; git status shows no modification. common/src/test/resources/nekojs/language-ts-examples/
+tsx/* fixtures: untouched (not part of the probe program).
