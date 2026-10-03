@@ -23,16 +23,16 @@
 //
 // 本体只使用已验证的公开成员：Item.of / Item.empty（ItemJS）、ItemStack 扩展
 // getId()（Mixin 注入，wiki/全局绑定.md）、ServerEvents.started（事件参考）。
-
-const gem = Item.of('minecraft:diamond', 2)
-console.info('trial item: ' + gem.getId() + ' x' + gem.getCount())
-
-const empty = Item.empty()
-console.info('trial empty stack: ' + (empty === undefined ? 'undefined' : 'ok'))
-
-// 错误成员（试做第 3 步取消注释）：
-// const bad = Item.off('minecraft:stone')
-
+// Item stack 的组件依赖服务器 registry；把读取放在 started，避免首次资源 reload
+// 尚未绑定 components 时误把生命周期时序问题记成 declaration 失败。
 ServerEvents.started(event => {
+  const gem = Item.of('minecraft:diamond', 2)
+  console.info('trial item: ' + gem.getId() + ' x' + gem.getCount())
+
+  const empty = Item.empty()
+  console.info('trial empty stack: ' + (empty === undefined ? 'undefined' : 'ok'))
   console.info('declaration trial server started')
 })
+
+// 错误成员（试做第 3 步取消注释；仍放在 started 回调内）：
+// ServerEvents.started(event => { const bad = Item.off('minecraft:stone') })

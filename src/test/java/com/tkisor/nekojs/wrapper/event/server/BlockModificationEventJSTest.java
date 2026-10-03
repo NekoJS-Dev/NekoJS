@@ -3,7 +3,11 @@
 //? if >=26 {
 package com.tkisor.nekojs.wrapper.event.server;
 
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.EventBusJS;
+import com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector;
 import com.tkisor.nekojs.core.modification.ModificationCandidatePlan;
+import com.tkisor.nekojs.core.state.CandidateStatePlan;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -63,6 +67,42 @@ class BlockModificationEventJSTest {
         plan.preflight();
         plan.publish();
     }
+
+    @Test
+    void candidateCollectionBeforeServerBindingStaysInert() {
+        CandidateStatePlan[] captured = new CandidateStatePlan[1];
+
+        owner.collect(new CandidateDomainCollector.Handle() {
+            @Override
+            public graal.graalvm.polyglot.Context candidateContext() {
+                return null;
+            }
+
+            @Override
+            public com.tkisor.nekojs.api.ScriptType scriptType() {
+                return ScriptType.SERVER;
+            }
+
+            @Override
+            public java.util.List<EventBusJS.PendingListener> listenersOf(EventBusJS<?, ?> bus) {
+                return java.util.List.of();
+            }
+
+            @Override
+            public void execute(EventBusJS.PendingListener listener, Object event) {
+                throw new AssertionError("unbound server collection must not dispatch modification listeners");
+            }
+
+            @Override
+            public void registerPlan(CandidateStatePlan plan) {
+                captured[0] = plan;
+            }
+        });
+
+        assertTrue(captured[0] instanceof ModificationCandidatePlan);
+        assertTrue(((ModificationCandidatePlan) captured[0]).isEmpty());
+    }
+
 
     @Test
     void modifyStoneHardnessThenEmptyPlanRestoresOriginal() {

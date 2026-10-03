@@ -138,6 +138,13 @@ public final class VillagerTradeDomainOwner
     @Override
     public void collect(CandidateDomainCollector.Handle handle) {
         VillagerTradeCandidatePlan plan = new VillagerTradeCandidatePlan(this, state);
+        // The initial server resource reload can precede the running server and its reloadable
+        // trade registries. Keep this candidate inert; applyInitialPlan collects active listeners
+        // after the server is ready and performs the first real preflight.
+        if (boundServer == null) {
+            handle.registerPlan(plan);
+            return;
+        }
         handle.dispatch(ServerEvents.TRADE_DECLARATION, new VillagerTradeDeclarationEventJS(plan));
         handle.dispatch(ServerEvents.TRADE_RELOAD,
                 new VillagerTradeReloadEventJS(plan, state.committedSnapshot()));

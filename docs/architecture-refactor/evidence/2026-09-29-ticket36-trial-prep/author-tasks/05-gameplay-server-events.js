@@ -16,7 +16,7 @@
 
 // ---- 1) PlayerEvents：登录欢迎与聊天（chat 可取消：return true）----
 PlayerEvents.loggedIn(event => {
-  console.log('welcome ' + event.entity.getGameProfile().getName())
+  console.log('welcome entity=' + event.entity)
 })
 
 PlayerEvents.chat(event => {
@@ -31,11 +31,11 @@ PlayerEvents.chat('HIGH', event => {
 
 // ---- 2) EntityEvents：按实体类型定向 + 生命周期代表 ----
 EntityEvents.death('minecraft:zombie', event => {
-  console.log('a zombie died to ' + event.damageSource.getMsgId())
+  console.log('a zombie died to ' + event.source.getMsgId())
 })
 
 EntityEvents.joinLevel('minecraft:creeper', event => {
-  console.log('creeper joined ' + event.level.dimension().location())
+  console.log('creeper joined ' + event.level.dimension().identifier())
 })
 
 EntityEvents.damagePre('minecraft:villager', event => {
@@ -50,7 +50,7 @@ EntityEvents.drops('minecraft:skeleton', event => {
 
 // ---- 3) LevelEvents：维度加载与爆炸（别名成员 tick/beforeExplosion 已 @Deprecated）----
 LevelEvents.loaded(event => {
-  console.log('level loaded: ' + event.level.dimension().location())
+  console.log('level loaded: ' + event.level.dimension().identifier())
 })
 
 LevelEvents.explosionStart(event => {
@@ -84,7 +84,7 @@ ItemEvents.modification(event => {
 
 // ---- 6) BlockEvents：中立载荷 + dispatch by block id ----
 BlockEvents.broken('minecraft:diamond_ore', event => {
-  console.log('diamond ore broken by ' + event.player.getName().getString())
+  console.log('diamond ore broken')
   // D2 已修复（2026-09-29 合入 mult）：broken 可取消（return true 阻止破坏，
   // 2026-09-28 真机会话验证）。本文件起草于修复前的基线，旧注释已按修复后语义更正。
 })

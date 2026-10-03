@@ -100,6 +100,13 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
     @Override
     public void collect(CandidateDomainCollector.Handle handle) {
         ModificationCandidatePlan plan = new ModificationCandidatePlan(this);
+        // The initial server resource reload can run before vanilla binds item components.
+        // Keep this candidate inert; applyInitialPlan collects the active listeners after the
+        // server is ready and performs the first real preflight.
+        if (boundServer == null) {
+            handle.registerPlan(plan);
+            return;
+        }
         handle.dispatch(ItemEvents.MODIFICATION, new ItemModificationEventJS(plan));
         handle.dispatch(BlockEvents.MODIFICATION, new BlockModificationEventJS(plan));
         handle.registerPlan(plan);

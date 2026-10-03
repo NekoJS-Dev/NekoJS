@@ -58,7 +58,7 @@ ServerEvents.started(event => {
       + ': ' + result.total + ' trade(s)')
     console.info('trade sets: ' + result.tradeSetIds)
     console.info('level_1 count: ' + result.countOf('minecraft:farmer/level_1'))
-    if (result.unrestoredListingKeys.length > 0) {
+    if (!result.unrestoredListingKeys.isEmpty()) {
       // Declared earlier, not declared any more: still active in the registry, recorded here
       // instead of being physically deleted by the reload.
       console.warn('unrestored listings: ' + result.unrestoredListingKeys)
