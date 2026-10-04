@@ -53,6 +53,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     private String rootId;
     private Value root;
     private InspectorSnapshot lastSnapshot;
+    private boolean tearingDown;
     private int viewportWidth;
     private int viewportHeight;
 
@@ -346,9 +347,17 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         } else if ("input".equals(type)) {
             graphics.fill(x, y, x + width, y + height, 0xFF20252B);
             graphics.outline(x, y, x + width, y + height, node.focused ? 0xFFFFFFFF : 0xFF707780);
-            String value = node.inputValue == null || node.inputValue.isEmpty() ? text(node.props.get("placeholder")) : node.inputValue;
-            graphics.text(Minecraft.getInstance().font, value, x + 4, y + 6,
-                    node.inputValue == null || node.inputValue.isEmpty() ? 0xFF888888 : 0xFFFFFFFF, false);
+            String input = node.inputValue == null ? "" : node.inputValue;
+            boolean empty = input.isEmpty();
+            String display = empty ? text(node.props.get("placeholder")) : input;
+            graphics.text(Minecraft.getInstance().font, display, x + 4, y + 6,
+                    empty ? 0xFF888888 : 0xFFFFFFFF, false);
+            if (node.focused) {
+                int cursor = Math.max(0, Math.min(node.cursor, input.length()));
+                String prefix = input.substring(0, cursor);
+                int cursorX = x + 4 + Minecraft.getInstance().font.width(prefix);
+                graphics.fill(cursorX, y + 4, cursorX + 1, y + height - 4, 0xFFFFFFFF);
+            }
         } else if ("label".equals(type)) {
             VisualSpec spec = resolveVisual(node);
             paintTextLines(graphics, text(node.props.get("text")), spec,
@@ -439,13 +448,11 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     boolean dispatchScroll(double mouseX, double mouseY, double delta) {
         requireUsable("route a scroll event");
-        JsxHostTree.Node node = hit(tree.roots(), mouseX, mouseY);
+        JsxHostTree.Node node = scrollHit(tree.roots(), mouseX, mouseY);
         if (node == null) return false;
-        if ("scroll".equals(node.type)) {
-            double current = number(node.props.get("scrollOffset"), 0);
-            node.props.put("scrollOffset", clamp(current - delta * 12, 0, node.scrollRange));
-            relayout();
-        }
+        double current = number(node.props.get("scrollOffset"), 0);
+        node.props.put("scrollOffset", clamp(current - delta * 12, 0, node.scrollRange));
+        relayout();
         return dispatch(node, "scroll", Map.of("x", mouseX, "y", mouseY, "delta", delta));
     }
 
@@ -463,6 +470,10 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         if (focused == null) return false;
         String keyName = keyName(key);
         if (bool(focused.props.get("disabled"))) return false;
+        if ("input".equals(focused.type) && editInput(focused, key, modifiers)) {
+            dispatch(focused, "key", Map.of("key", keyName));
+            return true;
+        }
         if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER || key == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER) {
             dispatch(focused, "key", Map.of("key", keyName));
             if ("input".equals(focused.type)) dispatch(focused, "submit", Map.of("key", keyName));
@@ -477,17 +488,55 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         return dispatch(focused, "key", Map.of("key", keyName));
     }
 
+    private boolean editInput(JsxHostTree.Node node, int key, int modifiers) {
+        boolean shift = (modifiers & org.lwjgl.glfw.GLFW.GLFW_MOD_SHIFT) != 0;
+        int position = node.cursor;
+        if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE) {
+            if (!node.deleteBackward()) return true;
+        } else if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_DELETE) {
+            if (!node.deleteForward()) return true;
+        } else if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT) {
+            position = node.hasSelection() && !shift ? node.selectionStart()
+                    : node.cursor == 0 ? 0 : node.inputValue.offsetByCodePoints(node.cursor, -1);
+            node.cursor = Math.max(0, position);
+            if (!shift) node.collapseSelection(node.cursor); else node.selectionEnd = node.cursor;
+            return true;
+        } else if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT) {
+            position = node.hasSelection() && !shift ? node.selectionEnd()
+                    : node.cursor >= node.inputValue.length() ? node.inputValue.length()
+                    : node.inputValue.offsetByCodePoints(node.cursor, 1);
+            node.cursor = Math.min(node.inputValue.length(), position);
+            if (!shift) node.collapseSelection(node.cursor); else node.selectionEnd = node.cursor;
+            return true;
+        } else if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_HOME) {
+            node.cursor = 0;
+            if (!shift) node.collapseSelection(0); else node.selectionEnd = 0;
+            return true;
+        } else if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_END) {
+            node.cursor = node.inputValue.length();
+            if (!shift) node.collapseSelection(node.cursor); else node.selectionEnd = node.cursor;
+            return true;
+        } else {
+            return false;
+        }
+        publishInput(node);
+        return true;
+    }
+
+    private void publishInput(JsxHostTree.Node node) {
+        node.props.put("value", node.inputValue);
+        dispatch(node, "textInput", Map.of("value", node.inputValue));
+        dispatch(node, "change", Map.of("value", node.inputValue));
+    }
+
     boolean textInput(int codepoint) {
         requireUsable("route text input");
         JsxHostTree.Node focused = focused(tree.roots());
         if (focused == null || !"input".equals(focused.type) || bool(focused.props.get("disabled"))) return false;
-        String next = (focused.inputValue == null ? "" : focused.inputValue) + new String(Character.toChars(codepoint));
+        String next = new String(Character.toChars(codepoint));
         int maxLength = integer(focused.props.get("maxLength"), Integer.MAX_VALUE);
-        if (next.length() > maxLength) next = next.substring(0, maxLength);
-        focused.inputValue = next;
-        focused.props.put("value", next);
-        dispatch(focused, "textInput", Map.of("value", next));
-        dispatch(focused, "change", Map.of("value", next));
+        focused.insertText(next, maxLength);
+        publishInput(focused);
         return true;
     }
 
@@ -545,17 +594,22 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     }
 
     private void teardown(String reason, boolean notifyGuest) {
-        // Re-entrant calls are no-ops: dismissing the Screen during generation teardown fires
+        // Re-entrant calls are no-ops: dismissing the Screen during teardown fires
         // Screen.removed() back into close(), and every cleanup path (reload success/failure,
         // setScreen replace, client exit, close preemption) may run more than once. The first
-        // call to reach CANDIDATE/ACTIVE owns the teardown.
+        // call to reach CANDIDATE/ACTIVE claims the teardown through this flag, which stays
+        // set for the whole body so those re-entrant calls return instead of recursing.
         UiRootLifecycle.State state = lifecycle.state();
         if (state != UiRootLifecycle.State.CANDIDATE && state != UiRootLifecycle.State.ACTIVE) {
             return;
         }
-        lifecycle.beginClose();
+        if (tearingDown) return;
+        tearingDown = true;
         try {
-            if (McClientCompat.get().currentScreen() == screen) McClientCompat.get().showScreen(null);
+            // The guest release runs while the root is still usable: the common root closes
+            // through the same host transaction channel as any other update, so it must not
+            // observe CLOSING yet — entering CLOSING first made every Screen close report a
+            // NEKO-7001 host-transaction rejection.
             if (notifyGuest && root != null) {
                 try {
                     root.invokeMember("close");
@@ -563,11 +617,17 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                     reportHostFailure("close", failure);
                 }
             }
-            tree.close(() -> { });
-            root = null;
+            lifecycle.beginClose();
+            try {
+                if (McClientCompat.get().currentScreen() == screen) McClientCompat.get().showScreen(null);
+                tree.close(() -> { });
+                root = null;
+            } finally {
+                lifecycle.finishClose();
+                globals.unregisterUiRoot(this);
+            }
         } finally {
-            lifecycle.finishClose();
-            globals.unregisterUiRoot(this);
+            tearingDown = false;
         }
     }
 
@@ -635,6 +695,17 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
             if (!visible(node) || !contains(node, x, y)) continue;
             JsxHostTree.Node child = hit(node.children, x, y);
             return child == null ? node : child;
+        }
+        return null;
+    }
+
+    static JsxHostTree.Node scrollHit(List<JsxHostTree.Node> values, double x, double y) {
+        for (int i = values.size() - 1; i >= 0; i--) {
+            JsxHostTree.Node node = values.get(i);
+            if (!visible(node) || !contains(node, x, y)) continue;
+            if ("scroll".equals(node.type)) return node;
+            JsxHostTree.Node child = scrollHit(node.children, x, y);
+            if (child != null) return child;
         }
         return null;
     }

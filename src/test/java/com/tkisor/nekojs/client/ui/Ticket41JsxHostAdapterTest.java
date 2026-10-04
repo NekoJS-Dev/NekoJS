@@ -16,6 +16,40 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Focused ticket 41 checks for retained transactions and the guest-free paint path. */
 class Ticket41JsxHostAdapterTest {
     @Test
+    void inputEditingDeletesByCodePointAndReplacesSelection() {
+        JsxHostTree.Node input = new JsxHostTree.Node(1, "input", null, new java.util.LinkedHashMap<>(Map.of("value", "a😀c")));
+        assertTrue(input.deleteBackward());
+        assertEquals("a😀", input.inputValue);
+        assertTrue(input.deleteBackward());
+        assertEquals("a", input.inputValue);
+        input.insertText("bc", 20);
+        assertEquals("abc", input.inputValue);
+        input.selectionStart = 1;
+        input.selectionEnd = 3;
+        input.insertText("Z", 20);
+        assertEquals("aZ", input.inputValue);
+        assertEquals(2, input.cursor);
+        assertTrue(input.deleteForward() == false);
+    }
+
+    @Test
+    void scrollHitPrefersTheScrollableAncestorOverItsContent() {
+        JsxHostTree.Node scroll = new JsxHostTree.Node(1, "scroll", null, new java.util.LinkedHashMap<>());
+        JsxHostTree.Node child = new JsxHostTree.Node(2, "label", null, new java.util.LinkedHashMap<>());
+        scroll.x = 10;
+        scroll.y = 10;
+        scroll.width = 100;
+        scroll.height = 50;
+        child.x = 10;
+        child.y = 10;
+        child.width = 100;
+        child.height = 20;
+        scroll.children.add(child);
+        assertEquals(scroll, JsxHostAdapter.scrollHit(List.of(scroll), 20, 20));
+        assertEquals(null, JsxHostAdapter.scrollHit(List.of(scroll), 120, 20));
+    }
+
+    @Test
     void failedCommitAndRollbackPreserveCommittedTreeAndRemovedHandlesExpire() {
         JsxHostTree tree = new JsxHostTree();
         JsxHostTree.Transaction initial = tree.begin();
@@ -78,6 +112,22 @@ class Ticket41JsxHostAdapterTest {
                 "the adapter must match the common three-argument layout contract");
         assertTrue(adapter.contains("root.invokeMember(\"resize\", viewport())"),
                 "screen resize must notify the bound common root");
+        assertTrue(adapter.contains("graphics.fill(cursorX"),
+                "focused inputs must paint an insertion cursor");
+    }
+
+    @Test
+    void screenTeardownNotifiesTheGuestBeforeEnteringClosing() throws Exception {
+        String adapter = Files.readString(sourceRoot().resolve("JsxHostAdapter.java"));
+        String body = adapter.substring(adapter.indexOf("private void teardown("));
+        int guestClose = body.indexOf("root.invokeMember(\"close\")");
+        int beginClose = body.indexOf("lifecycle.beginClose()");
+        assertTrue(guestClose > 0 && beginClose > 0, "teardown must notify the guest and enter CLOSING");
+        // The common root releases its retained nodes through the same host transaction channel
+        // as any other update, so notifyGuest must run while the lifecycle is still usable:
+        // closing first made every Screen close report NEKO-7001 and lose the release.
+        assertTrue(guestClose < beginClose,
+                "the guest release must run before the lifecycle leaves CANDIDATE/ACTIVE");
     }
 
     @Test

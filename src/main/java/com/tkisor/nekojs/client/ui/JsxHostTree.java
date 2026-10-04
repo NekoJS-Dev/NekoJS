@@ -50,7 +50,12 @@ final class JsxHostTree {
             node.type = type;
             node.key = key;
             node.props = new LinkedHashMap<>(props);
-            if ("input".equals(type) && !node.focused) node.inputValue = text(node.props.get("value"));
+            if ("input".equals(type) && !node.focused) {
+                node.inputValue = text(node.props.get("value"));
+                node.cursor = node.inputValue.length();
+                node.selectionStart = node.cursor;
+                node.selectionEnd = node.cursor;
+            }
         }
 
         void order(Object parent, List<?> children) {
@@ -106,6 +111,9 @@ final class JsxHostTree {
         Map<String, Object> props;
         List<Node> children = new ArrayList<>();
         String inputValue;
+        int cursor;
+        int selectionStart;
+        int selectionEnd;
         boolean focused;
         boolean removed;
         int x;
@@ -120,11 +128,70 @@ final class JsxHostTree {
             this.key = key;
             this.props = props;
             this.inputValue = "input".equals(type) ? text(props.get("value")) : null;
+            this.cursor = this.inputValue == null ? 0 : this.inputValue.length();
+            this.selectionStart = this.cursor;
+            this.selectionEnd = this.cursor;
+        }
+
+        boolean hasSelection() { return selectionStart != selectionEnd; }
+
+        int selectionStart() { return Math.min(selectionStart, selectionEnd); }
+
+        int selectionEnd() { return Math.max(selectionStart, selectionEnd); }
+
+        void collapseSelection(int position) {
+            cursor = Math.max(0, Math.min(position, inputValue.length()));
+            selectionStart = cursor;
+            selectionEnd = cursor;
+        }
+
+        void replaceSelection(String replacement) {
+            int start = selectionStart();
+            int end = selectionEnd();
+            inputValue = inputValue.substring(0, start) + replacement + inputValue.substring(end);
+            cursor = start + replacement.length();
+            selectionStart = cursor;
+            selectionEnd = cursor;
+        }
+
+        boolean deleteBackward() {
+            if (hasSelection()) {
+                replaceSelection("");
+                return true;
+            }
+            if (cursor <= 0) return false;
+            int previous = inputValue.offsetByCodePoints(cursor, -1);
+            inputValue = inputValue.substring(0, previous) + inputValue.substring(cursor);
+            collapseSelection(previous);
+            return true;
+        }
+
+        boolean deleteForward() {
+            if (hasSelection()) {
+                replaceSelection("");
+                return true;
+            }
+            if (cursor >= inputValue.length()) return false;
+            int next = inputValue.offsetByCodePoints(cursor, 1);
+            inputValue = inputValue.substring(0, cursor) + inputValue.substring(next);
+            collapseSelection(cursor);
+            return true;
+        }
+
+        void insertText(String value, int maxLength) {
+            replaceSelection(value);
+            if (inputValue.length() > maxLength) {
+                inputValue = inputValue.substring(0, maxLength);
+                collapseSelection(Math.min(cursor, maxLength));
+            }
         }
 
         Node copy() {
             Node copy = new Node(identity, type, key, new LinkedHashMap<>(props));
             copy.inputValue = inputValue;
+            copy.cursor = cursor;
+            copy.selectionStart = selectionStart;
+            copy.selectionEnd = selectionEnd;
             copy.focused = focused;
             copy.removed = removed;
             copy.x = x;
