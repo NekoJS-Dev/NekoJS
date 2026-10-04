@@ -109,6 +109,7 @@ public final class GlobalBindingMemberValidator {
         }
         // 名字提取与子节点递归必须相互独立：箭头/函数体内部的声明（如回调里的 const 局部）
         // 也是文件可见标识符——只收集参数不递归 body 会让回调内局部被误报为未知标识符
+        if (node instanceof ValNode.VarDecl decl) collectDeclaredNames(decl.init(), out);
         if (node instanceof ValNode.Block b) for (ValNode s : b.stmts()) collectDeclaredNames(s, out);
         if (node instanceof ValNode.CallExpr c) {
             collectDeclaredNames(c.callee(), out);
@@ -160,7 +161,9 @@ public final class GlobalBindingMemberValidator {
         if (node instanceof ValNode.VarDecl decl && decl.init() instanceof ValNode.Identifier init) {
             remap.put(decl.name(), init.name());
         }
+        if (node instanceof ValNode.VarDecl decl) collectRemaps(decl.init(), remap);
         if (node instanceof ValNode.Block b) for (ValNode s : b.stmts()) collectRemaps(s, remap);
+        if (node instanceof ValNode.FuncDecl fd) for (ValNode s : fd.body()) collectRemaps(s, remap);
         if (node instanceof ValNode.CallExpr c) for (ValNode a : c.args()) collectRemaps(a, remap);
         if (node instanceof ValNode.ArrowFunc af) for (ValNode s : af.body()) collectRemaps(s, remap);
     }
@@ -172,6 +175,7 @@ public final class GlobalBindingMemberValidator {
             Set<Class<?>> types = resolveType(decl.init(), schema, remap, out);
             if (types != null && !types.isEmpty()) out.put(decl.name(), types);
         }
+        if (node instanceof ValNode.VarDecl decl) collectLocalTypes(decl.init(), schema, remap, out);
         if (node instanceof ValNode.Block b) for (ValNode s : b.stmts()) collectLocalTypes(s, schema, remap, out);
         if (node instanceof ValNode.CallExpr c) {
             collectLocalTypes(c.callee(), schema, remap, out);
@@ -200,6 +204,9 @@ public final class GlobalBindingMemberValidator {
         }
         if (node instanceof ValNode.CallExpr call && call.callee() instanceof ValNode.Identifier id) {
             checkUnknownIdentifier(id, schema, remap, known, file, source, reported, view);
+        }
+        if (node instanceof ValNode.VarDecl decl) {
+            checkBlock(decl.init(), schema, remap, localTypes, known, file, source, reported, view);
         }
         if (node instanceof ValNode.Block b) for (ValNode s : b.stmts()) checkBlock(s, schema, remap, localTypes, known, file, source, reported, view);
         if (node instanceof ValNode.CallExpr c) {

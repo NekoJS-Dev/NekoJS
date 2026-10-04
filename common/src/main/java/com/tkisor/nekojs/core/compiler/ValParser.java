@@ -7,7 +7,13 @@ public final class ValParser {
     private final int n;
     private int pos;
 
-    private ValParser(String source) { this.src = source; this.n = source.length(); this.pos = 0; }
+    private ValParser(String source) { this(source, 0, source.length()); }
+
+    private ValParser(String source, int start, int end) {
+        this.src = source;
+        this.n = end;
+        this.pos = start;
+    }
 
     public static ValNode.Block parse(String source) {
         return new ValParser(source).parseProgram();
@@ -40,9 +46,7 @@ public final class ValParser {
         if (matchKw("const")) return parseVarDecl(ValNode.DeclarationKind.CONST, start, block);
         if (matchKw("let")) return parseVarDecl(ValNode.DeclarationKind.LET, start, block);
         if (matchKw("var")) return parseVarDecl(ValNode.DeclarationKind.VAR, start, block);
-        // 具名函数声明 function name(...) {...}：parseFuncDecl 自己要求「标识符 + (」，
-        // 匿名 function( 形态作为声明语句非法，走表达式路径
-        if (matchKw("function") && isIdStart(peekAfterKw("function"))) return parseFuncDecl(start);
+        if (matchKw("function")) return parseFuncDecl(start);
         ValNode e = parseExpr();
         skipSemi();
         return e;
@@ -51,20 +55,180 @@ public final class ValParser {
     // ---- declarations ----
 
     private ValNode.VarDecl parseVarDecl(ValNode.DeclarationKind kind, int start, ValNode.Block block) {
-        skipWs();
-        String name = readIdent();
-        if (name == null) { pos = start + 1; return null; }
-        skipWs();
-        ValNode init = null;
-        if (peek() == '=') { pos++; skipWs(); init = parseExpr(); }
-        skipSemi();
-        ValNode.VarDecl decl = new ValNode.VarDecl(kind, name, init, start, pos);
-        if (block != null) block.scope().put(name, decl);
-        return decl;
+        int declarationStart = start;
+        while (pos < n) {
+            skipWsCmt();
+            if (!isIdStart(peek())) break;
+            String name = readIdent();
+            skipWsCmt();
+            ValNode init = null;
+            if (peek() == '=') {
+                pos++;
+                skipWsCmt();
+                int initializerStart = pos;
+                int initializerEnd = scanInitializer(initializerStart, true);
+                init = new ValParser(src, initializerStart, initializerEnd).parseInitializer();
+                pos = initializerEnd;
+            }
+            int declarationEnd = pos;
+            skipWsCmt();
+            boolean another = peek() == ',';
+            if (another || peek() == ';') pos++;
+            ValNode.VarDecl decl = new ValNode.VarDecl(kind, name, init, declarationStart,
+                    another ? declarationEnd : pos);
+            block.stmts().add(decl);
+            block.scope().put(name, decl);
+            if (!another) return null;
+            skipWsCmt();
+            declarationStart = pos;
+        }
+        if (pos == start) pos++;
+        return null;
+    }
+
+    private ValNode parseInitializer() {
+        int start = pos;
+        ValNode first = parseExpr();
+        skipWsCmt();
+        if (first != null && pos == n) return first;
+        List<ValNode> expressions = new ArrayList<>();
+        if (first != null) expressions.add(first);
+        ValNode.Block fragments = new ValNode.Block(expressions, null, new LinkedHashMap<>(), start, n);
+        while (pos < n) {
+            skipWsCmt();
+            if (pos >= n) break;
+            int before = pos;
+            ValNode expression = parseStatement(fragments);
+            if (expression != null) expressions.add(expression);
+            if (pos == before) pos++;
+        }
+        return fragments;
+    }
+
+    private int scanInitializer(int start, boolean declaration) {
+        int cursor = start;
+        int depth = 0;
+        boolean operandExpected = true;
+        while (cursor < n) {
+            char current = src.charAt(cursor);
+            if (current == '\'' || current == '"') {
+                cursor = NekoSourceLexerBase.skipString(src, n, cursor, current);
+                operandExpected = false;
+                continue;
+            }
+            if (current == '`') {
+                cursor = skipInitializerTemplate(cursor);
+                operandExpected = false;
+                continue;
+            }
+            if (current == '/' && cursor + 1 < n) {
+                char next = src.charAt(cursor + 1);
+                if (next == '/') {
+                    cursor = NekoSourceLexerBase.skipLineComment(src, n, cursor + 2);
+                    continue;
+                }
+                if (next == '*') {
+                    int commentEnd = NekoSourceLexerBase.skipBlockComment(src, n, cursor + 2);
+                    if (declaration && depth == 0 && !operandExpected
+                            && containsLineBreak(cursor, commentEnd) && !continuesInitializer(commentEnd)) return cursor;
+                    cursor = commentEnd;
+                    continue;
+                }
+                if (operandExpected) {
+                    cursor = NekoSourceLexerBase.skipRegex(src, n, cursor + 1);
+                    operandExpected = false;
+                    continue;
+                }
+            }
+            if (depth == 0) {
+                if (current == ';' || current == '}' || current == ')' || current == ']') return cursor;
+                if (declaration && current == ',') return cursor;
+                if (declaration && (current == '\n' || current == '\r')
+                        && !operandExpected && !continuesInitializer(cursor)) return cursor;
+            }
+            if (Character.isWhitespace(current)) { cursor++; continue; }
+            if (isIdStart(current)) {
+                int tokenEnd = NekoSourceLexerBase.readIdentifierEnd(src, n, cursor);
+                String token = src.substring(cursor, tokenEnd);
+                operandExpected = switch (token) {
+                    case "return", "throw", "new", "delete", "void", "typeof",
+                            "yield", "await", "in", "instanceof" -> true;
+                    default -> false;
+                };
+                cursor = tokenEnd;
+                continue;
+            }
+            if (Character.isDigit(current)) {
+                cursor++;
+                while (cursor < n && (isIdPart(src.charAt(cursor)) || src.charAt(cursor) == '.')) cursor++;
+                operandExpected = false;
+                continue;
+            }
+            if (current == '(' || current == '[' || current == '{') {
+                depth++;
+                operandExpected = true;
+            } else if (current == ')' || current == ']' || current == '}') {
+                depth--;
+                operandExpected = false;
+            } else {
+                operandExpected = ".".indexOf(current) < 0;
+                if ((current == '+' || current == '-') && cursor + 1 < n
+                        && src.charAt(cursor + 1) == current) {
+                    cursor++;
+                    operandExpected = false;
+                }
+            }
+            cursor++;
+        }
+        return n;
+    }
+
+    private int skipInitializerTemplate(int start) {
+        int cursor = start + 1;
+        while (cursor < n) {
+            char current = src.charAt(cursor);
+            if (current == '\\') { cursor = Math.min(n, cursor + 2); continue; }
+            if (current == '`') return cursor + 1;
+            if (current == '$' && cursor + 1 < n && src.charAt(cursor + 1) == '{') {
+                cursor = scanInitializer(cursor + 2, false);
+                if (cursor < n && src.charAt(cursor) == '}') cursor++;
+                continue;
+            }
+            cursor++;
+        }
+        return n;
+    }
+
+    private boolean containsLineBreak(int start, int end) {
+        for (int cursor = start; cursor < end; cursor++) {
+            if (src.charAt(cursor) == '\n' || src.charAt(cursor) == '\r') return true;
+        }
+        return false;
+    }
+
+    private boolean continuesInitializer(int start) {
+        int cursor = start;
+        while (cursor < n) {
+            char current = src.charAt(cursor);
+            if (Character.isWhitespace(current)) { cursor++; continue; }
+            if (current == '/' && cursor + 1 < n && src.charAt(cursor + 1) == '/') {
+                cursor = NekoSourceLexerBase.skipLineComment(src, n, cursor + 2);
+                continue;
+            }
+            if (current == '/' && cursor + 1 < n && src.charAt(cursor + 1) == '*') {
+                cursor = NekoSourceLexerBase.skipBlockComment(src, n, cursor + 2);
+                continue;
+            }
+            if (current == '!') return cursor + 1 < n && src.charAt(cursor + 1) == '=';
+            if ((current == '+' || current == '-') && cursor + 1 < n
+                    && src.charAt(cursor + 1) == current) return false;
+            return ",.([`?+-*/%&|^<>=!".indexOf(current) >= 0;
+        }
+        return false;
     }
 
     private ValNode parseFuncDecl(int start) {
-        pos += 8; skipWs();
+        skipWsCmt();
         String name = readIdent();
         skipWs();
         if (peek() != '(') return null;
@@ -111,7 +275,9 @@ public final class ValParser {
         if (pos >= n) return null;
         char c = peek();
         if (isIdStart(c)) {
-            int start = pos; String name = readIdent();
+            int start = pos;
+            if (matchKw("function")) return parseFuncDecl(start);
+            String name = readIdent();
             if (name != null) return new ValNode.Identifier(name, start, pos);
         }
         if (c == '\'' || c == '"') return parseStringLiteral();
@@ -312,7 +478,7 @@ public final class ValParser {
     private boolean match(String kw) {
         int end = pos + kw.length(); if (end > n) return false;
         for (int i = 0; i < kw.length(); i++) if (src.charAt(pos + i) != kw.charAt(i)) return false;
-        if (end < n && isIdPart(src.charAt(end))) return false;
+        if (isIdPart(kw.charAt(kw.length() - 1)) && end < n && isIdPart(src.charAt(end))) return false;
         pos = end; return true;
     }
     private boolean matchKw(String kw) { int saved = pos; boolean ok = match(kw); if (!ok) pos = saved; return ok; }

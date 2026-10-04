@@ -141,6 +141,97 @@ class GlobalBindingMemberValidatorTest {
     }
 
     @Test
+    void everyModuleDeclaratorIsKnownInsideNamedFunctions() {
+        validate(file("multi-declarator-lifecycle"),
+                "let firstHost, firstRoot, secondHost, secondRoot;\n"
+                        + "function replaceScreen() { secondHost.bindRoot(secondRoot); }\n"
+                        + "function closeScreen() { firstRoot.close(); secondRoot.close(); }\n");
+        assertTrue(reported.isEmpty(), "every module declarator must be known: " + reported);
+    }
+
+    @Test
+    void laterInitializedDeclaratorsRetainBindingAndReturnTypeChecks() {
+        validate(file("multi-declarator-types"),
+                "const unused = 1, helper = Utils, stack = Item.of('minecraft:stone');\n"
+                        + "helper.serverTel('bad'); stack.withCont(2);\n");
+        assertTrue(reported.stream().noneMatch(message -> message.contains("Unknown identifier")),
+                "later declarators must remain known: " + reported);
+        assertTrue(reported.stream().anyMatch(message -> message.contains("no member 'serverTel'")),
+                "later binding aliases must still be checked: " + reported);
+        assertTrue(reported.stream().anyMatch(message -> message.contains("no member 'withCont'")),
+                "later initializer return types must still be checked: " + reported);
+    }
+
+    @Test
+    void nestedInitializerCommasDoNotDeclareReferencedNames() {
+        validate(file("multi-declarator-nesting"),
+                "let seed = (left, right), values = [left, right], later;\n"
+                        + "function use() { later.bindRoot(); right.bindRoot(); }\n");
+        assertTrue(reported.stream().noneMatch(message -> message.contains("Unknown identifier 'later'")),
+                "declaration after nested initializers must be known: " + reported);
+        assertTrue(reported.stream().anyMatch(message -> message.contains("Unknown identifier 'right'")),
+                "nested comma operands must not be mistaken for declarations: " + reported);
+    }
+
+    @Test
+    void compoundInitializersKeepMemberAndUnknownIdentifierDiagnostics() {
+        for (String expression : List.of("[Utils.serverTel(), missing.call(), absent()]",
+                "true && Utils.serverTel() && missing.call() && absent()",
+                "1 + Utils.serverTel() + missing.call() + absent()",
+                "true ? Utils.serverTel() : missing.call(absent())")) {
+            reported.clear();
+            validate(file("initializer-diagnostics"), "const value = " + expression + ", later = Utils;");
+            assertTrue(reported.stream().anyMatch(message -> message.contains("no member 'serverTel'")),
+                    expression + ": " + reported);
+            assertTrue(reported.stream().anyMatch(message -> message.contains("Unknown identifier 'missing'")),
+                    expression + ": " + reported);
+            assertTrue(reported.stream().anyMatch(message -> message.contains("Unknown identifier 'absent'")),
+                    expression + ": " + reported);
+        }
+    }
+
+    @Test
+    void initializedFunctionsAndArrowsKeepAllParametersAndDeclaratorsKnown() {
+        validate(file("initializer-functions"),
+                "const first = function named(firstArg, secondArg) {\n"
+                        + "  let localFirst, localSecond;\n"
+                        + "  firstArg.call(); secondArg.call(); localFirst.call(); localSecond.call();\n"
+                        + "}, second = (arrowFirst, arrowSecond) => {\n"
+                        + "  const nested = function(innerArg) { innerArg.call(); };\n"
+                        + "  arrowFirst.call(); arrowSecond.call(); nested();\n"
+                        + "}, third = function(lastArg) { lastArg.call(); }, compact = value=>value.call(), "
+                        + "compactPair = (left,right)=>left.call(right);\n"
+                        + "first(); second(); third(); named(); compact(); compactPair();\n");
+        assertTrue(reported.isEmpty(), "initializer declarations and parameters must stay known: " + reported);
+    }
+
+    @Test
+    void nestedInitializerBodiesStillReportMissingMembersAndIdentifiers() {
+        validate(file("nested-initializer-diagnostics"),
+                "const callback = (arg) => { const nested = function(inner) {\n"
+                        + "  const values = [Utils.serverTel(), missing.call()];\n"
+                        + "  inner.call(); arg.call();\n"
+                        + "}; nested(); };\n");
+        assertTrue(reported.stream().anyMatch(message -> message.contains("no member 'serverTel'")),
+                "nested initializer member must be checked: " + reported);
+        assertTrue(reported.stream().anyMatch(message -> message.contains("Unknown identifier 'missing'")),
+                "nested initializer identifier must be checked: " + reported);
+        assertTrue(reported.stream().noneMatch(message -> message.contains("Unknown identifier 'inner'")
+                        || message.contains("Unknown identifier 'arg'") || message.contains("Unknown identifier 'nested'")),
+                "nested parameters and declarations must be known: " + reported);
+    }
+
+    @Test
+    void newStatementPrefixOperatorsDoNotHideDiagnosticsBehindInitializers() {
+        for (String operator : List.of("!", "++", "--")) {
+            reported.clear();
+            validate(file("initializer-asi"), "let value = Utils\n" + operator + "missing.field;\n");
+            assertTrue(reported.stream().anyMatch(message -> message.contains("Unknown identifier 'missing'")),
+                    operator + ": " + reported);
+        }
+    }
+
+    @Test
     void directRegistrationCallbackWithTwoParametersKeepsBothParametersInScope() {
         view = new ScriptBindingSchema.View(Map.of(
                 "ClientEvents", new ScriptBindingSchema.BindingMembers(Set.of("hudRender"))),
