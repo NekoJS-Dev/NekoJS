@@ -73,3 +73,22 @@ run 目录)。本场为**首场部分会话**:进世界验证 + 输入链复验 
 - 任务 3 的本场 query 输出为 `ACTIVE ... trades=0`，尚不足以证明 add/query 交易结果；需单独隔离任务 3 重跑并记录 `declared 2`、`countOf` 等逐字输出。
 - 任务 1–11 的跨节点代表性试做、公开材料充分性表格、维护者四类 cookbook 任务和维护者最终结论仍需人工完成。
 - 票 41/43/44 的完整 JSX 真实交互、resize、纹理管线与 golden 审阅仍未完成；票 37 继续被票 36 阻塞。
+
+## 2026-10-04 票 36 试做会话·第三场（维护者操作，生命周期修复后）
+
+本场先修复并验证了生产接线：26.x 与 1.21.1 的 `ServerEventListener.onServerAboutToStart` 现在调用
+`VillagerTradeDomainOwner.applyInitialPlan(server)`，并在 server stop 清理 owner 绑定；两节点的源接线回归测试通过。客户端从相同
+`Game directory: D:\\mcmodDemo\\NekoJS-mult\\versions\\26.1.2\\run` 重启，完整脚本包恢复后进入同一测试世界。
+
+| 项 | 结果 | 证据 |
+|---|---|---|
+| F-T1 修订启动注册 | ❌ 旧 `unknown type name 'art'` 不再出现，但新启动仍记录 `Registry 'minecraft:painting_variant' ... collected 'mymod:art' ... registration pass never fired; content NOT registered`；实际注册仍未交付 | `latest.log` 10:14:56 附近 |
+| 任务 3 启动声明与查询 | ✅ `declared 2 trade declaration(s)`；启动提交 `2 trade declaration(s)`；`ACTIVE generation=1 adapter=26.x-trade-set trades=2 minecraft:farmer/level_1=2` | `latest.log` 10:26:40–10:26:41 |
+| 任务 3 reload | ✅ `declared 2 trade declaration(s)`；`this batch will touch 2 trade declaration(s)`；聊天显示 `NekoJS server reload committed: generation=2 phase=COMMIT` | `latest.log` 10:27:16–10:27:16 |
+| 任务 3 独立性 | ⚠️ 数据结果已为 2 条交易，但本场重启前已恢复全部试做脚本；故仍有其它脚本诊断输出，未把本场宣称为“无干扰独立复跑” | 同一 `latest.log`；此前隔离目录仅覆盖未重启的 reload，不能替代独立启动证据 |
+
+### 本场结论
+
+- 交易 owner 的生产启动接线缺口已修复；任务 3 的 add/query 正向数据和 reload 第二代提交均有真实客户端日志证据。
+- F-T1 已精确收窄为“类型名修正成功，但 `painting_variant` registration pass 未触发”；不能以旧错误消失或任务 3 结果关闭任务 1。
+- 票 36 的 11 项跨节点试做、公开材料充分性记录、四份维护者 cookbook 和最终维护者结论仍未完成。

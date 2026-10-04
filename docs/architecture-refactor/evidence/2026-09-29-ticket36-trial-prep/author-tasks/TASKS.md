@@ -77,7 +77,7 @@
 
 | 节点 | 变体 | 实际输出 / 诊断 | 公开材料是否足够 | 结论 | 备注 |
 |------|------|----------------|------------------|------|------|
-|      |      |                |                  |      |      |
+| 26.1.2 NeoForge | 主任务 3 | 启动 `declared 2 trade declaration(s)`；`VillagerTrades: committed 2 trade declaration(s) across 1 trade set(s) at startup`；`ACTIVE generation=1 adapter=26.x-trade-set trades=2 minecraft:farmer/level_1=2`。随后 `/nekojs reload server` 输出 `declared 2 trade declaration(s)`、`this batch will touch 2 trade declaration(s)`、聊天 `generation=2 phase=COMMIT`。 | 足够 | 通过（add/query 与 reload 提交） | 真实日志：`versions/26.1.2/run/logs/latest.log`，2026-10-04 10:26:40–10:27:16。完整脚本包已恢复，因此本场不宣称无干扰独立启动；任务 3 正向数据仍明确出现。 |
 
 ### 任务 4 / 4b Item / Block modification
 

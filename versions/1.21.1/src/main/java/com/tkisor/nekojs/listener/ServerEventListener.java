@@ -82,6 +82,10 @@ public class ServerEventListener {
         if (modificationDomain != null) {
             modificationDomain.applyInitialPlan(server);
         }
+        com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner villagerTradeDomain = villagerTradeDomain();
+        if (villagerTradeDomain != null) {
+            villagerTradeDomain.applyInitialPlan(server);
+        }
     }
 
     /** 修改域 owner（root 授权 domain collector；未注册返回 null，启动收集点跳过）。 */
@@ -94,7 +98,17 @@ public class ServerEventListener {
     }
 
     /**
-     * 挂载脚本包 {@code data/} 目录为合成 server datapack（仅含 data/ 的启用包）。
+     * Villager Trades owner (root-authorised domain collector; absent on unsupported loader nodes).
+     */
+    private static com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner villagerTradeDomain() {
+        com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector =
+                runtimeRoot == null ? null
+                        : runtimeRoot.domainCollector(com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner.DOMAIN);
+        return collector instanceof com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner owner
+                ? owner : null;
+    }
+
+    /**
      * 内容签名未变化时零开销；变化时在服务器线程上 repository.reload + setSelected +
      * server.reloadResources，随后把 nekojs 包 id 从 worldData 配置中剔除（不落盘）。
      */
@@ -139,6 +153,14 @@ public class ServerEventListener {
         // 脚本包 datapack 挂载与村民交易快照随服务器实例一起失效；重置以便下次挂载。
         ScriptPackDataManager.reset();
         VillagerTradeManager.reset();
+        com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner modificationDomain = modificationDomain();
+        if (modificationDomain != null) {
+            modificationDomain.clearServer();
+        }
+        com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner villagerTradeDomain = villagerTradeDomain();
+        if (villagerTradeDomain != null) {
+            villagerTradeDomain.clearServer();
+        }
         if (removed.isEmpty()) return;
         var serverManager = runtimeRoot.scriptManagerOrNull(ScriptType.SERVER);
         if (serverManager != null) serverManager.clearWorldPackListeners(removed);

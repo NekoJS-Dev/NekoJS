@@ -77,6 +77,10 @@ public class ServerEventListener {
         if (modificationDomain != null) {
             modificationDomain.applyInitialPlan(server);
         }
+        com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner villagerTradeDomain = villagerTradeDomain();
+        if (villagerTradeDomain != null) {
+            villagerTradeDomain.applyInitialPlan(server);
+        }
         // 动态注册事件 facade 的初次候选（ticket 16）：server registry ready 后收集一次
         // inert 计划（preflight 通过才发布；每次成功的 script/data reload 也会在候选阶段
         // 重新收集并联合发布，此处是对「初次 server registry ready」边界的显式触发，幂等）。
@@ -97,6 +101,17 @@ public class ServerEventListener {
                 runtimeRoot == null ? null
                         : runtimeRoot.domainCollector(com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.DOMAIN);
         return collector instanceof com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner owner
+                ? owner : null;
+    }
+
+    /**
+     * Villager Trades owner (root-authorised domain collector; absent on unsupported loader nodes).
+     */
+    private static com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner villagerTradeDomain() {
+        com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector =
+                runtimeRoot == null ? null
+                        : runtimeRoot.domainCollector(com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner.DOMAIN);
+        return collector instanceof com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner owner
                 ? owner : null;
     }
 
@@ -150,6 +165,10 @@ public class ServerEventListener {
         com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner modificationDomain = modificationDomain();
         if (modificationDomain != null) {
             modificationDomain.clearServer();
+        }
+        com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner villagerTradeDomain = villagerTradeDomain();
+        if (villagerTradeDomain != null) {
+            villagerTradeDomain.clearServer();
         }
         if (removed.isEmpty()) return;
         var serverManager = runtimeRoot.scriptManagerOrNull(ScriptType.SERVER);
