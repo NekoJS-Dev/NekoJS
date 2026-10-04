@@ -339,7 +339,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         } else if ("button".equals(type)) {
             boolean disabled = bool(node.props.get("disabled"));
             boolean hovered = contains(node, mouseX, mouseY);
-            int fill = disabled ? 0xFF404040 : hovered ? 0xFF5A7FA8 : 0xFF3A536F;
+            int fill = disabled ? 0xFF404040 : node.pressed ? 0xFF29415C : hovered ? 0xFF5A7FA8 : 0xFF3A536F;
             graphics.fill(x, y, x + width, y + height, fill);
             graphics.outline(x, y, x + width, y + height, node.focused ? 0xFFFFFFFF : 0xFF9AA7B5);
             graphics.centeredText(Minecraft.getInstance().font, text(node.props.get("text")), x + width / 2, y + 6,
@@ -350,6 +350,13 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
             String input = node.inputValue == null ? "" : node.inputValue;
             boolean empty = input.isEmpty();
             String display = empty ? text(node.props.get("placeholder")) : input;
+            if (node.focused && !empty && node.hasSelection()) {
+                int start = Math.max(0, Math.min(node.selectionStart(), input.length()));
+                int end = Math.max(start, Math.min(node.selectionEnd(), input.length()));
+                int selectionX = x + 4 + Minecraft.getInstance().font.width(input.substring(0, start));
+                int selectionEndX = x + 4 + Minecraft.getInstance().font.width(input.substring(0, end));
+                graphics.fill(selectionX, y + 4, selectionEndX, y + height - 4, 0xFF4A6A95);
+            }
             graphics.text(Minecraft.getInstance().font, display, x + 4, y + 6,
                     empty ? 0xFF888888 : 0xFFFFFFFF, false);
             if (node.focused) {
@@ -442,8 +449,20 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         requireUsable("route a mouse event");
         JsxHostTree.Node node = hit(tree.roots(), mouseX, mouseY);
         if (node == null || bool(node.props.get("disabled"))) return false;
-        if ("click".equals(eventName) && isFocusable(node)) focus(node);
-        return dispatch(node, eventName, Map.of("x", mouseX, "y", mouseY, "button", button));
+        if ("click".equals(eventName)) {
+            tree.capture(node, button);
+            if (isFocusable(node)) focus(node);
+        }
+        boolean callbackHandled = dispatch(node, eventName, Map.of("x", mouseX, "y", mouseY, "button", button));
+        return callbackHandled || isFocusable(node);
+    }
+
+    boolean dispatchRelease(double mouseX, double mouseY, int button) {
+        requireUsable("route a mouse release");
+        JsxHostTree.Node node = tree.releaseCapture(button);
+        if (node == null || node.removed) return false;
+        dispatch(node, "release", Map.of("x", mouseX, "y", mouseY, "button", button));
+        return true;
     }
 
     boolean dispatchScroll(double mouseX, double mouseY, double delta) {
@@ -451,9 +470,11 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         JsxHostTree.Node node = scrollHit(tree.roots(), mouseX, mouseY);
         if (node == null) return false;
         double current = number(node.props.get("scrollOffset"), 0);
-        node.props.put("scrollOffset", clamp(current - delta * 12, 0, node.scrollRange));
+        double next = clamp(current - delta * 12, 0, node.scrollRange);
+        node.props.put("scrollOffset", next);
         relayout();
-        return dispatch(node, "scroll", Map.of("x", mouseX, "y", mouseY, "delta", delta));
+        boolean callbackHandled = dispatch(node, "scroll", Map.of("x", mouseX, "y", mouseY, "delta", delta));
+        return callbackHandled || node.scrollRange > 0;
     }
 
     boolean key(int key, int modifiers) {
@@ -490,31 +511,31 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     private boolean editInput(JsxHostTree.Node node, int key, int modifiers) {
         boolean shift = (modifiers & org.lwjgl.glfw.GLFW.GLFW_MOD_SHIFT) != 0;
-        int position = node.cursor;
+        boolean control = (modifiers & org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL) != 0;
+        if (control && key == org.lwjgl.glfw.GLFW.GLFW_KEY_A) {
+            node.selectAll();
+            return true;
+        }
         if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE) {
             if (!node.deleteBackward()) return true;
         } else if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_DELETE) {
             if (!node.deleteForward()) return true;
         } else if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT) {
-            position = node.hasSelection() && !shift ? node.selectionStart()
+            int position = node.hasSelection() && !shift ? node.selectionStart()
                     : node.cursor == 0 ? 0 : node.inputValue.offsetByCodePoints(node.cursor, -1);
-            node.cursor = Math.max(0, position);
-            if (!shift) node.collapseSelection(node.cursor); else node.selectionEnd = node.cursor;
+            node.moveCursor(position, shift);
             return true;
         } else if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT) {
-            position = node.hasSelection() && !shift ? node.selectionEnd()
+            int position = node.hasSelection() && !shift ? node.selectionEnd()
                     : node.cursor >= node.inputValue.length() ? node.inputValue.length()
                     : node.inputValue.offsetByCodePoints(node.cursor, 1);
-            node.cursor = Math.min(node.inputValue.length(), position);
-            if (!shift) node.collapseSelection(node.cursor); else node.selectionEnd = node.cursor;
+            node.moveCursor(position, shift);
             return true;
         } else if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_HOME) {
-            node.cursor = 0;
-            if (!shift) node.collapseSelection(0); else node.selectionEnd = 0;
+            node.moveCursor(0, shift);
             return true;
         } else if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_END) {
-            node.cursor = node.inputValue.length();
-            if (!shift) node.collapseSelection(node.cursor); else node.selectionEnd = node.cursor;
+            node.moveCursor(node.inputValue.length(), shift);
             return true;
         } else {
             return false;
@@ -617,6 +638,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                     reportHostFailure("close", failure);
                 }
             }
+            tree.cancelCapture();
             lifecycle.beginClose();
             try {
                 if (McClientCompat.get().currentScreen() == screen) McClientCompat.get().showScreen(null);
@@ -703,9 +725,9 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         for (int i = values.size() - 1; i >= 0; i--) {
             JsxHostTree.Node node = values.get(i);
             if (!visible(node) || !contains(node, x, y)) continue;
-            if ("scroll".equals(node.type)) return node;
             JsxHostTree.Node child = scrollHit(node.children, x, y);
             if (child != null) return child;
+            if ("scroll".equals(node.type)) return node;
         }
         return null;
     }
@@ -748,7 +770,9 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
             cursor += (row ? childWidth : childHeight) + gap;
             available -= (row ? childWidth : childHeight) + gap;
         }
-        if ("scroll".equals(node.type)) node.scrollRange = Math.max(0, cursor - (row ? x : y) - (row ? node.width : node.height));
+        if ("scroll".equals(node.type)) {
+            node.updateScrollRange(Math.max(0, cursor - (row ? x : y) - (row ? node.width : node.height)));
+        }
     }
 
     private static int dimension(Object value, int available, int fallback) {

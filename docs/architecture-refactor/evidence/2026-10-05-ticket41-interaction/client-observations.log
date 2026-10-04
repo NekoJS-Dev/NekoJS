@@ -1,0 +1,10 @@
+[0510月2026 02:20:21.088] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket41-final] opened
+[0510月2026 02:21:55.088] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket41-final] change=N
+[0510月2026 02:21:55.370] [Render thread/INFO] [NekoJS/]: [client] [ticket41-final] change=Ne
+[0510月2026 02:21:55.532] [Render thread/INFO] [NekoJS/]: [client] [ticket41-final] change=Nek
+[0510月2026 02:21:56.089] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket41-final] change=Neko
+[0510月2026 02:22:09.088] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket41-final] change=NeX
+[0510月2026 02:22:17.088] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket41-final] click=1
+[0510月2026 02:22:21.089] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket41-final] release=1
+[0510月2026 02:22:34.453] [Render thread/INFO] [NekoJS/]: [client] [ticket41-final] click=2
+[0510月2026 02:22:35.089] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket41-final] release=2

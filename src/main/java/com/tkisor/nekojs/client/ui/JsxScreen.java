@@ -42,7 +42,7 @@ public final class JsxScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        return !disposed && adapter.dispatchAt(event.x(), event.y(), "release", event.button());
+        return !disposed && adapter.dispatchRelease(event.x(), event.y(), event.button());
     }
 
     @Override

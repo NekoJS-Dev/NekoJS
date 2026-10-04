@@ -11,10 +11,39 @@ final class JsxHostTree {
     private Map<Long, Node> nodes = new LinkedHashMap<>();
     private List<Node> roots = List.of();
     private long nextIdentity = 1;
+    private Long capturedIdentity;
+    private int capturedButton;
 
     List<Node> roots() { return roots; }
 
-    void clear() { nodes = new LinkedHashMap<>(); roots = List.of(); }
+    void capture(Node node, int button) {
+        cancelCapture();
+        if (!nodes.containsKey(node.identity)) return;
+        capturedIdentity = node.identity;
+        capturedButton = button;
+        nodes.get(node.identity).pressed = true;
+    }
+
+    Node releaseCapture(int button) {
+        if (capturedIdentity == null || capturedButton != button) return null;
+        Node captured = nodes.get(capturedIdentity);
+        cancelCapture();
+        return captured;
+    }
+
+    void cancelCapture() {
+        if (capturedIdentity != null) {
+            Node captured = nodes.get(capturedIdentity);
+            if (captured != null) captured.pressed = false;
+        }
+        capturedIdentity = null;
+    }
+
+    void clear() {
+        cancelCapture();
+        nodes = new LinkedHashMap<>();
+        roots = List.of();
+    }
 
     void close(Runnable closeRoot) {
         closeRoot.run();
@@ -49,12 +78,13 @@ final class JsxHostTree {
             Node node = node(handle);
             node.type = type;
             node.key = key;
+            Object previousOffset = node.props.get("scrollOffset");
             node.props = new LinkedHashMap<>(props);
-            if ("input".equals(type) && !node.focused) {
-                node.inputValue = text(node.props.get("value"));
-                node.cursor = node.inputValue.length();
-                node.selectionStart = node.cursor;
-                node.selectionEnd = node.cursor;
+            if ("scroll".equals(type) && !node.props.containsKey("scrollOffset") && previousOffset != null) {
+                node.props.put("scrollOffset", previousOffset);
+            }
+            if ("input".equals(type) && node.props.containsKey("value")) {
+                node.setInputValue(text(node.props.get("value")));
             }
         }
 
@@ -115,6 +145,7 @@ final class JsxHostTree {
         int selectionStart;
         int selectionEnd;
         boolean focused;
+        boolean pressed;
         boolean removed;
         int x;
         int y;
@@ -141,6 +172,9 @@ final class JsxHostTree {
 
         void collapseSelection(int position) {
             cursor = Math.max(0, Math.min(position, inputValue.length()));
+            if (cursor > 0 && cursor < inputValue.length()
+                    && Character.isHighSurrogate(inputValue.charAt(cursor - 1))
+                    && Character.isLowSurrogate(inputValue.charAt(cursor))) cursor--;
             selectionStart = cursor;
             selectionEnd = cursor;
         }
@@ -178,12 +212,51 @@ final class JsxHostTree {
             return true;
         }
 
+        void setInputValue(String value) {
+            if (value.equals(inputValue)) return;
+            inputValue = value;
+            collapseSelection(Math.min(cursor, value.length()));
+        }
+
+        void moveCursor(int position, boolean selecting) {
+            int target = Math.max(0, Math.min(position, inputValue.length()));
+            if (target > 0 && target < inputValue.length()
+                    && Character.isLowSurrogate(inputValue.charAt(target))) target--;
+            cursor = target;
+            if (selecting) selectionEnd = cursor;
+            else collapseSelection(cursor);
+        }
+
+        void selectAll() {
+            selectionStart = 0;
+            selectionEnd = inputValue.length();
+            cursor = selectionEnd;
+        }
+
         void insertText(String value, int maxLength) {
-            replaceSelection(value);
-            if (inputValue.length() > maxLength) {
-                inputValue = inputValue.substring(0, maxLength);
-                collapseSelection(Math.min(cursor, maxLength));
-            }
+            int start = selectionStart();
+            int end = selectionEnd();
+            int retainedLength = inputValue.codePointCount(0, start)
+                    + inputValue.codePointCount(end, inputValue.length());
+            int capacity = Math.max(0, maxLength - retainedLength);
+            int accepted = Math.min(capacity, value.codePointCount(0, value.length()));
+            if (accepted == 0 && !hasSelection()) return;
+            replaceSelection(value.substring(0, value.offsetByCodePoints(0, accepted)));
+        }
+
+        void updateScrollRange(double range) {
+            scrollRange = Math.max(0, range);
+            Object offset = props.get("scrollOffset");
+            double previous = offset instanceof Number number ? number.doubleValue() : 0;
+            double next = Math.max(0, Math.min(previous, scrollRange));
+            props.put("scrollOffset", next);
+            int displacement = (int) previous - (int) next;
+            for (Node child : children) child.translateVertically(displacement);
+        }
+
+        private void translateVertically(int displacement) {
+            y += displacement;
+            for (Node child : children) child.translateVertically(displacement);
         }
 
         Node copy() {
@@ -193,6 +266,7 @@ final class JsxHostTree {
             copy.selectionStart = selectionStart;
             copy.selectionEnd = selectionEnd;
             copy.focused = focused;
+            copy.pressed = pressed;
             copy.removed = removed;
             copy.x = x;
             copy.y = y;

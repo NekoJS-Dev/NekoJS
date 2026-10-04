@@ -30,6 +30,132 @@ class Ticket41JsxHostAdapterTest {
         assertEquals("aZ", input.inputValue);
         assertEquals(2, input.cursor);
         assertTrue(input.deleteForward() == false);
+        input = new JsxHostTree.Node(2, "input", null, new java.util.LinkedHashMap<>());
+        input.insertText("😀", 1);
+        assertEquals("😀", input.inputValue);
+        input.insertText("x", 1);
+        assertEquals("😀", input.inputValue);
+    }
+
+    @Test
+    void fullInputRejectsInsertionWithoutDiscardingTheExistingSuffix() {
+        JsxHostTree.Node input = new JsxHostTree.Node(1, "input", null,
+                new java.util.LinkedHashMap<>(Map.of("value", "abc")));
+        input.collapseSelection(1);
+        input.insertText("Z", 3);
+        assertEquals("abc", input.inputValue);
+        assertEquals(1, input.cursor);
+        input.selectionStart = 1;
+        input.selectionEnd = 2;
+        input.insertText("😀Z", 3);
+        assertEquals("a😀c", input.inputValue);
+        assertEquals(3, input.cursor);
+    }
+
+    @Test
+    void focusedInputAcceptsControlledValueUpdatesAndPreservesSelectionForUnchangedValues() {
+        JsxHostTree tree = new JsxHostTree();
+        JsxHostTree.Transaction initial = tree.begin();
+        Object handle = initial.create("input", "name", Map.of("value", "abc"));
+        initial.order(null, List.of(handle));
+        initial.commit(List.of(handle));
+        JsxHostTree.Node input = tree.roots().getFirst();
+        input.focused = true;
+        input.cursor = 2;
+        input.selectionStart = 1;
+        input.selectionEnd = 2;
+        JsxHostTree.Transaction unchanged = tree.begin();
+        unchanged.update(handle, "input", "name", Map.of("value", "abc"));
+        unchanged.commit(List.of(handle));
+        assertEquals(1, tree.roots().getFirst().selectionStart());
+        assertEquals(2, tree.roots().getFirst().selectionEnd());
+        JsxHostTree.Transaction changed = tree.begin();
+        changed.update(handle, "input", "name", Map.of("value", "X"));
+        changed.commit(List.of(handle));
+        assertEquals("X", tree.roots().getFirst().inputValue);
+        assertTrue(tree.roots().getFirst().cursor <= 1);
+    }
+
+    @Test
+    void controlledUnicodeValueKeepsTheCursorAtACodePointBoundary() {
+        JsxHostTree.Node input = new JsxHostTree.Node(1, "input", null,
+                new java.util.LinkedHashMap<>(Map.of("value", "ab")));
+        input.collapseSelection(1);
+        input.setInputValue("😀");
+        assertEquals(0, input.cursor);
+        input.insertText("X", 4);
+        assertEquals("X😀", input.inputValue);
+    }
+
+    @Test
+    void captureSurvivesReconcileButExpiresWhenANodeIsReplacedWithTheSameId() {
+        JsxHostTree tree = new JsxHostTree();
+        JsxHostTree.Transaction initial = tree.begin();
+        Object button = initial.create("button", "ok", Map.of("id", "ok"));
+        initial.order(null, List.of(button));
+        initial.commit(List.of(button));
+        tree.capture(tree.roots().getFirst(), 0);
+        JsxHostTree.Transaction update = tree.begin();
+        update.update(button, "button", "ok", Map.of("id", "ok", "text", "changed"));
+        update.commit(List.of(button));
+        assertTrue(tree.roots().getFirst().pressed);
+        assertEquals(null, tree.releaseCapture(1));
+        assertTrue(tree.roots().getFirst().pressed);
+        assertEquals(tree.roots().getFirst(), tree.releaseCapture(0));
+        assertFalse(tree.roots().getFirst().pressed);
+        tree.capture(tree.roots().getFirst(), 0);
+        JsxHostTree.Transaction replace = tree.begin();
+        replace.remove(button);
+        Object replacement = replace.create("button", "other", Map.of("id", "ok"));
+        replace.order(null, List.of(replacement));
+        replace.commit(List.of(replacement));
+        assertEquals(null, tree.releaseCapture(0));
+        assertFalse(tree.roots().getFirst().pressed);
+    }
+
+    @Test
+    void uncontrolledScrollSurvivesReconcileAndControlledOffsetsOverrideIt() {
+        JsxHostTree tree = new JsxHostTree();
+        JsxHostTree.Transaction initial = tree.begin();
+        Object handle = initial.create("scroll", "list", Map.of("id", "list"));
+        initial.order(null, List.of(handle));
+        initial.commit(List.of(handle));
+        tree.roots().getFirst().props.put("scrollOffset", 24.0);
+        JsxHostTree.Transaction update = tree.begin();
+        update.update(handle, "scroll", "list", Map.of("id", "list"));
+        update.commit(List.of(handle));
+        assertEquals(24.0, tree.roots().getFirst().props.get("scrollOffset"));
+        JsxHostTree.Transaction controlled = tree.begin();
+        controlled.update(handle, "scroll", "list", Map.of("id", "list", "scrollOffset", 12.0));
+        controlled.commit(List.of(handle));
+        assertEquals(12.0, tree.roots().getFirst().props.get("scrollOffset"));
+    }
+
+    @Test
+    void uncontrolledInputSurvivesUnrelatedReconciliation() {
+        JsxHostTree tree = new JsxHostTree();
+        JsxHostTree.Transaction initial = tree.begin();
+        Object handle = initial.create("input", "name", Map.of("id", "name"));
+        initial.order(null, List.of(handle));
+        initial.commit(List.of(handle));
+        tree.roots().getFirst().focused = true;
+        tree.roots().getFirst().insertText("Neko", 12);
+        JsxHostTree.Transaction update = tree.begin();
+        update.update(handle, "input", "name", Map.of("id", "name"));
+        update.commit(List.of(handle));
+        assertEquals("Neko", tree.roots().getFirst().inputValue);
+    }
+
+    @Test
+    void shortenedScrollContentClampsOffsetAndRestoresVisibleChildPositions() {
+        JsxHostTree.Node scroll = new JsxHostTree.Node(1, "scroll", null,
+                new java.util.LinkedHashMap<>(Map.of("scrollOffset", 100.0)));
+        JsxHostTree.Node child = new JsxHostTree.Node(2, "label", null, new java.util.LinkedHashMap<>());
+        child.y = -100;
+        scroll.children.add(child);
+        scroll.updateScrollRange(20);
+        assertEquals(20.0, scroll.props.get("scrollOffset"));
+        assertEquals(-20, child.y);
     }
 
     @Test
@@ -46,6 +172,14 @@ class Ticket41JsxHostAdapterTest {
         child.height = 20;
         scroll.children.add(child);
         assertEquals(scroll, JsxHostAdapter.scrollHit(List.of(scroll), 20, 20));
+        JsxHostTree.Node nested = new JsxHostTree.Node(3, "scroll", null, new java.util.LinkedHashMap<>());
+        nested.x = 20;
+        nested.y = 20;
+        nested.width = 40;
+        nested.height = 20;
+        scroll.children.clear();
+        scroll.children.add(nested);
+        assertEquals(nested, JsxHostAdapter.scrollHit(List.of(scroll), 25, 25));
         assertEquals(null, JsxHostAdapter.scrollHit(List.of(scroll), 120, 20));
     }
 

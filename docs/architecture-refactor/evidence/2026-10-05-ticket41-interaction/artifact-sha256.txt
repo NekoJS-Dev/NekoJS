@@ -1,0 +1,4 @@
+Algorithm: SHA256
+Live-smoke jar: nekojs-neoforge-26.2.0-1.1.0-preview3.jar
+SHA256: 2196175FB5AD60AF7F53DB5331CA9F1150C099E763C1309AF058CC64265F3291
+The built and staged game jars matched before launch. This checksum identifies the live-smoke build; two later input/scroll edge fixes are verified through node tests.
