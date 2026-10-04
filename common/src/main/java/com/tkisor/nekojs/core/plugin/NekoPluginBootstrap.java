@@ -154,9 +154,12 @@ public final class NekoPluginBootstrap {
             }
         }
         List<NekoPluginExtensionPoint<?>> extensionPoints = registry.freeze();
-        for (NekoJSPlugin plugin : plugins) {
-            for (NekoPluginExtensionPoint<?> extensionPoint : extensionPoints) {
+        for (NekoPluginExtensionPoint<?> extensionPoint : extensionPoints) {
+            for (NekoJSPlugin plugin : plugins) {
                 extensionPoint.collect(plugin, state);
+            }
+            if (extensionPoint.onFinish() != null) {
+                extensionPoint.onFinish().run();
             }
         }
 
