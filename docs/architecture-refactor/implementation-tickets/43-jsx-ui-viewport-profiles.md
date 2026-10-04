@@ -26,7 +26,7 @@
 - [x] row/column、stack、scroll、spacing、padding、align、anchor、可见性和文本规格可按 profile 覆盖；窄屏/宽屏重排不需要每个属性重复填写六遍。【evidence: deterministic fake layout snapshot asserts responsive row direction/gap, stack anchor, scroll offset/clipping, padding, profile visibility and text-size override】
 - [x] 设计坐标、逻辑像素和连续比例可共存；文本字号和可读性相关属性不被强制整体等比无限缩放。【evidence: public viewport contract exposes logical/design coordinate spaces and design scale; resolver accepts logical percentages and design dimensions; fake snapshot keeps font-size as an explicit profile value】
 - [x] resize/profile 切换只使布局失效并重新 measure/arrange，不重新执行 GraalJS render 或重建全部 host node；稳定输出包含最终矩形、裁剪和溢出诊断。【evidence: fake Adapter records layout snapshot, final rect/clip/overflow; two resize calls increment layout only, with unchanged render and commit counts】
-- [ ] 六个 profile 均有稳定 fake 输出；真实 NeoForge 26.2 resize smoke 在 41 完成后补入同一公开 contract，不用私有 widget 布局作为断言。【not run: real NeoForge 26.2 resize smoke is owned by ticket 41/client evidence; no human sign-off is authored here】
+- [x] 六个 profile 均有稳定 fake 输出；真实 NeoForge 26.2 resize smoke 在 41 完成后补入同一公开 contract，不用私有 widget 布局作为断言。【2026-10-05：[profile integration evidence](../evidence/2026-10-05-ticket43-profiles/README.md)保存真实 Graal/Minecraft 的八条公开测量（初始、六档、恢复），六档 `renderCount=1`、Inspector/common rect 一致；维护者点击右对齐 HIT 并在 F11 resize 后再次命中，两条 native target-hit 日志与截图配对。common snapshot 成为真实 retained host 几何/clip/style 来源，候选失败不再发布 Inspector；profile-only resize 不 rerender，状态/捕获身份保持。AC2 的响应式完整 golden/review 仍未勾选。】
 
 
 ## Delivery record (2026-09-23)

@@ -116,7 +116,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     isOwnerThread(): boolean
     enqueue(action: NekoUiCallback): boolean
     supportsPrimitive(type: NekoUiPrimitive): boolean
-    layout(tree: readonly NekoUiHostNode[], viewport?: NekoUiViewport, snapshot?: NekoUiLayoutSnapshot): void
+    layout(tree: readonly NekoUiHostNode[], viewport?: NekoUiViewport, snapshot?: NekoUiLayoutSnapshot, publish?: boolean): void
     measureText?(text: string, fontSize: number, maxWidth: number): { readonly width: number; readonly height: number }
     begin(): NekoUiHostTransaction
     reportDiagnostic(diagnostic: NekoUiDiagnostic): void
@@ -454,6 +454,10 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
   }
 
   function resolveViewport(input) {
+    // ponytail: the Java host currently supplies width/height only; convert more fields if it adds them.
+    if (!plainObject(input) && input != null && typeof input.get === 'function') {
+      input = { width: input.get('width'), height: input.get('height') }
+    }
     if (!plainObject(input)) throw new TypeError('Viewport input must be a plain object')
     finitePositive(input.width, 'viewport.width')
     finitePositive(input.height, 'viewport.height')
@@ -1024,7 +1028,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
         let layoutSnapshot
         try {
           layoutSnapshot = layoutSnapshotFor(candidate, root.viewport, adapter, eventHandlers)
-          adapter.layout(cloneLayoutTree(candidate), root.viewport, layoutSnapshot)
+          adapter.layout(cloneLayoutTree(candidate), root.viewport, { ...layoutSnapshot, rootId: rootId })
         } catch (error) {
           throw fail('layout', 'UI layout failed', error)
         }
@@ -1079,7 +1083,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
         }
         try {
           const nextSnapshot = layoutSnapshotFor(root.candidate, nextViewport, adapter, root.eventHandlers)
-          adapter.layout(cloneLayoutTree(root.candidate), nextViewport, nextSnapshot)
+          adapter.layout(cloneLayoutTree(root.candidate), nextViewport, { ...nextSnapshot, rootId: rootId }, true)
           root.viewport = nextViewport
           root.layoutSnapshot = nextSnapshot
           return true

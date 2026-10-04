@@ -106,6 +106,14 @@ function makeHost() {
   return host;
 }
 
+const mapHost = makeHost();
+mapHost.viewport = () => new Map([['width', 320], ['height', 180]]);
+const mapRoot = UI.createRoot(() => UI.element('screen', { id: 'map-root' }), mapHost, { id: 'map-root' });
+check(mapHost.layoutSnapshot().profile === 2, 'host Map viewport reaches initial layout');
+check(mapRoot.resize(new Map([['width', 1280], ['height', 720]])) === true
+  && mapHost.layoutSnapshot().profile === 6, 'host Map viewport reaches resize');
+mapRoot.close();
+
 const loweredSingle = <screen id="lowered" />;
 const loweredMany = <column><label>one</label><label>two</label></column>;
 const spreadProps = { id: 'spread' };

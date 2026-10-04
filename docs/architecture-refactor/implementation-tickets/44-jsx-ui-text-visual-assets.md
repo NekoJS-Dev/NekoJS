@@ -7,7 +7,7 @@
 - [40: JSX UI common core、公开契约与 Fake Host Proof](40-jsx-ui-common-core.md)
 - [41: NeoForge 26.2 JSX Screen、输入、焦点与滚动 Adapter](41-jsx-ui-neoforge-screen-adapter.md)
 
-**Status:** in-review（实现/测试/证据已交付；AC4 加载/解码两类失败诊断与 AC6 真实客户端 smoke 未勾选，待纹理管线与 Minecraft MCP 环境；非维护者签收）
+**Status:** in-review（纹理加载/解码/blit 与真实客户端 smoke 已补证据；完整视觉属性、custom font 和维护者整体结论仍待收口）
 
 **Assignee:** workbuddy-kimi-44（main-session agent；mult worktree）
 
@@ -26,9 +26,9 @@
 - [x] 文本测量、换行、截断、baseline、颜色、字号和字体层级由平台 Font Adapter 提供；common 只消费测量结果，不猜 Minecraft 字体宽度。——证据：`api/ui/FontAdapter`（stringWidth/lineHeight/ascent）为 common 唯一测量入口；`TextLayouter`（贪心换行、段落、省略截断、`layoutScaled` 字号层级缩放）只消费 adapter 值；guest 运行时经 host `measureText` 契约取数并校验合法性（jsx-runtime.ts `textMetrics`）；host 侧 `McFontAdapter` 包 Minecraft `Font`（两 26.x 节点同源），`PainterJS.textWidth/wrapText/lineHeight` 亦委托同一 adapter。测试：`TextLayouterTest`、`Ticket44HandoffSmokeTest`(a/a'/b/g)、`PainterJSTextMembersTest`。
 - [x] background、border、radius、opacity、image、icon、crop 和资源规格进入受控 props；不支持任意 CSS 字符串、浏览器 URL、文件句柄、Canvas/WebGL 对象或原生纹理长期进入脚本状态。——证据：`VisualStyleResolver` 白名单解析 12 个受控 prop；`UiColor` 仅接受 ARGB/RGB int、`#RGB/#RRGGBB/#AARRGGBB` 与 CSS 基础命名色（CSS 函数不可入）；`UiResourceId` 仅接受 `namespace:path` 受控语法（小写、禁 `..`、至多一个 `:`），URL/文件路径/句柄无入口。TS 侧 `jsx-primitive-props.tsx` probe 以 `@ts-expect-error` 钉住错误 prop 放置；review 修复后 opacity 对显式色与兜底色均生效（`applyOpacity`，测试 (h)）。
 - [x] 图片/图标/字体资源标识复用 29 的资源根、路径校验、pack reload 和回读语义；不新增第二资源根、第二事件或第二资源 policy。——证据：`DiskPackUiResourceResolver` 构造于 `NekoJSPaths.get().root()`（`<gameDir>/nekojs`），解析 `assets/<ns>/textures|fonts` 子树，与票 29 `AssetGeneratorJS`（`NekoJSPaths.assets()`）同一物理根；id 语法与票 29 写入侧一致；无第二事件/policy。限制已诚实记录：解析为磁盘级（`Files.isRegularFile`），内存态 pack reload 不在此层观察，vanilla 资源栈在纹理 blit 接线（version owner 后续）后接管可用性；`Ticket44ResourceIdParityTest` 钉住与 vanilla `ResourceLocation` 的接受/拒绝一致性。
-- [ ] 资源缺失、非法标识、加载失败、尺寸非法和解码失败进入统一诊断 seam，并可定位到 UI root、节点、资源和 generation。——部分满足未勾选：缺失（NEKO-6004）、非法标识（NEKO-6003）、尺寸非法（NEKO-6006，crop）三类已进 30 的统一 seam（`resolveVisual → ScriptErrorReporter.recordCallbackError`，Location 含 rootId/nodeType/nodeKey/resourceId/generation，证据测试 `Ticket44HandoffSmokeTest`(c/d/e)）；加载失败（NEKO-6005）与解码失败（NEKO-6007）按 Error-Reference 标注为 reserved 未发射——纹理加载/解码管线随 image blit 一并留待 version owner 接线，届时两条码已有契约位。
+- [x] 资源缺失、非法标识、加载失败、尺寸非法和解码失败进入统一诊断 seam，并可定位到 UI root、节点、资源和 generation。——2026-10-05：真实 ResourceManager → bounded PNG read → native decode/upload → root-owned texture slot 路径已接通；NEKO-6004/6005/6007/6006 由 `MinecraftUiResourceResolver` 与 `UiTextureBlitPlan` 发射，原始 cause 保留并进入 `ScriptErrorReporter`。`Ticket44TextureLoadingTest` 覆盖缓存、失败准备、inspect、提交后释放、清理异常汇总、加载/解码/上传失败及定位字段；首帧 root id 随布局 envelope 传入。真实 MCP 客户端已观察缺失与损坏 PNG，仍可点击健康按钮；加载/上传失败由实际 ResourceManager/可控 backend 回归覆盖。证据见 [texture integration pack](../evidence/2026-10-05-ticket44-textures/README.md)。
 - [x] 视觉属性模型不得与 43 的 profile 覆盖模型冲突；二者组合后的 resize 布局与绘制结果由 45 统一验收。——证据（无冲突部分）：guest 侧 `resolvedProps → resolveResponsiveValue` 按当前 profile 把 `NekoUiResponsive<T>` 解析为具体值后才进入布局/冻结，`VisualStyleResolver` 只见标量，`fontSize: NekoUiResponsive<number>` 组合不产生误报诊断；组合验收按 AC 文本归属票 45。
-- [ ] 至少一个真实 NeoForge 26.2 Screen smoke 覆盖多行文本、字体层级、图片/图标、透明度、裁剪和资源缺失诊断。——未勾选：本会话无 Minecraft MCP/真实客户端环境（同票 41/42 口径）。Minecraft-free seam `Ticket44HandoffSmokeTest` 已把六类场景钉为可执行契约（多行换行、字号层级、图片在/缺+NEKO-6004、透明度组合、crop、截断），缺真实客户端执行；另 image 绘制当前为占位框（纹理 blit 未接线，见 `JsxHostAdapter.paintNode` image 分支注释），真实 smoke 需与 blit 接线一同进行。
+- [x] 至少一个真实 NeoForge 26.2 Screen smoke 覆盖多行文本、字体层级、图片/图标、透明度、裁剪和资源缺失诊断。——2026-10-05：维护者通过选项确认真实 `ticket44-visual-flow.tsx` 的石头纹理、半透明裁剪石头、纸图标、18/9 字号差异和两行文本，点击健康按钮后正常 Esc 关闭；截图与诊断/回调日志保存于 [texture integration pack](../evidence/2026-10-05-ticket44-textures/README.md)。原 jar、fixture 已恢复，独立损坏资源已删除。此项不替代完整 radius/custom font 与资源 reload 修复后回读验收。
 
 ## Delivery record（2026-09-25, workbuddy-kimi-44）
 

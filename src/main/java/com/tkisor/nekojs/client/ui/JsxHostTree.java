@@ -151,7 +151,16 @@ final class JsxHostTree {
         int y;
         int width;
         int height;
+        int clipX;
+        int clipY;
+        int clipWidth;
+        int clipHeight;
+        boolean hasClip;
         double scrollRange;
+        com.tkisor.nekojs.api.ui.VisualSpec visual;
+        UiTextureBlitPlan texturePlan;
+        com.tkisor.nekojs.api.ui.TextLayout textLayout;
+        double textScale = 1;
 
         Node(long identity, String type, String key, Map<String, Object> props) {
             this.identity = identity;
@@ -272,7 +281,16 @@ final class JsxHostTree {
             copy.y = y;
             copy.width = width;
             copy.height = height;
+            copy.clipX = clipX;
+            copy.clipY = clipY;
+            copy.clipWidth = clipWidth;
+            copy.clipHeight = clipHeight;
+            copy.hasClip = hasClip;
             copy.scrollRange = scrollRange;
+            copy.visual = visual;
+            copy.texturePlan = texturePlan;
+            copy.textLayout = textLayout;
+            copy.textScale = textScale;
             return copy;
         }
     }

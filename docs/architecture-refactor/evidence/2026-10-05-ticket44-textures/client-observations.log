@@ -1,0 +1,21 @@
+[0510月2026 03:48:24.605] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
+[0510月2026 03:48:24.628] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 128x128x0 minecraft:textures/atlas/decorated_pot.png-atlas
+[0510月2026 03:48:24.630] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 2048x1024x0 minecraft:textures/atlas/armor_trims.png-atlas
+[0510月2026 03:48:24.656] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
+[0510月2026 03:48:24.685] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x512x0 minecraft:textures/atlas/shield_patterns.png-atlas
+[0510月2026 03:48:24.687] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 2048x2048x4 minecraft:textures/atlas/blocks.png-atlas
+[0510月2026 03:48:24.764] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x512x0 minecraft:textures/atlas/chest.png-atlas
+[0510月2026 03:48:24.796] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x128x0 minecraft:textures/atlas/celestials.png-atlas
+[0510月2026 03:48:24.800] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x512x0 minecraft:textures/atlas/banner_patterns.png-atlas
+[0510月2026 03:48:24.803] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x512x0 minecraft:textures/atlas/items.png-atlas
+[0510月2026 03:48:24.818] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x1024x0 minecraft:textures/atlas/gui.png-atlas
+[0510月2026 03:48:24.854] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 128x64x0 minecraft:textures/atlas/map_decorations.png-atlas
+[0510月2026 03:48:24.876] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x512x0 minecraft:textures/atlas/shulker_boxes.png-atlas
+原因: ticket44_trial:gui/missing — root=unknown node=image#missing resource=ticket44_trial:gui/missing generation=2
+script-diagnostic id=nekojs:rt/CLIENT/ui-visual/fff1db8e type=client phase=EXECUTION owner=Script Execution Environment generation=2 candidate=false cause=IllegalStateException: [NEKO-6004] UI image resource missing: ticket44_trial:gui/missing — root=unknown node=image#missing resource=ticket44_trial:gui/missing generation=2
+script-diagnostic id=nekojs:rt/CLIENT/ui-visual/1200d40b type=client phase=EXECUTION owner=Script Execution Environment generation=2 candidate=false cause=IOException: Bad PNG Signature: 7469636B65743434
+原因: ticket44_trial:gui/missing — root=ticket44-visual-root node=image#missing resource=ticket44_trial:gui/missing generation=2
+script-diagnostic id=nekojs:rt/CLIENT/ui-visual/d52e436c type=client phase=EXECUTION owner=Script Execution Environment generation=2 candidate=false cause=IllegalStateException: [NEKO-6004] UI image resource missing: ticket44_trial:gui/missing — root=ticket44-visual-root node=image#missing resource=ticket44_trial:gui/missing generation=2
+script-diagnostic id=nekojs:rt/CLIENT/ui-visual/f207deb3 type=client phase=EXECUTION owner=Script Execution Environment generation=2 candidate=false cause=IOException: Bad PNG Signature: 7469636B65743434
+[0510月2026 03:48:25.852] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket44] visual screen opened
+[0510月2026 03:50:45.853] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket44] healthy click after resource failures

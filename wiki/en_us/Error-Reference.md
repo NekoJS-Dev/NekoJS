@@ -47,6 +47,6 @@ This page is being backfilled area by area; only areas with assigned codes are l
 | NEKO-6002 | A UI visual prop value is out of range or has the wrong type (`opacity`, `fontSize`, `borderWidth`, `radius`, `fit`, `crop`). |
 | NEKO-6003 | A UI resource identifier violates the controlled id grammar (lowercase `namespace:path`, no `..`). |
 | NEKO-6004 | A controlled UI resource id does not resolve in the resource roots. |
-| NEKO-6005 | Reading or loading a resolved resource failed. Reserved, not yet emitted: the texture load pipeline is not wired; unresolved images draw as placeholder boxes. |
-| NEKO-6006 | A UI resource or crop size is not legal (non-positive dimensions). |
-| NEKO-6007 | Decoding a resource into a usable image failed. Reserved, not yet emitted: the texture decode pipeline is not wired. |
+| NEKO-6005 | Reading or uploading a resolved UI resource failed, including encoded input over the supported size limit. |
+| NEKO-6006 | A UI texture or crop size is invalid or exceeds the supported dimensions. |
+| NEKO-6007 | Decoding a resolved PNG resource into a usable UI image failed. |

@@ -1,0 +1,100 @@
+{
+  "engine": "Node + installed TypeScript transpiler; real common runtime, fake transaction capture",
+  "measurements": [
+    {
+      "profile": 1,
+      "target": {
+        "x": 160,
+        "y": 0,
+        "width": 40,
+        "height": 20
+      },
+      "responsiveWidth": 80
+    },
+    {
+      "profile": 2,
+      "target": {
+        "x": 160,
+        "y": 0,
+        "width": 40,
+        "height": 20
+      },
+      "responsiveWidth": 80
+    },
+    {
+      "profile": 3,
+      "target": {
+        "x": 160,
+        "y": 0,
+        "width": 40,
+        "height": 20
+      },
+      "responsiveWidth": 80
+    },
+    {
+      "profile": 4,
+      "target": {
+        "x": 160,
+        "y": 0,
+        "width": 40,
+        "height": 20
+      },
+      "responsiveWidth": 120
+    },
+    {
+      "profile": 5,
+      "target": {
+        "x": 160,
+        "y": 0,
+        "width": 40,
+        "height": 20
+      },
+      "responsiveWidth": 120
+    },
+    {
+      "profile": 6,
+      "target": {
+        "x": 160,
+        "y": 0,
+        "width": 40,
+        "height": 20
+      },
+      "responsiveWidth": 160
+    }
+  ],
+  "renders": 1,
+  "commits": 1,
+  "resizeTriggeredCommits": 0,
+  "rawResponsiveWidthAtCreate": {
+    "base": 80,
+    "profiles": {
+      "4": 120,
+      "6": 160
+    }
+  },
+  "hostProjectionFromInspectedJavaSource": {
+    "targetX": 0,
+    "responsiveWidth": 100,
+    "status": "source-derived projection, not an executed Minecraft Adapter"
+  }
+}
+{
+  "injectedFailure": "transaction commit",
+  "commonActiveTarget": {
+    "x": 160,
+    "y": 0,
+    "width": 40,
+    "height": 20
+  },
+  "previouslyOfferedLayoutCandidate": {
+    "x": 120,
+    "y": 0,
+    "width": 80,
+    "height": 20
+  },
+  "consequence": "An adapter publishing inspect() directly in layout() would expose rejected geometry"
+}
+{
+  "runtimeSha256": "9486fa4d44bd9d1fb3da25ce931fed8ad3879eeef97182828b48145a0a51f07b",
+  "goldenSha256": "6ef371e2d8104ecb373105f8c1cb198a51f00fdfe641521aef876034811d9be5"
+}

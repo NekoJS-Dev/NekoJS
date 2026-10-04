@@ -1,0 +1,15 @@
+   38 |   console.info('[ticket41-lifecycle] replacement opened');
+   38 |   console.info('[ticket41-lifecycle] replacement opened');
+   38 |   console.info('[ticket41-lifecycle] replacement opened');
+   38 |   console.info('[ticket41-lifecycle] replacement opened');
+[0510月2026 02:42:05.105] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket41-lifecycle] first opened
+[0510月2026 02:43:37.165] [Render thread/INFO] [NekoJS/]: [client] [ticket41-lifecycle] throwing intentional event error
+[0510月2026 02:43:38.106] [NekoJS-Log-Flusher/ERROR] [NekoJS/]: [client] Script ui-event callback exception:
+位置: ui-event/ee414dff
+原因: ticket41 intentional event failure
+script-diagnostic id=nekojs:rt/CLIENT/ui-event/ee414dff type=client phase=EXECUTION owner=Script Execution Environment generation=2 candidate=false cause=IllegalStateException: [NEKO-7007] JSX UI root ticket41-first-root failed in phase event (generation 2): ticket41 intentional event failure
+[0510月2026 02:43:41.105] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket41-lifecycle] healthy=1 frozen=true target=healthy
+[0510月2026 02:43:49.227] [Render thread/INFO] [NekoJS/]: [client] [ticket41-lifecycle] replacement opened
+[0510月2026 02:43:50.105] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket41-lifecycle] oldDisposed=true staleDispatch=false
+[0510月2026 02:43:55.105] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket41-lifecycle] oldDisposed=true staleDispatch=false
+[0510月2026 02:44:10.107] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket41-lifecycle] escape enabled

@@ -107,7 +107,7 @@ declare module 'nekojs/jsx-runtime' {
         isOwnerThread(): boolean
         enqueue(action: NekoUiCallback): boolean
         supportsPrimitive(type: NekoUiPrimitive): boolean
-        layout(tree: readonly NekoUiHostNode[], viewport?: NekoUiViewport, snapshot?: NekoUiLayoutSnapshot): void
+        layout(tree: readonly NekoUiHostNode[], viewport?: NekoUiViewport, snapshot?: NekoUiLayoutSnapshot, publish?: boolean): void
         measureText?(text: string, fontSize: number, maxWidth: number): { readonly width: number; readonly height: number }
         begin(): NekoUiHostTransaction
         reportDiagnostic(diagnostic: NekoUiDiagnostic): void

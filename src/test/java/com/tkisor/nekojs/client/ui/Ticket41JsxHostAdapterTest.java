@@ -312,7 +312,8 @@ class Ticket41JsxHostAdapterTest {
 
     private static Path sourceRoot() {
         Path direct = Path.of("src/main/java/com/tkisor/nekojs/client/ui");
-        return Files.isDirectory(direct) ? direct : Path.of("../../src/main/java/com/tkisor/nekojs/client/ui");
+        return Files.isRegularFile(direct.resolve("JsxHostAdapter.java")) ? direct
+                : Path.of("../../src/main/java/com/tkisor/nekojs/client/ui");
     }
 }
 //?}

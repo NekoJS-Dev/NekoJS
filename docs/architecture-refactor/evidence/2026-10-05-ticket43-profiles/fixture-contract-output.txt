@@ -1,0 +1,48 @@
+{
+  "result": "PASS",
+  "environment": "Node + TypeScript, fake host with Java-shaped Inspector records",
+  "fixtureMeasurements": 8,
+  "explicitProfiles": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "resizeRenderCounts": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "targetCenters": [
+    {
+      "x": 188,
+      "y": 46
+    },
+    {
+      "x": 188,
+      "y": 46
+    },
+    {
+      "x": 188,
+      "y": 46
+    },
+    {
+      "x": 188,
+      "y": 46
+    },
+    {
+      "x": 188,
+      "y": 46
+    },
+    {
+      "x": 188,
+      "y": 46
+    }
+  ],
+  "status": "Fixture logic/record serialization executed; actual Minecraft rendering/hit testing NOT RUN"
+}

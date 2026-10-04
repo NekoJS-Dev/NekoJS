@@ -3,7 +3,6 @@ package com.tkisor.nekojs.client.ui;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.ScriptErrorReporter;
-import com.tkisor.nekojs.api.ui.DiskPackUiResourceResolver;
 import com.tkisor.nekojs.api.ui.FontAdapter;
 import com.tkisor.nekojs.api.ui.InspectorScreenshot;
 import com.tkisor.nekojs.api.ui.InspectorSnapshot;
@@ -48,11 +47,13 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     private final GenerationGlobals globals;
     private final UiRootLifecycle lifecycle;
     private final FontAdapter fontAdapter;
-    private final UiResourceResolver resources;
+    private final MinecraftUiResourceResolver resources;
     private final List<InspectorSnapshot.PhaseError> retainedErrors = new ArrayList<>();
     private String rootId;
     private Value root;
     private InspectorSnapshot lastSnapshot;
+    private InspectorSnapshot layoutBasis;
+    private InspectorSnapshot pendingSnapshot;
     private boolean tearingDown;
     private int viewportWidth;
     private int viewportHeight;
@@ -62,8 +63,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         ownerThread = Thread.currentThread();
         screen = new JsxScreen(title, pausesGame, this);
         this.fontAdapter = new McFontAdapter(minecraft.font);
-        this.resources = new DiskPackUiResourceResolver(
-                com.tkisor.nekojs.core.fs.NekoJSPaths.get().root());
+        this.resources = new MinecraftUiResourceResolver(minecraft.getResourceManager(), minecraft.getTextureManager());
         Context context = Context.getCurrent();
         ScriptManager owner = null;
         if (context != null) {
@@ -159,6 +159,13 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     public InspectorSnapshot inspect() {
         requireUsable("inspect the UI root");
         if (lastSnapshot == null) return null;
+        if (resources.refresh()) {
+            try {
+                relayout();
+            } catch (RuntimeException failure) {
+                reportHostFailure("resource-refresh", failure);
+            }
+        }
         // The capture metadata describes the retained frame, not the live viewport: a
         // resize that has not been laid out yet must not relabel the measured frame.
         return InspectorSnapshots.decorate(lastSnapshot, focusedIds(tree.roots()),
@@ -169,22 +176,82 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     /** Receives the frozen common layout candidate and its snapshot without mutating guest data. */
     public void layout(Object tree, Object viewport, Object snapshot) {
+        layout(tree, viewport, snapshot, false);
+    }
+
+    public void layout(Object tree, Object viewport, Object snapshot, boolean publish) {
         requireUsable("apply the layout candidate");
-        if (tree != null) {
-            // Materialize the candidate to validate the interop boundary before the transaction begins.
-            readArray(tree);
+        if (tree != null) readArray(tree);
+        Value envelope = Value.asValue(snapshot);
+        if (envelope.hasMember("rootId") && envelope.getMember("rootId").isString()) {
+            rootId = envelope.getMember("rootId").asString();
         }
-        if (snapshot != null) {
+        InspectorSnapshot candidate = InspectorSnapshots.read(rootId == null ? "unknown" : rootId,
+                "neoforge-host", Value.asValue(snapshot));
+        if (publish) {
+            JsxHostTree.Transaction transaction = this.tree.begin();
             try {
-                lastSnapshot = InspectorSnapshots.read(rootId == null ? "unknown" : rootId,
-                        "neoforge-host", Value.asValue(snapshot));
-            } catch (RuntimeException malformed) {
-                // A malformed snapshot means runtime/host contract skew; keep the last good
-                // frame and surface the NEKO-8001 failure through the reporting seam.
-                ScriptErrorReporter.recordCallbackError(ScriptType.CLIENT, "ui-inspect",
-                        malformed instanceof IllegalStateException ? (IllegalStateException) malformed
-                                : new IllegalStateException(malformed.getMessage(), malformed));
+                transaction.commit(this.tree.roots(), nodes -> {
+                    pendingSnapshot = projected(candidate, nodes);
+                });
+                lastSnapshot = pendingSnapshot;
+                layoutBasis = candidate;
+                pendingSnapshot = null;
+            } catch (RuntimeException failure) {
+                transaction.rollback();
+                pendingSnapshot = null;
+                throw failure;
             }
+            finishPreparedResources();
+        } else {
+            pendingSnapshot = candidate;
+        }
+    }
+
+    private InspectorSnapshot projected(InspectorSnapshot candidate, List<JsxHostTree.Node> nodes) {
+        List<com.tkisor.nekojs.api.ui.InspectorNode> measured = JsxHostLayout.project(nodes, candidate.nodes(),
+                candidate.viewport().designScale());
+        prepareVisuals(nodes, candidate.viewport().designScale());
+        return new InspectorSnapshot(candidate.rootId(), candidate.source(), candidate.viewport(),
+                measured, candidate.diagnostics(), candidate.errors(), candidate.screenshot());
+    }
+
+    private void prepareVisuals(List<JsxHostTree.Node> nodes, double designScale) {
+        for (JsxHostTree.Node node : nodes) {
+            if (!"#text".equals(node.type)) {
+                node.visual = resolveVisual(node.props, node.type,
+                        node.key == null ? text(node.props.get("id")) : node.key,
+                        rootId == null ? "unknown" : rootId, lifecycle.generation(), resources);
+                node.texturePlan = null;
+                if ("image".equals(node.type)) {
+                    com.tkisor.nekojs.api.ui.UiResourceId resource = node.visual.image() == null
+                            ? node.visual.icon() : node.visual.image();
+                    if (resource != null) {
+                        UiTextureBlitPlan.Result result = UiTextureBlitPlan.prepare(resources.texture(resource.toString()),
+                                node.visual.crop(), node.visual.fit(), node.visual.opacity() == null ? 1 : node.visual.opacity(),
+                                node.x, node.y, node.width, node.height,
+                                new UiDiagnostic.Location(rootId == null ? "unknown" : rootId, node.type,
+                                        node.key == null ? text(node.props.get("id")) : node.key, lifecycle.generation()));
+                        node.texturePlan = result.plan();
+                        if (result.diagnostic() != null && node.visual.diagnostics().stream()
+                                .noneMatch(diagnostic -> diagnostic.code().equals(result.diagnostic().code()))) {
+                            ScriptErrorReporter.recordCallbackError(ScriptType.CLIENT, "ui-visual",
+                                    new IllegalStateException(result.diagnostic().logLine()));
+                        }
+                    }
+                }
+            }
+            if ("label".equals(node.type) || "#text".equals(node.type)) {
+                double fontSize = node.visual == null || node.visual.fontSize() == null ? 0 : node.visual.fontSize();
+                if ("design".equals(node.props.get("coordinateSpace"))) {
+                    fontSize = (fontSize <= 0 ? fontAdapter.lineHeight() : fontSize) * designScale;
+                }
+                boolean truncate = node.visual != null && Boolean.TRUE.equals(node.visual.truncate());
+                node.textLayout = TextLayouter.layoutScaled(fontAdapter, text(node.props.get("text")), fontSize,
+                        Math.max(1, node.width), !truncate, truncationFor(node.visual));
+                node.textScale = fontSize <= 0 ? 1 : fontSize / fontAdapter.lineHeight();
+            }
+            prepareVisuals(node.children, designScale);
         }
     }
 
@@ -250,7 +317,6 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         requireUsable("resize");
         viewportWidth = Math.max(0, width);
         viewportHeight = Math.max(0, height);
-        relayout();
         if (root != null) {
             try {
                 root.invokeMember("resize", viewport());
@@ -314,13 +380,25 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     void paintNode(net.minecraft.client.gui.GuiGraphicsExtractor graphics, JsxHostTree.Node node, int mouseX, int mouseY) {
         if (node.removed || !visible(node)) return;
+        if (node.hasClip && (node.clipWidth <= 0 || node.clipHeight <= 0)) return;
+        if (node.hasClip) {
+            graphics.enableScissor(node.clipX, node.clipY, node.clipX + node.clipWidth, node.clipY + node.clipHeight);
+        }
+        try {
+            paintNodeContents(graphics, node, mouseX, mouseY);
+        } finally {
+            if (node.hasClip) graphics.disableScissor();
+        }
+    }
+
+    private void paintNodeContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, JsxHostTree.Node node, int mouseX, int mouseY) {
         int x = node.x;
         int y = node.y;
         int width = node.width;
         int height = node.height;
         String type = node.type;
         if ("#text".equals(type)) {
-            paintTextLines(graphics, text(node.props.get("text")), null, x, y, width, 0xFFFFFFFF);
+            paintTextLines(graphics, node, x, y, 0xFFFFFFFF);
             return;
         }
         if ("panel".equals(type) || "screen".equals(type) || "scroll".equals(type)) {
@@ -332,10 +410,12 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                     applyOpacity(spec, argb(spec.borderColor(), 0xFFFFFFFF)));
         } else if ("image".equals(type)) {
             VisualSpec spec = resolveVisual(node);
-            // Placeholder frame until the version owner wires texture blitting; the id is
-            // validated and its diagnostics reported either way.
-            graphics.fill(x, y, x + width, y + height, applyOpacity(spec, argb(spec.background(), 0xFF1A1D22)));
-            graphics.outline(x, y, x + width, y + height, applyOpacity(spec, argb(spec.borderColor(), 0xFF707780)));
+            if (node.texturePlan != null) {
+                node.texturePlan.paint(graphics);
+            } else {
+                graphics.fill(x, y, x + width, y + height, applyOpacity(spec, argb(spec.background(), 0xFF1A1D22)));
+                graphics.outline(x, y, x + width, y + height, applyOpacity(spec, argb(spec.borderColor(), 0xFF707780)));
+            }
         } else if ("button".equals(type)) {
             boolean disabled = bool(node.props.get("disabled"));
             boolean hovered = contains(node, mouseX, mouseY);
@@ -367,8 +447,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
             }
         } else if ("label".equals(type)) {
             VisualSpec spec = resolveVisual(node);
-            paintTextLines(graphics, text(node.props.get("text")), spec,
-                    x, y, width, applyOpacity(spec, argb(spec.color(), 0xFFFFFFFF)));
+            paintTextLines(graphics, node, x, y, applyOpacity(spec, argb(spec.color(), 0xFFFFFFFF)));
         }
         if (node.focused && ("input".equals(type) || "button".equals(type))) {
             graphics.outline(x, y, x + width, y + height, 0xFFFFFFFF);
@@ -396,30 +475,32 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         VisualSpec spec = VisualStyleResolver.resolve(props,
                 new UiDiagnostic.Location(rootId, nodeType, nodeKey, generation), resources);
         for (UiDiagnostic diagnostic : spec.diagnostics()) {
+            Throwable cause = resources instanceof MinecraftUiResourceResolver minecraftResources
+                    ? minecraftResources.failureCause(diagnostic.resourceId()) : null;
             ScriptErrorReporter.recordCallbackError(ScriptType.CLIENT, "ui-visual",
-                    new IllegalStateException(diagnostic.logLine()));
+                    new IllegalStateException(diagnostic.logLine(), cause));
         }
         return spec;
     }
 
-    // ponytail: re-resolves props every frame; cache per node when profiling shows it matters.
     private VisualSpec resolveVisual(JsxHostTree.Node node) {
-        return resolveVisual(node.props, node.type, node.key,
-                rootId == null ? "unknown" : rootId, lifecycle.generation(), resources);
+        return node.visual;
     }
 
-    /** Paints wrapped text lines using the shared layout algorithm, one line box per row. */
-    private void paintTextLines(net.minecraft.client.gui.GuiGraphicsExtractor graphics, String value,
-            VisualSpec spec, int x, int y, int maxWidth, int argbColor) {
-        double fontSize = spec == null || spec.fontSize() == null ? 0 : spec.fontSize();
-        // A truncating label stays a single line cut with an ellipsis; without truncate the
-        // historical wrap-everything behavior is preserved.
-        boolean truncate = spec != null && Boolean.TRUE.equals(spec.truncate());
-        TextLayout layout = TextLayouter.layoutScaled(
-                fontAdapter, value, fontSize, maxWidth, !truncate, truncationFor(spec));
-        for (int i = 0; i < layout.lines().size(); i++) {
-            graphics.text(Minecraft.getInstance().font, layout.lines().get(i),
-                    x, y + i * layout.lineHeight(), argbColor, false);
+    private void paintTextLines(net.minecraft.client.gui.GuiGraphicsExtractor graphics, JsxHostTree.Node node,
+            int x, int y, int argbColor) {
+        if (node.textLayout == null) return;
+        graphics.pose().pushMatrix();
+        try {
+            graphics.pose().translate((float) x, (float) y);
+            graphics.pose().scale((float) node.textScale, (float) node.textScale);
+            for (int lineIndex = 0; lineIndex < node.textLayout.lines().size(); lineIndex++) {
+                int baseline = (int) Math.round(lineIndex * node.textLayout.lineHeight() / node.textScale);
+                graphics.text(Minecraft.getInstance().font, node.textLayout.lines().get(lineIndex),
+                        0, baseline, argbColor, false);
+            }
+        } finally {
+            graphics.pose().popMatrix();
         }
     }
 
@@ -645,8 +726,12 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                 tree.close(() -> { });
                 root = null;
             } finally {
-                lifecycle.finishClose();
-                globals.unregisterUiRoot(this);
+                try {
+                    resources.close();
+                } finally {
+                    lifecycle.finishClose();
+                    globals.unregisterUiRoot(this);
+                }
             }
         } finally {
             tearingDown = false;
@@ -733,7 +818,9 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     }
 
     private static boolean contains(JsxHostTree.Node node, double x, double y) {
-        return x >= node.x && y >= node.y && x < node.x + node.width && y < node.y + node.height;
+        boolean bounds = x >= node.x && y >= node.y && x < node.x + node.width && y < node.y + node.height;
+        return bounds && (!node.hasClip || (x >= node.clipX && y >= node.clipY
+                && x < node.clipX + node.clipWidth && y < node.clipY + node.clipHeight));
     }
 
     private static boolean isFocusable(JsxHostTree.Node node) {
@@ -741,48 +828,25 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     }
 
     private void relayout() {
-        layoutRoots(tree.roots());
-    }
-
-    private void layoutRoots(List<JsxHostTree.Node> roots) {
-        for (JsxHostTree.Node node : roots) layoutNode(node, 0, 0, viewportWidth, viewportHeight, 0);
-    }
-
-    private void layoutNode(JsxHostTree.Node node, int x, int y, int width, int height, int depth) {
-        node.x = x;
-        node.y = y;
-        node.width = Math.max(0, dimension(node.props.get("width"), width, 100));
-        node.height = Math.max(0, dimension(node.props.get("height"), height, defaultHeight(node)));
-        if ("screen".equals(node.type)) { node.width = width; node.height = height; }
-        int padding = integer(node.props.get("padding"), 0);
-        int gap = integer(node.props.get("gap"), 0);
-        boolean row = "row".equals(node.type);
-        int cursor = row ? x + padding : y + padding;
-        int available = (row ? node.width : node.height) - padding * 2;
-        for (JsxHostTree.Node child : node.children) {
-            int childWidth = dimension(child.props.get("width"), row ? available : node.width - padding * 2, row ? 100 : node.width - padding * 2);
-            int childHeight = dimension(child.props.get("height"), row ? node.height - padding * 2 : available, defaultHeight(child));
-            if ("fill".equals(child.props.get("width"))) childWidth = Math.max(0, node.width - padding * 2);
-            if ("fill".equals(child.props.get("height"))) childHeight = Math.max(0, node.height - padding * 2);
-            int childX = row ? cursor : x + padding;
-            int childY = row ? y + padding : cursor - ("scroll".equals(node.type) ? (int) number(node.props.get("scrollOffset"), 0) : 0);
-            layoutNode(child, childX, childY, childWidth, childHeight, depth + 1);
-            cursor += (row ? childWidth : childHeight) + gap;
-            available -= (row ? childWidth : childHeight) + gap;
+        if (layoutBasis == null) return;
+        JsxHostTree.Transaction transaction = tree.begin();
+        final InspectorSnapshot[] next = new InspectorSnapshot[1];
+        try {
+            transaction.commit(tree.roots(), nodes -> next[0] = projected(layoutBasis, nodes));
+            lastSnapshot = next[0];
+        } catch (RuntimeException failure) {
+            transaction.rollback();
+            throw failure;
         }
-        if ("scroll".equals(node.type)) {
-            node.updateScrollRange(Math.max(0, cursor - (row ? x : y) - (row ? node.width : node.height)));
+        finishPreparedResources();
+    }
+
+    private void finishPreparedResources() {
+        try {
+            resources.commitPrepared();
+        } catch (RuntimeException failure) {
+            reportHostFailure("resource-retire", failure);
         }
-    }
-
-    private static int dimension(Object value, int available, int fallback) {
-        if (value instanceof Number n) return Math.max(0, n.intValue());
-        if ("fill".equals(value)) return Math.max(0, available);
-        return fallback;
-    }
-
-    private static int defaultHeight(JsxHostTree.Node node) {
-        return switch (node.type) { case "label", "button", "input", "#text" -> 20; default -> 80; };
     }
 
     private static boolean visible(JsxHostTree.Node node) { return !node.removed && (!node.props.containsKey("visible") || bool(node.props.get("visible"))); }
@@ -871,11 +935,26 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         }
 
         public void commit(Object roots) {
-            transaction.commit(readArray(roots), JsxHostAdapter.this::layoutRoots);
+            InspectorSnapshot candidate = pendingSnapshot;
+            List<Object> handles = readArray(roots);
+            final InspectorSnapshot[] committed = new InspectorSnapshot[1];
+            transaction.commit(handles, nodes -> {
+                if (!nodes.isEmpty()) {
+                    if (candidate == null) {
+                        throw new IllegalStateException("[NEKO-8001] JSX host commit rejected: layout candidate is missing");
+                    }
+                    committed[0] = projected(candidate, nodes);
+                }
+            });
+            lastSnapshot = committed[0];
+            layoutBasis = committed[0] == null ? null : candidate;
+            pendingSnapshot = null;
+            finishPreparedResources();
         }
 
         public void rollback() {
             transaction.rollback();
+            pendingSnapshot = null;
         }
     }
 }
