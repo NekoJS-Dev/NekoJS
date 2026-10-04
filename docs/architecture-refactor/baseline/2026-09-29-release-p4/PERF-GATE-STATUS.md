@@ -19,16 +19,14 @@
   fixed or explicitly re-ruled; `forced_kill=true`/timeout samples are invalid; adverse samples must
   not be dropped.
 
-## 2. P4 re-test consumption — **PENDING TICKET 35**
+## 2. P4 re-test consumption — **CONSUMED TICKET 35**
 
-Ticket 35 (`35-release-perf-compare.md`, status in-progress) is running the policy-conformant
-re-test in a parallel worktree. Its landing directory is
+Ticket 35 (`35-release-perf-compare.md`, status closed) completed the policy-conformant
+re-test in its parallel worktree. Its landing directory is
 `docs/architecture-refactor/baseline/2026-09-29-release-perf/`.
 
-**Status at this pack's close: that directory did not exist** (checked at authoring time and
-again at commit time). **Consumed 2026-09-29 (main session, post-merge of ticket 35) per the
-consumer instruction above — ticket 35's report landed and closed its ticket with per-AC
-annotations:**
+The pack-close snapshot below is retained for auditability: the directory was absent when this
+pack was first authored and was consumed after ticket 35 landed and closed its ticket:
 
 - **startup: PASS** — 5 formal samples, `wall_done_ms` mean **16512.2 ms ≤ 41173 ms** (margin
   24660.8 ms; per-sample 12889/17446/17435/17097/17694; baseline mean 21979.2 → −24.9%).

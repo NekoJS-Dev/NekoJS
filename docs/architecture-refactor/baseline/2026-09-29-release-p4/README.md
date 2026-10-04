@@ -15,7 +15,7 @@ no golden, and no gate.
 - Maintainer rulings 2026-09-28/29 recorded in the closed tickets: TS-first declarations, zero
   deletion with ready evidence, hidden-reject command permission semantics (brigadier/vanilla
   convention), ticket 29 AC6 boundary (event-family charter; binding face → 09/34).
-- Ticket 04's maintainer-confirmed perf release policy; ticket 35 in progress (perf section below).
+- Ticket 04's maintainer-confirmed perf release policy; ticket 35 closed with the policy result recorded below.
 
 ## 2. Fresh verification executed in this pack (transcripts under `command-output/`)
 
