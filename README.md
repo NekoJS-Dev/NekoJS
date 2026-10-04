@@ -1,3 +1,5 @@
+> **中文** · [English](README.en_us.md)
+
 # NekoJS
 
 <img src="icon.png" width="256" height="256" alt="NekoJS 图标">
