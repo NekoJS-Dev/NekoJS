@@ -22,7 +22,7 @@ no golden, and no gate.
 | run | command / check | result |
 |---|---|---|
 | 01 | five-node `build` + `guardLint` + 3× `nbtSmokeTest` + `verifyExternalAddonIsolation` | GREEN — BUILD SUCCESSFUL (1m48s, exit 0); guardLint 341 blocks / 487 files / 0 warnings; 5 production jars carry no fixture content |
-| 02 | `npm run test:probe-types` | **RED — pre-existing** (14 errors, `jsx-primitive-props.tsx`); FAILURES-LEDGER F1 |
+| 02 | `npm run test:probe-types` | **GREEN after F1 fix** (`probe-types-fix` merged; fresh-checkout run exits 0); FAILURES-LEDGER resolved section |
 | 03 | `:common:check` (incl. `checkCommonIsolation`) + `:common-api-processor:test` | GREEN (suite 1963/0/4; processor 13/0) |
 | 04 | `tools/nekojs-ci-gates.py source-roots` ×5 nodes | GREEN (exit 0 each) |
 | 05 | `tools/nekojs-ci-gates.py all --out build/nekojs-gates-report.json` | GREEN — 4 checks (ci-subset-consistency, fabric-processor-deferral, declaration-parity, node-report), 0 failure rows |
@@ -38,18 +38,18 @@ no golden, and no gate.
 
 | AC | status | where |
 |---|---|---|
-| AC1 primary node full inputs; any required gap blocks release | **satisfied-with-recorded-gaps** — all build/check/artifact/contract/fixture/smoke inputs green on 26.1.2 except: probe-types red (F1, CI-blocking) and perf pending-35 (F-perf). Both are carried as blocking, not massaged. | BUILD-AND-ARTIFACT-MATRIX, FAILURES-LEDGER |
+| AC1 primary node full inputs; any required gap blocks release | **satisfied-with-recorded-gaps** — build/check/artifact/contract/fixture/smoke inputs are green on 26.1.2; probe-types F1 and perf F-perf are resolved. Owner-deferred/not-verified windows remain recorded and do not get fabricated as complete. | BUILD-AND-ARTIFACT-MATRIX, FAILURES-LEDGER |
 | AC2 secondary NeoForge node buildable/verifiable/contracts traceable; differences in matrix + notes | satisfied — 26.2.0 green across runs 01/04/05/10; differences carried (Assets `>=26`, PostEffects JSON branch, capability rows) | BUILD-AND-ARTIFACT-MATRIX §1/§3, CAPABILITY-MATRIX |
 | AC3 experimental nodes repeat-build + artifact + declared-capability smoke; no silent parity promise | satisfied — 1.21.1 + both fabric nodes green; explicit unavailable/partial recorded; no parity fabricated | BUILD-AND-ARTIFACT-MATRIX §3/§4, CAPABILITY-MATRIX |
 | AC4 supported/partial/unavailable only for capability; not-verified/deferred as separate blocking dimensions | satisfied — domain × node matrix with nv/def annotations kept separate and blocking | CAPABILITY-MATRIX |
-| AC5 contract/golden families have old/new diff, reason, impact, review; ordinary tests did not rewrite baselines | satisfied — 10 families inventoried with guard + latest green run; fresh regeneration roundtrip is a content no-op; one known red in the standalone typecheck gate (F1) recorded | GOLDEN-CONTRACT-AUDIT |
+| AC5 contract/golden families have old/new diff, reason, impact, review; ordinary tests did not rewrite baselines | satisfied — 10 families inventoried with guard + latest green run; fresh regeneration roundtrip is a content no-op; probe declaration typecheck and JSX golden drift guard now pass after F1 fix | GOLDEN-CONTRACT-AUDIT |
 | AC6 runtime smoke uses final artifacts/real scenarios; per-node discovery/skip/run/fail; dev-run not passed off as P4 | satisfied-with-open-windows — ledger distinguishes real-machine vs dev-run vs deferred; required holes identified: none beyond the owner-deferred/not-verified windows listed (which remain open and blocking their domains) | RUNTIME-SMOKE-LEDGER |
 | AC7 final physical-architecture audit: automated full inventory, per-file exceptions, common purity, no duplicate business logic, deletion-ledger consistency; no forced physical migration | satisfied — 1084 files inventoried; all rules PASS; allowed patterns per-file with owner/reason; deletion ledger consistent | ARCHITECTURE-AUDIT |
 | AC8 coverage ledger rows complete (path/owner/gate/evidence/deletion condition) | satisfied — all 23 functional rows mapped; no domain omitted | COVERAGE-LEDGER |
 | AC9 four cross-domain real chains; fixtures cannot substitute | satisfied-with-one-weak-chain — chains 1, 2, 4 real; chain 3 (global/shared → domain plans) fixture-only for its real legs, stated and routed to the real-machine round (N1/F12) | INTEGRATION-CHAINS |
-| AC10 perf policy exists; P4 records gate status per policy without touching numbers | satisfied-as-pending — policy cited; verdict **pending ticket 35** (`baseline/2026-09-29-release-perf/` absent at close); no number touched | PERF-GATE-STATUS |
+| AC10 perf policy exists; P4 records gate status per policy without touching numbers | satisfied — policy cited and ticket 35 startup/reload verdict is PASS under the approved thresholds | PERF-GATE-STATUS |
 | AC11 Point/Contributor/Hook/explicit depends/freeze/Handle not rebuilt or regressed; single source of truth for channels | satisfied — see §4 below | this README §4 |
-| AC12 all failures recorded per node/input/expected/actual/owner and block release; no auto-downgrade/EOL | satisfied — consolidated ledger; 2 release-blocking items (F1, F-perf) + domain-blocking windows | FAILURES-LEDGER |
+| AC12 all failures recorded per node/input/expected/actual/owner and block release; no auto-downgrade/EOL | satisfied — historical F1/F-perf blockers are resolved and retained with evidence; owner-deferred/domain windows remain explicitly recorded | FAILURES-LEDGER |
 
 ## 4. Point / Hook / Handle regression check (AC11)
 
@@ -70,20 +70,15 @@ no golden, and no gate.
 
 ## 5. Release-readiness verdict (input for the maintainer)
 
-**Conditional-go, with two hard blockers and a set of open verification windows:**
+**Conditional-go, with owner-deferred verification windows:**
 
-1. **F1 (probe-types red)** — the CI declaration-typecheck gate fails on this tree; the release
-   workflow cannot go green until the jsx-runtime declaration resolution is fixed (or re-ruled).
-2. **F-perf (pending 35)** — ticket 04's blocking dimensions have no recorded verdict yet; consume
-   ticket 35's report when it lands (PERF-GATE-STATUS has the consumer instruction).
+- Probe-types F1 is resolved by the merged declaration golden fix; the fresh-checkout TypeScript gate and
+  JSX golden drift guard pass.
+- Performance F-perf is resolved by ticket 35: startup mean 16512.2 ms and reload mean 278.0 ms pass
+  the approved thresholds.
 
-Everything else this pack could execute is green (five-node build/artifact/gates, architecture
-audit, golden integrity, fresh suites, GameTest smoke). The owner-deferred real-machine windows
-(fabric/1.21.1 real legs, PostEffects render, assets real readback, JEI hook load, chain-3 real
-legs, Python .pyi leg, binding-scope record) remain open and block **full** verification of their
-domains — they are recorded, never fabricated, and should ride the already-chartered real-machine
-round (34 window / ticket 36 trials). Human acceptance of this pack is the maintainer's conclusion,
-not this document.
+- Owner-deferred real-machine windows remain open and block full verification of their respective
+  domains. They are recorded, never fabricated, and require the maintainer's release conclusion.
 
 ## 6. Pack file index
 

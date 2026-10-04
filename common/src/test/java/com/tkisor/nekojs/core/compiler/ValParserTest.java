@@ -111,6 +111,21 @@ class ValParserTest {
     }
 
     @Test
+    void parenthesizedArrowParametersAndGroupingKeepDistinctShapes() {
+        ValNode.ArrowFunc twoParameters = assertInstanceOf(
+                ValNode.ArrowFunc.class, first(parse("(ctx, gui) => ctx.rect()")));
+        assertEquals(List.of("ctx", "gui"), twoParameters.params());
+
+        ValNode.ArrowFunc noParameters = assertInstanceOf(
+                ValNode.ArrowFunc.class, first(parse("() => console.log('ok')")));
+        assertEquals(List.of(), noParameters.params());
+
+        ValNode.Identifier grouped = assertInstanceOf(
+                ValNode.Identifier.class, first(parse("(value)")));
+        assertEquals("value", grouped.name());
+    }
+
+    @Test
     void malformedInputDoesNotHang() {
         assertTimeoutPreemptively(java.time.Duration.ofSeconds(5), () -> {
             parse("TestEvents.started((e) => { ; ; @#$ { ( ( }");

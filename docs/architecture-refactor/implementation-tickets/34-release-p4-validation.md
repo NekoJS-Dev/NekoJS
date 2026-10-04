@@ -4,7 +4,7 @@
 
 **Blocked by:** [33: CI 用途子集与 Fabric processor 延期替代 gate](33-build-ci-processor-gate.md)、[04: P4 前性能发布政策确认](04-perf-release-policy.md)、[39: Runtime Item/Block modification 候选计划与 snapshot ownership](39-item-block-modification.md)、[08: 真实外部 PluginAddon 从 discovery 到贡献消费与 reload 存活](08-plugin-addon.md)、[18: PData 与 ClientData 数据同步路径保护和 generation 边界](18-data-sync.md)、[20: 管理命令权限、生命周期入口与阶段诊断结果](20-runtime-commands.md)、[23: Recipe/数据生成/loot/tags/recipe viewer 既有事件域路径](23-recipe-data-surface.md)、[24: Block/Item/Level/Player/Command/Capability/goal/实体行为既有事件面覆盖路径](24-gameplay-event-surface.md)、[25: DataMap 与 EntitySelectors 查询 binding/Adapter/declaration 路径](25-query-tools.md)、[30: 错误诊断、telemetry、workspace 与用户报告链路](30-diagnostics.md)、[15: 启动期注册、typed Builder 与连带注册垂直收口](15-registry-startup.md)、[21: Dynamic Registry 多人 prepare/ack/commit 门禁](21-registry-dynamic-sync.md)、[22: Villager Trades 声明事件与稳定查询](22-villager-trades.md)、[26: CLIENT 输入与 HUD callback 生命周期](26-client-input-hud.md)、[27: CLIENT GUI 与 render Adapter 资源呈现清理](27-client-gui-render.md)、[28: PostEffects 声明事件与运行 binding 分离](28-post-effects.md)、[29: Assets/Lang 资源生成与回读收口](29-assets.md)
 
-**Status:** in-review（12 项 AC 全部附证据标注：本票证据包 `baseline/2026-09-29-release-p4/`。五节点 build/artifact/gates、架构审计、golden 完整性、全套件、GameTest 冒烟本轮全绿；两项 release 硬阻塞如实记录——probe-types 预存红(F1)与性能 gate pending-35(F-perf)；owner-deferred 真机窗口未伪造、按域阻塞满验证。性能节以票 35 落地报告为准（`baseline/2026-09-29-release-perf/` 截至本票收口仍未出现），维护者验收后闭合）
+**Status:** closed（2026-10-03 收口：probe-types F1 修复已合并并通过 `npm run test:probe-types` 与 JSX declaration golden drift guard；性能 F-perf 已由票 35 证据判定 PASS。owner-deferred 真机窗口与后续域级观察仍按 FAILURES-LEDGER 保留，不伪造为本票已验证）
 
 **Assignee:** zed-flash-34（main-session agent；GLM-5.3 subagent worktree）
 

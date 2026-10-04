@@ -1,8 +1,8 @@
 // 票 36 脚本作者试做示例 1/11：启动期注册（startup registration）
 //
-// 来源：逐字复用票 15 基线示例
+// 来源：基于票 15 基线示例
 // docs/architecture-refactor/baseline/2026-09-15-registry-startup/examples/registry-startup.js
-// （该示例与 RegistryStartupMinimalExampleTest 的 STARTUP_EXAMPLE 逐行一致）。
+// （启动注册段保持同一公开入口形态；该试做副本的说明与基线同步维护）。
 // 放置：startup_scripts/registry.js（注册类改动需重启游戏；/nekojs reload startup 只重跑脚本，
 // 注册回调只在每轮启动的注册阶段触发一次，见 wiki/注册新内容.md）。
 // 节点：五节点 capability=supported（fabric 为单批直注形状；fluid 类型在 fabric unavailable，
@@ -25,8 +25,8 @@ RegistryEvents.register(event => {
   // 2) 命名类型显式传入（同一糖方法的第二形态）
   event.soundEvent('mymod:ping', 'basic', b => { b.setFixedRange(32) });
 
-  // 3) custom：按全局唯一类型名解析注册表（类型名跨注册表歧义时会被拒绝）
-  event.custom('mymod:art', 'art', b => { b.width = 32; b.height = 32 });
+  // 3) 命名类型显式传入（注册表内类型名；custom 仅接受全局唯一类型名）
+  event.paintingVariant('mymod:art', 'basic', b => { b.width = 32; b.height = 32 });
 
   // 4) 裸 Supplier 高级入口：Runtime 校验返回值（非空）、实际类型与重复 ID；
   //    不承诺任意 Supplier 副作用的指纹/回滚

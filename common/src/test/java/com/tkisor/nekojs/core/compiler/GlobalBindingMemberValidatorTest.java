@@ -141,6 +141,22 @@ class GlobalBindingMemberValidatorTest {
     }
 
     @Test
+    void directRegistrationCallbackWithTwoParametersKeepsBothParametersInScope() {
+        view = new ScriptBindingSchema.View(Map.of(
+                "ClientEvents", new ScriptBindingSchema.BindingMembers(Set.of("hudRender"))),
+                Set.of("console", "Math", "JSON", "globalThis", "this", "arguments", "super"));
+
+        validate(file("hud-two-params"),
+                "ClientEvents.hudRender('demo:badge', { layer: 'foreground', priority: 100 }, (ctx, gui) => {\n"
+                        + "  ctx.rect(4, 18, 96, 12, 0x40000000)\n"
+                        + "  ctx.text('DASH READY', 6, 20, 0xFF55FF55)\n"
+                        + "})\n");
+
+        assertTrue(reported.isEmpty(),
+                "direct registration callback parameters must stay in scope: " + reported);
+    }
+
+    @Test
     void typeofAndBareIdentifiersAreNotFlagged() {
         // typeof 的操作数会被 ValParser 泄漏为独立语句（裸标识符），报了必误报
         validate(file("typeof"),

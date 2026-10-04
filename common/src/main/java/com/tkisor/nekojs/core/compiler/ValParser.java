@@ -119,9 +119,15 @@ public final class ValParser {
         if (Character.isDigit(c) || (c == '.' && Character.isDigit(peek(1)))) return parseNumberLiteral();
         if (c == '{') return parseBlock();
         if (c == '(') {
-            pos++; skipWs();
+            int start = pos;
             List<String> params = tryArrowParams();
-            if (params != null && match("=>")) { skipWs(); return parseArrowBody(params, pos); }
+            skipWs();
+            if (params != null && match("=>")) {
+                skipWs();
+                return parseArrowBody(params, start);
+            }
+            pos = start + 1;
+            skipWs();
             ValNode expr = parseExpr();
             skipWs(); if (peek() == ')') pos++;
             return expr;

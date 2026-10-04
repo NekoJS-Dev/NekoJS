@@ -39,10 +39,8 @@ events-declared goldens for 26.1.2 are byte-equivalent to what regeneration prod
 hand-patched output. This matches the archived no-op proof from golden-decl-prep but was re-executed
 on the current base `mult@28283cc4`.
 
-## 3. Known red in the declaration chain
+## 3. Declaration chain follow-up
 
-`npm run test:probe-types` is red on this tree (run 02; 14 errors in `jsx-primitive-props.tsx`,
-module resolution of `nekojs/jsx-runtime` → missing `JSX.IntrinsicElements`). Pre-existing before
-ticket 34 (recorded in golden-decl-prep §6 and the 2026-09-29 inreview digest); owner JSX chain/09.
-This is a CI gate failure and is carried as FAILURES-LEDGER F1 — the golden families above stay
-green in their JUnit guards, but the standalone declaration typecheck gate is not green.
+The historical `npm run test:probe-types` failure is retained in the resolved section of
+`FAILURES-LEDGER.md`. The committed JSX runtime declaration golden now makes the fresh-checkout
+probe typecheck green; the JUnit drift guard passed after the fix.

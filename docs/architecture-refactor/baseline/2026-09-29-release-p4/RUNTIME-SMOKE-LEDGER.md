@@ -48,10 +48,10 @@ Every node × domain without any runtime evidence above:
 
 **No REQUIRED hole discovered by this pack's own checks went unfilled**: everything this pack
 itself ran (five-node build/gates, artifact metadata, ci-gates, GameTest smoke, golden roundtrip)
-is green except the pre-existing probe-types red (F1). All remaining holes are the owner-deferred /
-not-verified windows listed above and in FAILURES-LEDGER; per AC4/AC12 they block the
-corresponding domains' full verification and are recorded for the release decision — they are not
-massaged into "verified".
+is green. The probe-types F1 gate is resolved by the merged declaration golden fix; remaining holes
+are the owner-deferred / not-verified windows listed above and in FAILURES-LEDGER. Per AC4/AC12
+they block the corresponding domains' full verification and are recorded for the release decision —
+they are not massaged into "verified".
 
 ## 3. Dev-run vs P4 evidence statement
 

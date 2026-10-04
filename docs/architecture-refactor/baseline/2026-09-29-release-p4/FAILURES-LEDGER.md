@@ -6,7 +6,17 @@
 > candidate (per AC12, failures block release until fixed or explicitly re-ruled by the maintainer;
 > owner-deferred windows block the corresponding domain's full verification, per AC4).
 
-## Blocking for the release pipeline
+## Resolved release-gate findings
+
+| id | node | input | expected | actual | owner | resolution |
+|---|---|---|---|---|---|---|
+| F1 | common (CI: all) | `npm run test:probe-types` (`common/src/test/probe-ts/jsx-primitive-props.tsx`) | exit 0 | PASS after merging `probe-types-fix` (`bce6d8ee6aaca103487cb1e0a0d1e13b3bb9dd8a`); fresh-checkout declaration fixture resolves `nekojs/jsx-runtime` and `tsc` exits 0 | JSX chain / 09 | Resolved 2026-10-03. Also passed `:common:test --tests com.tkisor.nekojs.probe.JsxRuntimeProbeDeclarationGoldenTest --rerun`; evidence: `evidence/2026-09-29-probe-types-fix/`.
+| F-perf | 26.1.2 | perf re-test per ticket 04 policy (startup ≤ 41173 ms, reload ≤ 285.3 ms mean, 5 formal samples each) | policy-verdict recorded | startup mean 16512.2 ms and reload mean 278.0 ms, both PASS | ticket 35 | Resolved by ticket 35 evidence; see `PERF-GATE-STATUS.md` §2.
+
+## Historical blocking snapshot at pack close (2026-09-29)
+
+The following rows preserve the original pack-close inputs for auditability. Current status is
+recorded in the resolved section above; these rows are not current release blockers.
 
 | id | node | input | expected | actual | owner | release impact |
 |---|---|---|---|---|---|---|
@@ -37,7 +47,7 @@
 
 ## Statement
 
-No failure above was downgraded or excluded to make a gate green; no gate was weakened. F1 and
-F-perf are the two items that block the release candidate as of this pack; every other row either
-blocks a specific domain's full verification (explicitly carried in CAPABILITY-MATRIX as nv/def) or
-is a recorded observation with a ruled owner.
+No failure was downgraded or excluded to make the original pack green; no gate was weakened. F1 and
+F-perf were the two release blockers at the 2026-09-29 pack close and are resolved in the section
+above. Remaining rows either block a specific domain's full verification (explicitly carried in
+CAPABILITY-MATRIX as nv/def) or are recorded observations with a ruled owner.

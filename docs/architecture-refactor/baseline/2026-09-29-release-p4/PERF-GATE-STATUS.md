@@ -41,8 +41,8 @@ annotations:**
   (isolated GRADLE_USER_HOME recreated cold; Docker stopped — quieter than baseline's noise
   profile; favorable, no protocol change).
 - **Verdict: the perf gate is GREEN for this release candidate.** The F-perf entry in the
-  failures ledger is resolved; the release-blocking set reduces to F1 (probe-types jsx
-  pre-existing red). Release-handoff note: reload's 7.3 ms margin — a noisier future
+  failures ledger is resolved; the release-blocking set no longer includes F-perf or the resolved
+  probe-types F1. Release-handoff note: reload's 7.3 ms margin — a noisier future
   environment should re-test before final release conclusions (35's REPORT §8).
 
 ## 3. What is already green around the perf gate

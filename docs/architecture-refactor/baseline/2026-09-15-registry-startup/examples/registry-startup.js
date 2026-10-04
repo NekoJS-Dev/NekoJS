@@ -15,8 +15,8 @@ RegistryEvents.register(event => {
   // 2) 命名类型显式传入（同一糖方法的第二形态）
   event.soundEvent('mymod:ping', 'basic', b => { b.setFixedRange(32) });
 
-  // 3) custom：按全局唯一类型名解析注册表（类型名跨注册表歧义时会被拒绝）
-  event.custom('mymod:art', 'art', b => { b.width = 32; b.height = 32 });
+  // 3) 命名类型显式传入（注册表内类型名；custom 仅接受全局唯一类型名）
+  event.paintingVariant('mymod:art', 'basic', b => { b.width = 32; b.height = 32 });
 
   // 4) 裸 Supplier 高级入口：Runtime 校验返回值（非空）、实际类型与重复 ID；
   //    不承诺任意 Supplier 副作用的指纹/回滚
