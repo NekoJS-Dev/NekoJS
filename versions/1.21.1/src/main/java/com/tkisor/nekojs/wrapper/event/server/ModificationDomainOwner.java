@@ -87,7 +87,7 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         bindServer(server);
         ModificationCandidatePlan plan = new ModificationCandidatePlan(this);
         try {
-            ItemEvents.MODIFICATION.post(new ItemModificationEventJS(plan));
+            ItemEvents.MODIFICATION.postForCollection(new ItemModificationEventJS(plan));
         } catch (Throwable t) {
             lastDiagnostics = new Diagnostics(Outcome.RECOVERY_FAILED, "startup-dispatch",
                     0, 0, List.of(), String.valueOf(t));

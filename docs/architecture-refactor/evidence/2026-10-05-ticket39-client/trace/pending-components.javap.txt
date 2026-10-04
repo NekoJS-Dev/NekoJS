@@ -1,0 +1,51 @@
+Compiled from "DataComponentInitializers.java"
+class net.minecraft.core.component.DataComponentInitializers$1 implements net.minecraft.core.component.DataComponentInitializers$PendingComponents<T> {
+  final net.minecraft.resources.ResourceKey val$registryKey;
+
+  final java.util.List val$entries;
+
+  net.minecraft.core.component.DataComponentInitializers$1();
+    Code:
+         0: aload_0
+         1: aload_1
+         2: putfield      #1                  // Field val$registryKey:Lnet/minecraft/resources/ResourceKey;
+         5: aload_0
+         6: aload_2
+         7: putfield      #7                  // Field val$entries:Ljava/util/List;
+        10: aload_0
+        11: invokespecial #11                 // Method java/lang/Object."<init>":()V
+        14: return
+
+  public net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<? extends T>> key();
+    Code:
+         0: aload_0
+         1: getfield      #1                  // Field val$registryKey:Lnet/minecraft/resources/ResourceKey;
+         4: areturn
+
+  public void forEach(java.util.function.BiConsumer<net.minecraft.core.Holder$Reference<T>, net.minecraft.core.component.DataComponentMap>);
+    Code:
+         0: aload_0
+         1: getfield      #7                  // Field val$entries:Ljava/util/List;
+         4: aload_1
+         5: invokedynamic #17,  0             // InvokeDynamic #0:accept:(Ljava/util/function/BiConsumer;)Ljava/util/function/Consumer;
+        10: invokeinterface #21,  2           // InterfaceMethod java/util/List.forEach:(Ljava/util/function/Consumer;)V
+        15: return
+
+  public void apply();
+    Code:
+         0: aload_0
+         1: getfield      #7                  // Field val$entries:Ljava/util/List;
+         4: invokedynamic #27,  0             // InvokeDynamic #1:accept:()Ljava/util/function/Consumer;
+         9: invokeinterface #21,  2           // InterfaceMethod java/util/List.forEach:(Ljava/util/function/Consumer;)V
+        14: return
+
+  private static void lambda$forEach$0(java.util.function.BiConsumer, net.minecraft.core.component.DataComponentInitializers$BakedEntry);
+    Code:
+         0: aload_0
+         1: aload_1
+         2: getfield      #30                 // Field net/minecraft/core/component/DataComponentInitializers$BakedEntry.element:Lnet/minecraft/core/Holder$Reference;
+         5: aload_1
+         6: getfield      #36                 // Field net/minecraft/core/component/DataComponentInitializers$BakedEntry.components:Lnet/minecraft/core/component/DataComponentMap;
+         9: invokeinterface #40,  3           // InterfaceMethod java/util/function/BiConsumer.accept:(Ljava/lang/Object;Ljava/lang/Object;)V
+        14: return
+}

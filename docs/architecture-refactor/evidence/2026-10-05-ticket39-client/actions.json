@@ -1,0 +1,61 @@
+{
+  "baseline": {
+    "questions": [{
+      "header": "票39基线",
+      "id": "ticket39-baseline",
+      "question": "只读探针已部署。请进入获准的测试世界，手动运行 /nekojs reload server 与 /nekojs reload client，等待两秒；暂时不要改物品或方块。",
+      "options": [
+        {"label": "已进入且两条 reload 正常", "description": "Agent 将记录服务端和客户端实际基线。"},
+        {"label": "reload 或脚本出现错误", "description": "保留错误，不继续应用修改。"},
+        {"label": "没有可用的测试世界", "description": "需要隔离测试环境，不覆盖现有世界。"}
+      ]
+    }]
+  },
+  "active": {
+    "questions": [{
+      "header": "票39客户端观察",
+      "id": "ticket39-active",
+      "question": "仅新建的测试脚本已换成 active 版本。请运行 /nekojs reload server；随后 /give @s minecraft:diamond 32，选中新领到的钻石，观察分堆和名称颜色。测试区域允许时再领一个 redstone_lamp 放到空位。",
+      "options": [
+        {"label": "修改和观察操作完成", "description": "Agent 将核对 fresh registry 和手持物品两组读数。"},
+        {"label": "reload 失败", "description": "保留失败 phase/generation，停止后续操作。"},
+        {"label": "服务端操作成功但客户端表现不一致", "description": "记录不一致，不能把重连当作已证实修复。"},
+        {"label": "不允许改物品栏或放置方块", "description": "仅记录只读探针，不做世界修改。"}
+      ]
+    }]
+  },
+  "rejection": {
+    "questions": [{
+      "header": "票39失败保留",
+      "id": "ticket39-rejection",
+      "question": "测试脚本已替换为 maxStackSize=500 的非法候选。请运行 /nekojs reload server，记录命令是否明确失败；不要再次发放物品。",
+      "options": [
+        {"label": "命令明确失败，游戏仍正常", "description": "Agent 将检查旧 active 值16/EPIC/7是否保持。"},
+        {"label": "命令显示成功", "description": "这是待诊断结果，不能记为预期拒绝。"},
+        {"label": "出现崩溃或其他错误", "description": "保存实际错误，不继续测试。"}
+      ]
+    }]
+  },
+  "restore": {
+    "questions": [{
+      "header": "票39基线恢复",
+      "id": "ticket39-restore",
+      "question": "仅新建测试脚本已移除所有修改声明。请运行 /nekojs reload server，等待两秒。Agent 会核对 fresh registry 回读；已有背包物品可能持有旧组件，不要求其自动变化。",
+      "options": [
+        {"label": "恢复 reload 已正常完成", "description": "核对实际 baseline，不用 vanilla 数字覆盖意外结果。"},
+        {"label": "reload 失败或仍显示修改值", "description": "先诊断恢复，不能移除证据文件。"}
+      ]
+    }]
+  },
+  "safeExit": {
+    "questions": [{
+      "header": "保存测试世界",
+      "id": "ticket39-save-exit",
+      "question": "需要比对重连或结束验收。请保存并返回主菜单，确认后 Agent 才能安全清理 owned fixture 或停止客户端。",
+      "options": [
+        {"label": "已保存并在主菜单", "description": "可以继续重连比对或恢复游戏目录。"},
+        {"label": "尚未保存", "description": "不要停止客户端或替换制品。"}
+      ]
+    }]
+  }
+}

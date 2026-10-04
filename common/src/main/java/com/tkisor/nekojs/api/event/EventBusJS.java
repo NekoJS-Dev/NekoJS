@@ -87,6 +87,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     private final EventBus<EVENT> bus;
+    private final ThreadLocal<Boolean> collectionDispatch = new ThreadLocal<>();
     /**
      * 按 ScriptType 分桶的 JS 侧监听器镜像。注册（脚本加载线程）与 {@link #hasListeners()}
      * 迭代（probe 等）可能并发，必须用并发 Map；内层 List 用 CopyOnWriteArrayList
@@ -244,16 +245,33 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         }
     }
 
-    /**
-     * 向总线投递事件。监听器抛出的异常会被捕获并经 ScriptErrorReporter 记录，
-     * 不中断其它监听器；返回事件是否被取消（不可取消总线恒为 {@code false}）。
-     */
+    /** Dispatches active collection callbacks in bus order and propagates failures to the batch owner. */
+    public boolean postForCollection(EVENT event) {
+        Boolean previous = collectionDispatch.get();
+        collectionDispatch.set(true);
+        try {
+            return this.bus.post(event);
+        } finally {
+            restoreDispatchMode(previous);
+        }
+    }
+
+    private void restoreDispatchMode(Boolean previous) {
+        if (previous == null) collectionDispatch.remove();
+        else collectionDispatch.set(previous);
+    }
+
+    /** Dispatches a normal event, reports callback failures, and returns its cancellation result. */
     public boolean post(EVENT event) {
+        Boolean previous = collectionDispatch.get();
+        collectionDispatch.set(false);
         try {
             return this.bus.post(event);
         } catch (Exception e) {
             NekoJS.LOGGER.error("Error during CancellableEventBus execution", e);
             return false;
+        } finally {
+            restoreDispatchMode(previous);
         }
     }
 
@@ -266,10 +284,14 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     @SuppressWarnings("unchecked")
     public boolean post(EVENT event, KEY key) {
         if (canDispatch()) {
+            Boolean previous = collectionDispatch.get();
+            collectionDispatch.set(false);
             try {
                 return ((DispatchEventBus<EVENT, KEY>) bus).post(event, key);
             } catch (Exception e) {
                 NekoJS.LOGGER.error("Error during EventBus execution", e);
+            } finally {
+                restoreDispatchMode(previous);
             }
             return false;
         }
@@ -680,6 +702,25 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         }
     }
 
+    private boolean skipDeadContext(Context context) {
+        if (!ScriptManager.isContextDead(context)) return false;
+        if (Boolean.TRUE.equals(collectionDispatch.get())) throw new IllegalStateException();
+        return true;
+    }
+
+    private void propagateCollectionFailure(Throwable failure) {
+        Throwable hostFailure = failure;
+        if (failure instanceof graal.graalvm.polyglot.PolyglotException polyglotFailure
+                && polyglotFailure.isHostException()) {
+            hostFailure = polyglotFailure.asHostException();
+        }
+        if (hostFailure instanceof InterruptedException) Thread.currentThread().interrupt();
+        if (hostFailure instanceof Error errorFailure) throw errorFailure;
+        if (!Boolean.TRUE.equals(collectionDispatch.get())) return;
+        if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
+        throw new RuntimeException(failure);
+    }
+
     private EventListenerToken<EVENT> register(byte priority, Value listener) {
         Context context = listener.getContext();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
@@ -697,7 +738,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         // 单线程约束本身仍是同一 Context 并发进入的最终兜底。
 
         return this.bus.listen(priority, event -> {
-            if (ScriptManager.isContextDead(context)) {
+            if (skipDeadContext(context)) {
                 // Context 已被 Graal 关闭（语句上限等）：监听器闭包指向死环境，跳过分发，
                 // 避免每次事件都在死 Context 上抛错刷屏；所属 ScriptManager 会在下次取用时重建并清空监听器
                 return;
@@ -723,6 +764,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 // 语句上限关闭 Context 的 kill 在稳态下只能从回调路径发现（入口早已执行完）：
                 // 上报所属 ScriptManager，使其在下次取用时自动重建环境，而不是静默死亡
                 ScriptManager.reportContextKilled(context, e);
+                propagateCollectionFailure(e);
                 recordListenerError(context, type, scriptId, "normal", null, event, e);
             }
         });
@@ -735,7 +777,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         var bus = (CancellableEventBus<EVENT>) this.bus;
 
         return bus.listen(priority, event -> {
-            if (ScriptManager.isContextDead(context)) {
+            if (skipDeadContext(context)) {
                 // Context 已被 Graal 关闭（语句上限等）：跳过分发，避免每次事件在死环境上报错刷屏
                 return false;
             }
@@ -755,6 +797,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                 if (e instanceof Error) throw (Error) e;
                 ScriptManager.reportContextKilled(context, e);
+                propagateCollectionFailure(e);
                 recordListenerError(context, type, scriptId, "cancellable", null, event, e);
             }
             return false; // 出错时默认不取消事件
@@ -771,7 +814,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 key,
                 priority,
                 event -> {
-                    if (ScriptManager.isContextDead(context)) {
+                    if (skipDeadContext(context)) {
                         // Context 已被 Graal 关闭（语句上限等）：跳过分发，避免每次事件在死环境上报错刷屏
                         return;
                     }
@@ -792,6 +835,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                         if (e instanceof Error) throw (Error) e;
                         ScriptManager.reportContextKilled(context, e);
+                        propagateCollectionFailure(e);
                         recordListenerError(context, type, scriptId, "dispatch", key, event, e);
                     }
                 }
@@ -808,7 +852,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 key,
                 priority,
                 event -> {
-                    if (ScriptManager.isContextDead(context)) {
+                    if (skipDeadContext(context)) {
                         // Context 已被 Graal 关闭（语句上限等）：跳过分发，避免每次事件在死环境上报错刷屏
                         return false;
                     }
@@ -830,6 +874,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                         if (e instanceof Error) throw (Error) e;
                         ScriptManager.reportContextKilled(context, e);
+                        propagateCollectionFailure(e);
                         recordListenerError(context, type, scriptId, "dispatchCancellable", key, event, e);
                     }
                     return false; // 出错时默认不取消事件

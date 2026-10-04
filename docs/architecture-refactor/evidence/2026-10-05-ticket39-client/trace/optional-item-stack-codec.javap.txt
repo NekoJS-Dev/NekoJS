@@ -1,0 +1,88 @@
+Compiled from "ItemStack.java"
+class net.minecraft.world.item.ItemStack$2 implements net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, net.minecraft.world.item.ItemStack> {
+  final net.minecraft.network.codec.StreamCodec val$patchCodec;
+
+  net.minecraft.world.item.ItemStack$2();
+    Code:
+         0: aload_0
+         1: aload_1
+         2: putfield      #72                 // Field val$patchCodec:Lnet/minecraft/network/codec/StreamCodec;
+         5: aload_0
+         6: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         9: return
+
+  public net.minecraft.world.item.ItemStack decode(net.minecraft.network.RegistryFriendlyByteBuf);
+    Code:
+         0: aload_1
+         1: invokevirtual #76                 // Method net/minecraft/network/RegistryFriendlyByteBuf.readVarInt:()I
+         4: istore_2
+         5: iload_2
+         6: ifgt          13
+         9: getstatic     #79                 // Field net/minecraft/world/item/ItemStack.EMPTY:Lnet/minecraft/world/item/ItemStack;
+        12: areturn
+        13: getstatic     #84                 // Field net/minecraft/world/item/Item.STREAM_CODEC:Lnet/minecraft/network/codec/StreamCodec;
+        16: aload_1
+        17: invokeinterface #13,  2           // InterfaceMethod net/minecraft/network/codec/StreamCodec.decode:(Ljava/lang/Object;)Ljava/lang/Object;
+        22: checkcast     #86                 // class net/minecraft/core/Holder
+        25: astore_3
+        26: aload_0
+        27: getfield      #72                 // Field val$patchCodec:Lnet/minecraft/network/codec/StreamCodec;
+        30: aload_1
+        31: invokeinterface #13,  2           // InterfaceMethod net/minecraft/network/codec/StreamCodec.decode:(Ljava/lang/Object;)Ljava/lang/Object;
+        36: checkcast     #88                 // class net/minecraft/core/component/DataComponentPatch
+        39: astore        4
+        41: new           #8                  // class net/minecraft/world/item/ItemStack
+        44: dup
+        45: aload_3
+        46: iload_2
+        47: aload         4
+        49: invokespecial #91                 // Method net/minecraft/world/item/ItemStack."<init>":(Lnet/minecraft/core/Holder;ILnet/minecraft/core/component/DataComponentPatch;)V
+        52: areturn
+
+  public void encode(net.minecraft.network.RegistryFriendlyByteBuf, net.minecraft.world.item.ItemStack);
+    Code:
+         0: aload_2
+         1: invokevirtual #19                 // Method net/minecraft/world/item/ItemStack.isEmpty:()Z
+         4: ifeq          16
+         7: aload_1
+         8: iconst_0
+         9: invokevirtual #102                // Method net/minecraft/network/RegistryFriendlyByteBuf.writeVarInt:(I)Lnet/minecraft/network/FriendlyByteBuf;
+        12: pop
+        13: goto          55
+        16: aload_1
+        17: aload_2
+        18: invokevirtual #105                // Method net/minecraft/world/item/ItemStack.getCount:()I
+        21: invokevirtual #102                // Method net/minecraft/network/RegistryFriendlyByteBuf.writeVarInt:(I)Lnet/minecraft/network/FriendlyByteBuf;
+        24: pop
+        25: getstatic     #84                 // Field net/minecraft/world/item/Item.STREAM_CODEC:Lnet/minecraft/network/codec/StreamCodec;
+        28: aload_1
+        29: aload_2
+        30: invokevirtual #109                // Method net/minecraft/world/item/ItemStack.typeHolder:()Lnet/minecraft/core/Holder;
+        33: invokeinterface #33,  3           // InterfaceMethod net/minecraft/network/codec/StreamCodec.encode:(Ljava/lang/Object;Ljava/lang/Object;)V
+        38: aload_0
+        39: getfield      #72                 // Field val$patchCodec:Lnet/minecraft/network/codec/StreamCodec;
+        42: aload_1
+        43: aload_2
+        44: getfield      #113                // Field net/minecraft/world/item/ItemStack.components:Lnet/minecraft/core/component/PatchedDataComponentMap;
+        47: invokevirtual #119                // Method net/minecraft/core/component/PatchedDataComponentMap.asPatch:()Lnet/minecraft/core/component/DataComponentPatch;
+        50: invokeinterface #33,  3           // InterfaceMethod net/minecraft/network/codec/StreamCodec.encode:(Ljava/lang/Object;Ljava/lang/Object;)V
+        55: return
+
+  public void encode(java.lang.Object, java.lang.Object);
+    Code:
+         0: aload_0
+         1: aload_1
+         2: checkcast     #37                 // class net/minecraft/network/RegistryFriendlyByteBuf
+         5: aload_2
+         6: checkcast     #8                  // class net/minecraft/world/item/ItemStack
+         9: invokevirtual #39                 // Method encode:(Lnet/minecraft/network/RegistryFriendlyByteBuf;Lnet/minecraft/world/item/ItemStack;)V
+        12: return
+
+  public java.lang.Object decode(java.lang.Object);
+    Code:
+         0: aload_0
+         1: aload_1
+         2: checkcast     #37                 // class net/minecraft/network/RegistryFriendlyByteBuf
+         5: invokevirtual #44                 // Method decode:(Lnet/minecraft/network/RegistryFriendlyByteBuf;)Lnet/minecraft/world/item/ItemStack;
+         8: areturn
+}

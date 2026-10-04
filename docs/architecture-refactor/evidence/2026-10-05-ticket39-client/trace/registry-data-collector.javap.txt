@@ -1,0 +1,432 @@
+Compiled from "RegistryDataCollector.java"
+public class net.minecraft.client.multiplayer.RegistryDataCollector {
+  private static final org.slf4j.Logger LOGGER;
+
+  private net.minecraft.client.multiplayer.RegistryDataCollector$ContentsCollector contentsCollector;
+
+  private net.minecraft.client.multiplayer.RegistryDataCollector$TagCollector tagCollector;
+
+  public net.minecraft.client.multiplayer.RegistryDataCollector();
+    Code:
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: return
+
+  public void appendContents(net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<?>>, java.util.List<net.minecraft.core.RegistrySynchronization$PackedRegistryEntry>);
+    Code:
+         0: aload_0
+         1: getfield      #7                  // Field contentsCollector:Lnet/minecraft/client/multiplayer/RegistryDataCollector$ContentsCollector;
+         4: ifnonnull     18
+         7: aload_0
+         8: new           #13                 // class net/minecraft/client/multiplayer/RegistryDataCollector$ContentsCollector
+        11: dup
+        12: invokespecial #15                 // Method net/minecraft/client/multiplayer/RegistryDataCollector$ContentsCollector."<init>":()V
+        15: putfield      #7                  // Field contentsCollector:Lnet/minecraft/client/multiplayer/RegistryDataCollector$ContentsCollector;
+        18: aload_0
+        19: getfield      #7                  // Field contentsCollector:Lnet/minecraft/client/multiplayer/RegistryDataCollector$ContentsCollector;
+        22: aload_1
+        23: aload_2
+        24: invokevirtual #16                 // Method net/minecraft/client/multiplayer/RegistryDataCollector$ContentsCollector.append:(Lnet/minecraft/resources/ResourceKey;Ljava/util/List;)V
+        27: return
+
+  public void appendTags(java.util.Map<net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<?>>, net.minecraft.tags.TagNetworkSerialization$NetworkPayload>);
+    Code:
+         0: aload_0
+         1: getfield      #20                 // Field tagCollector:Lnet/minecraft/client/multiplayer/RegistryDataCollector$TagCollector;
+         4: ifnonnull     18
+         7: aload_0
+         8: new           #24                 // class net/minecraft/client/multiplayer/RegistryDataCollector$TagCollector
+        11: dup
+        12: invokespecial #26                 // Method net/minecraft/client/multiplayer/RegistryDataCollector$TagCollector."<init>":()V
+        15: putfield      #20                 // Field tagCollector:Lnet/minecraft/client/multiplayer/RegistryDataCollector$TagCollector;
+        18: aload_1
+        19: aload_0
+        20: getfield      #20                 // Field tagCollector:Lnet/minecraft/client/multiplayer/RegistryDataCollector$TagCollector;
+        23: dup
+        24: invokestatic  #27                 // Method java/util/Objects.requireNonNull:(Ljava/lang/Object;)Ljava/lang/Object;
+        27: pop
+        28: invokedynamic #33,  0             // InvokeDynamic #0:accept:(Lnet/minecraft/client/multiplayer/RegistryDataCollector$TagCollector;)Ljava/util/function/BiConsumer;
+        33: invokeinterface #37,  2           // InterfaceMethod java/util/Map.forEach:(Ljava/util/function/BiConsumer;)V
+        38: return
+
+  private static <T> net.minecraft.core.Registry$PendingTags<T> resolveRegistryTags(net.minecraft.core.RegistryAccess$Frozen, net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<? extends T>>, net.minecraft.tags.TagNetworkSerialization$NetworkPayload);
+    Code:
+         0: aload_0
+         1: aload_1
+         2: invokeinterface #43,  2           // InterfaceMethod net/minecraft/core/RegistryAccess$Frozen.lookupOrThrow:(Lnet/minecraft/resources/ResourceKey;)Lnet/minecraft/core/Registry;
+         7: astore_3
+         8: aload_3
+         9: aload_2
+        10: aload_3
+        11: invokevirtual #49                 // Method net/minecraft/tags/TagNetworkSerialization$NetworkPayload.resolve:(Lnet/minecraft/core/Registry;)Lnet/minecraft/tags/TagLoader$LoadResult;
+        14: invokeinterface #55,  2           // InterfaceMethod net/minecraft/core/Registry.prepareTagReload:(Lnet/minecraft/tags/TagLoader$LoadResult;)Lnet/minecraft/core/Registry$PendingTags;
+        19: areturn
+
+  private net.minecraft.core.RegistryAccess loadNewElementsAndTags(net.minecraft.server.packs.resources.ResourceProvider, net.minecraft.client.multiplayer.RegistryDataCollector$ContentsCollector, boolean);
+    Code:
+         0: invokestatic  #61                 // Method net/minecraft/client/multiplayer/ClientRegistryLayer.createRegistryAccess:()Lnet/minecraft/core/LayeredRegistryAccess;
+         3: astore        4
+         5: aload         4
+         7: getstatic     #67                 // Field net/minecraft/client/multiplayer/ClientRegistryLayer.REMOTE:Lnet/minecraft/client/multiplayer/ClientRegistryLayer;
+        10: invokevirtual #71                 // Method net/minecraft/core/LayeredRegistryAccess.getAccessForLoading:(Ljava/lang/Object;)Lnet/minecraft/core/RegistryAccess$Frozen;
+        13: astore        5
+        15: new           #77                 // class java/util/HashMap
+        18: dup
+        19: invokespecial #79                 // Method java/util/HashMap."<init>":()V
+        22: astore        6
+        24: aload_2
+        25: getfield      #80                 // Field net/minecraft/client/multiplayer/RegistryDataCollector$ContentsCollector.elements:Ljava/util/Map;
+        28: aload         6
+        30: invokedynamic #84,  0             // InvokeDynamic #1:accept:(Ljava/util/Map;)Ljava/util/function/BiConsumer;
+        35: invokeinterface #37,  2           // InterfaceMethod java/util/Map.forEach:(Ljava/util/function/BiConsumer;)V
+        40: new           #87                 // class java/util/ArrayList
+        43: dup
+        44: invokespecial #89                 // Method java/util/ArrayList."<init>":()V
+        47: astore        7
+        49: aload_0
+        50: getfield      #20                 // Field tagCollector:Lnet/minecraft/client/multiplayer/RegistryDataCollector$TagCollector;
+        53: ifnull        75
+        56: aload_0
+        57: getfield      #20                 // Field tagCollector:Lnet/minecraft/client/multiplayer/RegistryDataCollector$TagCollector;
+        60: aload         6
+        62: iload_3
+        63: aload         7
+        65: aload         5
+        67: invokedynamic #90,  0             // InvokeDynamic #2:accept:(Ljava/util/Map;ZLjava/util/List;Lnet/minecraft/core/RegistryAccess$Frozen;)Ljava/util/function/BiConsumer;
+        72: invokevirtual #93                 // Method net/minecraft/client/multiplayer/RegistryDataCollector$TagCollector.forEach:(Ljava/util/function/BiConsumer;)V
+        75: aload         5
+        77: aload         7
+        79: invokestatic  #94                 // Method net/minecraft/tags/TagLoader.buildUpdatedLookups:(Lnet/minecraft/core/RegistryAccess$Frozen;Ljava/util/List;)Ljava/util/List;
+        82: astore        8
+        84: invokestatic  #100                // Method net/minecraft/util/Util.getMillis:()J
+        87: lstore        10
+        89: aload         6
+        91: aload_1
+        92: aload         8
+        94: getstatic     #106                // Field net/minecraft/resources/RegistryDataLoader.SYNCHRONIZED_REGISTRIES:Ljava/util/List;
+        97: invokestatic  #112                // Method net/minecraft/util/Util.backgroundExecutor:()Lnet/minecraft/TracingExecutor;
+       100: invokestatic  #116                // Method net/minecraft/resources/RegistryDataLoader.load:(Ljava/util/Map;Lnet/minecraft/server/packs/resources/ResourceProvider;Ljava/util/List;Ljava/util/List;Ljava/util/concurrent/Executor;)Ljava/util/concurrent/CompletableFuture;
+       103: invokevirtual #120                // Method java/util/concurrent/CompletableFuture.join:()Ljava/lang/Object;
+       106: checkcast     #44                 // class net/minecraft/core/RegistryAccess$Frozen
+       109: astore        9
+       111: invokestatic  #100                // Method net/minecraft/util/Util.getMillis:()J
+       114: lstore        12
+       116: getstatic     #126                // Field LOGGER:Lorg/slf4j/Logger;
+       119: ldc           #130                // String Loading network data took {} ms
+       121: lload         12
+       123: lload         10
+       125: lsub
+       126: invokestatic  #132                // Method java/lang/Long.valueOf:(J)Ljava/lang/Long;
+       129: invokeinterface #138,  3          // InterfaceMethod org/slf4j/Logger.debug:(Ljava/lang/String;Ljava/lang/Object;)V
+       134: goto          167
+       137: astore        10
+       139: aload         10
+       141: ldc           #146                // String Network Registry Load
+       143: invokestatic  #148                // Method net/minecraft/CrashReport.forThrowable:(Ljava/lang/Throwable;Ljava/lang/String;)Lnet/minecraft/CrashReport;
+       146: astore        11
+       148: aload         11
+       150: aload         6
+       152: aload         7
+       154: invokestatic  #154                // Method addCrashDetails:(Lnet/minecraft/CrashReport;Ljava/util/Map;Ljava/util/List;)V
+       157: new           #158                // class net/minecraft/ReportedException
+       160: dup
+       161: aload         11
+       163: invokespecial #160                // Method net/minecraft/ReportedException."<init>":(Lnet/minecraft/CrashReport;)V
+       166: athrow
+       167: aload         4
+       169: getstatic     #67                 // Field net/minecraft/client/multiplayer/ClientRegistryLayer.REMOTE:Lnet/minecraft/client/multiplayer/ClientRegistryLayer;
+       172: iconst_1
+       173: anewarray     #44                 // class net/minecraft/core/RegistryAccess$Frozen
+       176: dup
+       177: iconst_0
+       178: aload         9
+       180: aastore
+       181: invokevirtual #163                // Method net/minecraft/core/LayeredRegistryAccess.replaceFrom:(Ljava/lang/Object;[Lnet/minecraft/core/RegistryAccess$Frozen;)Lnet/minecraft/core/LayeredRegistryAccess;
+       184: invokevirtual #167                // Method net/minecraft/core/LayeredRegistryAccess.compositeAccess:()Lnet/minecraft/core/RegistryAccess$Frozen;
+       187: astore        10
+       189: aload         7
+       191: invokedynamic #171,  0            // InvokeDynamic #3:accept:()Ljava/util/function/Consumer;
+       196: invokeinterface #174,  2          // InterfaceMethod java/util/List.forEach:(Ljava/util/function/Consumer;)V
+       201: aload         10
+       203: areturn
+      Exception table:
+         from    to  target type
+            84   134   137   Class java/lang/Exception
+
+  private static void addCrashDetails(net.minecraft.CrashReport, java.util.Map<net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<?>>, net.minecraft.resources.RegistryDataLoader$NetworkedRegistryData>, java.util.List<net.minecraft.core.Registry$PendingTags<?>>);
+    Code:
+         0: aload_0
+         1: ldc           #179                // String Received Elements and Tags
+         3: invokevirtual #181                // Method net/minecraft/CrashReport.addCategory:(Ljava/lang/String;)Lnet/minecraft/CrashReportCategory;
+         6: astore_3
+         7: aload_3
+         8: ldc           #185                // String Dynamic Registries
+        10: aload_1
+        11: invokedynamic #187,  0            // InvokeDynamic #4:call:(Ljava/util/Map;)Lnet/minecraft/CrashReportDetail;
+        16: invokevirtual #191                // Method net/minecraft/CrashReportCategory.setDetail:(Ljava/lang/String;Lnet/minecraft/CrashReportDetail;)Lnet/minecraft/CrashReportCategory;
+        19: pop
+        20: aload_3
+        21: ldc           #197                // String Static Registries
+        23: aload_2
+        24: invokedynamic #199,  0            // InvokeDynamic #5:call:(Ljava/util/List;)Lnet/minecraft/CrashReportDetail;
+        29: invokevirtual #191                // Method net/minecraft/CrashReportCategory.setDetail:(Ljava/lang/String;Lnet/minecraft/CrashReportDetail;)Lnet/minecraft/CrashReportCategory;
+        32: pop
+        33: return
+
+  private static void loadOnlyTags(net.minecraft.client.multiplayer.RegistryDataCollector$TagCollector, net.minecraft.core.RegistryAccess$Frozen, boolean);
+    Code:
+         0: aload_0
+         1: iload_2
+         2: aload_1
+         3: invokedynamic #202,  0            // InvokeDynamic #6:accept:(ZLnet/minecraft/core/RegistryAccess$Frozen;)Ljava/util/function/BiConsumer;
+         8: invokevirtual #93                 // Method net/minecraft/client/multiplayer/RegistryDataCollector$TagCollector.forEach:(Ljava/util/function/BiConsumer;)V
+        11: return
+
+  private static void updateComponents(net.minecraft.core.RegistryAccess$Frozen, boolean);
+    Code:
+         0: getstatic     #205                // Field net/minecraft/core/registries/BuiltInRegistries.DATA_COMPONENT_INITIALIZERS:Lnet/minecraft/core/component/DataComponentInitializers;
+         3: aload_0
+         4: invokevirtual #211                // Method net/minecraft/core/component/DataComponentInitializers.build:(Lnet/minecraft/core/HolderLookup$Provider;)Ljava/util/List;
+         7: iload_1
+         8: invokedynamic #217,  0            // InvokeDynamic #7:accept:(Z)Ljava/util/function/Consumer;
+        13: invokeinterface #174,  2          // InterfaceMethod java/util/List.forEach:(Ljava/util/function/Consumer;)V
+        18: getstatic     #596                // Field net/neoforged/neoforge/common/NeoForge.EVENT_BUS:Lnet/neoforged/bus/api/IEventBus;
+        21: new           #598                // class net/neoforged/neoforge/event/DefaultDataComponentsBoundEvent
+        24: dup
+        25: iconst_1
+        26: iload_1
+        27: ifne          34
+        30: iconst_1
+        31: goto          35
+        34: iconst_0
+        35: invokespecial #603                // Method net/neoforged/neoforge/event/DefaultDataComponentsBoundEvent."<init>":(ZZ)V
+        38: invokeinterface #607,  2          // InterfaceMethod net/neoforged/bus/api/IEventBus.post:(Lnet/neoforged/bus/api/Event;)Lnet/neoforged/bus/api/Event;
+        43: pop
+        44: return
+
+  public net.minecraft.core.RegistryAccess$Frozen collectGameRegistries(net.minecraft.server.packs.resources.ResourceProvider, net.minecraft.core.RegistryAccess$Frozen, boolean);
+    Code:
+         0: aload_0
+         1: getfield      #7                  // Field contentsCollector:Lnet/minecraft/client/multiplayer/RegistryDataCollector$ContentsCollector;
+         4: ifnull        22
+         7: aload_0
+         8: aload_1
+         9: aload_0
+        10: getfield      #7                  // Field contentsCollector:Lnet/minecraft/client/multiplayer/RegistryDataCollector$ContentsCollector;
+        13: iload_3
+        14: invokevirtual #220                // Method loadNewElementsAndTags:(Lnet/minecraft/server/packs/resources/ResourceProvider;Lnet/minecraft/client/multiplayer/RegistryDataCollector$ContentsCollector;Z)Lnet/minecraft/core/RegistryAccess;
+        17: astore        4
+        19: goto          49
+        22: aload_0
+        23: getfield      #20                 // Field tagCollector:Lnet/minecraft/client/multiplayer/RegistryDataCollector$TagCollector;
+        26: ifnull        46
+        29: aload_0
+        30: getfield      #20                 // Field tagCollector:Lnet/minecraft/client/multiplayer/RegistryDataCollector$TagCollector;
+        33: aload_2
+        34: iload_3
+        35: ifne          42
+        38: iconst_1
+        39: goto          43
+        42: iconst_0
+        43: invokestatic  #224                // Method loadOnlyTags:(Lnet/minecraft/client/multiplayer/RegistryDataCollector$TagCollector;Lnet/minecraft/core/RegistryAccess$Frozen;Z)V
+        46: aload_2
+        47: astore        4
+        49: aload         4
+        51: invokeinterface #228,  1          // InterfaceMethod net/minecraft/core/RegistryAccess.freeze:()Lnet/minecraft/core/RegistryAccess$Frozen;
+        56: astore        5
+        58: aload         5
+        60: iload_3
+        61: ifne          68
+        64: iconst_1
+        65: goto          69
+        68: iconst_0
+        69: invokestatic  #233                // Method updateComponents:(Lnet/minecraft/core/RegistryAccess$Frozen;Z)V
+        72: aload         5
+        74: areturn
+
+  private static void lambda$updateComponents$0(boolean, net.minecraft.core.component.DataComponentInitializers$PendingComponents);
+    Code:
+         0: iload_0
+         1: ifne          16
+         4: aload_1
+         5: invokeinterface #237,  1          // InterfaceMethod net/minecraft/core/component/DataComponentInitializers$PendingComponents.key:()Lnet/minecraft/resources/ResourceKey;
+        10: invokestatic  #243                // Method net/minecraft/core/RegistrySynchronization.isNetworkable:(Lnet/minecraft/resources/ResourceKey;)Z
+        13: ifeq          22
+        16: aload_1
+        17: invokeinterface #249,  1          // InterfaceMethod net/minecraft/core/component/DataComponentInitializers$PendingComponents.apply:()V
+        22: return
+
+  private static void lambda$loadOnlyTags$0(boolean, net.minecraft.core.RegistryAccess$Frozen, net.minecraft.resources.ResourceKey, net.minecraft.tags.TagNetworkSerialization$NetworkPayload);
+    Code:
+         0: iload_0
+         1: ifne          11
+         4: aload_2
+         5: invokestatic  #243                // Method net/minecraft/core/RegistrySynchronization.isNetworkable:(Lnet/minecraft/resources/ResourceKey;)Z
+         8: ifeq          22
+        11: aload_1
+        12: aload_2
+        13: aload_3
+        14: invokestatic  #252                // Method resolveRegistryTags:(Lnet/minecraft/core/RegistryAccess$Frozen;Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/tags/TagNetworkSerialization$NetworkPayload;)Lnet/minecraft/core/Registry$PendingTags;
+        17: invokeinterface #256,  1          // InterfaceMethod net/minecraft/core/Registry$PendingTags.apply:()V
+        22: return
+
+  private static java.lang.String lambda$addCrashDetails$3(java.util.List) throws java.lang.Exception;
+    Code:
+         0: aload_0
+         1: invokeinterface #259,  1          // InterfaceMethod java/util/List.stream:()Ljava/util/stream/Stream;
+         6: invokedynamic #263,  0            // InvokeDynamic #8:apply:()Ljava/util/function/Function;
+        11: invokestatic  #266                // InterfaceMethod java/util/Comparator.comparing:(Ljava/util/function/Function;)Ljava/util/Comparator;
+        14: invokeinterface #272,  2          // InterfaceMethod java/util/stream/Stream.sorted:(Ljava/util/Comparator;)Ljava/util/stream/Stream;
+        19: invokedynamic #278,  0            // InvokeDynamic #9:apply:()Ljava/util/function/Function;
+        24: invokeinterface #279,  2          // InterfaceMethod java/util/stream/Stream.map:(Ljava/util/function/Function;)Ljava/util/stream/Stream;
+        29: invokestatic  #283                // Method java/util/stream/Collectors.joining:()Ljava/util/stream/Collector;
+        32: invokeinterface #289,  2          // InterfaceMethod java/util/stream/Stream.collect:(Ljava/util/stream/Collector;)Ljava/lang/Object;
+        37: checkcast     #293                // class java/lang/String
+        40: areturn
+
+  private static java.lang.String lambda$addCrashDetails$5(net.minecraft.core.Registry$PendingTags);
+    Code:
+         0: getstatic     #295                // Field java/util/Locale.ROOT:Ljava/util/Locale;
+         3: ldc_w         #301                // String \n\t\t%s: tags=%d
+         6: iconst_2
+         7: anewarray     #2                  // class java/lang/Object
+        10: dup
+        11: iconst_0
+        12: aload_0
+        13: invokeinterface #303,  1          // InterfaceMethod net/minecraft/core/Registry$PendingTags.key:()Lnet/minecraft/resources/ResourceKey;
+        18: invokevirtual #304                // Method net/minecraft/resources/ResourceKey.identifier:()Lnet/minecraft/resources/Identifier;
+        21: aastore
+        22: dup
+        23: iconst_1
+        24: aload_0
+        25: invokeinterface #310,  1          // InterfaceMethod net/minecraft/core/Registry$PendingTags.size:()I
+        30: invokestatic  #314                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+        33: aastore
+        34: invokestatic  #319                // Method java/lang/String.format:(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;
+        37: areturn
+
+  private static net.minecraft.resources.Identifier lambda$addCrashDetails$4(net.minecraft.core.Registry$PendingTags);
+    Code:
+         0: aload_0
+         1: invokeinterface #303,  1          // InterfaceMethod net/minecraft/core/Registry$PendingTags.key:()Lnet/minecraft/resources/ResourceKey;
+         6: invokevirtual #304                // Method net/minecraft/resources/ResourceKey.identifier:()Lnet/minecraft/resources/Identifier;
+         9: areturn
+
+  private static java.lang.String lambda$addCrashDetails$0(java.util.Map) throws java.lang.Exception;
+    Code:
+         0: aload_0
+         1: invokeinterface #323,  1          // InterfaceMethod java/util/Map.entrySet:()Ljava/util/Set;
+         6: invokeinterface #327,  1          // InterfaceMethod java/util/Set.stream:()Ljava/util/stream/Stream;
+        11: invokedynamic #330,  0            // InvokeDynamic #10:apply:()Ljava/util/function/Function;
+        16: invokestatic  #266                // InterfaceMethod java/util/Comparator.comparing:(Ljava/util/function/Function;)Ljava/util/Comparator;
+        19: invokeinterface #272,  2          // InterfaceMethod java/util/stream/Stream.sorted:(Ljava/util/Comparator;)Ljava/util/stream/Stream;
+        24: invokedynamic #331,  0            // InvokeDynamic #11:apply:()Ljava/util/function/Function;
+        29: invokeinterface #279,  2          // InterfaceMethod java/util/stream/Stream.map:(Ljava/util/function/Function;)Ljava/util/stream/Stream;
+        34: invokestatic  #283                // Method java/util/stream/Collectors.joining:()Ljava/util/stream/Collector;
+        37: invokeinterface #289,  2          // InterfaceMethod java/util/stream/Stream.collect:(Ljava/util/stream/Collector;)Ljava/lang/Object;
+        42: checkcast     #293                // class java/lang/String
+        45: areturn
+
+  private static java.lang.String lambda$addCrashDetails$2(java.util.Map$Entry);
+    Code:
+         0: getstatic     #295                // Field java/util/Locale.ROOT:Ljava/util/Locale;
+         3: ldc_w         #332                // String \n\t\t%s: elements=%d tags=%d
+         6: iconst_3
+         7: anewarray     #2                  // class java/lang/Object
+        10: dup
+        11: iconst_0
+        12: aload_0
+        13: invokeinterface #334,  1          // InterfaceMethod java/util/Map$Entry.getKey:()Ljava/lang/Object;
+        18: checkcast     #305                // class net/minecraft/resources/ResourceKey
+        21: invokevirtual #304                // Method net/minecraft/resources/ResourceKey.identifier:()Lnet/minecraft/resources/Identifier;
+        24: aastore
+        25: dup
+        26: iconst_1
+        27: aload_0
+        28: invokeinterface #339,  1          // InterfaceMethod java/util/Map$Entry.getValue:()Ljava/lang/Object;
+        33: checkcast     #342                // class net/minecraft/resources/RegistryDataLoader$NetworkedRegistryData
+        36: invokevirtual #344                // Method net/minecraft/resources/RegistryDataLoader$NetworkedRegistryData.elements:()Ljava/util/List;
+        39: invokeinterface #347,  1          // InterfaceMethod java/util/List.size:()I
+        44: invokestatic  #314                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+        47: aastore
+        48: dup
+        49: iconst_2
+        50: aload_0
+        51: invokeinterface #339,  1          // InterfaceMethod java/util/Map$Entry.getValue:()Ljava/lang/Object;
+        56: checkcast     #342                // class net/minecraft/resources/RegistryDataLoader$NetworkedRegistryData
+        59: invokevirtual #348                // Method net/minecraft/resources/RegistryDataLoader$NetworkedRegistryData.tags:()Lnet/minecraft/tags/TagNetworkSerialization$NetworkPayload;
+        62: invokevirtual #352                // Method net/minecraft/tags/TagNetworkSerialization$NetworkPayload.size:()I
+        65: invokestatic  #314                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+        68: aastore
+        69: invokestatic  #319                // Method java/lang/String.format:(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;
+        72: areturn
+
+  private static net.minecraft.resources.Identifier lambda$addCrashDetails$1(java.util.Map$Entry);
+    Code:
+         0: aload_0
+         1: invokeinterface #334,  1          // InterfaceMethod java/util/Map$Entry.getKey:()Ljava/lang/Object;
+         6: checkcast     #305                // class net/minecraft/resources/ResourceKey
+         9: invokevirtual #304                // Method net/minecraft/resources/ResourceKey.identifier:()Lnet/minecraft/resources/Identifier;
+        12: areturn
+
+  private static void lambda$loadNewElementsAndTags$1(java.util.Map, boolean, java.util.List, net.minecraft.core.RegistryAccess$Frozen, net.minecraft.resources.ResourceKey, net.minecraft.tags.TagNetworkSerialization$NetworkPayload);
+    Code:
+         0: aload         5
+         2: invokevirtual #353                // Method net/minecraft/tags/TagNetworkSerialization$NetworkPayload.isEmpty:()Z
+         5: ifne          54
+         8: aload         4
+        10: invokestatic  #243                // Method net/minecraft/core/RegistrySynchronization.isNetworkable:(Lnet/minecraft/resources/ResourceKey;)Z
+        13: ifeq          35
+        16: aload_0
+        17: aload         4
+        19: aload         5
+        21: invokedynamic #357,  0            // InvokeDynamic #12:apply:(Lnet/minecraft/tags/TagNetworkSerialization$NetworkPayload;)Ljava/util/function/BiFunction;
+        26: invokeinterface #360,  3          // InterfaceMethod java/util/Map.compute:(Ljava/lang/Object;Ljava/util/function/BiFunction;)Ljava/lang/Object;
+        31: pop
+        32: goto          54
+        35: iload_1
+        36: ifne          54
+        39: aload_2
+        40: aload_3
+        41: aload         4
+        43: aload         5
+        45: invokestatic  #252                // Method resolveRegistryTags:(Lnet/minecraft/core/RegistryAccess$Frozen;Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/tags/TagNetworkSerialization$NetworkPayload;)Lnet/minecraft/core/Registry$PendingTags;
+        48: invokeinterface #364,  2          // InterfaceMethod java/util/List.add:(Ljava/lang/Object;)Z
+        53: pop
+        54: return
+
+  private static net.minecraft.resources.RegistryDataLoader$NetworkedRegistryData lambda$loadNewElementsAndTags$2(net.minecraft.tags.TagNetworkSerialization$NetworkPayload, net.minecraft.resources.ResourceKey, net.minecraft.resources.RegistryDataLoader$NetworkedRegistryData);
+    Code:
+         0: aload_2
+         1: ifnull        11
+         4: aload_2
+         5: invokevirtual #344                // Method net/minecraft/resources/RegistryDataLoader$NetworkedRegistryData.elements:()Ljava/util/List;
+         8: goto          14
+        11: invokestatic  #368                // InterfaceMethod java/util/List.of:()Ljava/util/List;
+        14: astore_3
+        15: new           #342                // class net/minecraft/resources/RegistryDataLoader$NetworkedRegistryData
+        18: dup
+        19: aload_3
+        20: aload_0
+        21: invokespecial #371                // Method net/minecraft/resources/RegistryDataLoader$NetworkedRegistryData."<init>":(Ljava/util/List;Lnet/minecraft/tags/TagNetworkSerialization$NetworkPayload;)V
+        24: areturn
+
+  private static void lambda$loadNewElementsAndTags$0(java.util.Map, net.minecraft.resources.ResourceKey, java.util.List);
+    Code:
+         0: aload_0
+         1: aload_1
+         2: new           #342                // class net/minecraft/resources/RegistryDataLoader$NetworkedRegistryData
+         5: dup
+         6: aload_2
+         7: getstatic     #374                // Field net/minecraft/tags/TagNetworkSerialization$NetworkPayload.EMPTY:Lnet/minecraft/tags/TagNetworkSerialization$NetworkPayload;
+        10: invokespecial #371                // Method net/minecraft/resources/RegistryDataLoader$NetworkedRegistryData."<init>":(Ljava/util/List;Lnet/minecraft/tags/TagNetworkSerialization$NetworkPayload;)V
+        13: invokeinterface #378,  3          // InterfaceMethod java/util/Map.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+        18: pop
+        19: return
+
+  static {};
+    Code:
+         0: invokestatic  #382                // Method com/mojang/logging/LogUtils.getLogger:()Lorg/slf4j/Logger;
+         3: putstatic     #126                // Field LOGGER:Lorg/slf4j/Logger;
+         6: return
+}

@@ -124,10 +124,9 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         bindServer(server);
         ModificationCandidatePlan plan = new ModificationCandidatePlan(this);
         try {
-            ItemEvents.MODIFICATION.post(new ItemModificationEventJS(plan));
-            BlockEvents.MODIFICATION.post(new BlockModificationEventJS(plan));
+            ItemEvents.MODIFICATION.postForCollection(new ItemModificationEventJS(plan));
+            BlockEvents.MODIFICATION.postForCollection(new BlockModificationEventJS(plan));
         } catch (Throwable t) {
-            // EventBusJS.post 吞掉监听器异常；这里只兜派发自身的意外（总线状态等）
             lastDiagnostics = new Diagnostics(Outcome.RECOVERY_FAILED, "startup-dispatch",
                     0, 0, List.of(), String.valueOf(t));
             NekoJS.LOGGER.error("NekoJS modification startup dispatch failed; keeping existing values", t);
@@ -364,7 +363,9 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
             throw new IllegalStateException("Block disappeared between preflight and apply: "
                     + declaration.targetId());
         }
-        blockBaselines.computeIfAbsent(declaration.targetId(), key -> BlockModificationJS.PropertySnapshot.capture(block));
+        BlockModificationJS.PropertySnapshot baseline = blockBaselines.computeIfAbsent(
+                declaration.targetId(), key -> BlockModificationJS.PropertySnapshot.capture(block));
+        baseline.applyTo(block);
         BlockModificationJS view = new BlockModificationJS(block);
         Map<String, Object> properties = declaration.properties();
         if (properties.containsKey("hardness")) view.setHardness((Float) properties.get("hardness"));

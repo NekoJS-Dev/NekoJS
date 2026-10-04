@@ -43,7 +43,7 @@
 - [ ] Item/Block 修改后的客户端可见性有真实 fixture：自动同步、显式 resync、需要 relog 或明确 unsupported 均由节点 capability 与错误/提示表达，不出现服务端与客户端长期隐藏不一致。
       **部分满足，未勾选**：候选/Adapter/source-trace 与 server-side 行为已验证，但权威报告仍记录无真实 client visibility fixture（REPORT §3 AC10、§6 G2/G2b、§12）；不得以 capability 文档或 fake fixture 代替该门禁。
 - [ ] 26.x 与 1.21.1 的 item default components、block/state 属性、注册时机和同步差异只存在平台/版本 Adapter；五节点 capability/source-trace 与 smoke 记录实际结果，不自动补 Fabric parity。
-      **部分满足，未勾选**：版本 Adapter 与结构/source-trace 证据已交付，但权威报告记录 1.21.1/static-pool 与真实 in-game smoke 仍未完成（REPORT §3 AC11、§6 G2/G2b/G5）；维护者需补真实节点证据后再关闭该 gate。
+      **部分满足，未勾选**：版本 Adapter 与结构/source-trace 证据已交付，但权威报告记录 1.21.1 的 item 默认组件反射发布与真实 in-game smoke 仍未完成（REPORT §3 AC11、§6 G2/G2b/G5）；维护者需补真实节点证据后再关闭该 gate。
 - [x] 调用者 Interface、既有 Registry/Event/Adapter owner 契约、runtime member、TS/Python declaration、contract/golden 和迁移表互相追溯；不新增公开 Modification Runtime、第二 registry path 或第二事件框架，测试从脚本事件贯穿到平台 Adapter 可观察结果，不断言私有静态 Map。
 - [x] 随实现交付 Item/Block modification、setter/property parity、声明移除后的恢复/阻止提交和不可同步边界的最小可运行示例与必要迁移材料；示例只使用已通过 gate 的能力。
 - [ ] 旧 direct live mutation、restore-all 后整体重放、无 owner static snapshot 和不受测 server-only 旁路只能在替代路径 parity、失败保留、迁移表、无消费者证据和维护者确认后删除；不保留长期兼容双路径。【不勾选：维护者删除确认是门禁（Human input note）；替代路径 parity（parity/failure-retention/迁移表）+ 旧 route 无消费者证据 + 结构 guard 已交付，见 baseline REPORT §11/§12；待 sign-off】
@@ -91,6 +91,13 @@ javadoc）；结构 guard：`Ticket39ModificationOwnershipTest`（真跑）。
   如实降级）；真实 BlockBuilder 嵌套面 vanilla-gated；真机 modification/连带注册 smoke（G1/G2）。
 
 票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。
+
+## Follow-up implementation (2026-10-05)
+
+- Initial active-listener collection now uses `EventBusJS.postForCollection`, preserving bus order while rejecting callback failure/dead Context instead of applying a partial plan. Normal nested events keep their report-and-continue mode; actual Graal regressions cover mode restoration, fatal Error and interruption.
+- Every 26.x Block declaration restores the owned baseline before application, matching the documented whole-declaration replacement behavior. Later item/block declarations do not merge omitted earlier fields.
+- New initial-collection and same-target regressions are in the five-node test matrix. Registry-free callbacks execute; vanilla-dependent component/block cases retain their existing explicit skips and are not counted as runtime proof.
+- [Client readiness and audited limits](../evidence/2026-10-05-ticket39-client/README.md) distinguish integrated-server observations from independent-client visibility. Relog/resync claims were corrected to not verified because no production client replay path exists. AC10/AC11/AC14 remain open.
 
 ## Sources
 

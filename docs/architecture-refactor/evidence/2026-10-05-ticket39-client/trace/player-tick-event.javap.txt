@@ -1,0 +1,4 @@
+Compiled from "PlayerTickEvent.java"
+public abstract class net.neoforged.neoforge.event.tick.PlayerTickEvent extends net.neoforged.neoforge.event.entity.player.PlayerEvent {
+  protected net.neoforged.neoforge.event.tick.PlayerTickEvent(net.minecraft.world.entity.player.Player);
+}

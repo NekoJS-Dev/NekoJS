@@ -1,0 +1,58 @@
+Compiled from "DataComponentInitializers.java"
+final class net.minecraft.core.component.DataComponentInitializers$BakedEntry<T> extends java.lang.Record {
+  private final net.minecraft.core.Holder$Reference<T> element;
+
+  private final net.minecraft.core.component.DataComponentMap components;
+
+  private net.minecraft.core.component.DataComponentInitializers$BakedEntry(net.minecraft.core.Holder$Reference<T>, net.minecraft.core.component.DataComponentMap);
+    Code:
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Record."<init>":()V
+         4: aload_0
+         5: aload_1
+         6: putfield      #7                  // Field element:Lnet/minecraft/core/Holder$Reference;
+         9: aload_0
+        10: aload_2
+        11: putfield      #13                 // Field components:Lnet/minecraft/core/component/DataComponentMap;
+        14: return
+
+  public void apply();
+    Code:
+         0: aload_0
+         1: getfield      #7                  // Field element:Lnet/minecraft/core/Holder$Reference;
+         4: aload_0
+         5: getfield      #13                 // Field components:Lnet/minecraft/core/component/DataComponentMap;
+         8: invokevirtual #17                 // Method net/minecraft/core/Holder$Reference.bindComponents:(Lnet/minecraft/core/component/DataComponentMap;)V
+        11: return
+
+  public final java.lang.String toString();
+    Code:
+         0: aload_0
+         1: invokedynamic #23,  0             // InvokeDynamic #0:toString:(Lnet/minecraft/core/component/DataComponentInitializers$BakedEntry;)Ljava/lang/String;
+         6: areturn
+
+  public final int hashCode();
+    Code:
+         0: aload_0
+         1: invokedynamic #27,  0             // InvokeDynamic #0:hashCode:(Lnet/minecraft/core/component/DataComponentInitializers$BakedEntry;)I
+         6: ireturn
+
+  public final boolean equals(java.lang.Object);
+    Code:
+         0: aload_0
+         1: aload_1
+         2: invokedynamic #31,  0             // InvokeDynamic #0:equals:(Lnet/minecraft/core/component/DataComponentInitializers$BakedEntry;Ljava/lang/Object;)Z
+         7: ireturn
+
+  public net.minecraft.core.Holder$Reference<T> element();
+    Code:
+         0: aload_0
+         1: getfield      #7                  // Field element:Lnet/minecraft/core/Holder$Reference;
+         4: areturn
+
+  public net.minecraft.core.component.DataComponentMap components();
+    Code:
+         0: aload_0
+         1: getfield      #13                 // Field components:Lnet/minecraft/core/component/DataComponentMap;
+         4: areturn
+}

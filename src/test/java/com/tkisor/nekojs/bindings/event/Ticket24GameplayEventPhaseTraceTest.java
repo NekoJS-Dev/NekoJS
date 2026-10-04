@@ -141,10 +141,12 @@ class Ticket24GameplayEventPhaseTraceTest {
         // modification families: only the ticket-39 domain owner posts (event-side wiring only;
         // transaction/snapshot acceptance belongs to ticket 39's evidence)
         String owner = code(MAIN + "/wrapper/event/server/ModificationDomainOwner.java");
-        assertEquals(1, count(owner, "ItemEvents.MODIFICATION.post("),
+        assertEquals(1, count(owner, "ItemEvents.MODIFICATION.postForCollection("),
                 "ItemEvents.modification is posted only by the modification domain owner");
-        assertEquals(1, count(owner, "BlockEvents.MODIFICATION.post("),
+        assertEquals(1, count(owner, "BlockEvents.MODIFICATION.postForCollection("),
                 "BlockEvents.modification is posted only by the modification domain owner");
+        assertEquals(0, count(owner, "ItemEvents.MODIFICATION.post("));
+        assertEquals(0, count(owner, "BlockEvents.MODIFICATION.post("));
 
         // block broken on fabric: the fabric adapter posts the neutral payload and honors cancel
         assertEquals(1, count(code(FABRIC + "/fabric/event/FabricBlockEventBindings.java"),

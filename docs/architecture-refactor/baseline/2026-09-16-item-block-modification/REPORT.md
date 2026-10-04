@@ -185,7 +185,7 @@ RECOVERY_FAILED`（AC7：「静默 stale 不算成功」）。
 | 同上 | `modification.block` = supported（26.x 面，六属性三副本 + per-state 光照函数恢复） | 同上 |
 | 1.21.1 | `modification.item` = supported（四基础属性；组件发布走反射） | 1.21.1 成对 owner + `ItemModificationComponentsTest`（registry-gated） |
 | 1.21.1 | `modification.block` = **unavailable**（无总线；脚本得明确「无此成员」错误，不是静默 no-op） | 节点 golden 无 `modification` 条目 + 成对 owner 的 `preflight` 只接受 `item` |
-| 全节点 | 客户端自动同步 = **unsupported**；显式区块 resync = partial（需平台/网络侧动作，本票不改）；relog = supported | source trace：写入面只有服务端对象图，无 packet/sendTo；`BlockModificationEventJS`/`ItemModificationEventJS` javadoc 的 Visibility note + MIGRATION.md |
+| 全节点 | 客户端自动同步 = **unsupported**；独立客户端显式 resync/relog = **not verified**，当前 owner 无属性重放或同步实现 | 服务端写入/source trace 无 packet/sendTo；2026-10-05 审计确认集成 JVM 共享静态对象不可替代跨进程可见性，默认组件握手可重新绑定 vanilla 初始值；[client readiness pack](../../evidence/2026-10-05-ticket39-client/README.md) |
 
 source trace（唯一 dispatch/post 来源，`grep -rn "ItemEvents.MODIFICATION\|BlockEvents.MODIFICATION" src versions/*/src common/src src/fabric`，排除 build 与测试）：
 

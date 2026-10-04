@@ -1,0 +1,242 @@
+Compiled from "DataComponentInitializers.java"
+public class net.minecraft.core.component.DataComponentInitializers {
+  private final java.util.List<net.minecraft.core.component.DataComponentInitializers$InitializerEntry<?>> initializers;
+
+  public net.minecraft.core.component.DataComponentInitializers();
+    Code:
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: aload_0
+         5: new           #7                  // class java/util/ArrayList
+         8: dup
+         9: invokespecial #9                  // Method java/util/ArrayList."<init>":()V
+        12: putfield      #10                 // Field initializers:Ljava/util/List;
+        15: return
+
+  public <T> void add(net.minecraft.resources.ResourceKey<T>, net.minecraft.core.component.DataComponentInitializers$Initializer<T>);
+    Code:
+         0: aload_0
+         1: getfield      #10                 // Field initializers:Ljava/util/List;
+         4: new           #16                 // class net/minecraft/core/component/DataComponentInitializers$InitializerEntry
+         7: dup
+         8: aload_1
+         9: aload_2
+        10: invokespecial #18                 // Method net/minecraft/core/component/DataComponentInitializers$InitializerEntry."<init>":(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/core/component/DataComponentInitializers$Initializer;)V
+        13: invokeinterface #21,  2           // InterfaceMethod java/util/List.add:(Ljava/lang/Object;)Z
+        18: pop
+        19: return
+
+  private java.util.Map<net.minecraft.resources.ResourceKey<?>, net.minecraft.core.component.DataComponentMap$Builder> runInitializers(net.minecraft.core.HolderLookup$Provider);
+    Code:
+         0: new           #27                 // class java/util/HashMap
+         3: dup
+         4: invokespecial #29                 // Method java/util/HashMap."<init>":()V
+         7: astore_2
+         8: aload_0
+         9: getfield      #10                 // Field initializers:Ljava/util/List;
+        12: invokeinterface #30,  1           // InterfaceMethod java/util/List.iterator:()Ljava/util/Iterator;
+        17: astore_3
+        18: aload_3
+        19: invokeinterface #34,  1           // InterfaceMethod java/util/Iterator.hasNext:()Z
+        24: ifeq          70
+        27: aload_3
+        28: invokeinterface #40,  1           // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+        33: checkcast     #16                 // class net/minecraft/core/component/DataComponentInitializers$InitializerEntry
+        36: astore        4
+        38: aload_2
+        39: aload         4
+        41: getfield      #44                 // Field net/minecraft/core/component/DataComponentInitializers$InitializerEntry.key:Lnet/minecraft/resources/ResourceKey;
+        44: invokedynamic #48,  0             // InvokeDynamic #0:apply:()Ljava/util/function/Function;
+        49: invokeinterface #52,  3           // InterfaceMethod java/util/Map.computeIfAbsent:(Ljava/lang/Object;Ljava/util/function/Function;)Ljava/lang/Object;
+        54: checkcast     #58                 // class net/minecraft/core/component/DataComponentMap$Builder
+        57: astore        5
+        59: aload         4
+        61: aload         5
+        63: aload_1
+        64: invokevirtual #60                 // Method net/minecraft/core/component/DataComponentInitializers$InitializerEntry.run:(Lnet/minecraft/core/component/DataComponentMap$Builder;Lnet/minecraft/core/HolderLookup$Provider;)V
+        67: goto          18
+        70: aload_2
+        71: areturn
+
+  private static <T> void registryEmpty(java.util.Map<net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<?>>, net.minecraft.core.component.DataComponentInitializers$PendingComponentBuilders<?>>, net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<? extends T>>);
+    Code:
+         0: aload_1
+         1: astore_2
+         2: aload_0
+         3: aload_1
+         4: new           #64                 // class net/minecraft/core/component/DataComponentInitializers$PendingComponentBuilders
+         7: dup
+         8: aload_2
+         9: new           #27                 // class java/util/HashMap
+        12: dup
+        13: invokespecial #29                 // Method java/util/HashMap."<init>":()V
+        16: invokespecial #66                 // Method net/minecraft/core/component/DataComponentInitializers$PendingComponentBuilders."<init>":(Lnet/minecraft/resources/ResourceKey;Ljava/util/Map;)V
+        19: invokeinterface #69,  3           // InterfaceMethod java/util/Map.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+        24: pop
+        25: return
+
+  private static <T> void addBuilder(java.util.Map<net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<?>>, net.minecraft.core.component.DataComponentInitializers$PendingComponentBuilders<?>>, net.minecraft.resources.ResourceKey<T>, net.minecraft.core.component.DataComponentMap$Builder);
+    Code:
+         0: aload_0
+         1: aload_1
+         2: invokevirtual #73                 // Method net/minecraft/resources/ResourceKey.registryKey:()Lnet/minecraft/resources/ResourceKey;
+         5: invokeinterface #79,  2           // InterfaceMethod java/util/Map.get:(Ljava/lang/Object;)Ljava/lang/Object;
+        10: checkcast     #64                 // class net/minecraft/core/component/DataComponentInitializers$PendingComponentBuilders
+        13: astore_3
+        14: aload_3
+        15: getfield      #83                 // Field net/minecraft/core/component/DataComponentInitializers$PendingComponentBuilders.builders:Ljava/util/Map;
+        18: aload_1
+        19: aload_2
+        20: invokeinterface #69,  3           // InterfaceMethod java/util/Map.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+        25: pop
+        26: return
+
+  public java.util.List<net.minecraft.core.component.DataComponentInitializers$PendingComponents<?>> build(net.minecraft.core.HolderLookup$Provider);
+    Code:
+         0: new           #27                 // class java/util/HashMap
+         3: dup
+         4: invokespecial #29                 // Method java/util/HashMap."<init>":()V
+         7: astore_2
+         8: aload_1
+         9: invokeinterface #87,  1           // InterfaceMethod net/minecraft/core/HolderLookup$Provider.listRegistryKeys:()Ljava/util/stream/Stream;
+        14: aload_2
+        15: invokedynamic #93,  0             // InvokeDynamic #1:accept:(Ljava/util/Map;)Ljava/util/function/Consumer;
+        20: invokeinterface #97,  2           // InterfaceMethod java/util/stream/Stream.forEach:(Ljava/util/function/Consumer;)V
+        25: aload_0
+        26: aload_1
+        27: invokevirtual #103                // Method runInitializers:(Lnet/minecraft/core/HolderLookup$Provider;)Ljava/util/Map;
+        30: aload_2
+        31: invokedynamic #107,  0            // InvokeDynamic #2:accept:(Ljava/util/Map;)Ljava/util/function/BiConsumer;
+        36: invokeinterface #110,  2          // InterfaceMethod java/util/Map.forEach:(Ljava/util/function/BiConsumer;)V
+        41: aload_2
+        42: invokeinterface #113,  1          // InterfaceMethod java/util/Map.values:()Ljava/util/Collection;
+        47: invokeinterface #117,  1          // InterfaceMethod java/util/Collection.stream:()Ljava/util/stream/Stream;
+        52: aload_1
+        53: invokedynamic #122,  0            // InvokeDynamic #3:apply:(Lnet/minecraft/core/HolderLookup$Provider;)Ljava/util/function/Function;
+        58: invokeinterface #125,  2          // InterfaceMethod java/util/stream/Stream.map:(Ljava/util/function/Function;)Ljava/util/stream/Stream;
+        63: invokestatic  #129                // Method java/util/stream/Collectors.toUnmodifiableList:()Ljava/util/stream/Collector;
+        66: invokeinterface #135,  2          // InterfaceMethod java/util/stream/Stream.collect:(Ljava/util/stream/Collector;)Ljava/lang/Object;
+        71: checkcast     #22                 // class java/util/List
+        74: areturn
+
+  private static <T> net.minecraft.core.component.DataComponentInitializers$PendingComponents<T> createInitializerForRegistry(net.minecraft.core.HolderLookup$Provider, net.minecraft.core.component.DataComponentInitializers$PendingComponentBuilders<T>);
+    Code:
+         0: new           #7                  // class java/util/ArrayList
+         3: dup
+         4: invokespecial #9                  // Method java/util/ArrayList."<init>":()V
+         7: astore_2
+         8: aload_1
+         9: getfield      #139                // Field net/minecraft/core/component/DataComponentInitializers$PendingComponentBuilders.registryKey:Lnet/minecraft/resources/ResourceKey;
+        12: astore_3
+        13: aload_0
+        14: aload_3
+        15: invokeinterface #141,  2          // InterfaceMethod net/minecraft/core/HolderLookup$Provider.lookupOrThrow:(Lnet/minecraft/resources/ResourceKey;)Lnet/minecraft/core/HolderLookup$RegistryLookup;
+        20: astore        4
+        22: invokestatic  #145                // Method com/google/common/collect/Sets.newIdentityHashSet:()Ljava/util/Set;
+        25: astore        5
+        27: aload_1
+        28: getfield      #83                 // Field net/minecraft/core/component/DataComponentInitializers$PendingComponentBuilders.builders:Ljava/util/Map;
+        31: aload         4
+        33: aload_0
+        34: aload_2
+        35: aload         5
+        37: invokedynamic #364,  0            // InvokeDynamic #7:accept:(Lnet/minecraft/core/HolderLookup$RegistryLookup;Lnet/minecraft/core/HolderLookup$Provider;Ljava/util/List;Ljava/util/Set;)Ljava/util/function/BiConsumer;
+        42: invokeinterface #110,  2          // InterfaceMethod java/util/Map.forEach:(Ljava/util/function/BiConsumer;)V
+        47: aload         4
+        49: invokeinterface #154,  1          // InterfaceMethod net/minecraft/core/HolderLookup$RegistryLookup.listElements:()Ljava/util/stream/Stream;
+        54: aload         5
+        56: invokedynamic #159,  0            // InvokeDynamic #5:test:(Ljava/util/Set;)Ljava/util/function/Predicate;
+        61: invokeinterface #163,  2          // InterfaceMethod java/util/stream/Stream.filter:(Ljava/util/function/Predicate;)Ljava/util/stream/Stream;
+        66: aload_2
+        67: invokedynamic #167,  0            // InvokeDynamic #6:accept:(Ljava/util/List;)Ljava/util/function/Consumer;
+        72: invokeinterface #97,  2           // InterfaceMethod java/util/stream/Stream.forEach:(Ljava/util/function/Consumer;)V
+        77: new           #170                // class net/minecraft/core/component/DataComponentInitializers$1
+        80: dup
+        81: aload_3
+        82: aload_2
+        83: invokespecial #172                // Method net/minecraft/core/component/DataComponentInitializers$1."<init>":(Lnet/minecraft/resources/ResourceKey;Ljava/util/List;)V
+        86: areturn
+
+  private static void lambda$createInitializerForRegistry$2(java.util.List, net.minecraft.core.Holder$Reference);
+    Code:
+         0: aload_0
+         1: new           #175                // class net/minecraft/core/component/DataComponentInitializers$BakedEntry
+         4: dup
+         5: aload_1
+         6: getstatic     #177                // Field net/minecraft/core/component/DataComponentMap.EMPTY:Lnet/minecraft/core/component/DataComponentMap;
+         9: invokespecial #183                // Method net/minecraft/core/component/DataComponentInitializers$BakedEntry."<init>":(Lnet/minecraft/core/Holder$Reference;Lnet/minecraft/core/component/DataComponentMap;)V
+        12: invokeinterface #21,  2           // InterfaceMethod java/util/List.add:(Ljava/lang/Object;)Z
+        17: pop
+        18: return
+
+  private static boolean lambda$createInitializerForRegistry$1(java.util.Set, net.minecraft.core.Holder$Reference);
+    Code:
+         0: aload_0
+         1: aload_1
+         2: invokeinterface #186,  2          // InterfaceMethod java/util/Set.contains:(Ljava/lang/Object;)Z
+         7: ifne          14
+        10: iconst_1
+        11: goto          15
+        14: iconst_0
+        15: ireturn
+
+  private static void lambda$createInitializerForRegistry$0(net.minecraft.core.HolderLookup$RegistryLookup, net.minecraft.core.HolderLookup$Provider, java.util.List, java.util.Set, net.minecraft.resources.ResourceKey, net.minecraft.core.component.DataComponentMap$Builder);
+    Code:
+         0: aload_0
+         1: aload         4
+         3: invokeinterface #191,  2          // InterfaceMethod net/minecraft/core/HolderLookup$RegistryLookup.getOrThrow:(Lnet/minecraft/resources/ResourceKey;)Lnet/minecraft/core/Holder$Reference;
+         8: astore        6
+        10: aload         4
+        12: getstatic     #369                // Field net/minecraft/core/registries/Registries.ITEM:Lnet/minecraft/resources/ResourceKey;
+        15: invokevirtual #373                // Method net/minecraft/resources/ResourceKey.isFor:(Lnet/minecraft/resources/ResourceKey;)Z
+        18: ifeq          35
+        21: aload_1
+        22: aload         6
+        24: invokevirtual #376                // Method net/minecraft/core/Holder$Reference.value:()Ljava/lang/Object;
+        27: checkcast     #378                // class net/minecraft/world/item/Item
+        30: aload         5
+        32: invokestatic  #383                // Method net/neoforged/neoforge/internal/DataComponentModifiers.apply:(Lnet/minecraft/core/HolderLookup$Provider;Lnet/minecraft/world/item/Item;Lnet/minecraft/core/component/DataComponentMap$Builder;)V
+        35: aload         5
+        37: invokevirtual #195                // Method net/minecraft/core/component/DataComponentMap$Builder.build:()Lnet/minecraft/core/component/DataComponentMap;
+        40: astore        7
+        42: aload_2
+        43: new           #175                // class net/minecraft/core/component/DataComponentInitializers$BakedEntry
+        46: dup
+        47: aload         6
+        49: aload         7
+        51: invokespecial #183                // Method net/minecraft/core/component/DataComponentInitializers$BakedEntry."<init>":(Lnet/minecraft/core/Holder$Reference;Lnet/minecraft/core/component/DataComponentMap;)V
+        54: invokeinterface #21,  2           // InterfaceMethod java/util/List.add:(Ljava/lang/Object;)Z
+        59: pop
+        60: aload_3
+        61: aload         6
+        63: invokeinterface #199,  2          // InterfaceMethod java/util/Set.add:(Ljava/lang/Object;)Z
+        68: pop
+        69: return
+
+  private static net.minecraft.core.component.DataComponentInitializers$PendingComponents lambda$build$2(net.minecraft.core.HolderLookup$Provider, net.minecraft.core.component.DataComponentInitializers$PendingComponentBuilders);
+    Code:
+         0: aload_0
+         1: aload_1
+         2: invokestatic  #200                // Method createInitializerForRegistry:(Lnet/minecraft/core/HolderLookup$Provider;Lnet/minecraft/core/component/DataComponentInitializers$PendingComponentBuilders;)Lnet/minecraft/core/component/DataComponentInitializers$PendingComponents;
+         5: areturn
+
+  private static void lambda$build$1(java.util.Map, net.minecraft.resources.ResourceKey, net.minecraft.core.component.DataComponentMap$Builder);
+    Code:
+         0: aload_0
+         1: aload_1
+         2: aload_2
+         3: invokestatic  #204                // Method addBuilder:(Ljava/util/Map;Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/core/component/DataComponentMap$Builder;)V
+         6: return
+
+  private static void lambda$build$0(java.util.Map, net.minecraft.resources.ResourceKey);
+    Code:
+         0: aload_0
+         1: aload_1
+         2: invokestatic  #208                // Method registryEmpty:(Ljava/util/Map;Lnet/minecraft/resources/ResourceKey;)V
+         5: return
+
+  private static net.minecraft.core.component.DataComponentMap$Builder lambda$runInitializers$0(net.minecraft.resources.ResourceKey);
+    Code:
+         0: invokestatic  #212                // InterfaceMethod net/minecraft/core/component/DataComponentMap.builder:()Lnet/minecraft/core/component/DataComponentMap$Builder;
+         3: areturn
+}

@@ -34,12 +34,11 @@ import java.util.function.Consumer;
  * });
  * </pre>
  *
- * <h2>Visibility note（不变）</h2>
- * Writes update the {@code BlockBehaviour.Properties} fields plus the copies held by the
- * {@link Block} and every {@code BlockState}（Adapter 应用期），so all existing states pick
- * up the change immediately on the server. Clients are NOT resynced: players need to relog
- * (or receive a chunk resync) to observe visual-only effects such as light emission——
- * 该不可同步边界由 ticket 39 capability 记录显式表达，不靠隐藏漂移。
+ * <h2>Client visibility</h2>
+ * The adapter updates server-owned block properties and state copies. No client property
+ * synchronization is implemented here. Relogging or chunk resynchronization has not been
+ * verified to apply these changes in an independent client process; integrated-server
+ * shared state is not evidence of remote-client visibility.
  */
 public class BlockModificationEventJS {
 

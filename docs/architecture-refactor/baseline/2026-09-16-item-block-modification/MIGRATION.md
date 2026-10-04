@@ -84,9 +84,7 @@
 
 ## 4. 已知边界（不在本票解决）
 
-- **客户端可见性**：服务端写入立即生效（所有 `BlockState` 副本一起更新），纯视觉结果
-  （`lightLevel` 等）不自动同步给已连接客户端——需要 relog 或区块 resync。本票不改同步
-  路径，也不引入隐藏漂移；能力记录见 REPORT 的 capability/source-trace 表。
+- **客户端可见性**：服务端写入立即生效，但当前修改 owner 没有独立客户端属性发布或重放路径。集成服务器与客户端共享 JVM 静态对象，不能以单人外观证明多人同步；relog/chunk resync 也没有证据证明能更新独立客户端的 block 属性或 item 默认组件。跨进程客户端同步保持 **not verified**，不能按 supported 使用。准备与源码审计见 [client readiness pack](../../evidence/2026-10-05-ticket39-client/README.md)。
 - **`maxStackSize` 上限 99**：26.x 的 `Item#ABSOLUTE_MAX_STACK_SIZE`；1.21.1 取同值常量。
 - **fireResistant 的 server 绑定**：26.x 需要 damage type registry（server 未绑定时预检拒绝
   整批）；1.21.1 无此依赖。
