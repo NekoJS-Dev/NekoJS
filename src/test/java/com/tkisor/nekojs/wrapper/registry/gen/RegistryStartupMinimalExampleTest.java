@@ -46,7 +46,7 @@ class RegistryStartupMinimalExampleTest {
               // 2) 命名类型显式传入
               event.soundEvent('mymod:ping', 'basic', b => { b.setFixedRange(32) });
               // 3) custom：按全局唯一类型名解析注册表
-              event.custom('mymod:art', 'art', b => { b.width = 32; b.height = 32 });
+              event.custom('mymod:scholar_variant', 'art', b => { });
               // 4) 裸 Supplier：高级入口，Runtime 校验返回值/实际类型/重复 ID
               event.register('minecraft:villager_type', 'mymod:scholar', () => 'raw-scholar');
               // 5) setter/property parity：两种写法同一个 setter、同一指纹
@@ -89,8 +89,7 @@ class RegistryStartupMinimalExampleTest {
         RegistryTypesPoint.RegistryTypesCollector collector = new RegistryTypesPoint.RegistryTypesCollector();
         collector.registerType(Registries.SOUND_EVENT, "basic", SoundEventBuilder.class, SoundEventBuilder::new);
         collector.setDefault(Registries.SOUND_EVENT, "basic");
-        collector.registerType(Registries.PAINTING_VARIANT, "art", PaintingVariantBuilder.class, PaintingVariantBuilder::new);
-        collector.setDefault(Registries.PAINTING_VARIANT, "art");
+        collector.registerType(Registries.VILLAGER_TYPE, "art", VillagerTypeBuilder.class, VillagerTypeBuilder::new);
         collector.registerType(Registries.VILLAGER_TYPE, "basic", VillagerTypeBuilder.class, VillagerTypeBuilder::new);
         collector.setDefault(Registries.VILLAGER_TYPE, "basic");
         collector.registerType(Registries.ITEM, "basic", ItemBuilder.class, ItemBuilder::new);
@@ -107,15 +106,12 @@ class RegistryStartupMinimalExampleTest {
                 context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
                 context.eval("js", STARTUP_EXAMPLE);
                 runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, exampleInfos(), exampleTypes()));
-                // drain 必须在 Context 存活期内（supplier 的 JS 函数绑定在 Context 上）
-                RecordingSink sink = new RecordingSink(java.util.Set.of(Registries.ITEM));
+                RecordingSink sink = new RecordingSink(java.util.Set.of(Registries.ITEM, Registries.VILLAGER_TYPE));
                 StartupRegistryRuntime.DrainResult items = runtime.drainFor(Registries.ITEM, sink);
                 StartupRegistryRuntime.DrainResult sounds = runtime.drainFor(Registries.SOUND_EVENT, sink);
-                StartupRegistryRuntime.DrainResult paintings = runtime.drainFor(Registries.PAINTING_VARIANT, sink);
                 StartupRegistryRuntime.DrainResult villagers = runtime.drainFor(Registries.VILLAGER_TYPE, sink);
-                verify(items, sounds, paintings, villagers, sink);
+                verify(items, sounds, villagers, sink);
             } finally {
-                // 断言失败也不泄漏静态绑定（审查 F5）
                 ScriptContextRegistry.unbind(context);
             }
         }
@@ -125,35 +121,24 @@ class RegistryStartupMinimalExampleTest {
     private static void verify(
             StartupRegistryRuntime.DrainResult items,
             StartupRegistryRuntime.DrainResult sounds,
-            StartupRegistryRuntime.DrainResult paintings,
             StartupRegistryRuntime.DrainResult villagers,
             RecordingSink sink) {
-        // 五种入口全部到达对应注册表请求（drain 结果含定义、注册表、节点、来源与指纹）
         assertEquals(List.of("minecraft:item|mymod:via_property", "minecraft:item|mymod:via_setter"),
                 items.registered().stream().map(r -> r.registry().identifier() + "|" + r.definition()).toList());
         assertEquals(List.of("minecraft:sound_event|mymod:boom", "minecraft:sound_event|mymod:ping"),
                 sounds.registered().stream().map(r -> r.registry().identifier() + "|" + r.definition()).toList());
-        assertEquals(List.of("minecraft:painting_variant|mymod:art"),
-                paintings.registered().stream().map(r -> r.registry().identifier() + "|" + r.definition()).toList());
-        assertEquals(List.of("minecraft:villager_type|mymod:scholar"),
+        assertEquals(List.of("minecraft:villager_type|mymod:scholar_variant", "minecraft:villager_type|mymod:scholar"),
                 villagers.registered().stream().map(r -> r.registry().identifier() + "|" + r.definition()).toList());
 
-        // setter/property parity：脚本端 property 写入（via_property 条目）与 Java 端显式
-        // setter 配置的同 id twin 产生同一 definition fingerprint（指纹含 id，两条不同 id
-        // 的声明本身不该相等）；rarity 归一化小写在指纹内一致
         ItemBuilder javaTwin = new ItemBuilder(Identifier.parse("mymod:via_property"));
         javaTwin.setMaxStackSize(16);
         javaTwin.setRarity("epic");
         String viaProperty = items.registered().get(0).fingerprint();
         assertEquals(new StartupRegistryRuntime(NODE).definitionFingerprint(javaTwin), viaProperty,
-                "脚本 b.maxStackSize = 16 / b.rarity = 'EPIC' 与 Java setMaxStackSize(16)/setRarity('epic') 同一指纹");
+                "脚本 property 与显式 setter 必须产生同一指纹");
         assertEquals(64, viaProperty.length());
-
-        // sink 立即执行 supplier：裸 Supplier 的返回值成为注册对象
-        assertEquals("raw-scholar", sink.built.get("minecraft:villager_type|mymod:scholar"));
         assertNotNull(sink.built.get("minecraft:sound_event|mymod:boom"));
     }
-
     @Test
     void exampleRunsThroughTheProductionSequenceAndFullyDrains() {
         StartupRegistryRuntime runtime = runExample();

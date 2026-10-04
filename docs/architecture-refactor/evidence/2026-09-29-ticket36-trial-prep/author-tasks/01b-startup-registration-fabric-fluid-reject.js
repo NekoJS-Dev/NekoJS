@@ -3,13 +3,12 @@
 // 节点：26.1.2-fabric / 26.2.0-fabric（放置：startup_scripts/）。
 // capability 事实（票 15 REPORT §3）：启动注册在 fabric 为 supported（单批直注形状），
 // 但 FluidBuilder / `minecraft:fluid` 类型是 NeoForge 面 —— fabric 的糖方法目录只保留
-// 平台无关的 5 个（NekoRegistryDeclarations：soundEvent/mobEffect/potion/paintingVariant/
-// villagerType），NeoForge 特化的 7 个（含 fluid）被整文件守卫剥离。
+// 平台无关的 4 个（NekoRegistryDeclarations：soundEvent/mobEffect/potion/villagerType）
 //
 // 预期（显式拒绝，不是静默 no-op）：`event.fluid(...)` 在 fabric 上触发成员解析错误，
 // 形如：
 //   RegistryEvent has no member 'fluid'; known: [soundEvent, mobEffect, potion,
-//   paintingVariant, villagerType, custom, register]   // known 列表按节点实际目录
+//   villagerType, custom, register]   // known 列表按节点实际目录
 // （来源：RegistryEventJS.getMember 的 IllegalArgumentException；头文件见
 // src/main/java/com/tkisor/nekojs/wrapper/registry/gen/RegistryEventJS.java。）
 // 试做时要记录的实际输出以节点运行为准；只要它是「点名成员 + 列出已知目录」的明确

@@ -61,8 +61,6 @@ public final class NekoRegistryPointsPlugin
         collector.setDefault(Registries.MOB_EFFECT, "basic");
         collector.registerType(Registries.POTION, "basic", PotionBuilder.class, PotionBuilder::new);
         collector.setDefault(Registries.POTION, "basic");
-        collector.registerType(Registries.PAINTING_VARIANT, "basic", PaintingVariantBuilder.class, PaintingVariantBuilder::new);
-        collector.setDefault(Registries.PAINTING_VARIANT, "basic");
         collector.registerType(Registries.VILLAGER_TYPE, "basic", VillagerTypeBuilder.class, VillagerTypeBuilder::new);
         collector.setDefault(Registries.VILLAGER_TYPE, "basic");
         // builder 本体平台无关（零 loader 依赖），fabric 由 FabricRegistryAdapter 单批直注 +

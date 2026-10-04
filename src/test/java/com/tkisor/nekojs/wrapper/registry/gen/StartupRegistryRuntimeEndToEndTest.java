@@ -81,11 +81,10 @@ class StartupRegistryRuntimeEndToEndTest {
         RegistryTypesPoint.RegistryTypesCollector collector = new RegistryTypesPoint.RegistryTypesCollector();
         collector.registerType(Registries.SOUND_EVENT, "basic", SoundEventBuilder.class, SoundEventBuilder::new);
         collector.setDefault(Registries.SOUND_EVENT, "basic");
+        // 全局唯一的类型名（custom 的合法解析路径）
+        collector.registerType(Registries.VILLAGER_TYPE, "art", VillagerTypeBuilder.class, VillagerTypeBuilder::new);
         collector.registerType(Registries.VILLAGER_TYPE, "basic", VillagerTypeBuilder.class, VillagerTypeBuilder::new);
         collector.setDefault(Registries.VILLAGER_TYPE, "basic");
-        // 全局唯一的类型名（custom 的合法解析路径）
-        collector.registerType(Registries.PAINTING_VARIANT, "art", PaintingVariantBuilder.class, PaintingVariantBuilder::new);
-        collector.setDefault(Registries.PAINTING_VARIANT, "art");
         collector.registerType(Registries.ITEM, "basic", ItemBuilder.class, ItemBuilder::new);
         collector.setDefault(Registries.ITEM, "basic");
         // 测试专用：同名类型挂在两个注册表下（custom 的跨注册表歧义路径）
@@ -125,15 +124,14 @@ class StartupRegistryRuntimeEndToEndTest {
                     event.villagerType('mymod:scholar', b => { })
                     event.soundEvent('mymod:boom', b => { b.fixedRange = 16 })
                     event.soundEvent('mymod:ping', 'basic', b => { })
-                    event.custom('mymod:art', 'art', b => { b.width = 32 })
+                    event.custom('mymod:scholar_variant', 'art', b => { })
                     event.register('minecraft:villager_type', 'mymod:raw', () => 'raw-object')
                 });
                 """, new ErrorLog());
 
         assertEquals(Map.of(
-                "minecraft:villager_type", List.of("mymod:scholar", "mymod:raw"),
-                "minecraft:sound_event", List.of("mymod:boom", "mymod:ping"),
-                "minecraft:painting_variant", List.of("mymod:art")),
+                "minecraft:villager_type", List.of("mymod:scholar", "mymod:scholar_variant", "mymod:raw"),
+                "minecraft:sound_event", List.of("mymod:boom", "mymod:ping")),
                 keepIds(runtime),
                 "五种入口（糖/命名/custom/supplier）都要到达对应注册表请求");
 

@@ -114,17 +114,6 @@ interface MobEffectBuilder {
     setColor(color: number): void;
 }
 
-/** PaintingVariantBuilder — registry 'minecraft:painting_variant', type 'basic', sugar 'paintingVariant'. */
-interface PaintingVariantBuilder {
-    assetId: string;
-    height: number;
-    readonly id: any;
-    setAssetId(assetId: string): void;
-    setHeight(height: number): void;
-    setWidth(width: number): void;
-    width: number;
-}
-
 /** ParticleTypeBuilder — registry 'minecraft:particle_type', type 'basic', sugar 'particleType'. */
 interface ParticleTypeBuilder {
     readonly id: any;

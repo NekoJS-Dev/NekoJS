@@ -10,7 +10,8 @@
 |---|---|---|
 | default 类型糖方法 | `event.item('mymod:ruby', b => { ... })` | 免类型名；糖方法名由注册表键 snake_case → lowerCamelCase 派生 |
 | 命名类型 | `event.soundEvent('mymod:ping', 'basic', b => { ... })` | 显式类型名；未知类型在收集期拒绝并列出 known types |
-| 命名类型（PaintingVariant 示例） | `event.paintingVariant('mymod:art', 'basic', b => { ... })` | 注册表内按名选择 builder 类型；26.1.2 内置 builder 类型名为 `basic` |
+| 命名类型（VillagerType 示例） | `event.villagerType('mymod:scholar', 'basic', b => { ... })` | 注册表内按名选择 builder 类型；26.1.2 内置 builder 类型名为 `basic` |
+| painting variants | 不支持 `RegistryEvents.register`；使用 datapack/resource generation 路径 | `minecraft:painting_variant` 是 datapack/dynamic registry，没有启动期 RegisterEvent pass |
 | custom | `event.custom('mymod:thing', '<globally-unique-type>', b => { ... })` | 仅接受跨全部 registry 全局唯一的类型名；类型名不存在或跨 registry 歧义时拒绝，歧义时改用 `event.<registry>(id, typeName, cb)` |
 | 裸 Supplier | `event.register('minecraft:villager_type', 'mymod:raw', () => value)` | 高级入口；Runtime 在合法启动 pass 校验返回值非空、实际类型与重复 ID |
 | setter/property parity | `b.maxStackSize = 16` 与 `b.setMaxStackSize(16)` | 同一个 setter，同一校验/规范化/definition fingerprint |

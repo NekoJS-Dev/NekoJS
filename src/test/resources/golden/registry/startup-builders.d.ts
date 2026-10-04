@@ -118,22 +118,6 @@ interface MobEffectBuilder {
     setColor(color: number): void;
 }
 
-/** PaintingVariantBuilder — registry 'minecraft:painting_variant', type 'basic', sugar 'paintingVariant'. */
-interface PaintingVariantBuilder {
-    assetId: string;
-    author: string;
-    height: number;
-    readonly id: any;
-    setAssetId(assetId: string): void;
-    setAuthor(author: string): void;
-    setHeight(height: number): void;
-    setTitle(title: string): void;
-    setWidth(width: number): void;
-    tag(...tags: string[]): any;
-    title: string;
-    width: number;
-}
-
 /** ParticleTypeBuilder — registry 'minecraft:particle_type', type 'basic', sugar 'particleType'. */
 interface ParticleTypeBuilder {
     readonly id: any;

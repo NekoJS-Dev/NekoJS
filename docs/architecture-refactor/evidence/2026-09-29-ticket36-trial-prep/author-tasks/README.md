@@ -20,7 +20,7 @@ capabilities are tested as explicit rejections, never as hidden-alternative-path
 
 | # | Task | Files | Example provenance |
 |---|------|-------|--------------------|
-| 1 / 1b | 启动期注册 (+ fabric fluid rejection) | `01-startup-registration.js`, `01b-…` | based on ticket 15 baseline; corrected to registry-scoped `paintingVariant(..., 'basic', ...)` after 26.1.2 F-T1 |
+| 1 / 1b | 启动期注册 (+ fabric fluid rejection) | `01-startup-registration.js`, `01b-…` | based on ticket 15 baseline; paintingVariant removed because 26.1.2 has no startup RegisterEvent pass for `painting_variant` |
 | 2 / 2b | Dynamic Registry (+ unavailable-node rejection) | `02-dynamic-registry.js`, `02b-…` | verbatim from ticket 21 baseline (`2026-09-22-registry-dynamic-sync/examples/dynamic-registry-transaction.js`) |
 | 3 / 3b | Villager Trades add/query (+ fabric rejection) | `03-villager-trades-add-and-query.js`, `03b-…` | verbatim from ticket 22 baseline |
 | 4 / 4b | Item/Block modification (+ 1.21.1 block rejection) | `04-item-block-modification.js`, `04b-…` | verbatim merge of the two ticket 39 baseline examples |

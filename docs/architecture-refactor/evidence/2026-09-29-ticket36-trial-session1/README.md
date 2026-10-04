@@ -31,11 +31,11 @@ run 目录)。本场为**首场部分会话**:进世界验证 + 输入链复验 
   基线示例原样运行——preflight 对「直接调用即注册」API 回调参数的处理缺陷,或示例签名
   过期;owner 26 域 triage。
 
-## F-T1 修复记录（2026-10-03，agent 修正文档，真机复跑待维护者完成）
+## F-T1 修复记录（2026-10-04，生命周期边界修复）
 
-- 根因确认：26.1.2 生产 `NekoRegistryPointsPlugin` 为各内置 registry 登记的 builder 类型名均为 `basic`；不存在生产类型名 `art`。`RegistryEventJS.custom` 要求类型名在全局唯一，生产 `basic` 跨多个 registry 歧义，因此不能把 `basic` 作为 `custom` 参数。
-- 已修正票 15 baseline、票 36 author task 及其 26.1.2 `run/nekojs/startup_scripts/t36-01-startup.js` 部署副本：`event.custom('mymod:art', 'art', ...)` 改为 `event.paintingVariant('mymod:art', 'basic', ...)`，即按注册表限定的命名类型形态。票 36 的来源注释同步改为“基于票 15”，不再声称与测试 fixture 逐字复用。
-- 原 session1 真机事实保持不变：26.1.2 重启时旧示例触发 `unknown type name 'art'`。本次仅完成代码/文档根因修正；尚未代替维护者在 26.1.2 重启游戏并逐字确认修订脚本启动成功，故 F-T1 真机验收仍待维护者记录。
+- 根因确认：26.1.2 的 `minecraft:painting_variant` 出现在 `Registries` 数据注册表集合，但不出现在实际 `BuiltInRegistries` 静态注册表或 NeoForge `RegisterEvent` pass 中；它由 datapack/dynamic registry loader 管理。StartupRegistryRuntime 因此只能收集，无法通过 `RegisterEvent` 抽干，最终报告 `registration pass never fired`。
+- 已移除 `paintingVariant` startup builder/type/declaration 与对应 TS/Python golden 输入；保留 `PaintingVariantBuilder` 作为未来 datapack/resource-generation 路径候选。启动文档与票 36 任务示例改用实际有 `RegisterEvent` pass 的 `villagerType`。
+- 这不是把动态注册伪装成启动注册：painting variants 必须另走 datapack/resource generation 设计；本轮只关闭错误 public route，未宣称 painting 实际注册成功。
 
 ## F-T2 修复记录（2026-10-03，engine fix，真机复跑待维护者完成）
 
@@ -82,7 +82,7 @@ run 目录)。本场为**首场部分会话**:进世界验证 + 输入链复验 
 
 | 项 | 结果 | 证据 |
 |---|---|---|
-| F-T1 修订启动注册 | ❌ 旧 `unknown type name 'art'` 不再出现，但新启动仍记录 `Registry 'minecraft:painting_variant' ... collected 'mymod:art' ... registration pass never fired; content NOT registered`；实际注册仍未交付 | `latest.log` 10:14:56 附近 |
+| F-T1 启动注册边界 | ⚠️ 旧 `unknown type name 'art'` 已消失；随后确认 `painting_variant` 没有 NeoForge startup RegisterEvent pass。该 route 已从 startup public surface 移除，实际 painting 注册需另立 datapack/resource-generation 路径 | `latest.log` 10:14:56；NeoForge 26.1.2 registry-order/source inspection |
 | 任务 3 启动声明与查询 | ✅ `declared 2 trade declaration(s)`；启动提交 `2 trade declaration(s)`；`ACTIVE generation=1 adapter=26.x-trade-set trades=2 minecraft:farmer/level_1=2` | `latest.log` 10:26:40–10:26:41 |
 | 任务 3 reload | ✅ `declared 2 trade declaration(s)`；`this batch will touch 2 trade declaration(s)`；聊天显示 `NekoJS server reload committed: generation=2 phase=COMMIT` | `latest.log` 10:27:16–10:27:16 |
 | 任务 3 独立性 | ⚠️ 数据结果已为 2 条交易，但本场重启前已恢复全部试做脚本；故仍有其它脚本诊断输出，未把本场宣称为“无干扰独立复跑” | 同一 `latest.log`；此前隔离目录仅覆盖未重启的 reload，不能替代独立启动证据 |
@@ -90,5 +90,5 @@ run 目录)。本场为**首场部分会话**:进世界验证 + 输入链复验 
 ### 本场结论
 
 - 交易 owner 的生产启动接线缺口已修复；任务 3 的 add/query 正向数据和 reload 第二代提交均有真实客户端日志证据。
-- F-T1 已精确收窄为“类型名修正成功，但 `painting_variant` registration pass 未触发”；不能以旧错误消失或任务 3 结果关闭任务 1。
+- F-T1 已精确收窄为“旧类型名错误已修正文档层；进一步确认 painting_variant 不属于 startup RegisterEvent”。该 API 已从 startup surface 移除，不能以旧错误消失或任务 3 结果宣称 painting 实际注册成功；未来需另立 datapack/resource-generation 路径。
 - 票 36 的 11 项跨节点试做、公开材料充分性记录、四份维护者 cookbook 和最终维护者结论仍未完成。

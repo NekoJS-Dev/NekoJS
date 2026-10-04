@@ -42,8 +42,9 @@
 ```bash
 # 生成方式：临时 scratch（已删除）以生产同款 fixture types 驱动
 # RegistryBuilderSurfaces.derive(...) → RegistryBuilderTsRenderer.render(...) 写入 build/tmp；
-# 26.1.2 输出提升为 src/test/resources/golden/registry/startup-builders.d.ts（161 行）；
-# 1.21.1 输出提升为 startup-builders-1.21.1.d.ts（152 行）。
+# 26.1.2 输出提升为 src/test/resources/golden/registry/startup-builders.d.ts（145 行）；
+# 1.21.1 输出提升为 startup-builders-1.21.1.d.ts（136 行）。
+# painting_variant 是 datapack/dynamic registry，不属于该 startup golden 输入；
 # 审查 F1 再生成（2026-09-15）：契约重载收集修复后重出两份 golden——
 # git diff 仅 26.x potion effect 一行（3 参 → 确定性 5 参），1.21.1 逐字节零变化；
 # 旧新 diff/原因/影响记录在 REPORT §4。

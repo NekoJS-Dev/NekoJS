@@ -55,8 +55,6 @@ class RegistryBuilderSurfaceGoldenTest {
         collector.setDefault(net.minecraft.core.registries.Registries.MOB_EFFECT, "basic");
         collector.registerType(net.minecraft.core.registries.Registries.POTION, "basic", PotionBuilder.class, PotionBuilder::new);
         collector.setDefault(net.minecraft.core.registries.Registries.POTION, "basic");
-        collector.registerType(net.minecraft.core.registries.Registries.PAINTING_VARIANT, "basic", PaintingVariantBuilder.class, PaintingVariantBuilder::new);
-        collector.setDefault(net.minecraft.core.registries.Registries.PAINTING_VARIANT, "basic");
         collector.registerType(net.minecraft.core.registries.Registries.VILLAGER_TYPE, "basic", VillagerTypeBuilder.class, VillagerTypeBuilder::new);
         collector.setDefault(net.minecraft.core.registries.Registries.VILLAGER_TYPE, "basic");
         collector.registerType(net.minecraft.core.registries.Registries.ITEM, "basic", ItemBuilder.class, ItemBuilder::new);
@@ -139,9 +137,9 @@ class RegistryBuilderSurfaceGoldenTest {
                 .map(RegistryBuilderSurfaceEntry::builderName).toList();
         assertEquals(List.of(
                 "BlockBuilder", "CreativeTabBuilder", "EnchantmentBuilder", "EntityTypeBuilder",
-                "ItemBuilder", "MobEffectBuilder", "PaintingVariantBuilder", "ParticleTypeBuilder",
+                "ItemBuilder", "MobEffectBuilder", "ParticleTypeBuilder",
                 "PotionBuilder", "SoundEventBuilder", "VillagerTypeBuilder"), names,
-                "派生顺序＝注册表键字典序（minecraft:block 最前）；面＝内置 12 loader 无关类型（fluid 另计）");
+                "派生顺序＝注册表键字典序（minecraft:block 最前）；面＝内置 11 loader 无关类型（fluid 另计）");
     }
 
 //? if neoforge {

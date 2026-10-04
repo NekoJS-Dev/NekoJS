@@ -54,16 +54,16 @@
 | 收集/抽干接线 | `RegistryEventAdapter`（`//? if neoforge`）：逐 `RegisterEvent` pass `drainFor`，Supplier 延迟执行 | 同 26.1.2 | 同（守卫替换后编译，全量 build 通过） | `FabricRegistryAdapter.onInitialize` 单批：先 `collectOnce` 再逐注册表 `drainFor` 直注 vanilla registry（supplier 立即执行） | 同左 |
 | epoch `beginBoot` | `NekoJSMod` 构造期 | 同 | 同 | `NekoJSFabricMod` onInitialize 初 | 同 |
 | FluidBuilder（`minecraft:fluid`） | 有（注册点行内 neoforge 守卫） | 有 | 有（1.21.1 override 文件） | **无**（整文件 neoforge 守卫剥离；`event.fluid` → unknown registry 可诊断错误，显式拒绝不静默 no-op） | 无 |
-| typed Builder golden | `startup-builders.d.ts`（12 类型，161 行，审查 F1 再生成） | 同一份（定向测试通过——预处理同源） | `startup-builders-1.21.1.d.ts`（152 行；**真实成员差异**：六个版本化 builder 无 `tag`、PaintingVariant 无 `author/title`。审查 F1 修正：初版 golden 里的 Potion `effect` 重载形状差异是<b>收集伪影</b>（getMethods 顺序丢重载），修复后两侧统一冻结确定性 5 参形态） | 26.x golden 对 fabric 成立（fluid 条目本就不进 golden；fluid 用例被守卫剥离，golden 套件 3 用例） | 同左 |
+| typed Builder golden | `startup-builders.d.ts`（11 类型，145 行，F-T1 生命周期修正后重生成） | 同一份（定向测试通过——预处理同源） | `startup-builders-1.21.1.d.ts`（136 行；版本化 builder 成员差异按 golden 保留） | 26.x golden 对 fabric 成立（fluid 条目本就不进 golden；fluid 用例被守卫剥离，golden 套件 3 用例） | 同左 |
 | 节点标签（错误/诊断内） | `neoforge:<mc 版本>`（运行期取 `Platform`） | 同 | 同 | `fabric:<mc 版本>` | 同 |
 | 本票验证状态 | 全量 build + `:common:check` + guardLint 通过 | 定向 golden 通过；全量 build 主会话统一 | 全量 build 通过（125 tests） | `compileJava` + 定向 golden 通过；全量 build 主会话 | 主会话统一 |
 | capability 口径 | 启动注册 supported（证据如上） | supported（预处理同源 + 定向 golden） | supported（成员面差异显式冻结于独立 golden） | 启动注册 supported（单批直注形状）；fluid 类型 unavailable | 同左 |
 
 ## 4. golden 变更留痕（REGENERATE.md §3 格式）
 
-**新增两个 golden（本票零改动既有 golden）：`src/test/resources/golden/registry/startup-builders.d.ts`（26.x，161 行）与 `startup-builders-1.21.1.d.ts`（1.21.1，152 行）**
+**新增两个 golden（F-T1 生命周期修正后重生成）：`src/test/resources/golden/registry/startup-builders.d.ts`（26.x，145 行）与 `startup-builders-1.21.1.d.ts`（1.21.1，136 行）**
 
-- **原因**：AC9 要求 contract/golden 与 runtime member、TS/Python declaration 由同一契约输入派生。输入 = 生产 `registry_types` 同款 builder 清单（13 类型；fluid 为 NeoForge 面不入 golden）→ `RegistryBuilderContract` 反射 → `RegistryBuilderSurfaces.derive` → `RegistryBuilderTsRenderer`（probe TS 后端生产渲染器）。
+- **原因**：AC9 要求 contract/golden 与 runtime member、TS/Python declaration 由同一契约输入派生。输入 = 生产 `registry_types` 同款静态 RegisterEvent builder 清单（11 类型；fluid 为 NeoForge 面不入 golden；datapack/dynamic `painting_variant` 不属于 startup surface）→ `RegistryBuilderContract` 反射 → `RegistryBuilderSurfaces.derive` → `RegistryBuilderTsRenderer`。
 - **旧新 diff**：均为新文件（旧值：不存在）。生成方式 = 临时 scratch（已删除）以生产同款 fixture 驱动渲染写 `build/tmp`，人工提升为 golden（root 树手动路径，query 域 ticket 25 同款；REGENERATE.md §1 已加登记行并更新尾注）。
 - **影响**：只被 `RegistryBuilderSurfaceGoldenTest` 消费；`api-manifest-core.json`、probe-ts fixture、legacy probe golden 零变化（`:common:check` 通过即证）。两份 golden 的差异即 1.21.1 成员面真实差异（§3）。
 - **审阅记录**：owner 自查（zcode-agent，2026-09-15）——逐行核对成员来自真实 builder 反射（含修复 varargs 渲染缺陷后重生成）；**缺维护者审阅**（ticket 14 G6 同款如实标注）。
@@ -95,7 +95,7 @@
 
 1. **Graal 宿主对象 property 写不落 setter**（设计过程 characterization）：public-field 形态下 `b.maxStackSize = 16` 直写字段、绕过一切校验；私有化后宿主对象 property 写亦不会映射 setter。处理：`BuilderSurface` ProxyObject putMember seam（spec 08 Implementation Decisions 预授权回退路径），两种写法转发同一 `Method`；characterization 结论固化进 parity 测试 javadoc（探测用 ScratchProbeTest 已删除，不入库）。
 2. **`IPluginRuntime` 新增抽象方法破坏 15 个 common 测试 stub**：改为 default `List.of()`（与 `TypeDocsRegister.registerRegistryBuilderSurface` 同款处理；真实产物由 `NekoPluginRuntime` 合并提供，两个根树测试 stub 的显式覆盖保留）。
-3. **单一 golden 在 1.21.1 不成立**：六个版本化 builder 的成员面有真实差异（无 `TaggableBuilder`、painting 无 author/title）。处理：按版本各冻一份 golden，守卫选择；差异进 §3 表——这是显式记录而非掩盖。**审查 F1 更正**：初版此处与 §3 把 Potion `effect` 重载形状也列为差异——那是契约收集伪影（`Map.put` 同名覆盖只留一个重载，两节点各自碰巧冻到不同形态），修复后差异面只剩 tag/painting 两项（§10-1）。
+3. **单一 golden 在 1.21.1 不成立**：版本化 builder 的成员面有真实差异（无 `TaggableBuilder`）；处理：按版本各冻一份 golden，守卫选择；差异进 §3 表。
 4. **varargs 参数渲染缺陷**：`tag(tags...args: string[])` 是非法 TS。修复 `RegistryBuilderSurfaces`（TS `...name: T[]`、Py `*name: T`）并重新生成 golden（§4）。
 5. **共享测试树跨节点编译**（上轮 KeyBindEvents 教训）：`VanillaRegistryProbe` 是 `>=26` 文件 → parity 两个 BlockBuilder 用例加 `//? if >=26` 守卫；测试树 `.identifier()` 用法加 `//~ mc_legacy_api` 标记（2 个测试文件）；guard else 分支须 `/* */` 包裹 inactive 代码（`EntityExtension` 先例）。
 6. **示例测试 ITEM 立即执行需 FML**（裸 JUnit 无 loader）：sink 改双形状——ITEM 按 NeoForge `RegisterEvent` 延迟形状只记录 Supplier，其余立即执行（fabric 直注形状）；两种形状消费同一 `validatedSupplier` 包装。

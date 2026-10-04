@@ -16,7 +16,7 @@ RegistryEvents.register(event => {
   event.soundEvent('mymod:ping', 'basic', b => { b.setFixedRange(32) });
 
   // 3) 命名类型显式传入（注册表内类型名；custom 仅接受全局唯一类型名）
-  event.paintingVariant('mymod:art', 'basic', b => { b.width = 32; b.height = 32 });
+  event.villagerType('mymod:scholar', 'basic', b => { });
 
   // 4) 裸 Supplier 高级入口：Runtime 校验返回值（非空）、实际类型与重复 ID；
   //    不承诺任意 Supplier 副作用的指纹/回滚
