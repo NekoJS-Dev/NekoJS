@@ -4,7 +4,7 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)、[05: 单 owner 预整理：闭合两个 loader 的运行时生命周期入口](05-runtime-root.md)、[06: 候选环境、阶段结果与 owner-thread commit 点](06-reload-commit.md)、[07: 同类型串行、close 优先与 watchdog 隔离恢复](07-runtime-threads.md)、[10: 按类型 global、显式 shared 与候选顶层写集联合提交](10-global-state.md)
 
-**Status:** closed
+**Status:** closed（实现路径与自动化证据已收口；AC10/AC11 的真实 client/smoke 验收和 AC14 维护者删除确认仍未完成，不代表 release gate 已通过）
 
 **Assignee:** zcode-agent
 
@@ -40,8 +40,10 @@
 - [x] 脚本不再声明某项修改时，成功 reload 后 NekoJS 持有基线先恢复，再应用新的完整修改计划；平台无法证明可恢复的字段不得提交该批，旧 active 保持可用。诊断能区分 active、blocked/recovery-failed 和 restored，不得把静默 stale 当成成功。
 - [x] 显式 setter 与 JavaBean-style property assignment 调用同一 setter，并进入同一校验、规范化、definition fingerprint 和候选修改计划；不得用同名 public field 绕过校验，GraalJS runtime contract test 固定两种写法等价。
 - [x] 同一 candidate 的修改计划与 global/shared 顶层写集完成联合预检，并联合成功或失败；不得出现领域计划失败而状态半提交，或状态提交而修改计划失败。
-- [x] Item/Block 修改后的客户端可见性有真实 fixture：自动同步、显式 resync、需要 relog 或明确 unsupported 均由节点 capability 与错误/提示表达，不出现服务端与客户端长期隐藏不一致。
-- [x] 26.x 与 1.21.1 的 item default components、block/state 属性、注册时机和同步差异只存在平台/版本 Adapter；五节点 capability/source-trace 与 smoke 记录实际结果，不自动补 Fabric parity。
+- [ ] Item/Block 修改后的客户端可见性有真实 fixture：自动同步、显式 resync、需要 relog 或明确 unsupported 均由节点 capability 与错误/提示表达，不出现服务端与客户端长期隐藏不一致。
+      **部分满足，未勾选**：候选/Adapter/source-trace 与 server-side 行为已验证，但权威报告仍记录无真实 client visibility fixture（REPORT §3 AC10、§6 G2/G2b、§12）；不得以 capability 文档或 fake fixture 代替该门禁。
+- [ ] 26.x 与 1.21.1 的 item default components、block/state 属性、注册时机和同步差异只存在平台/版本 Adapter；五节点 capability/source-trace 与 smoke 记录实际结果，不自动补 Fabric parity。
+      **部分满足，未勾选**：版本 Adapter 与结构/source-trace 证据已交付，但权威报告记录 1.21.1/static-pool 与真实 in-game smoke 仍未完成（REPORT §3 AC11、§6 G2/G2b/G5）；维护者需补真实节点证据后再关闭该 gate。
 - [x] 调用者 Interface、既有 Registry/Event/Adapter owner 契约、runtime member、TS/Python declaration、contract/golden 和迁移表互相追溯；不新增公开 Modification Runtime、第二 registry path 或第二事件框架，测试从脚本事件贯穿到平台 Adapter 可观察结果，不断言私有静态 Map。
 - [x] 随实现交付 Item/Block modification、setter/property parity、声明移除后的恢复/阻止提交和不可同步边界的最小可运行示例与必要迁移材料；示例只使用已通过 gate 的能力。
 - [ ] 旧 direct live mutation、restore-all 后整体重放、无 owner static snapshot 和不受测 server-only 旁路只能在替代路径 parity、失败保留、迁移表、无消费者证据和维护者确认后删除；不保留长期兼容双路径。【不勾选：维护者删除确认是门禁（Human input note）；替代路径 parity（parity/failure-retention/迁移表）+ 旧 route 无消费者证据 + 结构 guard 已交付，见 baseline REPORT §11/§12；待 sign-off】
