@@ -42,7 +42,7 @@ Record any item defaults reset after login/handshake without a SERVER generation
 - Chunk resend observation: NOT VERIFIED; no claim is made that chunk resync changes the property values.
 - Relog observation: PASS for connection/re-observation only; after leaving and rejoining, the client still reported baseline values while the server active plan remained committed.
 - Long-term server/client mismatch and user-visible explanation/rejection: MISMATCH OBSERVED; no capability message or explicit rejection is currently exposed to the user.
-- 1.21.1 actual item startup/reload/removal smoke: NOT RUN.
+- 1.21.1 actual item startup/reload/removal smoke: NOT RUN; MCP NeoForge 21.1.172 server setup failed during installer headless processor replay with `unexpected end of file`. Existing client version files were not treated as server evidence.
 
 ## Preservation
 

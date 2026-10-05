@@ -43,7 +43,7 @@
 - [ ] Item/Block 修改后的客户端可见性有真实 fixture：自动同步、显式 resync、需要 relog 或明确 unsupported 均由节点 capability 与错误/提示表达，不出现服务端与客户端长期隐藏不一致。
       **部分满足，未勾选**：2026-10-05 真实 NeoForge 26.2 dedicated server/client fixture 已连接成功。active 时 server fresh diamond `16/EPIC`、lamp default light `7`；client fresh/held diamond 保持 `64/COMMON`、lamp `0`。`/give` 新栈和 relog 后仍为 baseline；server generation 2 空计划 reload 恢复 baseline。证据见 [client records](../evidence/2026-10-05-ticket39-client/records.md)。该结果证明当前没有自动可见性，且尚无明确 unsupported capability/message；chunk resend 与 1.21.1 smoke 未验证，不能满足 AC10。
 - [ ] 26.x 与 1.21.1 的 item default components、block/state 属性、注册时机和同步差异只存在平台/版本 Adapter；五节点 capability/source-trace 与 smoke 记录实际结果，不自动补 Fabric parity。
-      **部分满足，未勾选**：版本 Adapter 与结构/source-trace 证据已交付，但权威报告记录 1.21.1 的 item 默认组件反射发布与真实 in-game smoke 仍未完成（REPORT §3 AC11、§6 G2/G2b/G5）；维护者需补真实节点证据后再关闭该 gate。
+      **部分满足，未勾选**：版本 Adapter 与结构/source-trace 证据已交付；本次尝试用 MCP NeoForge 21.1.172 执行 1.21.1 smoke，但 server installer 的 headless processor replay 以 `unexpected end of file` 失败，因此没有真实 startup/reload/removal 结果。维护者仍需补真实节点证据后再关闭该 gate。
 - [x] 调用者 Interface、既有 Registry/Event/Adapter owner 契约、runtime member、TS/Python declaration、contract/golden 和迁移表互相追溯；不新增公开 Modification Runtime、第二 registry path 或第二事件框架，测试从脚本事件贯穿到平台 Adapter 可观察结果，不断言私有静态 Map。
 - [x] 随实现交付 Item/Block modification、setter/property parity、声明移除后的恢复/阻止提交和不可同步边界的最小可运行示例与必要迁移材料；示例只使用已通过 gate 的能力。
 - [ ] 旧 direct live mutation、restore-all 后整体重放、无 owner static snapshot 和不受测 server-only 旁路只能在替代路径 parity、失败保留、迁移表、无消费者证据和维护者确认后删除；不保留长期兼容双路径。【不勾选：维护者删除确认是门禁（Human input note）；替代路径 parity（parity/failure-retention/迁移表）+ 旧 route 无消费者证据 + 结构 guard 已交付，见 baseline REPORT §11/§12；待 sign-off】
