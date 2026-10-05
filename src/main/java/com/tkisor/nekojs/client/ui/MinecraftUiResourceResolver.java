@@ -107,7 +107,7 @@ public final class MinecraftUiResourceResolver implements UiResourceResolver, Au
                 var providers = net.minecraft.client.gui.font.providers.GlyphProviderDefinition.Conditional.CODEC.listOf()
                         .parse(com.mojang.serialization.JsonOps.INSTANCE, json.getAsJsonObject().get("providers"))
                         .getOrThrow();
-                loadNativeProviders(providers);
+                loadNativeProviders(providers, new java.util.HashSet<>());
                 return ResourceStatus.resolved(id.toString(), location.toString());
             } catch (NativeProviderLoadFailure failure) {
                 fontFailures.put(id.toString(), failure.getCause());
@@ -121,18 +121,70 @@ public final class MinecraftUiResourceResolver implements UiResourceResolver, Au
         });
     }
 
-    private void loadNativeProviders(List<net.minecraft.client.gui.font.providers.GlyphProviderDefinition.Conditional> providers) {
+    private void loadNativeProviders(
+            List<net.minecraft.client.gui.font.providers.GlyphProviderDefinition.Conditional> providers,
+            java.util.Set<Identifier> resolving) {
         for (var conditional : providers) {
-            var loader = conditional.definition().unpack().left();
-            if (loader.isEmpty()) continue;
+            if (!conditional.filter().apply(activeFontOptions())) continue;
+            var definition = conditional.definition();
+            var unpacked = definition.unpack();
+            var loader = unpacked.left();
+            if (loader.isPresent()) {
+                try {
+                    var provider = loader.get().load(resources);
+                    if (provider == null) throw new IllegalStateException("Font provider loader returned null");
+                    provider.close();
+                } catch (IOException | RuntimeException failure) {
+                    throw new NativeProviderLoadFailure(failure);
+                }
+                continue;
+            }
+            var reference = unpacked.right().orElseThrow(
+                    () -> new IllegalStateException("Font provider definition has no loader or reference"));
+            if (!resolving.add(reference.id())) {
+                throw new IllegalStateException("Cyclic font provider reference: " + reference.id());
+            }
             try {
-                var provider = loader.get().load(resources);
-                if (provider == null) throw new IllegalStateException("Font provider loader returned null");
-                provider.close();
+                Identifier location = Identifier.fromNamespaceAndPath(reference.id().getNamespace(),
+                        "font/" + reference.id().getPath() + ".json");
+                Resource resource = resources.getResource(location).orElseThrow(
+                        () -> new IOException("Missing referenced font definition: " + location));
+                byte[] bytes;
+                try (InputStream input = resource.open()) {
+                    bytes = input.readNBytes(MAX_FONT_BYTES + 1);
+                }
+                if (bytes.length > MAX_FONT_BYTES) {
+                    throw new IOException("Referenced font definition exceeds the encoded byte limit: " + location);
+                }
+                var json = com.google.gson.JsonParser.parseString(
+                        new String(bytes, java.nio.charset.StandardCharsets.UTF_8));
+                if (!json.isJsonObject() || !json.getAsJsonObject().has("providers")) {
+                    throw new IOException("Referenced font definition requires a providers array: " + location);
+                }
+                var referenced = net.minecraft.client.gui.font.providers.GlyphProviderDefinition.Conditional.CODEC.listOf()
+                        .parse(com.mojang.serialization.JsonOps.INSTANCE, json.getAsJsonObject().get("providers"))
+                        .getOrThrow();
+                loadNativeProviders(referenced, resolving);
             } catch (IOException | RuntimeException failure) {
                 throw new NativeProviderLoadFailure(failure);
+            } finally {
+                resolving.remove(reference.id());
             }
         }
+    }
+
+    private java.util.Set<net.minecraft.client.gui.font.FontOption> activeFontOptions() {
+        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+        if (minecraft == null || minecraft.options == null) return java.util.Set.of();
+        java.util.EnumSet<net.minecraft.client.gui.font.FontOption> options =
+                java.util.EnumSet.noneOf(net.minecraft.client.gui.font.FontOption.class);
+        if (minecraft.options.forceUnicodeFont().get()) {
+            options.add(net.minecraft.client.gui.font.FontOption.UNIFORM);
+        }
+        if (minecraft.options.japaneseGlyphVariants().get()) {
+            options.add(net.minecraft.client.gui.font.FontOption.JAPANESE_VARIANTS);
+        }
+        return java.util.Set.copyOf(options);
     }
 
     private static final class NativeProviderLoadFailure extends RuntimeException {
