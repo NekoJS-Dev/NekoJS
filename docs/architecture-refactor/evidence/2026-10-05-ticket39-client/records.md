@@ -1,28 +1,28 @@
 # Ticket 39 actual run records
 
-Prepared 2026-10-05. No live test or maintainer conclusion has been recorded by the preparer.
+Prepared 2026-10-05. Partial live attempt recorded 2026-10-05 by the lead; no maintainer conclusion has been recorded.
 
 ## Environment
 
 | Field | Actual value |
 |---|---|
-| Commit and dirty-source description | UNFILLED |
-| Built server jar and SHA-256 | UNFILLED |
-| Built client jar and SHA-256 | UNFILLED |
-| Minecraft/loader/Java | UNFILLED |
-| SERVER PID | UNFILLED |
-| CLIENT PID | UNFILLED |
-| Same JVM or separate process | UNFILLED |
-| Verified game directory/directories | UNFILLED |
-| Initial conflicting scripts/errors | UNFILLED |
-| Fresh Item.of vs existing held inventory stack | Record separately below |
+| Commit and dirty-source description | `043fdfbb` plus existing unrelated dirty worktree; isolated fixture files only |
+| Built server jar and SHA-256 | `versions/26.2.0/build/libs/nekojs-neoforge-26.2.0-1.1.0-preview3.jar`; `F061A1D6AE33FF7E81D32C62768C0F5B21A3D20AD4841D3F224A61E28538C530` |
+| Built client jar and SHA-256 | Same jar and hash |
+| Minecraft/loader/Java | Minecraft 26.2 / NeoForge 26.2.0.75 / Zulu Java 25 |
+| SERVER PID | Separate direct Java process; stopped after smoke |
+| CLIENT PID | `5652`; stopped after smoke |
+| Same JVM or separate process | Separate server and client processes |
+| Verified game directory/directories | `build/issue4-server-neoforge` and `build/ticket41-mc` |
+| Initial conflicting scripts/errors | No t39 filenames existed; offline auth errors are unrelated. Client auto-connect resolved to `kubernetes.docker.internal:25883` and did not reach the server |
+| Fresh Item.of vs existing held inventory stack | Server fixture only; client not connected |
 
 ## Phase observations
 
 | Phase | SERVER fresh diamond max/rarity | CLIENT fresh diamond max/rarity | CLIENT held diamond max/rarity/patch origin | SERVER lamp default emission | CLIENT lamp default emission | Reload result/generation | Log/screenshot path |
 |---|---|---|---|---|---|---|---|
 | Baseline | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | — |
-| Active after SERVER commit | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | — |
+| Active after SERVER commit | 16 / EPIC | NOT OBSERVED (client did not connect) | NOT OBSERVED | 7 | NOT OBSERVED | SERVER active fixture loaded and emitted values; client connect failed | `build/issue4-server-neoforge/logs/latest.log`; `build/ticket41-mc/logs/latest.log` | |
 | New ordinary /give stack | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | — |
 | Invalid candidate rejected | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | — |
 | Empty-plan baseline restore | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | — |
@@ -37,11 +37,11 @@ Record any item defaults reset after login/handshake without a SERVER generation
 
 ## Capability conclusion
 
-- Integrated local observation: UNFILLED; never a substitute for the remote-client gate.
-- Automatic remote apply: UNFILLED; source currently declares unsupported.
-- Chunk resend observation: UNFILLED; changing light section data is not proof of property synchronization.
-- Relog observation: UNFILLED; record default holder values and received stacks independently.
-- Long-term server/client mismatch and user-visible explanation/rejection: UNFILLED.
+- Integrated/server-side observation: PASS for the active fixture (`diamondMax=16 diamondRarity=EPIC stickMax=16 stickRarity=EPIC lampDefaultLight=7`). This is not remote-client evidence.
+- Automatic remote apply: NOT VERIFIED; the client did not connect.
+- Chunk resend observation: NOT VERIFIED.
+- Relog observation: NOT VERIFIED.
+- Long-term server/client mismatch and user-visible explanation/rejection: NOT VERIFIED.
 - 1.21.1 actual item startup/reload/removal smoke: NOT RUN.
 
 ## Preservation

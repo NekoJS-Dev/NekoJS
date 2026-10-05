@@ -1,6 +1,6 @@
 # Ticket 39 real-client acceptance readiness
 
-Status: **prepared, not executed**. DSH delegated preparation owns only this directory. No source/ticket edits, staging, commits, Gradle runs or Minecraft launches were performed by this preparation task. The lead owns the live NeoForge 26.2 client and subsequent test results. This document does not provide human sign-off.
+Status: **partially executed, not accepted**. The lead ran an isolated NeoForge 26.2 dedicated-server fixture and recorded the active server values. The client launch did not connect to that server because the launcher resolved the connection target to `kubernetes.docker.internal:25883`; no remote-client visibility or relog evidence is claimed. No maintainer sign-off is provided.
 
 ## Inputs and observable values
 
