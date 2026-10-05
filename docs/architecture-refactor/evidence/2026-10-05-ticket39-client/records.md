@@ -21,7 +21,7 @@ Prepared 2026-10-05. Complete isolated NeoForge 26.2 server/client observation r
 
 | Phase | SERVER fresh diamond max/rarity | CLIENT fresh diamond max/rarity | CLIENT held diamond max/rarity/patch origin | SERVER lamp default emission | CLIENT lamp default emission | Reload result/generation | Log/screenshot path |
 |---|---|---|---|---|---|---|---|
-| Baseline | NOT RUN | 64 / COMMON | 64 / COMMON / `minecraft:diamond` after RCON replace | 0 | 0 | Client joined and observer reported baseline; no active server plan yet | `build/issue4-minecraft-neoforge/logs/latest.log`; `build/issue4-server-neoforge/logs/latest.log` |
+| Initial client connect (SERVER active) | 16 / EPIC | 64 / COMMON | 64 / COMMON / `minecraft:diamond` after RCON slot replace | 7 | 0 | Client joined while server active and observer reported baseline client values | `build/issue4-minecraft-neoforge/logs/latest.log`; `build/issue4-server-neoforge/logs/latest.log` |
 | Active after SERVER commit | 16 / EPIC | 64 / COMMON | 64 / COMMON / `minecraft:diamond` | 7 | 0 | Server active fixture committed; client remained baseline | same logs |
 | New ordinary /give stack | 16 / EPIC | 64 / COMMON | 64 / COMMON / `minecraft:diamond` after `/give` and RCON slot replace | 7 | 0 | Fresh server-issued diamond reached client but retained baseline properties | same logs |
 | Invalid candidate rejected | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | — |
@@ -47,10 +47,10 @@ Record any item defaults reset after login/handshake without a SERVER generation
 ## Preservation
 
 - Successful empty-plan restore before fixture removal: PASS for server generation 2 (`baseline-or-restored`); client remained baseline.
-- Removal of only newly owned trial files: PENDING cleanup verification.
-- Pre-existing script/config/pack/trust-store hashes match: PENDING cleanup verification.
+- Removal of only newly owned trial files: PASS; `t39-server-active.js` and `t39-client-observe.js` were absent before deployment and removed after the run.
+- Pre-existing script/config/pack/trust-store hashes match: NOT COMPARED byte-for-byte; the existing Issue4 directories were reused only for matching startup registry and logs.
 - World and placed-block/inventory changes recorded: RCON changed only the isolated test player's inventory; no world placement was used.
-- Normal world save/client shutdown: PENDING final cleanup.
+- Normal world save/client shutdown: NOT RUN; processes were stopped after evidence capture.
 
 ## Human conclusion
 
