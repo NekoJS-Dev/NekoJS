@@ -73,7 +73,9 @@ function tables(content) {
 }
 
 function migrationAssociations(content) {
-  const records = tables(content).flatMap(table => table.rows.map(row => {
+  const candidateTables = tables(content).filter(table => table.headers.some(header =>
+    /old|legacy|旧|删除|原形态|new|replacement|替代|新写法|新形态/i.test(header)));
+  const records = candidateTables.flatMap(table => table.rows.map(row => {
     const entries = Object.entries(row);
     const oldEntry = entries.find(([header]) => /old|legacy|旧|删除|原形态/i.test(header));
     const newEntry = entries.find(([header]) => /new|replacement|替代|新写法|新形态/i.test(header));
