@@ -21,7 +21,7 @@
 ## Acceptance criteria
 
 - [x] 默认只读且仅显式启动；故障、取消或报告生成不得改动脚本、world、pdata、pack、trust-store 或用户编辑文档。——`scripts/offline-migration-report.mjs` 只读取两个显式路径，不提供写入或迁移分支；测试比较运行前后输入文件内容。
-- [ ] 报告关联已有旧/新 public symbol 迁移记录与数据保护输入，缺失信息明确标记，不编造替代接口或迁移成功。——当前报告读取并列出输入结构，但尚未解析 symbol 迁移语义，保留未勾选。
+- [x] 报告关联已有旧/新 public symbol 迁移记录与数据保护输入，缺失信息明确标记，不编造替代接口或迁移成功。——报告解析 Markdown 表格，输出 `migration.associations`（old/replacement/missing）以及 `protection.topics`/`missing`；缺少迁移表、old/replacement 列或数据保护主题会显式进入 `missing`。focused test 固定完整关联结果。
 - [x] 相同输入产生可比报告，非法或缺少输入有普通可读错误，不静默跳过风险。——JSON 输出由 focused test 做两次字节级比较；参数、缺失文件和空文件均返回状态 2 并输出可读错误。
 - [x] 只有用户明确选用时才实施；不作为任何必选票或 release gate 的先决条件。——本次由用户明确请求实施；CLI 无默认启动入口，票据仍为 Optional。
 - [x] 报告不替代必需的迁移表、旧 fixture 回读、必要迁移/回滚与 contract diff 证据。——报告固定输出警告，明确要求人工检查这些证据。
@@ -29,10 +29,10 @@
 
 ## Delivery record（2026-10-05）
 
-- Added `scripts/offline-migration-report.mjs`: explicit `--migration`/`--protection` inputs, deterministic text/JSON output, read-only behavior, ordinary exit-2 errors, and explicit warnings that the report is not a migration or rollback.
-- Added `scripts/offline-migration-report.test.mjs`: deterministic output, read-only input preservation, and missing-input failure coverage.
-- Verification: `node --test scripts/offline-migration-report.test.mjs` passed (2 tests).
-- AC2 remains open because this minimal report does not yet parse old/new symbol semantics; it must not be treated as a complete migration validator.
+- Added `scripts/offline-migration-report.mjs`: explicit `--migration`/`--protection` inputs, deterministic text/JSON output, read-only behavior, ordinary exit-2 errors, explicit old/replacement association records, data-protection topic coverage, and explicit warnings that the report is not a migration or rollback.
+- Added `scripts/offline-migration-report.test.mjs`: deterministic output, read-only input preservation, old/replacement association, protection-topic completeness, malformed/empty input, and missing-input failure coverage.
+- Verification: `node --test scripts/offline-migration-report.test.mjs` passed (3 tests).
+- The report remains an evidence summarizer, not a migration executor or rollback validator; it does not claim those operations succeeded.
 
 
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)

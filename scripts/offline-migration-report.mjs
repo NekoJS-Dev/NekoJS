@@ -49,9 +49,60 @@ function tableRows(content) {
     .map(line => line.trim());
 }
 
+function splitTableRow(line) {
+  return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim());
+}
+
+function tables(content) {
+  const lines = content.split(/\r?\n/);
+  const result = [];
+  for (let index = 0; index + 2 < lines.length; index += 1) {
+    if (!/^\s*\|/.test(lines[index]) || !/^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/.test(lines[index + 1])) continue;
+    const headers = splitTableRow(lines[index]);
+    const rows = [];
+    index += 2;
+    while (index < lines.length && /^\s*\|/.test(lines[index])) {
+      const cells = splitTableRow(lines[index]);
+      if (cells.length === headers.length) rows.push(Object.fromEntries(headers.map((header, cell) => [header, cells[cell]])));
+      index += 1;
+    }
+    result.push({ headers, rows });
+    index -= 1;
+  }
+  return result;
+}
+
+function migrationAssociations(content) {
+  const records = tables(content).flatMap(table => table.rows.map(row => {
+    const entries = Object.entries(row);
+    const oldEntry = entries.find(([header]) => /old|legacy|旧|删除|原形态/i.test(header));
+    const newEntry = entries.find(([header]) => /new|replacement|替代|新写法|新形态/i.test(header));
+    return {
+      old: oldEntry?.[1] ?? null,
+      replacement: newEntry?.[1] ?? null,
+      missing: [oldEntry ? null : 'old symbol', newEntry ? null : 'replacement path'].filter(Boolean),
+    };
+  }));
+  return {
+    records,
+    missing: records.length === 0 ? ['migration symbol table'] : [...new Set(records.flatMap(record => record.missing))],
+  };
+}
+
+function protectionAssociations(content) {
+  const topics = ['config', 'world', 'pdata', 'pack', 'trust-store', 'workspace', 'logs', 'cache'];
+  const normalized = content.toLowerCase();
+  return {
+    topics: topics.filter(topic => normalized.includes(topic)),
+    missing: topics.filter(topic => !normalized.includes(topic)),
+  };
+}
+
 function buildReport(values) {
   const migration = readInput('migration', values.migration);
   const protection = readInput('protection', values.protection);
+  const associations = migrationAssociations(migration.content);
+  const protectionSummary = protectionAssociations(protection.content);
   return {
     format: 1,
     readOnly: true,
@@ -59,11 +110,15 @@ function buildReport(values) {
       file: migration.absolute,
       headings: headings(migration.content),
       rows: tableRows(migration.content),
+      associations: associations.records,
+      missing: associations.missing,
     },
     protection: {
       file: protection.absolute,
       headings: headings(protection.content),
       rows: tableRows(protection.content),
+      topics: protectionSummary.topics,
+      missing: protectionSummary.missing,
     },
     warnings: [
       'This report does not perform migration or rollback.',

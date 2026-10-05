@@ -11,8 +11,8 @@ test('offline migration report is deterministic and read-only', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nekojs-migration-report-'));
   const migration = path.join(directory, 'migration.md');
   const protection = path.join(directory, 'protection.md');
-  fs.writeFileSync(migration, '# Migration\n\n| old | new |\n| --- | --- |\n| A | B |\n');
-  fs.writeFileSync(protection, '# Protection\n\n| data | rollback |\n| --- | --- |\n| world | backup |\n');
+  fs.writeFileSync(migration, '# Migration\n\n| old symbol | replacement path |\n| --- | --- |\n| OldApi#fire | NewOwner#apply |\n');
+  fs.writeFileSync(protection, '# Protection\n\nconfig world pdata pack trust-store workspace logs cache\n\n| data | rollback |\n| --- | --- |\n| world | backup |\n');
   const before = [fs.readFileSync(migration), fs.readFileSync(protection)];
   const first = spawnSync(process.execPath, [script, '--migration', migration, '--protection', protection, '--json'], { encoding: 'utf8' });
   const second = spawnSync(process.execPath, [script, '--migration', migration, '--protection', protection, '--json'], { encoding: 'utf8' });
@@ -23,6 +23,9 @@ test('offline migration report is deterministic and read-only', () => {
   const report = JSON.parse(first.stdout);
   assert.equal(report.readOnly, true);
   assert.deepEqual(report.migration.headings, ['# Migration']);
+  assert.deepEqual(report.migration.associations, [{ old: 'OldApi#fire', replacement: 'NewOwner#apply', missing: [] }]);
+  assert.deepEqual(report.migration.missing, []);
+  assert.deepEqual(report.protection.missing, []);
   assert.deepEqual(report.protection.rows, ['| data | rollback |', '| world | backup |']);
 });
 
