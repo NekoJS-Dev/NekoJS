@@ -134,6 +134,14 @@ public final class FabricServerEventBindings {
      */
     public static void register(Runnable loadServerScripts,
             java.util.function.Supplier<com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot> rootSupplier) {
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot root = rootSupplier.get();
+            com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector = root == null ? null
+                    : root.domainCollector(com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.DOMAIN);
+            if (collector instanceof com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner owner) {
+                owner.syncTo(handler.player);
+            }
+        });
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
             currentServer = server;
             loadServerScripts.run();

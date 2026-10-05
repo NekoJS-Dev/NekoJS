@@ -6,6 +6,9 @@ import net.minecraft.server.level.ServerPlayer;
 //? if neoforge {
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 //?}
+//? if >=26 {
+import com.tkisor.nekojs.wrapper.event.server.ModificationSyncWire;
+//?}
 
 /**
  * {@link NekoScriptPayload} 的接收投递：按 channel 投给脚本监听器
@@ -29,6 +32,12 @@ public final class NetworkMessageHandler {
 
     /** 中立投递核心：服务端 → 客户端的包投给 CLIENT 监听器（调用方须已在客户端主线程）。 */
     public static void postClientEvent(NekoScriptPayload payload) {
+//? if >=26 {
+        if (ModificationSyncWire.CHANNEL.equals(payload.channel())) {
+            ModificationSyncWire.handleClient(payload.data());
+            return;
+        }
+//?}
         NetworkDataEventJS event = new NetworkDataEventJS(payload.channel(), payload.data(), null);
         NetworkEvents.CLIENT.post(event, payload.channel());
     }

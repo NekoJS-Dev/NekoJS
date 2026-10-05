@@ -70,6 +70,10 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
     /** 最近成功应用的计划指纹（初始 generation 收集的等价跳过依据）。 */
     private volatile String lastAppliedFingerprint;
 
+    /** 最近一次成功发布的声明快照，用于新玩家登录后的 client catch-up。 */
+    private volatile List<ModificationDeclaration> activeDeclarations = List.of();
+    private volatile long syncGeneration;
+
     public ModificationDomainOwner() {
     }
 
@@ -85,7 +89,20 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         this.boundServer = null;
     }
 
-    // ---- CandidateDomainCollector（DOMAIN_PLAN 阶段） ----
+    /** Sends the current committed plan to a newly logged-in player. */
+    public void syncTo(net.minecraft.server.level.ServerPlayer player) {
+        if (player != null && boundServer != null) {
+            ModificationSyncWire.sendTo(player, syncGeneration, activeDeclarations);
+        }
+    }
+
+    /** Sends the committed plan to all connected clients after a successful server apply. */
+    private void syncToClients(List<ModificationDeclaration> declarations) {
+        if (boundServer != null) {
+            ModificationSyncWire.broadcast(syncGeneration, declarations);
+        }
+    }
+
 
     @Override
     public String domain() {
@@ -270,6 +287,9 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
             boolean restoredOnly = declarations.isEmpty();
             lastDiagnostics = new Diagnostics(restoredOnly ? Outcome.RESTORED : Outcome.APPLIED, source,
                     countKind(declarations, "item"), countKind(declarations, "block"), List.copyOf(restored), null);
+            activeDeclarations = List.copyOf(declarations);
+            syncGeneration++;
+            syncToClients(activeDeclarations);
             if (!declarations.isEmpty()) {
                 NekoJS.LOGGER.info("NekoJS modifications applied at {} ({} item(s), {} block(s))",
                         source, countKind(declarations, "item"), countKind(declarations, "block"));

@@ -59,6 +59,16 @@ public class ServerEventListener {
         ProbeCoordinator.runStartupProbeIfConfigured();
     }
 
+//? if >=26 {
+    @SubscribeEvent
+    public static void onModificationPlayerLoggedIn(
+            net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner owner = modificationDomain();
+            if (owner != null) owner.syncTo(player);
+        }
+    }
+//?}
     @SubscribeEvent
     public static void onServerAboutToStart(ServerAboutToStartEvent event) {
         var server = event.getServer();

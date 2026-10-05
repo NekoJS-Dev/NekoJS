@@ -171,7 +171,7 @@ RECOVERY_FAILED`（AC7：「静默 stale 不算成功」）。
 | AC7 声明移除 → 成功 reload 先恢复基线再应用完整新计划；不可证明可恢复的字段阻止该批；诊断区分 active/blocked/recovery-failed/restored，不把静默 stale 当成功 | **满足** | `removedDeclarationsRestoreBaselinesViaAnEmptyPlanAtCommit`（真跑）；`ModificationLegacyCharacterizationTest.removedItemDeclarationNowRestoresBaselineInsteadOfStayingStale`；`Ticket39ModificationScriptE2ETest.removedDeclarationRestoresNekoJsBaselineInsteadOfStayingStale`；`Outcome` 枚举 6 态 + 两个 E2E 断言 outcome |
 | AC8 setter 与 property 赋值同一 setter/校验/规范化/fingerprint/计划路径；无同名 public field 旁路；GraalJS runtime contract test 固定两种写法等价 | **满足（两种到达形态均真跑）** | `ModificationSetterPropertyParityTest`（10 用例，本机实测五节点真跑，真实 GraalJS Context）：规范化声明等价、fingerprint 等价、错误同源、未知成员、类型不匹配、write-only 读面报错、food 对象字面量/null 移除（>=26）；**生产投递形态**（JS 函数 → 沙盒 `HostAccess` 实现成 `Consumer` → 裸视图，与 `ItemModificationEventJS#modify` 同形）与 surface 形态产生同一声明与同一 fingerprint；`viewsExposeNoLiveMutationSeam`（真跑：视图无接受 live 类型的 public 方法） |
 | AC9 同一 candidate 的修改计划与 global/shared 顶层写集联合预检、联合成败 | **满足** | `domainPlanAndGlobalWriteSetCommitJointlyOrNotAtAll`（真跑，双向）；`GenerationGlobals` 联合边界（票 10 既有 fixture） |
-| AC10 客户端可见性有真实 fixture：自动同步/显式 resync/relog/unsupported 由 capability 与错误/提示表达，无长期隐藏不一致 | **部分满足（降级：文档化边界 + 可机检结构 guard，无客户端 fixture）** | 能力记录：§8 capability 表（自动同步 = unsupported；显式 resync = partial；relog = supported）；可机检边界：`Ticket39ModificationOwnershipTest.modificationPathReferencesNoNetworkSymbols`（本机实测五节点真跑：modification 类的方法/字段签名不得出现网络类型，加同步路径必须先更新能力记录）；文档化：payload javadoc + `MIGRATION.md` §1/§4 明示 relog / chunk resync 需求；**缺口**：没有真实客户端 fixture（无 in-game 客户端复验），见 §12 G2 —— 该 AC 的「真实 fixture」要求未闭环 |
+| AC10 客户端可见性有真实 fixture：自动同步/显式 resync/relog/unsupported 由 capability 与错误/提示表达，无长期隐藏不一致 | **满足（NeoForge 26.2 真实 fixture）** | `ModificationSyncWireTest` 固定 generation-scoped declaration round-trip；独立 dedicated server/client 实测 active login catch-up、fresh `/give` stack、empty-plan restore、relog 和再次 active reload。旧 ItemStack 不 retroactively rewrite，新建/relog stack 与 server 一致；完整日志见 [client records](../../evidence/2026-10-05-ticket39-client/records.md) |
 | AC11 26.x 与 1.21.1 的 item default components、block/state 属性、注册时机和同步差异只存在平台/版本 Adapter；五节点 capability/source trace 与 smoke 记录实际结果，不自动补 Fabric parity | **满足（五节点已有实测构建/测试）** | §6 五节点差异表；common 契约零 MC import（`guardLint` 通过）；本机实测五节点 `build`（含 test 编译与执行）：26.1.2 / 26.2.0 / 26.1.2-fabric / 26.2.0-fabric / 1.21.1（§9）；fabric 两节点复用同一 Adapter 编译，不自动补 Fabric 特有 parity；**缺口**：无 in-game smoke（gametest 被票 15 的 Point bootstrap 阻塞，见 §12 G2b） |
 | AC12 最小可运行示例 + 迁移材料；示例只用已通过 gate 的能力 | **满足** | `MIGRATION.md`；`examples/item-modification.js`、`item-setter-property-parity.js`、`block-modification.js`、`declaration-removal-recovery.js`；`Ticket39ModificationExamplesTest` 按生产序列（初始收集点 + reload）执行示例同源代码 |
 | AC13 Interface/Registry/Event/Adapter owner/declaration/golden/迁移表互相追溯；不新增公开 Modification Runtime、第二 registry path 或第二事件框架；测试从脚本事件贯穿到 Adapter 可观察结果 | **满足** | `ModificationDomainOwner implements CandidateDomainCollector, ModificationApplier, AutoCloseable`（`restoreAllThenReplayEntryPointsAreGone` 真跑断言归属）；`Ticket39ModificationScriptE2ETest`（脚本 → 事件 → 计划 → Adapter → `Items.DIAMOND.components()` 可观察结果）；`Ticket39ModificationOwnershipTest`（断言不读私有静态 Map）；catalog/golden + MIGRATION 追溯表 |
@@ -181,11 +181,12 @@ RECOVERY_FAILED`（AC7：「静默 stale 不算成功」）。
 
 | 节点 | capability | 依据 |
 |---|---|---|
-| 26.1.2 / 26.2.0 / 26.1.2-fabric / 26.2.0-fabric | `modification.item` = supported（收集→commit→Adapter 应用；`fireResistant` 需 server 绑定，未绑定时整批 blocked） | §3.1/§3.4 + registry-gated E2E fixture |
+| 26.1.2 / 26.2.0 / 26.1.2-fabric / 26.2.0-fabric | `modification.item` = supported（收集→commit→Adapter 应用；fireResistant 需 server 绑定，未绑定时整批 blocked） | §3.1/§3.4 + registry-gated E2E fixture |
 | 同上 | `modification.block` = supported（26.x 面，六属性三副本 + per-state 光照函数恢复） | 同上 |
 | 1.21.1 | `modification.item` = supported（四基础属性；组件发布走反射） | 1.21.1 成对 owner + `ItemModificationComponentsTest`（registry-gated） |
 | 1.21.1 | `modification.block` = **unavailable**（无总线；脚本得明确「无此成员」错误，不是静默 no-op） | 节点 golden 无 `modification` 条目 + 成对 owner 的 `preflight` 只接受 `item` |
-| 全节点 | 客户端自动同步 = **unsupported**；独立客户端显式 resync/relog = **not verified**，当前 owner 无属性重放或同步实现 | 服务端写入/source trace 无 packet/sendTo；2026-10-05 审计确认集成 JVM 共享静态对象不可替代跨进程可见性，默认组件握手可重新绑定 vanilla 初始值；[client readiness pack](../../evidence/2026-10-05-ticket39-client/README.md) |
+| NeoForge 26.2 | `modification.clientSync` = **supported**；active plan、restore、fresh stack 和 relog catch-up 通过既有 `NekoScriptPayload` | `ModificationSyncWireTest` + dedicated server/client evidence |
+| 1.21.1 / Fabric 26.x | client sync = **not verified in-game**；Fabric wire/登录接线已编译，仍需对应真实 client evidence | 版本 build/guard 通过；1.21.1 MCP server setup blocked by installer EOF |
 
 source trace（唯一 dispatch/post 来源，`grep -rn "ItemEvents.MODIFICATION\|BlockEvents.MODIFICATION" src versions/*/src common/src src/fabric`，排除 build 与测试）：
 
@@ -259,7 +260,7 @@ golden 完整性：本票未改任何 golden 输入（`block-events-api.txt` 的
 | # | 项 | 现状 | 建议 |
 |---|---|---|---|
 | G1 | registry-gated fixture 在无 FML loader 的测试 JVM 报 **skipped**（26.1.2：`Ticket39ModificationScriptE2ETest` 6、`Ticket39BlockModificationScriptE2ETest` 4、`Ticket39ModificationExamplesTest` 4、`BlockModificationEventJSTest` 6、`ItemModificationComponentsTest` 15、`ModificationLegacyCharacterizationTest` 2） | 与既有基线同口径（票 14 证据里 `:26.1.2:check` 也是 34 skipped）；真跑面由 registry-free fixture 承担：`:26.1.2` parity 7 + ownership 4 + surface 2，`:26.1.2-fabric` 13，`:1.21.1` 11，`common` `Ticket39DomainCollectionTest` 7（真实 root + 真实脚本管线 + 真实 Graal） | 主会话在 ModDev/开发环境复核 registry-gated 那批；in-game smoke 用 `minecraft-mod-mcp`（注意 G2b 的既有阻塞） |
-| G2 | 客户端可见性（relog/chunk resync）**未在本 worktree 做客户端复验** | 只有服务端写入面 source trace + 文档边界；无隐藏漂移 | 主会话用 MCP 起客户端复核一次（放置/观察红石灯 lightLevel 变化需 relog 的现象），并在 ticket 34/36 的 P4 证据里消费 |
+| G2 | 客户端可见性真实 fixture | NeoForge 26.2 已完成 active/restore/fresh/relog dedicated server/client smoke；Fabric 26.x 与 1.21.1 仍缺对应 in-game fixture，1.21.1 另受 MCP installer EOF 阻断 | 复用 `ModificationSyncWire` 与 matching fixture；补齐其他节点时沿用同一 records 表 |
 | G2b | 真机 smoke 尝试：`./gradlew :26.1.2:runGameTestServer`（在 `run/nekojs/server_scripts/` 放一份 item+block 修改脚本）**失败于 mod 构造期**：`IllegalStateException: extension point 'nekojs:registry_types' has not finished yet (bootstrap incomplete)` @ `NekoRegistryPointsPlugin.requireResult/registryTypes/registerTypeDocs` ← `NekoPluginBootstrap.bootstrapOwned` ← `NekoRuntimeAssembly.assemble` ← `NekoJSMod.initializeScripts` | **与本票无关的既有问题**：堆栈全在票 15 的启动注册 Point 面（`NekoRegistryPointsPlugin` 由 `5ac74024` 引入，本票未触碰），失败点在 mod 构造，早于任何 modification 收集；`run/` 目录为生成物（已清理脚本，不影响后续运行） | 归 ticket 15/34 owner 处置（gametest 环境下的 Point bootstrap 未完成）；修好后可用同一脚本路径复核 modification 启动收集点，本票不把该次失败计入 AC 证据 |
 | G3 | 五节点全量（check/artifact/CI 子集） | 本 worktree 已跑五节点 `build`（含 test 编译与执行）：26.1.2 / 26.2.0 / 26.1.2-fabric / 26.2.0-fabric / 1.21.1（§9）；CI 子集与 artifact gate 未在本 worktree 跑 | 合并后由主会话跑五节点全量 check/artifact + CI 子集 |
 | G6 | 并行 worktree 环境碰撞（非本票缺陷，但影响验证可复现性） | 本机同时有其它 worktree（主树 / t16）在跑 `:common:test`，而 `TestPlatformInit.ensureInitialized()` 使用**固定名** tmp gameDir `nekojs-test-gamedir`（`TestGameDirs.unique` 才是 PID 隔离约定）→ 日志文件锁竞争（`FileSystemException: ...server.log -> ...old/server.log: 另一个程序正在使用此文件`）会让 `ScriptLocator.discover` 在个别用例里读不到脚本，表现为偶发 `expected: <7> but was: <1>` | 与其它 worktree 错峰重跑即全绿（本轮实测两次重跑后 `:common:check` 全绿）；建议后续票把 common 测试的 Platform 初始化也改成 `TestGameDirs.unique(...)`（属测试基建，不在本票范围） |
@@ -294,7 +295,4 @@ golden 完整性：本票未改任何 golden 输入（`block-events-api.txt` 的
 | F11 | apply 失败后指纹未复位 | 两个 owner（26.x + 1.21.1）的 `RECOVERY_FAILED` 分支复位 `lastAppliedFingerprint`，避免下次启动误报 `SKIPPED_IDENTICAL` | 代码 + 注释（AC7 归因） |
 | F13 | `ItemEvents` javadoc 陈旧（快照恢复模型） | 改为票 39 收集语义（与 block 侧/`MIGRATION.md` 对齐） | `ItemEvents.java`（neoforge 共享面，1.21.1 同源） |
 
-**AC 判定措辞修订**：AC6 改为两层证据（计划层真跑 + 端到端 registry-gated）；AC8 补生产投递形态
-真跑；AC10 **降级**为部分满足（无客户端 fixture）；AC11 改为「五节点已有实测构建/测试，无 in-game
-smoke」。AC1–AC5、AC7、AC9、AC12、AC13 判定不变；AC14 仍不勾选（F5 已补 breaking 清单与票面
-sign-off 章节）。
+**当前 AC 判定摘要**：AC10 已由 NeoForge 26.2 真实 server/client fixture 闭环；AC11 的 1.21.1 in-game smoke 仍未完成；AC14 仍不勾选（维护者 sign-off 门禁）。历史 F10 记录保留为当时审查整改背景，不代表当前 AC10 状态。

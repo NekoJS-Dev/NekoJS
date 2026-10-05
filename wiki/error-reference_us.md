@@ -55,6 +55,7 @@ Codes from #58 that have no call site on this branch are not used:
 | Code | English summary | Chinese message |
 |---|---|---|
 | `NEKO-3010` | persistent data sync skipped because the payload exceeds the limit | PData 同步因数据超过上限而跳过 |
+| `NEKO-3011` | server Item/Block modification sync rejected | 服务端 Item/Block modification 同步被客户端拒绝 |
 
 <a id="wiki-section-5"></a>
 ## Registration and bindings

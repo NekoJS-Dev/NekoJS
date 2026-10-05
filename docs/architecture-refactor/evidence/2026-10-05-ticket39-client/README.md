@@ -1,6 +1,6 @@
 # Ticket 39 real-client acceptance readiness
 
-Status: **executed, not accepted**. The lead ran an isolated NeoForge 26.2 dedicated server and a separate client using matching Issue4 startup registry scripts. The server active plan reported diamond `16/EPIC` and lamp `7`; the client connected, but fresh/held items and lamp remained baseline (`64/COMMON`, `0`) through active reload and relog. This demonstrates a server/client mismatch, not automatic visibility or a supported capability explanation. No maintainer sign-off is provided.
+Status: **NeoForge 26.2 visibility verified; cross-version acceptance pending**. The isolated dedicated server and separate client use matching Issue4 startup registry scripts. The server active plan reports diamond `16/EPIC` and lamp `7`; the client receives generation-scoped declarations over the existing payload channel and reports the same values. Empty-plan restore, fresh server-issued stacks, relog catch-up, and a subsequent active reload pass. Existing ItemStack instances are not retroactively rewritten; newly created or relogged stacks match the server. No maintainer sign-off is provided for AC14, and 1.21.1 smoke remains blocked by the MCP installer EOF.
 
 ## Inputs and observable values
 

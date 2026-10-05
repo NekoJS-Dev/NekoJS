@@ -55,6 +55,7 @@
 | 错误码 | 英文摘要 | 中文消息 |
 |---|---|---|
 | `NEKO-3010` | persistent data sync skipped because the payload exceeds the limit | PData 同步因数据超过上限而跳过 |
+| `NEKO-3011` | server Item/Block modification sync rejected | 服务端 Item/Block modification 同步被客户端拒绝 |
 
 <a id="wiki-section-5"></a>
 ## 注册与绑定
