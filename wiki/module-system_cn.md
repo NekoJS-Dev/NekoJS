@@ -1,0 +1,232 @@
+<!-- wiki-page: module-system; locale: cn -->
+
+> **中文** · [English](module-system_us)
+
+<a id="wiki-section-1"></a>
+# 模块系统
+
+NekoJS 同时支持**原生 ESM** 和 **CommonJS**，并且能把 Java 包/类当作模块导入。本页讲怎么拆分多文件、引用 npm 依赖、导入 Java 类。
+
+<a id="wiki-section-2"></a>
+## ESM（推荐）
+
+支持完整的现代 ESM：
+
+```javascript
+// math_utils.mjs
+export function add(a, b) { return a + b }
+export const PI = 3.14
+export default function square(x) { return x * x }
+```
+
+```javascript
+// main.mjs
+import square, { add, PI } from './math_utils.mjs'
+import { existsSync } from 'node:fs'        // 也能导入 node: 模块
+
+console.info(square(add(1, 2)))              // 9
+```
+
+**支持的特性**：
+- `import` / `export`（具名、默认、命名空间）
+- live binding（导出值变化会被导入方感知）
+- 循环依赖
+- `import.meta`
+- **顶层 await**（top-level await）
+- 动态 `import('...')`
+- ESM/CJS 互操作
+
+> `jsconfig.json` 默认 `module: "ESNext"`，IDE 完全支持。
+
+<a id="wiki-section-3"></a>
+## CommonJS
+
+```javascript
+// utils.cjs
+function calculateDamage(base, multiplier) { return base * multiplier }
+const MOD_NAME = 'NekoJS'
+module.exports = { calculateDamage, MOD_NAME }
+```
+
+```javascript
+// main.cjs
+const { calculateDamage, MOD_NAME } = require('./utils.cjs')
+
+ServerEvents.tickPre(event => {
+  // 用 calculateDamage
+})
+```
+
+`require()` 走 GraalJS 的 CommonJS 实现，`js.commonjs-require=true`，cwd 是 `nekojs/` 根目录。
+
+<a id="wiki-section-4"></a>
+## 扩展名与模块模式
+
+这张表不是命名建议，是引擎的分派规则（`NekoModuleMode.fromExtension`）：
+
+| 扩展名 | 模块模式 |
+|---|---|
+| `.mjs` | 强制 ESM |
+| `.cjs` | 强制 CJS |
+| `.js` | `AUTO`——按内容判定（通常按 ESM 处理；`nekojs/config/engine.toml` 的 `enableEsmAuthoring` 可关掉 ESM 改写，此时退回纯 CommonJS） |
+| `.ts` | 可擦除 TypeScript（擦除后按上面规则，`AUTO`） |
+| `.jsx`/`.tsx` | JSX lowering（classic runtime），模块模式同 `AUTO` |
+
+改不了这套映射：`.cjs` 里写 `export` 不会因为你希望它是 ESM 就变成 ESM。而目录名（`server_scripts` / `client_scripts` / `startup_scripts` / `test_scripts`）与 `nekojs/` 根同样是硬编码的（`NekoJSPaths`），没有配置项可以改。
+
+详见 [TypeScript 与 JSX](typescript-and-jsx_cn)。
+
+<a id="wiki-section-5"></a>
+## 引用 npm 依赖
+
+把**纯 JS** 的 npm 包放进 `nekojs/node_modules/`，然后像在 Node 里一样 `require`/`import`：
+
+```javascript
+// 假设你装了 lodash 到 nekojs/node_modules/lodash/
+const _ = require('lodash')
+console.info(_.chunk([1,2,3,4], 2))   // [[1,2],[3,4]]
+```
+
+<a id="wiki-section-6"></a>
+### 限制
+
+- 注意：**只支持纯 JS 包**。包含原生 bindings（C/C++ 编译产物）的包**不能用**（如 `node-sass`、`sharp`、`better-sqlite3`）。
+- 这是 shim，**不等于完整 Node.js 运行时**。能用的核心模块见 [Node.js 兼容](nodejs-compatibility_cn)。
+- 文件访问限制在游戏目录内，有符号链接逃逸检查。
+
+<a id="wiki-section-7"></a>
+## 导入 Java 类（`java:` 模块）
+
+Java 包/类可以作为特殊模块导入。**只接受 `java:` 前缀和斜杠分隔路径**。
+
+<a id="wiki-section-8"></a>
+### 包级模块（懒加载 namespace proxy）
+
+```ts
+import { Integer, $Integer, Math as JavaMath } from 'java:java/lang'
+const { Integer, $Integer, Math: JavaMath } = require('java:java/lang')
+```
+
+- 普通名字（如 `Integer`、`Math`）按属性查找。
+- `$Integer` 这种 `$` 前缀名字会直接映射到 `Java.type('java.lang.Integer')`。
+- `Integer`、`$Integer`、`Math` / `JavaMath` 这几种写法都能用。
+
+<a id="wiki-section-9"></a>
+### 类级模块（直接返回 Java 类 proxy）
+
+```ts
+import IntegerClass, { $Integer } from 'java:java/lang/Integer'
+const IntegerClass = require('java:java/lang/Integer')
+```
+
+- 直接返回 Java 类 proxy。
+- 额外暴露 `default` 和 `$Class`。
+- 如果只想拿一个明确的 Java 类，这种写法最直接。
+
+<a id="wiki-section-10"></a>
+### 规则
+
+| 规则 | 说明 |
+|---|---|
+| 只接受 `java:` 前缀 | 不支持 `org.example:` 这类 |
+| 只接受斜杠分隔路径 | `java:java/lang`、`java:java/lang/Integer` |
+| 不支持 `.` / `..` | — |
+| 动态 `import('java:...')` | 返回带 `default` / `namespace` 的合成 ESM 模块 |
+
+<a id="wiki-section-11"></a>
+### 实战：调用任意 Java API
+
+```javascript
+import { $ArrayList } from 'java:java/util'
+const ArrayList = $ArrayList          // 等价 Java.type('java.util.ArrayList')
+const list = new ArrayList()
+list.add('hello')
+console.info(list.size())             // 1
+```
+
+```javascript
+// 调用原版 Java 静态方法
+const JavaMath = Java.type('java.lang.Math')
+console.info(JavaMath.max(3, 7))        // 7
+console.info(JavaMath.PI)               // 3.141592653589793
+```
+
+> 配方/事件脚本里**首选 NekoJS 绑定**（`Item.of(...)` 而不是 `Java.type(...)`），更简洁、有类型提示。`java:` 导入主要用于绑定未覆盖的场景。
+
+<a id="wiki-section-12"></a>
+## 安全沙盒
+
+NekoJS 限制脚本访问范围：
+
+- **Java 类**：高危类被过滤（`java.lang.Runtime`、`Process`、`ClassLoader`、`System`、`java.io.*`、`java.nio.*`、反射、net、lwjgl、polyglot 本身，以及 `java.awt`/`javax.swing`/`javax.imageio`、`javax.naming`、`java.rmi`、`java.sql`/`javax.sql`、`java.lang.Module`、`org.graalvm`/`com.oracle.truffle`、NekoJS 内部实现 `com.tkisor.nekojs.core` 等）。具体黑名单见 `common/.../core/fs/ClassFilter.java`。
+- **文件系统**：访问范围限制在游戏目录内，符号链接逃逸检查。
+- **配置**：`nekojs/config/engine.toml`（与 probe.toml 同目录；旧 `config/nekojs-engine.toml` 仅作只读回退）可调 `allowThreads`、`allowReflection`、`allowAsm`、`enableEsmAuthoring` 等。
+- **失控保护**：`scriptRunawayTimeoutSeconds`（默认 0 禁用；建议显式开启，如 10）——同步脚本持续执行超过该秒数未让出（判定为失控循环，如 `while(true){}`）即中止并自动重建脚本环境；每次让出（事件间隙/长宿主调用）都会重新计时，长驻环境无论累计执行多少语句都不会被误杀。另有可选的 `scriptStatementLimit`（**默认 0 禁用**）：单个脚本源连续执行过的语句总量硬上限，仅在需要硬性预算时启用。
+- **HostAccess 边界**：按名黑名单只拦截 `Java.type` 一类的**类查找**；Java 方法返回值的对象图由 Graal `HostAccess` 控制（当前 `HostAccess.ALL`），黑名单类的实例仍可能经方法返回值进入脚本。
+
+> 脚本仍应视为**半可信代码**——不应运行不受信任的第三方脚本，多人服务器里用网络同步功能时尤其如此。
+
+<a id="wiki-section-13"></a>
+## 顶层 await 与动态 import
+
+```javascript
+// JSON data-store 是同步 API，路径固定在 nekojs/data/ 下
+JsonIO.write('profiles/default.json', { enabled: true })
+const data = JsonIO.read('profiles/default.json')
+console.info(data?.toPrettyString())
+
+// 动态 import：按需加载
+if (someCondition) {
+  const mod = await import('./feature.js')
+  mod.run()
+}
+```
+
+<a id="wiki-section-14"></a>
+## 实战：拆分多文件项目
+
+```
+nekojs/server_scripts/
+├── lib/
+│   ├── constants.js       // 共享常量
+│   └── recipe_helpers.js  // 配方辅助函数
+├── main.js                // 主入口
+└── jsconfig.json
+```
+
+```javascript
+// lib/constants.js
+export const ORES = ['minecraft:iron_ore', 'minecraft:gold_ore', 'minecraft:diamond_ore']
+```
+
+```javascript
+// lib/recipe_helpers.js
+export function dustify(event, ore, output) {
+  event.recipes.minecraft.smelting(output, ore).id(`nekojs:dust_${ore.split(':')[1]}`)
+}
+```
+
+```javascript
+// main.js
+import { ORES } from './lib/constants.js'
+import { dustify } from './lib/recipe_helpers.js'
+
+ServerEvents.recipes(event => {
+  for (const ore of ORES) {
+    dustify(event, ore, ore.replace('_ore', '_ingot'))
+  }
+})
+```
+
+<a id="wiki-section-15"></a>
+## 下一步
+
+- [TypeScript 与 JSX](typescript-and-jsx_cn) —— 用 TS 写脚本。
+- [Node.js 兼容](nodejs-compatibility_cn) —— `fs`/`path`/`buffer` 等可用模块。
+- [全局绑定](global-bindings_cn) —— 顶层 API。
+
+<!-- wiki-nav -->
+
+---
+
+[上一篇: 注册新内容](registering-new-content_cn) · [目录](Home) · [下一篇: TypeScript 与 JSX](typescript-and-jsx_cn)

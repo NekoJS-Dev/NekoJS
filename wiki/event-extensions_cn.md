@@ -1,0 +1,258 @@
+<!-- wiki-page: event-extensions; locale: cn -->
+
+> **中文** · [English](event-extensions_us)
+
+<a id="wiki-section-1"></a>
+# 事件扩展
+
+> 本页讲两件事：(1) 插件如何注册**自定义事件组**（让脚本像用 `ServerEvents` 一样用你的事件）；(2) 用户如何在**启动脚本**里用 `ScriptEvents` 把原版事件桥接成新事件组。
+
+<a id="wiki-section-2"></a>
+## 概念回顾
+
+NekoJS 的事件系统（见 [项目架构 - 事件系统](project-architecture_cn#wiki-section-10)）：
+
+- **`EventGroup`**：命名的总线集合。`group.server("name", EventClass)` 工厂方法声明一个事件。
+- **`EventBus`/`CancellableEventBus`/`DispatchEventBus`**：三种总线。dispatch 版按 key 分发（如按物品/方块 id）。
+- **`EventBusJS`**：GraalJS 面向的 `ProxyExecutable`，让脚本 `事件组.事件名(cb)` 这样调。
+- **`EventBusForgeBridge`**：把平台事件桥接进中立总线。
+
+内置事件组放在 `bindings/event/` 下、以 interface + `static final` 字段的形式声明，例如：
+
+```java
+public interface ServerEvents {
+    EventGroup GROUP = EventGroup.of("ServerEvents");
+
+    EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
+    EventBusJS<TagEventJS, Identifier> TAGS =
+        GROUP.server("tags", TagEventJS.class, TAG_REGISTRY_KEY);   // dispatch 总线
+}
+```
+
+这个排布是**约定**：`EventGroup` 只是个普通对象，放在 class 的 static 字段、enum、甚至插件实例的字段里都行。用 interface 常量的好处是字段隐式 `public static final`、初始化在类加载时一次完成，正好配合「在 `registerEvents` 里 `registry.register(GROUP)`、在别处 `XXX.post(...)`」这种用法。
+
+<a id="wiki-section-3"></a>
+## 插件注册自定义事件组
+
+<a id="wiki-section-4"></a>
+### 步骤 1：定义事件对象类
+
+你的事件对象就是脚本回调里收到的 `event`。**类的形状没有任何要求**——普通类、record、甚至现成的 MC 类都能直接用，不需要继承什么基类或实现什么接口：
+
+```java
+package com.example.myaddon;
+
+import net.minecraft.server.level.ServerPlayer;
+
+public class PlayerGreetEvent {
+    private final ServerPlayer player;
+    private final String greeting;
+    public PlayerGreetEvent(ServerPlayer player, String greeting) {
+        this.player = player; this.greeting = greeting;
+    }
+    public ServerPlayer getPlayer() { return player; }
+    public String getGreeting() { return greeting; }
+}
+```
+
+事件类只在两处被检查：脚本看到的成员由反射 + `@Remap`/`@HideFromJS` 决定（见 [注解体系](annotations_cn)），可取消性由「是否实现平台的可取消事件接口」决定（见下）。getter 命名之类的只影响脚本里写起来顺不顺手。
+
+> 要给事件对象加 JSDoc，直接在事件类的方法/参数上标注 `@Doc`/`@Param`/`@Return`（probe 生成进 JSDoc），或用编程式 `registerTypeDocs`（`TypeDocsRegister.register(...)`，见 [插件开发](plugin-development_cn)）。
+
+<a id="wiki-section-5"></a>
+### 步骤 2：声明事件组
+
+```java
+package com.example.myaddon;
+
+import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.event.EventBusJS;
+import net.minecraft.resources.Identifier;
+
+public interface MyEvents {
+    EventGroup GROUP = EventGroup.of("MyEvents");
+
+    // 普通服务端事件
+    EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET =
+        GROUP.server("playerGreet", PlayerGreetEvent.class);
+
+    // dispatch 事件（按 Identifier 分发）
+    EventBusJS<MyCustomEvent, Identifier> CUSTOM =
+        GROUP.server("custom", MyCustomEvent.class, MY_DISPATCH_KEY);
+}
+```
+
+`EventGroup` 的工厂方法：
+
+| 方法 | 总线类型 | 用途 |
+|---|---|---|
+| `GROUP.server(name, eventClass)` | `EventBus` | 一律 `EventBusJS.of(type)`；可取消性由事件类自动检测（`EventBusJS.eventCancellability(type)`），不取决于工厂变体或回调写法 |
+| `GROUP.server(name, eventClass, dispatchKey)` | `DispatchEventBus` | 按 key 分发 |
+| `GROUP.client(...)` / `GROUP.startup(...)` | 同上 | 客户端/启动侧别 |
+
+这三组工厂只是 `GROUP.add(name, ScriptType.X, bus)` 的糖——`add` 本身是 public 的，需要自己造总线（比如强制可取消，见下）时直接调它。
+
+`add` 上有两条真检查：组内事件名重复抛 `IllegalArgumentException`；bootstrap 结束后 `EventGroup` 会 `freeze()`，之后再 `add` 抛 `IllegalStateException`。**组名重复不是错误**——`EventGroupRegistry` 按名字 `merge`，两个插件用同一个组名会把事件并进同一个组（这也是给别人的事件组追加事件的正规做法），只有事件名撞上才报错。
+
+<a id="wiki-section-6"></a>
+### 步骤 3：在插件里注册事件组
+
+```java
+@Override
+public void registerEvents(EventGroupRegistry registry) {
+    registry.register(MyEvents.GROUP);
+}
+```
+
+<a id="wiki-section-7"></a>
+### 步骤 4：派发事件
+
+在合适的时机（比如你的 mod 监听原版事件时）post 你的事件：
+
+```java
+import com.tkisor.nekojs.api.event.EventBusJS;
+
+// 普通事件
+MyEvents.PLAYER_GREET.post(new PlayerGreetEvent(player, "你好"));
+
+// dispatch 事件（带 key）
+MyEvents.CUSTOM.post(someIdentifier, new MyCustomEvent(...));
+```
+
+> `post(...)` 返回 boolean（是否被取消）。**不可取消的总线永远返回 false**，脚本 `return true` 也不会让它变 true——`GROUP.server(name, eventClass)` 走 `EventBusJS.of(type)`，可取消性由 `eventCancellability(type)` 判定，而该判定在 NeoForge 上是「事件类 `implements ICancellableEvent`」（`NeoForgeRuntimeBootstrap`）。上面 `PlayerGreetEvent` 那样的 POJO 因此是不可取消的。
+>
+> 想让自己的 POJO 事件可取消，绕开糖方法自己造总线：
+>
+> ```java
+> EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET =
+>     MyEvents.GROUP.add("playerGreet", ScriptType.SERVER, EventBusJS.of(PlayerGreetEvent.class, true));
+> ```
+>
+> 然后 `boolean cancelled = PLAYER_GREET.post(...)` 才有意义。
+
+<a id="wiki-section-8"></a>
+### 脚本侧用法
+
+注册后，脚本就能像内置事件一样用：
+
+```javascript
+MyEvents.playerGreet(event => {
+  console.info(`${event.getPlayer().getName().getString()} 被问候：${event.getGreeting()}`)
+})
+
+MyEvents.custom('mymod:some_key', event => {
+  // dispatch 事件，第一个参数是 key
+})
+```
+
+<a id="wiki-section-9"></a>
+## ScriptEvents —— 让脚本自己定义事件
+
+NekoJS 还提供一个**面向脚本作者**的机制：在 `startup_scripts/` 里声明一个自定义事件组，
+之后在 `server_scripts`/`client_scripts` 里既能像内置事件一样监听，也能自己触发。
+事件载荷（payload）就是触发方传进去的值，NekoJS 不做包装。
+
+<a id="wiki-section-10"></a>
+### 声明
+
+```javascript
+// startup_scripts/register_events.js
+ScriptEvents.server(event => event.register(
+  'MyEvents',    // 事件组名（会成为全局绑定名）
+  'bossKilled'   // 事件名
+))
+
+ScriptEvents.client(event => event.register('MyClientEvents', 'hudRefresh'))
+```
+
+<a id="wiki-section-11"></a>
+### 对象形式
+
+```javascript
+ScriptEvents.server(event => event.register({ group: 'MyEvents', name: 'bossKilled' }))
+```
+
+<a id="wiki-section-12"></a>
+### 监听与触发
+
+```javascript
+// server_scripts/use_custom.js
+MyEvents.bossKilled(payload => {
+  console.info(`击杀了 ${payload.boss}，掉落 ${payload.loot}`)
+})
+
+// 任意 server 脚本里触发
+MyEvents.bossKilled.post({ boss: 'ender_dragon', loot: 'dragon_egg' })
+```
+
+```javascript
+// client_scripts/use_custom_client.js
+MyClientEvents.hudRefresh(payload => console.info(payload.reason))
+MyClientEvents.hudRefresh.post({ reason: 'manual' })
+```
+
+<a id="wiki-section-13"></a>
+### 规则
+
+会真的抛异常的三条（`ScriptEventsJS` / `ScriptEventRegistry`）：
+
+- `group` 和 `name` 必须匹配 `[A-Za-z_$][A-Za-z0-9_$]*`，否则 `register` 抛 `IllegalArgumentException`。
+- 组名不能撞上内置事件组名或**任一** ScriptType 下的内置全局绑定名（撞了抛异常，报 `conflicts with built-in ...`）。
+- 同一 `(ScriptType, group, name)` 只能注册一次，**不分源脚本**；键已存在就抛异常，不能以相同来源为理由覆盖。当前命令不支持重载 STARTUP，修改自定义事件定义后需要重启游戏。
+
+其余是行为说明：
+
+- `ScriptEvents.server(...)` 声明的事件在 `server_scripts` 可用；`.client(...)` 声明的在 `client_scripts` 可用。
+- 监听用 `组.名(callback)`，触发用 `组.名.post(payload)`；payload 可以是任意 JS 值。
+- **probe 覆盖**：动态声明的事件组/事件会进入事件目录与 probe 类型生成（`.d.ts` / `.pyi`）。
+- 修改启动阶段的定义需要重启；**server/client reload** 更新监听器，不重新声明定义。
+- **平台支持**：NeoForge（26.x / 1.21.1）与 Fabric 一致可用。
+
+<a id="wiki-section-14"></a>
+### 迁移：原先"桥接原生事件类"的写法
+
+旧版第 3 个参数是 NeoForge 事件类（FQN 或类对象），另有 `priority` / `receiveCancelled`。
+这套语义无法跨加载器（Fabric 的事件是回调接口，没有事件类可按名挂载），已移除：
+
+| 旧写法 | 现写法 |
+| --- | --- |
+| `event.register('G', 'n', 'net.neoforged...Event$Post')` | `NativeEvents.onEvent('net.neoforged...Event$Post', e => {})`（NeoForge 面） |
+| `event.register({ group, name, event, priority, receiveCancelled })` | `NativeEvents.onEvent(priority, receiveCancelled, eventClass, handler)`（NeoForge 面） |
+| 想要"命名事件组 + 跨加载器" | `event.register('G', 'n')`，在合适的时机自己 `G.n.post(payload)` |
+
+<a id="wiki-section-15"></a>
+## EventBusForgeBridge
+
+如果你的事件组要桥接**平台原生事件**（NeoForge `IEventBus` / Forge `EVENT_BUS`），用 `EventBusForgeBridge`：
+
+```java
+EventBusForgeBridge.create(NeoForge.EVENT_BUS)
+    .bind(MyEvents.PLAYER_GREET)        // 把每个事件绑到一个原生事件
+    .bind(MyEvents.CUSTOM);
+```
+
+`bind(...)` 会订阅原生事件，转发进中立总线，并把取消传播回原版 `ICancellableEvent`。详见内置事件组（如 `ServerEvents.java` 末尾的 `FORGE_BRIDGE`）。
+
+<a id="wiki-section-16"></a>
+## 设计要点
+
+前两条是建议，没有代码检查；后三条是机制：
+
+1. **事件对象尽量简单**（建议）：POJO 或 record 反射出来的脚本表面最好看；复杂对象也能用，只是脚本侧成员会跟着变杂。
+2. **dispatch key 要稳定**（建议）：dispatch 事件的 key 类型（`Identifier`/`String`/`Class`）改了会让所有已有脚本的第一个参数失配，属于自愿承担的 API 冻结线。
+3. **可取消性来自事件类**（机制）：不是选哪个工厂方法决定的，见上文 `post` 那一节。
+4. **跨侧访问会抛异常**（机制）：在 `client_scripts` 里访问 `.server(...)` 声明的事件，`EventGroupJS.getMember` 抛 `Event 'X.y' not available in CLIENT`；事件名根本不存在则抛 `No such event bus`。注意 `ScriptType` 的谓词语义有重叠——SERVER 侧事件在 STARTUP/TEST 里也可用，CLIENT 侧事件在 STARTUP 里也可用。
+5. **无监听器短路**（建议，但对热点是刚需）：构建成本高的发射点（probe 等）先用 `EventBusJS.hasListeners()` 检查，没有监听器就跳过事件对象构建。
+
+<a id="wiki-section-17"></a>
+## 下一步
+
+- [插件开发](plugin-development_cn) —— `registerEvents` 钩子。
+- [注解体系](annotations_cn) —— `@Remap`/`@HideFromJS`/`@PlatformAvailability` 控制事件对象表面。
+- [事件参考](event-reference_cn) —— 内置事件组列表。
+
+<!-- wiki-nav -->
+
+---
+
+[上一篇: 类型适配器](type-adapters_cn) · [目录](Home) · [下一篇: 注解体系](annotations_cn)

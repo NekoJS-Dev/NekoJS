@@ -1,0 +1,215 @@
+<!-- wiki-page: annotations; locale: cn -->
+
+> **中文** · [English](annotations_us)
+
+<a id="wiki-section-1"></a>
+# 注解体系
+
+> NekoJS 的注解控制 JS 可见性与命名（运行时由 `MemberVisibilityQuery`/`NekoJSMemberRemapper` 反射层消费）。所有注解在 `com.tkisor.nekojs.api.annotation` 包（引擎契约包）（`@PlatformAvailability` 在 `api.spec`）。
+> 所有注解的 Javadoc 一律英文，本页用中文解释。
+
+<a id="wiki-section-2"></a>
+## 注解总览
+
+| 注解 | 目标 | 作用 |
+|---|---|---|
+| `@RegisterNekoJSPlugin` | TYPE | 标记插件类 |
+| `@Remap("jsName")` | METHOD/FIELD/PARAMETER | 把 Java 名重命名为 JS 名 |
+| `@RemapByPrefix({"get", "is"})` | TYPE/METHOD/FIELD | 按前缀批量重命名 |
+| `@HideFromJS` | TYPE/METHOD/FIELD | 对 JS 不可见 |
+| `@CalledByDynamicCode` | TYPE/METHOD/CONSTRUCTOR | 标记被生成的 JS 调用（`RetentionPolicy.SOURCE`，IDE 不报 unused） |
+| `@PlatformAvailability(Scope.ALL\|NF_ONLY\|CR_ONLY)` | TYPE/METHOD | Spec 接口的平台可用性声明 |
+| `@Doc("...")` | TYPE/METHOD/CONSTRUCTOR/FIELD | 英文文档，渲染为 probe `.d.ts` JSDoc；可重复 |
+| `@Param(name, value)` | METHOD/CONSTRUCTOR | 参数文档 → `@param` 行；可重复 |
+| `@Return("...")` | METHOD | 返回值文档 → `@returns` 行 |
+| `@Overload({"id: string"})` | METHOD/CONSTRUCTOR | 手写 `.d.ts` 附加签名；可重复 |
+| `@DeprecatedNekojs` | TYPE/METHOD/CONSTRUCTOR/FIELD | 脚本面弃用 → JSDoc `@deprecated`（编辑器划线） |
+
+所有注解都是 `@Retention(RUNTIME)`（除 `@CalledByDynamicCode` 是 `SOURCE`）+ `@Documented`。
+
+<a id="wiki-section-3"></a>
+## 哪些注解有强制力
+
+按「不写会怎样」分三类：
+
+| 类别 | 注解 | 不写/写错的后果 |
+|---|---|---|
+| 改变运行时行为 | `@Remap`、`@RemapByPrefix`、`@HideFromJS` | 不写就是「按 Java 原名暴露、全部可见」。它们经 Graal 的 `MemberRemapper.CHAIN`（`NekoJSMemberRemapper`）在成员查找时生效，脚本真的调不到被 `@HideFromJS` 的成员，probe 也不生成 |
+| 编译期强制 | `@PlatformAvailability` + Spec 接口 | 见下节：漏覆写 `neko$` 方法则编译 ERROR，但**只在接了 annotation processor 的构建里** |
+| 只影响生成的文档 | `@Doc`、`@Param`、`@Return`、`@Overload`、`@DeprecatedNekojs` | 不写就是 JSDoc 为空 / 无附加签名。对能不能调用毫无影响；`@Overload` 会影响类型检查（多了可用的签名） |
+| 完全无运行时消费 | `@CalledByDynamicCode` | `RetentionPolicy.SOURCE`，只为了让 IDE 不报 unused。漏标不影响任何行为 |
+
+`@RegisterNekoJSPlugin` 是唯一「必须存在」的那个：平台加载器只扫描带它的类（见 [插件开发](plugin-development_cn)）。
+
+---
+
+<a id="wiki-section-4"></a>
+## `@RegisterNekoJSPlugin`
+
+标记插件类（见 [插件开发](plugin-development_cn)）。属性：`clientOnly()`（默认 `false`）、`requiredMods()`（默认 `{}`，AND 语义）、`priority()`（默认 `1000`，数值大先加载；内置 `NekoJSPlugin.CORE_PRIORITY = Integer.MAX_VALUE` 保证最先）。
+
+<a id="wiki-section-5"></a>
+## `@Remap("jsName")`
+
+把 Java 成员/参数重命名成 JS 可见的名字。
+
+```java
+public class FooJS {
+    @Remap("addItem")            // 脚本里调 foo.addItem(...) 而不是 foo.addItemInternal(...)
+    public void addItemInternal(ItemStack stack) { ... }
+}
+```
+
+> 用途：Java 关键字冲突（如 `NbtFacade` 的 `byteValue` → JS `byte`）、Java 命名规范与 JS 习惯不一致时。运行时 `MemberRemapper` 消费。
+
+<a id="wiki-section-6"></a>
+## `@RemapByPrefix({"get", "is"})`
+
+按前缀批量重命名一个类里的成员。`value()` 是要**剥离**的前缀列表。常用于把 `getXXX`/`isXXX` 转成属性式名，以及 spec 接口的 `neko$` 前缀映射：
+
+```java
+@RemapByPrefix({"get", "is"})   // 将 getX → x、isX → x
+public class FooJS { ... }
+
+// Spec 接口模式：neko$ 前缀在平台 Extension 上批量剥离为 JS 名
+@RemapByPrefix("neko$")
+public interface ItemStackExtension extends ItemStackSpec { ... }
+```
+
+<a id="wiki-section-7"></a>
+## `@HideFromJS`
+
+让成员对 JS 完全不可见（既不能调，probe 也不生成）。
+
+```java
+public class FooJS {
+    @HideFromJS
+    public void internalHelper() { ... }   // 脚本看不到这个方法
+}
+```
+
+也可标在类上（整个类对 JS 不可见）。
+
+<a id="wiki-section-8"></a>
+## `@CalledByDynamicCode`
+
+标记「会被生成的 JS 代码调用」的类型/方法/构造器。`RetentionPolicy.SOURCE`——纯 IDE 提示，运行时无消费。常用于 `NekoScriptModuleLoaderHost` 等被 `internal/script-loader.js` 调用的方法。
+
+<a id="wiki-section-9"></a>
+## `@PlatformAvailability` 与 Spec 接口模式
+
+`@PlatformAvailability(Scope.ALL | NF_ONLY | CR_ONLY)` 声明一个 Spec 接口（或方法）的跨平台可用性，位于 `com.tkisor.nekojs.api.spec`。
+
+**Spec 接口模式**（跨平台方法绑定）：
+
+```java
+// 契约包 api.spec：Spec 接口声明跨平台脚本表面，neko$ 前缀避免与 MC 原生方法碰撞
+@RemapByPrefix("neko$")
+@PlatformAvailability(Scope.ALL)
+public interface EntitySpec {
+    String neko$getId();
+    void neko$kill();
+    ...
+}
+
+// 平台：Extension 接口 extends Spec 并用 MC 类型实现协变返回
+@RemapByPrefix("neko$")
+public interface EntityExtension extends EntitySpec {
+    @Override
+    default String neko$getId() { ... }
+}
+```
+
+- `Scope.ALL`：所有平台可用；`NF_ONLY`：仅 NeoForge 1.21.1/26.x；`CR_ONLY`：仅 Cleanroom 1.12.2。
+- 覆盖检查由 `SpecCoverageProcessor`（annotation processor）在编译期做：每个平台 `Extension` 必须覆写 Spec 接口的每个 `neko$` 方法，漏一个是编译 ERROR。**只要接上 `annotationProcessor(project(":common-api-processor"))` 这层就生效**，不需要额外选项。
+- 但**平台范围检查要额外开**：`Scope` 语义（哪个平台该实现哪些）只在编译时传了 `-Anekojs.platform=<平台>` 之后才校验，不传则只做覆盖检查。本仓只在 NeoForge 节点传（`buildSrc/.../nekojs.neoforge-node.gradle.kts`），fabric 节点刻意不传。第三方插件若没接处理器，`@RemapByPrefix("neko$")` + Spec 接口这套写法在你自己的 mod 里就是**纯约定**——好处仍在（`neko$` 前缀避免与 MC 原生方法碰撞、remap 一次剥掉），只是没人替你检查覆盖完整性。
+
+---
+
+<a id="wiki-section-10"></a>
+## 文档注解（已实现）
+
+`@Doc` / `@Param` / `@Return`（`com.tkisor.nekojs.api.annotation`）已实现并由内置 probe 消费——`TypeReflector` 反射时读取注解，渲染进生成的 `.d.ts` JSDoc（编辑器签名帮助可见）。**注解文本一律英文**。
+
+| 注解 | 目标 | 作用 |
+|---|---|---|
+| `@Doc("...")` | 类 / 方法 / 构造器 / 字段 | 描述文本；可重复（每条 = 一个 JSDoc 段落） |
+| `@Param(name = "x", value = "...")` | 方法 / 构造器 | 单个参数文档，渲染为 `@param x ...` 行；可重复 |
+| `@Return("...")` | 方法 | 返回值文档，渲染为 `@returns ...` 行 |
+
+```java
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
+
+@Doc("Creates an item stack from an id or item-like value.")
+@Param(name = "id", value = "item id like 'minecraft:stone', '#tag', or item-like object")
+@Return("the resolved stack; never null")
+public static ItemStack of(Object id) { ... }
+```
+
+- 无注解的成员 docs 为空 → 渲染零输出，与未注解路径的旧产物逐字节一致（`TypeScriptNoopIrGoldenTest` 守护）。
+- 与编程式通道的关系：`registerTypeDocs`（`TypeDocsRegister.register(...)`）仍可用于绑定级文档；probe `modify_type` 事件在生成期的编辑优先于注解。
+
+<a id="wiki-section-11"></a>
+## `@Overload`：手写附加签名（已实现）
+
+`.d.ts` 里的重载签名有两个来源，覆盖不同的情况：
+
+1. **自动（适配器驱动，无需注解）**：类型适配器实现 `inputShapes()`（见 [类型适配器](type-adapters_cn)）后，probe 把所有引用该目标类型的方法参数放宽成输入别名联合（如 `$ItemStack_ = $ItemStack | string | {...}`）。同形不同输入的场合全自动。
+2. **手写（本注解）**：适配器表达不了的签名——不同参数个数（`of(id)` 与 `of(id, count)`）、参数声明为 `Object` 的工厂方法、各形态语义不同。
+
+```java
+@Doc("Creates a stack from an id.")
+@Overload({"id: string"})
+@Overload(value = {"item: $ItemStack", "count?: number"}, returns = "string", doc = "Copy with a count.")
+public static ItemStack of(Object input, int flags) { ... }
+```
+
+- `value()` 每项是一个参数，`name: Type` 或 `name?: Type` 原样输出；`returns()` 空则沿用反射返回类型。
+- 参数与返回类型是 TypeScript 片段，不走反射链、不自动收集 import——引用的类型须用生成模块里可见的名字（`$Foo` 形式），由注解作者保证。
+- getter/setter 属性访问器不发射重载（要补签名就写普通方法形态）。
+- 仅 TS 后端消费；Python `.pyi` 后端不消费（TS-first）。
+
+<a id="wiki-section-12"></a>
+## `@DeprecatedNekojs`：脚本面弃用（已实现）
+
+与 Java 自带的 `@Deprecated` 语义分开：那个常标记引擎内部原因，这个专指"脚本作者别再用"。**Java `@Deprecated` 不会自动触发它**——脚本面弃用要显式标注。
+
+```java
+@DeprecatedNekojs(value = "Tag filters moved to Ingredient.matchTag.", replacedBy = "matchTag")
+public static IngredientJS anyTag(String tag) { ... }
+```
+
+- 渲染为 JSDoc `@deprecated` 行（`value` + `Use <replacedBy> instead.`），编辑器对脚本与 `.d.ts` 里的该成员划删除线。
+- 目标：类 / 方法 / 构造器 / 字段。
+
+尚未实现的注解剩三个：`@Example` / `@TypeOverride` / `@Since`（`@Since` 依赖公开 API 的版本线，见 [项目架构](project-architecture_cn) 的待办）。
+
+<a id="wiki-section-13"></a>
+## 最佳实践
+
+下面四条都是**约定**，没有任何检查执行它们；照做的收益写在括号里：
+
+1. **公开绑定类的 JS 命名要显式**：用 `@Remap`/`@RemapByPrefix` 让脚本作者看到友好名，而非 `addItemInternal` 这种内部名（否则脚本里和 `.d.ts` 里都是内部名，改名就是破坏性变更）。
+2. **内部辅助方法用 `@HideFromJS`**：避免污染脚本 API 面（不标只是脚本能看到多余成员，不会出错）。
+3. **跨平台方法集用 Spec 接口**：`@RemapByPrefix("neko$")` + `@PlatformAvailability`；只有在接了 `SpecCoverageProcessor` 的构建里才有编译期覆盖检查（见上节）。
+4. **关键字冲突用 `@Remap`**：如 NBT 标量方法 `byteValue` → JS `byte`（Java 关键字不能作方法名）。这条实际上躲不开——不 remap 就没法在 Java 侧写出那个名字。
+
+<a id="wiki-section-14"></a>
+## 与 probe 的关系（重要）
+
+- 已实现：`@Remap`/`@RemapByPrefix`/`@HideFromJS` 由运行时 `MemberVisibilityQuery`/`MemberRemapper` 消费（脚本运行时生效），probe 生成的 `.d.ts` 名字/可见性与运行时一致。
+- 已实现：文档注解（`@Doc`/`@Param`/`@Return`）经 `TypeReflector` → IR docs → `.d.ts` JSDoc（见上方「文档注解」）。
+
+<a id="wiki-section-15"></a>
+## 下一步
+
+- [Probe 类型生成](probe-type-generation_cn) —— 注解如何变成 `.d.ts`。
+- [插件开发](plugin-development_cn) —— `registerTypeDocs` 编程式文档通道。
+
+<!-- wiki-nav -->
+
+---
+
+[上一篇: 事件扩展](event-extensions_cn) · [目录](Home) · [下一篇: 项目架构](project-architecture_cn)

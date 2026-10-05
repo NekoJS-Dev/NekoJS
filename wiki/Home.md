@@ -1,81 +1,85 @@
-> **中文**  · [English](en_us/Home)
+# NekoJS Wiki
 
-# 欢迎使用 NekoJS
+[简体中文](home_cn) · [English](home_us)
 
-> **现代、极速、优雅的 Minecraft 脚本魔改引擎**
+## 先看这里
 
-NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft JavaScript 脚本运行时。它面向整合包作者和模组开发者，目标是在 Minecraft 中提供接近现代前端工程化的脚本开发体验。
+- [首页](home_cn)
+- [平台与兼容性](platform-compatibility_cn)
+- [快速开始](quick-start_cn)
+- [常见问题](faq_cn)
 
-本 Wiki 按读者角色组织：
+## 脚本作者
 
-- **脚本作者**：从 [快速开始](快速开始) 入门，继续阅读 [脚本基础](脚本基础)、[全局绑定](全局绑定) 和 [事件参考](事件参考)。
-- **整合包作者**：重点阅读 [配方系统](配方系统)、[注册新内容](注册新内容)、[模块系统](模块系统) 和 [TypeScript 与 JSX](TypeScript-与-JSX)。
-- **插件开发者**：从 [插件开发](插件开发) 开始，配合 [类型适配器](类型适配器)、[事件扩展](事件扩展) 和 [注解体系](注解体系)。
-- **项目贡献者**：阅读 [项目架构](项目架构)、[Probe 类型生成](Probe-类型生成) 和 [构建系统](构建系统)。
+- [脚本基础](script-basics_cn)
+- [脚本属性](script-properties_cn)
+- [全局绑定](global-bindings_cn)
+- [Python 脚本](python-scripts_cn)
+- [Python 特性清单](python-feature-support_cn)
+- [事件参考](event-reference_cn)
+- [命令](commands_cn)
+- [错误与日志参考](error-reference_cn)
 
----
+## 整合包作者
 
-## 为什么选 NekoJS?
+- [配方系统](recipe-system_cn)
+- [注册新内容](registering-new-content_cn)
+- [模块系统](module-system_cn)
+- [TypeScript 与 JSX](typescript-and-jsx_cn)
+- [JSX 客户端 UI](jsx-client-ui_cn)
+- [Node.js 兼容](nodejs-compatibility_cn)
 
-| 特性 | 说明 |
-|---|---|
-| **GraalVM 强力驱动** | 拥抱最新 ECMAScript 标准，告别老旧的 Rhino/Nashorn，享受现代 JS 语法和 GraalJS 运行时能力。 |
-| **TypeScript & JSX 本体支持** | 内置 `.ts` 可擦除 TypeScript 前端和轻量 `.jsx/.tsx` classic runtime lowering，无需额外编译步骤。 |
-| **原生 ESM 运行时** | 支持 `import`/`export`、live binding、循环依赖、top-level await、`import.meta`、动态 `import()`、ESM/CJS 互操作。 |
-| **Node.js 兼容 API** | 内置 `fs`、`path`、`buffer`、`process`、`timers`、`util`、`events`、`assert`、`os`、`test` 等核心模块 shim。 |
-| **IDE 智能提示** | `/nekojs probe` 一键生成 TypeScript/Python 类型声明（`.neko_probe/`），无需外部 ProbeJS mod 即可获得补全。 |
-| **服务端热重载** | `/nekojs reload` 热重载服务端脚本；NeoForge 与 Cleanroom 均支持配方热重载（详见 [命令](命令)）。 |
-| **多平台** | 同时支持 NeoForge 26.1 / 26.2 / 1.21.1，Fabric 26.1 正在移植；Cleanroom 1.12.2（Forge）在独立的 legacy 分支维护。 |
+## 插件开发者
 
----
+- [插件开发](plugin-development_cn)
+- [类型适配器](type-adapters_cn)
+- [事件扩展](event-extensions_cn)
+- [注解体系](annotations_cn)
 
-## 三十秒上手
+## 项目贡献者
 
-1. 安装前置 mod [Graal](https://www.curseforge.com/minecraft/mc-mods/graal)（**25.1.3.7 或更高**）和 NekoJS，启动游戏。
-2. 在游戏根目录下会自动生成 `nekojs/` 文件夹。
-3. 在 `nekojs/server_scripts/` 里新建 `hello.js`：
-
-```javascript
-// server_scripts/hello.js
-ServerEvents.started(event => {
-  console.info('NekoJS 已就绪！')
-})
-```
-
-4. 进入世界，或执行 `/nekojs reload`，看到日志输出即可。
-
-完整流程见 **[快速开始](快速开始)**。
+- [项目架构](project-architecture_cn)
+- [Probe 类型生成](probe-type-generation_cn)
+- [构建系统](build-system_cn)
 
 ---
 
-## 我该看哪部分?
+## Start here
 
-- **我想写脚本魔改整合包**：从 [快速开始](快速开始) 开始，然后翻 [全局绑定](全局绑定) 和 [事件参考](事件参考)。
-- **我想改配方**：参见 [配方系统](配方系统)。
-- **我想注册新物品/方块/实体**：参见 [注册新内容](注册新内容)。
-- **我想用 TS 或拆分多文件模块**：参见 [TypeScript 与 JSX](TypeScript-与-JSX)、[模块系统](模块系统)。
-- **我遇到报错了**：参见 [常见问题](常见问题)。
-- **我想给 NekoJS 写插件 mod**：参见 [插件开发](插件开发)。
-- **我想了解内部架构**：参见 [项目架构](项目架构)。
+- [Home](home_us)
+- [Platforms and compatibility](platform-compatibility_us)
+- [Quick start](quick-start_us)
+- [FAQ](faq_us)
 
----
+## Script authors
 
-## 支持的 Minecraft 版本
+- [Script basics](script-basics_us)
+- [Script properties](script-properties_us)
+- [Global bindings](global-bindings_us)
+- [Python scripts](python-scripts_us)
+- [Python feature support](python-feature-support_us)
+- [Event reference](event-reference_us)
+- [Commands](commands_us)
+- [Error and log reference](error-reference_us)
 
-| 平台 | MC 版本 | 加载器 | Java |
-|---|---|---|---|
-| NeoForge 26.1 | 26.1.2 | NeoForge 26.1.2-beta | 25 |
-| NeoForge 26.2 | 26.2.0 | NeoForge 26.2.0-beta | 25 |
-| NeoForge 1.21.1 | 1.21.1 | NeoForge 21.1.x | 21 |
-| Cleanroom 1.12.2 | 1.12.2 | Cleanroom（Forge）0.5.14-alpha | 25 |
+## Modpack authors
 
-> 绝大多数脚本 API 跨平台一致；少数 1.12.2 因 API 差异略有不同，文中会标注。Cleanroom 1.12.2 在独立的 legacy 分支维护，与上面三个 NeoForge 版本不在同一个代码库里。
->
-> Fabric 26.1 还在移植中，暂无发布版本。运行前置 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal) 需要 25.1.3.7 或更高。
+- [Recipe system](recipe-system_us)
+- [Registering new content](registering-new-content_us)
+- [Module system](module-system_us)
+- [TypeScript and JSX](typescript-and-jsx_us)
+- [JSX client UI](jsx-client-ui_us)
+- [Node.js compatibility](nodejs-compatibility_us)
 
----
+## Plugin developers
 
-## 额外资源
+- [Plugin development](plugin-development_us)
+- [Type adapters](type-adapters_us)
+- [Event extensions](event-extensions_us)
+- [Annotations](annotations_us)
 
-- `docs/adr/` 收录了引擎的设计决策记录（扩展点模型、注册表模型、模块边界、守卫纪律等）。
-- 想了解仓库自身怎么组织和构建，看 [项目架构](项目架构) 和 [构建系统](构建系统)。
+## Project contributors
+
+- [Project architecture](project-architecture_us)
+- [Probe type generation](probe-type-generation_us)
+- [Build system](build-system_us)
