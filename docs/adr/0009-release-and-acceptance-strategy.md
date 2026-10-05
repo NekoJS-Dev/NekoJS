@@ -1,5 +1,7 @@
 # 迁移发布与验收策略
 
+> **部分条款已被取代**：第 1 条及 Consequences 中的“两发布 / major”假设由[现行路线图 Notes](../architecture-refactor-map.md#notes)和[验证与迁移决策的 Resolution](../architecture-refactor/decisions/07-validation-and-migration.md#resolution)取代：本轮采用 `1.2.0` 一次 clean cutover。第 5 条的 Forge 1.20.1 计划已由文末修订取消。下文保留历史理由；判据、试做、真人验收的区分仍有效，具体实施范围和 release gate 读取现行决策及实现票，本 ADR 不证明实现或验收已完成。
+
 架构重设计的全部模型决策（ADR-0001~0008）已锁定，本 ADR 定**落地与验收**策略：
 
 1. **三阶段两发布**：P1（扩展点系统）可独立发布验证——插件 API breaking、脚本用户无感；P2（通用注册表 + 脚本面切换）是**唯一面向脚本的 breaking 发布**（大版本号，配 validator 迁移提示与 wiki 迁移表，ADR-0006）；P3（模块与守卫治理）无破坏收尾。breaking 只发生一次。
