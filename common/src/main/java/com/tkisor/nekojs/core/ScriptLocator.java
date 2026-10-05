@@ -110,7 +110,7 @@ public final class ScriptLocator {
                     .sorted()
                     .forEach(files::add);
         } catch (Exception e) {
-            logger.error("扫描脚本目录失败: {}", dir, e);
+            logger.error("[NEKO-1001] 扫描脚本目录失败: {} — failed to scan script directory", dir, e);
         }
 
         return files;

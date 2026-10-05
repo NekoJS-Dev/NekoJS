@@ -99,8 +99,8 @@ final class RunawayWatchdog implements Predicate<Source> {
 
         if (statementCap > 0 && firedIntervalsTotal(w) >= statementCap) {
             if (logger != null) {
-                logger.warn("脚本语句累计数达到 scriptStatementLimit（{}），关闭对应脚本环境；"
-                        + "当前求值被中止，下一次取用时会自动重建 Context（/nekojs reload 亦可手动恢复）",
+                logger.warn("[NEKO-2002] 脚本语句累计数达到 scriptStatementLimit（{}），关闭对应脚本环境；"
+                        + "当前求值被中止，下一次取用时会自动重建 Context（/nekojs reload 亦可手动恢复） — script statement limit exceeded",
                         statementCap);
             }
             return true;
@@ -114,8 +114,8 @@ final class RunawayWatchdog implements Predicate<Source> {
         w.lastFire = now;
         if (now - w.windowStart > timeoutNanos) {
             if (logger != null) {
-                logger.warn("脚本同步执行持续超过 scriptRunawayTimeoutSeconds（{}s）未让出，判定为失控循环，"
-                        + "关闭对应脚本环境；当前求值被中止，下一次取用时会自动重建 Context（/nekojs reload 亦可手动恢复）",
+                logger.warn("[NEKO-2003] 脚本同步执行持续超过 scriptRunawayTimeoutSeconds（{}s）未让出，判定为失控循环，"
+                        + "关闭对应脚本环境；当前求值被中止，下一次取用时会自动重建 Context（/nekojs reload 亦可手动恢复） — runaway script loop detected",
                         timeoutNanos / 1_000_000_000L);
             }
             return true;
