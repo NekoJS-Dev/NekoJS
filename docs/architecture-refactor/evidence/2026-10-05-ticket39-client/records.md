@@ -14,7 +14,7 @@ Prepared 2026-10-05. Partial live attempt recorded 2026-10-05 by the lead; no ma
 | CLIENT PID | `5652`; stopped after smoke |
 | Same JVM or separate process | Separate server and client processes |
 | Verified game directory/directories | `build/issue4-server-neoforge` and `build/ticket41-mc` |
-| Initial conflicting scripts/errors | No t39 filenames existed; offline auth errors are unrelated. Client auto-connect resolved to `kubernetes.docker.internal:25883` and did not reach the server |
+| Initial conflicting scripts/errors | No t39 filenames existed; offline auth errors are unrelated. First client attempt used the wrong resolved host; second reached `127.0.0.1:25883` but disconnected during registry sync because server-only Issue4 startup registrations (`nekojs:issue4_mob_spawn_egg`, `nekojs:issue4_mob`, `nekojs:issue4_native_zombie`) were unknown to the client |
 | Fresh Item.of vs existing held inventory stack | Server fixture only; client not connected |
 
 ## Phase observations
@@ -38,10 +38,10 @@ Record any item defaults reset after login/handshake without a SERVER generation
 ## Capability conclusion
 
 - Integrated/server-side observation: PASS for the active fixture (`diamondMax=16 diamondRarity=EPIC stickMax=16 stickRarity=EPIC lampDefaultLight=7`). This is not remote-client evidence.
-- Automatic remote apply: NOT VERIFIED; the client did not connect.
+- Automatic remote apply: NOT VERIFIED; the client reached configuration/registry sync but was disconnected on unknown server registry keys before player tick.
 - Chunk resend observation: NOT VERIFIED.
 - Relog observation: NOT VERIFIED.
-- Long-term server/client mismatch and user-visible explanation/rejection: NOT VERIFIED.
+- Long-term server/client mismatch and user-visible explanation/rejection: NOT VERIFIED; the observed disconnect is a concrete registry mismatch, not a supported capability message.
 - 1.21.1 actual item startup/reload/removal smoke: NOT RUN.
 
 ## Preservation
