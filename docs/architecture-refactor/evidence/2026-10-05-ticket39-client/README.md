@@ -1,6 +1,6 @@
 # Ticket 39 real-client acceptance readiness
 
-Status: **partially executed, not accepted**. The lead ran an isolated NeoForge 26.2 dedicated-server fixture and recorded the active server values. The client launch did not connect to that server because the launcher resolved the connection target to `kubernetes.docker.internal:25883`; no remote-client visibility or relog evidence is claimed. No maintainer sign-off is provided.
+Status: **executed, not accepted**. The lead ran an isolated NeoForge 26.2 dedicated server and a separate client using matching Issue4 startup registry scripts. The server active plan reported diamond `16/EPIC` and lamp `7`; the client connected, but fresh/held items and lamp remained baseline (`64/COMMON`, `0`) through active reload and relog. This demonstrates a server/client mismatch, not automatic visibility or a supported capability explanation. No maintainer sign-off is provided.
 
 ## Inputs and observable values
 
