@@ -230,6 +230,74 @@ class Ticket41MouseSelectionTest {
         }
     }
 
+    @Test
+    void hidingThenShowingAnAncestorCancelsTheDescendantsCapturedDrag() throws Exception {
+        try (ScreenFixture fixture = new ScreenFixture("WiZ")) {
+            Object parent = fixture.wrapInput();
+            fixture.screen.mouseClicked(mouse(24.25, 25, 0, 0), false);
+            fixture.setParentVisible(parent, false);
+            fixture.setParentVisible(parent, true);
+            assertFalse(fixture.screen.mouseDragged(mouse(200, 100, 0, 0), 175.75, 75));
+            assertFalse(fixture.screen.mouseReleased(mouse(200, 100, 0, 0)));
+            assertTrue(fixture.screen.charTyped(new CharacterEvent('X')));
+            assertEquals("WXiZ", fixture.paint().text);
+        }
+    }
+
+    @Test
+    void offOwnerThreadNativeInputsRejectBeforeMutatingTheCapturedField() throws Exception {
+        try (ScreenFixture fixture = new ScreenFixture("WiZ");
+             var worker = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            fixture.screen.mouseClicked(mouse(24.25, 25, 0, 0), false);
+            java.util.concurrent.atomic.AtomicInteger callbacks = new java.util.concurrent.atomic.AtomicInteger();
+            fixture.onEvent(event -> callbacks.incrementAndGet());
+            List<java.util.concurrent.Callable<Boolean>> inputs = List.of(
+                    () -> fixture.screen.mouseClicked(mouse(24.25, 25, 0, 0), false),
+                    () -> fixture.screen.mouseDragged(mouse(200, 100, 0, 0), 175.75, 75),
+                    () -> fixture.screen.mouseReleased(mouse(200, 100, 0, 0)),
+                    () -> fixture.screen.charTyped(new CharacterEvent('Q')),
+                    () -> fixture.screen.keyPressed(new net.minecraft.client.input.KeyEvent(
+                            org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE, 0, 0)),
+                    () -> fixture.screen.mouseScrolled(24.25, 25, 0, -1));
+            for (java.util.concurrent.Callable<Boolean> inputEvent : inputs) {
+                java.util.concurrent.ExecutionException rejected = assertThrows(java.util.concurrent.ExecutionException.class,
+                        () -> worker.submit(inputEvent).get(5, java.util.concurrent.TimeUnit.SECONDS));
+                assertTrue(rejected.getCause() instanceof IllegalStateException);
+                assertTrue(rejected.getCause().getMessage().contains("NEKO-7004"));
+            }
+            assertEquals(0, callbacks.get());
+            assertEquals("WiZ", fixture.paint().text);
+            assertTrue(fixture.screen.mouseDragged(mouse(200, 100, 0, 0), 175.75, 75));
+            assertTrue(fixture.screen.mouseReleased(mouse(200, 100, 0, 0)));
+            assertTrue(fixture.screen.charTyped(new CharacterEvent('X')));
+            assertEquals("WX", fixture.paint().text);
+        }
+    }
+
+    @Test
+    void closedGenerationRejectsEveryNativeInputWithoutInvokingOldCallbacks() throws Exception {
+        try (ScreenFixture fixture = new ScreenFixture("WiZ")) {
+            fixture.screen.mouseClicked(mouse(24.25, 25, 0, 0), false);
+            java.util.concurrent.atomic.AtomicInteger callbacks = new java.util.concurrent.atomic.AtomicInteger();
+            fixture.onEvent(event -> callbacks.incrementAndGet());
+            fixture.globals.close();
+            List<java.util.concurrent.Callable<Boolean>> inputs = List.of(
+                    () -> fixture.screen.mouseClicked(mouse(24.25, 25, 0, 0), false),
+                    () -> fixture.screen.mouseDragged(mouse(200, 100, 0, 0), 175.75, 75),
+                    () -> fixture.screen.mouseReleased(mouse(200, 100, 0, 0)),
+                    () -> fixture.screen.charTyped(new CharacterEvent('Q')),
+                    () -> fixture.screen.keyPressed(new net.minecraft.client.input.KeyEvent(
+                            org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE, 0, 0)),
+                    () -> fixture.screen.mouseScrolled(24.25, 25, 0, -1));
+            for (java.util.concurrent.Callable<Boolean> inputEvent : inputs) {
+                IllegalStateException rejected = assertThrows(IllegalStateException.class, inputEvent::call);
+                assertTrue(rejected.getMessage().contains("NEKO-7001"));
+            }
+            assertEquals(0, callbacks.get());
+            assertEquals(null, fixture.paint().text);
+        }
+    }
+
     private static MouseButtonEvent mouse(double x, double y, int button, int modifiers) {
         return new MouseButtonEvent(x, y, new MouseButtonInfo(button, modifiers));
     }
@@ -351,6 +419,27 @@ class Ticket41MouseSelectionTest {
                 node.width = 100;
                 node.height = 24;
             });
+        }
+
+        private Object wrapInput() {
+            JsxHostTree.Transaction transaction = tree.begin();
+            Object parent = transaction.create("column", "parent", Map.of("id", "parent", "visible", true));
+            transaction.order(parent, List.of(input));
+            transaction.order(null, List.of(parent));
+            transaction.commit(List.of(parent), nodes -> {
+                JsxHostTree.Node node = nodes.getFirst();
+                node.x = 0;
+                node.y = 0;
+                node.width = 120;
+                node.height = 50;
+            });
+            return parent;
+        }
+
+        private void setParentVisible(Object parent, boolean visible) {
+            JsxHostTree.Transaction transaction = tree.begin();
+            transaction.update(parent, "column", "parent", Map.of("id", "parent", "visible", visible));
+            transaction.commit(tree.roots());
         }
 
         private Object addSecondInput(String value) {

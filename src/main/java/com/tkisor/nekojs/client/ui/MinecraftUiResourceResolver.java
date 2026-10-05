@@ -33,6 +33,7 @@ import java.util.function.Supplier;
  */
 public final class MinecraftUiResourceResolver implements UiResourceResolver, AutoCloseable {
     private static final int MAX_TEXTURE_BYTES = 16 * 1024 * 1024;
+    private static final int MAX_FONT_BYTES = 1024 * 1024;
     private final ResourceManager resources;
     private final UiTextureBackend backend;
     private final Supplier<?> revision;
@@ -81,18 +82,36 @@ public final class MinecraftUiResourceResolver implements UiResourceResolver, Au
         UiResourceId id = parsed.get();
         return fonts.computeIfAbsent(id.toString(), ignored -> {
             String path = id.path().endsWith(".json") ? id.path() : id.path() + ".json";
+            Identifier location = Identifier.fromNamespaceAndPath(id.namespace(), "font/" + path);
+            byte[] bytes;
             try {
-                for (String directory : new String[]{"font/", "fonts/"}) {
-                    Identifier location = Identifier.fromNamespaceAndPath(id.namespace(), directory + path);
-                    if (resources.getResource(location).isPresent()) {
-                        return ResourceStatus.resolved(id.toString(), location.toString());
-                    }
+                Optional<Resource> definition = resources.getResource(location);
+                if (definition.isEmpty()) return ResourceStatus.missing(id);
+                try (InputStream input = definition.get().open()) {
+                    bytes = input.readNBytes(MAX_FONT_BYTES + 1);
                 }
-                return ResourceStatus.missing(id);
+            } catch (IOException | RuntimeException failure) {
+                fontFailures.put(id.toString(), failure);
+                return new ResourceStatus(ResourceStatus.State.INVALID, id.toString(), null,
+                        UiErrorCodes.RESOURCE_LOAD_FAILED, "UI font definition read failed: " + id);
+            }
+            if (bytes.length > MAX_FONT_BYTES) {
+                return new ResourceStatus(ResourceStatus.State.INVALID, id.toString(), null,
+                        UiErrorCodes.INVALID_RESOURCE_SIZE, "UI font definition exceeds the encoded byte limit: " + id);
+            }
+            try {
+                var json = com.google.gson.JsonParser.parseString(new String(bytes, java.nio.charset.StandardCharsets.UTF_8));
+                if (!json.isJsonObject() || !json.getAsJsonObject().has("providers")) {
+                    throw new IllegalArgumentException("Font definition requires a providers array");
+                }
+                net.minecraft.client.gui.font.providers.GlyphProviderDefinition.Conditional.CODEC.listOf()
+                        .parse(com.mojang.serialization.JsonOps.INSTANCE, json.getAsJsonObject().get("providers"))
+                        .getOrThrow();
+                return ResourceStatus.resolved(id.toString(), location.toString());
             } catch (RuntimeException failure) {
                 fontFailures.put(id.toString(), failure);
                 return new ResourceStatus(ResourceStatus.State.INVALID, id.toString(), null,
-                        UiErrorCodes.RESOURCE_LOAD_FAILED, "UI font lookup failed: " + id);
+                        UiErrorCodes.RESOURCE_DECODE_FAILED, "UI font definition decode failed: " + id);
             }
         });
     }

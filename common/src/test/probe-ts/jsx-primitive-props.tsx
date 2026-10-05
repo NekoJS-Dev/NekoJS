@@ -30,6 +30,15 @@ const visualPanel = <panel opacity={0.5} />;
 const visualImage = <image resource="mymod:gui/hero" fit="contain" opacity={0.25} icon="mymod:gui/icon" crop={{ x: 1, y: 2, width: 8, height: 9 }} />;
 const arrayCrop = <image resource="mymod:gui/hero" crop={[1, 2, 8, 9]} />;
 const truncated = <label truncate>long text</label>;
+const selectedFont = <label text="custom" font="mymod:custom" />;
+const responsiveFont = <label font={{ base: 'minecraft:default', profiles: { 4: 'mymod:custom.json' } }} />;
+UI.element('label', { font: { base: 'minecraft:default', profiles: { 3: 'mymod:custom' } } });
+// @ts-expect-error label font must be a controlled id string or responsive string
+const numericFont = <label font={12} />;
+// @ts-expect-error responsive font overrides must contain strings
+const invalidResponsiveFont = <label font={{ profiles: { 2: 12 } }} />;
+// @ts-expect-error panel has no font selector
+const invalidPanelFont = <panel font="mymod:custom" />;
 UI.element('panel', { opacity: 0.5 });
 UI.element('image', { icon: 'mymod:gui/icon', crop: [1, 2, 8, 9] });
 // @ts-expect-error row has no opacity prop

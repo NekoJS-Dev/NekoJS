@@ -107,6 +107,140 @@ class NekoTypeScriptJsxRuntimeTest {
     // ---- AC2: erasure preserves runtime values, control flow and export shape ----
 
     @Test
+    void labelFontReachesMeasurementAndProfileResizeWithoutGuestRerender() throws Exception {
+        write("font.tsx", """
+                import { UI } from 'nekojs/jsx-runtime';
+                const measurements = [];
+                let renders = 0;
+                let creates = 0;
+                let commits = 0;
+                const host = {
+                    isOwnerThread: () => true,
+                    enqueue: () => false,
+                    supportsPrimitive: () => true,
+                    measureText: (text, size, maximumWidth, font) => {
+                        measurements.push({ text, size, maximumWidth, font });
+                        return { width: font === 'demo:wide.json.json' ? 20 : 6, height: 9 };
+                    },
+                    layout: () => {},
+                    reportDiagnostic: () => {},
+                    begin: () => ({
+                        create: () => ++creates,
+                        update: () => {}, order: () => {}, remove: () => {},
+                        commit: () => { commits++; }, rollback: () => {}
+                    })
+                };
+                const root = UI.createRoot(() => {
+                    renders++;
+                    return UI.element('label', { id: 'font-label', text: 'WW', width: 'auto', height: 'auto',
+                        font: { base: 'demo:narrow.json', profiles: { 4: 'demo:wide.json.json' } } });
+                }, host, { id: 'font-root', viewport: { width: 320, height: 180 } });
+                export const before = root.layout();
+                root.resize({ width: 640, height: 360 });
+                export const after = root.layout();
+                export const measured = measurements;
+                export const state = { renders, creates, commits };
+                root.close();
+                """);
+        Value proof = asValue(host.loadEntry("./server_scripts/src/font.tsx"));
+        Value before = proof.getMember("before").getMember("nodes").getArrayElement(0);
+        Value after = proof.getMember("after").getMember("nodes").getArrayElement(0);
+        assertEquals("demo:narrow.json", before.getMember("style").getMember("font").asString());
+        assertEquals(6, before.getMember("rect").getMember("width").asInt());
+        assertEquals("demo:wide.json.json", after.getMember("style").getMember("font").asString());
+        assertEquals(20, after.getMember("rect").getMember("width").asInt());
+        assertEquals("demo:narrow.json", proof.getMember("measured").getArrayElement(0).getMember("font").asString());
+        assertEquals("demo:wide.json.json", proof.getMember("measured").getArrayElement(1).getMember("font").asString());
+        assertEquals(1, proof.getMember("state").getMember("renders").asInt());
+        assertEquals(1, proof.getMember("state").getMember("creates").asInt());
+        assertEquals(1, proof.getMember("state").getMember("commits").asInt());
+        var snapshot = com.tkisor.nekojs.api.ui.InspectorSnapshots.read("font-root", "fake-host", proof.getMember("after"));
+        java.util.ArrayList<String> resolvedFonts = new java.util.ArrayList<>();
+        var decorated = com.tkisor.nekojs.api.ui.InspectorSnapshots.decorate(snapshot, java.util.Set.of(),
+                id -> { throw new AssertionError("The font id must not enter texture resolution"); },
+                id -> {
+                    resolvedFonts.add(id);
+                    return com.tkisor.nekojs.api.ui.ResourceStatus.resolved(id, "demo:font/wide.json");
+                }, java.util.List.of(), null);
+        assertEquals(java.util.List.of("demo:wide.json.json"), resolvedFonts);
+        assertEquals("demo:wide.json.json", decorated.nodes().getFirst().resources().getFirst().id());
+        assertEquals("demo:font/wide.json", decorated.nodes().getFirst().resources().getFirst().resolvedPath());
+        var legacy = com.tkisor.nekojs.api.ui.InspectorSnapshots.decorate(snapshot, java.util.Set.of(),
+                id -> { throw new AssertionError("The legacy overload must not resolve fonts as textures"); },
+                java.util.List.of(), null);
+        assertTrue(legacy.nodes().getFirst().resources().isEmpty());
+    }
+
+    @Test
+    void defaultLabelsKeepThreeArgumentMeasurementHostsCompatible() throws Exception {
+        write("default-font.ts", """
+                import { UI } from 'nekojs/jsx-runtime';
+                const arities = [];
+                const host = {
+                    isOwnerThread: () => true, enqueue: () => false, supportsPrimitive: () => true,
+                    layout: () => {}, reportDiagnostic: () => {},
+                    measureText: function(text, size, maximumWidth) {
+                        arities.push(arguments.length);
+                        return { width: 6, height: 9 };
+                    },
+                    begin: () => ({ create: () => 1, update: () => {}, order: () => {}, remove: () => {},
+                        commit: () => {}, rollback: () => {} })
+                };
+                const root = UI.createRoot(() => UI.element('label', { text: 'WW', width: 'auto' }), host,
+                    { id: 'default-font', viewport: { width: 320, height: 180 } });
+                root.resize({ width: 480, height: 240 });
+                export const observed = arities;
+                export const width = root.layout().nodes[0].rect.width;
+                root.close();
+                """);
+        Value proof = asValue(host.loadEntry("./server_scripts/src/default-font.ts"));
+        assertEquals(2, proof.getMember("observed").getArraySize());
+        assertEquals(3, proof.getMember("observed").getArrayElement(0).asInt());
+        assertEquals(3, proof.getMember("observed").getArrayElement(1).asInt());
+        assertEquals(6, proof.getMember("width").asInt());
+    }
+
+    @Test
+    void malformedResponsiveFontsFailWithRootDiagnosticsBeforeHostCreation() throws Exception {
+        write("invalid-font.ts", """
+                import { UI } from 'nekojs/jsx-runtime';
+                export const failures = [];
+                const invalidFonts = [42, { profiles: { 7: 'demo:custom' } }, { base: 'demo:custom', profiles: { 2: 7 } }];
+                for (const font of invalidFonts) {
+                    let creates = 0;
+                    let commits = 0;
+                    const diagnostics = [];
+                    const host = {
+                        isOwnerThread: () => true, enqueue: () => false, supportsPrimitive: () => true,
+                        layout: () => {}, reportDiagnostic: diagnostic => diagnostics.push(diagnostic),
+                        measureText: () => ({ width: 6, height: 9 }),
+                        begin: () => ({ create: () => ++creates, update: () => {}, order: () => {}, remove: () => {},
+                            commit: () => commits++, rollback: () => {} })
+                    };
+                    let rejected = false;
+                    try {
+                        const root = UI.createRoot(() => UI.element('label', { text: 'WW', font }), host,
+                            { id: 'invalid-font', viewport: { width: 320, height: 180 } });
+                        root.close();
+                    } catch (error) { rejected = true; }
+                    failures.push({ rejected, creates, commits, diagnostics });
+                }
+                """);
+        Value proof = asValue(host.loadEntry("./server_scripts/src/invalid-font.ts"));
+        Value failures = proof.getMember("failures");
+        assertEquals(3, failures.getArraySize());
+        for (long index = 0; index < failures.getArraySize(); index++) {
+            Value failure = failures.getArrayElement(index);
+            assertTrue(failure.getMember("rejected").asBoolean());
+            assertEquals(0, failure.getMember("creates").asInt());
+            assertEquals(0, failure.getMember("commits").asInt());
+            Value diagnostic = failure.getMember("diagnostics").getArrayElement(0);
+            assertEquals("layout", diagnostic.getMember("phase").asString());
+            assertEquals("invalid-font", diagnostic.getMember("rootId").asString());
+        }
+    }
+
+    @Test
     void typeErasurePreservesRuntimeValuesControlFlowAndExportShape() throws Exception {
         write("erasure.ts", "interface Named { name: string }\n"
                 + "type Count = number;\n"

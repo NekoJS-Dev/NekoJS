@@ -20,9 +20,10 @@ public interface UiResourceResolver {
     ResourceStatus resolveTexture(String id);
 
     /**
-     * Resolves a font id such as {@code mymod:custom} to its font definition
-     * ({@code font/<path>.json}, pre-1.21.2 spelling, or {@code fonts/<path>.json}
-     * on newer versions — whichever the roots provide).
+     * Resolves a font id such as {@code mymod:custom} to its definition under
+     * {@code font/<path>.json}. The optional {@code .json} suffix is accepted.
+     * A resolved definition is available for lookup; it does not establish that
+     * the platform has successfully decoded or loaded every font provider.
      *
      * @param id raw resource id from script props
      * @return resolution status, never null

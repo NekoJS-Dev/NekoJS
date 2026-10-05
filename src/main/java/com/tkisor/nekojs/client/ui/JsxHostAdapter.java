@@ -3,7 +3,6 @@ package com.tkisor.nekojs.client.ui;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.ScriptErrorReporter;
-import com.tkisor.nekojs.api.ui.FontAdapter;
 import com.tkisor.nekojs.api.ui.InspectorScreenshot;
 import com.tkisor.nekojs.api.ui.InspectorSnapshot;
 import com.tkisor.nekojs.api.ui.InspectorSnapshots;
@@ -46,7 +45,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     private final ScriptManager manager;
     private final GenerationGlobals globals;
     private final UiRootLifecycle lifecycle;
-    private final FontAdapter fontAdapter;
+    private final McFontAdapter fontAdapter;
     private final MinecraftUiResourceResolver resources;
     private final List<InspectorSnapshot.PhaseError> retainedErrors = new ArrayList<>();
     private String rootId;
@@ -117,6 +116,26 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         return Map.of("width", layout.width(), "height", layout.height());
     }
 
+    public Map<String, Object> measureText(String text, double fontSize, int maxWidth, String font) {
+        requireUsable("measure text");
+        TextLayout layout = TextLayouter.layoutScaled(selectedFont(font), text, fontSize, maxWidth,
+                true, TextLayouter.Truncation.OFF);
+        return Map.of("width", layout.width(), "height", layout.height());
+    }
+
+    private McFontAdapter selectedFont(String rawFont) {
+        if (rawFont == null) return fontAdapter;
+        VisualSpec spec = VisualStyleResolver.resolve(Map.of("font", rawFont),
+                new UiDiagnostic.Location(rootId == null ? "unknown" : rootId, "label", null, lifecycle.generation()));
+        if (spec.font() == null || resources.resolveFont(rawFont).state() != com.tkisor.nekojs.api.ui.ResourceStatus.State.RESOLVED) {
+            return fontAdapter;
+        }
+        net.minecraft.network.chat.Style style = net.minecraft.network.chat.Style.EMPTY.withFont(
+                new net.minecraft.network.chat.FontDescription.Resource(
+                        net.minecraft.resources.Identifier.parse(spec.font().toString())));
+        return new McFontAdapter(minecraft.font, style);
+    }
+
     public boolean isOwnerThread() {
         return Thread.currentThread() == ownerThread;
     }
@@ -169,7 +188,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         // The capture metadata describes the retained frame, not the live viewport: a
         // resize that has not been laid out yet must not relabel the measured frame.
         return InspectorSnapshots.decorate(lastSnapshot, focusedIds(tree.roots()),
-                resources::resolveTexture, List.copyOf(retainedErrors),
+                resources::resolveTexture, resources::resolveFont, List.copyOf(retainedErrors),
                 new InspectorScreenshot("neoforge-viewport-meta",
                         lastSnapshot.viewport().width(), lastSnapshot.viewport().height()));
     }
@@ -260,8 +279,9 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                 if ("design".equals(node.props.get("coordinateSpace"))) {
                     fontSize = (fontSize <= 0 ? fontAdapter.lineHeight() : fontSize) * designScale;
                 }
+                node.textFont = selectedFont(node.props.get("font") instanceof String font ? font : null);
                 boolean truncate = node.visual != null && Boolean.TRUE.equals(node.visual.truncate());
-                node.textLayout = TextLayouter.layoutScaled(fontAdapter, text(node.props.get("text")), fontSize,
+                node.textLayout = TextLayouter.layoutScaled(node.textFont, text(node.props.get("text")), fontSize,
                         Math.max(1, node.width), !truncate, truncationFor(node.visual));
                 node.textScale = fontSize <= 0 ? 1 : fontSize / fontAdapter.lineHeight();
             }
@@ -509,7 +529,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
             graphics.pose().scale((float) node.textScale, (float) node.textScale);
             for (int lineIndex = 0; lineIndex < node.textLayout.lines().size(); lineIndex++) {
                 int baseline = (int) Math.round(lineIndex * node.textLayout.lineHeight() / node.textScale);
-                graphics.text(Minecraft.getInstance().font, node.textLayout.lines().get(lineIndex),
+                graphics.text(Minecraft.getInstance().font, node.textFont.text(node.textLayout.lines().get(lineIndex)),
                         0, baseline, argbColor, false);
             }
         } finally {
@@ -702,7 +722,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
             // run as a client-thread task, so re-queueing here defers the decision to after that
             // task — the epoch check in runDeferredOpen then sees either the committed
             // generation (open) or the discarded candidate (explicit drop with a diagnostic).
-            minecraft.execute(this::runDeferredOpen);
+            minecraft.schedule(this::runDeferredOpen);
             return;
         }
         throw new IllegalStateException("[NEKO-7001] Cannot open the JSX Screen: this UI root belongs "
@@ -827,6 +847,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     private static JsxHostTree.Node focused(List<JsxHostTree.Node> values) {
         for (JsxHostTree.Node node : values) {
+            if (!visible(node)) continue;
             if (node.focused) return node;
             JsxHostTree.Node nested = focused(node.children);
             if (nested != null) return nested;
@@ -843,6 +864,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     private static void collectFocusedIds(List<JsxHostTree.Node> values, Set<String> ids) {
         for (JsxHostTree.Node node : values) {
+            if (!visible(node)) continue;
             if (node.focused && node.props.get("id") instanceof String id) ids.add(id);
             collectFocusedIds(node.children, ids);
         }
@@ -971,22 +993,27 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         }
 
         public Object create(String type, String key, Object props) {
+            requireUsable("create a host node");
             return transaction.create(type, key, props(props));
         }
 
         public void update(Object handle, String type, String key, Object props) {
+            requireUsable("update a host node");
             transaction.update(interopValue(handle), type, key, props(props));
         }
 
         public void order(Object parent, Object children) {
+            requireUsable("order host nodes");
             transaction.order(interopValue(parent), readArray(children));
         }
 
         public void remove(Object handle) {
+            requireUsable("remove a host node");
             transaction.remove(interopValue(handle));
         }
 
         public void commit(Object roots) {
+            requireUsable("commit a host transaction");
             InspectorSnapshot candidate = pendingSnapshot;
             List<Object> handles = readArray(roots);
             final InspectorSnapshot[] committed = new InspectorSnapshot[1];
@@ -1005,6 +1032,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         }
 
         public void rollback() {
+            requireUsable("roll back a host transaction");
             transaction.rollback();
             pendingSnapshot = null;
         }

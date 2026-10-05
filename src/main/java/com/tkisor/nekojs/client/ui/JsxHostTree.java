@@ -17,10 +17,17 @@ final class JsxHostTree {
     List<Node> roots() { return roots; }
 
     Node retained(Node expected) {
-        if (expected == null) return null;
-        Node current = nodes.get(expected.identity);
-        return current == null || current.removed || Boolean.TRUE.equals(current.props.get("disabled"))
-                || Boolean.FALSE.equals(current.props.get("visible")) ? null : current;
+        return expected == null ? null : retained(roots, expected.identity);
+    }
+
+    private Node retained(List<Node> values, long identity) {
+        for (Node node : values) {
+            if (node.removed || Boolean.FALSE.equals(node.props.get("visible"))) continue;
+            if (node.identity == identity) return Boolean.TRUE.equals(node.props.get("disabled")) ? null : node;
+            Node nested = retained(node.children, identity);
+            if (nested != null) return nested;
+        }
+        return null;
     }
 
     void capture(Node node, int button) {
@@ -33,9 +40,8 @@ final class JsxHostTree {
 
     Node captured(int button) {
         if (capturedIdentity == null || capturedButton != button) return null;
-        Node captured = nodes.get(capturedIdentity);
-        if (captured == null || captured.removed || Boolean.TRUE.equals(captured.props.get("disabled"))
-                || Boolean.FALSE.equals(captured.props.get("visible"))) {
+        Node captured = retained(nodes.get(capturedIdentity));
+        if (captured == null) {
             cancelCapture();
             return null;
         }
@@ -180,6 +186,7 @@ final class JsxHostTree {
         UiTextureBlitPlan texturePlan;
         UiBoxPaintPlan boxPlan;
         com.tkisor.nekojs.api.ui.TextLayout textLayout;
+        com.tkisor.nekojs.wrapper.client.McFontAdapter textFont;
         double textScale = 1;
 
         Node(long identity, String type, String key, Map<String, Object> props) {
@@ -311,6 +318,7 @@ final class JsxHostTree {
             copy.texturePlan = texturePlan;
             copy.boxPlan = boxPlan;
             copy.textLayout = textLayout;
+            copy.textFont = textFont;
             copy.textScale = textScale;
             return copy;
         }

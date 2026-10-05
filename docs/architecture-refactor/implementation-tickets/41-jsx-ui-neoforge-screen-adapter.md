@@ -55,7 +55,7 @@
 
 **Mouse/visual follow-up (2026-10-05, round 2):** [evidence pack](../evidence/2026-10-05-round2-jsx/README.md) 保存维护者实际选项、两次构建哈希、输入日志和截图。click/Shift-click/框外 drag/final release 以真实字宽定位并保持 codepoint 边界；回调重入后以 retained identity 重取焦点，隐藏 subtree 从 Tab 顺序跳过。16 项原生 Screen 输入/绘制回归在 26.2 和 26.1.2 均无 skip/failure；维护者在 26.2 确认键鼠替换、两秒 reconciliation 后拖选、disable 与 same-id/new-key replacement 取消捕获。首次高级 fixture 的按钮文字被截断，已以 native y=26/expected20 回归复现；绘制改为按 committed height 居中，第二次截图及选项确认完整。26.1.2 仅自动测试证据，仍无真实客户端支持结论。
 
-**Acceptance remains in-review:** first open/paint, click, input focus/change/edit/delete, keyboard and mouse selection/replacement, Tab/Enter, pointer capture release/retention/cancellation, disabled rejection, scroll, resize, reload reopening, Screen replacement, old-root/event invalidation, event-error retention and conditional Escape cleanup are observed on NeoForge 26.2. The full tooltip/narration matrix and remaining owner-thread/generation failure matrices still need targeted evidence. The round-2 resource repair trial proves a recreated CLIENT generation's readback, not unchanged-root repair. Whole-ticket items remain unchecked where they combine verified and unverified paths.
+- Round 4 added public native regressions for hidden-parent publication/capture revocation, escaped transaction owner-thread and closed-generation rejection, tooltip clipping/disabled/hidden behavior, native collector/title narration boundary, and canonical font painting. The full affected matrix passes. The native client confirms tooltip/font paths; automatic narrator audio was reported incorrect/not accepted, so narration remains unverified.
 
 ## Dependency rationale
 

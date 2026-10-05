@@ -2,6 +2,8 @@ package com.tkisor.nekojs.wrapper.client;
 
 import com.tkisor.nekojs.api.ui.FontAdapter;
 import net.minecraft.client.gui.Font;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 
 /**
  * {@link FontAdapter} over the client's Minecraft font: the single host measurement
@@ -10,14 +12,25 @@ import net.minecraft.client.gui.Font;
  */
 public final class McFontAdapter implements FontAdapter {
     private final Font font;
+    private final Style style;
 
     public McFontAdapter(Font font) {
+        this(font, Style.EMPTY);
+    }
+
+    public McFontAdapter(Font font, Style style) {
         this.font = font;
+        this.style = style;
+    }
+
+    public Component text(String value) {
+        return Component.literal(value).setStyle(style);
     }
 
     @Override
     public int stringWidth(String text) {
-        return text == null || text.isEmpty() ? 0 : font.width(text);
+        if (text == null || text.isEmpty()) return 0;
+        return style.isEmpty() ? font.width(text) : font.width(text(text));
     }
 
     @Override

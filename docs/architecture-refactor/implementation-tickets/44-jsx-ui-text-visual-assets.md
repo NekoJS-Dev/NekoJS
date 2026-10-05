@@ -51,7 +51,14 @@
 - Standards 1 项、Spec 2 项 P2 审查发现均已用公开回归修复，复核无剩余 scoped findings。完整 common/processor/五节点测试、构建、guard 与 Probe 检查通过。两测试客户端停止，独立 jar/fixture/PNG 已删除，原入口哈希一致。
 - Radius 已落地并真机验证；AC3 的 custom font 路径因原证据不足重新未勾选，整体仍 in-review。字体选择、provider 回读/诊断和维护者 whole-ticket 结论仍待实施。
 
-## Dependency rationale
+## Delivery follow-up (2026-10-05, round 4)
+
+- [round 4 evidence](../evidence/2026-10-05-round4-ui/README.md) adds controlled `label.font` selection. Common retains authored responsive selectors for measurement/Inspector, while `VisualSpec.font` normalizes one `.json` suffix for native `FontDescription.Resource`; default three-argument measurement hosts remain compatible.
+- NeoForge host measurement and cached painting use one selected native `Style`; bounded `font/<id>.json` definitions are validated through the native provider codec. Missing definitions report `NEKO-6004`; malformed definitions report `NEKO-6007` with causes. Singular native `font/` semantics are now documented and tested; provider load success is not inferred from file presence.
+- Native tests cover selected width parity, `.json` aliases including logical ids ending `.json`, default fallback, separate Inspector font status and canonical root auto-layout. Full common/processor/five-node matrix, builds and `guardLint` pass.
+- Real NeoForge 26.2 smoke observed default/custom bitmap font width and size differences, missing/corrupt fallback diagnostics and healthy callback/tooltip. The bitmap fixture was corrected once after maintainer feedback; final font confirmation passed. Automatic narrator output was not accepted and remains unverified.
+
+AC3 custom font behavior is now technically evidenced but whole-ticket status remains `in-review` pending robust provider compatibility and maintainer whole-ticket conclusion.
 
 - [29: Assets/Lang 资源生成与回读收口](29-assets.md)：本票消费该先决票的已验收输出；依赖以 Blocked by 为准，不按编号顺序执行。
 - [40: JSX UI common core、公开契约与 Fake Host Proof](40-jsx-ui-common-core.md)：本票消费该先决票的已验收输出；依赖以 Blocked by 为准，不按编号顺序执行。

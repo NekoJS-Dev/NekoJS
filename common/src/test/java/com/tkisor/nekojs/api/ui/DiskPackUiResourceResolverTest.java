@@ -57,18 +57,34 @@ class DiskPackUiResourceResolverTest {
     }
 
     @Test
-    void resolvesFontInBothVanillaSpellings() throws IOException {
-        Path legacy = packRoot.resolve("assets/mymod/font/custom.json");
-        Files.createDirectories(legacy.getParent());
-        Files.writeString(legacy, "{}");
-        assertEquals(ResourceStatus.State.RESOLVED,
-                new DiskPackUiResourceResolver(packRoot).resolveFont("mymod:custom").state());
+    void pluralFontDirectoryDoesNotBecomeANativeFontDefinition() throws IOException {
+        Path plural = packRoot.resolve("assets/mymod/fonts/custom.json");
+        Files.createDirectories(plural.getParent());
+        Files.writeString(plural, "{}");
+        DiskPackUiResourceResolver resolver = new DiskPackUiResourceResolver(packRoot);
+        assertEquals(ResourceStatus.State.MISSING, resolver.resolveFont("mymod:custom").state());
+        Path definition = packRoot.resolve("assets/mymod/font/custom.json");
+        Files.createDirectories(definition.getParent());
+        Files.writeString(definition, "{}");
+        ResourceStatus status = resolver.resolveFont("mymod:custom");
+        assertEquals(ResourceStatus.State.RESOLVED, status.state());
+        assertEquals(definition.toString(), status.resolvedPath());
+        assertEquals(ResourceStatus.State.RESOLVED, resolver.resolveFont("mymod:custom.json").state());
+    }
 
-        Path modern = packRoot.resolve("assets/other/fonts/custom.json");
-        Files.createDirectories(modern.getParent());
-        Files.writeString(modern, "{}");
-        assertEquals(ResourceStatus.State.RESOLVED,
-                new DiskPackUiResourceResolver(packRoot).resolveFont("other:custom").state());
+    @Test
+    void explicitDefinitionSuffixPreservesALogicalFontPathEndingInJson() throws IOException {
+        Path definition = packRoot.resolve("assets/mymod/font/custom.json.json");
+        Files.createDirectories(definition.getParent());
+        Files.writeString(definition, "{}");
+        DiskPackUiResourceResolver resolver = new DiskPackUiResourceResolver(packRoot);
+        ResourceStatus status = resolver.resolveFont("mymod:custom.json.json");
+        assertEquals(ResourceStatus.State.RESOLVED, status.state());
+        assertEquals(definition.toString(), status.resolvedPath());
+        VisualSpec spec = VisualStyleResolver.resolve(java.util.Map.of("font", "mymod:custom.json.json"),
+                new UiDiagnostic.Location("font-root", "label", "heading", 1), resolver);
+        assertEquals("mymod:custom.json", spec.font().toString());
+        assertTrue(spec.diagnostics().isEmpty());
     }
 
     @Test

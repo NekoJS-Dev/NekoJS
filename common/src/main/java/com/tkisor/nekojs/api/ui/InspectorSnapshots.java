@@ -76,8 +76,15 @@ public final class InspectorSnapshots {
     public static InspectorSnapshot decorate(InspectorSnapshot base, Set<String> focusedIds,
             Function<String, ResourceStatus> resources, List<InspectorSnapshot.PhaseError> errors,
             InspectorScreenshot screenshot) {
+        return decorate(base, focusedIds, resources, null, errors, screenshot);
+    }
+
+    /** Decorates texture and font availability separately; font definition presence is not provider-load proof. */
+    public static InspectorSnapshot decorate(InspectorSnapshot base, Set<String> focusedIds,
+            Function<String, ResourceStatus> resources, Function<String, ResourceStatus> fonts,
+            List<InspectorSnapshot.PhaseError> errors, InspectorScreenshot screenshot) {
         return new InspectorSnapshot(base.rootId(), base.source(), base.viewport(),
-                base.nodes().stream().map(node -> decorateNode(node, focusedIds, resources)).toList(),
+                base.nodes().stream().map(node -> decorateNode(node, focusedIds, resources, fonts)).toList(),
                 base.diagnostics(), errors, screenshot);
     }
 
@@ -190,17 +197,18 @@ public final class InspectorSnapshots {
     }
 
     private static InspectorNode decorateNode(InspectorNode node, Set<String> focusedIds,
-            Function<String, ResourceStatus> resources) {
+            Function<String, ResourceStatus> resources, Function<String, ResourceStatus> fonts) {
         List<ResourceStatus> statuses = new ArrayList<>();
         if (resources != null) {
             addResource(statuses, resources, node.style().get("resource"));
             addResource(statuses, resources, node.style().get("icon"));
         }
+        if (fonts != null) addResource(statuses, fonts, node.style().get("font"));
         return new InspectorNode(node.id(), node.type(), node.key(), node.visible(),
                 node.id() != null && focusedIds.contains(node.id()),
                 node.rect(), node.clip(), node.overflow(), node.scrollOffset(), node.style(),
                 node.bindings(), statuses,
-                node.children().stream().map(child -> decorateNode(child, focusedIds, resources)).toList());
+                node.children().stream().map(child -> decorateNode(child, focusedIds, resources, fonts)).toList());
     }
 
     private static void addResource(List<ResourceStatus> statuses, Function<String, ResourceStatus> resources,

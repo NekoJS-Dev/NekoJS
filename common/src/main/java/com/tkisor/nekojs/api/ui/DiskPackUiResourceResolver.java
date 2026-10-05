@@ -33,10 +33,6 @@ public final class DiskPackUiResourceResolver implements UiResourceResolver {
     public ResourceStatus resolveFont(String id) {
         Optional<UiResourceId> parsed = UiResourceId.parse(id);
         if (parsed.isEmpty()) return ResourceStatus.invalid(String.valueOf(id));
-        // Vanilla renamed the directory between versions; accept both spellings,
-        // preferring the modern one when both exist.
-        ResourceStatus modern = resolveParsed(parsed.get(), "fonts", ".json");
-        if (modern.state() == ResourceStatus.State.RESOLVED) return modern;
         return resolveParsed(parsed.get(), "font", ".json");
     }
 

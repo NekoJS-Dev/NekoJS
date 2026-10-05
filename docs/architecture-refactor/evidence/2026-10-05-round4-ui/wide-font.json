@@ -1,0 +1,11 @@
+{
+  "providers": [
+    {
+      "type": "bitmap",
+      "file": "ticket44_round4:font/wide.png",
+      "height": 8,
+      "ascent": 7,
+      "chars": ["A"]
+    }
+  ]
+}

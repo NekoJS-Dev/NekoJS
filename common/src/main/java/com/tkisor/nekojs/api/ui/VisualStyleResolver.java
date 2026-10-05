@@ -9,7 +9,7 @@ import java.util.Optional;
 /**
  * Parses script-side visual props ({@code color}, {@code background},
  * {@code borderColor}, {@code borderWidth}, {@code radius}, {@code opacity},
- * {@code fontSize}, {@code truncate}, {@code resource}, {@code fit}, {@code crop}, {@code icon}) into a
+ * {@code fontSize}, {@code font}, {@code truncate}, {@code resource}, {@code fit}, {@code crop}, {@code icon}) into a
  * {@link VisualSpec}. Invalid values are skipped and reported as locatable
  * diagnostics instead of throwing, so one bad prop cannot take down a whole tree.
  *
@@ -33,9 +33,10 @@ public final class VisualStyleResolver {
     }
 
     /**
-     * Resolves visual props; when {@code resources} is given, image/icon resource ids
-     * are additionally resolved and missing or invalid ids become diagnostics (the
-     * id itself still lands in the spec so the host can paint a placeholder).
+     * Resolves visual props; when {@code resources} is given, image/icon/font ids
+     * are additionally resolved and missing or invalid ids become diagnostics. A
+     * syntactically valid id remains in the spec so the host can choose its explicit
+     * missing-resource placeholder or font fallback.
      *
      * @param props     raw node props; null values are treated as absent
      * @param location  position stamped into diagnostics
@@ -55,14 +56,18 @@ public final class VisualStyleResolver {
         Boolean truncate = parseBoolean(props.get("truncate"), "truncate", location, diagnostics);
         VisualSpec.ImageFit fit = parseFit(props.get("fit"), location, diagnostics);
         VisualSpec.CropRect crop = parseCrop(props.get("crop"), location, diagnostics);
-        UiResourceId image = parseResourceId(props.get("resource"), location, diagnostics);
-        UiResourceId icon = parseResourceId(props.get("icon"), location, diagnostics);
+        UiResourceId image = parseResourceId(props.get("resource"), null, location, diagnostics);
+        UiResourceId icon = parseResourceId(props.get("icon"), null, location, diagnostics);
+        UiResourceId font = parseResourceId(props.get("font"), ".json", location, diagnostics);
         if (resources != null) {
             checkResource(image, resources::resolveTexture, "image", location, diagnostics);
             checkResource(icon, resources::resolveTexture, "icon", location, diagnostics);
+            UiResourceId definition = font == null ? null
+                    : parseResourceId(props.get("font"), null, location, diagnostics);
+            checkResource(definition, resources::resolveFont, "font", location, diagnostics);
         }
         return new VisualSpec(color, background, borderColor, borderWidth, radius, opacity, fontSize,
-                truncate, image, fit, crop, icon, diagnostics);
+                truncate, image, fit, crop, icon, font, diagnostics);
     }
 
     private static UiColor parseColor(Object value, String prop, UiDiagnostic.Location location,
@@ -156,11 +161,16 @@ public final class VisualStyleResolver {
         return null;
     }
 
-    private static UiResourceId parseResourceId(Object value, UiDiagnostic.Location location,
-            List<UiDiagnostic> diagnostics) {
+    private static UiResourceId parseResourceId(Object value, String definitionSuffix,
+            UiDiagnostic.Location location, List<UiDiagnostic> diagnostics) {
         if (value == null) return null;
         if (value instanceof String string) {
             Optional<UiResourceId> parsed = UiResourceId.parse(string);
+            if (parsed.isPresent() && definitionSuffix != null && parsed.get().path().endsWith(definitionSuffix)) {
+                UiResourceId resource = parsed.get();
+                parsed = UiResourceId.parse(resource.namespace() + ":"
+                        + resource.path().substring(0, resource.path().length() - definitionSuffix.length()));
+            }
             if (parsed.isPresent()) return parsed.get();
         }
         report(diagnostics, UiErrorCodes.INVALID_RESOURCE_ID,

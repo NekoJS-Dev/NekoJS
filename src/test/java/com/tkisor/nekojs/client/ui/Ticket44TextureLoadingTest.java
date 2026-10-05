@@ -252,7 +252,7 @@ class Ticket44TextureLoadingTest {
     @Test
     void explicitTexturePrefixAndFontDefinitionsUseTheSameResourceManager() {
         MemoryResources resources = new MemoryResources();
-        resources.add("demo:font/custom.json", new byte[]{123, 125});
+        resources.add("demo:font/custom.json", "{\"providers\":[]}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         RecordingBackend backend = new RecordingBackend();
         try (MinecraftUiResourceResolver resolver = new MinecraftUiResourceResolver(resources, backend, () -> 1)) {
             assertEquals("demo:font/custom.json", resolver.resolveFont("demo:custom").resolvedPath());

@@ -108,7 +108,7 @@ declare module 'nekojs/jsx-runtime' {
         enqueue(action: NekoUiCallback): boolean
         supportsPrimitive(type: NekoUiPrimitive): boolean
         layout(tree: readonly NekoUiHostNode[], viewport?: NekoUiViewport, snapshot?: NekoUiLayoutSnapshot, publish?: boolean): void
-        measureText?(text: string, fontSize: number, maxWidth: number): { readonly width: number; readonly height: number }
+        measureText?(text: string, fontSize: number, maxWidth: number, font?: string): { readonly width: number; readonly height: number }
         begin(): NekoUiHostTransaction
         reportDiagnostic(diagnostic: NekoUiDiagnostic): void
         viewport?(): NekoUiViewportInput
@@ -170,7 +170,7 @@ declare module 'nekojs/jsx-runtime' {
         column: NekoUiSharedProps
         stack: NekoUiSharedProps
         scroll: NekoUiSharedProps & { scrollX?: NekoUiResponsive<boolean>; scrollY?: NekoUiResponsive<boolean>; scrollOffset?: NekoUiResponsive<number> }
-        label: NekoUiSharedProps & { text?: string; color?: string | number; fontSize?: NekoUiResponsive<number>; wrap?: boolean; truncate?: boolean }
+        label: NekoUiSharedProps & { text?: string; color?: string | number; fontSize?: NekoUiResponsive<number>; font?: NekoUiResponsive<string>; wrap?: boolean; truncate?: boolean }
         button: NekoUiSharedProps & { text?: string; disabled?: boolean; tooltip?: string }
         input: NekoUiSharedProps & { value?: string; placeholder?: string; maxLength?: number; disabled?: boolean }
         image: NekoUiSharedProps & { resource?: string; fit?: 'contain' | 'cover' | 'stretch'; opacity?: number; icon?: string; crop?: NekoUiCrop }

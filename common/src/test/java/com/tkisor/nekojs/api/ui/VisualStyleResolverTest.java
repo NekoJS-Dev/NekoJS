@@ -118,6 +118,78 @@ class VisualStyleResolverTest {
         assertTrue(spec.diagnostics().isEmpty());
     }
 
+    @Test
+    void missingFontUsesFontResolutionAndReportsTheNodeLocation() {
+        java.util.ArrayList<String> fonts = new java.util.ArrayList<>();
+        UiResourceResolver resolver = new UiResourceResolver() {
+            @Override
+            public ResourceStatus resolveTexture(String id) {
+                throw new AssertionError("Font selection must not resolve a texture");
+            }
+
+            @Override
+            public ResourceStatus resolveFont(String id) {
+                fonts.add(id);
+                return ResourceStatus.missing(UiResourceId.parse(id).orElseThrow());
+            }
+        };
+        UiDiagnostic.Location label = new UiDiagnostic.Location("font-root", "label", "heading", 17L);
+        VisualSpec spec = VisualStyleResolver.resolve(Map.of("font", "demo:missing"), label, resolver);
+        assertEquals(List.of("demo:missing"), fonts);
+        assertEquals(1, spec.diagnostics().size());
+        UiDiagnostic diagnostic = spec.diagnostics().getFirst();
+        assertEquals("NEKO-6004", diagnostic.code());
+        assertEquals("font-root", diagnostic.rootId());
+        assertEquals("label", diagnostic.nodeType());
+        assertEquals("heading", diagnostic.nodeKey());
+        assertEquals("demo:missing", diagnostic.resourceId());
+        assertEquals(17L, diagnostic.generation());
+        assertTrue(diagnostic.message().contains("font"));
+    }
+
+    @Test
+    void fontDefinitionSuffixBecomesALogicalIdForSelection() {
+        java.util.ArrayList<String> fonts = new java.util.ArrayList<>();
+        UiResourceResolver resolver = new UiResourceResolver() {
+            @Override
+            public ResourceStatus resolveTexture(String id) {
+                throw new AssertionError("Font selection must not resolve a texture");
+            }
+
+            @Override
+            public ResourceStatus resolveFont(String id) {
+                fonts.add(id);
+                return ResourceStatus.resolved(id, "demo:font/custom.json");
+            }
+        };
+        VisualSpec spec = VisualStyleResolver.resolve(Map.of("font", "demo:custom.json"), LOCATION, resolver);
+        assertEquals("demo:custom", spec.font().toString());
+        assertEquals(List.of("demo:custom.json"), fonts);
+        assertTrue(spec.diagnostics().isEmpty());
+        VisualSpec suffixed = VisualStyleResolver.resolve(Map.of("font", "demo:custom.json.json"), LOCATION, resolver);
+        assertEquals("demo:custom.json", suffixed.font().toString());
+        assertEquals(List.of("demo:custom.json", "demo:custom.json.json"), fonts);
+        assertTrue(suffixed.diagnostics().isEmpty());
+    }
+
+    @Test
+    void oldVisualSpecConstructorKeepsDefaultFontSelection() {
+        VisualSpec spec = new VisualSpec(null, null, null, null, null, null, null,
+                null, null, null, null, null, List.of());
+        assertNull(spec.font());
+        assertTrue(spec.diagnostics().isEmpty());
+    }
+
+    @Test
+    void invalidFontIsAbsentAndDiagnosedWithoutArbitraryResourceAccess() {
+        for (String id : List.of("https://host/font", "demo:../font", "demo:.json")) {
+            VisualSpec spec = VisualStyleResolver.resolve(Map.of("font", id), LOCATION);
+            assertNull(spec.font());
+            assertEquals("NEKO-6003", spec.diagnostics().getFirst().code());
+            assertEquals(id, spec.diagnostics().getFirst().resourceId());
+        }
+    }
+
     /** Resolver stub that reports every id as resolved. */
     private static final class ExistingFileResolver implements UiResourceResolver {
         @Override

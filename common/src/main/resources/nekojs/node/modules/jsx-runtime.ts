@@ -117,7 +117,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     enqueue(action: NekoUiCallback): boolean
     supportsPrimitive(type: NekoUiPrimitive): boolean
     layout(tree: readonly NekoUiHostNode[], viewport?: NekoUiViewport, snapshot?: NekoUiLayoutSnapshot, publish?: boolean): void
-    measureText?(text: string, fontSize: number, maxWidth: number): { readonly width: number; readonly height: number }
+    measureText?(text: string, fontSize: number, maxWidth: number, font?: string): { readonly width: number; readonly height: number }
     begin(): NekoUiHostTransaction
     reportDiagnostic(diagnostic: NekoUiDiagnostic): void
     viewport?(): NekoUiViewportInput
@@ -183,7 +183,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     column: NekoUiSharedProps
     stack: NekoUiSharedProps
     scroll: NekoUiSharedProps & { scrollX?: NekoUiResponsive<boolean>; scrollY?: NekoUiResponsive<boolean>; scrollOffset?: NekoUiResponsive<number> }
-    label: NekoUiSharedProps & { text?: string; color?: string | number; fontSize?: NekoUiResponsive<number>; wrap?: boolean; truncate?: boolean }
+    label: NekoUiSharedProps & { text?: string; color?: string | number; fontSize?: NekoUiResponsive<number>; font?: NekoUiResponsive<string>; wrap?: boolean; truncate?: boolean }
     button: NekoUiSharedProps & { text?: string; disabled?: boolean; tooltip?: string }
     input: NekoUiSharedProps & { value?: string; placeholder?: string; maxLength?: number; disabled?: boolean }
     image: NekoUiSharedProps & { resource?: string; fit?: 'contain' | 'cover' | 'stretch'; opacity?: number; icon?: string; crop?: NekoUiCrop }
@@ -242,7 +242,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     column: [],
     stack: [],
     scroll: ['scrollX', 'scrollY', 'scrollOffset'],
-    label: ['text', 'color', 'fontSize', 'wrap', 'truncate'],
+    label: ['text', 'color', 'fontSize', 'font', 'wrap', 'truncate'],
     button: ['text', 'disabled', 'tooltip'],
     input: ['value', 'placeholder', 'maxLength', 'disabled'],
     image: ['resource', 'fit', 'opacity', 'icon', 'crop'],
@@ -406,6 +406,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     for (const value of responsiveValues(props.direction)) if (value != null && (value !== 'row' && value !== 'column')) throw fail('layout', 'Invalid direction value: ' + value)
     for (const value of responsiveValues(props.anchor)) if (value != null && !ANCHORS.has(value)) throw fail('layout', 'Invalid anchor value: ' + value)
     for (const value of responsiveValues(props.visible)) if (value != null && typeof value !== 'boolean') throw fail('layout', 'visible must be a boolean')
+    for (const value of responsiveValues(props.font)) if (value != null && typeof value !== 'string') throw fail('layout', 'font must be a controlled resource id string')
     if (props.coordinateSpace != null && props.coordinateSpace !== 'logical' && props.coordinateSpace !== 'design') {
       throw fail('layout', 'coordinateSpace must be logical or design')
     }
@@ -549,11 +550,12 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     return Math.min(Math.max(value, min), max)
   }
 
-  function textMetrics(adapter, text, fontSize, maxWidth) {
+  function textMetrics(adapter, text, fontSize, maxWidth, font) {
     if (typeof adapter.measureText !== 'function') {
       throw fail('layout', 'UI host Adapter does not implement measureText; the common runtime never guesses text widths')
     }
-    const result = adapter.measureText(text, fontSize, maxWidth)
+    const result = font == null ? adapter.measureText(text, fontSize, maxWidth)
+      : adapter.measureText(text, fontSize, maxWidth, font)
     if (result == null || !Number.isFinite(result.width) || !Number.isFinite(result.height)
       || result.width < 0 || result.height < 0) throw fail('layout', 'Font Adapter returned invalid text metrics')
     return result
@@ -566,7 +568,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     if (node.type === '#text' || TEXT_CHILDREN.has(node.type)) {
       const text = String(props.text == null ? '' : props.text)
       const fontSize = props.fontSize == null ? 9 * scale : props.fontSize * scale
-      const measured = textMetrics(adapter, text, fontSize, Math.max(0, availableWidth))
+      const measured = textMetrics(adapter, text, fontSize, Math.max(0, availableWidth), props.font)
       return { width: measured.width, height: measured.height }
     }
     const children = node.children
@@ -602,17 +604,17 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     return { x: x, y: y }
   }
 
-  function layoutNode(node, x, y, availableWidth, availableHeight, parentClip, viewport, adapter, diagnostics, rootNode, allocated, eventHandlers) {
+  function layoutNode(node, x, y, availableWidth, availableHeight, parentClip, viewport, adapter, diagnostics, rootNode, allocated, eventHandlers, ancestorVisible) {
     const props = resolvedProps(node.props, viewport)
     const scale = props.coordinateSpace === 'design' ? viewport.designScale : 1
-    const intrinsic = intrinsicSize(node, availableWidth, availableHeight, viewport, adapter)
+    const visible = ancestorVisible !== false && props.visible !== false
+    const intrinsic = visible ? intrinsicSize(node, availableWidth, availableHeight, viewport, adapter) : { width: 0, height: 0 }
     let width = allocated || props.width === undefined ? availableWidth : dimension(props.width, availableWidth, intrinsic.width, scale)
     let height = allocated || props.height === undefined ? availableHeight : dimension(props.height, availableHeight, intrinsic.height, scale)
     if (!allocated) {
       width = clampDimension(width, props.minWidth, props.maxWidth, availableWidth, scale, 'width')
       height = clampDimension(height, props.minHeight, props.maxHeight, availableHeight, scale, 'height')
     }
-    const visible = props.visible !== false
     if (!visible) { width = 0; height = 0 }
     const rect = Object.freeze({ x: x, y: y, width: width, height: height })
     const clip = intersect(rect, parentClip)
@@ -632,7 +634,11 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     const innerWidth = Math.max(0, width - padding * 2)
     const innerHeight = Math.max(0, height - padding * 2)
     const layoutClip = clip
-    if (visible && node.children.length > 0 && node.type !== '#text' && node.type !== 'stack' && !TEXT_CHILDREN.has(node.type)) {
+    if (!visible) {
+      for (const child of node.children) {
+        children.push(layoutNode(child, x, y, 0, 0, layoutClip, viewport, adapter, diagnostics, false, true, eventHandlers, false))
+      }
+    } else if (node.children.length > 0 && node.type !== '#text' && node.type !== 'stack' && !TEXT_CHILDREN.has(node.type)) {
       const direction = props.direction || (node.type === 'row' ? 'row' : node.type === 'column' ? 'column' : 'column')
       const gap = Number(props.spacing == null ? (props.gap == null ? 0 : props.gap) : props.spacing) * scale
       const mainSize = direction === 'row' ? innerWidth : innerHeight

@@ -20,6 +20,7 @@ import java.util.Optional;
  * @param fit         image fit mode, when present and valid
  * @param crop        image source crop in texture pixels, when present and valid
  * @param icon        icon resource id, when present and valid
+ * @param font        logical font id, when present and valid; availability does not prove provider loading
  * @param diagnostics diagnostics gathered while resolving, never null
  */
 public record VisualSpec(
@@ -35,9 +36,18 @@ public record VisualSpec(
         ImageFit fit,
         CropRect crop,
         UiResourceId icon,
+        UiResourceId font,
         List<UiDiagnostic> diagnostics) {
     public VisualSpec {
         diagnostics = List.copyOf(diagnostics);
+    }
+
+    public VisualSpec(UiColor color, UiColor background, UiColor borderColor, Integer borderWidth,
+                      Integer radius, Double opacity, Double fontSize, Boolean truncate,
+                      UiResourceId image, ImageFit fit, CropRect crop, UiResourceId icon,
+                      List<UiDiagnostic> diagnostics) {
+        this(color, background, borderColor, borderWidth, radius, opacity, fontSize,
+                truncate, image, fit, crop, icon, null, diagnostics);
     }
 
     /** How an image is fitted into its box. */
