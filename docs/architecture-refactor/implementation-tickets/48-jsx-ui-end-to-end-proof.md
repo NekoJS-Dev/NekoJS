@@ -33,7 +33,9 @@
 - [ ] NeoForge 26.2 capability 只按真实 Adapter/smoke 结果记录；其它节点保持 `not verified` 或按证据标记 `supported` / `partial` / `unavailable`。
 - [ ] 不修改 34–37 的既有 Blocked by；若维护者决定纳入某个发布，另行发布范围决策并更新对应 gate。
 
-## Dependency rationale
+## Current evidence record
+
+The consolidated evidence is [ticket 48 e2e status](../evidence/2026-10-06-ticket48-e2e/README.md). Tickets 41/43/44/45/46/47 provide the component-level fake/native/live inputs, but the combined converted-screen NeoForge session and performance counters remain open; no acceptance checkbox is claimed from split evidence.
 
 - [41: NeoForge 26.2 JSX Screen、输入、焦点与滚动 Adapter](41-jsx-ui-neoforge-screen-adapter.md)：本票消费该先决票的已验收输出；依赖以 Blocked by 为准，不按编号顺序执行。
 - [42: JSX UI CLIENT generation、reload、诊断与 cleanup 接线](42-jsx-ui-generation-reload-cleanup.md)：本票消费该先决票的已验收输出；依赖以 Blocked by 为准，不按编号顺序执行。

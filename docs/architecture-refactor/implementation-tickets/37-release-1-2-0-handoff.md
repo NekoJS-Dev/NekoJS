@@ -33,7 +33,9 @@
 - [ ] 可选离线 validator/migration report 保持显式运行、默认只读且不是 release blocker，也不进入普通 runtime 错误路径或第二套 Script API。
 - [ ] 发布产物在本地完成准备、校验和交接清单核对；远程上传、渠道公告或正式发布动作未在本票执行，需维护者另行明确授权。
 
-## Sources
+## Current handoff record
+
+The current local checklist is [ticket 37 handoff status](../evidence/2026-10-06-ticket37-handoff/README.md). It prepares the agent-owned evidence and explicitly leaves maintainer trials, breaking-symbol sign-off, 1.21.1 smoke, and the combined ticket-48 proof as release blockers; it does not mark release acceptance.
 
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)
 - [PR 37 维护体验回归约束规格](../specs/00-pr37-maintainer-research.md)
