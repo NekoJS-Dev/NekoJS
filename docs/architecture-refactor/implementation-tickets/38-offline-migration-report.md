@@ -4,7 +4,7 @@
 
 **Blocked by:** [03: 持久化与用户编辑数据保护基线：默认不改、可回滚才迁移](03-data-protection.md)、[09: Managed Surface 单一规范源与声明/Probe 派生链](09-managed-surface.md)
 
-**Status:** closed（六项 AC 已完成；CLI 只读、确定性输出和输入保护均有 focused tests；该 Optional 票不阻塞 release）
+**Status:** in-review（六项 AC 已完成；CLI 只读、确定性输出和输入保护均有 focused tests；该 Optional 票不阻塞 release，待票据审阅收口）
 
 **Assignee:** main-session agent
 
