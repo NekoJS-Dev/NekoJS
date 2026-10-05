@@ -608,8 +608,10 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     const intrinsic = intrinsicSize(node, availableWidth, availableHeight, viewport, adapter)
     let width = allocated || props.width === undefined ? availableWidth : dimension(props.width, availableWidth, intrinsic.width, scale)
     let height = allocated || props.height === undefined ? availableHeight : dimension(props.height, availableHeight, intrinsic.height, scale)
-    width = clampDimension(width, props.minWidth, props.maxWidth, availableWidth, scale, 'width')
-    height = clampDimension(height, props.minHeight, props.maxHeight, availableHeight, scale, 'height')
+    if (!allocated) {
+      width = clampDimension(width, props.minWidth, props.maxWidth, availableWidth, scale, 'width')
+      height = clampDimension(height, props.minHeight, props.maxHeight, availableHeight, scale, 'height')
+    }
     const visible = props.visible !== false
     if (!visible) { width = 0; height = 0 }
     const rect = Object.freeze({ x: x, y: y, width: width, height: height })
@@ -646,17 +648,34 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       let fixedMain = Math.max(0, childRecords.length - 1) * gap
       for (const record of childRecords) {
         if (record.props.visible === false) continue
-        if (record.rawMain !== 'fill') record.main = dimension(record.rawMain, mainSize, direction === 'row' ? record.intrinsic.width : record.intrinsic.height, record.props.coordinateSpace === 'design' ? viewport.designScale : 1)
+        const childScale = record.props.coordinateSpace === 'design' ? viewport.designScale : 1
+        if (record.rawMain !== 'fill') {
+          const measured = dimension(record.rawMain, mainSize, direction === 'row' ? record.intrinsic.width : record.intrinsic.height, childScale)
+          record.main = clampDimension(measured,
+            direction === 'row' ? record.props.minWidth : record.props.minHeight,
+            direction === 'row' ? record.props.maxWidth : record.props.maxHeight,
+            mainSize, childScale, direction === 'row' ? 'width' : 'height')
+        }
         fixedMain += record.main
       }
       const fillMain = fillCount === 0 ? 0 : Math.max(0, mainSize - fixedMain) / fillCount
       let usedMain = Math.max(0, childRecords.length - 1) * gap
       for (const record of childRecords) {
-        if (record.props.visible !== false) record.main = record.rawMain === 'fill' ? fillMain : record.main
+        const childScale = record.props.coordinateSpace === 'design' ? viewport.designScale : 1
+        if (record.props.visible !== false && record.rawMain === 'fill') {
+          record.main = clampDimension(fillMain,
+            direction === 'row' ? record.props.minWidth : record.props.minHeight,
+            direction === 'row' ? record.props.maxWidth : record.props.maxHeight,
+            mainSize, childScale, direction === 'row' ? 'width' : 'height')
+        }
         const intrinsicCross = direction === 'row' ? record.intrinsic.height : record.intrinsic.width
-        record.cross = dimension(record.rawCross, crossSize, intrinsicCross, record.props.coordinateSpace === 'design' ? viewport.designScale : 1)
+        record.cross = dimension(record.rawCross, crossSize, intrinsicCross, childScale)
         const align = record.props.align || props.align || 'start'
         if (align === 'stretch' && (record.rawCross === undefined || record.rawCross === 'auto' || record.rawCross === 'fill')) record.cross = crossSize
+        record.cross = clampDimension(record.cross,
+          direction === 'row' ? record.props.minHeight : record.props.minWidth,
+          direction === 'row' ? record.props.maxHeight : record.props.maxWidth,
+          crossSize, childScale, direction === 'row' ? 'height' : 'width')
         usedMain += record.props.visible === false ? 0 : record.main
       }
       const extra = mainSize - usedMain
@@ -684,8 +703,11 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       for (const child of node.children) {
         const childIntrinsic = intrinsicSize(child, innerWidth, innerHeight, viewport, adapter)
         const childProps = resolvedProps(child.props, viewport)
-        const childWidth = dimension(childProps.width, innerWidth, childIntrinsic.width, childProps.coordinateSpace === 'design' ? viewport.designScale : 1)
-        const childHeight = dimension(childProps.height, innerHeight, childIntrinsic.height, childProps.coordinateSpace === 'design' ? viewport.designScale : 1)
+        const childScale = childProps.coordinateSpace === 'design' ? viewport.designScale : 1
+        const childWidth = clampDimension(dimension(childProps.width, innerWidth, childIntrinsic.width, childScale),
+          childProps.minWidth, childProps.maxWidth, innerWidth, childScale, 'width')
+        const childHeight = clampDimension(dimension(childProps.height, innerHeight, childIntrinsic.height, childScale),
+          childProps.minHeight, childProps.maxHeight, innerHeight, childScale, 'height')
         const anchor = childProps.anchor || props.anchor || 'topLeft'
         const position = anchorOffset(anchor, innerWidth, innerHeight, childWidth, childHeight)
         children.push(layoutNode(child, innerX + position.x, innerY + position.y, childWidth, childHeight, layoutClip, viewport, adapter, diagnostics, false, true, eventHandlers))

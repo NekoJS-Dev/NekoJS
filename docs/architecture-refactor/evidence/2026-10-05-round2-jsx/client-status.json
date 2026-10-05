@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "type": "minecraft-mod",
+  "version": "0.2.1",
+  "loader": "neoforge",
+  "pid": 23304,
+  "port": 9876,
+  "uptime": 33.7
+}

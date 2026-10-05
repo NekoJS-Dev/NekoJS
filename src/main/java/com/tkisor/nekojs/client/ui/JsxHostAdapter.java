@@ -211,18 +211,32 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     private InspectorSnapshot projected(InspectorSnapshot candidate, List<JsxHostTree.Node> nodes) {
         List<com.tkisor.nekojs.api.ui.InspectorNode> measured = JsxHostLayout.project(nodes, candidate.nodes(),
                 candidate.viewport().designScale());
-        prepareVisuals(nodes, candidate.viewport().designScale());
+        Map<String, Object> liveViewport = viewport();
+        prepareVisuals(nodes, candidate.viewport().designScale(),
+                Math.min(candidate.viewport().width(), integer(liveViewport.get("width"), candidate.viewport().width())),
+                Math.min(candidate.viewport().height(), integer(liveViewport.get("height"), candidate.viewport().height())));
         return new InspectorSnapshot(candidate.rootId(), candidate.source(), candidate.viewport(),
                 measured, candidate.diagnostics(), candidate.errors(), candidate.screenshot());
     }
 
-    private void prepareVisuals(List<JsxHostTree.Node> nodes, double designScale) {
+    private void prepareVisuals(List<JsxHostTree.Node> nodes, double designScale, int paintWidth, int paintHeight) {
         for (JsxHostTree.Node node : nodes) {
             if (!"#text".equals(node.type)) {
                 node.visual = resolveVisual(node.props, node.type,
                         node.key == null ? text(node.props.get("id")) : node.key,
                         rootId == null ? "unknown" : rootId, lifecycle.generation(), resources);
                 node.texturePlan = null;
+                node.boxPlan = null;
+                if ("panel".equals(node.type) || "screen".equals(node.type) || "scroll".equals(node.type)) {
+                    int clipX = node.hasClip ? Math.max(0, node.clipX) : 0;
+                    int clipY = node.hasClip ? Math.max(0, node.clipY) : 0;
+                    long clipRight = node.hasClip ? Math.min((long) paintWidth, (long) node.clipX + node.clipWidth) : paintWidth;
+                    long clipBottom = node.hasClip ? Math.min((long) paintHeight, (long) node.clipY + node.clipHeight) : paintHeight;
+                    node.boxPlan = UiBoxPaintPlan.prepare(node.x, node.y, node.width, node.height,
+                            node.visual.radius() == null ? 0 : node.visual.radius(),
+                            node.visual.borderWidth() == null ? 0 : node.visual.borderWidth(),
+                            clipX, clipY, (int) Math.max(0, clipRight - clipX), (int) Math.max(0, clipBottom - clipY));
+                }
                 if ("image".equals(node.type)) {
                     com.tkisor.nekojs.api.ui.UiResourceId resource = node.visual.image() == null
                             ? node.visual.icon() : node.visual.image();
@@ -251,7 +265,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                         Math.max(1, node.width), !truncate, truncationFor(node.visual));
                 node.textScale = fontSize <= 0 ? 1 : fontSize / fontAdapter.lineHeight();
             }
-            prepareVisuals(node.children, designScale);
+            prepareVisuals(node.children, designScale, paintWidth, paintHeight);
         }
     }
 
@@ -403,11 +417,9 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         }
         if ("panel".equals(type) || "screen".equals(type) || "scroll".equals(type)) {
             VisualSpec spec = resolveVisual(node);
-            graphics.fill(x, y, x + width, y + height,
-                    applyOpacity(spec, argb(spec.background(), 0xB0101010)));
-            int borderWidth = spec.borderWidth() == null ? 0 : spec.borderWidth();
-            if (borderWidth > 0) graphics.outline(x, y, x + width, y + height,
-                    applyOpacity(spec, argb(spec.borderColor(), 0xFFFFFFFF)));
+            if (node.boxPlan != null) node.boxPlan.paint(graphics::fill,
+                    argb(spec.background(), 0xB0101010), argb(spec.borderColor(), 0xFFFFFFFF),
+                    spec.opacity() == null ? 1 : spec.opacity());
         } else if ("image".equals(type)) {
             VisualSpec spec = resolveVisual(node);
             if (node.texturePlan != null) {
@@ -422,7 +434,8 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
             int fill = disabled ? 0xFF404040 : node.pressed ? 0xFF29415C : hovered ? 0xFF5A7FA8 : 0xFF3A536F;
             graphics.fill(x, y, x + width, y + height, fill);
             graphics.outline(x, y, x + width, y + height, node.focused ? 0xFFFFFFFF : 0xFF9AA7B5);
-            graphics.centeredText(Minecraft.getInstance().font, text(node.props.get("text")), x + width / 2, y + 6,
+            graphics.centeredText(Minecraft.getInstance().font, text(node.props.get("text")), x + width / 2,
+                    y + Math.max(0, (height - Minecraft.getInstance().font.lineHeight) / 2),
                     disabled ? 0xFF888888 : 0xFFFFFFFF);
         } else if ("input".equals(type)) {
             graphics.fill(x, y, x + width, y + height, 0xFF20252B);
@@ -526,22 +539,56 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         return (alpha << 24) | (argb & 0x00FFFFFF);
     }
 
-    boolean dispatchAt(double mouseX, double mouseY, String eventName, int button) {
+    boolean dispatchAt(double mouseX, double mouseY, String eventName, int button, int modifiers) {
         requireUsable("route a mouse event");
         JsxHostTree.Node node = hit(tree.roots(), mouseX, mouseY);
         if (node == null || bool(node.props.get("disabled"))) return false;
         if ("click".equals(eventName)) {
+            if ("input".equals(node.type) && button != 0) return false;
             tree.capture(node, button);
+            if ("input".equals(node.type)) {
+                node.moveCursor(inputPosition(node, mouseX),
+                        (modifiers & org.lwjgl.glfw.GLFW.GLFW_MOD_SHIFT) != 0);
+            }
             if (isFocusable(node)) focus(node);
+            node = tree.captured(button);
+            if (node == null) return true;
         }
         boolean callbackHandled = dispatch(node, eventName, Map.of("x", mouseX, "y", mouseY, "button", button));
         return callbackHandled || isFocusable(node);
+    }
+
+    private int inputPosition(JsxHostTree.Node node, double mouseX) {
+        double relativeX = mouseX - node.x - 4;
+        if (relativeX <= 0) return 0;
+        String prefix = minecraft.font.plainSubstrByWidth(node.inputValue, (int) Math.floor(relativeX));
+        int position = prefix.length();
+        if (position >= node.inputValue.length()) return node.inputValue.length();
+        int next = node.inputValue.offsetByCodePoints(position, 1);
+        int previousWidth = fontAdapter.stringWidth(prefix);
+        int nextWidth = fontAdapter.stringWidth(node.inputValue.substring(0, next));
+        return relativeX < (previousWidth + nextWidth) / 2.0 ? position : next;
+    }
+
+    boolean dispatchDrag(double mouseX, double mouseY, int button) {
+        requireUsable("route a mouse drag");
+        JsxHostTree.Node node = tree.captured(button);
+        if (node == null || button != 0 || !"input".equals(node.type)) return false;
+        if (!node.focused) {
+            tree.cancelCapture();
+            return false;
+        }
+        node.moveCursor(inputPosition(node, mouseX), true);
+        return true;
     }
 
     boolean dispatchRelease(double mouseX, double mouseY, int button) {
         requireUsable("route a mouse release");
         JsxHostTree.Node node = tree.releaseCapture(button);
         if (node == null || node.removed) return false;
+        if (button == 0 && "input".equals(node.type) && node.focused) {
+            node.moveCursor(inputPosition(node, mouseX), true);
+        }
         dispatch(node, "release", Map.of("x", mouseX, "y", mouseY, "button", button));
         return true;
     }
@@ -753,7 +800,11 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         JsxHostTree.Node current = focused(tree.roots());
         if (current == next) return;
         if (current != null) { current.focused = false; dispatch(current, "blur", Map.of()); }
-        if (next != null) { next.focused = true; dispatch(next, "focus", Map.of()); }
+        JsxHostTree.Node retained = tree.retained(next);
+        if (retained != null && isFocusable(retained)) {
+            retained.focused = true;
+            dispatch(retained, "focus", Map.of());
+        }
     }
 
     private void focusNext(boolean reverse) {
@@ -768,6 +819,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     private void collectFocusable(List<JsxHostTree.Node> values, List<JsxHostTree.Node> output) {
         for (JsxHostTree.Node node : values) {
+            if (!visible(node)) continue;
             if (isFocusable(node) && !bool(node.props.get("disabled"))) output.add(node);
             collectFocusable(node.children, output);
         }

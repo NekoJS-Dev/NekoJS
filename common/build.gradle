@@ -183,6 +183,19 @@ tasks.register('regenerateGoldens', Test) {
     systemProperty 'nekojs.golden.regenerate', 'true'
 }
 
+tasks.register('regenerateUiProfileGolden', Test) {
+    group = 'verification'
+    description = 'Regenerates the public UI profile layout golden (review the diff before acceptance).'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching 'com.tkisor.nekojs.core.module.Ticket43ProfileGoldenTest'
+    }
+    systemProperty 'nekojs.ui.profile.golden.regenerate', 'true'
+    outputs.upToDateWhen { false }
+}
+
 // ---- Ticket 08: test-only external addon fixture artifact ----------------------------
 // Mimics a future third-party plugin jar: sources live in a dedicated source set whose
 // compile classpath is **only** common main output (not even this module's test deps or

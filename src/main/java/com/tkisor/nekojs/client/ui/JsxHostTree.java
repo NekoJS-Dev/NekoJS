@@ -16,6 +16,13 @@ final class JsxHostTree {
 
     List<Node> roots() { return roots; }
 
+    Node retained(Node expected) {
+        if (expected == null) return null;
+        Node current = nodes.get(expected.identity);
+        return current == null || current.removed || Boolean.TRUE.equals(current.props.get("disabled"))
+                || Boolean.FALSE.equals(current.props.get("visible")) ? null : current;
+    }
+
     void capture(Node node, int button) {
         cancelCapture();
         if (!nodes.containsKey(node.identity)) return;
@@ -24,9 +31,20 @@ final class JsxHostTree {
         nodes.get(node.identity).pressed = true;
     }
 
-    Node releaseCapture(int button) {
+    Node captured(int button) {
         if (capturedIdentity == null || capturedButton != button) return null;
         Node captured = nodes.get(capturedIdentity);
+        if (captured == null || captured.removed || Boolean.TRUE.equals(captured.props.get("disabled"))
+                || Boolean.FALSE.equals(captured.props.get("visible"))) {
+            cancelCapture();
+            return null;
+        }
+        return captured;
+    }
+
+    Node releaseCapture(int button) {
+        Node captured = captured(button);
+        if (captured == null) return null;
         cancelCapture();
         return captured;
     }
@@ -118,6 +136,7 @@ final class JsxHostTree {
             beforePublish.accept(candidate);
             nodes = staged;
             roots = candidate;
+            captured(capturedButton);
             finished = true;
         }
 
@@ -159,6 +178,7 @@ final class JsxHostTree {
         double scrollRange;
         com.tkisor.nekojs.api.ui.VisualSpec visual;
         UiTextureBlitPlan texturePlan;
+        UiBoxPaintPlan boxPlan;
         com.tkisor.nekojs.api.ui.TextLayout textLayout;
         double textScale = 1;
 
@@ -289,6 +309,7 @@ final class JsxHostTree {
             copy.scrollRange = scrollRange;
             copy.visual = visual;
             copy.texturePlan = texturePlan;
+            copy.boxPlan = boxPlan;
             copy.textLayout = textLayout;
             copy.textScale = textScale;
             return copy;

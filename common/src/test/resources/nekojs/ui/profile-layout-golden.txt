@@ -1,0 +1,200 @@
+--- public profile selection ---
+{"name":"boundary-1","input":{"width":100,"height":100},"profile":1}
+{"name":"boundary-2","input":{"width":320,"height":180},"profile":2}
+{"name":"boundary-3","input":{"width":480,"height":240},"profile":3}
+{"name":"boundary-4","input":{"width":640,"height":360},"profile":4}
+{"name":"boundary-5","input":{"width":854,"height":480},"profile":5}
+{"name":"boundary-6","input":{"width":1280,"height":720},"profile":6}
+{"name":"width-below-boundary","input":{"width":319,"height":180},"profile":1}
+{"name":"height-below-boundary","input":{"width":320,"height":179},"profile":1}
+{"name":"lower-axis","input":{"width":1280,"height":240},"profile":3}
+{"name":"safe-area-tier","input":{"width":500,"height":260,"safeArea":{"left":10,"right":11,"top":10,"bottom":10}},"profile":2}
+{"name":"capability-cap","input":{"width":1280,"height":720,"capabilities":{"maxProfile":3}},"profile":3}
+{"name":"gui-scale-independent","input":{"width":320,"height":180,"guiScale":6},"profile":2}
+{"name":"design-ratio-independent","input":{"width":320,"height":180,"designWidth":160,"designHeight":90},"profile":2}
+--- precedence host state ---
+before={"renders":1,"counts":{"layouts":1,"commits":1,"creates":5},"roots":[1]}
+after={"renders":1,"counts":{"layouts":6,"commits":1,"creates":5},"roots":[1]}
+resizeResults=[true,true,true,true,true]
+offer profile=1 publish=false
+offer profile=2 publish=true
+offer profile=3 publish=true
+offer profile=4 publish=true
+offer profile=5 publish=true
+offer profile=6 publish=true
+--- precedence profile 1 ---
+root=ticket43-precedence source=fake-host profile=1 viewport=100x100 content=100x100 safe=0/0/0/0 gui=- design=1
+diagnostics=-
+errors=-
+screenshot=-
+node type=stack key=- id=precedence-root visible=true focused=false rect=0,0,100,100 clip=0,0,100,100 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=precedence-root,width=fill,height=fill}
+  node type=spacer key=- id=base-exact-lower visible=true focused=false rect=0,0,11,10 clip=0,0,11,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=base-exact-lower,width=11,height=10}
+  node type=spacer key=- id=future-fallback visible=true focused=false rect=0,0,0,10 clip=0,0,0,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=future-fallback,width=null,height=10}
+  node type=spacer key=- id=base-only visible=true focused=false rect=0,0,13,10 clip=0,0,13,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=base-only,width=13,height=10}
+  node type=spacer key=- id=nearest-lower visible=true focused=false rect=0,0,17,10 clip=0,0,17,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=nearest-lower,width=17,height=10}
+--- precedence profile 2 ---
+root=ticket43-precedence source=fake-host profile=2 viewport=320x180 content=320x180 safe=0/0/0/0 gui=- design=1
+diagnostics=-
+errors=-
+screenshot=-
+node type=stack key=- id=precedence-root visible=true focused=false rect=0,0,320,180 clip=0,0,320,180 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=precedence-root,width=fill,height=fill}
+  node type=spacer key=- id=base-exact-lower visible=true focused=false rect=0,0,22,10 clip=0,0,22,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=base-exact-lower,width=22,height=10}
+  node type=spacer key=- id=future-fallback visible=true focused=false rect=0,0,0,10 clip=0,0,0,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=future-fallback,width=null,height=10}
+  node type=spacer key=- id=base-only visible=true focused=false rect=0,0,13,10 clip=0,0,13,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=base-only,width=13,height=10}
+  node type=spacer key=- id=nearest-lower visible=true focused=false rect=0,0,23,10 clip=0,0,23,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=nearest-lower,width=23,height=10}
+--- precedence profile 3 ---
+root=ticket43-precedence source=fake-host profile=3 viewport=480x240 content=480x240 safe=0/0/0/0 gui=- design=1
+diagnostics=-
+errors=-
+screenshot=-
+node type=stack key=- id=precedence-root visible=true focused=false rect=0,0,480,240 clip=0,0,480,240 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=precedence-root,width=fill,height=fill}
+  node type=spacer key=- id=base-exact-lower visible=true focused=false rect=0,0,22,10 clip=0,0,22,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=base-exact-lower,width=22,height=10}
+  node type=spacer key=- id=future-fallback visible=true focused=false rect=0,0,0,10 clip=0,0,0,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=future-fallback,width=null,height=10}
+  node type=spacer key=- id=base-only visible=true focused=false rect=0,0,13,10 clip=0,0,13,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=base-only,width=13,height=10}
+  node type=spacer key=- id=nearest-lower visible=true focused=false rect=0,0,31,10 clip=0,0,31,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=nearest-lower,width=31,height=10}
+--- precedence profile 4 ---
+root=ticket43-precedence source=fake-host profile=4 viewport=640x360 content=640x360 safe=0/0/0/0 gui=- design=1
+diagnostics=-
+errors=-
+screenshot=-
+node type=stack key=- id=precedence-root visible=true focused=false rect=0,0,640,360 clip=0,0,640,360 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=precedence-root,width=fill,height=fill}
+  node type=spacer key=- id=base-exact-lower visible=true focused=false rect=0,0,44,10 clip=0,0,44,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=base-exact-lower,width=44,height=10}
+  node type=spacer key=- id=future-fallback visible=true focused=false rect=0,0,64,10 clip=0,0,64,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=future-fallback,width=64,height=10}
+  node type=spacer key=- id=base-only visible=true focused=false rect=0,0,13,10 clip=0,0,13,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=base-only,width=13,height=10}
+  node type=spacer key=- id=nearest-lower visible=true focused=false rect=0,0,31,10 clip=0,0,31,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=nearest-lower,width=31,height=10}
+--- precedence profile 5 ---
+root=ticket43-precedence source=fake-host profile=5 viewport=854x480 content=854x480 safe=0/0/0/0 gui=- design=1
+diagnostics=-
+errors=-
+screenshot=-
+node type=stack key=- id=precedence-root visible=true focused=false rect=0,0,854,480 clip=0,0,854,480 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=precedence-root,width=fill,height=fill}
+  node type=spacer key=- id=base-exact-lower visible=true focused=false rect=0,0,44,10 clip=0,0,44,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=base-exact-lower,width=44,height=10}
+  node type=spacer key=- id=future-fallback visible=true focused=false rect=0,0,64,10 clip=0,0,64,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=future-fallback,width=64,height=10}
+  node type=spacer key=- id=base-only visible=true focused=false rect=0,0,13,10 clip=0,0,13,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=base-only,width=13,height=10}
+  node type=spacer key=- id=nearest-lower visible=true focused=false rect=0,0,53,10 clip=0,0,53,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=nearest-lower,width=53,height=10}
+--- precedence profile 6 ---
+root=ticket43-precedence source=fake-host profile=6 viewport=1280x720 content=1280x720 safe=0/0/0/0 gui=- design=1
+diagnostics=-
+errors=-
+screenshot=-
+node type=stack key=- id=precedence-root visible=true focused=false rect=0,0,1280,720 clip=0,0,1280,720 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=precedence-root,width=fill,height=fill}
+  node type=spacer key=- id=base-exact-lower visible=true focused=false rect=0,0,44,10 clip=0,0,44,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=base-exact-lower,width=44,height=10}
+  node type=spacer key=- id=future-fallback visible=true focused=false rect=0,0,64,10 clip=0,0,64,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=future-fallback,width=64,height=10}
+  node type=spacer key=- id=base-only visible=true focused=false rect=0,0,13,10 clip=0,0,13,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=base-only,width=13,height=10}
+  node type=spacer key=- id=nearest-lower visible=true focused=false rect=0,0,53,10 clip=0,0,53,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=nearest-lower,width=53,height=10}
+--- percentages and limits profile 1 ---
+root=ticket43-geometry source=fake-host profile=1 viewport=100x100 content=100x100 safe=0/0/0/0 gui=- design=1
+diagnostics=percent-overflow:overflow-right
+errors=-
+screenshot=-
+node type=stack key=- id=geometry-root visible=true focused=false rect=0,0,100,100 clip=0,0,100,100 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=geometry-root,width=fill,height=fill}
+  node type=spacer key=- id=percent-clamp visible=true focused=false rect=0,0,80,50 clip=0,0,80,50 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=percent-clamp,width=50%,height=50%,minWidth=80,maxWidth=200,minHeight=40,maxHeight=120}
+  node type=spacer key=- id=percent-limits visible=true focused=false rect=0,0,25,25 clip=0,0,25,25 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=percent-limits,width=10,height=10,minWidth=25%,maxWidth=50%,minHeight=25%,maxHeight=50%}
+  node type=spacer key=- id=percent-overflow visible=true focused=false rect=0,0,120,10 clip=0,0,100,10 overflow=0,0,20,0 scroll=- bindings=- resources=- style={id=percent-overflow,width=120%,height=10}
+  node type=spacer key=- id=logical-length visible=true focused=false rect=0,0,20,10 clip=0,0,20,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=logical-length,width=20,height=10}
+--- percentages and limits profile 2 ---
+root=ticket43-geometry source=fake-host profile=2 viewport=320x180 content=320x180 safe=0/0/0/0 gui=- design=1
+diagnostics=percent-overflow:overflow-right
+errors=-
+screenshot=-
+node type=stack key=- id=geometry-root visible=true focused=false rect=0,0,320,180 clip=0,0,320,180 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=geometry-root,width=fill,height=fill}
+  node type=spacer key=- id=percent-clamp visible=true focused=false rect=0,0,160,90 clip=0,0,160,90 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=percent-clamp,width=50%,height=50%,minWidth=80,maxWidth=200,minHeight=40,maxHeight=120}
+  node type=spacer key=- id=percent-limits visible=true focused=false rect=0,0,80,45 clip=0,0,80,45 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=percent-limits,width=10,height=10,minWidth=25%,maxWidth=50%,minHeight=25%,maxHeight=50%}
+  node type=spacer key=- id=percent-overflow visible=true focused=false rect=0,0,384,10 clip=0,0,320,10 overflow=0,0,64,0 scroll=- bindings=- resources=- style={id=percent-overflow,width=120%,height=10}
+  node type=spacer key=- id=logical-length visible=true focused=false rect=0,0,20,10 clip=0,0,20,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=logical-length,width=20,height=10}
+--- percentages and limits profile 3 ---
+root=ticket43-geometry source=fake-host profile=3 viewport=480x240 content=480x240 safe=0/0/0/0 gui=- design=1
+diagnostics=percent-overflow:overflow-right
+errors=-
+screenshot=-
+node type=stack key=- id=geometry-root visible=true focused=false rect=0,0,480,240 clip=0,0,480,240 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=geometry-root,width=fill,height=fill}
+  node type=spacer key=- id=percent-clamp visible=true focused=false rect=0,0,200,120 clip=0,0,200,120 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=percent-clamp,width=50%,height=50%,minWidth=80,maxWidth=200,minHeight=40,maxHeight=120}
+  node type=spacer key=- id=percent-limits visible=true focused=false rect=0,0,120,60 clip=0,0,120,60 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=percent-limits,width=10,height=10,minWidth=25%,maxWidth=50%,minHeight=25%,maxHeight=50%}
+  node type=spacer key=- id=percent-overflow visible=true focused=false rect=0,0,576,10 clip=0,0,480,10 overflow=0,0,96,0 scroll=- bindings=- resources=- style={id=percent-overflow,width=120%,height=10}
+  node type=spacer key=- id=logical-length visible=true focused=false rect=0,0,20,10 clip=0,0,20,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=logical-length,width=20,height=10}
+--- percentages and limits profile 4 ---
+root=ticket43-geometry source=fake-host profile=4 viewport=640x360 content=640x360 safe=0/0/0/0 gui=- design=1
+diagnostics=percent-overflow:overflow-right
+errors=-
+screenshot=-
+node type=stack key=- id=geometry-root visible=true focused=false rect=0,0,640,360 clip=0,0,640,360 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=geometry-root,width=fill,height=fill}
+  node type=spacer key=- id=percent-clamp visible=true focused=false rect=0,0,160,120 clip=0,0,160,120 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=percent-clamp,width=25%,height=50%,minWidth=100,maxWidth=300,minHeight=40,maxHeight=120}
+  node type=spacer key=- id=percent-limits visible=true focused=false rect=0,0,160,90 clip=0,0,160,90 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=percent-limits,width=10,height=10,minWidth=25%,maxWidth=50%,minHeight=25%,maxHeight=50%}
+  node type=spacer key=- id=percent-overflow visible=true focused=false rect=0,0,768,10 clip=0,0,640,10 overflow=0,0,128,0 scroll=- bindings=- resources=- style={id=percent-overflow,width=120%,height=10}
+  node type=spacer key=- id=logical-length visible=true focused=false rect=0,0,20,10 clip=0,0,20,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=logical-length,width=20,height=10}
+--- percentages and limits profile 5 ---
+root=ticket43-geometry source=fake-host profile=5 viewport=854x480 content=854x480 safe=0/0/0/0 gui=- design=1
+diagnostics=percent-overflow:overflow-right
+errors=-
+screenshot=-
+node type=stack key=- id=geometry-root visible=true focused=false rect=0,0,854,480 clip=0,0,854,480 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=geometry-root,width=fill,height=fill}
+  node type=spacer key=- id=percent-clamp visible=true focused=false rect=0,0,213.5,120 clip=0,0,213.5,120 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=percent-clamp,width=25%,height=50%,minWidth=100,maxWidth=300,minHeight=40,maxHeight=120}
+  node type=spacer key=- id=percent-limits visible=true focused=false rect=0,0,213.5,120 clip=0,0,213.5,120 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=percent-limits,width=10,height=10,minWidth=25%,maxWidth=50%,minHeight=25%,maxHeight=50%}
+  node type=spacer key=- id=percent-overflow visible=true focused=false rect=0,0,1024.8,10 clip=0,0,854,10 overflow=0,0,170.79999999999995,0 scroll=- bindings=- resources=- style={id=percent-overflow,width=120%,height=10}
+  node type=spacer key=- id=logical-length visible=true focused=false rect=0,0,20,10 clip=0,0,20,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=logical-length,width=20,height=10}
+--- percentages and limits profile 6 ---
+root=ticket43-geometry source=fake-host profile=6 viewport=1280x720 content=1280x720 safe=0/0/0/0 gui=- design=1
+diagnostics=percent-overflow:overflow-right
+errors=-
+screenshot=-
+node type=stack key=- id=geometry-root visible=true focused=false rect=0,0,1280,720 clip=0,0,1280,720 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=geometry-root,width=fill,height=fill}
+  node type=spacer key=- id=percent-clamp visible=true focused=false rect=0,0,300,120 clip=0,0,300,120 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=percent-clamp,width=25%,height=50%,minWidth=100,maxWidth=300,minHeight=40,maxHeight=120}
+  node type=spacer key=- id=percent-limits visible=true focused=false rect=0,0,320,180 clip=0,0,320,180 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=percent-limits,width=10,height=10,minWidth=25%,maxWidth=50%,minHeight=25%,maxHeight=50%}
+  node type=spacer key=- id=percent-overflow visible=true focused=false rect=0,0,1536,10 clip=0,0,1280,10 overflow=0,0,256,0 scroll=- bindings=- resources=- style={id=percent-overflow,width=120%,height=10}
+  node type=spacer key=- id=logical-length visible=true focused=false rect=0,0,20,10 clip=0,0,20,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=logical-length,width=20,height=10}
+--- invalid inputs ---
+{"name":"profile-zero","boundary":"createRoot","message":"Invalid viewport profile: 0","counts":{"layouts":0,"commits":0,"creates":0},"diagnostics":[{"phase":"layout","rootId":"invalid-profile-zero","message":"Invalid viewport profile: 0"}]}
+{"name":"profile-seven","boundary":"createRoot","message":"Invalid viewport profile: 7","counts":{"layouts":0,"commits":0,"creates":0},"diagnostics":[{"phase":"layout","rootId":"invalid-profile-seven","message":"Invalid viewport profile: 7"}]}
+{"name":"profile-fraction","boundary":"createRoot","message":"Invalid viewport profile: 2.5","counts":{"layouts":0,"commits":0,"creates":0},"diagnostics":[{"phase":"layout","rootId":"invalid-profile-fraction","message":"Invalid viewport profile: 2.5"}]}
+{"name":"profile-text","boundary":"createRoot","message":"Invalid viewport profile: wide","counts":{"layouts":0,"commits":0,"creates":0},"diagnostics":[{"phase":"layout","rootId":"invalid-profile-text","message":"Invalid viewport profile: wide"}]}
+{"name":"profile-map-array","boundary":"createRoot","message":"profiles must be a plain object","counts":{"layouts":0,"commits":0,"creates":0},"diagnostics":[{"phase":"layout","rootId":"invalid-profile-map-array","message":"profiles must be a plain object"}]}
+{"name":"negative-percent","boundary":"createRoot","message":"width must be a finite non-negative number","counts":{"layouts":0,"commits":0,"creates":0},"diagnostics":[{"phase":"layout","rootId":"invalid-negative-percent","message":"width must be a finite non-negative number"}]}
+{"name":"malformed-percent","boundary":"createRoot","message":"width must be a finite non-negative number","counts":{"layouts":0,"commits":0,"creates":0},"diagnostics":[{"phase":"layout","rootId":"invalid-malformed-percent","message":"width must be a finite non-negative number"}]}
+{"name":"negative-width","boundary":"createRoot","message":"width must be a finite non-negative number","counts":{"layouts":0,"commits":0,"creates":0},"diagnostics":[{"phase":"layout","rootId":"invalid-negative-width","message":"width must be a finite non-negative number"}]}
+{"name":"nan-width","boundary":"createRoot","message":"width must be a finite non-negative number","counts":{"layouts":0,"commits":0,"creates":0},"diagnostics":[{"phase":"layout","rootId":"invalid-nan-width","message":"width must be a finite non-negative number"}]}
+{"name":"infinite-width","boundary":"createRoot","message":"width must be a finite non-negative number","counts":{"layouts":0,"commits":0,"creates":0},"diagnostics":[{"phase":"layout","rootId":"invalid-infinite-width","message":"width must be a finite non-negative number"}]}
+{"name":"negative-minimum","boundary":"createRoot","message":"minWidth must be a finite non-negative number","counts":{"layouts":0,"commits":0,"creates":0},"diagnostics":[{"phase":"layout","rootId":"invalid-negative-minimum","message":"minWidth must be a finite non-negative number"}]}
+{"name":"inverted-limits","boundary":"createRoot","message":"UI layout failed: width min must not exceed max","counts":{"layouts":0,"commits":0,"creates":0},"diagnostics":[{"phase":"layout","rootId":"invalid-inverted-limits","message":"UI layout failed: width min must not exceed max"}]}
+{"name":"inverted-height-limits","boundary":"createRoot","message":"UI layout failed: height min must not exceed max","counts":{"layouts":0,"commits":0,"creates":0},"diagnostics":[{"phase":"layout","rootId":"invalid-inverted-height-limits","message":"UI layout failed: height min must not exceed max"}]}
+{"name":"zero-width","boundary":"profileFor","message":"viewport.width must be a finite positive number"}
+{"name":"negative-height","boundary":"profileFor","message":"viewport.height must be a finite positive number"}
+{"name":"infinite-ratio","boundary":"profileFor","message":"viewport.width must be a finite positive number"}
+{"name":"nan-ratio","boundary":"profileFor","message":"viewport.height must be a finite positive number"}
+{"name":"zero-gui-scale","boundary":"profileFor","message":"viewport.guiScale must be a finite positive number"}
+{"name":"negative-safe-area","boundary":"profileFor","message":"safeArea.left must be a finite non-negative number"}
+{"name":"empty-content","boundary":"profileFor","message":"Viewport safeArea must leave a positive content area"}
+{"name":"profile-cap-zero","boundary":"profileFor","message":"Viewport capabilities.maxProfile must be an integer from 1 to 6"}
+{"name":"profile-cap-seven","boundary":"profileFor","message":"Viewport capabilities.maxProfile must be an integer from 1 to 6"}
+{"name":"profile-cap-fraction","boundary":"profileFor","message":"Viewport capabilities.maxProfile must be an integer from 1 to 6"}
+{"name":"missing-design-height","boundary":"profileFor","message":"Viewport designWidth and designHeight must be provided together"}
+{"name":"zero-design-width","boundary":"profileFor","message":"viewport.designWidth must be a finite positive number"}
+{"name":"infinite-design-height","boundary":"profileFor","message":"viewport.designHeight must be a finite positive number"}
+--- rejected resize ---
+rejected=false recovered=true renders=1 counts={"layouts":2,"commits":1,"creates":1}
+beforeRoots=[1] afterRoots=[1]
+invalidViewport=viewport.width must be a finite positive number
+{"phase":"layout","rootId":"ticket43-rejected-resize","message":"UI resize layout failed: width min must not exceed max"}
+state=before
+root=ticket43-rejected-resize source=fake-host profile=1 viewport=100x100 content=100x100 safe=0/0/0/0 gui=- design=1
+diagnostics=-
+errors=-
+screenshot=-
+node type=spacer key=- id=resize-target visible=true focused=false rect=0,0,40,10 clip=0,0,40,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=resize-target,width=40,height=10,minWidth=10,maxWidth=100}
+state=afterRejection
+root=ticket43-rejected-resize source=fake-host profile=1 viewport=100x100 content=100x100 safe=0/0/0/0 gui=- design=1
+diagnostics=-
+errors=-
+screenshot=-
+node type=spacer key=- id=resize-target visible=true focused=false rect=0,0,40,10 clip=0,0,40,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=resize-target,width=40,height=10,minWidth=10,maxWidth=100}
+state=afterInvalid
+root=ticket43-rejected-resize source=fake-host profile=1 viewport=100x100 content=100x100 safe=0/0/0/0 gui=- design=1
+diagnostics=-
+errors=-
+screenshot=-
+node type=spacer key=- id=resize-target visible=true focused=false rect=0,0,40,10 clip=0,0,40,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=resize-target,width=40,height=10,minWidth=10,maxWidth=100}
+state=recoveredSnapshot
+root=ticket43-rejected-resize source=fake-host profile=2 viewport=320x180 content=320x180 safe=0/0/0/0 gui=- design=1
+diagnostics=-
+errors=-
+screenshot=-
+node type=spacer key=- id=resize-target visible=true focused=false rect=0,0,40,10 clip=0,0,40,10 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=resize-target,width=40,height=10,minWidth=10,maxWidth=100}

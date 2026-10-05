@@ -37,7 +37,12 @@ public final class JsxScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        return !disposed && adapter.dispatchAt(event.x(), event.y(), "click", event.button());
+        return !disposed && adapter.dispatchAt(event.x(), event.y(), "click", event.button(), event.modifiers());
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+        return !disposed && adapter.dispatchDrag(event.x(), event.y(), event.button());
     }
 
     @Override

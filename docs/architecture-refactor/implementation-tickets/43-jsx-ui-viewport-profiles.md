@@ -5,7 +5,7 @@
 **Blocked by:**
 - [40: JSX UI common core、公开契约与 Fake Host Proof](40-jsx-ui-common-core.md)
 
-**Status:** in-review
+**Status:** closed（2026-10-05：六项验收均有证据；AC2 基线与行为修复经维护者选项确认）
 
 **Assignee:** 维护者/执行者：sol-ticket43（pixelstarrysky/gpt-6-sol xhigh）
 
@@ -22,11 +22,11 @@
 ## Acceptance criteria
 
 - [x] Profile 1–6 的判定规则、边界、优先级、tie-break 和可观察输出进入公开 contract；不把 Minecraft GUI scale 数字等同 Profile，只允许原生 scale 作为输入之一。【evidence: `UI.profileFor` uses post-safe-area content width/height tiers (320/480/640/854/1280 and 180/240/360/480/720), selects the lower axis tier as the tie-break, then applies `maxProfile`; fixture asserts six boundaries, GUI-scale independence, capability cap, zero rejection】
-- [ ] 基础值与 profile 覆盖值的解析顺序、缺省回退、非法 profile、非法比例和 min/max 裁剪规则固定，并由 fake Adapter golden 覆盖。【evidence: deterministic fake fixture covers profile fallback, invalid values, percentage/min/max and diagnostics; no golden file was regenerated or maintainer-reviewed in this ticket】【evidence: profile override resolution checks exact profile then lower profile then base; invalid profile keys and finite/positive viewport inputs fail; fixture observes base/profile percentage, min/max, overflow and invalid-profile/responsive-minmax diagnostics】
+- [x] 基础值与 profile 覆盖值的解析顺序、缺省回退、非法 profile、非法比例和 min/max 裁剪规则固定，并由 fake Adapter golden 覆盖。【2026-10-05：[golden review](../evidence/2026-10-05-round2-jsx/golden-review.md) 与生成的 200 行基线覆盖 exact → nearest lower → base/future fallback、六档百分比宽高与 min/max、26 种非法输入、诊断、resize 保留和恢复；原 84 行 Inspector golden 不变。公开回归先发现百分比 min/max 错用已分配孩子空间（宽 10/min 25% 得 5），修复为父容器内空间，并在 row/column 预算/对齐及 stack anchor 前执行约束。普通只读 golden 比较、common isolation、处理器、五节点测试和 guardLint 通过；维护者通过选项明确选择“接受这份基线和行为修复”，真实结论保存于同包。】
 - [x] row/column、stack、scroll、spacing、padding、align、anchor、可见性和文本规格可按 profile 覆盖；窄屏/宽屏重排不需要每个属性重复填写六遍。【evidence: deterministic fake layout snapshot asserts responsive row direction/gap, stack anchor, scroll offset/clipping, padding, profile visibility and text-size override】
 - [x] 设计坐标、逻辑像素和连续比例可共存；文本字号和可读性相关属性不被强制整体等比无限缩放。【evidence: public viewport contract exposes logical/design coordinate spaces and design scale; resolver accepts logical percentages and design dimensions; fake snapshot keeps font-size as an explicit profile value】
 - [x] resize/profile 切换只使布局失效并重新 measure/arrange，不重新执行 GraalJS render 或重建全部 host node；稳定输出包含最终矩形、裁剪和溢出诊断。【evidence: fake Adapter records layout snapshot, final rect/clip/overflow; two resize calls increment layout only, with unchanged render and commit counts】
-- [x] 六个 profile 均有稳定 fake 输出；真实 NeoForge 26.2 resize smoke 在 41 完成后补入同一公开 contract，不用私有 widget 布局作为断言。【2026-10-05：[profile integration evidence](../evidence/2026-10-05-ticket43-profiles/README.md)保存真实 Graal/Minecraft 的八条公开测量（初始、六档、恢复），六档 `renderCount=1`、Inspector/common rect 一致；维护者点击右对齐 HIT 并在 F11 resize 后再次命中，两条 native target-hit 日志与截图配对。common snapshot 成为真实 retained host 几何/clip/style 来源，候选失败不再发布 Inspector；profile-only resize 不 rerender，状态/捕获身份保持。AC2 的响应式完整 golden/review 仍未勾选。】
+- [x] 六个 profile 均有稳定 fake 输出；真实 NeoForge 26.2 resize smoke 在 41 完成后补入同一公开 contract，不用私有 widget 布局作为断言。【2026-10-05：[profile integration evidence](../evidence/2026-10-05-ticket43-profiles/README.md)保存真实 Graal/Minecraft 的八条公开测量（初始、六档、恢复），六档 `renderCount=1`、Inspector/common rect 一致；维护者点击右对齐 HIT 并在 F11 resize 后再次命中，两条 native target-hit 日志与截图配对。common snapshot 成为真实 retained host 几何/clip/style 来源，候选失败不再发布 Inspector；profile-only resize 不 rerender，状态/捕获身份保持。AC2 的补充 golden/review 已于同日通过维护者选项确认，见 closure record。】
 
 
 ## Delivery record (2026-09-23)
@@ -38,6 +38,12 @@
 - Passed: `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoTypeScriptJsxRuntimeTest --tests com.tkisor.nekojs.core.compiler.NodeModuleTypeDocsTest`; `./gradlew.bat :common:check guardLint`; `git diff --check`.
 - Passed after `npm ci`: `npm run test:probe-types` (TypeScript 5.8.3, exit 0). Not run: golden regeneration/review, real NeoForge 26.2 resize smoke, and maintainer acceptance. No golden files were changed.
 - Shared runtime hardening included in this ticket: cross-Fragment sibling-key rejection, retry-safe close on Adapter commit failure, and owner-thread-first signal updater execution. These are common-runtime evidence only and do not sign or close ticket 40.
+
+## Closure record (2026-10-05)
+
+- 维护者通过选项确认 `golden-review.md` 提供的旧新行为表、新增 200 行公开基线及百分比约束修复；没有由 agent 代写审阅结论。
+- `:common:regenerateUiProfileGolden` 仅生成专用 profile baseline；普通 `Ticket43ProfileGoldenTest`（9 项，含布局位置）与既有 `Ticket45InspectorOutputTest` 比较输出，不写 golden。完整 `:common:check :common-api-processor:test`、五节点测试、26.2 build、`guardLint` 及 Probe TypeScript 检查通过。
+- AC6 的真实六档测量、HIT/F11 证据沿用前一包；本次新增基线补足 AC2。闭票仅覆盖本票布局/profile 契约，不代替票 41/44/48 或全项目发布验收。
 
 ## Dependency rationale
 

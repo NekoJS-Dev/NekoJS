@@ -1,0 +1,8 @@
+{
+  "testSeams": "Confirmed existing public UI.profileFor/root.resize, Fake Adapter commit/layout output, and Screen mouse/paint output",
+  "nativeInputVisual": "鼠标选择、框外拖选和圆角都正常",
+  "goldenReview": "接受这份基线和行为修复",
+  "resourceReload": "重载后看到绿色十字，按钮与 Esc 正常",
+  "captureInitial": "新界面按钮只显示一半",
+  "captureAfterButtonFix": "按钮完整，刷新保持拖选，禁用和替换取消旧捕获"
+}
