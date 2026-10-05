@@ -60,13 +60,15 @@ function tables(content) {
     if (!/^\s*\|/.test(lines[index]) || !/^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/.test(lines[index + 1])) continue;
     const headers = splitTableRow(lines[index]);
     const rows = [];
+    const malformedRows = [];
     index += 2;
     while (index < lines.length && /^\s*\|/.test(lines[index])) {
       const cells = splitTableRow(lines[index]);
       if (cells.length === headers.length) rows.push(Object.fromEntries(headers.map((header, cell) => [header, cells[cell]])));
+      else malformedRows.push(cells);
       index += 1;
     }
-    result.push({ headers, rows });
+    result.push({ headers, rows, malformedRows });
     index -= 1;
   }
   return result;
@@ -75,16 +77,20 @@ function tables(content) {
 function migrationAssociations(content) {
   const candidateTables = tables(content).filter(table => table.headers.some(header =>
     /old|legacy|旧|删除|原形态|new|replacement|替代|新写法|新形态/i.test(header)));
-  const records = candidateTables.flatMap(table => table.rows.map(row => {
-    const entries = Object.entries(row);
-    const oldEntry = entries.find(([header]) => /old|legacy|旧|删除|原形态/i.test(header));
-    const newEntry = entries.find(([header]) => /new|replacement|替代|新写法|新形态/i.test(header));
-    return {
-      old: oldEntry?.[1] ?? null,
-      replacement: newEntry?.[1] ?? null,
-      missing: [oldEntry ? null : 'old symbol', newEntry ? null : 'replacement path'].filter(Boolean),
-    };
-  }));
+  const records = candidateTables.flatMap(table => [
+    ...table.rows.map(row => {
+      const entries = Object.entries(row);
+      const oldEntry = entries.find(([header]) => /old|legacy|旧|删除|原形态/i.test(header));
+      const newEntry = entries.find(([header]) => /new|replacement|替代|新写法|新形态/i.test(header));
+      return {
+        old: oldEntry?.[1] || null,
+        replacement: newEntry?.[1] || null,
+        missing: [oldEntry && oldEntry[1] ? null : 'old symbol', newEntry && newEntry[1] ? null : 'replacement path'].filter(Boolean),
+      };
+    }),
+    ...table.malformedRows.map(() => ({ old: null, replacement: null,
+      missing: ['old symbol', 'replacement path', 'malformed migration row'] }))
+  ]);
   return {
     records,
     missing: records.length === 0 ? ['migration symbol table'] : [...new Set(records.flatMap(record => record.missing))],

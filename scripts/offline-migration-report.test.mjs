@@ -38,9 +38,23 @@ test('offline migration report rejects malformed or empty inputs', () => {
   const empty = spawnSync(process.execPath, [script, '--migration', migration, '--protection', protection], { encoding: 'utf8' });
   assert.equal(empty.status, 2);
   assert.match(empty.stderr, /migration input is empty/);
-  const malformed = spawnSync(process.execPath, [script, '--migration', migration, '--protection', protection, '--unknown'], { encoding: 'utf8' });
-  assert.equal(malformed.status, 2);
-  assert.match(malformed.stderr, /Unknown argument/);
+  const unknownArg = spawnSync(process.execPath, [script, '--migration', migration, '--protection', protection, '--unknown'], { encoding: 'utf8' });
+  assert.equal(unknownArg.status, 2);
+  assert.match(unknownArg.stderr, /Unknown argument/);
+
+  const malformedDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'nekojs-migration-report-malformed-'));
+  const malformedMigration = path.join(malformedDirectory, 'migration.md');
+  const malformedProtection = path.join(malformedDirectory, 'protection.md');
+  fs.writeFileSync(malformedMigration, '# Migration\n\n| old symbol | replacement path |\n| --- | --- |\n| | NewOwner#apply |\n| malformed |\n');
+  fs.writeFileSync(malformedProtection, '# Protection\nconfig world pdata pack trust-store workspace logs cache\n');
+  const malformed = spawnSync(process.execPath, [script, '--migration', malformedMigration, '--protection', malformedProtection, '--json'], { encoding: 'utf8' });
+  assert.equal(malformed.status, 0, malformed.stderr);
+  const malformedReport = JSON.parse(malformed.stdout);
+  assert.deepEqual(malformedReport.migration.missing, ['old symbol', 'replacement path', 'malformed migration row']);
+  assert.deepEqual(malformedReport.migration.associations, [
+    { old: null, replacement: 'NewOwner#apply', missing: ['old symbol'] },
+    { old: null, replacement: null, missing: ['old symbol', 'replacement path', 'malformed migration row'] },
+  ]);
 });
 
 test('offline migration report rejects missing inputs', () => {

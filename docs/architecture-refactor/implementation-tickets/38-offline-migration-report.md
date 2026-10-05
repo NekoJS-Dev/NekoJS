@@ -34,6 +34,7 @@
 - Verification: `node --test scripts/offline-migration-report.test.mjs` passed (3 tests).
 - The report remains an evidence summarizer, not a migration executor or rollback validator; it does not claim those operations succeeded.
 
+## Sources
 
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)
 - [运行时生命周期与数据保护规格](../specs/05-runtime-lifecycle-and-data.md)
