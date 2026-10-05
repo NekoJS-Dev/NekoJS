@@ -26,14 +26,14 @@
 
 ## Acceptance criteria
 
-- [ ] NeoForge 26.2 真实客户端能打开、绘制、操作、resize 和关闭 JSX Screen；Screen 选项覆盖标题、关闭行为、暂停策略和外部替换 cleanup。
-- [ ] 原生鼠标、滚轮、键盘、文本输入、焦点和捕获被转换为稳定脚本事件；事件对象不暴露原生 Screen、widget、`GuiGraphics`、Java 对象身份或版本特有字段。
-- [ ] input 的值、光标、选择、焦点、最大长度和文本事件可用；scroll 正确管理内容范围、裁剪、偏移和滚轮消费。
+- [x] NeoForge 26.2 真实客户端能打开、绘制、操作、resize 和关闭 JSX Screen；Screen 选项覆盖标题、关闭行为、暂停策略和外部替换 cleanup.
+- [x] 原生鼠标、滚轮、键盘、文本输入、焦点和捕获被转换为稳定脚本事件；事件对象不暴露原生 Screen、widget、`GuiGraphics`、Java 对象身份或版本特有字段。
+- [x] input 的值、光标、选择、焦点、最大长度和文本事件可用；scroll 正确管理内容范围、裁剪、偏移和滚轮消费。
 - [ ] 焦点顺序、Tab/Shift+Tab、Enter/Space、Escape、hover、pressed、disabled、tooltip 和基础 narration 行为与 fake Adapter contract 一致。
-- [ ] 首次构建、resize、状态更新和事件回调都不在普通 paint 帧重新执行 JSX render；每帧只绘制已提交 host tree。
-- [ ] host Adapter 持有 Minecraft/loader 类型，shared/common author contract 不引入平台类型；脚本侧状态、VNode、host tree 和事件闭包只在 client owner thread 访问。
-- [ ] 节点删除后旧事件闭包不再响应；Screen 关闭、外部替换和重复 cleanup 进入同一释放路径。
-- [ ] NeoForge 26.2 真实客户端 smoke 使用仓库规定 Minecraft MCP 或等价注册 smoke 通道完成；其它节点只记录 `not verified`，不因 common 编译通过而标记支持。
+- [x] 首次构建、resize、状态更新和事件回调都不在普通 paint 帧重新执行 JSX render；每帧只绘制已提交 host tree。
+- [x] host Adapter 持有 Minecraft/loader 类型，shared/common author contract 不引入平台类型；脚本侧状态、VNode、host tree 和事件闭包只在 client owner thread 访问。
+- [x] 节点删除后旧事件闭包不再响应；Screen 关闭、外部替换和重复 cleanup 进入同一释放路径。
+- [x] NeoForge 26.2 真实客户端 smoke 使用仓库规定 Minecraft MCP 或等价注册 smoke 通道完成；其它节点只记录 `not verified`，不因 common 编译通过而标记支持。
 
 ## Implementation evidence and remaining gaps
 
@@ -56,6 +56,7 @@
 **Mouse/visual follow-up (2026-10-05, round 2):** [evidence pack](../evidence/2026-10-05-round2-jsx/README.md) 保存维护者实际选项、两次构建哈希、输入日志和截图。click/Shift-click/框外 drag/final release 以真实字宽定位并保持 codepoint 边界；回调重入后以 retained identity 重取焦点，隐藏 subtree 从 Tab 顺序跳过。16 项原生 Screen 输入/绘制回归在 26.2 和 26.1.2 均无 skip/failure；维护者在 26.2 确认键鼠替换、两秒 reconciliation 后拖选、disable 与 same-id/new-key replacement 取消捕获。首次高级 fixture 的按钮文字被截断，已以 native y=26/expected20 回归复现；绘制改为按 committed height 居中，第二次截图及选项确认完整。26.1.2 仅自动测试证据，仍无真实客户端支持结论。
 
 - Round 4 added public native regressions for hidden-parent publication/capture revocation, escaped transaction owner-thread and closed-generation rejection, tooltip clipping/disabled/hidden behavior, native collector/title narration boundary, and canonical font painting. The full affected matrix passes. The native client confirms tooltip/font paths; automatic narrator audio was reported incorrect/not accepted, so narration remains unverified.
+- **Remaining AC4 gap:** native narration text/collector paths have focused coverage, but automatic narrator audio/output was reported incorrect or not accepted in the live session; AC4 remains intentionally unchecked until a valid native narration result is captured.
 
 ## Dependency rationale
 
