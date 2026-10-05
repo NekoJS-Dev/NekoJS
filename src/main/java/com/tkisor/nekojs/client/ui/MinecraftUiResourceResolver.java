@@ -104,16 +104,43 @@ public final class MinecraftUiResourceResolver implements UiResourceResolver, Au
                 if (!json.isJsonObject() || !json.getAsJsonObject().has("providers")) {
                     throw new IllegalArgumentException("Font definition requires a providers array");
                 }
-                net.minecraft.client.gui.font.providers.GlyphProviderDefinition.Conditional.CODEC.listOf()
+                var providers = net.minecraft.client.gui.font.providers.GlyphProviderDefinition.Conditional.CODEC.listOf()
                         .parse(com.mojang.serialization.JsonOps.INSTANCE, json.getAsJsonObject().get("providers"))
                         .getOrThrow();
+                loadNativeProviders(providers);
                 return ResourceStatus.resolved(id.toString(), location.toString());
+            } catch (NativeProviderLoadFailure failure) {
+                fontFailures.put(id.toString(), failure.getCause());
+                return new ResourceStatus(ResourceStatus.State.INVALID, id.toString(), null,
+                        UiErrorCodes.RESOURCE_LOAD_FAILED, "UI font provider load failed: " + id);
             } catch (RuntimeException failure) {
                 fontFailures.put(id.toString(), failure);
                 return new ResourceStatus(ResourceStatus.State.INVALID, id.toString(), null,
                         UiErrorCodes.RESOURCE_DECODE_FAILED, "UI font definition decode failed: " + id);
             }
         });
+    }
+
+    private void loadNativeProviders(List<net.minecraft.client.gui.font.providers.GlyphProviderDefinition.Conditional> providers) {
+        for (var conditional : providers) {
+            var loader = conditional.definition().unpack().left();
+            if (loader.isEmpty()) continue;
+            try {
+                var provider = loader.get().load(resources);
+                if (provider == null) throw new IllegalStateException("Font provider loader returned null");
+                provider.close();
+            } catch (IOException | RuntimeException failure) {
+                throw new NativeProviderLoadFailure(failure);
+            }
+        }
+    }
+
+    private static final class NativeProviderLoadFailure extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        private NativeProviderLoadFailure(Throwable cause) {
+            super(cause);
+        }
     }
 
     /** Returns whether cached texture plans must be prepared again after a pack reload. */

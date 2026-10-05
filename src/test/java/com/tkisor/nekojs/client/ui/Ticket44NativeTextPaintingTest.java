@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class Ticket44NativeTextPaintingTest {
-    private static final String FONT_JSON = "{\"providers\":[{\"type\":\"space\",\"advances\":{\"A\":11}}]}";
+    private static final String FONT_JSON = "{\"providers\":[]}";
 
     @AfterEach
     void clearReporter() { ScriptErrorReporter.set(null); }
@@ -77,6 +77,35 @@ class Ticket44NativeTextPaintingTest {
             assertTrue(diagnostics.stream().anyMatch(message -> message.contains("NEKO-6004")
                     && message.contains("root=text-test") && message.contains("node=label#label")
                     && message.contains("resource=demo:missing") && message.contains("generation=0")));
+        }
+    }
+
+    @Test
+    void nativeProviderLoadFailureIsDiagnosedInsteadOfTreatingJsonPresenceAsSuccess() throws Exception {
+        List<Throwable> diagnostics = new ArrayList<>();
+        ScriptErrorReporter.set((type, phase, failure) -> diagnostics.add(failure));
+        try (NativeUiScreenFixture fixture = new NativeUiScreenFixture()) {
+            fixture.resources.add("demo:font/missing-bitmap.json", "{\"providers\":[{\"type\":\"bitmap\",\"file\":\"demo:font/missing.png\",\"height\":8,\"ascent\":7,\"chars\":[\"A\"]}]}" );
+            assertEquals(24, fixture.adapter.measureText("AAAA", 9, 100, "demo:missing-bitmap").get("width"));
+            fixture.commitLabel(Map.of("id", "label", "text", "AAAA", "font", "demo:missing-bitmap"), 24, 9);
+            assertEquals(FontDescription.DEFAULT, fixture.paint().getFirst().font());
+            assertTrue(diagnostics.stream().anyMatch(failure -> failure.getMessage().contains("NEKO-6005")
+                    && failure.getCause() != null));
+            assertEquals(UiErrorCodes.RESOURCE_LOAD_FAILED,
+                    fixture.adapter.inspect().nodes().getFirst().resources().getFirst().code());
+        }
+    }
+
+    @Test
+    void nativeProviderStatusIsRevalidatedAfterResourceReload() throws Exception {
+        try (NativeUiScreenFixture fixture = new NativeUiScreenFixture()) {
+            fixture.resources.add("demo:font/reload.json", "{\"providers\":[{\"type\":\"unsupported_provider\"}]}" );
+            assertEquals(24, fixture.adapter.measureText("AAAA", 9, 100, "demo:reload").get("width"));
+            fixture.resources.add("demo:font/reload.json", FONT_JSON);
+            fixture.resources.revision++;
+            assertEquals(44, fixture.adapter.measureText("AAAA", 9, 100, "demo:reload").get("width"));
+            fixture.commitLabel(Map.of("id", "label", "text", "AAAA", "font", "demo:reload"), 44, 9);
+            assertEquals(new FontDescription.Resource(Identifier.parse("demo:reload")), fixture.paint().getFirst().font());
         }
     }
 

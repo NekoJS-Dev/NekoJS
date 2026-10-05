@@ -261,6 +261,27 @@ class Ticket44TextureLoadingTest {
         }
     }
 
+    @Test
+    void fontProviderLoadingFailureIsCachedAndReloadCanRecover() {
+        MemoryResources resources = new MemoryResources();
+        byte[] font = "{\"providers\":[{\"type\":\"bitmap\",\"file\":\"demo:font/test.png\",\"height\":8,\"ascent\":7,\"chars\":[\"A\"]}]}"
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        resources.add("demo:font/test.json", font);
+        resources.add("demo:textures/font/test.png", new byte[]{1, 2, 3});
+        RecordingBackend backend = new RecordingBackend();
+        try (MinecraftUiResourceResolver resolver = new MinecraftUiResourceResolver(resources, backend, () -> 1)) {
+            var failed = resolver.resolveFont("demo:test");
+            assertEquals(UiErrorCodes.RESOURCE_LOAD_FAILED, failed.code());
+            assertNotNull(resolver.failureCause("demo:test"));
+            assertEquals(UiErrorCodes.RESOURCE_LOAD_FAILED, resolver.resolveFont("demo:test").code());
+
+            resources.add("demo:textures/font/test.png", java.util.Base64.getDecoder().decode(
+                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="));
+            resolver.invalidate();
+            assertEquals(null, resolver.resolveFont("demo:test").code());
+        }
+    }
+
     private static byte[] pngHeader(int width, int height) throws IOException {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         DataOutputStream output = new DataOutputStream(bytes);

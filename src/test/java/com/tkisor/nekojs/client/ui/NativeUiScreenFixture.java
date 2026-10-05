@@ -179,7 +179,8 @@ final class NativeUiScreenFixture implements AutoCloseable {
             int[] width = new int[1];
             text.visit((style, segment) -> {
                 boolean custom = style.getFont() instanceof FontDescription.Resource resource
-                        && resource.id().equals(Identifier.parse("demo:wide"));
+                        && (resource.id().equals(Identifier.parse("demo:wide"))
+                        || resource.id().equals(Identifier.parse("demo:reload")));
                 width[0] += segment.codePointCount(0, segment.length()) * (custom ? 11 : 6);
                 return Optional.empty();
             }, Style.EMPTY);
