@@ -19,15 +19,15 @@ import net.minecraft.world.level.block.state.BlockState;
  * 于是 ① 脚本 API 随 MC 版本变形 ② fabric 根本没有对应类 ③ 公共 API 声明处需要版本守卫。
  * 换成中立载荷后三个问题一起消失。
  *
- * <p>取消语义：脚本 {@code return false} 时由绑定点回写到原生事件（本类不持有原生事件引用，
- * 避免把加载器类型再泄回来）。
+ * <p>Listeners returning {@code true} cancel the native break through the loader bridge.
+ * This payload does not retain the native event or expose loader types.
  *
  * <p>**刻意不含掉落经验**：1.21.1 的 {@code BlockEvent.BreakEvent} 有 {@code getExpToDrop()}，
  * 26.x 的 {@code BreakBlockEvent} **删掉了**这个 API。设计中立载荷会迫使这类**数据层面**的
  * 真实版本差异浮出水面——与其在某一版伪造 0，不如不暴露（要用就走版本守卫的扩展面）。
  */
 @Doc("Fired when a block is broken (BlockEvents.broken). Listeners are dispatched by block id.")
-@Doc("Return false to cancel the break.")
+@Doc("Return true to cancel the break.")
 @Getter
 public class BlockBrokenEventJS {
 

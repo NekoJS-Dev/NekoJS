@@ -1,49 +1,85 @@
 # NekoJS
 
-基于 GraalVM/GraalJS 的 Minecraft 脚本魔改引擎：让整合包作者用现代 JS/TS 在多版本、多加载器上写启动/服务端/客户端脚本。
+A Minecraft scripting engine built on GraalVM/GraalJS. Modpack authors use modern JavaScript and TypeScript to customize startup, server, and client behavior across Minecraft versions and loaders.
 
 ## Language
 
-**脚本 API（Script API）**:
-面向脚本作者（整合包作者）的公开 JS 接口。写法简洁好用优先；重大重构允许一次性 breaking，配 wiki 迁移表（报错保持普通形式，不带修复指引）。
-_Avoid_: 用户 API、前端接口
+### Script interface
 
-**插件 API（Plugin API）**:
-面向 Java 插件开发者的接口与扩展契约；活跃开发期允许 breaking change。
-_Avoid_: 开发者 API
+**Script API**:
+The public JavaScript interface used by script and modpack authors. Its primary concern is convenient, readable script authoring.
+_Avoid_: User API, frontend interface
 
-**扩展点（Extension Point）**:
-插件向引擎注入某一类能力的命名挂载点（如注册表信息、注册表对象类型）。
-_Avoid_: 钩子、插桩点
+**Event Group**:
+A named namespace of related Script Events, such as `ServerEvents`. In `ServerEvents.xxx(...)`, `ServerEvents` is the group and `xxx` identifies one event.
+_Avoid_: Event bus, individual event
 
-**贡献面（Contributor）**:
-扩展点向插件暴露的贡献接口；插件实现该接口即被此扩展点收集。
-_Avoid_: 钩子接口、SPI
+**Script Event**:
+A named callback registration entry within an Event Group. Scripts subscribe through calls such as `ServerEvents.xxx(event => {})`; the event supplies the callback's Event Object.
+_Avoid_: Plugin Hook, Extension Point
 
-**插件钩子（Plugin Hook）**:
-`NekoJSPlugin` 基接口上面向作者的门面方法（ADR-0010 双形态模型）：注册面（收集型，bootstrap 期配对收集）与回调面（直调型，事件时平台触发）。与扩展点是投影关系——钩子必有配对的扩展点，反之不必然。基接口的"钩子"一词专指此概念，不与扩展点混称。
-_Avoid_: 用"钩子"指代扩展点或贡献面本身
+**Event Object**:
+The object passed to a Script Event callback, conventionally named `event`. It exposes the data and operations available during that event.
+_Avoid_: Event Group, listener
 
-**扩展点句柄（Extension Handle）**:
-扩展点注册时返回的产物持有对象，bootstrap 完成后凭它获取该扩展点的产物。
-_Avoid_: 产物引用、provider
+**Binding**:
+A named value or callable exposed to a script environment, such as `Item` in `Item.of(...)`. A Binding provides access to its public operations and properties; it is not itself an event subscription.
+_Avoid_: Dependency injection binding, Plugin Hook
 
-**通用注册表（Generic Registry）**:
-由注册表元信息与对象类型工厂统一驱动的注册系统，目标是取代逐类型手写包装。
-_Avoid_: 泛型注册、注册中心
+**Builder**:
+An object used to configure a definition being created or registered. In callback-based creation, it is passed as `build` to the final callback, as in `event.create(id, build => {})`.
+_Avoid_: Finished registered object, Event Object
 
-**连带注册（Co-registration）**:
-注册一种对象时按约定隐式带出的关联注册，如 Block→BlockItem、Fluid→流体方块与桶。
-_Avoid_: 自动注册、隐式注册
+**Bean Property**:
+A script-facing property backed by exposed Java accessors, such as `event.xxx` for `getXxx()` and assignment for `setXxx(value)`. Reading and writing depend on which accessors the object exposes.
+_Avoid_: Java field, unconditional writable property
 
-**版本树（Version tree）**:
-stonecutter 管理的多版本共享源码树，平台差异以守卫与 replacements 表达。
-_Avoid_: 共享树、主干
+### Java plugin interface
 
-**类型内共享状态（global）**:
-同一脚本类型内的脚本共同读写的运行期内存状态。
-_Avoid_: JS 语言全局对象、世界持久化
+**Plugin API**:
+The public Java interface and extension contracts used by plugin authors.
+_Avoid_: Developer API
 
-**显式跨类型共享状态**:
-同一 NekoJS 运行域内，不同脚本类型通过明确入口共享的运行期内存状态。
-_Avoid_: C/S 网络同步、跨进程持久化
+**Extension Point**:
+A named place where plugins contribute one kind of engine capability, such as registry metadata or registry object types.
+_Avoid_: Hook, instrumentation point
+
+**Contributor**:
+The contribution interface exposed by an Extension Point. Implementing it lets a plugin participate in that point's collection.
+_Avoid_: Hook interface, SPI
+
+**Plugin Hook**:
+An author-facing method on `NekoJSPlugin`. Collection hooks are facades for paired Extension Points; direct callback hooks are invoked at the relevant lifecycle or platform event.
+_Avoid_: Using hook to mean an Extension Point, Contributor, or Script Event
+
+**Extension Handle**:
+The handle returned when an Extension Point is registered, providing access to that point's result after bootstrap completes.
+_Avoid_: Result reference, provider
+
+### Registration
+
+**Generic Registry**:
+The registration system driven by registry metadata and object-type factories, in place of separate handwritten registration wrappers for each type.
+_Avoid_: Generic registration, registry center
+
+**Co-registration**:
+Related registration performed when another object is registered, such as a Block's BlockItem or a Fluid's block and bucket.
+_Avoid_: Automatic registration, implicit registration
+
+### Execution and platforms
+
+**Script Type**:
+The execution category of a script: `STARTUP`, `SERVER`, `CLIENT`, or `TEST`. The category determines which script-facing capabilities and lifecycle apply.
+_Avoid_: File extension, programming language
+
+**Type-local shared state (`global`)**:
+Runtime memory shared by scripts of the same Script Type.
+_Avoid_: JavaScript global object, world persistence
+
+**Explicit cross-type shared state**:
+Runtime memory accessed through an explicit shared entry by different Script Types within the same NekoJS runtime.
+_Avoid_: Client/server network synchronization, cross-process persistence
+
+**Version tree**:
+The Stonecutter-managed source tree shared across Minecraft versions and loaders, with version facades and node-specific implementations for platform differences.
+_Avoid_: Shared tree, trunk
