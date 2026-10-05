@@ -1,0 +1,86 @@
+#!/usr/bin/env node
+import fs from 'node:fs';
+import path from 'node:path';
+
+function usage() {
+  return 'Usage: node scripts/offline-migration-report.mjs --migration <file> --protection <file> [--json]';
+}
+
+function parseArgs(argv) {
+  const values = { json: false };
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index];
+    if (argument === '--json') {
+      values.json = true;
+      continue;
+    }
+    if (argument === '--migration' || argument === '--protection') {
+      const value = argv[index + 1];
+      if (!value || value.startsWith('--')) throw new Error(`${argument} requires a file path`);
+      values[argument.slice(2)] = value;
+      index += 1;
+      continue;
+    }
+    throw new Error(`Unknown argument: ${argument}`);
+  }
+  if (!values.migration || !values.protection) throw new Error(usage());
+  return values;
+}
+
+function readInput(label, file) {
+  const absolute = path.resolve(file);
+  let content;
+  try {
+    content = fs.readFileSync(absolute, 'utf8');
+  } catch (error) {
+    throw new Error(`${label} input cannot be read: ${absolute}: ${error.message}`);
+  }
+  if (!content.trim()) throw new Error(`${label} input is empty: ${absolute}`);
+  return { absolute, content };
+}
+
+function headings(content) {
+  return content.split(/\r?\n/).filter(line => /^#{1,6}\s+\S/.test(line)).map(line => line.trim());
+}
+
+function tableRows(content) {
+  return content.split(/\r?\n/)
+    .filter(line => /^\s*\|/.test(line) && !/^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/.test(line))
+    .map(line => line.trim());
+}
+
+function buildReport(values) {
+  const migration = readInput('migration', values.migration);
+  const protection = readInput('protection', values.protection);
+  return {
+    format: 1,
+    readOnly: true,
+    migration: {
+      file: migration.absolute,
+      headings: headings(migration.content),
+      rows: tableRows(migration.content),
+    },
+    protection: {
+      file: protection.absolute,
+      headings: headings(protection.content),
+      rows: tableRows(protection.content),
+    },
+    warnings: [
+      'This report does not perform migration or rollback.',
+      'Missing symbols, fixtures, rollback evidence, and maintainer decisions require manual review.',
+    ],
+  };
+}
+
+try {
+  const values = parseArgs(process.argv.slice(2));
+  const report = buildReport(values);
+  if (values.json) {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+  } else {
+    process.stdout.write(`Offline migration report (read-only)\nMigration: ${report.migration.file}\nProtection: ${report.protection.file}\nMigration headings: ${report.migration.headings.length}\nProtection headings: ${report.protection.headings.length}\nMigration rows: ${report.migration.rows.length}\nProtection rows: ${report.protection.rows.length}\nWarnings: ${report.warnings.length}\n`);
+  }
+} catch (error) {
+  process.stderr.write(`offline-migration-report: ${error.message}\n`);
+  process.exitCode = 2;
+}
