@@ -4,7 +4,7 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)、[05: 单 owner 预整理：闭合两个 loader 的运行时生命周期入口](05-runtime-root.md)、[06: 候选环境、阶段结果与 owner-thread commit 点](06-reload-commit.md)、[07: 同类型串行、close 优先与 watchdog 隔离恢复](07-runtime-threads.md)、[10: 按类型 global、显式 shared 与候选顶层写集联合提交](10-global-state.md)
 
-**Status:** in-review（实现路径与自动化证据已收口；AC10/AC11 的真实 client/smoke 验收和 AC14 维护者删除确认仍未完成，release gate 未通过）
+**Status:** in-review（实现路径与自动化证据已收口；AC10 NeoForge 26.2 真实 client sync 已通过，AC11 的 1.21.1 smoke 和 AC14 维护者删除确认仍未完成，release gate 未通过）
 
 **Assignee:** zcode-agent
 
