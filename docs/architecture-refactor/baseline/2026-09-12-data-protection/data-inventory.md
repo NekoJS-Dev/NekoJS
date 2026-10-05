@@ -42,7 +42,7 @@ spec 依据：[运行时生命周期与数据保护规格](../../specs/05-runtim
   NightConfig `CommentedFileConfig`，writable 时 `sync().autosave()`（`:22-24`）；入口 `ClassFilter.loadEngineConfig()`
   （`common/.../core/fs/ClassFilter.java:137-166`，启动期由 `WorkspaceGenerator.setupWorkspace()` 触发，`NekoJSMod.java:138`）。
 - **默认值来源**：`setupConfigEntry` 对缺失键补默认值 + 注释（`SandboxConfigLoader.java:29-73`；如 `allowThreads=false`、
-  `allowReflection=false`、`enableEsmAuthoring=true`、`scriptEvaluationTimeoutSeconds=30`、`packSync.mode=off`、
+  `allowReflection=false`、`enableEsmAuthoring=true`、`scriptEvaluationTimeoutSeconds=0`、`packSync.mode=off`、
   `dynamicRegistry.enabled=false` 等）。**默认键补写是写盘行为**：首次加载会把缺失键与注释写回文件。
 - **废弃键清理**：`removeConfigEntry` 加载时删除 `prependRequirePatch`/`useNekoScriptLoader`/`useNativeEsmLoader`（`:41-43,125-130`）。
 - **损坏语义**：解析抛错 → WARN + `SandboxConfig.defaultConfig()`（内存），**不覆盖原文件**（`:91-94`）。

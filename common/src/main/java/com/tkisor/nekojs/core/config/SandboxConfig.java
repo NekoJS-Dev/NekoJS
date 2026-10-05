@@ -48,7 +48,7 @@ public record SandboxConfig(
     }
 
     public static SandboxConfig defaultConfig() {
-        return new SandboxConfig(false, false, false, false, true, true, false, true, 30, 0,
+        return new SandboxConfig(false, false, false, false, true, true, false, true, 0, 0,
                 DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS, PACK_SYNC_OFF, false, false);
     }
 

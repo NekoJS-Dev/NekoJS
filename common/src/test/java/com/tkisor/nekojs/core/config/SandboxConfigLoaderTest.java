@@ -37,7 +37,7 @@ class SandboxConfigLoaderTest {
         assertTrue(loaded.conciseScriptErrorLogs());
         assertFalse(loaded.jsxAutomaticRuntime());
         assertTrue(loaded.scriptMemberValidation());
-        assertEquals(30, loaded.scriptEvaluationTimeoutSeconds());
+        assertEquals(0, loaded.scriptEvaluationTimeoutSeconds());
     }
 
     @Test

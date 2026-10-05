@@ -54,7 +54,7 @@ public final class SandboxConfigLoader {
             setupConfigEntry(config, "scriptMemberValidation", true,
                     " Enables compile-time validation of global-binding and event-callback member accesses. Reports typos and missing members to the in-game error panel. Disable to skip all AST parsing overhead in production modpacks.");
 
-            setupConfigEntry(config, "scriptEvaluationTimeoutSeconds", 30,
+            setupConfigEntry(config, "scriptEvaluationTimeoutSeconds", 0,
                     " Maximum seconds to wait for a script entry to finish evaluating (top-level await / native ESM). On timeout the script is marked as failed and the server thread stops waiting instead of hanging forever. Set 0 or a negative value to disable the timeout.");
 
             setupConfigEntry(config, "scriptStatementLimit", 0L,
@@ -81,7 +81,7 @@ public final class SandboxConfigLoader {
                     config.get("conciseScriptErrorLogs"),
                     config.get("jsxAutomaticRuntime"),
                     config.get("scriptMemberValidation"),
-                    (int) numberValue(config, "scriptEvaluationTimeoutSeconds", 30),
+                    (int) numberValue(config, "scriptEvaluationTimeoutSeconds", 0),
                     numberValue(config, "scriptStatementLimit", 0L),
                     (int) numberValue(config, "scriptRunawayTimeoutSeconds", SandboxConfig.DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS),
                     stringValue(config, "packSync.mode", SandboxConfig.PACK_SYNC_OFF),
