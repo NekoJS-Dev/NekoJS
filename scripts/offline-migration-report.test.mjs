@@ -26,7 +26,21 @@ test('offline migration report is deterministic and read-only', () => {
   assert.deepEqual(report.protection.rows, ['| data | rollback |', '| world | backup |']);
 });
 
-test('offline migration report rejects missing or incomplete inputs', () => {
+test('offline migration report rejects malformed or empty inputs', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nekojs-migration-report-empty-'));
+  const migration = path.join(directory, 'migration.md');
+  const protection = path.join(directory, 'protection.md');
+  fs.writeFileSync(migration, '');
+  fs.writeFileSync(protection, '# Protection\n');
+  const empty = spawnSync(process.execPath, [script, '--migration', migration, '--protection', protection], { encoding: 'utf8' });
+  assert.equal(empty.status, 2);
+  assert.match(empty.stderr, /migration input is empty/);
+  const malformed = spawnSync(process.execPath, [script, '--migration', migration, '--protection', protection, '--unknown'], { encoding: 'utf8' });
+  assert.equal(malformed.status, 2);
+  assert.match(malformed.stderr, /Unknown argument/);
+});
+
+test('offline migration report rejects missing inputs', () => {
   const result = spawnSync(process.execPath, [script, '--migration', 'missing.md', '--protection', 'missing-protection.md'], { encoding: 'utf8' });
   assert.equal(result.status, 2);
   assert.match(result.stderr, /migration input cannot be read/);
