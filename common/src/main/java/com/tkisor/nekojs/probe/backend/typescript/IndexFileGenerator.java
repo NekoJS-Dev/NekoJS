@@ -389,6 +389,37 @@ public final class IndexFileGenerator {
     }
 
     /**
+     * 用手写声明替代反射渲染结果（{@code ClassDeclarationCatalogEntry} 的落地）。
+     *
+     * <p>与 {@link #predeclareClass} 只差声明文本从哪来：这里直接收文本 + 引用的类型 FQN，
+     * 不走 {@code TypeDecl} 渲染、也不做反射 import 收集（手写声明引用什么由调用方给出）。
+     * 缓存键与常规路径一致，故 {@code generate()} 不必知道声明是手写的。
+     *
+     * @param declaration 顶格写的声明文本（不含 {@code declare module} 外壳）
+     * @param importFqns  引用到的类型 FQN。给<b>真实类</b>即可——发射 import 时会自己查
+     *                    该类有无输入别名，有则一并导入 {@code $Foo_}
+     */
+    public void predeclareClassDeclaration(String fqn, String declaration, Set<String> importFqns) {
+        declCache.put(fqn, indentModuleBody(declaration));
+        importCache.put(fqn, new LinkedHashSet<>(importFqns == null ? Set.of() : importFqns));
+    }
+
+    /** 补模块体缩进（4 空格）：剥首尾空行，非空行加前缀，空行不留尾随空白。 */
+    private static String indentModuleBody(String declaration) {
+        if (declaration == null || declaration.isBlank()) return "";
+        String[] lines = declaration.split("\n", -1);
+        int from = 0, to = lines.length;
+        while (from < to && lines[from].isBlank()) from++;
+        while (to > from && lines[to - 1].isBlank()) to--;
+        StringBuilder sb = new StringBuilder(declaration.length() + (to - from) * 4);
+        for (int i = from; i < to; i++) {
+            if (!lines[i].isBlank()) sb.append("    ").append(lines[i]);
+            sb.append('\n');
+        }
+        return sb.toString();
+    }
+
+    /**
      * 为枚举 {@link TypeDecl} 计算输入别名声明（{@code $Color_ = $Color | "RED" | ...}）并缓存，
      * 供 {@link #generate} 在枚举所在包模块内就近发射。常量顺序与 {@code TypeScriptClassRenderer.renderEnum}
      * 的静态常量发射完全一致（同一 {@code decl.fields} 序——TypeReflector 已按名字稳定排序），

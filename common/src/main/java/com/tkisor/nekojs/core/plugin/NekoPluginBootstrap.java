@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
 import com.tkisor.nekojs.core.module.NodeModuleRegister;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.core.plugin.TypeDocsRegister;
@@ -246,6 +247,7 @@ public final class NekoPluginBootstrap {
         private final EventGroupRegistry eventGroups = new EventGroupRegistry.Impl();
         private final List<TypeDocCatalogEntry> typeDocs = new ArrayList<>();
         private final List<ManualDeclarationCatalogEntry> manualDeclarations = new ArrayList<>();
+        private final List<ClassDeclarationCatalogEntry> classDeclarations = new ArrayList<>();
         private final Map<String, String> nodeModules = new LinkedHashMap<>();
         private final Map<String, RecipeNamespaceEntry> recipeNamespaces = new LinkedHashMap<>();
         private final Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides = new LinkedHashMap<>();
@@ -391,6 +393,7 @@ public final class NekoPluginBootstrap {
                     Map.copyOf(eventGroups.view()),
                     typeDocsSnapshot(),
                     manualDeclarationsSnapshot(),
+                    classDeclarationsSnapshot(),
                     nodeModulesSnapshot(),
                     recipeNamespacesSnapshot(),
                     recipeSchemaOverridesSnapshot(),
@@ -427,6 +430,12 @@ public final class NekoPluginBootstrap {
         }
 
         @Override
+        public void registerClassDeclaration(ClassDeclarationCatalogEntry entry) {
+            requireMutable("class declarations");
+            classDeclarations.add(Objects.requireNonNull(entry, "entry"));
+        }
+
+        @Override
         public void register(String moduleId, String source) {
             requireMutable("node modules");
             Objects.requireNonNull(moduleId, "moduleId");
@@ -460,6 +469,12 @@ public final class NekoPluginBootstrap {
         List<ManualDeclarationCatalogEntry> manualDeclarationsSnapshot() {
             return manualDeclarations.stream()
                     .sorted(Comparator.comparingInt(ManualDeclarationCatalogEntry::priority))
+                    .toList();
+        }
+
+        List<ClassDeclarationCatalogEntry> classDeclarationsSnapshot() {
+            return classDeclarations.stream()
+                    .sorted(Comparator.comparingInt(ClassDeclarationCatalogEntry::priority))
                     .toList();
         }
 

@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core.plugin;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.Binding;
@@ -44,6 +45,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
     private final Map<String, EventGroup> eventGroups;
     private final List<TypeDocCatalogEntry> typeDocs;
     private final List<ManualDeclarationCatalogEntry> manualDeclarations;
+    private final List<ClassDeclarationCatalogEntry> classDeclarations;
     private final Map<String, String> nodeModules;
     private final Map<String, RecipeNamespaceEntry> recipeNamespaces;
     private final Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides;
@@ -63,6 +65,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
                       Map<String, EventGroup> eventGroups,
                       List<TypeDocCatalogEntry> typeDocs,
                       List<ManualDeclarationCatalogEntry> manualDeclarations,
+                      List<ClassDeclarationCatalogEntry> classDeclarations,
                       Map<String, String> nodeModules,
                       Map<String, RecipeNamespaceEntry> recipeNamespaces,
                       Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides,
@@ -81,6 +84,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         this.eventGroups = eventGroups;
         this.typeDocs = typeDocs;
         this.manualDeclarations = manualDeclarations;
+        this.classDeclarations = classDeclarations;
         this.nodeModules = nodeModules;
         this.recipeNamespaces = recipeNamespaces;
         this.recipeSchemaOverrides = recipeSchemaOverrides;
@@ -208,6 +212,12 @@ public final class NekoPluginRuntime implements IPluginRuntime {
 
     public List<ManualDeclarationCatalogEntry> manualDeclarations() {
         return manualDeclarations;
+    }
+
+    /** 必须覆盖接口 default——漏了这一环会让插件注册的类声明替换静默失效。 */
+    @Override
+    public List<ClassDeclarationCatalogEntry> classDeclarations() {
+        return classDeclarations;
     }
 
     public Map<String, String> nodeModules() {

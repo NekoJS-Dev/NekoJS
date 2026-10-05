@@ -13,6 +13,7 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
+import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
@@ -143,7 +144,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                     ? provided
                     : Executors.newFixedThreadPool(parallelism());
             try {
-                predeclareClasses(ctx.ir(), classesToGenerate, pool);
+                predeclareClasses(ctx.ir(), classesToGenerate, pool, authoredDeclarations(snapshot));
 
                 // 4. 渲染 @package Java 类型声明（并行渲染，产物进内存，复用同一线程池）
                 renderPackageDeclarations(tree, files, pool);
@@ -221,7 +222,26 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
      * 类供 import/别名过滤。每类只反射一次（共享 IR 已反射的不再反射），一次反射同时产出
      * 声明与 import 两个产物。
      */
-    private void predeclareClasses(List<TypeDecl> sharedIr, Set<String> classNames, ExecutorService pool) {
+    /**
+     * 插件注册的类声明替换表：FQN → 条目。同一 FQN 多条时取 priority 最高者。
+     *
+     * <p>只在本次会生成的类上生效——未生成的类不进 {@code classesToGenerate}，查表自然落空。
+     */
+    private static Map<String, ClassDeclarationCatalogEntry> authoredDeclarations(
+            NekoScriptCatalogSnapshot snapshot) {
+        List<ClassDeclarationCatalogEntry> entries = snapshot.classDeclarations();
+        if (entries == null || entries.isEmpty()) return Map.of();
+        Map<String, ClassDeclarationCatalogEntry> byFqn = new LinkedHashMap<>();
+        for (ClassDeclarationCatalogEntry e : entries) {
+            if (e != null && e.targetFqn() != null && e.declaration() != null && !e.declaration().isBlank()) {
+                byFqn.merge(e.targetFqn(), e, (a, b) -> b.priority() >= a.priority() ? b : a);
+            }
+        }
+        return byFqn;
+    }
+
+    private void predeclareClasses(List<TypeDecl> sharedIr, Set<String> classNames, ExecutorService pool,
+                                   Map<String, ClassDeclarationCatalogEntry> authored) {
         Map<String, TypeDecl> irByFqn = new LinkedHashMap<>();
         if (sharedIr != null) {
             for (TypeDecl d : sharedIr) {
@@ -233,6 +253,13 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         for (String fqn : classNames) {
             futures.add(pool.submit(() -> {
                 try {
+                    // 插件给了手写声明：直接写入，跳过反射渲染与反射 import 收集
+                    var authoredDecl = authored.get(fqn);
+                    if (authoredDecl != null) {
+                        indexFileGenerator.predeclareClassDeclaration(
+                                fqn, authoredDecl.declaration(), authoredDecl.importFqns());
+                        return;
+                    }
                     TypeDecl decl = irByFqn.get(fqn);
                     if (decl == null) {
                         // 共享 IR 缺失（共享层反射失败，或测试直连 ir=null）：本 backend 自行反射

@@ -7,6 +7,7 @@ import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.ScriptTypePredicate;
 import com.tkisor.nekojs.api.event.DispatchEventBus;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.ScriptEventDefinition;
@@ -16,6 +17,8 @@ import com.tkisor.nekojs.api.surface.ApiRuntimeView;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
 import com.tkisor.nekojs.api.surface.EnvironmentKey;
 import com.tkisor.nekojs.api.surface.EnvironmentKeyFactory;
+
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -32,90 +35,49 @@ public final class NekoScriptCatalog {
     }
 
     public static NekoScriptCatalogSnapshot snapshot(IPluginRuntime runtime) {
-        List<BindingCatalogEntry> allBindings = bindings(runtime);
-        List<EventCatalogEntry> allEvents = events(runtime);
-        List<AdapterCatalogEntry> allAdapters = adapters(runtime);
-        List<HostExtensionCatalogEntry> allHostExtensions = hostExtensions();
-
-        NekoScriptCatalogSnapshot temp = new NekoScriptCatalogSnapshot(
-                ScriptType.all(),
-                allBindings,
-                allEvents,
-                allAdapters,
-                recipeNamespaces(),
-                allHostExtensions,
-                List.copyOf(platformProvider.snippets()),
-                runtime.typeDocs(),
-                runtime.manualDeclarations(),
-                List.copyOf(platformProvider.registryTypes()),
-                modIds(),
-                platformProvider.outputLayout(),
-                Map.of(),
-                List.of()
-        );
-
-        Map<ScriptType, ApiEnvironmentSnapshot> managedApis = buildManagedApis(runtime, ScriptType.all());
-        List<ApiSymbol> legacySurface = LegacySurfaceAdapter.convert(temp);
-
-        return new NekoScriptCatalogSnapshot(
-                ScriptType.all(),
-                allBindings,
-                allEvents,
-                allAdapters,
-                recipeNamespaces(),
-                allHostExtensions,
-                List.copyOf(platformProvider.snippets()),
-                runtime.typeDocs(),
-                runtime.manualDeclarations(),
-                List.copyOf(platformProvider.registryTypes()),
-                modIds(),
-                platformProvider.outputLayout(),
-                managedApis,
-                legacySurface
-        );
+        return snapshot(runtime, null);
     }
 
-    public static NekoScriptCatalogSnapshot snapshot(IPluginRuntime runtime, ScriptType scriptType) {
-        List<BindingCatalogEntry> typeBindings = bindings(runtime, scriptType);
-        List<EventCatalogEntry> typeEvents = events(runtime, scriptType);
-        List<HostExtensionCatalogEntry> typeHostExtensions = hostExtensions(scriptType);
+    /**
+     * 构建 catalog 快照。
+     *
+     * @param scriptType 只取该脚本类型的条目；传 {@code null} 表示全类型
+     */
+    public static NekoScriptCatalogSnapshot snapshot(IPluginRuntime runtime, @Nullable ScriptType scriptType) {
+        boolean all = scriptType == null;
+        List<ScriptType> types = all ? ScriptType.all() : List.of(scriptType);
+        List<BindingCatalogEntry> typeBindings = all ? bindings(runtime) : bindings(runtime, scriptType);
+        List<EventCatalogEntry> typeEvents = all ? events(runtime) : events(runtime, scriptType);
+        List<HostExtensionCatalogEntry> typeHostExtensions =
+                all ? hostExtensions() : hostExtensions(scriptType);
+        List<SnippetCatalogEntry> typeSnippets =
+                all ? List.copyOf(platformProvider.snippets()) : snippets(scriptType);
 
+        // 两阶段：先建不含 managedApis/legacySurface 的临时快照，供 LegacySurfaceAdapter 转换；
+        // 再以它产出的 managedApis/legacySurface 重建最终快照（字段间依赖，无法一次构造）
         NekoScriptCatalogSnapshot temp = new NekoScriptCatalogSnapshot(
-                List.of(scriptType),
-                typeBindings,
-                typeEvents,
-                adapters(runtime),
-                recipeNamespaces(),
-                typeHostExtensions,
-                snippets(scriptType),
-                runtime.typeDocs().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
-                runtime.manualDeclarations().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
-                List.copyOf(platformProvider.registryTypes()),
-                modIds(),
-                platformProvider.outputLayout(),
-                Map.of(),
-                List.of()
-        );
-
-        Map<ScriptType, ApiEnvironmentSnapshot> managedApis = buildManagedApis(runtime, List.of(scriptType));
-        List<ApiSymbol> legacySurface = LegacySurfaceAdapter.convert(temp);
+                types, typeBindings, typeEvents, adapters(runtime), recipeNamespaces(),
+                typeHostExtensions, typeSnippets,
+                filterByType(runtime.typeDocs(), TypeDocCatalogEntry::scriptType, scriptType),
+                filterByType(runtime.manualDeclarations(), ManualDeclarationCatalogEntry::scriptType, scriptType),
+                filterByType(runtime.classDeclarations(), ClassDeclarationCatalogEntry::scriptType, scriptType),
+                List.copyOf(platformProvider.registryTypes()), modIds(),
+                platformProvider.outputLayout(), Map.of(), List.of());
 
         return new NekoScriptCatalogSnapshot(
-                List.of(scriptType),
-                typeBindings,
-                typeEvents,
-                adapters(runtime),
-                recipeNamespaces(),
-                typeHostExtensions,
-                snippets(scriptType),
-                runtime.typeDocs().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
-                runtime.manualDeclarations().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
-                List.copyOf(platformProvider.registryTypes()),
-                modIds(),
-                platformProvider.outputLayout(),
-                managedApis,
-                legacySurface
-        );
+                types, typeBindings, typeEvents, adapters(runtime), recipeNamespaces(),
+                typeHostExtensions, typeSnippets,
+                temp.typeDocs(), temp.manualDeclarations(), temp.classDeclarations(),
+                temp.registryTypes(), temp.modIds(), temp.outputLayout(),
+                buildManagedApis(runtime, types), LegacySurfaceAdapter.convert(temp));
+    }
+
+    /** 按脚本类型过滤条目；{@code scriptType} 为 null（全类型）时原样返回。 */
+    private static <E> List<E> filterByType(List<E> entries,
+                                            java.util.function.Function<E, ScriptTypePredicate> predicate,
+                                            @Nullable ScriptType scriptType) {
+        return scriptType == null ? entries
+                : entries.stream().filter(e -> predicate.apply(e).test(scriptType)).toList();
     }
 
     /** Merged recipe namespace entries: handler methods + schema types. */
