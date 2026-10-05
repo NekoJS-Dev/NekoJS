@@ -142,9 +142,10 @@ class TypeScriptClassRendererTest {
     void nonPrimitiveSuperClassStillRendersExtends() {
         TypeDecl decl = new TypeReflector().reflect(java.util.ArrayList.class);
         String out = render(decl);
-        // superType 取 getSuperclass()（erased Class），故泛型上界不渲染类型实参
-        assertTrue(out.contains("export class $ArrayList<E> extends $AbstractList implements"),
-                "regular super class must keep its extends clause:\n" + out);
+        // superType 走 getGenericSuperclass()，实参随类型变量一起渲染（$AbstractList<E>）——
+        // 丢了实参父类只能给出裸 $AbstractList，子类的 E 就继承不到
+        assertTrue(out.contains("export class $ArrayList<E> extends $AbstractList<E> implements"),
+                "regular super class must keep its extends clause with type arguments:\n" + out);
     }
 
     // ---------------- heritage 合法性守卫（probe.assign_type / changeSuper 注入路径） ----------------

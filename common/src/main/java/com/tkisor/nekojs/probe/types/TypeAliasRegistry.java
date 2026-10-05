@@ -13,8 +13,20 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class TypeAliasRegistry {
     private final Map<String, String> classAliases = new LinkedHashMap<>();
     private final Map<String, CollectionAlias> collectionAliases = new LinkedHashMap<>();
+
     /**
-     * 枚举输入别名的惰性解析缓存：FQN → {@code $<SimpleName>_}；空串 = 已确认非枚举/不可加载。
+     * 泛型类别别名的形参名：FQN → 形参名列表（如 {@code java.util.function.Consumer → [T]}）。
+     *
+     * <p>与 {@link #classAliases} 的区别：普通类别名是**无参**替换（{@code Foo → $Foo_}，丢弃实参），
+     * 泛型类别名要**透传实参**（{@code Consumer<String> → $Consumer_<string>}）。
+     * 后者是函数式接口 lambda 别名的形态——形参 {@code T} 由别名声明自身承接，
+     * 调用点把实参填进去。
+     *
+     * <p>不在表中（或值为空）= 非泛型别名，按 {@link #classAliases} 原语义处理。
+     */
+    private final Map<String, List<String>> genericClassAliasParams = new LinkedHashMap<>();
+
+    /** 枚举输入别名的惰性解析缓存：FQN → {@code $<SimpleName>_}；空串 = 已确认非枚举/不可加载。
      *
      * <p>枚举别名必须与适配器别名（{@code registerClassAlias}，在全部参数渲染前一次性注册）一样
      * 「先于参数渲染可用」——但共享 IR 是逐类并行预声明的，逐类注册会因任务调度顺序不同导致
@@ -72,6 +84,7 @@ public final class TypeAliasRegistry {
     public void clear() {
         classAliases.clear();
         collectionAliases.clear();
+        genericClassAliasParams.clear();
         enumAliasCache.clear();
         registerDefaults();
     }
@@ -157,6 +170,38 @@ public final class TypeAliasRegistry {
      */
     public void registerClassAlias(String className, String tsType) {
         classAliases.put(className, tsType);
+    }
+
+    /**
+     * 注册**泛型**类别名：{@code Foo<A, B>} 在参数位置放宽为 {@code $Foo_<a, b>}。
+     *
+     * <p>与 {@link #registerClassAlias} 的区别在于实参是否透传。函数式接口的 lambda 别名
+     * 必须走这条——{@code $Consumer_<T> = ((arg0: T) => void) | $Consumer<T>} 的 {@code T}
+     * 由调用点的实参填充，丢实参会让 lambda 形参退化成 {@code any}。
+     *
+     * @param paramNames 别名声明的形参名，顺序与实参一致（如 {@code List.of("T")}）
+     */
+    public void registerGenericClassAlias(String className, String tsType, List<String> paramNames) {
+        classAliases.put(className, tsType);
+        genericClassAliasParams.put(className, List.copyOf(paramNames));
+    }
+
+    /**
+     * 泛型类别别名的查询：带实参调用，展开为 {@code $Foo_<实参…>}。
+     *
+     * <p>只在注册过泛型形参且实参非空时命中；否则返回 null，由调用方回落常规渲染。
+     * 实参个数与形参不符时也返回 null——宁可渲染成完整类型，也不要产出语法错误的别名。
+     *
+     * @param tsArgs 各实参**独立渲染后**的 TS 字符串（与 {@link #getCollectionAlias} 同口径，
+     *               不能先 join 再拆，实参自身可能含 {@code ", "}）
+     */
+    public String getGenericClassAlias(String className, String[] tsArgs) {
+        List<String> params = genericClassAliasParams.get(className);
+        if (params == null || params.isEmpty()) return null;
+        String alias = classAliases.get(className);
+        if (alias == null) return null;
+        if (tsArgs.length != params.size()) return null;
+        return alias + "<" + String.join(", ", tsArgs) + ">";
     }
 
     /**

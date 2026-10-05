@@ -3,6 +3,7 @@ package com.tkisor.nekojs.probe.ir;
 import com.tkisor.nekojs.api.JavaMemberIndex;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
@@ -47,15 +48,21 @@ public final class TypeReflector {
 
         // 父类（仅 class；interface/enum 的 extends 在旧实现里不渲染 superclass）
         if (kind == TypeDecl.Kind.CLASS) {
-            Class<?> sc = cls.getSuperclass();
-            if (sc != null && sc != Object.class) {
-                decl.superType = TypeSlot.of(sc, toRef(sc));
+            Type sc = cls.getGenericSuperclass();
+            Class<?> scRaw = rawClassOf(sc);
+            if (scRaw != null && scRaw != Object.class) {
+                decl.superType = TypeSlot.of(scRaw, toRef(sc));
             }
         }
 
-        // 接口
-        for (Class<?> iface : cls.getInterfaces()) {
-            decl.interfaces.add(TypeSlot.of(iface, toRef(iface)));
+        // 接口：用 getGenericInterfaces 才能带上实参（$Collection<E> extends $Iterable<E>）。
+        // getInterfaces 只给裸 Class，实参丢失后父接口的类型变量退化成 any，
+        // 子接口就继承不到 E（forEach 的 x 变成 any）。
+        for (Type iface : cls.getGenericInterfaces()) {
+            Class<?> ifaceRaw = rawClassOf(iface);
+            if (ifaceRaw != null) {
+                decl.interfaces.add(TypeSlot.of(ifaceRaw, toRef(iface)));
+            }
         }
 
         switch (kind) {
@@ -96,6 +103,20 @@ public final class TypeReflector {
     private static String typeKey(TypeSlot slot) {
         if (slot == null || slot.sourceType == null) return "";
         return slot.sourceType.getTypeName();
+    }
+
+    /**
+     * 解析类型对应的原始类；泛型/通配符等非 Class 形态返回 {@code null}。
+     *
+     * <p>用于 {@code getGenericSuperclass()}/{@code getGenericInterfaces()} 的返回值——
+     * 它们可能是 {@link ParameterizedType}，而 {@link TypeSlot#sourceType} 与
+     * {@link Class#getSimpleName()} 这类用法都需要裸 {@code Class}。
+     */
+    @Nullable
+    private static Class<?> rawClassOf(Type type) {
+        if (type instanceof Class<?> c) return c;
+        if (type instanceof ParameterizedType pt && pt.getRawType() instanceof Class<?> raw) return raw;
+        return null;
     }
 
     private void reflectClassMembers(Class<?> cls, TypeDecl decl) {
@@ -365,6 +386,9 @@ public final class TypeReflector {
         if (type instanceof GenericArrayType gat) return ApiTypeRef.array(toRef(gat.getGenericComponentType()));
         if (type instanceof TypeVariable<?> tv) return ApiTypeRef.typeVariable(tv.getName());
         if (type instanceof WildcardType wt) {
+            // 实验：? super X 的下界 X 才是消费者需要的类型（`?` 无界通配符仍回落 any）
+            Type[] lower = wt.getLowerBounds();
+            if (lower.length > 0) return toRef(lower[0]);
             Type[] upper = wt.getUpperBounds();
             if (upper.length > 0 && upper[0] != Object.class) return toRef(upper[0]);
             return ApiTypeRef.primitive("any");

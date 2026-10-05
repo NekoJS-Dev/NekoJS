@@ -1,13 +1,13 @@
 import { $Serializable } from "java:java/io";
-import { $Character, $Cloneable, $Double, $Enum, $Integer, $Iterable, $Long, $Runnable, $String } from "java:java/lang";
-import { $BiConsumer, $BiFunction, $Consumer, $DoubleConsumer, $DoubleSupplier, $Function, $IntConsumer, $IntFunction, $IntSupplier, $LongConsumer, $LongSupplier, $Predicate, $Supplier, $ToDoubleFunction, $ToIntFunction, $ToLongFunction, $UnaryOperator } from "java:java/util/function";
+import { $Character, $Cloneable, $Double, $Enum, $Integer, $Iterable, $Iterable_, $Long, $Runnable, $Runnable_, $String } from "java:java/lang";
+import { $BiConsumer, $BiConsumer_, $BiFunction, $BiFunction_, $Consumer, $Consumer_, $DoubleConsumer, $DoubleConsumer_, $DoubleSupplier, $DoubleSupplier_, $Function, $Function_, $IntConsumer, $IntConsumer_, $IntFunction, $IntFunction_, $IntSupplier, $IntSupplier_, $LongConsumer, $LongConsumer_, $LongSupplier, $LongSupplier_, $Predicate, $Predicate_, $Supplier, $Supplier_, $ToDoubleFunction, $ToDoubleFunction_, $ToIntFunction, $ToIntFunction_, $ToLongFunction, $ToLongFunction_, $UnaryOperator, $UnaryOperator_ } from "java:java/util/function";
 import { $DoubleStream, $IntStream, $LongStream, $Stream } from "java:java/util/stream";
 
 export * as function from "java:java/util/function";
 export * as stream from "java:java/util/stream";
 
 declare module "java:java/util" {
-    export interface $Collection<E> extends $Iterable {
+    export interface $Collection<E> extends $Iterable<E> {
         addAll(arg0: E[]): boolean;
         add(arg0: E): boolean;
         clear(): void;
@@ -19,36 +19,36 @@ declare module "java:java/util" {
         iterator(): $Iterator<E>;
         parallelStream(): $Stream<E>;
         removeAll(arg0: any[]): boolean;
-        removeIf(arg0: $Predicate<any>): boolean;
+        removeIf(arg0: $Predicate_<E>): boolean;
         remove(arg0: object): boolean;
         retainAll(arg0: any[]): boolean;
         size(): number;
         spliterator(): $Spliterator<E>;
         stream(): $Stream<E>;
         toArray<T>(arg0: T[]): T[];
-        toArray<T>(arg0: $IntFunction<T[]>): T[];
+        toArray<T>(arg0: $IntFunction_<T[]>): T[];
         toArray(): object[];
     }
 
     export interface $Comparator<T> {
         compare(arg0: T, arg1: T): number;
-        comparingDouble<T>(arg0: $ToDoubleFunction<any>): $Comparator<T>;
-        comparingInt<T>(arg0: $ToIntFunction<any>): $Comparator<T>;
-        comparingLong<T>(arg0: $ToLongFunction<any>): $Comparator<T>;
-        comparing<T, U>(arg0: $Function<any, U>, arg1: $Comparator<any>): $Comparator<T>;
-        comparing<T, U>(arg0: $Function<any, U>): $Comparator<T>;
+        comparingDouble<T>(arg0: $ToDoubleFunction_<T>): $Comparator<T>;
+        comparingInt<T>(arg0: $ToIntFunction_<T>): $Comparator<T>;
+        comparingLong<T>(arg0: $ToLongFunction_<T>): $Comparator<T>;
+        comparing<T, U>(arg0: $Function_<T, U>, arg1: $Comparator<U>): $Comparator<T>;
+        comparing<T, U>(arg0: $Function_<T, U>): $Comparator<T>;
         equals(arg0: object): boolean;
         naturalOrder<T>(): $Comparator<T>;
-        nullsFirst<T>(arg0: $Comparator<any>): $Comparator<T>;
-        nullsLast<T>(arg0: $Comparator<any>): $Comparator<T>;
+        nullsFirst<T>(arg0: $Comparator<T>): $Comparator<T>;
+        nullsLast<T>(arg0: $Comparator<T>): $Comparator<T>;
         reverseOrder<T>(): $Comparator<T>;
         reversed(): $Comparator<T>;
-        thenComparingDouble(arg0: $ToDoubleFunction<any>): $Comparator<T>;
-        thenComparingInt(arg0: $ToIntFunction<any>): $Comparator<T>;
-        thenComparingLong(arg0: $ToLongFunction<any>): $Comparator<T>;
-        thenComparing(arg0: $Comparator<any>): $Comparator<T>;
-        thenComparing<U>(arg0: $Function<any, U>, arg1: $Comparator<any>): $Comparator<T>;
-        thenComparing<U>(arg0: $Function<any, U>): $Comparator<T>;
+        thenComparingDouble(arg0: $ToDoubleFunction_<T>): $Comparator<T>;
+        thenComparingInt(arg0: $ToIntFunction_<T>): $Comparator<T>;
+        thenComparingLong(arg0: $ToLongFunction_<T>): $Comparator<T>;
+        thenComparing(arg0: $Comparator<T>): $Comparator<T>;
+        thenComparing<U>(arg0: $Function_<T, U>, arg1: $Comparator<U>): $Comparator<T>;
+        thenComparing<U>(arg0: $Function_<T, U>): $Comparator<T>;
     }
 
     export class $DoubleSummaryStatistics implements $DoubleConsumer {
@@ -94,13 +94,13 @@ declare module "java:java/util" {
     }
 
     export interface $Iterator<E> {
-        forEachRemaining(arg0: $Consumer<any>): void;
+        forEachRemaining(arg0: $Consumer_<E>): void;
         hasNext(): boolean;
         next(): E;
         remove(): void;
     }
 
-    export interface $List<E> extends $SequencedCollection {
+    export interface $List<E> extends $SequencedCollection<E> {
         addAll(arg0: number, arg1: E[]): boolean;
         addAll(arg0: E[]): boolean;
         addFirst(arg0: E): void;
@@ -139,19 +139,19 @@ declare module "java:java/util" {
         removeLast(): E;
         remove(arg0: number): E;
         remove(arg0: object): boolean;
-        replaceAll(arg0: $UnaryOperator<E>): void;
+        replaceAll(arg0: $UnaryOperator_<E>): void;
         retainAll(arg0: any[]): boolean;
         reversed(): $List<E>;
         set(arg0: number, arg1: E): E;
         size(): number;
-        sort(arg0: $Comparator<any>): void;
+        sort(arg0: $Comparator<E>): void;
         spliterator(): $Spliterator<E>;
         subList(arg0: number, arg1: number): $List<E>;
         toArray<T>(arg0: T[]): T[];
         toArray(): object[];
     }
 
-    export interface $ListIterator<E> extends $Iterator {
+    export interface $ListIterator<E> extends $Iterator<E> {
         add(arg0: E): void;
         hasNext(): boolean;
         hasPrevious(): boolean;
@@ -327,22 +327,22 @@ declare module "java:java/util" {
 
     export interface $Map<K, V> {
         clear(): void;
-        computeIfAbsent(arg0: K, arg1: $Function<any, V>): V;
-        computeIfPresent(arg0: K, arg1: $BiFunction<any, any, V>): V;
-        compute(arg0: K, arg1: $BiFunction<any, any, V>): V;
+        computeIfAbsent(arg0: K, arg1: $Function_<K, V>): V;
+        computeIfPresent(arg0: K, arg1: $BiFunction_<K, V, V>): V;
+        compute(arg0: K, arg1: $BiFunction_<K, V, V>): V;
         containsKey(arg0: object): boolean;
         containsValue(arg0: object): boolean;
         copyOf<K, V>(arg0: { [key: K]: V }): $Map<K, V>;
         entrySet(): $Set<$Map$Entry<K, V>>;
         entry<K, V>(arg0: K, arg1: V): $Map$Entry<K, V>;
         equals(arg0: object): boolean;
-        forEach(arg0: $BiConsumer<any, any>): void;
+        forEach(arg0: $BiConsumer_<K, V>): void;
         getOrDefault(arg0: object, arg1: V): V;
         get(arg0: object): V;
         hashCode(): number;
         isEmpty(): boolean;
         keySet(): $Set<K>;
-        merge(arg0: K, arg1: V, arg2: $BiFunction<any, any, V>): V;
+        merge(arg0: K, arg1: V, arg2: $BiFunction_<V, V, V>): V;
         ofEntries<K, V>(arg0?: $Map$Entry<K, V>[]): $Map<K, V>;
         of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V, arg16: K, arg17: V, arg18: K, arg19: V): $Map<K, V>;
         of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V, arg16: K, arg17: V): $Map<K, V>;
@@ -360,7 +360,7 @@ declare module "java:java/util" {
         put(arg0: K, arg1: V): V;
         remove(arg0: object, arg1: object): boolean;
         remove(arg0: object): V;
-        replaceAll(arg0: $BiFunction<any, any, V>): void;
+        replaceAll(arg0: $BiFunction_<K, V, V>): void;
         replace(arg0: K, arg1: V, arg2: V): boolean;
         replace(arg0: K, arg1: V): V;
         size(): number;
@@ -368,9 +368,9 @@ declare module "java:java/util" {
     }
 
     export interface $Map$Entry<K, V> {
-        comparingByKey<K, V>(arg0: $Comparator<any>): $Comparator<$Map$Entry<K, V>>;
+        comparingByKey<K, V>(arg0: $Comparator<K>): $Comparator<$Map$Entry<K, V>>;
         comparingByKey<K, V>(): $Comparator<$Map$Entry<K, V>>;
-        comparingByValue<K, V>(arg0: $Comparator<any>): $Comparator<$Map$Entry<K, V>>;
+        comparingByValue<K, V>(arg0: $Comparator<V>): $Comparator<$Map$Entry<K, V>>;
         comparingByValue<K, V>(): $Comparator<$Map$Entry<K, V>>;
         copyOf<K, V>(arg0: $Map$Entry<K, V>): $Map$Entry<K, V>;
         equals(arg0: object): boolean;
@@ -389,18 +389,18 @@ declare module "java:java/util" {
         static ofNullable<T>(arg0: T): $Optional<T>;
         static of<T>(arg0: T): $Optional<T>;
         equals(arg0: object): boolean;
-        filter(arg0: $Predicate<any>): $Optional<T>;
-        flatMap<U>(arg0: $Function<any, $Optional<U>>): $Optional<U>;
+        filter(arg0: $Predicate_<T>): $Optional<T>;
+        flatMap<U>(arg0: $Function_<T, $Optional<U>>): $Optional<U>;
         get(): T;
         hashCode(): number;
-        ifPresentOrElse(arg0: $Consumer<any>, arg1: $Runnable): void;
-        ifPresent(arg0: $Consumer<any>): void;
-        map<U>(arg0: $Function<any, U>): $Optional<U>;
-        orElseGet(arg0: $Supplier<T>): T;
-        orElseThrow<X>(arg0: $Supplier<X>): T;
+        ifPresentOrElse(arg0: $Consumer_<T>, arg1: $Runnable_): void;
+        ifPresent(arg0: $Consumer_<T>): void;
+        map<U>(arg0: $Function_<T, U>): $Optional<U>;
+        orElseGet(arg0: $Supplier_<T>): T;
+        orElseThrow<X>(arg0: $Supplier_<X>): T;
         orElseThrow(): T;
         orElse(arg0: T): T;
-        or(arg0: $Supplier<$Optional<T>>): $Optional<T>;
+        or(arg0: $Supplier_<$Optional<T>>): $Optional<T>;
         stream(): $Stream<T>;
         toString(): string;
     }
@@ -416,10 +416,10 @@ declare module "java:java/util" {
         static of(arg0: number): $OptionalDouble;
         equals(arg0: object): boolean;
         hashCode(): number;
-        ifPresentOrElse(arg0: $DoubleConsumer, arg1: $Runnable): void;
-        ifPresent(arg0: $DoubleConsumer): void;
-        orElseGet(arg0: $DoubleSupplier): number;
-        orElseThrow<X>(arg0: $Supplier<X>): number;
+        ifPresentOrElse(arg0: $DoubleConsumer_, arg1: $Runnable_): void;
+        ifPresent(arg0: $DoubleConsumer_): void;
+        orElseGet(arg0: $DoubleSupplier_): number;
+        orElseThrow<X>(arg0: $Supplier_<X>): number;
         orElseThrow(): number;
         orElse(arg0: number): number;
         stream(): $DoubleStream;
@@ -437,10 +437,10 @@ declare module "java:java/util" {
         static of(arg0: number): $OptionalInt;
         equals(arg0: object): boolean;
         hashCode(): number;
-        ifPresentOrElse(arg0: $IntConsumer, arg1: $Runnable): void;
-        ifPresent(arg0: $IntConsumer): void;
-        orElseGet(arg0: $IntSupplier): number;
-        orElseThrow<X>(arg0: $Supplier<X>): number;
+        ifPresentOrElse(arg0: $IntConsumer_, arg1: $Runnable_): void;
+        ifPresent(arg0: $IntConsumer_): void;
+        orElseGet(arg0: $IntSupplier_): number;
+        orElseThrow<X>(arg0: $Supplier_<X>): number;
         orElseThrow(): number;
         orElse(arg0: number): number;
         stream(): $IntStream;
@@ -458,42 +458,42 @@ declare module "java:java/util" {
         static of(arg0: number): $OptionalLong;
         equals(arg0: object): boolean;
         hashCode(): number;
-        ifPresentOrElse(arg0: $LongConsumer, arg1: $Runnable): void;
-        ifPresent(arg0: $LongConsumer): void;
-        orElseGet(arg0: $LongSupplier): number;
-        orElseThrow<X>(arg0: $Supplier<X>): number;
+        ifPresentOrElse(arg0: $LongConsumer_, arg1: $Runnable_): void;
+        ifPresent(arg0: $LongConsumer_): void;
+        orElseGet(arg0: $LongSupplier_): number;
+        orElseThrow<X>(arg0: $Supplier_<X>): number;
         orElseThrow(): number;
         orElse(arg0: number): number;
         stream(): $LongStream;
         toString(): string;
     }
 
-    export interface $PrimitiveIterator<T, T_CONS> extends $Iterator {
+    export interface $PrimitiveIterator<T, T_CONS> extends $Iterator<T> {
         forEachRemaining(arg0: T_CONS): void;
     }
 
-    export interface $PrimitiveIterator$OfDouble extends $PrimitiveIterator {
-        forEachRemaining(arg0: $Consumer<any>): void;
-        forEachRemaining(arg0: $DoubleConsumer): void;
+    export interface $PrimitiveIterator$OfDouble extends $PrimitiveIterator<number, $DoubleConsumer> {
+        forEachRemaining(arg0: $Consumer_<number>): void;
+        forEachRemaining(arg0: $DoubleConsumer_): void;
         nextDouble(): number;
         next(): number;
     }
 
-    export interface $PrimitiveIterator$OfInt extends $PrimitiveIterator {
-        forEachRemaining(arg0: $Consumer<any>): void;
-        forEachRemaining(arg0: $IntConsumer): void;
+    export interface $PrimitiveIterator$OfInt extends $PrimitiveIterator<number, $IntConsumer> {
+        forEachRemaining(arg0: $Consumer_<number>): void;
+        forEachRemaining(arg0: $IntConsumer_): void;
         nextInt(): number;
         next(): number;
     }
 
-    export interface $PrimitiveIterator$OfLong extends $PrimitiveIterator {
-        forEachRemaining(arg0: $Consumer<any>): void;
-        forEachRemaining(arg0: $LongConsumer): void;
+    export interface $PrimitiveIterator$OfLong extends $PrimitiveIterator<number, $LongConsumer> {
+        forEachRemaining(arg0: $Consumer_<number>): void;
+        forEachRemaining(arg0: $LongConsumer_): void;
         nextLong(): number;
         next(): number;
     }
 
-    export interface $SequencedCollection<E> extends $Collection {
+    export interface $SequencedCollection<E> extends $Collection<E> {
         addFirst(arg0: E): void;
         addLast(arg0: E): void;
         getFirst(): E;
@@ -503,7 +503,7 @@ declare module "java:java/util" {
         reversed(): $SequencedCollection<E>;
     }
 
-    export interface $SequencedMap<K, V> extends $Map {
+    export interface $SequencedMap<K, V> extends $Map<K, V> {
         firstEntry(): $Map$Entry<K, V>;
         lastEntry(): $Map$Entry<K, V>;
         pollFirstEntry(): $Map$Entry<K, V>;
@@ -516,11 +516,11 @@ declare module "java:java/util" {
         sequencedValues(): $SequencedCollection<V>;
     }
 
-    export interface $SequencedSet<E> extends $SequencedCollection, $Set {
+    export interface $SequencedSet<E> extends $SequencedCollection<E>, $Set<E> {
         reversed(): $SequencedSet<E>;
     }
 
-    export interface $Set<E> extends $Collection {
+    export interface $Set<E> extends $Collection<E> {
         addAll(arg0: E[]): boolean;
         add(arg0: E): boolean;
         clear(): void;
@@ -552,8 +552,8 @@ declare module "java:java/util" {
         toArray(): object[];
     }
 
-    export interface $SortedMap<K, V> extends $SequencedMap {
-        comparator(): $Comparator<any>;
+    export interface $SortedMap<K, V> extends $SequencedMap<K, V> {
+        comparator(): $Comparator<K>;
         entrySet(): $Set<$Map$Entry<K, V>>;
         firstKey(): K;
         headMap(arg0: K): $SortedMap<K, V>;
@@ -570,11 +570,11 @@ declare module "java:java/util" {
     export interface $Spliterator<T> {
         characteristics(): number;
         estimateSize(): number;
-        forEachRemaining(arg0: $Consumer<any>): void;
-        getComparator(): $Comparator<any>;
+        forEachRemaining(arg0: $Consumer_<T>): void;
+        getComparator(): $Comparator<T>;
         getExactSizeIfKnown(): number;
         hasCharacteristics(arg0: number): boolean;
-        tryAdvance(arg0: $Consumer<any>): boolean;
+        tryAdvance(arg0: $Consumer_<T>): boolean;
         trySplit(): $Spliterator<T>;
         static CONCURRENT: number;
         static DISTINCT: number;
@@ -586,31 +586,31 @@ declare module "java:java/util" {
         static SUBSIZED: number;
     }
 
-    export interface $Spliterator$OfDouble extends $Spliterator$OfPrimitive {
-        forEachRemaining(arg0: $Consumer<any>): void;
-        forEachRemaining(arg0: $DoubleConsumer): void;
-        tryAdvance(arg0: $Consumer<any>): boolean;
-        tryAdvance(arg0: $DoubleConsumer): boolean;
+    export interface $Spliterator$OfDouble extends $Spliterator$OfPrimitive<number, $DoubleConsumer, $Spliterator$OfDouble> {
+        forEachRemaining(arg0: $Consumer_<number>): void;
+        forEachRemaining(arg0: $DoubleConsumer_): void;
+        tryAdvance(arg0: $Consumer_<number>): boolean;
+        tryAdvance(arg0: $DoubleConsumer_): boolean;
         trySplit(): $Spliterator$OfDouble;
     }
 
-    export interface $Spliterator$OfInt extends $Spliterator$OfPrimitive {
-        forEachRemaining(arg0: $Consumer<any>): void;
-        forEachRemaining(arg0: $IntConsumer): void;
-        tryAdvance(arg0: $Consumer<any>): boolean;
-        tryAdvance(arg0: $IntConsumer): boolean;
+    export interface $Spliterator$OfInt extends $Spliterator$OfPrimitive<number, $IntConsumer, $Spliterator$OfInt> {
+        forEachRemaining(arg0: $Consumer_<number>): void;
+        forEachRemaining(arg0: $IntConsumer_): void;
+        tryAdvance(arg0: $Consumer_<number>): boolean;
+        tryAdvance(arg0: $IntConsumer_): boolean;
         trySplit(): $Spliterator$OfInt;
     }
 
-    export interface $Spliterator$OfLong extends $Spliterator$OfPrimitive {
-        forEachRemaining(arg0: $Consumer<any>): void;
-        forEachRemaining(arg0: $LongConsumer): void;
-        tryAdvance(arg0: $Consumer<any>): boolean;
-        tryAdvance(arg0: $LongConsumer): boolean;
+    export interface $Spliterator$OfLong extends $Spliterator$OfPrimitive<number, $LongConsumer, $Spliterator$OfLong> {
+        forEachRemaining(arg0: $Consumer_<number>): void;
+        forEachRemaining(arg0: $LongConsumer_): void;
+        tryAdvance(arg0: $Consumer_<number>): boolean;
+        tryAdvance(arg0: $LongConsumer_): boolean;
         trySplit(): $Spliterator$OfLong;
     }
 
-    export interface $Spliterator$OfPrimitive<T, T_CONS, T_SPLITR extends $Spliterator$OfPrimitive<T, T_CONS, T_SPLITR>> extends $Spliterator {
+    export interface $Spliterator$OfPrimitive<T, T_CONS, T_SPLITR extends $Spliterator$OfPrimitive<T, T_CONS, T_SPLITR>> extends $Spliterator<T> {
         forEachRemaining(arg0: T_CONS): void;
         tryAdvance(arg0: T_CONS): boolean;
         trySplit(): T_SPLITR;

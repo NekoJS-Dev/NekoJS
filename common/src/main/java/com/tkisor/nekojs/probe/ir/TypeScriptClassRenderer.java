@@ -357,6 +357,9 @@ public final class TypeScriptClassRenderer {
                         .toArray(String[]::new);
                 String alias = aliases.getCollectionAlias(fqn, renderedArgs);
                 if (alias != null) return alias;
+                // 泛型类别名（函数式接口的 lambda 别名）：实参透传，如 Consumer<String> → $Consumer_<string>
+                alias = aliases.getGenericClassAlias(fqn, renderedArgs);
+                if (alias != null) return alias;
             } else if (aliases.hasAlias(fqn)) {
                 return aliases.getAlias(fqn);
             }

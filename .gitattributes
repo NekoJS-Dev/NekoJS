@@ -11,6 +11,9 @@
 *.yaml text eol=lf
 *.sh text eol=lf
 *.properties text eol=lf
+# probe golden 与 tsc 校验用的声明文件：内容参与字节级比对（goldens 归一化行尾后才比较），
+# 不声明会被 core.autocrlf 在 checkout 时改成 CRLF，让整棵树在 git status 里假装被改动
+*.d.ts text eol=lf
 # 无扩展名脚本不匹配 *.sh，单独声明（两者均要求仓库内 LF）
 gradlew text eol=lf
 scripts/check-platform-drift text eol=lf

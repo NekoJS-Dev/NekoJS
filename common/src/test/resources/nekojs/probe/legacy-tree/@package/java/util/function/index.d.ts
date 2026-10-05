@@ -3,22 +3,22 @@ import { $Comparator } from "java:java/util";
 declare module "java:java/util/function" {
     export interface $BiConsumer<T, U> {
         accept(arg0: T, arg1: U): void;
-        andThen(arg0: $BiConsumer<any, any>): $BiConsumer<T, U>;
+        andThen(arg0: $BiConsumer_<T, U>): $BiConsumer<T, U>;
     }
 
     export interface $BiFunction<T, U, R> {
-        andThen<V>(arg0: $Function<any, V>): $BiFunction<T, U, V>;
+        andThen<V>(arg0: $Function_<R, V>): $BiFunction<T, U, V>;
         apply(arg0: T, arg1: U): R;
     }
 
-    export interface $BinaryOperator<T> extends $BiFunction {
-        maxBy<T>(arg0: $Comparator<any>): $BinaryOperator<T>;
-        minBy<T>(arg0: $Comparator<any>): $BinaryOperator<T>;
+    export interface $BinaryOperator<T> extends $BiFunction<T, T, T> {
+        maxBy<T>(arg0: $Comparator<T>): $BinaryOperator<T>;
+        minBy<T>(arg0: $Comparator<T>): $BinaryOperator<T>;
     }
 
     export interface $Consumer<T> {
         accept(arg0: T): void;
-        andThen(arg0: $Consumer<any>): $Consumer<T>;
+        andThen(arg0: $Consumer_<T>): $Consumer<T>;
     }
 
     export interface $DoubleBinaryOperator {
@@ -27,7 +27,7 @@ declare module "java:java/util/function" {
 
     export interface $DoubleConsumer {
         accept(arg0: number): void;
-        andThen(arg0: $DoubleConsumer): $DoubleConsumer;
+        andThen(arg0: $DoubleConsumer_): $DoubleConsumer;
     }
 
     export interface $DoubleFunction<R> {
@@ -35,9 +35,9 @@ declare module "java:java/util/function" {
     }
 
     export interface $DoublePredicate {
-        and(arg0: $DoublePredicate): $DoublePredicate;
+        and(arg0: $DoublePredicate_): $DoublePredicate;
         negate(): $DoublePredicate;
-        or(arg0: $DoublePredicate): $DoublePredicate;
+        or(arg0: $DoublePredicate_): $DoublePredicate;
         test(arg0: number): boolean;
     }
 
@@ -54,16 +54,16 @@ declare module "java:java/util/function" {
     }
 
     export interface $DoubleUnaryOperator {
-        andThen(arg0: $DoubleUnaryOperator): $DoubleUnaryOperator;
+        andThen(arg0: $DoubleUnaryOperator_): $DoubleUnaryOperator;
         applyAsDouble(arg0: number): number;
-        compose(arg0: $DoubleUnaryOperator): $DoubleUnaryOperator;
+        compose(arg0: $DoubleUnaryOperator_): $DoubleUnaryOperator;
         identity(): $DoubleUnaryOperator;
     }
 
     export interface $Function<T, R> {
-        andThen<V>(arg0: $Function<any, V>): $Function<T, V>;
+        andThen<V>(arg0: $Function_<R, V>): $Function<T, V>;
         apply(arg0: T): R;
-        compose<V>(arg0: $Function<any, T>): $Function<V, R>;
+        compose<V>(arg0: $Function_<V, T>): $Function<V, R>;
         identity<T>(): $Function<T, T>;
     }
 
@@ -73,7 +73,7 @@ declare module "java:java/util/function" {
 
     export interface $IntConsumer {
         accept(arg0: number): void;
-        andThen(arg0: $IntConsumer): $IntConsumer;
+        andThen(arg0: $IntConsumer_): $IntConsumer;
     }
 
     export interface $IntFunction<R> {
@@ -81,9 +81,9 @@ declare module "java:java/util/function" {
     }
 
     export interface $IntPredicate {
-        and(arg0: $IntPredicate): $IntPredicate;
+        and(arg0: $IntPredicate_): $IntPredicate;
         negate(): $IntPredicate;
-        or(arg0: $IntPredicate): $IntPredicate;
+        or(arg0: $IntPredicate_): $IntPredicate;
         test(arg0: number): boolean;
     }
 
@@ -100,9 +100,9 @@ declare module "java:java/util/function" {
     }
 
     export interface $IntUnaryOperator {
-        andThen(arg0: $IntUnaryOperator): $IntUnaryOperator;
+        andThen(arg0: $IntUnaryOperator_): $IntUnaryOperator;
         applyAsInt(arg0: number): number;
-        compose(arg0: $IntUnaryOperator): $IntUnaryOperator;
+        compose(arg0: $IntUnaryOperator_): $IntUnaryOperator;
         identity(): $IntUnaryOperator;
     }
 
@@ -112,7 +112,7 @@ declare module "java:java/util/function" {
 
     export interface $LongConsumer {
         accept(arg0: number): void;
-        andThen(arg0: $LongConsumer): $LongConsumer;
+        andThen(arg0: $LongConsumer_): $LongConsumer;
     }
 
     export interface $LongFunction<R> {
@@ -120,9 +120,9 @@ declare module "java:java/util/function" {
     }
 
     export interface $LongPredicate {
-        and(arg0: $LongPredicate): $LongPredicate;
+        and(arg0: $LongPredicate_): $LongPredicate;
         negate(): $LongPredicate;
-        or(arg0: $LongPredicate): $LongPredicate;
+        or(arg0: $LongPredicate_): $LongPredicate;
         test(arg0: number): boolean;
     }
 
@@ -139,9 +139,9 @@ declare module "java:java/util/function" {
     }
 
     export interface $LongUnaryOperator {
-        andThen(arg0: $LongUnaryOperator): $LongUnaryOperator;
+        andThen(arg0: $LongUnaryOperator_): $LongUnaryOperator;
         applyAsLong(arg0: number): number;
-        compose(arg0: $LongUnaryOperator): $LongUnaryOperator;
+        compose(arg0: $LongUnaryOperator_): $LongUnaryOperator;
         identity(): $LongUnaryOperator;
     }
 
@@ -158,11 +158,11 @@ declare module "java:java/util/function" {
     }
 
     export interface $Predicate<T> {
-        and(arg0: $Predicate<any>): $Predicate<T>;
+        and(arg0: $Predicate_<T>): $Predicate<T>;
         isEqual<T>(arg0: object): $Predicate<T>;
         negate(): $Predicate<T>;
-        not<T>(arg0: $Predicate<any>): $Predicate<T>;
-        or(arg0: $Predicate<any>): $Predicate<T>;
+        not<T>(arg0: $Predicate_<T>): $Predicate<T>;
+        or(arg0: $Predicate_<T>): $Predicate<T>;
         test(arg0: T): boolean;
     }
 
@@ -182,16 +182,46 @@ declare module "java:java/util/function" {
         applyAsLong(arg0: T): number;
     }
 
-    export interface $UnaryOperator<T> extends $Function {
+    export interface $UnaryOperator<T> extends $Function<T, T> {
         identity<T>(): $UnaryOperator<T>;
     }
 
-    export type $BiConsumer_<T, U> = (T, U) => void;
-    export type $BiFunction_<T, U, R> = (T, U) => any;
-    export type $BinaryOperator_<T> = (T, T) => T;
-    export type $Consumer_<T> = (T) => void;
-    export type $Function_<T, R> = (T) => R;
-    export type $Predicate_<T> = (T) => boolean;
+    export type $BiConsumer_<T, U> = (arg0: T, arg1: U) => void;
+    export type $BiFunction_<T, U, R> = (arg0: T, arg1: U) => R;
+    export type $BinaryOperator_<T> = (arg0: T, arg1: U) => R;
+    export type $Consumer_<T> = (arg0: T) => void;
+    export type $DoubleBinaryOperator_ = (arg0: number, arg1: number) => number;
+    export type $DoubleConsumer_ = (arg0: number) => void;
+    export type $DoubleFunction_<R> = (arg0: number) => R;
+    export type $DoublePredicate_ = (arg0: number) => boolean;
+    export type $DoubleSupplier_ = () => number;
+    export type $DoubleToIntFunction_ = (arg0: number) => number;
+    export type $DoubleToLongFunction_ = (arg0: number) => number;
+    export type $DoubleUnaryOperator_ = (arg0: number) => number;
+    export type $Function_<T, R> = (arg0: T) => R;
+    export type $IntBinaryOperator_ = (arg0: number, arg1: number) => number;
+    export type $IntConsumer_ = (arg0: number) => void;
+    export type $IntFunction_<R> = (arg0: number) => R;
+    export type $IntPredicate_ = (arg0: number) => boolean;
+    export type $IntSupplier_ = () => number;
+    export type $IntToDoubleFunction_ = (arg0: number) => number;
+    export type $IntToLongFunction_ = (arg0: number) => number;
+    export type $IntUnaryOperator_ = (arg0: number) => number;
+    export type $LongBinaryOperator_ = (arg0: number, arg1: number) => number;
+    export type $LongConsumer_ = (arg0: number) => void;
+    export type $LongFunction_<R> = (arg0: number) => R;
+    export type $LongPredicate_ = (arg0: number) => boolean;
+    export type $LongSupplier_ = () => number;
+    export type $LongToDoubleFunction_ = (arg0: number) => number;
+    export type $LongToIntFunction_ = (arg0: number) => number;
+    export type $LongUnaryOperator_ = (arg0: number) => number;
+    export type $ObjDoubleConsumer_<T> = (arg0: T, arg1: number) => void;
+    export type $ObjIntConsumer_<T> = (arg0: T, arg1: number) => void;
+    export type $ObjLongConsumer_<T> = (arg0: T, arg1: number) => void;
+    export type $Predicate_<T> = (arg0: T) => boolean;
     export type $Supplier_<T> = () => T;
-    export type $UnaryOperator_<T> = (T) => {1};
+    export type $ToDoubleFunction_<T> = (arg0: T) => number;
+    export type $ToIntFunction_<T> = (arg0: T) => number;
+    export type $ToLongFunction_<T> = (arg0: T) => number;
+    export type $UnaryOperator_<T> = (arg0: T) => R;
 }

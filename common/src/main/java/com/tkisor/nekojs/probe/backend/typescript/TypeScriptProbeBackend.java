@@ -48,10 +48,14 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
     private final TypeAliasRegistry aliasRegistry = new TypeAliasRegistry();
     private final AdapterAliasGenerator adapterAliasGenerator = new AdapterAliasGenerator(aliasRegistry);
+    /** 函数式接口的 lambda 输入别名：{@code $Consumer_<T> = (arg0: T) => void}。 */
+    private final FunctionalInterfaceAliasGenerator lambdaAliasGenerator =
+            new FunctionalInterfaceAliasGenerator(aliasRegistry);
     // IR 唯一渲染路径（Phase 2.7）：所有类声明与 import 均由 TypeReflector → IR → renderer 产出，
     // 旧的 ClassDeclGenerator 直接反射渲染已删除
     private final TypeScriptClassRenderer tsClassRenderer = new TypeScriptClassRenderer(aliasRegistry);
-    private final IndexFileGenerator indexFileGenerator = new IndexFileGenerator(tsClassRenderer, adapterAliasGenerator);
+    private final IndexFileGenerator indexFileGenerator =
+            new IndexFileGenerator(tsClassRenderer, adapterAliasGenerator, lambdaAliasGenerator);
     private final EventDeclarationGenerator eventGenerator = new EventDeclarationGenerator(aliasRegistry, adapterAliasGenerator);
     private final BindingDeclarationGenerator bindingGenerator = new BindingDeclarationGenerator();
     private final RecipeEventDeclarationGenerator recipeEventGenerator = new RecipeEventDeclarationGenerator(aliasRegistry);
@@ -118,11 +122,26 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             aliasRegistry.clear();
             adapterAliasGenerator.prepare(snapshot.adapters(), classesToGenerate);
 
-            // 别名引用的跨包 host 类型（如 NekoId、Item）也需生成声明，否则别名里的 $NekoId 等会悬空
+            // 别名引用的跨包 host 类型（如 NekoId、Item）也需生成声明，否则别名里的 $NekoId 等会悬空。
             for (String host : adapterAliasGenerator.hostImports()) {
                 if (ctx.config().isRelevantClass(host, platformPkgs)) {
                     classesToGenerate.add(host);
                 }
+            }
+
+            // 函数式接口的 lambda 别名（$Consumer_<T>）：必须在参数渲染前注册，故放在
+            // 适配器 host 补齐**之后**——这样别名集合覆盖到全部会被生成的类（含刚补进来的 host）。
+            // 别名自己引用的类型还可能引入新类，故循环到不动点（实际一两轮即收敛：
+            // 引用通常是已有类的类型实参，如 $Consumer_<T> 里的 $ItemStack）。
+            for (int round = 0; round < 4; round++) {
+                lambdaAliasGenerator.prepare(classesToGenerate);
+                boolean grew = false;
+                for (String host : lambdaAliasGenerator.hostImports()) {
+                    if (ctx.config().isRelevantClass(host, platformPkgs) && classesToGenerate.add(host)) {
+                        grew = true;
+                    }
+                }
+                if (!grew) break;
             }
 
             NekoJS.LOGGER.info("Probe [typescript]: {} classes to generate", classesToGenerate.size());

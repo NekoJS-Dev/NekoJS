@@ -1,4 +1,4 @@
-import { $AutoCloseable } from "java:java/lang";
+import { $AutoCloseable, $AutoCloseable_ } from "java:java/lang";
 
 declare module "java:java/io" {
     export interface $Closeable extends $AutoCloseable {
@@ -37,4 +37,5 @@ declare module "java:java/io" {
     export interface $Serializable {
     }
 
+    export type $Closeable_ = () => void;
 }

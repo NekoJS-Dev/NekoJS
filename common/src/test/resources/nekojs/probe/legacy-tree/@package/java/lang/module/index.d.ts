@@ -1,12 +1,12 @@
 import { $InputStream } from "java:java/io";
-import { $Comparable, $String } from "java:java/lang";
+import { $Comparable, $Comparable_, $String } from "java:java/lang";
 import { $AccessFlag, $AccessFlag_ } from "java:java/lang/reflect";
 import { $ByteBuffer } from "java:java/nio";
 import { $Optional, $Set } from "java:java/util";
-import { $Supplier } from "java:java/util/function";
+import { $Supplier, $Supplier_ } from "java:java/util/function";
 
 declare module "java:java/lang/module" {
-    export class $ModuleDescriptor implements $Comparable {
+    export class $ModuleDescriptor implements $Comparable<$ModuleDescriptor> {
         get automatic(): boolean;
         isAutomatic(): boolean;
         get open(): boolean;
@@ -15,9 +15,9 @@ declare module "java:java/lang/module" {
         static newModule(arg0: string, arg1: $ModuleDescriptor$Modifier_[]): $ModuleDescriptor$Builder;
         static newModule(arg0: string): $ModuleDescriptor$Builder;
         static newOpenModule(arg0: string): $ModuleDescriptor$Builder;
-        static read(arg0: $InputStream, arg1: $Supplier<string[]>): $ModuleDescriptor;
+        static read(arg0: $InputStream, arg1: $Supplier_<string[]>): $ModuleDescriptor;
         static read(arg0: $InputStream): $ModuleDescriptor;
-        static read(arg0: $ByteBuffer, arg1: $Supplier<string[]>): $ModuleDescriptor;
+        static read(arg0: $ByteBuffer, arg1: $Supplier_<string[]>): $ModuleDescriptor;
         static read(arg0: $ByteBuffer): $ModuleDescriptor;
         accessFlags(): $Set<$AccessFlag>;
         compareTo(arg0: $ModuleDescriptor): number;

@@ -5,6 +5,7 @@ import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.*;
 import java.util.*;
@@ -25,6 +26,9 @@ import java.util.*;
 public final class IndexFileGenerator {
     private final TypeScriptClassRenderer irRenderer;
     private final AdapterAliasGenerator adapterAliasGenerator;
+    /** 函数式接口的 lambda 别名；未接线时为 null（见三参构造器）。 */
+    @Nullable
+    private final FunctionalInterfaceAliasGenerator lambdaAliasGenerator;
 
     // 性能缓存（线程安全，支持并行生成）
     private final java.util.concurrent.ConcurrentHashMap<String, Class<?>> classCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -49,8 +53,19 @@ public final class IndexFileGenerator {
     private volatile Set<String> hiddenClasses = Set.of();
 
     public IndexFileGenerator(TypeScriptClassRenderer irRenderer, AdapterAliasGenerator adapterAliasGenerator) {
+        this(irRenderer, adapterAliasGenerator, null);
+    }
+
+    /**
+     * @param lambdaAliasGenerator 函数式接口的 lambda 输入别名；为 null 时不生成
+     *                             （旧调用点与测试用两参构造器即可）
+     */
+    public IndexFileGenerator(TypeScriptClassRenderer irRenderer,
+                              AdapterAliasGenerator adapterAliasGenerator,
+                              FunctionalInterfaceAliasGenerator lambdaAliasGenerator) {
         this.irRenderer = irRenderer;
         this.adapterAliasGenerator = adapterAliasGenerator;
+        this.lambdaAliasGenerator = lambdaAliasGenerator;
     }
 
     /**
@@ -74,10 +89,19 @@ public final class IndexFileGenerator {
         // 合并适配器输入别名引用的跨包类型（如 $Item、$NekoId），并探测是否引用了 @special 注册表字面量
         boolean moduleUsesRegistry = false;
         for (String simpleName : classNames) {
-            AdapterAliasGenerator.AdapterAlias alias = adapterAliasGenerator.getAlias(packageName + "." + simpleName);
-            if (alias == null) continue;
-            importsNeeded.addAll(alias.importFqns());
-            if (alias.usesRegistry()) moduleUsesRegistry = true;
+            String fullName = packageName + "." + simpleName;
+            AdapterAliasGenerator.AdapterAlias alias = adapterAliasGenerator.getAlias(fullName);
+            if (alias != null) {
+                importsNeeded.addAll(alias.importFqns());
+                if (alias.usesRegistry()) moduleUsesRegistry = true;
+            }
+            // lambda 别名引用的跨包类型（如 $Consumer_<T> 里的 $ItemStack）
+            if (lambdaAliasGenerator != null) {
+                FunctionalInterfaceAliasGenerator.FunctionalAlias lambdaAlias = lambdaAliasGenerator.getAlias(fullName);
+                if (lambdaAlias != null) {
+                    importsNeeded.addAll(lambdaAlias.imports());
+                }
+            }
         }
 
         // 引用 @special 注册表字面量时，需要导入 RegistryTypes 命名空间
@@ -105,6 +129,13 @@ public final class IndexFileGenerator {
                 AdapterAliasGenerator.AdapterAlias alias = adapterAliasGenerator.getAlias(fqn);
                 if (alias != null) {
                     names.add(alias.aliasName());
+                }
+                // lambda 别名同理：参数位置的 $Consumer_<T> 需导入 $Consumer_
+                if (lambdaAliasGenerator != null) {
+                    FunctionalInterfaceAliasGenerator.FunctionalAlias lambdaAlias = lambdaAliasGenerator.getAlias(fqn);
+                    if (lambdaAlias != null) {
+                        names.add(lambdaAlias.aliasName());
+                    }
                 }
                 // 枚举同理：参数放宽为 $Enum_ 后需导入枚举所在模块的别名声明
                 EnumAlias enumAlias = enumAliasCache.get(fqn);
@@ -174,6 +205,14 @@ public final class IndexFileGenerator {
                 if (enumAlias != null) {
                     sb.append(enumAlias.declaration());
                     continue;
+                }
+                // 函数式接口的 lambda 别名（$Consumer_<T> = (arg0: T) => void）
+                if (lambdaAliasGenerator != null) {
+                    FunctionalInterfaceAliasGenerator.FunctionalAlias lambdaAlias = lambdaAliasGenerator.getAlias(fullName);
+                    if (lambdaAlias != null) {
+                        sb.append("    export type ").append(lambdaAlias.declaration()).append("\n");
+                        continue;
+                    }
                 }
                 String alias = generateTypeAlias(fullName, simpleName);
                 if (alias != null) {
