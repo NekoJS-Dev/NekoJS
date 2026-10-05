@@ -3,8 +3,8 @@
 用**合成旧格式 fixture** 驱动一台真实专用服务器（NeoForge `26.1.2` primary 节点），在普通 reload、
 失败 reload、server stop、重启前后对工单点名的数据面（config / world pack / GLOBAL pack /
 pdata / trust-store / 用户编辑文件 / logs / probe cache）做**公开观察面**取证：文件内容 hash、
-日志 marker、命令回显。目录随仓库提交；原始运行输出（`out/`、`run/`）不入库，证据副本入
-`docs/architecture-refactor/baseline/2026-09-12-data-protection/`（见该目录 REPORT.md）。
+日志 marker、命令回显。目录随仓库提交；原始运行输出（`out/`、`run/`）和完整日志仅保留在本地，
+公开仓库保留报告摘要与必要证据。
 
 - 运行 revision：`d0aa6e0d`（master，工单 03 开工时前端）。
 - 节点：`26.1.2`（primary）。其余节点不在本票采样（ Fabric WORLD 现状差异以代码盘点记录，

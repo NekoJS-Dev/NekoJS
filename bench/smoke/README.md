@@ -7,7 +7,6 @@
   Source-RCON 客户端副本。
 - run 目录：NeoForge = `versions/<node>/run`，fabric = `versions/<node>/run-server`
   （loom `runs.named("server").runDir`）；每会话清空 `nekojs/` 与 `logs/nekojs/` 保证计数从零。
-- 输出：`out/<UTC 时间戳>-<node>/`（checks.json / RCON 应答 / server-stdout.log.gz）。
-  注意 `.gitignore` 的 `*.log.gz` 会忽略日志归档——入库证据放
-  `docs/architecture-refactor/baseline/2026-09-12-runtime-root-refactor/evidence/`（force add）。
+- 输出：`out/<UTC 时间戳>-<node>/`（checks.json / RCON 应答 / server-stdout.log.gz），仅保留在本地；公开证据放在
+  `docs/architecture-refactor/baseline/2026-09-12-runtime-root-refactor/evidence/` 的精选摘要中。
 - ticket 05 报告：`docs/architecture-refactor/baseline/2026-09-12-runtime-root-refactor/REPORT.md`。

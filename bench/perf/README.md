@@ -1,8 +1,8 @@
 # NekoJS 性能基准 harness（工单 02）
 
 固定口径的性能采样 harness：固定节点范围、固定数据集、固定命令、固定输出路径。本目录随仓库提交，
-是后续（P4 复测）必须复用的同一套 harness；原始样本与报告分离存放在
-`docs/architecture-refactor/baseline/2026-09-12-perf-baseline/raw/`。
+是后续（P4 复测）必须复用的同一套 harness；原始样本仅保留在运行者本地，公开仓库保留报告摘要和
+必要的可复现输入。
 
 - 基线绑定 revision：`3400e97e`（工单 02 报告 §1 说明它为何取代 01 号报告建议的 `14de611f`）。
 - 支持等级口径：`26.1.2` = **primary**（默认采样节点）；`26.2.0` = secondary；`1.21.1` 与两个 fabric

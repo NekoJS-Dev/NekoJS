@@ -1,7 +1,7 @@
 # Spec: 转换层对齐 KubeJS wrapper 的三个缺口
 
 Label: done
-Stage: 已实施完结（2026-09-06，分支 feat/kjs-wrapper-parity，全票勾选见 kjs-wrapper-parity-tickets.md；未 push）
+Stage: 已实施完结（2026-09-06；全票勾选见 `kjs-wrapper-parity-tickets.md`）
 
 ## Problem Statement
 

@@ -1,4 +1,4 @@
-# 采样原始输出不入库；证据副本存放 docs/architecture-refactor/baseline/*/raw/（主仓库）
+# 采样原始输出仅保留在本地；公开仓库只保留 runner、fixtures 和报告摘要。
 out/
 run/
 *.log

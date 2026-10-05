@@ -1,6 +1,6 @@
 # 票：kjs-wrapper-parity
 
-状态：T1–T5 已实现（分支 feat/kjs-wrapper-parity，未 push）；spec 见 `docs/kjs-wrapper-parity.md`。任务图（无阻塞关系的票可并行）：
+状态：T1–T5 已实现并合入当前 stonecutter 历史；spec 见 `docs/kjs-wrapper-parity.md`。任务图（无阻塞关系的票可并行）：
 
 - T1 alias 注册机制 —— 无阻塞
 - T2 record 通用转换 adapter —— 无阻塞
@@ -8,8 +8,7 @@
 - T4 绑定层 6 全局 —— 无阻塞
 - T5 合并 + spec 勾选 —— 阻塞于 T1–T4
 
-T1–T4 各自在独立分支/工作树实现，汇入 PR 分支 `feat/kjs-wrapper-parity`。
-共同的冲突点只有 `NekoJSCorePlugin` 的注册行，合并时人工解决。
+T1–T4 在独立分支/工作树实现后已合入主线；共同的冲突点是 `NekoJSCorePlugin` 的注册行，历史合并已完成。
 
 ---
 
@@ -53,6 +52,6 @@ T1–T4 各自在独立分支/工作树实现，汇入 PR 分支 `feat/kjs-wrapp
 
 ## T5 — 合并与收尾
 
-- [x] T1–T4 合入 `feat/kjs-wrapper-parity`（冲突点：`NekoJSCorePlugin` 注册行）
+- [x] T1–T4 已合入当前主线（冲突点：`NekoJSCorePlugin` 注册行）
 - [x] spec `docs/kjs-wrapper-parity.md` 勾选、阶段推进
 - [x] code review 修复

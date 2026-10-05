@@ -8,5 +8,4 @@ $ Select-String -Recurse -Pattern 'ClientRenderRegistry.clearAll'
 $ Select-String -Recurse -Pattern 'beforeScriptsLoaded' src/main/java/com/tkisor/nekojs/client
 （删除 ClientRenderPlugin 后，客户端已无 beforeScriptsLoaded 覆写点）
 
-其它 ClientRenderPlugin 命中全部位于 docs/architecture-refactor/baseline/**/raw/*.log
-历史运行日志（证据归档，不是源码引用）。
+历史运行日志中的匹配不属于源码引用，原始日志不随仓库保留。

@@ -47,7 +47,7 @@ KeyBindEvents.pressed('demo:dash', e => console.log('pressed ' + e.id))
 
 | 符号 | 旧形态 | 替代路径 | 无消费者证据 |
 |---|---|---|---|
-| `ClientRenderPlugin`（整类，`src/main/java/com/tkisor/nekojs/client/render/ClientRenderPlugin.java`） | `@RegisterNekoJSPlugin(clientOnly = true)` 的 `NekoJSPlugin` + `LifecyclePoint.Contributor`；唯一方法 `beforeScriptsLoaded(ScriptType)` 在 CLIENT 时调 `ClientRenderRegistry.clearAll()` | 清理改由 commit 点 `ClientRenderRegistry.Candidate#publish()` 承担（整批换装即退役旧代） | 全仓 `java/kts/gradle/json/txt/properties/toml` 引用**仅该文件自身**；其余命中全在 `docs/architecture-refactor/baseline/**/raw/*.log` 历史运行日志（证据归档，非源码引用）；无 golden/gate 引用它（`EventSurfaceDomainGateTest` 只枚举 `registerEvents/registerClientEvents` 贡献者，该类不贡献任何成员）。见 `command-output/09-old-route-consumers.txt` |
+| `ClientRenderPlugin`（整类，`src/main/java/com/tkisor/nekojs/client/render/ClientRenderPlugin.java`） | `@RegisterNekoJSPlugin(clientOnly = true)` 的 `NekoJSPlugin` + `LifecyclePoint.Contributor`；唯一方法 `beforeScriptsLoaded(ScriptType)` 在 CLIENT 时调 `ClientRenderRegistry.clearAll()` | 清理改由 commit 点 `ClientRenderRegistry.Candidate#publish()` 承担（整批换装即退役旧代） | 全仓 `java/kts/gradle/json/txt/properties/toml` 引用仅该文件自身；历史运行记录不属于源码引用；无 golden/gate 引用该类（`EventSurfaceDomainGateTest` 只枚举 `registerEvents/registerClientEvents` 贡献者，该类不贡献任何成员）。见 `command-output/09-old-route-consumers.txt` |
 | 新增装配点 `ClientRenderDomainOwner` | （新增，非删除） | `NekoJSMod.registerClient` 的 client dist 分支 `root.registerDomainCollector(...)` | 与票 28 `PostEffectDomainOwner`、票 22 `VillagerTradeDomainOwner` 同款接缝；fabric 侧未注册（见 §4） |
 
 删除条件（已满足的部分 / 待维护者确认的部分）：
