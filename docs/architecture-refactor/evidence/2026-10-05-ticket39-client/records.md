@@ -22,7 +22,7 @@ Prepared 2026-10-05. Partial live attempt recorded 2026-10-05 by the lead; no ma
 | Phase | SERVER fresh diamond max/rarity | CLIENT fresh diamond max/rarity | CLIENT held diamond max/rarity/patch origin | SERVER lamp default emission | CLIENT lamp default emission | Reload result/generation | Log/screenshot path |
 |---|---|---|---|---|---|---|---|
 | Baseline | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | — |
-| Active after SERVER commit | 16 / EPIC | NOT OBSERVED (client did not connect) | NOT OBSERVED | 7 | NOT OBSERVED | SERVER active fixture loaded and emitted values; client connect failed | `build/issue4-server-neoforge/logs/latest.log`; `build/ticket41-mc/logs/latest.log` | |
+| Active after SERVER commit | 16 / EPIC | NOT OBSERVED (client did not connect) | NOT OBSERVED | 7 | NOT OBSERVED | SERVER active fixture loaded and emitted values; client connect failed | `build/issue4-server-neoforge/logs/latest.log`; `build/ticket41-mc/logs/latest.log` |
 | New ordinary /give stack | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | — |
 | Invalid candidate rejected | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | — |
 | Empty-plan baseline restore | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | — |
