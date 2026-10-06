@@ -134,6 +134,7 @@ public final class FabricServerEventBindings {
      */
     public static void register(Runnable loadServerScripts,
             java.util.function.Supplier<com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot> rootSupplier) {
+        FabricEventBusBridge bridge = FabricEventBusBridge.create();
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot root = rootSupplier.get();
             com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector = root == null ? null
@@ -158,10 +159,12 @@ public final class FabricServerEventBindings {
             }
             STARTING.post(new ServerLifecycleEventJS(server));
         });
-        ServerLifecycleEvents.SERVER_STARTED.register(server ->
-                STARTED.post(new ServerLifecycleEventJS(server)));
-        ServerLifecycleEvents.SERVER_STOPPING.register(server ->
-                STOPPING.post(new ServerLifecycleEventJS(server)));
+        bridge.bind(STARTED,
+                listener -> ServerLifecycleEvents.SERVER_STARTED.register(server ->
+                        listener.accept(new ServerLifecycleEventJS(server))));
+        bridge.bind(STOPPING,
+                listener -> ServerLifecycleEvents.SERVER_STOPPING.register(server ->
+                        listener.accept(new ServerLifecycleEventJS(server))));
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             // 未来得及 post 的登录不带进下一个服务器实例（单人退出世界再进）
             PENDING_LOGINS.clear();
@@ -177,7 +180,7 @@ public final class FabricServerEventBindings {
             }
             STOPPED.post(new ServerLifecycleEventJS(server));
         });
-        FabricEventBusBridge.create().bindTransformed(
+        bridge.bindTransformed(
                 TICK_PRE,
                 listener -> ServerTickEvents.START_SERVER_TICK.register(listener::accept),
                 ServerTickEventJS::new);
@@ -197,10 +200,12 @@ public final class FabricServerEventBindings {
         });
         // 克隆/重生：fabric COPY_FROM（数据拷贝点，对齐 PlayerEvent.Clone）与
         // AFTER_RESPAWN（重生完成）。alive = 旧实体仍存活（末地返回式重生）
-        ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) ->
-                CLONED.post(new PlayerCloneEventJS(newPlayer, oldPlayer, alive)));
-        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
-                RESPAWNED.post(new PlayerRespawnEventJS(newPlayer, oldPlayer, alive)));
+        bridge.bind(CLONED,
+                listener -> ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) ->
+                        listener.accept(new PlayerCloneEventJS(newPlayer, oldPlayer, alive))));
+        bridge.bind(RESPAWNED,
+                listener -> ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
+                        listener.accept(new PlayerRespawnEventJS(newPlayer, oldPlayer, alive))));
         // fabric 的 JOIN 在 PlayerList#placeNewPlayer 中途触发（语义是"可以给这个连接发包了"），
         // 此刻玩家还没进 server.getPlayerList()——NeoForge 的 PlayerLoggedInEvent 是进列表之后。
         // 因此排到下一个 tick 末再 post：否则脚本在 loggedIn 里做的全服广播（ClientData.sync 等）
@@ -221,17 +226,18 @@ public final class FabricServerEventBindings {
         });
         // 标签更新：fabric TAGS_LOADED（RegistryAccess, updated）——TAGS_UPDATED 载荷的
         // shouldUpdateStaticData 承载 updated（NF 的 UpdateCause 无 fabric 对应，差异记录）
-        CommonLifecycleEvents.TAGS_LOADED.register((registries, updated) ->
-                TAGS_UPDATED.post(new TagUpdatedEventJS(registries, updated)));
+        bridge.bind(TAGS_UPDATED,
+                listener -> CommonLifecycleEvents.TAGS_LOADED.register((registries, updated) ->
+                        listener.accept(new TagUpdatedEventJS(registries, updated))));
         // 战利品表装载：per-table MODIFY（builder 模式；NF 侧为整表 get/set + 可取消，差异记录）
-        LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {
-            if (!LOOT_TABLE_LOAD.hasListeners()) {
-                return;
-            }
-            LOOT_TABLE_LOAD.post(new LootTableLoadEventJS(
-                    key.identifier(), tableBuilder, registries));
-        });
-        net.fabricmc.fabric.api.message.v1.ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) ->
-                CHAT.post(new com.tkisor.nekojs.wrapper.event.player.ServerChatEventJS(sender, message.signedContent())));
+        bridge.bind(LOOT_TABLE_LOAD,
+                listener -> LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) ->
+                        listener.accept(new LootTableLoadEventJS(
+                                key.identifier(), tableBuilder, registries))));
+        bridge.bind(CHAT,
+                listener -> net.fabricmc.fabric.api.message.v1.ServerMessageEvents.CHAT_MESSAGE.register(
+                        (message, sender, params) -> listener.accept(
+                                new com.tkisor.nekojs.wrapper.event.player.ServerChatEventJS(
+                                        sender, message.signedContent()))));
     }
 }

@@ -15,13 +15,18 @@ public final class FabricLevelEventBindings {
     private FabricLevelEventBindings() {}
 
     public static void register() {
-        ServerLevelEvents.LOAD.register((server, level) ->
-                LevelEvents.LOADED.post(new LevelEventJS(level)));
-        ServerLevelEvents.UNLOAD.register((server, level) ->
-                LevelEvents.UNLOADED.post(new LevelEventJS(level)));
-        ServerTickEvents.START_LEVEL_TICK.register(level ->
-                LevelEvents.TICK_PRE.post(new LevelEventJS(level)));
-        ServerTickEvents.END_LEVEL_TICK.register(level ->
-                LevelEvents.TICK_POST.post(new LevelEventJS(level)));
+        FabricEventBusBridge bridge = FabricEventBusBridge.create();
+        bridge.bind(LevelEvents.LOADED,
+                listener -> ServerLevelEvents.LOAD.register((server, level) ->
+                        listener.accept(new LevelEventJS(level))));
+        bridge.bind(LevelEvents.UNLOADED,
+                listener -> ServerLevelEvents.UNLOAD.register((server, level) ->
+                        listener.accept(new LevelEventJS(level))));
+        bridge.bind(LevelEvents.TICK_PRE,
+                listener -> ServerTickEvents.START_LEVEL_TICK.register(level ->
+                        listener.accept(new LevelEventJS(level))));
+        bridge.bind(LevelEvents.TICK_POST,
+                listener -> ServerTickEvents.END_LEVEL_TICK.register(level ->
+                        listener.accept(new LevelEventJS(level))));
     }
 }

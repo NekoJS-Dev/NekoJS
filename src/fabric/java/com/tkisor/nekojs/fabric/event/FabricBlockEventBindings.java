@@ -39,25 +39,33 @@ public final class FabricBlockEventBindings {
                     DispatchKey.of(Block.class, event -> event.getBlock())));
 
     public static void register() {
-        // Fabric BEFORE expects false to stop the break; the script bus returns true on cancellation.
-        PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) ->
-                !BlockEvents.BROKEN.post(new BlockBrokenEventJS(level, pos, state, player)));
-        UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
-            if (level.isClientSide()) {
-                return InteractionResult.PASS;
-            }
-            boolean cancelled = RIGHT_CLICKED.post(
-                    new BlockRightClickEventJS(player, level, hit.getBlockPos(),
-                            level.getBlockState(hit.getBlockPos()), hand));
-            return cancelled ? InteractionResult.SUCCESS : InteractionResult.PASS;
-        });
-        AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) -> {
-            if (level.isClientSide()) {
-                return InteractionResult.PASS;
-            }
-            boolean cancelled = LEFT_CLICKED.post(
-                    new BlockLeftClickEventJS(player, level, pos, level.getBlockState(pos), hand));
-            return cancelled ? InteractionResult.SUCCESS : InteractionResult.PASS;
-        });
+        FabricEventBusBridge bridge = FabricEventBusBridge.create();
+        bridge.bindCancellable(
+                BlockEvents.BROKEN,
+                listener -> PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) ->
+                        !listener.test(new BlockBrokenEventJS(level, pos, state, player))));
+        bridge.bindCancellableDispatched(
+                RIGHT_CLICKED,
+                listener -> UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
+                    if (level.isClientSide()) {
+                        return InteractionResult.PASS;
+                    }
+                    var state = level.getBlockState(hit.getBlockPos());
+                    boolean cancelled = listener.apply(
+                            new BlockRightClickEventJS(player, level, hit.getBlockPos(), state, hand),
+                            state.getBlock());
+                    return cancelled ? InteractionResult.SUCCESS : InteractionResult.PASS;
+                }));
+        bridge.bindCancellableDispatched(
+                LEFT_CLICKED,
+                listener -> AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) -> {
+                    if (level.isClientSide()) {
+                        return InteractionResult.PASS;
+                    }
+                    var state = level.getBlockState(pos);
+                    boolean cancelled = listener.apply(
+                            new BlockLeftClickEventJS(player, level, pos, state, hand), state.getBlock());
+                    return cancelled ? InteractionResult.SUCCESS : InteractionResult.PASS;
+                }));
     }
 }

@@ -14,7 +14,9 @@ public final class FabricCommandEventBindings {
     private FabricCommandEventBindings() {}
 
     public static void register() {
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-                CommandEvents.REGISTER.post(new CommandRegistryEventJS(dispatcher, registryAccess)));
+        FabricEventBusBridge.create().bind(
+                CommandEvents.REGISTER,
+                listener -> CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+                        listener.accept(new CommandRegistryEventJS(dispatcher, registryAccess))));
     }
 }
