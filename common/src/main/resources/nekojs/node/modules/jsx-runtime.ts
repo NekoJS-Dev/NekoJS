@@ -1035,7 +1035,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       try {
         let output
         try {
-          output = render()
+          output = callGuest(render, [])
         } catch (error) {
           throw fail('render', 'UI render failed', error)
         }
