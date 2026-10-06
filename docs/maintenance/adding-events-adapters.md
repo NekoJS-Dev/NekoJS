@@ -83,11 +83,13 @@ EventBusJS<MachineCraftedEventJS, Void> MACHINE_CRAFTED =
 NeoForge wiring 模板（把 `NativeMachineCraftedEvent` 换成真实事件类）：
 
 ```java
-// ServerEvents.java 的 FORGE_BRIDGE 初始化链
-EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
-        .bind(TICK_PRE)
-        .bind(TICK_POST)
-        .bindTransformed(
+// src/main/java/.../NeoForgeMachineEventBindings.java
+public final class NeoForgeMachineEventBindings {
+    private NeoForgeMachineEventBindings() {}
+
+    public static void register() {
+        EventBusForgeBridge bridge = EventBusForgeBridge.create(NeoForge.EVENT_BUS);
+        bridge.bindTransformed(
                 MACHINE_CRAFTED,
                 event -> new MachineCraftedEventJS(
                         event.getPlayer(),
@@ -95,9 +97,9 @@ EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS
                         event.getRecipeId().toString(),
                         event.getOutputCount()),
                 NativeMachineCraftedEvent.class);
+    }
+}
 ```
-
-实际 `bindTransformed` 重载顺序以当前源码为准。若转换需要检查 side、记录状态或只在某个 owner commit 点发布，不要硬塞进 lambda；建立与现有业务域一致的平台 owner，并在正确生命周期点调用 `MACHINE_CRAFTED.post(payload)`。
 
 Fabric wiring 模板：
 
@@ -120,6 +122,8 @@ public final class FabricMachineEventBindings {
 ```
 
 这里的 `SomeFabricCallback` 是占位符，必须由目标 Fabric API 的真实 callback 替换。如果没有 callback，检查项目是否已用 mixin/domain owner 覆盖该语义；没有实现就明确记录 capability，而不是留一个永远不触发的 bus。
+
+**双端一致的目标**：脚本侧契约必须一致（同组名、事件名、payload 语义、Script Type、cancel/dispatch 语义）；Loader 原生注册方式不可能总是相同，因为 NeoForge 常通过 `IEventBus`/`EventBusForgeBridge` 订阅原生 Event，而 Fabric 常通过 Fabric API 的 callback registry 或 mixin。维护者可把两种接线分别封装在 `NeoForgeMachineEventBindings.register()` 与 `FabricMachineEventBindings.register()`，并由各自 mod entrypoint 在同一生命周期阶段调用。这样业务代码和 JS 使用一致，差异只留在平台 adapter；不要为了“代码长得一样”把 Fabric callback 伪装成 EventBus listener。
 
 JS 侧调用：
 

@@ -15,8 +15,11 @@ NekoJS's event system, described in [Project architecture: event system](project
 - **`EventGroup`**: a named collection of buses. Factory methods such as `group.server("name", EventClass)` declare an event.
 - **`EventBus` / `CancellableEventBus` / `DispatchEventBus`**: three bus forms. The dispatch form routes by key, for example an item/block id.
 - **`EventBusJS`**: a GraalJS-facing `ProxyExecutable` allowing scripts to call `EventGroup.eventName(cb)`.
-- **`EventBusForgeBridge`**: bridges platform events into neutral buses.
+- **`EventBusForgeBridge`**: bridges NeoForge native events into NekoJS buses.
 
+**Cross-loader consistency boundary:** keep the script contract aligned where capability permits: the same `EventGroup`, event name, payload meaning, Script Type, and cancellation/dispatch semantics. Native registration remains platform-adapter work. NeoForge commonly binds native Events on an `IEventBus` through `EventBusForgeBridge`; Fabric commonly registers Fabric API callbacks, with mixins or explicit unavailable capability records where needed. You can give both adapters a NekoJS-owned `register()` entrypoint called from each loader bootstrap, but do not disguise a Fabric callback as a NeoForge EventBus event or promise a capability the loader does not provide.
+
+The repository's detailed maintainer Java/JS examples and placement guide is `docs/maintenance/adding-events-adapters.md`.
 Built-in event groups live under `bindings/event/` and are declared as interfaces with `static final` fields, for example:
 
 ```java

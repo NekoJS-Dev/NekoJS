@@ -315,6 +315,7 @@ Adapters **can** be cross-platform, but no mechanism requires that: an adapter c
 - [Plugin development](plugin-development_us): the `registerAdapters` hook.
 - [Probe type generation](probe-type-generation_us): how `AdapterInputShape` becomes `.d.ts` aliases.
 - [Annotations](annotations_us): use `@Overload` for signatures adapters cannot express; an adapter's declared `inputShapes()` automatically broadens parameter types, as described above.
+- Maintainer Java/JS examples and source-placement guide: `docs/maintenance/adding-events-adapters.md`.
 
 <!-- wiki-nav -->
 

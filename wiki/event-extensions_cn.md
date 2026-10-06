@@ -15,8 +15,11 @@ NekoJS 的事件系统（见 [项目架构 - 事件系统](project-architecture_
 - **`EventGroup`**：命名的总线集合。`group.server("name", EventClass)` 工厂方法声明一个事件。
 - **`EventBus`/`CancellableEventBus`/`DispatchEventBus`**：三种总线。dispatch 版按 key 分发（如按物品/方块 id）。
 - **`EventBusJS`**：GraalJS 面向的 `ProxyExecutable`，让脚本 `事件组.事件名(cb)` 这样调。
-- **`EventBusForgeBridge`**：把平台事件桥接进中立总线。
+- **`EventBusForgeBridge`**：把 NeoForge 原生事件接到 NekoJS 总线。
 
+**双端一致性边界**：脚本侧尽量保持同一个 `EventGroup`、事件名、payload 语义、Script Type 和取消/dispatch 契约；原生注册机制仍由平台 adapter 负责。NeoForge 常用 `EventBusForgeBridge` 绑定 `IEventBus` 上的原生 Event；Fabric 常用 Fabric API callback registry，缺口由 mixin 或显式 unavailable 能力处理。可以把 NekoJS 自有入口统一成两个平台各自的 `register()` 方法并在 loader entrypoint 调用，但不要把 Fabric callback 伪装成 NeoForge EventBus，也不要承诺不存在的跨平台能力。
+
+维护者侧完整 Java/JS 示例与推荐目录见仓库 `docs/maintenance/adding-events-adapters.md`。
 内置事件组放在 `bindings/event/` 下、以 interface + `static final` 字段的形式声明，例如：
 
 ```java

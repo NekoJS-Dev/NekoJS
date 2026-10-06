@@ -315,6 +315,7 @@ void myPosAdapterConvertsObjectAndString() {
 - [插件开发](plugin-development_cn) —— `registerAdapters` 钩子。
 - [Probe 类型生成](probe-type-generation_cn) —— `AdapterInputShape` 如何变成 `.d.ts` 别名。
 - [注解体系](annotations_cn) —— `@Overload` 手写适配器表达不了的签名；适配器声明的 `inputShapes()` 会自动放宽参数类型，见上。
+- 维护者完整 Java/JS 示例与目录边界：`docs/maintenance/adding-events-adapters.md`。
 
 <!-- wiki-nav -->
 
