@@ -16,7 +16,7 @@ NekoJS's event system, described in [Project architecture: event system](project
 - **`EventBus` / `CancellableEventBus` / `DispatchEventBus`**: three bus forms. The dispatch form routes by key, for example an item/block id.
 - **`EventBusJS`**: a GraalJS-facing `ProxyExecutable` allowing scripts to call `EventGroup.eventName(cb)`.
 - **`EventBusForgeBridge`**: bridges NeoForge native events into NekoJS buses.
-- **`FabricEventBusBridge`**: connects Fabric callback registrars to `EventBusJS` through `bind` / `bindTransformed`; `bindCancellable` forwards script cancellation through the callback adapter and skips conversion/dispatch when there are no listeners.
+- **`FabricEventBusBridge`**: connects Fabric callback registrars to `EventBusJS` through `bind` / `bindTransformed`; `bindCancellable` forwards script cancellation through the callback adapter. Ordinary buses skip conversion/dispatch without listeners; dispatch buses preserve keyed delivery and support Java keyed listeners.
 
 **Cross-loader consistency:** keep the script contract aligned where capability permits: `EventGroup`, event name, payload meaning, Script Type, and cancellation/dispatch semantics. NeoForge binds native events on `IEventBus`; Fabric binds Fabric callbacks. The bus and payload contract can stay consistent, while the registration lambda adapts each real callback signature. Use a mixin or explicitly record unavailable capability where no equivalent callback exists; do not imply unsupported behavior.
 

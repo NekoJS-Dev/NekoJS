@@ -6,6 +6,7 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -36,6 +37,19 @@ class FabricEventBusBridgeTest {
         FabricEventBusBridge.create().bindCancellable(bus, registered::set);
 
         assertTrue(registered.get().test("cancelled"));
+    }
+
+    @Test
+    void bindCancellableDispatchedForwardsKeyAndCancellation() {
+        EventBusJS<String, Integer> bus = EventBusJS.of(String.class, true,
+                com.tkisor.nekojs.api.event.DispatchKey.of(Integer.class, value -> 7));
+        ((com.tkisor.nekojs.api.event.DispatchCancellableEventBus<String, Integer>) bus.bus())
+                .listen(7, (java.util.function.Predicate<String>) value -> true);
+        AtomicReference<BiFunction<String, Integer, Boolean>> registered = new AtomicReference<>();
+
+        FabricEventBusBridge.create().bindCancellableDispatched(bus, registered::set);
+
+        assertTrue(registered.get().apply("cancelled", 7));
     }
 
     @Test

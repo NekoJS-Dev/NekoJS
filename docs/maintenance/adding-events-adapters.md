@@ -122,7 +122,7 @@ public final class FabricMachineEventBindings {
 }
 ```
 
-当 Fabric API 已提供单一 native payload type 时，可以用 `.bindTransformed(bus, registerCallback, transformer)` 分开写注册器与 payload 转换。`registerCallback` 仍是 Fabric 原生 callback 的薄 adapter，因为各 callback 的方法签名不同；NekoJS 侧的 bus forwarding 由 bridge 统一负责。所有 bind 形态都会在没有脚本监听器时跳过 post 和 payload 转换。若 callback 可返回取消结果，用 `.bindCancellable(bus, registerPredicate)`；注册 lambda 负责把 boolean 映射成该 Fabric API 的原生结果。总线不可取消时该方法立即抛 `IllegalArgumentException`。
+当 Fabric API 已提供单一 native payload type 时，可以用 `.bindTransformed(bus, registerCallback, transformer)` 分开写注册器与 payload 转换。`registerCallback` 仍是 Fabric 原生 callback 的薄 adapter，因为各 callback 的方法签名不同；NekoJS 侧的 bus forwarding 由 bridge 统一负责。普通 `bind` / `bindTransformed` / `bindCancellable` 形态在没有脚本监听器时会跳过 post 和 payload 转换。dispatch 形态必须保留 key 投递，也兼容 Java 侧直接注册的 keyed listener，因此不会依赖 `hasListeners()` 短路。若 callback 可返回取消结果，用 `.bindCancellable(bus, registerPredicate)`；dispatch 可取消事件使用对应的 `bindCancellableDispatched`；注册 lambda 负责把 boolean 映射成该 Fabric API 的原生结果。总线不可取消时取消绑定立即抛 `IllegalArgumentException`。
 
 `SomeFabricCallback` 是占位符，必须换成目标 Fabric API 的真实 callback。如果没有 callback，检查项目是否已用 mixin/domain owner 覆盖该语义；没有实现就明确记录 capability，而不是留一个永远不触发的 bus。
 

@@ -16,7 +16,7 @@ NekoJS 的事件系统（见 [项目架构 - 事件系统](project-architecture_
 - **`EventBus`/`CancellableEventBus`/`DispatchEventBus`**：三种总线。dispatch 版按 key 分发（如按物品/方块 id）。
 - **`EventBusJS`**：GraalJS 面向的 `ProxyExecutable`，让脚本 `事件组.事件名(cb)` 这样调。
 - **`EventBusForgeBridge`**：把 NeoForge 原生事件接到 NekoJS 总线。
-- **`FabricEventBusBridge`**：通过 `bind` / `bindTransformed` 把 Fabric callback registrar 接到 `EventBusJS`；`bindCancellable` 将脚本取消结果交回 callback adapter，无监听者时会跳过转换和派发。
+- **`FabricEventBusBridge`**：通过 `bind` / `bindTransformed` 把 Fabric callback registrar 接到 `EventBusJS`；`bindCancellable` 将脚本取消结果交回 callback adapter。普通总线无监听器时跳过转换/派发，dispatch 总线保留 key 投递并兼容 Java keyed listener。
 
 **双端一致性边界**：脚本侧尽量保持同一个 `EventGroup`、事件名、payload 语义、Script Type 和取消/dispatch 契约。NeoForge 绑定原生 `IEventBus`；Fabric 绑定 Fabric callback。两边 bus/payload 契约可保持一致，但注册 lambda 仍需适配真实 callback 签名；无等价 API 时用 mixin 或明确记录 unavailable，不能伪装能力。
 

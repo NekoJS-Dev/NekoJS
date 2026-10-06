@@ -3,6 +3,8 @@ package com.tkisor.nekojs.fabric.event;
 import com.tkisor.nekojs.api.event.EventBusJS;
 
 import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -14,6 +16,44 @@ public final class FabricEventBusBridge {
 
     public static FabricEventBusBridge create() {
         return new FabricEventBusBridge();
+    }
+
+    /** Registers a callback that supplies the dispatch key alongside its payload. */
+    public <E, K> FabricEventBusBridge bindDispatched(
+            EventBusJS<E, K> bus,
+            Consumer<BiConsumer<E, K>> registerCallback) {
+        Objects.requireNonNull(bus, "bus");
+        Objects.requireNonNull(registerCallback, "registerCallback");
+        registerCallback.accept((event, key) -> bus.post(event, key));
+        return this;
+    }
+
+    /** Registers a callback and transforms its native payload and key before dispatching. */
+    public <N, E, K> FabricEventBusBridge bindTransformedDispatched(
+            EventBusJS<E, K> bus,
+            Consumer<BiConsumer<N, K>> registerCallback,
+            Function<N, E> transform) {
+        Objects.requireNonNull(bus, "bus");
+        Objects.requireNonNull(registerCallback, "registerCallback");
+        Objects.requireNonNull(transform, "transform");
+        registerCallback.accept((nativeEvent, key) ->
+                bus.post(transform.apply(nativeEvent), key));
+        return this;
+    }
+
+    /** Registers a cancellable callback that supplies a dispatch key. */
+    public <E, K> FabricEventBusBridge bindCancellableDispatched(
+            EventBusJS<E, K> bus,
+            Consumer<BiFunction<E, K, Boolean>> registerCallback) {
+        Objects.requireNonNull(bus, "bus");
+        Objects.requireNonNull(registerCallback, "registerCallback");
+        if (!bus.canCancel()) {
+            throw new IllegalArgumentException(
+                    "bindCancellableDispatched requires a cancellable event bus: "
+                            + bus.eventType().getName());
+        }
+        registerCallback.accept((event, key) -> bus.post(event, key));
+        return this;
     }
 
     /** Registers a callback whose payload already matches the script event object. */
