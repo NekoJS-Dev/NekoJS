@@ -1,0 +1,5 @@
+
+Algorithm       Hash                                                                   Path
+---------       ----                                                                   ----
+SHA256          2FDA12ABD8DCD2E253E17D6DD6FC3CF44CEE9A0839DCB79C3D76BFDC8A98C05B       C:\Users\11515\AppData\Roaming\.…
+

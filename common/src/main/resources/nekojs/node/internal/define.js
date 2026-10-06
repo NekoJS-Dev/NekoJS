@@ -72,7 +72,15 @@
     } else if (normalizedChildren.length > 1) {
       normalizedProps.children = normalizedChildren
     }
-    return { tag: type, props: normalizedProps, children: normalizedChildren }
+    return Object.freeze({
+      $$nekoJsx: true,
+      type,
+      key: null,
+      props: Object.freeze(normalizedProps),
+      children: Object.freeze(normalizedChildren.slice()),
+      // Keep the legacy tag alias for scripts that inspect classic JSX values directly.
+      tag: type
+    })
   }
 
   function createJsxFragment(...children) {

@@ -32,7 +32,7 @@ function UsernameField() {
   return (
     <column id="login-username-group" gap={2}>
       <label id="login-username-label" fontSize={9}>{'用户名'}</label>
-      <input id="login-username" value={username.get()} placeholder="请输入用户名" maxLength={32}
+      <input id="login-username" width="fill" value={username.get()} placeholder="请输入用户名" maxLength={32}
              height={12} disabled={submitting.get()}
              onChange={event => username.set(event.value == null ? '' : event.value)} />
     </column>
@@ -43,7 +43,7 @@ function PasswordField() {
   return (
     <column id="login-password-group" gap={2}>
       <label id="login-password-label" fontSize={9}>{'密码'}</label>
-      <input id="login-password" value={password.get()} placeholder="请输入密码" maxLength={64}
+      <input id="login-password" width="fill" value={password.get()} placeholder="请输入密码" maxLength={64}
              height={12} disabled={submitting.get()}
              onChange={event => password.set(event.value == null ? '' : event.value)}
              onSubmit={() => submit()} />
