@@ -56,6 +56,13 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     private boolean tearingDown;
     private int viewportWidth;
     private int viewportHeight;
+    private long layoutCount;
+    private long successfulTransactionCount;
+    private long initialBuildCount;
+    private long reconcileCount;
+    private long resizeCount;
+    private long diagnosticCount;
+    private long cleanupCount;
 
     public JsxHostAdapter(String title, boolean pausesGame) {
         minecraft = Minecraft.getInstance();
@@ -200,6 +207,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     public void layout(Object tree, Object viewport, Object snapshot, boolean publish) {
         requireUsable("apply the layout candidate");
+        layoutCount++;
         if (tree != null) readArray(tree);
         Value envelope = Value.asValue(snapshot);
         if (envelope.hasMember("rootId") && envelope.getMember("rootId").isString()) {
@@ -294,7 +302,30 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         return new JsxHostTransaction(tree.begin());
     }
 
+    private void recordSuccessfulTransaction() {
+        if (tearingDown) return;
+        successfulTransactionCount++;
+        if (successfulTransactionCount == 1) initialBuildCount++;
+        else reconcileCount++;
+    }
+
+    /**
+     * Returns counters for a retained UI proof fixture. Values are snapshots and have no
+     * scheduling or diagnostic side effects.
+     */
+    public Map<String, Object> performanceCounters() {
+        return Map.of(
+                "initialBuild", initialBuildCount,
+                "layout", layoutCount,
+                "reconcile", reconcileCount,
+                "resize", resizeCount,
+                "paint", (long) screen.paintCount(),
+                "diagnostics", diagnosticCount,
+                "cleanup", cleanupCount);
+    }
+
     public void reportDiagnostic(Object diagnostic) {
+        diagnosticCount++;
         Value envelope = Value.asValue(diagnostic);
         String rootId = text(memberOrNull(envelope, "rootId"));
         String phase = text(memberOrNull(envelope, "phase"));
@@ -349,6 +380,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     public void resize(int width, int height) {
         requireUsable("resize");
+        resizeCount++;
         viewportWidth = Math.max(0, width);
         viewportHeight = Math.max(0, height);
         if (root != null) {
@@ -361,6 +393,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     }
 
     private void reportHostFailure(String phase, RuntimeException failure) {
+        diagnosticCount++;
         ScriptErrorReporter.recordCallbackError(ScriptType.CLIENT, "ui-" + phase,
                 new IllegalStateException("[NEKO-7007] JSX UI host operation '" + phase
                         + "' failed (generation " + lifecycle.generation() + ")", failure));
@@ -797,6 +830,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                     resources.close();
                 } finally {
                     lifecycle.finishClose();
+                    cleanupCount++;
                     globals.unregisterUiRoot(this);
                 }
             }
@@ -908,6 +942,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         try {
             transaction.commit(tree.roots(), nodes -> next[0] = projected(layoutBasis, nodes));
             lastSnapshot = next[0];
+            layoutCount++;
         } catch (RuntimeException failure) {
             transaction.rollback();
             throw failure;
@@ -1025,6 +1060,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                     committed[0] = projected(candidate, nodes);
                 }
             });
+            recordSuccessfulTransaction();
             lastSnapshot = committed[0];
             layoutBasis = committed[0] == null ? null : candidate;
             pendingSnapshot = null;

@@ -150,8 +150,11 @@ class Ticket24GameplayEventPhaseTraceTest {
 
         // block broken on fabric: the fabric adapter posts the neutral payload and honors cancel
         assertEquals(1, count(code(FABRIC + "/fabric/event/FabricBlockEventBindings.java"),
-                "BlockEvents.BROKEN.post("),
-                "fabric BlockEvents.broken has exactly one poster (PlayerBlockBreakEvents.BEFORE)");
+                "BlockEvents.BROKEN"),
+                "fabric BlockEvents.broken has exactly one bridge binding (PlayerBlockBreakEvents.BEFORE)");
+        assertEquals(1, count(code(FABRIC + "/fabric/event/FabricBlockEventBindings.java"),
+                "bindCancellable("),
+                "fabric BlockEvents.broken uses one cancellable bridge binding");
     }
 
     // ---- 2. side filters on both-logical-side events bound to SERVER buses ----
