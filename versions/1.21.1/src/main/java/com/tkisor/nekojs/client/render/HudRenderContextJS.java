@@ -132,7 +132,23 @@ public class HudRenderContextJS {
      * 贴图（完整纹理 id，如 {@code 'minecraft:textures/gui/icons.png'}），u/v 为纹理内偏移。
      */
     public HudRenderContextJS texture(String textureId, int x, int y, int width, int height, int u, int v) {
-        graphics.blit(ResourceLocation.parse(textureId), x, y, u, v, width, height);
+        return texture(textureId, x, y, width, height, u, v, 256, 256);
+    }
+
+    public HudRenderContextJS texture(String textureId, int x, int y, int width, int height,
+            int u, int v, int textureWidth, int textureHeight) {
+        if (textureWidth <= 0 || textureHeight <= 0) {
+            throw new IllegalArgumentException("[NEKO-4026] Texture dimensions must be positive");
+        }
+        graphics.blit(ResourceLocation.parse(textureId), x, y, (float) u, (float) v,
+                width, height, textureWidth, textureHeight);
+        return this;
+    }
+
+    /** Draws the entire texture scaled to the requested rectangle. */
+    public HudRenderContextJS textureFull(String textureId, int x, int y, int width, int height) {
+        if (width == 0 || height == 0) return this;
+        graphics.blit(ResourceLocation.parse(textureId), x, y, 0F, 0F, width, height, width, height);
         return this;
     }
 

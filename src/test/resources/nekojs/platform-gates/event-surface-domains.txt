@@ -19,13 +19,13 @@ BlockEvents | 26.2.0-fabric = present | buses=broken,modification
 CapabilityEvents | 1.21.1 = present | buses=register
 CapabilityEvents | 26.1.2 = present | buses=register
 CapabilityEvents | 26.2.0 = present | buses=register
-CapabilityEvents | 26.1.2-fabric = not-verified | buses=-
-CapabilityEvents | 26.2.0-fabric = not-verified | buses=-
+CapabilityEvents | 26.1.2-fabric = present | buses=register
+CapabilityEvents | 26.2.0-fabric = present | buses=register
 ClientEvents | 1.21.1 = present | buses=cloned,commandRegistry,generateAssets,hud,hudRender,interactionKey,lang,loggedIn,loggedOut,playerTickPost,playerTickPre,postEffects,registerBlockEntityRenderers,registerEntityRenderers,registerKeyMappings,registerMenuScreens,registerParticleProviders,registerRenderers,screenRender,tick,tickPost,tickPre,worldRender
 ClientEvents | 26.1.2 = present | buses=cloned,commandRegistry,generateAssets,hud,hudRender,interactionKey,lang,loggedIn,loggedOut,playerTickPost,playerTickPre,postEffects,registerBlockEntityRenderers,registerEntityRenderers,registerKeyMappings,registerMenuScreens,registerParticleProviders,registerRenderers,screenRender,tick,tickPost,tickPre,worldRender
 ClientEvents | 26.2.0 = present | buses=cloned,commandRegistry,generateAssets,hud,hudRender,interactionKey,lang,loggedIn,loggedOut,playerTickPost,playerTickPre,postEffects,registerBlockEntityRenderers,registerEntityRenderers,registerKeyMappings,registerMenuScreens,registerParticleProviders,registerRenderers,screenRender,tick,tickPost,tickPre,worldRender
-ClientEvents | 26.1.2-fabric = present | buses=tick,tickPost,tickPre
-ClientEvents | 26.2.0-fabric = present | buses=tick,tickPost,tickPre
+ClientEvents | 26.1.2-fabric = present | buses=hud,screenRender,tick,tickPost,tickPre
+ClientEvents | 26.2.0-fabric = present | buses=hud,screenRender,tick,tickPost,tickPre
 CommandEvents | 1.21.1 = present | buses=command,register
 CommandEvents | 26.1.2 = present | buses=command,register
 CommandEvents | 26.2.0 = present | buses=command,register

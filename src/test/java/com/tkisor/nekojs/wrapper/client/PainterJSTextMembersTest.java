@@ -3,9 +3,11 @@ package com.tkisor.nekojs.wrapper.client;
 import com.tkisor.nekojs.api.ui.FontAdapter;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Direct contracts of the {@code PainterJS} text measurement members (ticket 44):
@@ -53,6 +55,26 @@ class PainterJSTextMembersTest {
                 "greedy wrap at the widest fitting line");
         assertEquals(List.of("one", "two"), painter.wrapText("one\ntwo", 100),
                 "explicit newlines are paragraph breaks");
+    }
+
+    @Test
+    void publicSurfaceKeepsConstructorParityAndChainableDrawCalls() throws ReflectiveOperationException {
+        assertTrue(Arrays.stream(PainterJS.class.getConstructors())
+                        .anyMatch(constructor -> constructor.getParameterCount() == 1),
+                "PainterJS exposes a graphics-only constructor on every supported version");
+
+        assertEquals(PainterJS.class, PainterJS.class.getMethod("color", Number.class).getReturnType());
+        assertEquals(PainterJS.class, PainterJS.class.getMethod("resetColor").getReturnType());
+        assertEquals(PainterJS.class, PainterJS.class.getMethod(
+                "rect", int.class, int.class, int.class, int.class).getReturnType());
+        assertEquals(PainterJS.class, PainterJS.class.getMethod(
+                "text", String.class, int.class, int.class).getReturnType());
+        assertEquals(PainterJS.class, PainterJS.class.getMethod(
+                "texture", String.class, int.class, int.class, int.class, int.class).getReturnType());
+        assertEquals(PainterJS.class, PainterJS.class.getMethod(
+                "push").getReturnType());
+        assertEquals(PainterJS.class, PainterJS.class.getMethod(
+                "translate", float.class, float.class).getReturnType());
     }
 
     @Test

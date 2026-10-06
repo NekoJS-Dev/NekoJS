@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "locales": {
+    "cn": "简体中文",
+    "us": "English"
+  },
+  "sections": [
+    {
+      "id": "start",
+      "cn": "先看这里",
+      "us": "Start here"
+    },
+    {
+      "id": "scripts",
+      "cn": "脚本作者",
+      "us": "Script authors"
+    },
+    {
+      "id": "modpacks",
+      "cn": "整合包作者",
+      "us": "Modpack authors"
+    },
+    {
+      "id": "plugins",
+      "cn": "插件开发者",
+      "us": "Plugin developers"
+    },
+    {
+      "id": "contributors",
+      "cn": "项目贡献者",
+      "us": "Project contributors"
+    }
+  ],
+  "pages": [
+    {
+      "id": "home",
+      "section": "start",
+      "cn": "首页",
+      "us": "Home",
+      "legacy": "Home.md",
+      "legacyDigest": "8a23f3adcd66ce695a7ae461affa8d4fcef28afd3f6bfa4534a1de18c4ecdf66",
+      "sourceDigest": "5794845f52f2db5b9b57bb375a062df231297fbf70dc56445af8fbd583c0c577",
+      "translationDigest": "c23073c8b3c0383c231f1af9063293c940b133bcab873bb0322b6ab45ee91eb1",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "platform-compatibility",
+      "section": "start",
+      "cn": "平台与兼容性",
+      "us": "Platforms and compatibility",
+      "legacy": "平台与兼容性.md",
+      "legacyDigest": "b697e861f3ba37e7fc14b880530feb5e0a731bfc5c29a7932ec26faafc79a702",
+      "sourceDigest": "ba877ed6bcd52b187f5e7458cbd3cfb657876891909c208c7436139f7f54a951",
+      "translationDigest": "fc2fe2dabca2a0ca7e18985c5d4c5352678361cf3b03474a97282025de001cdc",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "quick-start",
+      "section": "start",
+      "cn": "快速开始",
+      "us": "Quick start",
+      "legacy": "快速开始.md",
+      "legacyDigest": "6d7f5c999e495c3bf63ad6aab85a2a83cf6959be653897e5db8127e5698738e5",
+      "sourceDigest": "345f2c872b9e56b5e9d7e38bdd675da549bba754d12bd95b15650e112d716a9c",
+      "translationDigest": "4e225b2c2f6617a082e2a1af061766db024c40f6251737426891846077243f90",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "faq",
+      "section": "start",
+      "cn": "常见问题",
+      "us": "FAQ",
+      "legacy": "常见问题.md",
+      "legacyDigest": "4227fde9d00259fa332da0d80d6c931a5c4066468b57a4cc4221c17ed5d3893a",
+      "sourceDigest": "7180899ce37721d2325f45605edbcba9ecd21a9a802b9b88757acd660f8d76a3",
+      "translationDigest": "a4ea4e9937def87a18855717e7cc5b022048f92a1a3102169e95be0760659ee5",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "script-basics",
+      "section": "scripts",
+      "cn": "脚本基础",
+      "us": "Script basics",
+      "legacy": "脚本基础.md",
+      "legacyDigest": "0ce1e75bc6f3baaeec81c50f6396e58ac64e129ef160a242ab62426fd186a6b2",
+      "sourceDigest": "3e4a3434853fc4e83154b7548d0aae7c28c977e7ca7368c3adf88f654eb4e987",
+      "translationDigest": "9a0a52022982038499a16d001e1688ee72359e35d8a7705455ea28e8a808b6b9",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "script-properties",
+      "section": "scripts",
+      "cn": "脚本属性",
+      "us": "Script properties",
+      "legacy": "脚本属性.md",
+      "legacyDigest": "0fbe95c6e94cfcbbdfcbe7717d04d578f9419d6989920521882801db103930c6",
+      "sourceDigest": "119122bb9f6bbbf857f367fd3a0b69018d4796c4ef1c17b453e4e15fec3b8390",
+      "translationDigest": "2d9efbe41f74739aeab918bb40c91e7050f378ac73f1365d89b08fedbe3034e3",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "global-bindings",
+      "section": "scripts",
+      "cn": "全局绑定",
+      "us": "Global bindings",
+      "legacy": "全局绑定.md",
+      "legacyDigest": "610f273af3dd06e75482b76e2461f623711f6cc21ca87a8e3ddb495b967dd794",
+      "sourceDigest": "4a101a37d0d675f0684354f49c85d7e5260d391e3e1c328de3d79152d0e8828c",
+      "translationDigest": "050350f28dd491b848fa57606d90a36dd5c8742c86f72b18a35982aaf7a67f41",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "python-scripts",
+      "section": "scripts",
+      "cn": "Python 脚本",
+      "us": "Python scripts",
+      "legacy": "Python-脚本.md",
+      "legacyDigest": "0486bddda0dfbeed2bb7efd4d21e5f0d70529ac9e615c1b0738531e2277f24e9",
+      "sourceDigest": "83ee154c319c6c83117b790dfb1300eec2e1b4ae7de1716be345ab1c9cb69d44",
+      "translationDigest": "f1d11f112526ff1b1b0fdc419500bde86af465c45a1a5a483076bb7108dfa7d4",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "python-feature-support",
+      "section": "scripts",
+      "cn": "Python 特性清单",
+      "us": "Python feature support",
+      "legacy": "Python-特性清单.md",
+      "legacyDigest": "ece6afbbcde8d625fae6c6ab0af8f0a2c7162754d9eb58b6b1014029f0fecc50",
+      "sourceDigest": "b3b022cff9dd30faf64816f68cc243dd881e1378076816d6e848d9df587995cb",
+      "translationDigest": "b563bb74dcfd143a72ae448a95324e7cd299045e1e14dc08ee86d0121555e331",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "event-reference",
+      "section": "scripts",
+      "cn": "事件参考",
+      "us": "Event reference",
+      "legacy": "事件参考.md",
+      "legacyDigest": "c4981ab0f0a357d3a49de5ff8472bd180447e5148f6078ca3f792cf32974c3d1",
+      "sourceDigest": "86dcf0f8610562be5d8c7ca9bdc418cd1f45aaec4b322cf135a1299d0cd5044b",
+      "translationDigest": "ac5d997eba78b1d16ce8a4363444e91d8354ea43ca535b03c7c735b3b2dddb0c",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "commands",
+      "section": "scripts",
+      "cn": "命令",
+      "us": "Commands",
+      "legacy": "命令.md",
+      "legacyDigest": "2a161db73102c1ce5604bea6c4aa9ff14bb77c7c25df701cc0eef9bf4084a72a",
+      "sourceDigest": "8c02f3d99630b654763e473baf1e36bbdca02f4eae300bbbc2096a9a9673b772",
+      "translationDigest": "23297b585c5c790e86ba6cff2cbdb4baec3ad40e3b8b1106b290bee5e3b072fa",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "error-reference",
+      "section": "scripts",
+      "cn": "错误与日志参考",
+      "us": "Error and log reference",
+      "legacy": "en_us/Error-Reference.md",
+      "sourceLocale": "us",
+      "legacyDigest": "d655593a3910daa974f0cc8410ad608cb0fb8c8850922ee4fc61314b1ee57e3c",
+      "sourceDigest": "bcc849c8a62c7588917880ab4a12f81c160180df9d4866743f983f7fd8f56447",
+      "translationDigest": "14c58bb3ce4ede0a35960f3f6a2de2814aa08fd0f39f9ddfabc98b069474dd20",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "recipe-system",
+      "section": "modpacks",
+      "cn": "配方系统",
+      "us": "Recipe system",
+      "legacy": "配方系统.md",
+      "legacyDigest": "0b2b7b0b0a0ba172772be0500acb67de680f2b31aec02b079cbc417da267cd70",
+      "sourceDigest": "855808bf8c82cd9e332843c9c3fb9fa3f77d7a974bbb1346385e825be5f6a17f",
+      "translationDigest": "9925f3d7fab9684c2631db1bf3ecd119141918333ea6d9846d0e6b34c245d119",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "registering-new-content",
+      "section": "modpacks",
+      "cn": "注册新内容",
+      "us": "Registering new content",
+      "legacy": "注册新内容.md",
+      "legacyDigest": "9d4c07f0f1f6e614adf427a2b67cc547f85ce2d72c324c35b90ec59922788f02",
+      "sourceDigest": "cee0587bd913a9e9f3b30271f61e1f83cacb22cadd160533587b49827862ce16",
+      "translationDigest": "a8b066e534709d3621290ef91f160bc171afabda6b2a09b74ebb4a3c47fab317",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "module-system",
+      "section": "modpacks",
+      "cn": "模块系统",
+      "us": "Module system",
+      "legacy": "模块系统.md",
+      "legacyDigest": "73cefc50be0c9117fa9d11cbf225810eac2ea3bae2fe9bcdc8762b257647ced0",
+      "sourceDigest": "18cce3bfcfa8587e1c52400a739552a9ca85f7f1b4d332cc6399fc3810cba15d",
+      "translationDigest": "3cf9b9dbe587563c4108761856f40e0c56a3b07c7b2e932f9cca27f43e64606c",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "typescript-and-jsx",
+      "section": "modpacks",
+      "cn": "TypeScript 与 JSX",
+      "us": "TypeScript and JSX",
+      "legacy": "TypeScript-与-JSX.md",
+      "legacyDigest": "aa041878196d981ec2fe66dc6fceb92074042db75395b5435ea60718c9588903",
+      "sourceDigest": "74166ff429f545c3e886465e25ce4378090f6a12fb424c6c2605f02ee968776c",
+      "translationDigest": "29a172e73aa47d977c207f42637ddb8a316c9510f74f00b092963d156319fcde",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "jsx-client-ui",
+      "section": "modpacks",
+      "cn": "JSX 客户端 UI",
+      "us": "JSX client UI",
+      "legacy": "JSX-客户端UI.md",
+      "legacyDigest": "00a93c7a13042dd12d92c4e0ac97365e43ee9e3ee7f854e7de57f80ec42a41d1",
+      "sourceDigest": "4107b5a5413dc67afeaf0fecd1c0a9399037611681d4fb34e4caf9dd824bea31",
+      "translationDigest": "e5a5b3cc42f98a814fe36ae05a387f5fd726dcac4d18825f6b4534479374a6ac",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "nodejs-compatibility",
+      "section": "modpacks",
+      "cn": "Node.js 兼容",
+      "us": "Node.js compatibility",
+      "legacy": "Node-js-兼容.md",
+      "legacyDigest": "3600cb30306ef3eba41286f0565a7f2cb43deafcbb122d082137967fa02f6574",
+      "sourceDigest": "dd51cff2cca0e695c6e82f558dd2c6ad732119d69a1104aff37c56649a46a0e0",
+      "translationDigest": "c2b61b77ccefeabc8e033090e6aff7577efef96ba028e6c5ea32a6f0c5b0dc3a",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "plugin-development",
+      "section": "plugins",
+      "cn": "插件开发",
+      "us": "Plugin development",
+      "legacy": "插件开发.md",
+      "legacyDigest": "3b1e293cebb15b3e967150bc4897f4c866cf663a09cdcaef77b8bd20e0795fd7",
+      "sourceDigest": "b0f0b8591aa1a1e900bf5d4044e7fb5f274b6ecc1aa3e2038aa842be4f30c225",
+      "translationDigest": "ded7b622efddf762f4bc911f76016829d85c7db5182eba48ebf7f28e00b9b48c",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "type-adapters",
+      "section": "plugins",
+      "cn": "类型适配器",
+      "us": "Type adapters",
+      "legacy": "类型适配器.md",
+      "legacyDigest": "03e9c1c029bde32fb81cb2115134491763a1d65d6ec5bb5b88512bbd7851e008",
+      "sourceDigest": "69e429f662a18437d950413cc41317eeb2870cecf078098fb165f64ee2804dab",
+      "translationDigest": "e3e806b8bc0e953e26d3c7dab345dff2bd79e9287f9f82524f1e29bbd48744af",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "event-extensions",
+      "section": "plugins",
+      "cn": "事件扩展",
+      "us": "Event extensions",
+      "legacy": "事件扩展.md",
+      "legacyDigest": "033267bec13dfcc33faa9370b097ad6cb5128edd84fa6d37ca5dffdab69fab9d",
+      "sourceDigest": "b43f6162e78ef72d68a7b18bd6807a6700492986a6b9a5bfcdccaf828c24c55a",
+      "translationDigest": "e532fb262a0a7f98abd7062697efa0cb1f44dfe7a819787e7e377146b7b1163e",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "annotations",
+      "section": "plugins",
+      "cn": "注解体系",
+      "us": "Annotations",
+      "legacy": "注解体系.md",
+      "legacyDigest": "87447931e59ad693ffe3dff834d957569e67992dc48748d9d397ddfce181fc4e",
+      "sourceDigest": "d776f1df645428619592aae16ecbf99ef5053140a0a36e75378fe81a8804155c",
+      "translationDigest": "5c4615bd04335af6acdbbfad1134a58a8b6698dc644578518d5fcb5d2a7f1776",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "project-architecture",
+      "section": "contributors",
+      "cn": "项目架构",
+      "us": "Project architecture",
+      "legacy": "项目架构.md",
+      "legacyDigest": "d80a5b1aa46ea88a728ed973d2e313333c61b639cbb830a5aae90492d365fb6d",
+      "sourceDigest": "94a69abdf0c4b71fd151b3f5d5475a0a7685fcbfb79a8a08a68e049df9bce98c",
+      "translationDigest": "aa6f0ebd45d1e93c9411faa3e338b6327c6b8f00a216f7b538d270361c15cd85",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "probe-type-generation",
+      "section": "contributors",
+      "cn": "Probe 类型生成",
+      "us": "Probe type generation",
+      "legacy": "Probe-类型生成.md",
+      "legacyDigest": "e04220b9b877582ad6ba0a05d95573c1ed3945c00cbccf36bc79e899bd1a3cab",
+      "sourceDigest": "435a70394380bf219ef2c5eabfac036e92727f1818fe5c593ff1ae6cb61e8368",
+      "translationDigest": "6c43a6aa0656d38e0886c0e3e74d0fa923e43f8df804debccf685ec03d9ff61d",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "build-system",
+      "section": "contributors",
+      "cn": "构建系统",
+      "us": "Build system",
+      "legacy": "构建系统.md",
+      "legacyDigest": "53a393be55a9dc6d69f026c619dab10b0d0aa9913fee45e35d160c9b571d91c1",
+      "sourceDigest": "2140d393a6769b1b7586b39eeb859a0088a946812439bf7d63a362a1872a348d",
+      "translationDigest": "1cd7ac824ba362d8aeed70fe7f838e6cbb4992df7c9f1708659b19216efc8331",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    }
+  ]
+}

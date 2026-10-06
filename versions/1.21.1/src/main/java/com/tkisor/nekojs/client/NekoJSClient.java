@@ -4,7 +4,7 @@ package com.tkisor.nekojs.client;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.bindings.event.client.ClientEvents;
-import com.tkisor.nekojs.client.renderer.NekoNoopEntityRenderer;
+import com.tkisor.nekojs.client.renderer.NekoEntityRenderers;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
@@ -48,7 +48,8 @@ public class NekoJSClient {
     }
 
     private static void onRegisterEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        EntityTypeBuilder.registeredEntityTypes().forEach(type -> event.registerEntityRenderer(type, NekoNoopEntityRenderer::new));
+        EntityTypeBuilder.registeredEntityTypes().forEach(type -> event.registerEntityRenderer(type,
+                NekoEntityRenderers.provider(EntityTypeBuilder.renderConfiguration(type))));
     }
 
     private static void onClientTickPost(ClientTickEvent.Post event, NekoRuntimeRoot root) {

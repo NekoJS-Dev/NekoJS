@@ -22,6 +22,7 @@ ItemStackSpec#neko$getId(0) | impl=ItemStackExtension | declared-by-impl
 ItemStackSpec#neko$hasEnchantment(2) | impl=ItemStackExtension | declared-by-impl
 ItemStackSpec#neko$isUnbreakable(0) | impl=ItemStackExtension | declared-by-impl
 ItemStackSpec#neko$matches(1) | impl=ItemStackExtension | declared-by-impl
+ItemStackSpec#neko$pdata(0) | impl=ItemStackExtension | declared-by-impl
 ItemStackSpec#neko$setUnbreakable(1) | impl=ItemStackExtension | declared-by-impl
 ItemStackSpec#neko$withCount(1) | impl=ItemStackExtension | declared-by-impl
 ItemStackSpec | scope=ALL | required=true | impl=ItemStackExtension | extends=ItemStackSpec

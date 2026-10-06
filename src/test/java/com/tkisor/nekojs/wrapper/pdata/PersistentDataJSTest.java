@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * S5 regression test: array getters (and the array branches of {@code get(String)})
@@ -75,6 +76,71 @@ class PersistentDataJSTest {
         assertArrayEquals(new byte[] {1, 2, 3}, ((ByteArrayTag) tag.get("bytes")).getAsByteArray());
         assertArrayEquals(new int[] {4, 5, 6}, ((IntArrayTag) tag.get("ints")).getAsIntArray());
         assertArrayEquals(new long[] {7L, 8L, 9L}, ((LongArrayTag) tag.get("longs")).getAsLongArray());
+    }
+
+    @Test
+    void failedEditNeverChangesTheSourceOrMarksItDirty() {
+        CompoundTag source = new CompoundTag();
+        source.putInt("mana", 5);
+        AtomicInteger saves = new AtomicInteger();
+        AtomicInteger dirty = new AtomicInteger();
+        PersistentDataJS pdata = new PersistentDataJS(() -> source,
+                tag -> saves.incrementAndGet(), dirty::incrementAndGet, () -> {});
+
+        assertThrows(IllegalStateException.class, () -> pdata.edit(tag -> {
+            tag.putInt("mana", 99);
+            throw new IllegalStateException("fixture rejection");
+        }));
+        assertEquals(5, pdata.getInt("mana"));
+        assertEquals(0, saves.get());
+        assertEquals(0, dirty.get());
+    }
+
+    @Test
+    void successfulEditCommitsOnceAndReadsCannotMutateStoredCompounds() {
+        java.util.concurrent.atomic.AtomicReference<CompoundTag> stored =
+                new java.util.concurrent.atomic.AtomicReference<>(new CompoundTag());
+        AtomicInteger saves = new AtomicInteger();
+        AtomicInteger dirty = new AtomicInteger();
+        PersistentDataJS pdata = new PersistentDataJS(stored::get, tag -> {
+            stored.set(tag.copy());
+            saves.incrementAndGet();
+        }, dirty::incrementAndGet, () -> {});
+        pdata.edit(tag -> {
+            tag.putInt("mana", 7);
+            CompoundTag child = new CompoundTag();
+            child.putInt("value", 12);
+            tag.put("child", child);
+        });
+        assertEquals(1, saves.get());
+        assertEquals(1, dirty.get());
+        assertEquals(7, pdata.getInt("mana"));
+        ((CompoundTag) pdata.get("child")).putInt("value", 99);
+        assertEquals(12, new PersistentDataJS(() -> pdata.getCompound("child"), tag -> {}).getInt("value"));
+        assertEquals(1, dirty.get());
+    }
+
+    @Test
+    void readOnlyEditRejectsBeforeCallingUserCode() {
+        AtomicInteger callbacks = new AtomicInteger();
+        PersistentDataJS mirror = PersistentDataJS.readOnly(CompoundTag::new);
+        assertThrows(UnsupportedOperationException.class,
+                () -> mirror.edit(tag -> callbacks.incrementAndGet()));
+        assertEquals(0, callbacks.get());
+    }
+
+    @Test
+    void readOnlyMirrorRejectsEveryWriteEntryWithoutChangingSource() {
+        CompoundTag source = new CompoundTag();
+        source.putInt("mana", 5);
+        PersistentDataJS mirror = PersistentDataJS.readOnly(() -> source);
+
+        assertThrows(UnsupportedOperationException.class, () -> mirror.putInt("mana", 9));
+        assertThrows(UnsupportedOperationException.class, () -> mirror.edit(tag -> tag.putInt("mana", 9)));
+        assertThrows(UnsupportedOperationException.class, mirror::markDirty);
+        assertThrows(UnsupportedOperationException.class, mirror::sync);
+
+        assertEquals(5, mirror.getInt("mana"));
     }
 
     /**

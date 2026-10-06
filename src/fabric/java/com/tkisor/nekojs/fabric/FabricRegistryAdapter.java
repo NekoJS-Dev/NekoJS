@@ -5,16 +5,15 @@ import com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryRuntime;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 
 /**
- * 通用注册表的 Fabric 适配层（ADR-0004 平台层的 fabric 形态；ticket 15 起为
- * {@link StartupRegistryRuntime} 的薄接线）：与 NeoForge 侧逐 pass 抽干不同，
- * fabric 在 {@code onInitialize} 内<b>单批</b>完成——先收集一次（同一
- * {@code collectOnce} epoch 语义），再逐注册表 {@code drainFor}、以 vanilla
- * {@link Registry#register} 直注（sink 立即执行 supplier，校验即时可观察）。
- * 跨注册表互引经 builder 的懒 {@code get()} 解析，单批内的注册次序无关紧要。
+ * Registers a collected startup epoch through Fabric's vanilla registry sinks.
+ * Each pass refreshes the pending registries so co-registered entries are included.
+ * ITEM runs after the other registries that can produce block items or spawn eggs;
+ * each registry still receives only one pass within the runtime epoch.
  */
 public final class FabricRegistryAdapter {
     private FabricRegistryAdapter() {}
@@ -40,10 +39,7 @@ public final class FabricRegistryAdapter {
     public static void onInitialize() {
         StartupRegistryRuntime current = runtime;
         current.collectOnce();
-        // 快照 key 集再逐个抽干（drain 会改结构）
-        for (ResourceKey<? extends Registry<?>> key : current.snapshotUndrainedRegistries()) {
-            drainRegistry(current, key);
-        }
+        drainPendingRegistries(current, key -> drainRegistry(current, key));
         // 实体属性挂载：EntityTypeBuilder build 期记账的属性表统一注册（NeoForge 侧由
         // EntityAttributeCreationEvent 消费同一 drainPendingAttributes）
         com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder.drainPendingAttributes()
@@ -66,6 +62,24 @@ public final class FabricRegistryAdapter {
             net.fabricmc.fabric.api.registry.FuelValueEvents.BUILD.register((builder, ctx) ->
                     com.tkisor.nekojs.wrapper.registry.gen.ItemBuilder.FUEL_ASSIGNMENTS.forEach((id, time) ->
                             BuiltInRegistries.ITEM.getOptional(id).ifPresent(item -> builder.add(item, time))));
+        }
+    }
+
+    static void drainPendingRegistries(StartupRegistryRuntime current,
+            java.util.function.Consumer<ResourceKey<? extends Registry<?>>> drain) {
+        java.util.Set<ResourceKey<? extends Registry<?>>> visited = new java.util.HashSet<>();
+        java.util.Comparator<ResourceKey<? extends Registry<?>>> order = java.util.Comparator
+                .comparing((ResourceKey<? extends Registry<?>> key) -> key.equals(Registries.ITEM))
+                .thenComparing(key -> key.identifier().toString());
+        while (true) {
+            java.util.Set<ResourceKey<? extends Registry<?>>> pending = current.snapshotUndrainedRegistries();
+            if (pending.isEmpty()) return;
+            ResourceKey<? extends Registry<?>> next = pending.stream().min(order).orElseThrow();
+            if (!visited.add(next)) {
+                throw new IllegalStateException("[NEKO-4028] Registry pass did not drain its pending content: "
+                        + next.identifier());
+            }
+            drain.accept(next);
         }
     }
 

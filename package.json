@@ -2,7 +2,9 @@
   "name": "nekojs-build-tools",
   "private": true,
   "scripts": {
-    "test:probe-types": "tsc -p common/src/test/probe-ts/tsconfig.json --noEmit"
+    "test:probe-types": "tsc -p common/src/test/probe-ts/tsconfig.json --noEmit",
+    "check:wiki": "node scripts/wiki-docs.mjs check --strict",
+    "test:wiki": "node --test scripts/wiki-docs.test.mjs"
   },
   "devDependencies": {
     "typescript": "5.8.3"

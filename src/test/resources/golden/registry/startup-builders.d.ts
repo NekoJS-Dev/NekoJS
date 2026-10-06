@@ -61,8 +61,12 @@ interface EnchantmentBuilder {
 
 /** EntityTypeBuilder — registry 'minecraft:entity_type', type 'basic', sugar 'entityType'. */
 interface EntityTypeBuilder {
+    attributeBase(type: any): any;
+    attributeSupplier(supplier: any): any;
     attributes(consumer: (b: any) => void): void;
     category: string;
+    entityClass(entityClass: any): any;
+    factory(factory: any): any;
     fireImmune: boolean;
     goals(consumer: (b: any) => void): void;
     height: number;
@@ -70,19 +74,25 @@ interface EntityTypeBuilder {
     noSave: boolean;
     noSummon: boolean;
     receiveVelocityUpdates: boolean;
+    renderer: string;
     setCategory(category: string): void;
     setFireImmune(fireImmune: boolean): void;
     setHeight(height: number): void;
     setNoSave(noSave: boolean): void;
     setNoSummon(noSummon: boolean): void;
     setReceiveVelocityUpdates(receiveVelocityUpdates: boolean): void;
+    setRenderer(renderer: string): void;
+    setShadowRadius(shadowRadius: number): void;
+    setTexture(texture: string): void;
     setTrackingRange(trackingRange: number): void;
     setUpdateInterval(updateInterval: number): void;
     setWidth(width: number): void;
+    shadowRadius: number;
     size(width: number, height: number): void;
     spawnEgg(backgroundColor: number, highlightColor: number): void;
     readonly spawnEggId: any;
     tag(...tags: string[]): any;
+    texture: string;
     trackingRange: number;
     updateInterval: number;
     width: number;

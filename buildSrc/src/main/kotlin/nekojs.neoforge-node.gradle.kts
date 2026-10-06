@@ -11,10 +11,13 @@
 //      （见下面的 stonecutterProcessed）；
 //   2. 版本目录经 buildSrc/settings.gradle.kts 导入，libs 访问器要通过 LibrariesForLibs 取。
 
+import groovy.json.JsonSlurper
 import groovy.lang.Closure
 import org.gradle.accessors.dm.LibrariesForLibs
 import org.slf4j.event.Level
 import java.util.concurrent.Callable
+import java.util.jar.JarInputStream
+import java.util.zip.ZipFile
 
 plugins {
     id("java-library")
@@ -166,11 +169,18 @@ dependencies {
     testImplementation(libs.junit.jupiter.legacy)
     testRuntimeOnly(libs.junit.platform.launcher)
 
-    if (!modern) {
-        // 1.21.1 的开发运行需要显式补 ICU4J：MDG 的 server legacy classpath 不收项目
-        // runtimeClasspath 的传递依赖。26.x 走 clientData，不再需要。
+    if (modern) {
+        runtimeOnly(libs.icu4j)
+        add("jarJar", libs.icu4j)
+    } else {
+        runtimeOnly("com.ibm.icu:icu4j:73.2")
+        add("jarJar", "com.ibm.icu:icu4j:73.2")
         "additionalRuntimeClasspath"("com.ibm.icu:icu4j:73.2")
     }
+}
+
+configurations.named("jarJar") {
+    shouldResolveConsistentlyWith(configurations.runtimeClasspath.get())
 }
 
 // stonecutter.process 的输出落在 build/generated/stonecutter/main/ 下，这个目录既是
@@ -236,6 +246,68 @@ tasks.jar {
             .toCollection(mutableListOf())
             .map { dep -> if (dep.isDirectory) dep else zipTree(dep) }
     })
+}
+
+val neoForgeJar = tasks.named<Jar>("jar")
+val verifyNeoForgeRuntimeArtifact = tasks.register("verifyNeoForgeRuntimeArtifact") {
+    group = "verification"
+    description = "Verifies that the NeoForge runtime jar contains an intact ICU Jar-in-Jar dependency."
+    dependsOn(neoForgeJar)
+    inputs.file(neoForgeJar.flatMap { it.archiveFile })
+
+    doLast {
+        val archive = neoForgeJar.get().archiveFile.get().asFile
+        val expectedIcu = configurations.runtimeClasspath.get().resolvedConfiguration.resolvedArtifacts.single {
+            it.moduleVersion.id.group == "com.ibm.icu" && it.name == "icu4j"
+        }
+        ZipFile(archive).use { jar ->
+            val metadataEntry = jar.getEntry("META-INF/jarjar/metadata.json")
+                ?: throw GradleException("NeoForge runtime artifact ${archive.name} has no Jar-in-Jar metadata for ICU.")
+            val metadata = jar.getInputStream(metadataEntry).use { JsonSlurper().parse(it) } as? Map<*, *>
+                ?: throw GradleException("NeoForge runtime artifact ${archive.name} has invalid Jar-in-Jar metadata.")
+            val dependencies = metadata["jars"] as? List<*>
+                ?: throw GradleException("NeoForge runtime artifact ${archive.name} has no Jar-in-Jar dependency list.")
+            val icuDependencies = dependencies.filterIsInstance<Map<*, *>>().filter { dependency ->
+                val identifier = dependency["identifier"] as? Map<*, *>
+                identifier?.get("group") == "com.ibm.icu" && identifier?.get("artifact") == "icu4j"
+            }
+            if (icuDependencies.size != 1) {
+                throw GradleException("NeoForge runtime artifact ${archive.name} must declare exactly one ICU dependency.")
+            }
+            val dependency = icuDependencies.single()
+            val version = dependency["version"] as? Map<*, *>
+            if (version?.get("artifactVersion") != expectedIcu.moduleVersion.id.version
+                || (version?.get("range") as? String).isNullOrBlank()) {
+                throw GradleException("NeoForge runtime artifact ${archive.name} has inconsistent ICU dependency metadata.")
+            }
+            val path = dependency["path"] as? String
+                ?: throw GradleException("NeoForge runtime artifact ${archive.name} has no embedded ICU path.")
+            if (!path.startsWith("META-INF/jarjar/") || path.contains("..")) {
+                throw GradleException("NeoForge runtime artifact ${archive.name} has an invalid embedded ICU path.")
+            }
+            val nested = jar.getEntry(path)
+                ?: throw GradleException("NeoForge runtime artifact ${archive.name} is missing its declared ICU jar.")
+            jar.getInputStream(nested).use { stream ->
+                JarInputStream(stream).use { icu ->
+                    val entries = generateSequence { icu.nextJarEntry }.map { it.name }.toSet()
+                    val hasDateFormat = "com/ibm/icu/text/DateFormat.class" in entries
+                    val hasLocaleData = entries.any { it.startsWith("com/ibm/icu/impl/data/") && it.endsWith(".res") }
+                    val hasModuleIdentity = icu.manifest?.mainAttributes?.getValue("Automatic-Module-Name") == "com.ibm.icu"
+                    if (!hasDateFormat || !hasLocaleData || !hasModuleIdentity) {
+                        throw GradleException("NeoForge runtime artifact ${archive.name} contains an incomplete ICU library.")
+                    }
+                }
+            }
+            val entries = jar.entries().asSequence().map { it.name }.toList()
+            if (entries.any { it.startsWith("com/ibm/icu/") }) {
+                throw GradleException("NeoForge runtime artifact ${archive.name} must not flatten ICU into the mod module.")
+            }
+            val embeddedIcu = entries.filter { it.startsWith("META-INF/jarjar/icu4j-") && it.endsWith(".jar") }
+            if (embeddedIcu != listOf(path)) {
+                throw GradleException("NeoForge runtime artifact ${archive.name} contains an unexpected ICU jar.")
+            }
+        }
+    }
 }
 
 // ---- 编译约定 -------------------------------------------------------------------
@@ -354,5 +426,5 @@ val verifyDevModSourceSets = tasks.register("verifyDevModSourceSets") {
 }
 
 tasks.named("check") {
-    dependsOn(verifyDevModSourceSets)
+    dependsOn(verifyDevModSourceSets, verifyNeoForgeRuntimeArtifact)
 }

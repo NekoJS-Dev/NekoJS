@@ -356,7 +356,13 @@ public final class ValParser {
     private ValNode.ArrowFunc parseArrowBody(List<String> params, int start) {
         List<ValNode> body = new ArrayList<>();
         if (peek() == '{') { ValNode.Block b = parseBlock(); body.addAll(b.stmts()); }
-        else { ValNode e = parseExpr(); if (e != null) body.add(e); }
+        else {
+            int expressionStart = pos;
+            int expressionEnd = scanInitializer(expressionStart, true);
+            ValNode expression = new ValParser(src, expressionStart, expressionEnd).parseInitializer();
+            if (expression != null) body.add(expression);
+            pos = expressionEnd;
+        }
         return new ValNode.ArrowFunc(params, body, start, pos);
     }
 

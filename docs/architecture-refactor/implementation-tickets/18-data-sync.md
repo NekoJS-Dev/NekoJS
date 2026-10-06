@@ -26,7 +26,7 @@
 
 - [x] 旧 NeoForge 与 Fabric 存档 fixture 中的 NeoForgeData/NekoJSPersistentData 均可回读，PData key、NBT 形状和跨 loader 语义不变。【fabric 侧生产 mixin 真实方法体 fixture ×2 节点（7 用例/节点，经 vanilla TagValueInput/Output）+ literal 旧 NeoForge 存档回读（含第三方 mod 键不泄漏断言）；NeoForge 读路径 = trace + 既有 EntityPDataStoreTest（bare JVM 无法构造 patched Entity，characterization 如实声明）】
 - [x] PData 写入触发 dirty 标记，读操作不触发；flush 保持每 tick 上限、tracking player 目标和 revision 递增语义。【写/读/sync 分离 JVM 钉住（PersistentDataJSTest 新用例与 saveTag 生产语义逐条核对）；flush 256/tick、tracking、revision 递增 = 实读语义表 + 票 03 真机 + 票 17 dispatcher 装配（PDataSyncService 本票零 diff）】
-- [x] 空数据包清除对应 entity mirror，stale revision 被拒绝，entity id 复用后不会读到旧实体数据。【PDataSyncAcceptTest 四方法（empty 清 mirror/同 revision 幂等覆盖/stale 拒绝/clear 全清）×4 节点；id 复用防线（onEntityRemoved 空包 + SERVER_REVISIONS.remove）语义表锚点行号核对；事件触发面 characterization】
+- [x] 空数据包清除对应 entity mirror，stale revision 被拒绝，entity id 复用后不会读到旧实体数据。【PDataSyncAcceptTest 空包清除/同 revision 幂等/stale 拒绝/clear 全清 + entity id 复用 tombstone/延迟旧包拒绝；服务端 revision 在服务器生命周期内单调递增，停服清账；事件触发面 = characterization】
 - [x] ClientData 仅接受旧契约允许的 JSON 类型，超限值显式失败，同 key 覆盖，坏包丢弃并记录警告。【发送面 6 用例与 createPacket 生产代码逐条对上（32768 恰过/超限抛/不发送）；双 loader 接收面坏包丢弃/覆盖/JSON null 各 3 用例（NeoForge hop 计数断言）；WARN 文本不断言记为 characterization】
 - [x] ClientData 在断线、离开旧世界/切维度时按现约清空；首次进服收到的数据不被进入世界钩子误删。【fabric 侧 ClientLevelWatch 状态机 JVM 钉住（从两处内联 lambda 提取、逐点等价、instances 独立）；NeoForge onLevelUnload 实读（断线/切维度都触发、首次进服无 unload）+ 既有覆盖/清空 fixture】
 - [x] PDataSyncPacket 与 ClientDataSyncPacket 的 id、方向、codec、字段顺序和 JSON/NBT wire 与旧 fixture 一致。【引用票 17 PayloadWireFormatGoldenTest 零改动（两 hex 与本票 evidence 引用逐字符一致核对）；本票 diff 零 payload/codec/网络/mixin 存档文件】

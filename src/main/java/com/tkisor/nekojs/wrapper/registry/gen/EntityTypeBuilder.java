@@ -17,8 +17,16 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.world.level.Level;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.Proxy;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.DefaultAttributes;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -56,6 +64,19 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
     private Integer spawnEggHighlightColor = null;
     private final EntityAttributeBuilderJS attributes = new EntityAttributeBuilderJS();
     private final GoalRegistry.GoalBuilderJS goals = GoalRegistry.builder();
+    private BiFunction<EntityType<?>, Level, ? extends LivingEntity> factory = EntityTypeBuilder::createDefaultMob;
+    private Class<? extends LivingEntity> nativeEntityClass;
+    private boolean customFactory;
+    private boolean attributesConfigured;
+    private AttributeSupplier attributeBase;
+    private AttributeSupplier builtAttributes;
+    private String renderer = "humanoid";
+    private Identifier texture = Identifier.parse("minecraft:textures/entity/zombie/zombie.png");
+    private float shadowRadius = 0.5F;
+    private RenderConfiguration builtRenderConfiguration;
+
+    public record RenderConfiguration(String renderer, Identifier texture, float shadowRadius,
+            Class<? extends LivingEntity> entityClass) {}
 
     public EntityTypeBuilder(Identifier id) {
         super(id);
@@ -156,7 +177,7 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
     }
 
     private static void requirePositive(String what, float value) {
-        if (value <= 0 || Float.isNaN(value)) {
+        if (value <= 0 || !Float.isFinite(value)) {
             throw new IllegalArgumentException(what + " must be > 0 but got " + value);
         }
     }
@@ -175,9 +196,90 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
         this.spawnEggHighlightColor = highlightColor;
     }
 
-    /** 配置属性表（血量/速度等）。 */
+    public String getRenderer() {
+        return renderer;
+    }
+
+    public void setRenderer(String renderer) {
+        if (renderer == null || (!renderer.equals("humanoid")
+                && !renderer.matches("[A-Za-z_$][\\w$]*(\\.[A-Za-z_$][\\w$]*)+"))) {
+            throw new IllegalArgumentException("[NEKO-4025] Entity renderer must be humanoid or a Java renderer class name");
+        }
+        this.renderer = renderer;
+    }
+
+    public String getTexture() {
+        return texture.toString();
+    }
+
+    public void setTexture(String texture) {
+        Identifier parsed = texture == null ? null : Identifier.tryParse(texture);
+        if (parsed == null || !parsed.getPath().startsWith("textures/")
+                || !parsed.getPath().endsWith(".png") || parsed.getPath().contains("..")) {
+            throw new IllegalArgumentException("[NEKO-4025] Entity texture must be a resource id under textures/ ending in .png");
+        }
+        this.texture = parsed;
+    }
+
+    public float getShadowRadius() {
+        return shadowRadius;
+    }
+
+    public void setShadowRadius(float shadowRadius) {
+        if (!Float.isFinite(shadowRadius) || shadowRadius < 0F) {
+            throw new IllegalArgumentException("[NEKO-4025] Entity shadow radius must be finite and non-negative");
+        }
+        this.shadowRadius = shadowRadius;
+    }
+
+    public EntityTypeBuilder attributeBase(EntityType<? extends LivingEntity> type) {
+        AttributeSupplier supplier = DefaultAttributes.getSupplier(type);
+        if (supplier == null) {
+            throw new IllegalArgumentException("[NEKO-4008] Entity attribute base has no registered supplier: " + type);
+        }
+        this.attributeBase = supplier;
+        return this;
+    }
+
+    public EntityTypeBuilder attributeSupplier(AttributeSupplier supplier) {
+        if (supplier == null) {
+            throw new IllegalArgumentException("[NEKO-4008] Entity attribute supplier must not be null");
+        }
+        this.attributeBase = supplier;
+        return this;
+    }
+
     public void attributes(Consumer<EntityAttributeBuilderJS> consumer) {
         consumer.accept(attributes);
+        attributesConfigured = true;
+    }
+
+    /** Configures the entity factory, which receives (EntityType, Level) and returns a LivingEntity. */
+    public EntityTypeBuilder factory(BiFunction<EntityType<?>, Level, ? extends LivingEntity> factory) {
+        if (factory == null) {
+            throw new IllegalArgumentException("[NEKO-4008] entity factory must not be null");
+        }
+        if (Proxy.isProxyClass(factory.getClass()) || factory.getClass().getName().startsWith("graal.")
+                || factory.getClass().getName().startsWith("com.oracle.truffle.")
+                || factory.getClass().getName().startsWith("org.graalvm.polyglot.")) {
+            throw new IllegalArgumentException("[NEKO-4008] Entity factory must be a native Java implementation; guest callbacks cannot run on both entity owner threads");
+        }
+        this.factory = factory;
+        this.nativeEntityClass = null;
+        this.customFactory = true;
+        return this;
+    }
+
+    /** Uses the standard (EntityType, Level) constructor of a native entity class. */
+    public EntityTypeBuilder entityClass(Class<? extends LivingEntity> entityClass) {
+        if (entityClass == null) {
+            throw new IllegalArgumentException("[NEKO-4008] entity class must not be null");
+        }
+        Constructor<? extends LivingEntity> constructor = nativeConstructor(entityClass);
+        this.factory = (type, level) -> instantiate(constructor, type, level);
+        this.nativeEntityClass = entityClass;
+        this.customFactory = true;
+        return this;
     }
 
     /** 配置 AI 目标。 */
@@ -185,9 +287,94 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
         consumer.accept(goals);
     }
 
+    private static LivingEntity createDefaultMob(EntityType<?> type, Level level) {
+        @SuppressWarnings("unchecked")
+        EntityType<? extends PathfinderMob> mobType = (EntityType<? extends PathfinderMob>) (EntityType<?>) type;
+        return new NekoScriptMob(mobType, level);
+    }
+
+    private static Constructor<? extends LivingEntity> nativeConstructor(Class<? extends LivingEntity> entityClass) {
+        if (!LivingEntity.class.isAssignableFrom(entityClass) || Modifier.isAbstract(entityClass.getModifiers())
+                || !Modifier.isPublic(entityClass.getModifiers())) {
+            throw new IllegalArgumentException("[NEKO-4008] Entity class must be a public concrete LivingEntity: " + entityClass.getName());
+        }
+        try {
+            return entityClass.getConstructor(EntityType.class, Level.class);
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalArgumentException("[NEKO-4008] Entity class must have a public constructor(EntityType, Level): "
+                    + entityClass.getName(), exception);
+        }
+    }
+
+    private static LivingEntity instantiate(Constructor<? extends LivingEntity> constructor,
+            EntityType<?> type, Level level) {
+        try {
+            return constructor.newInstance(type, level);
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalStateException("[NEKO-4008] Entity construction failed: " + constructor.getDeclaringClass().getName(), exception);
+        }
+    }
+
+    private AttributeSupplier resolveAttributes() {
+        AttributeSupplier base = attributeBase;
+        if (base == null && nativeEntityClass != null && nativeEntityClass != NekoScriptMob.class) {
+            try {
+                var method = nativeEntityClass.getMethod("createAttributes");
+                if (!Modifier.isStatic(method.getModifiers())) {
+                    throw new IllegalArgumentException("[NEKO-4008] Native createAttributes must be static");
+                }
+                Object result = method.invoke(null);
+                if (result instanceof AttributeSupplier.Builder attributeBuilder) {
+                    base = attributeBuilder.build();
+                } else if (result instanceof AttributeSupplier supplier) {
+                    base = supplier;
+                } else {
+                    throw new IllegalArgumentException("[NEKO-4008] Native createAttributes must return AttributeSupplier or its Builder");
+                }
+            } catch (ReflectiveOperationException exception) {
+                throw new IllegalArgumentException("[NEKO-4008] Native entity class requires attributeBase or attributeSupplier: "
+                        + nativeEntityClass.getName(), exception);
+            }
+        }
+        AttributeSupplier configured = attributes.buildOverrides();
+        if (base == null) {
+            base = attributes.build();
+        }
+        Class<? extends LivingEntity> entityClass = customFactory ? nativeEntityClass : NekoScriptMob.class;
+        AttributeSupplier required = entityClass == null || Mob.class.isAssignableFrom(entityClass)
+                ? Mob.createMobAttributes().build() : LivingEntity.createLivingAttributes().build();
+        AttributeSupplier.Builder result = AttributeSupplier.builder();
+        for (var holder : BuiltInRegistries.ATTRIBUTE.listElements().toList()) {
+            AttributeSupplier source = attributesConfigured && configured.hasAttribute(holder) ? configured : base;
+            if (required.hasAttribute(holder) && !source.hasAttribute(holder)) {
+                throw new IllegalArgumentException("[NEKO-4008] Entity attribute supplier is missing " + holder.getRegisteredName());
+            }
+            if (source.hasAttribute(holder)) {
+                double value = source.getBaseValue(holder);
+                if (!Double.isFinite(value)) {
+                    throw new IllegalArgumentException("[NEKO-4008] Entity attribute value must be finite: " + holder.getRegisteredName());
+                }
+                result.add(holder, value);
+            }
+        }
+        return result.build();
+    }
+
     @Override
     public EntityType<?> build() {
-        EntityType.Builder<NekoScriptMob> builder = EntityType.Builder.of(NekoScriptMob::new, resolveCategory(category))
+        builtAttributes = resolveAttributes();
+        builtRenderConfiguration = new RenderConfiguration(renderer, texture, shadowRadius,
+                customFactory ? nativeEntityClass : NekoScriptMob.class);
+        BiFunction<EntityType<?>, Level, ? extends LivingEntity> creationFactory = factory;
+        Class<? extends LivingEntity> expectedClass = nativeEntityClass;
+        EntityType.EntityFactory<LivingEntity> entityFactory = (type, level) -> {
+            Object result = creationFactory.apply(type, level);
+            if (!(result instanceof LivingEntity entity) || entity.getType() != type || (expectedClass != null && !expectedClass.isInstance(entity))) {
+                throw new IllegalStateException("[NEKO-4008] Entity factory returned an incompatible entity for '" + id + "'");
+            }
+            return entity;
+        };
+        EntityType.Builder<LivingEntity> builder = EntityType.Builder.of(entityFactory, resolveCategory(category))
                 .sized(width, height)
                 .clientTrackingRange(trackingRange)
                 .updateInterval(updateInterval);
@@ -206,7 +393,7 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
             builder.noSummon();
         }
 
-        EntityType<NekoScriptMob> type = builder.build(ResourceKey.create(Registries.ENTITY_TYPE, id));
+        EntityType<LivingEntity> type = builder.build(ResourceKey.create(Registries.ENTITY_TYPE, id));
         goals.forType(type).register();
         REGISTERED.put(id, this);
         if (spawnEggBackgroundColor != null) {
@@ -241,9 +428,21 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
     public static Map<EntityType<? extends LivingEntity>, AttributeSupplier> drainPendingAttributes() {
         Map<EntityType<? extends LivingEntity>, AttributeSupplier> drained = new HashMap<>();
         for (EntityTypeBuilder builder : REGISTERED.values()) {
-            drained.put(builder.entityType(), builder.attributes.build());
+            drained.put(builder.entityType(), builder.builtAttributes);
         }
         return drained;
+    }
+
+    public static RenderConfiguration renderConfiguration(EntityType<?> type) {
+        return REGISTERED.values().stream().filter(builder -> builder.entityType() == type)
+                .map(builder -> builder.builtRenderConfiguration).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("[NEKO-4025] No script entity renderer configuration for " + type));
+    }
+
+    /** Returns the configured runtime class when an entity id can be resolved safely. */
+    public static Class<? extends LivingEntity> registeredEntityClass(Identifier entityId) {
+        EntityTypeBuilder builder = REGISTERED.get(entityId);
+        return builder == null ? null : builder.builtRenderConfiguration.entityClass();
     }
 
     /** build 好的脚本实体类型（未注册 id 返回 null）。 */

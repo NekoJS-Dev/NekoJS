@@ -97,7 +97,12 @@ class RegistryBuilderSurfaceGoldenTest {
         // 行尾统一 LF（checkout autocrlf 容忍），失败时降级为内容级 diff 便于定位
         String golden = readGolden().replace("\r\n", "\n");
         if (!golden.equals(first)) {
-            org.junit.jupiter.api.Assertions.fail(byteLevelMismatch(golden, first));
+            java.nio.file.Path report = java.nio.file.Path.of("build", "nekojs-gates",
+                    java.nio.file.Path.of(GOLDEN).getFileName().toString());
+            java.nio.file.Files.createDirectories(report.getParent());
+            java.nio.file.Files.writeString(report, first, StandardCharsets.UTF_8);
+            org.junit.jupiter.api.Assertions.fail(byteLevelMismatch(golden, first)
+                    + " Generated declaration for review: " + report.toAbsolutePath());
         }
     }
 

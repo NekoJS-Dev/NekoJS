@@ -20,6 +20,11 @@ import com.tkisor.nekojs.api.spec.PlatformAvailability;
 @PlatformAvailability(PlatformAvailability.Scope.ALL)
 public interface ItemStackSpec {
 
+    /** Returns the ItemStack-owned persistent data wrapper; this data is local to the stack. */
+    default Object neko$pdata() {
+        throw new UnsupportedOperationException("ItemStackSpec.neko$pdata not implemented");
+    }
+
     /** 返回指定数量的副本（不修改原 ItemStack）。 */
     default Object neko$withCount(int count) {
         throw new UnsupportedOperationException("ItemStackSpec.neko$withCount not implemented");

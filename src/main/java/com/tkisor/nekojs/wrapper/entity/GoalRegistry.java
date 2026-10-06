@@ -2,10 +2,7 @@
 // 改本文件行为时须同步它。
 package com.tkisor.nekojs.wrapper.entity;
 
-// 脚本实体注册面（EntityTypeBuilder）是 neoforge 面；fabric 上此依赖不存在
-//? if neoforge {
 import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
-//?}
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
@@ -68,7 +65,8 @@ import java.util.function.Function;
 public final class GoalRegistry {
     // 注册阶段写、gameplay 阶段读，用 ConcurrentHashMap 保证 safe-publication
     private static final Map<EntityType<?>, List<GoalFactory>> GOALS = new java.util.concurrent.ConcurrentHashMap<>();
-    private static final Set<Mob> APPLIED_JOIN_GOALS = java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
+    private static final Set<Mob> APPLIED_JOIN_GOALS = java.util.Collections.newSetFromMap(
+            new com.google.common.collect.MapMaker().weakKeys().<Mob, Boolean>makeMap());
 
     private GoalRegistry() {}
 
@@ -80,7 +78,12 @@ public final class GoalRegistry {
         if (type == null || goals.isEmpty()) {
             return;
         }
-        GOALS.computeIfAbsent(type, ignored -> new ArrayList<>()).addAll(goals);
+        GOALS.compute(type, (ignored, previous) -> {
+            List<GoalFactory> combined = new ArrayList<>();
+            if (previous != null) combined.addAll(previous);
+            combined.addAll(goals);
+            return List.copyOf(combined);
+        });
     }
 
     public static void applyBuiltInGoals(Mob mob) {
@@ -92,28 +95,33 @@ public final class GoalRegistry {
     }
 
     public static void onEntityJoinLevel(Entity entity, Level level) {
-        // 没有脚本注册的 goal 时零开销退出——APPLIED_JOIN_GOALS 是强引用集合，
-        // 否则每个加入的生物都会被永久钉住
         if (GOALS.isEmpty()) return;
         if (level.isClientSide() || !(entity instanceof Mob mob) || mob instanceof NekoScriptMob) {
             return;
         }
-        if (!APPLIED_JOIN_GOALS.add(mob)) {
-            return;
-        }
-        applyBuiltInGoals(mob);
+        List<GoalFactory> goals = GOALS.get(mob.getType());
+        if (goals == null || APPLIED_JOIN_GOALS.contains(mob)) return;
+        apply(mob, goals);
+        APPLIED_JOIN_GOALS.add(mob);
     }
 
     private static void apply(Mob mob, List<GoalFactory> goals) {
+        List<Runnable> additions = new ArrayList<>(goals.size());
         for (GoalFactory factory : goals) {
             Goal goal = factory.create(mob);
             if (goal != null) {
-                (factory.target() ? mob.targetSelector : mob.goalSelector).addGoal(factory.priority(), goal);
+                additions.add(() -> (factory.target() ? mob.targetSelector : mob.goalSelector)
+                        .addGoal(factory.priority(), goal));
             }
         }
+        additions.forEach(Runnable::run);
     }
 
     public record GoalFactory(int priority, boolean target, Function<Mob, Goal> factory) {
+        public GoalFactory {
+            factory = GoalBuilderJS.requireGoalFactory(factory);
+        }
+
         Goal create(Mob mob) {
             return factory.apply(mob);
         }
@@ -198,17 +206,19 @@ public final class GoalRegistry {
         }
         if (target instanceof String id) {
             String normalized = id.contains(":") ? id.substring(id.indexOf(':') + 1) : id;
-            Class<? extends LivingEntity> mapped = TARGET_CLASSES.get(normalized);
+            Class<? extends LivingEntity> mapped = !id.contains(":") || id.startsWith("minecraft:")
+                    ? TARGET_CLASSES.get(normalized) : null;
             if (mapped != null) {
                 return mapped;
             }
             Identifier location = id.contains(":") ? Identifier.parse(id) : Identifier.fromNamespaceAndPath("nekojs", id);
-//? if neoforge {
-            // 脚本注册的实体统一是 NekoScriptMob（fabric 上脚本实体注册面未移植，走不到这里）
-            if (EntityTypeBuilder.getEntityType(location) != null) {
-                return NekoScriptMob.class;
+            Class<? extends LivingEntity> registered = EntityTypeBuilder.registeredEntityClass(location);
+            if (registered != null) {
+                return registered;
             }
-//?}
+            if (EntityTypeBuilder.getEntityType(location) != null) {
+                throw new IllegalArgumentException("[NEKO-4004] 无法从 opaque entity factory 推断目标类，请传 Java 类 — cannot infer target class from opaque entity factory: " + id);
+            }
             throw new IllegalArgumentException("[NEKO-4004] 未知目标实体（无内置映射，可用 Java.type(...) 传类） — unknown target entity: " + id);
         }
         throw new IllegalArgumentException("[NEKO-4005] 无法解析目标 — could not resolve goal target: " + target);
@@ -316,6 +326,63 @@ public final class GoalRegistry {
                     ? new AvoidEntityGoal<>(pathfinderMob, clazz, radius, speed, speed)
                     : null));
             return this;
+        }
+
+        /** Registers a regular goal created by a native Java factory. */
+        public GoalBuilderJS custom(int priority, Function<Mob, Goal> factory) {
+            goals.add(new GoalFactory(priority, false, requireGoalFactory(factory)));
+            return this;
+        }
+
+        /** Registers a target goal created by a native Java factory. */
+        public GoalBuilderJS customTarget(int priority, Function<Mob, Goal> factory) {
+            goals.add(new GoalFactory(priority, true, requireGoalFactory(factory)));
+            return this;
+        }
+
+        /** Registers a native goal with a public (Mob) constructor. */
+        public GoalBuilderJS customClass(int priority, Class<? extends Goal> goalClass) {
+            return custom(priority, nativeGoalFactory(goalClass));
+        }
+
+        /** Registers a native target goal with a public (Mob) constructor. */
+        public GoalBuilderJS customTargetClass(int priority, Class<? extends Goal> goalClass) {
+            return customTarget(priority, nativeGoalFactory(goalClass));
+        }
+
+        private static Function<Mob, Goal> nativeGoalFactory(Class<? extends Goal> goalClass) {
+            if (goalClass == null || !Goal.class.isAssignableFrom(goalClass)
+                    || !java.lang.reflect.Modifier.isPublic(goalClass.getModifiers())
+                    || java.lang.reflect.Modifier.isAbstract(goalClass.getModifiers())) {
+                throw new IllegalArgumentException("[NEKO-4017] Goal class must be public and concrete");
+            }
+            java.lang.reflect.Constructor<? extends Goal> constructor;
+            try {
+                constructor = goalClass.getConstructor(Mob.class);
+            } catch (ReflectiveOperationException failure) {
+                throw new IllegalArgumentException("[NEKO-4017] Goal class must have a public constructor(Mob): "
+                        + goalClass.getName(), failure);
+            }
+            return mob -> {
+                try {
+                    return constructor.newInstance(mob);
+                } catch (ReflectiveOperationException failure) {
+                    throw new IllegalStateException("[NEKO-4017] Native goal construction failed: "
+                            + goalClass.getName(), failure);
+                }
+            };
+        }
+
+        private static Function<Mob, Goal> requireGoalFactory(Function<Mob, Goal> factory) {
+            if (factory == null) {
+                throw new IllegalArgumentException("[NEKO-4017] Goal factory must not be null");
+            }
+            String className = factory.getClass().getName();
+            if (java.lang.reflect.Proxy.isProxyClass(factory.getClass()) || className.startsWith("graal.")
+                    || className.startsWith("com.oracle.truffle.") || className.startsWith("org.graalvm.polyglot.")) {
+                throw new IllegalArgumentException("[NEKO-4017] Persistent goal factories must be native Java implementations");
+            }
+            return factory;
         }
 
         public void register() {

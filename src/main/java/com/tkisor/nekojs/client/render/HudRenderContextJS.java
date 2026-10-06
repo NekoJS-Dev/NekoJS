@@ -109,12 +109,12 @@ public class HudRenderContextJS {
 
     /** 1px 矩形边框。 */
     public HudRenderContextJS outline(int x, int y, int width, int height) {
-        graphics.outline(x, y, x + width, y + height, currentColor);
+        graphics.outline(x, y, width, height, currentColor);
         return this;
     }
 
     public HudRenderContextJS outline(int x, int y, int width, int height, Number color) {
-        graphics.outline(x, y, x + width, y + height, UiColor.argbBits(color));
+        graphics.outline(x, y, width, height, UiColor.argbBits(color));
         return this;
     }
 
@@ -129,13 +129,28 @@ public class HudRenderContextJS {
      * 贴图（完整纹理 id，如 {@code 'minecraft:textures/gui/icons.png'}），u/v 为纹理内偏移。
      */
     public HudRenderContextJS texture(String textureId, int x, int y, int width, int height, int u, int v) {
-        graphics.blit(Identifier.parse(textureId), x, y, width, height, u, v, width, height);
+        return texture(textureId, x, y, width, height, u, v, 256, 256);
+    }
+
+    /** Draws the entire texture using the legacy 256-pixel source contract. */
+    public HudRenderContextJS texture(String textureId, int x, int y, int width, int height) {
+        return texture(textureId, x, y, width, height, 0, 0);
+    }
+
+    public HudRenderContextJS texture(String textureId, int x, int y, int width, int height,
+            int u, int v, int textureWidth, int textureHeight) {
+        if (textureWidth <= 0 || textureHeight <= 0) {
+            throw new IllegalArgumentException("[NEKO-4026] Texture dimensions must be positive");
+        }
+        graphics.blit(Identifier.parse(textureId), x, y, x + width, y + height,
+                (float) u / textureWidth, ((float) u + width) / textureWidth,
+                (float) v / textureHeight, ((float) v + height) / textureHeight);
         return this;
     }
 
-    /** 贴图（整张纹理，u/v 为 0）。 */
-    public HudRenderContextJS texture(String textureId, int x, int y, int width, int height) {
-        graphics.blit(Identifier.parse(textureId), x, y, width, height, 0, 0, width, height);
+    /** Draws the entire texture scaled to the requested rectangle. */
+    public HudRenderContextJS textureFull(String textureId, int x, int y, int width, int height) {
+        graphics.blit(Identifier.parse(textureId), x, y, x + width, y + height, 0F, 1F, 0F, 1F);
         return this;
     }
 

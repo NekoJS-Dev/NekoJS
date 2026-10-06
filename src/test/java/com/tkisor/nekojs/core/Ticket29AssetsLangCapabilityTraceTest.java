@@ -273,9 +273,10 @@ class Ticket29AssetsLangCapabilityTraceTest {
         while (buses.find()) {
             busNames.add(buses.group(1));
         }
-        assertEquals(Set.of("tickPre", "tickPost", "tick"), busNames,
-                "the fabric ClientEvents subset stays the tick-only bridge: no generateAssets/lang bridge"
-                        + " may appear without a fabric reload/generation lifecycle to back it");
+        assertFalse(busNames.contains("generateAssets"),
+                "Fabric must not expose asset generation without its reload lifecycle");
+        assertFalse(busNames.contains("lang"),
+                "Fabric must not expose language generation without its reload lifecycle");
     }
 
     private static Stream<Path> walkAll(Path root, List<Path> dirs) throws IOException {

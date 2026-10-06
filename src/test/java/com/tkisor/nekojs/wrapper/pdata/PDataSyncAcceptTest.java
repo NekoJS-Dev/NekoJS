@@ -1,4 +1,3 @@
-//? if >=26 {
 package com.tkisor.nekojs.wrapper.pdata;
 
 import com.tkisor.nekojs.network.PDataSyncPacket;
@@ -39,12 +38,25 @@ class PDataSyncAcceptTest {
     }
 
     @Test
+    void equalRevisionOverwritesAndReceivedTagsAreIsolated() {
+        CompoundTag first = tagOf("mana", 5);
+        PDataSyncService.acceptClientSync(new PDataSyncPacket(7, 3, first));
+        first.putInt("mana", 99);
+        assertEquals(5, new PersistentDataJS(() -> PDataSyncService.clientMirrorById(7), tag -> {}).getInt("mana"));
+        PDataSyncService.acceptClientSync(new PDataSyncPacket(7, 3, tagOf("mana", 12)));
+        CompoundTag read = PDataSyncService.clientMirrorById(7);
+        read.putInt("mana", 99);
+        assertEquals(12, new PersistentDataJS(() -> PDataSyncService.clientMirrorById(7), tag -> {}).getInt("mana"));
+    }
+
+    @Test
     void staleRevisionIsIgnored() {
         PDataSyncService.acceptClientSync(new PDataSyncPacket(7, 3, tagOf("mana", 30)));
         PDataSyncService.acceptClientSync(new PDataSyncPacket(7, 1, tagOf("mana", 10)));
+        PDataSyncService.acceptClientSync(new PDataSyncPacket(7, 2, new CompoundTag()));
 
-        assertTrue(PDataSyncService.hasPendingClientData(7));
-        // 旧包被忽略：镜像值仍是 revision 3 的内容——经 clear 空包对照验证
+        assertTrue(PDataSyncService.hasPendingClientData(7), "stale empty packet must not clear the current mirror");
+        // 旧包被忽略：镜像值仍是 revision 3 的内容——经 fresh clear 空包对照验证
         PDataSyncService.acceptClientSync(new PDataSyncPacket(7, 4, new CompoundTag()));
         assertFalse(PDataSyncService.hasPendingClientData(7), "empty-data packet clears the mirror");
     }
@@ -64,6 +76,19 @@ class PDataSyncAcceptTest {
     }
 
     @Test
+    void reusedEntityIdContinuesRevisionAndRejectsDelayedOldPacket() {
+        PDataSyncService.acceptClientSync(new PDataSyncPacket(9, 7, tagOf("old", 1)));
+        PDataSyncService.acceptClientSync(new PDataSyncPacket(9, 8, new CompoundTag()));
+        PDataSyncService.acceptClientSync(new PDataSyncPacket(9, 6, tagOf("delayed", 99)));
+        assertFalse(PDataSyncService.hasPendingClientData(9), "delayed old data must not resurrect after removal");
+
+        PDataSyncService.acceptClientSync(new PDataSyncPacket(9, 9, tagOf("new", 2)));
+
+        assertTrue(PDataSyncService.hasPendingClientData(9), "replacement entity must publish a fresh mirror");
+        assertEquals(2, new PersistentDataJS(() -> PDataSyncService.clientMirrorById(9), tag -> {}).getInt("new"));
+    }
+
+    @Test
     void clearClientMirrorsWipesEverything() {
         PDataSyncService.acceptClientSync(new PDataSyncPacket(1, 1, tagOf("a", 1)));
         PDataSyncService.acceptClientSync(new PDataSyncPacket(2, 1, tagOf("b", 2)));
@@ -79,4 +104,3 @@ class PDataSyncAcceptTest {
         return PDataSyncService.clientMirrorById(entityId);
     }
 }
-//?}

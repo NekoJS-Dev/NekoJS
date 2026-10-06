@@ -1,72 +1,173 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation; keep this file paired with the 1.21.1 version.
 //? if neoforge {
 package com.tkisor.nekojs.wrapper.event.registry;
 
-import com.tkisor.nekojs.js.type_adapter.ParseIds;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.neoforged.neoforge.capabilities.BaseCapability;
 import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.EntityCapability;
+import net.neoforged.neoforge.capabilities.IBlockCapabilityProvider;
+import net.neoforged.neoforge.capabilities.ItemCapability;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.energy.EnergyHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.item.ItemResource;
-import java.util.ArrayList;
-import java.util.List;
+
 import java.util.Locale;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 /**
- * {@code CapabilityEvents.register} 事件对象：为方块实体注册标准 capability provider。
- *
- * <p>MVP 仅支持 block entity + 标准 item / energy / fluid 三类能力。provider 为无上下文
- * 回调（返回 {@code Capabilities.itemHandler(...)} 等 transfer API 实例）；挂到
- * NeoForge {@code RegisterCapabilitiesEvent}（mod bus）时生效。
+ * Collects standard and mod-defined native capability providers for startup registration.
+ * Providers run on native queries, not during collection, and must return owner-backed
+ * handlers rather than constructing empty storage for each query. Null declines a query.
  */
 public class CapabilityRegistryEventJS {
-    private final List<PendingRegistration> pending = new ArrayList<>();
+    private final CapabilityRegistrationPlan plan;
 
-    /**
-     * 为方块实体类型注册 capability。
-     *
-     * @param blockEntityTypeId 方块实体类型 id（如 {@code 'mymod:storage'}）
-     * @param capability        {@code 'item'} / {@code 'energy'} / {@code 'fluid'}
-     * @param provider          返回能力实例的回调（如 {@code () => Capabilities.itemHandler(6)}）
-     */
-    public void registerBlockEntity(String blockEntityTypeId, String capability, Supplier<Object> provider) {
-        Identifier location = ParseIds.parseItemOrBlockId(blockEntityTypeId);
-        BlockEntityType<?> type = BuiltInRegistries.BLOCK_ENTITY_TYPE.getOptional(location)
-                .orElseThrow(() -> new IllegalArgumentException("[NEKO-4006] 未知方块实体类型 — unknown block entity type: " + blockEntityTypeId));
-        pending.add(new PendingRegistration(type, capability.toLowerCase(Locale.ROOT), provider));
+    public CapabilityRegistryEventJS() {
+        this(new CapabilityRegistrationPlan());
     }
 
-    /** NeoForge 回调：把 pending 注册应用到 {@code RegisterCapabilitiesEvent}。 */
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    CapabilityRegistryEventJS(CapabilityRegistrationPlan plan) {
+        this.plan = plan;
+    }
+
+    /** Preserves the legacy no-context callback, invoked for each native query. */
+    public void registerBlockEntity(String typeId, String capability, Supplier<?> provider) {
+        requireProvider(provider);
+        registerBlockEntityContext(typeId, capability, (blockEntity, direction) -> provider.get());
+    }
+
+    /** Registers a standard block-entity provider with its nullable Direction context. */
+    public void registerBlockEntityContext(String typeId, String capability,
+                                           BiFunction<BlockEntity, Direction, ?> provider) {
+        requireProvider(provider);
+        plan.collect(CapabilityRegistrationPlan.Scope.BLOCK_ENTITY, typeId, standardBlock(capability),
+                (owner, context) -> provider.apply((BlockEntity) owner, (Direction) context));
+    }
+
+    /**
+     * Registers a standard entity provider. Item inventory queries have null context;
+     * item_automation, energy and fluid queries have nullable Direction context.
+     */
+    public void registerEntity(String typeId, String capability, BiFunction<Entity, Object, ?> provider) {
+        requireProvider(provider);
+        plan.collect(CapabilityRegistrationPlan.Scope.ENTITY, typeId, standardEntity(capability),
+                (owner, context) -> provider.apply((Entity) owner, context));
+    }
+
+    /** Registers a standard item provider with the native ItemAccess context on 26.x. */
+    public void registerItem(String itemId, String capability, BiFunction<ItemStack, Object, ?> provider) {
+        requireProvider(provider);
+        plan.collect(CapabilityRegistrationPlan.Scope.ITEM, itemId, standardItem(capability),
+                (owner, context) -> provider.apply((ItemStack) owner, context));
+    }
+
+    /** Registers a standard plain-block provider with (level, pos, state, blockEntity, direction). */
+    public void registerBlock(String blockId, String capability, IBlockCapabilityProvider<?, Object> provider) {
+        requireProvider(provider);
+        collectBlock(blockId, standardBlock(capability), provider);
+    }
+
+    /** Attaches a mod-defined capability to a plain block with its native five-argument callback. */
+    public <T, C> void registerBlockNative(String blockId, BlockCapability<T, C> capability,
+                                          IBlockCapabilityProvider<T, C> provider) {
+        requireProvider(provider);
+        plan.collect(CapabilityRegistrationPlan.Scope.BLOCK, blockId, capability, (owner, context) -> {
+            CapabilityRegistrationPlan.BlockQuery query = (CapabilityRegistrationPlan.BlockQuery) owner;
+            return provider.getCapability(query.level(), query.pos(), query.state(), query.blockEntity(),
+                    castContext(capability, context));
+        });
+    }
+
+    private void collectBlock(String blockId, BlockCapability<?, ?> capability,
+                              IBlockCapabilityProvider<?, Object> provider) {
+        plan.collect(CapabilityRegistrationPlan.Scope.BLOCK, blockId, capability, (owner, context) -> {
+            CapabilityRegistrationPlan.BlockQuery query = (CapabilityRegistrationPlan.BlockQuery) owner;
+            return provider.getCapability(query.level(), query.pos(), query.state(), query.blockEntity(), context);
+        });
+    }
+
+    /** Attaches a mod-defined block capability without depending on that mod's classes. */
+    public <T, C> void registerBlockEntityNative(String typeId, BlockCapability<T, C> capability,
+                                                BiFunction<BlockEntity, C, ? extends T> provider) {
+        collectNative(CapabilityRegistrationPlan.Scope.BLOCK_ENTITY, typeId, capability, provider, BlockEntity.class);
+    }
+
+    /** Attaches a mod-defined entity capability, preserving its native context contract. */
+    public <T, C> void registerEntityNative(String typeId, EntityCapability<T, C> capability,
+                                           BiFunction<Entity, C, ? extends T> provider) {
+        collectNative(CapabilityRegistrationPlan.Scope.ENTITY, typeId, capability, provider, Entity.class);
+    }
+
+    /** Attaches a mod-defined item capability, preserving its native context contract. */
+    public <T, C> void registerItemNative(String itemId, ItemCapability<T, C> capability,
+                                         BiFunction<ItemStack, C, ? extends T> provider) {
+        collectNative(CapabilityRegistrationPlan.Scope.ITEM, itemId, capability, provider, ItemStack.class);
+    }
+
+    /** Commits this collection once; a failed native commit cannot be retried. */
     public void apply(RegisterCapabilitiesEvent event) {
-        for (PendingRegistration registration : pending) {
-            switch (registration.capability) {
-                case "item" -> event.registerBlockEntity(
-                        (BlockCapability) Capabilities.Item.BLOCK,
-                        (BlockEntityType) registration.type,
-                        (blockEntity, direction) -> (ResourceHandler<ItemResource>) registration.provider.get());
-                case "energy" -> event.registerBlockEntity(
-                        (BlockCapability) Capabilities.Energy.BLOCK,
-                        (BlockEntityType) registration.type,
-                        (blockEntity, direction) -> (EnergyHandler) registration.provider.get());
-                case "fluid" -> event.registerBlockEntity(
-                        (BlockCapability) Capabilities.Fluid.BLOCK,
-                        (BlockEntityType) registration.type,
-                        (blockEntity, direction) -> (ResourceHandler<FluidResource>) registration.provider.get());
-                default -> throw new IllegalArgumentException("[NEKO-4007] 未知 capability（支持 item/energy/fluid） — unknown capability: " + registration.capability);
-            }
+        plan.apply(event);
+    }
+
+    private <O, T, C> void collectNative(CapabilityRegistrationPlan.Scope scope, String id,
+                                        BaseCapability<T, C> capability, BiFunction<O, C, ? extends T> provider,
+                                        Class<O> ownerType) {
+        requireProvider(provider);
+        plan.collect(scope, id, capability, (owner, context) ->
+                provider.apply(ownerType.cast(owner), castContext(capability, context)));
+    }
+
+    private static <T, C> C castContext(BaseCapability<T, C> capability, Object context) {
+        return context == null ? null : capability.contextClass().cast(context);
+    }
+
+    private static void requireProvider(Object provider) {
+        if (provider == null) {
+            throw new IllegalArgumentException("[NEKO-4020] Capability provider must not be null");
         }
     }
 
-    private record PendingRegistration(BlockEntityType<?> type, String capability, Supplier<Object> provider) {
+    private static String normalize(String capability) {
+        if (capability == null || capability.isBlank()) {
+            throw new IllegalArgumentException("[NEKO-4007] Capability name must not be blank");
+        }
+        return capability.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static BlockCapability<?, ?> standardBlock(String capability) {
+        return switch (normalize(capability)) {
+            case "item" -> Capabilities.Item.BLOCK;
+            case "energy" -> Capabilities.Energy.BLOCK;
+            case "fluid" -> Capabilities.Fluid.BLOCK;
+            default -> throw unknownStandard(capability, "block entity");
+        };
+    }
+
+    private static EntityCapability<?, ?> standardEntity(String capability) {
+        return switch (normalize(capability)) {
+            case "item" -> Capabilities.Item.ENTITY;
+            case "item_automation" -> Capabilities.Item.ENTITY_AUTOMATION;
+            case "energy" -> Capabilities.Energy.ENTITY;
+            case "fluid" -> Capabilities.Fluid.ENTITY;
+            default -> throw unknownStandard(capability, "entity");
+        };
+    }
+
+    private static ItemCapability<?, ?> standardItem(String capability) {
+        return switch (normalize(capability)) {
+            case "item" -> Capabilities.Item.ITEM;
+            case "energy" -> Capabilities.Energy.ITEM;
+            case "fluid" -> Capabilities.Fluid.ITEM;
+            default -> throw unknownStandard(capability, "item");
+        };
+    }
+
+    private static IllegalArgumentException unknownStandard(String capability, String scope) {
+        return new IllegalArgumentException("[NEKO-4007] Unknown standard " + scope + " capability: " + capability);
     }
 }
 //?}

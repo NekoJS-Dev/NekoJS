@@ -105,11 +105,13 @@ public class PersistentDataJS {
     }
 
     public PersistentDataJS markDirty() {
+        ensureWritable();
         dirtyMarker.run();
         return this;
     }
 
     public PersistentDataJS sync() {
+        ensureWritable();
         syncer.run();
         return this;
     }
@@ -119,7 +121,8 @@ public class PersistentDataJS {
      * 脚本示例：{@code entity.pdata.edit(tag => { tag.putInt("a",1); tag.putString("b","x"); })}
      */
     public PersistentDataJS edit(Consumer<CompoundTag> editor) {
-        CompoundTag tag = getTag();
+        ensureWritable();
+        CompoundTag tag = getTag().copy();
         editor.accept(tag);
         saveTag(tag);
         return this;
@@ -140,17 +143,22 @@ public class PersistentDataJS {
         if (element instanceof ByteArrayTag ba) { byte[] v = ba.getAsByteArray(); return Arrays.copyOf(v, v.length); }
         if (element instanceof IntArrayTag ia) { int[] v = ia.getAsIntArray(); return Arrays.copyOf(v, v.length); }
         if (element instanceof LongArrayTag la) { long[] v = la.getAsLongArray(); return Arrays.copyOf(v, v.length); }
-        return element;
+        return element == null ? null : element.copy();
     }
 
     private CompoundTag getTag() {
-        return getter.get();
+        CompoundTag tag = getter.get();
+        return readOnly ? tag.copy() : tag;
+    }
+
+    protected void ensureWritable() {
+        if (readOnly) {
+            throw new UnsupportedOperationException("[NEKO-4013] Client pdata mirror is read-only — client persistent data mirror is read-only");
+        }
     }
 
     private void saveTag(CompoundTag tag) {
-        if (readOnly) {
-            throw new UnsupportedOperationException("Client pdata mirror is read-only");
-        }
+        ensureWritable();
         saver.accept(tag);
         dirtyMarker.run();
     }

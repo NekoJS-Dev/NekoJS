@@ -50,6 +50,7 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
     @Override
     public void registerBinding(com.tkisor.nekojs.api.data.BindingRegistry registry) {
         // 服务端→客户端键值推送（只读侧 clientData 由 common 内置插件注册）
+        registry.register("Capabilities", new com.tkisor.nekojs.bindings.static_access.CapabilitiesJS());
         registry.register("ClientData", com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncJS.class);
         // 配方面（与 NeoForge 侧 NekoJSCorePlugin 同写法）：Ingredient 工厂 + 同名 vanilla 类
         // 静态成员委托 + RecipeSchema 查看器绑定
@@ -153,6 +154,7 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register(com.tkisor.nekojs.bindings.event.ServerEvents.GROUP);
         // AI goal 注册（STARTUP）：消费端 FabricEntityEventBindings.postJoinLevel 在跑，
         // postRegister 由 NekoJSFabricMod.initializeScripts 在 STARTUP 脚本加载后调用
+        registry.register(com.tkisor.nekojs.bindings.event.CapabilityEvents.GROUP);
         registry.register(com.tkisor.nekojs.bindings.event.GoalEvents.GROUP);
         // 实体 joinLevel / death / damagePre / damagePost（按实体类型 dispatch）
         registry.register(FabricEntityEventBindings.ENTITY_EVENTS);

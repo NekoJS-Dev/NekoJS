@@ -22,6 +22,9 @@ class NekoJSCommandsEditorRemovalTest {
 
     @Test
     void editorCommandIsRemovedWithoutAliasAndViewErrorsRemain() {
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                com.tkisor.nekojs.testfixture.VanillaRegistryProbe.registryMetadataAvailable(),
+                "native command permissions require bootstrapped registry metadata");
         CommandDispatcher<CommandSourceStack> dispatcher = new CommandDispatcher<>();
         // root 仅被命令 executor 的 lambda 捕获、树构建期不解引用；本测试只断言命令树形状，
         // 传 null 以免为此引入完整装配 fixture（ticket 05 注入签名变更）

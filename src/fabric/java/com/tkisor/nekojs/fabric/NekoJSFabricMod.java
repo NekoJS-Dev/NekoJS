@@ -125,6 +125,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         initializeWorkspace();
         initializeScripts();
         FabricRegistryAdapter.onInitialize();
+        com.tkisor.nekojs.bindings.event.CapabilityEvents.postAndApply();
         // 全部注册/装载完成后收尾（NeoForge 侧在 FMLLoadComplete 的 RegistryEventAdapter.onLoadComplete
         // 之后 fire；fabric 侧 FabricRegistryAdapter.onInitialize 即注册抽干完成，同位次）
         NekoRuntimeAccess.get().fireAfterInit();

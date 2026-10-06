@@ -92,12 +92,12 @@ public class PainterJS {
 
     /** 1px 矩形边框。 */
     public PainterJS outline(int x, int y, int width, int height) {
-        guiGraphics.outline(x, y, x + width, y + height, currentColor);
+        guiGraphics.outline(x, y, width, height, currentColor);
         return this;
     }
 
     public PainterJS outline(int x, int y, int width, int height, Number color) {
-        guiGraphics.outline(x, y, x + width, y + height, UiColor.argbBits(color));
+        guiGraphics.outline(x, y, width, height, UiColor.argbBits(color));
         return this;
     }
 
@@ -152,15 +152,29 @@ public class PainterJS {
         return this;
     }
 
-    /** 贴图（完整纹理 id，如 {@code 'minecraft:textures/gui/icons.png'}），u/v 默认 0。 */
+    /** Draws a region from a 256-pixel texture, preserving the legacy pixel-coordinate contract. */
     public PainterJS texture(String textureId, int x, int y, int width, int height) {
-        guiGraphics.blit(Identifier.parse(textureId), x, y, width, height, 0, 0, width, height);
+        return texture(textureId, x, y, 0, 0, width, height);
+    }
+
+    public PainterJS texture(String textureId, int x, int y, int u, int v, int width, int height) {
+        return texture(textureId, x, y, u, v, width, height, 256, 256);
+    }
+
+    public PainterJS texture(String textureId, int x, int y, int u, int v, int width, int height,
+            int textureWidth, int textureHeight) {
+        if (textureWidth <= 0 || textureHeight <= 0) {
+            throw new IllegalArgumentException("[NEKO-4026] Texture dimensions must be positive");
+        }
+        guiGraphics.blit(Identifier.parse(textureId), x, y, x + width, y + height,
+                (float) u / textureWidth, ((float) u + width) / textureWidth,
+                (float) v / textureHeight, ((float) v + height) / textureHeight);
         return this;
     }
 
-    /** 贴图（带纹理内偏移 u/v）。 */
-    public PainterJS texture(String textureId, int x, int y, int u, int v, int width, int height) {
-        guiGraphics.blit(Identifier.parse(textureId), x, y, width, height, u, v, width, height);
+    /** Draws the entire texture scaled to the requested rectangle. */
+    public PainterJS textureFull(String textureId, int x, int y, int width, int height) {
+        guiGraphics.blit(Identifier.parse(textureId), x, y, x + width, y + height, 0F, 1F, 0F, 1F);
         return this;
     }
 

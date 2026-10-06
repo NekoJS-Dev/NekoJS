@@ -192,10 +192,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
             if (group.equals("ClientEvents")) {
                 clientEventsRows++;
                 for (String member : RENDER_PRESENTATION_MEMBERS) {
-                    if (fabric) {
+                    if (fabric && !Set.of("hud", "screenRender").contains(member)) {
                         assertFalse(names.contains(member),
-                                "Fabric " + node + " explicitly has no GUI/render presentation member '"
-                                        + member + "' (documented unavailable, no silent parity)");
+                                "Fabric " + node + " must not advertise unimplemented renderer registration '"
+                                        + member + "'");
                     } else {
                         assertEquals(1, names.stream().filter(member::equals).count(),
                                 "ClientEvents." + member + " must be declared exactly once for " + node);

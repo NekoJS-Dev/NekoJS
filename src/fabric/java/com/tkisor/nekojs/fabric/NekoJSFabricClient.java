@@ -1,8 +1,11 @@
 package com.tkisor.nekojs.fabric;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.client.renderer.NekoEntityRenderers;
 import com.tkisor.nekojs.fabric.event.FabricClientEventBindings;
+import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
 import net.fabricmc.api.ClientModInitializer;
+import net.minecraft.client.renderer.entity.EntityRenderers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +24,7 @@ public final class NekoJSFabricClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         LOGGER.info("NekoJS fabric client entrypoint reached.");
+        registerScriptEntityRenderers();
         FabricPackSync.registerClient();
         FabricPlayNetwork.registerClient();
         FabricPDataSync.registerClient();
@@ -37,5 +41,12 @@ public final class NekoJSFabricClient implements ClientModInitializer {
             root.scriptManagerOf(ScriptType.CLIENT).loadScripts();
         });
         LOGGER.info("NekoJS fabric client bindings registered (CLIENT scripts load at CLIENT_STARTED).");
+    }
+
+    /** Registers the configured visible renderer for every startup entity type. */
+    @SuppressWarnings("deprecation")
+    private static void registerScriptEntityRenderers() {
+        EntityTypeBuilder.registeredEntityTypes().forEach(type ->
+                EntityRenderers.register(type, NekoEntityRenderers.provider(EntityTypeBuilder.renderConfiguration(type))));
     }
 }

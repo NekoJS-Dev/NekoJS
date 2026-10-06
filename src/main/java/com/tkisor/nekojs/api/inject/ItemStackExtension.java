@@ -8,6 +8,7 @@ import com.tkisor.nekojs.api.annotation.HideFromJS;
 import com.tkisor.nekojs.api.annotation.Remap;
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.spec.inject.ItemStackSpec;
+import com.tkisor.nekojs.wrapper.item.PersistentDataJS;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.component.DataComponentMap;
@@ -46,6 +47,11 @@ public interface ItemStackExtension extends ItemStackSpec {
 
     private ItemStack self() {
         return (ItemStack) (Object) this;
+    }
+
+    /** Returns the ItemStack-owned persistent data container; it is local and is not network-synchronized. */
+    default PersistentDataJS neko$pdata() {
+        return new PersistentDataJS(self());
     }
 
     default ItemLore neko$getLore() {

@@ -156,6 +156,12 @@ class ValParserTest {
                 if (member != null) return member;
             }
         }
+        if (node instanceof ValNode.ArrowFunc arrow) {
+            for (ValNode expression : arrow.body()) {
+                ValNode.MemberAccess member = findMember(expression, name);
+                if (member != null) return member;
+            }
+        }
         if (node instanceof ValNode.VarDecl declaration) return findMember(declaration.init(), name);
         return null;
     }
@@ -227,6 +233,69 @@ class ValParserTest {
         ValNode.Identifier grouped = assertInstanceOf(
                 ValNode.Identifier.class, first(parse("(value)")));
         assertEquals("value", grouped.name());
+    }
+
+    @Test
+    void conditionalArrowBodyRemainsOneArgumentAndPreservesBothBranches() {
+        String source = "event.registerItem('stick', 'energy', (stack, context) => "
+                + "context.ready() && context.enabled ? store.energy(stack) : store.empty()); "
+                + "event.registerEntity('pig', 'fluid', (entity, side) => store.fluids(entity));";
+        ValNode.Block block = parse(source);
+        assertEquals(2, block.stmts().size());
+        ValNode.CallExpr registration = assertInstanceOf(ValNode.CallExpr.class, block.stmts().getFirst());
+        assertEquals(3, registration.args().size());
+        ValNode.ArrowFunc provider = assertInstanceOf(ValNode.ArrowFunc.class, registration.args().get(2));
+        assertEquals(List.of("stack", "context"), provider.params());
+        assertEquals(source.indexOf("); event.registerEntity"), provider.end());
+        for (String member : List.of("ready", "enabled", "energy", "empty")) {
+            assertNotNull(findMember(provider, member), member);
+        }
+        ValNode.CallExpr following = assertInstanceOf(ValNode.CallExpr.class, block.stmts().get(1));
+        assertEquals(3, following.args().size());
+        assertEquals("registerEntity", assertInstanceOf(ValNode.MemberAccess.class, following.callee()).member());
+    }
+
+    @Test
+    void nestedArrowExpressionsDoNotConsumeFollowingCallArguments() {
+        String source = "register('block', (level, position, state, owner, side) => "
+                + "side === north ? storage.find(level, position, inner => "
+                + "inner.allowed ? owner.first() : owner.second()) : owner.fallback(), 'tail');";
+        ValNode.CallExpr registration = assertInstanceOf(ValNode.CallExpr.class, first(parse(source)));
+        assertEquals(3, registration.args().size());
+        assertEquals("tail", assertInstanceOf(ValNode.StringLiteral.class, registration.args().get(2)).value());
+        ValNode.ArrowFunc provider = assertInstanceOf(ValNode.ArrowFunc.class, registration.args().get(1));
+        assertEquals(List.of("level", "position", "state", "owner", "side"), provider.params());
+        for (String member : List.of("find", "allowed", "first", "second", "fallback")) {
+            assertNotNull(findMember(provider, member), member);
+        }
+        assertEquals(source.indexOf(", 'tail'"), provider.end());
+    }
+
+    @Test
+    void binaryArrowBodyKeepsNestedCommasAndCommentedDelimiters() {
+        String source = "register(owner => owner.enabled() /* , ) ; */ && "
+                + "store.lookup('comma,inside', owner.read()) || owner.fallback(), after);";
+        ValNode.CallExpr registration = assertInstanceOf(ValNode.CallExpr.class, first(parse(source)));
+        assertEquals(2, registration.args().size());
+        assertEquals("after", assertInstanceOf(ValNode.Identifier.class, registration.args().get(1)).name());
+        ValNode.ArrowFunc provider = assertInstanceOf(ValNode.ArrowFunc.class, registration.args().getFirst());
+        for (String member : List.of("enabled", "lookup", "read", "fallback")) {
+            assertNotNull(findMember(provider, member), member);
+        }
+    }
+
+    @Test
+    void multilineArrowExpressionsPreserveTheNextStatement() {
+        String source = "const provider = owner => owner.ready()\n && owner.read()\n"
+                + "provider.configure();";
+        ValNode.Block block = parse(source);
+        assertEquals(2, block.stmts().size());
+        ValNode.ArrowFunc provider = assertInstanceOf(ValNode.ArrowFunc.class,
+                assertInstanceOf(ValNode.VarDecl.class, block.stmts().getFirst()).init());
+        assertNotNull(findMember(provider, "ready"));
+        assertNotNull(findMember(provider, "read"));
+        assertEquals("configure", assertInstanceOf(ValNode.MemberAccess.class,
+                assertInstanceOf(ValNode.CallExpr.class, block.stmts().get(1)).callee()).member());
     }
 
     @Test

@@ -66,6 +66,7 @@
   独有（expansion spec 第 0 步上移共享树后全节点共用）。
 - `bindings/event/ServerEvents`（fabric 孪生）：共享树版是 NeoForge 原生事件签名整文件
   守卫，孪生只含 recipes/afterRecipes；后续把共享树版事件载荷中立化后合并回单副本。
+- Fabric 26.x client rendering：`ClientEvents.hud` 已接 `HudElementRegistry`，`ClientEvents.screenRender` 已接 `ScreenEvents.afterExtract`，两者均包装原生 `GuiGraphicsExtractor` 为共享 `PainterJS`/`ScreenRenderEventJS`。`hudRender` / `worldRender` 注册式渲染仍保持未移植，不做静默 no-op。
 
 7. **网络自定义通道整链打通**（2026-09-02 第二批）：NekoScriptPayload 双向注册
    （PayloadTypeRegistry serverbound/clientbound + ServerPlayNetworking/
@@ -320,9 +321,15 @@ BlockStateExtension（hasTag）；TagLoaderMixin（ServerEvents.tags）；后处
 [专项产品决定](architecture-refactor/editor-removal-and-error-ui.md)。外部
 WorkspaceGenerator/Probe/类型映射保留；Fabric 错误继续使用现有聊天文本降级，不因此承诺新面板。
 
+## Issue #4 增量
+
+- `Capabilities` / `CapabilityEvents.register` 已接入真实 Fabric Lookup/Transfer：方块、方块实体、实体、物品标准存储与自定义 typed lookup；item/fluid 使用 Fabric 原生 API，energy 使用 NekoJS typed interface，不宣称其他模组能量 API 兼容。
+- 物品、流体、能量存储参与 Fabric 事务回滚，最终提交才通知 owner；持久化由 owner 调用严格的 `readValue` / `writeValue`，损坏数据拒绝并保留原值。
+- 脚本实体默认挂载可见人形模型与纹理，支持原生实体类、属性基线和原生 Goal 类。注册抽干逐 pass 刷新待处理表，ITEM 在实体/方块产生者之后，刷怪蛋与 BlockItem 不再遗漏。
+- Painter 与 PData 的构建、行为和真实客户端证据见 [Issue #4 验收记录](issue-4-implementation.md)。
+
 ## B 类豁免（NeoForge 专属概念，移植=重新设计）
 
-CapabilityEvents（fabric 无 capability API，DataComponent 方案另议）；
 BlockEvents.toolModification；generateData/generateAssets/lang（datagen 事件模型）；
 流体配方面（FluidResolver/FluidIngredientJS/SizedIngredientJS/FluidJS——fabric 无流体体系）。
 

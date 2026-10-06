@@ -29,6 +29,10 @@ public class PainterJS {
     private int currentColor = 0xFFFFFFFF;
 
 
+    public PainterJS(GuiGraphics guiGraphics) {
+        this(guiGraphics, 0F);
+    }
+
     public PainterJS(GuiGraphics guiGraphics, float partialTick) {
         this.guiGraphics = guiGraphics;
         this.font = Minecraft.getInstance().font;
@@ -156,15 +160,29 @@ public class PainterJS {
         return this;
     }
 
-    /** 贴图（完整纹理 id，如 {@code 'minecraft:textures/gui/icons.png'}），u/v 默认 0。 */
+    /** Draws a region from a 256-pixel texture, preserving the legacy pixel-coordinate contract. */
     public PainterJS texture(String textureId, int x, int y, int width, int height) {
-        guiGraphics.blit(ResourceLocation.parse(textureId), x, y, 0, 0, width, height);
+        return texture(textureId, x, y, 0, 0, width, height);
+    }
+
+    public PainterJS texture(String textureId, int x, int y, int u, int v, int width, int height) {
+        return texture(textureId, x, y, u, v, width, height, 256, 256);
+    }
+
+    public PainterJS texture(String textureId, int x, int y, int u, int v, int width, int height,
+            int textureWidth, int textureHeight) {
+        if (textureWidth <= 0 || textureHeight <= 0) {
+            throw new IllegalArgumentException("[NEKO-4026] Texture dimensions must be positive");
+        }
+        guiGraphics.blit(ResourceLocation.parse(textureId), x, y, (float) u, (float) v,
+                width, height, textureWidth, textureHeight);
         return this;
     }
 
-    /** 贴图（带纹理内偏移 u/v）。 */
-    public PainterJS texture(String textureId, int x, int y, int u, int v, int width, int height) {
-        guiGraphics.blit(ResourceLocation.parse(textureId), x, y, u, v, width, height);
+    /** Draws the entire texture scaled to the requested rectangle. */
+    public PainterJS textureFull(String textureId, int x, int y, int width, int height) {
+        if (width == 0 || height == 0) return this;
+        guiGraphics.blit(ResourceLocation.parse(textureId), x, y, 0F, 0F, width, height, width, height);
         return this;
     }
 

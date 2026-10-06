@@ -73,7 +73,7 @@ public final class FabricPlatform implements IPlatform {
     @Override
     public Set<PlatformCapability> capabilities() {
         return Set.of(PlatformCapability.TAGS, PlatformCapability.RESOURCE_PACKS,
-                PlatformCapability.NETWORK_CUSTOM_CHANNEL);
+                PlatformCapability.NETWORK_CUSTOM_CHANNEL, PlatformCapability.CAPABILITIES);
     }
 
     @Override

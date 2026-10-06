@@ -21,6 +21,7 @@ class PlatformCapabilityTest {
         assertTrue(all.contains(PlatformCapability.TAGS));
         assertTrue(all.contains(PlatformCapability.RECIPE_HOT_RELOAD));
         assertTrue(all.contains(PlatformCapability.NETWORK_CUSTOM_CHANNEL));
-        assertTrue(all.size() >= 10, "expected at least 10 capabilities, got " + all.size());
+        assertTrue(all.contains(PlatformCapability.CAPABILITIES));
+        assertTrue(all.size() >= 11, "expected at least 11 capabilities, got " + all.size());
     }
 }

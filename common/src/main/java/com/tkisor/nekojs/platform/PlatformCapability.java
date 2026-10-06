@@ -10,5 +10,6 @@ public enum PlatformCapability {
     RECIPE_SCHEMA_AWARE,
     NETWORK_CUSTOM_CHANNEL,
     NBT_BINARY_IO,
-    RECIPE_VIEWER
+    RECIPE_VIEWER,
+    CAPABILITIES
 }

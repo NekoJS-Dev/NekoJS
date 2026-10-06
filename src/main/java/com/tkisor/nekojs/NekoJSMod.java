@@ -138,7 +138,7 @@ public class NekoJSMod extends NekoJS {
     /** 能力注册：先跑脚本（startup 脚本在 mod 构造期已加载监听），再应用 pending。 */
     private static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
         CapabilityRegistryEventJS eventJS = new CapabilityRegistryEventJS();
-        CapabilityEvents.REGISTER.post(eventJS);
+        CapabilityEvents.REGISTER.postForCollection(eventJS);
         eventJS.apply(event);
     }
 

@@ -10,6 +10,9 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.EntityTrackingEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
@@ -40,11 +43,29 @@ public final class FabricPDataSync {
         PayloadTypeRegistry.clientboundPlay().register(
                 PDataSyncPacket.TYPE, PDataSyncPacket.STREAM_CODEC);
         EntityPDataStore.install(fullAccess());
-        ServerLifecycleEvents.SERVER_STARTING.register(server -> currentServer = server);
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> currentServer = null);
+        EntityTrackingEvents.START_TRACKING.register((entity, player) -> PDataSyncService.syncTo(entity, player));
+        EntityTrackingEvents.STOP_TRACKING.register((entity, player) -> PDataSyncService.clearFor(entity, player));
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> PDataSyncService.markDirty(handler.player));
+        ServerPlayerEvents.COPY_FROM.register((original, replacement, alive) ->
+                PDataSyncService.copyPlayerData(original, replacement));
+        ServerPlayerEvents.AFTER_RESPAWN.register((original, replacement, alive) ->
+                PDataSyncService.markDirty(replacement));
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> {
+            currentServer = server;
+            PDataSyncService.resetServerState();
+        });
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            currentServer = null;
+            PDataSyncService.resetServerState();
+        });
         ServerTickEvents.END_SERVER_TICK.register(FabricPDataSync::flush);
         // 对齐 NeoForge 的 EntityLeaveLevelEvent 语义（chunk 卸载/死亡/消失/换维度都算离开）：
         // 只用换维度事件会漏掉消失的实体——revision/mirror 残留，entity id 复用会读到旧数据
+        ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
+            if (entity instanceof net.minecraft.server.level.ServerPlayer) {
+                PDataSyncService.markDirty(entity);
+            }
+        });
         ServerEntityEvents.ENTITY_UNLOAD.register(
                 (entity, level) -> PDataSyncService.onEntityRemoved(entity));
     }
@@ -109,16 +130,24 @@ public final class FabricPDataSync {
     /** 客户端半：receiver + 断线清 mirror（client init 调用）。 */
     public static void registerClient() {
         ClientPlayNetworking.registerGlobalReceiver(PDataSyncPacket.TYPE, (payload, context) ->
-                context.client().execute(() -> PDataSyncService.acceptClientSync(payload)));
+                context.client().execute(() -> acceptClientSync(payload, context.client().level)));
         ClientPlayConnectionEvents.DISCONNECT.register(
                 (handler, client) -> PDataSyncService.clearClientMirrors());
         // 切维度也要清（NeoForge 挂 client level unload）：只在"离开一个已有世界"时清，
         // 进服那次 null→世界 的变化不清（否则会抹掉刚随进服推下来的数据）——
         // 语义钉在 ClientLevelWatch（节点本地 JVM fixture）
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (LEVEL_WATCH.leftPreviousLevel(client.level)) {
-                PDataSyncService.clearClientMirrors();
-            }
-        });
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client ->
+                observeClientLevel(client.level));
+    }
+
+    private static void acceptClientSync(PDataSyncPacket payload, Object level) {
+        observeClientLevel(level);
+        PDataSyncService.acceptClientSync(payload);
+    }
+
+    private static void observeClientLevel(Object level) {
+        if (LEVEL_WATCH.leftPreviousLevel(level)) {
+            PDataSyncService.clearClientMirrors();
+        }
     }
 }

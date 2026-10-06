@@ -140,8 +140,8 @@ class Ticket24FabricGameplayEventCatalogTest {
 
         List<String> missing = expected.keySet().stream().filter(f -> !groups.containsKey(f)).toList();
         assertTrue(missing.isEmpty(), "gameplay event families missing from the fabric registration entry: " + missing);
-        assertFalse(groups.containsKey("CapabilityEvents"),
-                "CapabilityEvents must stay a neoforge-only family on fabric (explicit gap, never a silent no-op)");
+        assertTrue(groups.containsKey("CapabilityEvents"),
+                "Fabric native lookup capability registration must be present");
 
         List<EventCatalogEntry> entries = NekoScriptCatalog.events(new StubRuntime(groups));
         Map<String, Map<String, EventCatalogEntry>> catalog = entries.stream()

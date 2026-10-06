@@ -11,9 +11,12 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
 import com.tkisor.nekojs.core.module.esm.NekoEsmSpan;
 
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -96,12 +99,10 @@ public final class EventCallbackSourceValidator {
      * {@link JavaMemberIndex}）兜底覆盖事件类全部可见成员（方法名 + getter 属性名 + 字段名），
      * 保证 {@code e.getServer()} 等方法形式不误报。
      *
-     * <p>回调参数不只出现在事件注册上：绑定的普通方法也收回调（如
-     * {@code DynamicRegistry.item(id, b => b.maxStackSize(64))}）。这类「非事件回调」按
-     * 绑定方法签名的函数式参数（{@code Consumer<ItemBuilder>} 的第一个类型实参）登记形参类型；
-     * 签名推不出来（非泛型、类型实参非具体类、找不到匹配重载）就整段跳过——预检的默认答案
-     * 必须是「不知道就别报」，否则 builder 回调一用就误报（例如
-     * {@code 'maxStackSize' not in DynamicRegistry}）。
+     * <p>Bindings can also accept callbacks, such as builder configuration methods. Their input
+     * types are derived from the functional interface's abstract method, including generic
+     * substitutions. Only inputs with known concrete types are checked; unresolved inputs
+     * remain unknown rather than being inferred from the callback's return type.
      */
     private static void checkCallbackArgs(ValNode.CallExpr call, String group,
                                           Map<String, ScriptBindingSchema.BindingMembers> schema,
@@ -145,33 +146,31 @@ public final class EventCallbackSourceValidator {
         }
     }
 
-    /**
-     * 非事件回调的形参类型：在绑定 {@code valueClasses} 上找与方法名、调用参数数匹配的重载，
-     * 取该参数位声明的泛型类型；若是函数式接口（{@code Consumer<X>}/{@code Function<X,?>}…），
-     * 回调第 j 个形参 = 第 j 个类型实参。只接受具体类实参（通配/类型变量推不出唯一答案），
-     * 任一环节失败即返回空表——调用方据此跳过整段检查。
-     */
+    /** Derives callback inputs from the native SAM signature, substituting declared interface arguments. */
     private static Map<String, Set<Class<?>>> callbackParamTypes(
             Map<String, ScriptBindingSchema.BindingMembers> schema, String group, String member,
             int argCount, int argIndex, List<String> params) {
-        ScriptBindingSchema.BindingMembers bm = schema.get(group);
-        if (bm == null || argIndex < 0) return Map.of();
+        ScriptBindingSchema.BindingMembers binding = schema.get(group);
+        if (binding == null || argIndex < 0) return Map.of();
         Map<String, Set<Class<?>>> out = new HashMap<>();
-        for (Class<?> cls : bm.valueClasses()) {
-            List<Method> candidates = JavaMemberIndex.exposedMembersOf(cls).methods().get(member);
+        for (Class<?> valueClass : binding.valueClasses()) {
+            List<Method> candidates = JavaMemberIndex.exposedMembersOf(valueClass).methods().get(member);
             if (candidates == null) continue;
-            for (Method m : candidates) {
-                int fixed = m.getParameterCount();
-                if (m.isVarArgs() ? argCount < fixed - 1 : argCount != fixed) continue;
+            for (Method candidate : candidates) {
+                int fixed = candidate.getParameterCount();
+                if (candidate.isVarArgs() ? argCount < fixed - 1 : argCount != fixed) continue;
                 if (argIndex >= fixed) continue;
-                Type declared = m.getGenericParameterTypes()[argIndex];
-                if (!(declared instanceof ParameterizedType pt)
-                        || !(pt.getRawType() instanceof Class<?> raw)
-                        || !isFunctionalShape(raw)) continue;
-                Type[] typeArgs = pt.getActualTypeArguments();
-                for (int j = 0; j < params.size() && j < typeArgs.length; j++) {
-                    if (typeArgs[j] instanceof Class<?> argClass) {
-                        out.computeIfAbsent(params.get(j), k -> new LinkedHashSet<>()).add(argClass);
+                Type declared = candidate.getGenericParameterTypes()[argIndex];
+                Class<?> raw = rawClass(declared);
+                Method sam = singleAbstractMethod(raw);
+                if (sam == null) continue;
+                Map<TypeVariable<?>, Type> arguments = interfaceArguments(declared, sam.getDeclaringClass(), Map.of());
+                if (arguments == null) continue;
+                Type[] inputs = sam.getGenericParameterTypes();
+                for (int index = 0; index < params.size() && index < inputs.length; index++) {
+                    Class<?> inputClass = rawClass(substitute(inputs[index], arguments));
+                    if (inputClass != null && inputClass != Object.class) {
+                        out.computeIfAbsent(params.get(index), ignored -> new LinkedHashSet<>()).add(inputClass);
                     }
                 }
             }
@@ -179,9 +178,74 @@ public final class EventCallbackSourceValidator {
         return out;
     }
 
-    private static boolean isFunctionalShape(Class<?> raw) {
-        return raw.isAnnotationPresent(FunctionalInterface.class)
-                || raw.getName().startsWith("java.util.function.");
+    private static Method singleAbstractMethod(Class<?> raw) {
+        if (raw == null || !raw.isInterface()) return null;
+        Map<MethodSignature, Method> methods = new HashMap<>();
+        for (Method method : raw.getMethods()) {
+            if (!Modifier.isAbstract(method.getModifiers()) || Modifier.isStatic(method.getModifiers())
+                    || method.isDefault() || isObjectMethod(method)) continue;
+            MethodSignature signature = new MethodSignature(method.getName(), List.of(method.getParameterTypes()));
+            Method previous = methods.get(signature);
+            if (previous == null || previous.getReturnType().isAssignableFrom(method.getReturnType())) {
+                methods.put(signature, method);
+            } else if (!method.getReturnType().isAssignableFrom(previous.getReturnType())) {
+                return null;
+            }
+        }
+        return methods.size() == 1 ? methods.values().iterator().next() : null;
+    }
+
+    private static boolean isObjectMethod(Method method) {
+        try {
+            Method objectMethod = Object.class.getMethod(method.getName(), method.getParameterTypes());
+            return objectMethod.getReturnType() == method.getReturnType();
+        } catch (NoSuchMethodException absent) {
+            return false;
+        }
+    }
+
+    private record MethodSignature(String name, List<Class<?>> parameters) {}
+
+    private static Map<TypeVariable<?>, Type> interfaceArguments(Type declared, Class<?> target,
+                                                                 Map<TypeVariable<?>, Type> inherited) {
+        Class<?> raw = rawClass(declared);
+        if (raw == null) return null;
+        Map<TypeVariable<?>, Type> arguments = new HashMap<>(inherited);
+        if (declared instanceof ParameterizedType parameterized) {
+            TypeVariable<?>[] variables = raw.getTypeParameters();
+            Type[] actual = parameterized.getActualTypeArguments();
+            for (int index = 0; index < variables.length; index++) {
+                arguments.put(variables[index], substitute(actual[index], inherited));
+            }
+        }
+        if (raw == target) return arguments;
+        for (Type parent : raw.getGenericInterfaces()) {
+            Map<TypeVariable<?>, Type> resolved = interfaceArguments(parent, target, arguments);
+            if (resolved != null) return resolved;
+        }
+        return null;
+    }
+
+    private static Type substitute(Type declared, Map<TypeVariable<?>, Type> arguments) {
+        Set<Type> visited = new HashSet<>();
+        while (declared instanceof TypeVariable<?> variable && visited.add(declared)) {
+            Type replacement = arguments.get(variable);
+            if (replacement == null) break;
+            declared = replacement;
+        }
+        if (declared instanceof GenericArrayType array) {
+            Class<?> component = rawClass(substitute(array.getGenericComponentType(), arguments));
+            if (component != null) return component.arrayType();
+        }
+        return declared;
+    }
+
+    private static Class<?> rawClass(Type type) {
+        if (type instanceof Class<?> raw) return raw;
+        if (type instanceof ParameterizedType parameterized && parameterized.getRawType() instanceof Class<?> raw) {
+            return raw;
+        }
+        return null;
     }
 
     private static String classNames(Set<Class<?>> classes) {

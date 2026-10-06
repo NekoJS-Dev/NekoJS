@@ -123,7 +123,7 @@ class Ticket24GameplayEventPhaseTraceTest {
     @Test
     void manualPostingSitesEachHaveExactlyOneProductionPoster() {
         // capability family: only the mod-bus RegisterCapabilitiesEvent callback posts the payload
-        assertEquals(1, count(code(MAIN + "/NekoJSMod.java"), "CapabilityEvents.REGISTER.post("),
+        assertEquals(1, count(code(MAIN + "/NekoJSMod.java"), "CapabilityEvents.REGISTER.postForCollection("),
                 "CapabilityEvents.register has exactly one production poster (onRegisterCapabilities)");
 
         // goal family: the production posting site is invoked once per loader entry after
@@ -211,9 +211,10 @@ class Ticket24GameplayEventPhaseTraceTest {
                     "fabric adapter missing: " + adapter);
         }
 
-        // the capability family is a neoforge-only surface: no fabric poster may exist
-        assertEquals(0, count(code(FABRIC + "/fabric/FabricCorePlugin.java"), "CapabilityEvents"),
-                "CapabilityEvents is a NeoForge-only family (explicit fabric gap, not a silent no-op)");
+        assertEquals(1, count(code(FABRIC + "/fabric/FabricCorePlugin.java"), "CapabilityEvents.GROUP"),
+                "Fabric registers its native lookup capability family exactly once");
+        assertEquals(1, count(code(FABRIC + "/fabric/NekoJSFabricMod.java"), "CapabilityEvents.postAndApply();"),
+                "Fabric commits capability providers once after startup registries drain");
     }
 
     // ---- 4. no second registration path ----
@@ -223,7 +224,7 @@ class Ticket24GameplayEventPhaseTraceTest {
         // shared-tree declaration (every loader compiles it) + fabric twin + fabric binding
         // group merged by name are the legal sites; anything else would be a second surface
         assertDeclarationCount("BlockEvents", 1);
-        assertDeclarationCount("CapabilityEvents", 1);
+        assertDeclarationCount("CapabilityEvents", 2);
         assertDeclarationCount("GoalEvents", 1);
         assertDeclarationCount("LevelEvents", 2);
         assertDeclarationCount("CommandEvents", 2);

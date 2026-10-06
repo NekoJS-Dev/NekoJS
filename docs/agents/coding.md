@@ -102,7 +102,7 @@ For example, when a failed reload has actually retained the old generation, a us
 
 ### Diagnostic codes
 
-A log or exception message that reports a problem carries a stable `NEKO-` code. The code is the lookup key: do not change it when the wording changes, and do not reuse it for a different failure. The same failure uses the same code at every call site, including node copies. Assigned codes are listed in `wiki/en_us/Error-Reference.md`; update that page in the same change. Review the diff against the page. There is no separate code-number check.
+A log or exception message that reports a problem carries a stable `NEKO-` code. The code is the lookup key: do not change it when the wording changes, and do not reuse it for a different failure. The same failure uses the same code at every call site, including node copies. Assigned codes are listed in `wiki/error-reference_us.md` with the corresponding Chinese reference in `wiki/error-reference_cn.md`; update both pages in the same change. Review the diff against the page. There is no separate code-number check.
 
 - Prefix the message with `[NEKO-nnnn]`. When the body is not already the short English summary (the existing Chinese messages), append ` — ` and that summary. Put the summary before a trailing runtime value: `[NEKO-4006] 未知方块实体类型 — unknown block entity type: minecraft:chest`. A message that is already that English sentence does not get a second paraphrase.
 - Take the next free number in the area: `1xxx` script loading and reload, `2xxx` sandbox and resource limits, `3xxx` script sync limits, `4xxx` registration and bindings, `5xxx` recipes and data, `6xxx` client UI visual and resource contract, `7xxx` client JSX UI lifecycle and diagnostics, `8xxx` UI inspector.
