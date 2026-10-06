@@ -16,7 +16,11 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import java.util.List;
 
-@EventBusSubscriber(modid = NekoJS.MODID)
+@EventBusSubscriber(modid = NekoJS.MODID
+//? if <26 {
+        /*, bus = EventBusSubscriber.Bus.MOD
+*///?}
+)
 public class NekoJSNetwork {
     @SubscribeEvent
     public static void register(final RegisterPayloadHandlersEvent event) {

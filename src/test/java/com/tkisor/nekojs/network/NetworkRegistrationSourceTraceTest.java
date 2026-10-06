@@ -118,9 +118,11 @@ class NetworkRegistrationSourceTraceTest {
     @Test
     void neoforgeRegistrationLivesInLoaderEventSubscriber() {
         String source = read(repoRoot().resolve("src/main/java/com/tkisor/nekojs/network/NekoJSNetwork.java"));
-        assertTrue(source.contains("@EventBusSubscriber(modid = com.tkisor.nekojs.NekoJS.MODID)")
-                        || source.contains("@EventBusSubscriber(modid = NekoJS.MODID)"),
+        assertTrue(source.contains("@EventBusSubscriber(modid = NekoJS.MODID"),
                 "payload registration must stay in the FML event subscriber (loader-native timing)");
+        // Only 1.21.1 exposes this Bus selector; NeoForge 26.x uses a unified event bus.
+        assertTrue(source.contains("bus = EventBusSubscriber.Bus.MOD"),
+                "the legacy 1.21.1 node must subscribe on the MOD bus");
         assertTrue(source.contains("RegisterPayloadHandlersEvent"),
                 "payload registration must hook the loader's payload registration event");
         assertEquals(1, countOccurrences(source, "PlayPacketDispatchers.install("),

@@ -1,9 +1,14 @@
 //? if neoforge {
 package com.tkisor.nekojs.wrapper.event.server;
 
+import com.tkisor.nekojs.NekoJS;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
+//? if <26 {
+/*import net.minecraft.server.MinecraftServer;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
+*///?}
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -200,16 +205,31 @@ public class LootTableEventJS {
      */
     public static void onLootTableLoad(LootTableLoadEvent event) {
         Identifier id = event.getName();
-        REGISTRIES = event.getRegistries();
+        HolderLookup.Provider registries = registryProvider(event);
+        REGISTRIES = registries;
         if (PENDING_REMOVE.contains(id)) {
             event.setTable(LootTable.EMPTY);
         } else {
             JsonObject json = PENDING_SET.get(id);
             if (json != null) {
-                event.setTable(parse(json, event.getRegistries()));
+                if (registries == null) {
+                    NekoJS.LOGGER.warn("Skipping loot table JSON replacement for {}: registry context is unavailable on this node", id);
+                } else {
+                    event.setTable(parse(json, registries));
+                }
             }
         }
         LOADED_TABLES.put(id, event.getTable());
+    }
+
+    private static HolderLookup.Provider registryProvider(LootTableLoadEvent event) {
+//? if >=26 {
+        return event.getRegistries();
+//?} else {
+/*        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return null;
+        return server.reloadableRegistries().lookup() instanceof HolderLookup.Provider provider ? provider : null;
+*///?}
     }
 
     private static LootTable parse(JsonObject json, HolderLookup.Provider registries) {

@@ -1,0 +1,20 @@
+[0610月2026 21:38:19.573] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found mod file "nekojs-neoforge-1.21.1-1.1.0-preview3.jar" [locator: {mods folder locator at D:\mcmodDemo\mcp-1211-ticket39-run2\mods}, reader: mod manifest]
+     Mod List:
+		NekoJS 1.1.0-preview3 (nekojs)
+[0610月2026 21:38:34.799] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[0610月2026 21:38:35.408] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[0610月2026 21:38:36.403] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [NekoJS] NekoJS plugin runtime bootstrapped once (assembly)
+[0610月2026 21:38:36.404] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] 发现了 1 个 STARTUP 脚本 — scripts discovered
+[0610月2026 21:38:36.404] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本 — scripts discovered
+[0610月2026 21:38:36.404] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] 发现了 1 个 CLIENT 脚本 — scripts discovered
+[0610月2026 21:38:38.905] [modloading-worker-0/INFO] [NekoJS/]: 正在为 STARTUP 注册 14 个事件组... — registering event groups
+[0610月2026 21:38:39.390] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] Hello, World! (Loaded startup example script)
+[0610月2026 21:38:39.522] [modloading-sync-worker/INFO] [NekoJS/]: 正在为 CLIENT 注册 14 个事件组... — registering event groups
+[0610月2026 21:38:40.389] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] Hello, World! (Loaded client example script)
+[0610月2026 21:38:41.247] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources, mod/nekojs, mod/graalmc, mod/neoforge, mod/mcpmod, nekojs
+[0610月2026 21:38:46.391] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] 正在重载 CLIENT 脚本... — reloading scripts (x2)
+[0610月2026 21:38:46.439] [Render thread/INFO] [NekoJS/]: 正在为 CLIENT 注册 14 个事件组... — registering event groups
+[0610月2026 21:38:46.471] [Render thread/INFO] [NekoJS/]: [client] 发现了 1 个 CLIENT 脚本 — scripts discovered
+[0610月2026 21:38:46.559] [Render thread/INFO] [NekoJS PostEffects/]: Installed client post-effect generation 0 (0 definition(s), 0 removed)
+[0610月2026 21:38:46.575] [Render thread/INFO] [NekoJS/]: [client] Hello, World! (Loaded client example script)
+[0610月2026 21:38:47.390] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] CLIENT 脚本重载完毕 — script reload finished (x2)

@@ -1,0 +1,47 @@
+[0610月2026 20:49:00.511] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found mod file "nekojs-neoforge-1.21.1-1.1.0-preview3.jar" [locator: {mods folder locator at D:\mcmodDemo\mcp-1211-ticket39-run2\mods}, reader: mod manifest]
+     Mod List:
+		NekoJS 1.1.0-preview3 (nekojs)
+[0610月2026 20:49:36.306] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[0610月2026 20:49:37.150] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] 已初始化环境入口: D:\mcmodDemo\mcp-1211-ticket39-run2\nekojs\startup_scripts\src\main.js — workspace entry point created
+[0610月2026 20:49:37.151] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] 已初始化环境入口: D:\mcmodDemo\mcp-1211-ticket39-run2\nekojs\server_scripts\src\main.js — workspace entry point created
+[0610月2026 20:49:37.151] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] 已初始化环境入口: D:\mcmodDemo\mcp-1211-ticket39-run2\nekojs\client_scripts\src\main.js — workspace entry point created
+[0610月2026 20:49:37.522] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[0610月2026 20:49:38.132] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] 发现了 1 个 STARTUP 脚本 — scripts discovered
+[0610月2026 20:49:38.132] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本 — scripts discovered
+[0610月2026 20:49:38.134] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] 发现了 1 个 CLIENT 脚本 — scripts discovered
+[0610月2026 20:49:38.135] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [NekoJS] NekoJS plugin runtime bootstrapped once (assembly)
+[0610月2026 20:49:42.939] [modloading-worker-0/INFO] [NekoJS/]: 正在为 STARTUP 注册 14 个事件组... — registering event groups
+[0610月2026 20:49:44.106] [modloading-sync-worker/INFO] [NekoJS/]: 正在为 CLIENT 注册 14 个事件组... — registering event groups
+[0610月2026 20:49:44.139] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] Hello, World! (Loaded startup example script)
+[0610月2026 20:49:44.997] [modloading-sync-worker/WARN] [net.neoforged.fml.DeferredWorkQueue/LOADING]: Mod 'nekojs' took 1.296 s to run a deferred task.
+[0610月2026 20:49:45.133] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] Hello, World! (Loaded client example script)
+[0610月2026 20:49:47.540] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources, mod/nekojs, mod/graalmc, mod/neoforge, mod/mcpmod, nekojs
+[0610月2026 20:49:48.300] [Render thread/INFO] [NekoJS/]: Generated default IDE workspace config at D:\mcmodDemo\mcp-1211-ticket39-run2\nekojs\server_scripts\jsconfig.json; later edits by the user are kept as-is
+[0610月2026 20:49:48.304] [Render thread/INFO] [NekoJS/]: Generated default IDE workspace config at D:\mcmodDemo\mcp-1211-ticket39-run2\nekojs\client_scripts\jsconfig.json; later edits by the user are kept as-is
+[0610月2026 20:49:48.305] [Render thread/INFO] [NekoJS/]: Generated default IDE workspace config at D:\mcmodDemo\mcp-1211-ticket39-run2\nekojs\startup_scripts\jsconfig.json; later edits by the user are kept as-is
+[0610月2026 20:49:48.306] [Render thread/INFO] [NekoJS/]: Generated default IDE workspace config at D:\mcmodDemo\mcp-1211-ticket39-run2\nekojs\test_scripts\jsconfig.json; later edits by the user are kept as-is
+[0610月2026 20:49:48.310] [Render thread/INFO] [NekoJS/]: Generated default IDE workspace config at D:\mcmodDemo\mcp-1211-ticket39-run2\.neko_probe\jsconfig.json; later edits by the user are kept as-is
+[0610月2026 20:49:58.459] [Render thread/INFO] [NekoJS/]: 正在为 CLIENT 注册 14 个事件组... — registering event groups
+[0610月2026 20:49:58.477] [Render thread/INFO] [NekoJS/]: [client] 正在重载 CLIENT 脚本... — reloading scripts (x2)
+[0610月2026 20:49:58.496] [Render thread/INFO] [NekoJS/]: [client] 发现了 1 个 CLIENT 脚本 — scripts discovered
+[0610月2026 20:49:58.559] [Render thread/INFO] [NekoJS PostEffects/]: Installed client post-effect generation 0 (0 definition(s), 0 removed)
+[0610月2026 20:49:58.584] [Render thread/INFO] [NekoJS/]: [client] Hello, World! (Loaded client example script)
+[0610月2026 20:49:59.123] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] CLIENT 脚本重载完毕 — script reload finished (x2)
+[0610月2026 20:51:06.352] [Render thread/INFO] [net.minecraft.server.MinecraftServer/]: Found new data pack nekojs, loading it automatically
+[0610月2026 20:51:07.031] [Worker-Main-19/ERROR] [net.neoforged.bus.EventBus/EVENTBUS]: Exception caught during firing event: 'net.minecraft.core.HolderLookup$Provider net.neoforged.neoforge.event.LootTableLoadEvent.getRegistries()'
+		0: CancellableListener(net.neoforged.neoforge.event.LootTableLoadEvent)
+		1: com.tkisor.nekojs.listener.ServerEventListener$$Lambda/0x000002865d0b9480@21aec7e7
+java.lang.NoSuchMethodError: 'net.minecraft.core.HolderLookup$Provider net.neoforged.neoforge.event.LootTableLoadEvent.getRegistries()'
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.LootTableEventJS.onLootTableLoad(LootTableEventJS.java:203)
+[0610月2026 20:51:07.059] [Render thread/INFO] [net.minecraft.server.MinecraftServer/]: Found new data pack nekojs, loading it automatically
+[0610月2026 20:51:07.374] [Worker-Main-6/ERROR] [net.neoforged.bus.EventBus/EVENTBUS]: Exception caught during firing event: 'net.minecraft.core.HolderLookup$Provider net.neoforged.neoforge.event.LootTableLoadEvent.getRegistries()'
+		0: CancellableListener(net.neoforged.neoforge.event.LootTableLoadEvent)
+		1: com.tkisor.nekojs.listener.ServerEventListener$$Lambda/0x000002865d0b9480@21aec7e7
+java.lang.NoSuchMethodError: 'net.minecraft.core.HolderLookup$Provider net.neoforged.neoforge.event.LootTableLoadEvent.getRegistries()'
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.LootTableEventJS.onLootTableLoad(LootTableEventJS.java:203)
+[0610月2026 20:51:07.389] [Render thread/INFO] [net.minecraft.server.MinecraftServer/]: Found new data pack nekojs, loading it automatically
+[0610月2026 20:51:07.751] [Worker-Main-19/ERROR] [net.neoforged.bus.EventBus/EVENTBUS]: Exception caught during firing event: 'net.minecraft.core.HolderLookup$Provider net.neoforged.neoforge.event.LootTableLoadEvent.getRegistries()'
+		0: CancellableListener(net.neoforged.neoforge.event.LootTableLoadEvent)
+		1: com.tkisor.nekojs.listener.ServerEventListener$$Lambda/0x000002865d0b9480@21aec7e7
+java.lang.NoSuchMethodError: 'net.minecraft.core.HolderLookup$Provider net.neoforged.neoforge.event.LootTableLoadEvent.getRegistries()'
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.LootTableEventJS.onLootTableLoad(LootTableEventJS.java:203)

@@ -16,7 +16,11 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 
-@EventBusSubscriber
+@EventBusSubscriber(modid = NekoJS.MODID
+//? if <26 {
+        /*, bus = EventBusSubscriber.Bus.MOD
+*///?}
+)
 public class NekoJSPackLoader {
 
     @SubscribeEvent
