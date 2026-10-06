@@ -23,7 +23,7 @@ Both fixes compile and the focused source-trace test passes.
 
 ## Latest rerun
 
-After the MOD-bus fixes and the version-guarded loot registry fallback, the clean `run2` profile reached NekoJS startup, client script reload, workspace creation and the MCP endpoint without `NoSuchMethodError`. The exact filtered run log is in `D:\mcmodDemo\mcp-1211-ticket39-run2\logs\latest.log`; the MCP connection used port `9876` in the final run.
+After the MOD-bus fixes and the version-guarded loot registry fallback, a clean `run2` profile reached NekoJS startup, client script reload, workspace creation and the MCP endpoint without the prior `NoSuchMethodError`. The committed filtered startup log is [run2-filtered.log](run2-filtered.log); it contains startup/script discovery evidence only. The registry fallback itself is covered by compilation and node tests, not by the incomplete world fixture.
 
 The run did not complete the ticket39 baseline/active fixture because the MCP GUI/world creation path remained on the world-preparation screen. No item modification, client visibility or restoration result is claimed yet.
 
@@ -32,5 +32,5 @@ The run did not complete the ticket39 baseline/active fixture because the MCP GU
 - MCP connection and mod list succeeded in a clean isolated game directory.
 - NekoJS startup/client scripts reached discovery and reload.
 - `NekoJSPackLoader` and `NekoJSNetwork` MOD-bus fixes were exercised by real startup.
-- The 1.21.1 loot-table API mismatch no longer crashes startup; legacy registry context is now guarded and unavailable JSON replacement is reported instead of invoking `getRegistries()`.
+- The 1.21.1 legacy API has no `LootTableLoadEvent.getRegistries()`. The implementation now obtains the current reloadable registry provider when available; if it is unavailable for a JSON replacement, it emits an explicit `[NEKO-2301]` error and leaves the old table active instead of crashing through a missing method or silently claiming the replacement succeeded.
 - Ticket39 baseline/active/restore fixture execution remains pending; do not close AC11 or AC14.

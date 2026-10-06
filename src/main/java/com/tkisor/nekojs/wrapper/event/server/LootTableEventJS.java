@@ -213,7 +213,9 @@ public class LootTableEventJS {
             JsonObject json = PENDING_SET.get(id);
             if (json != null) {
                 if (registries == null) {
-                    NekoJS.LOGGER.warn("Skipping loot table JSON replacement for {}: registry context is unavailable on this node", id);
+                    NekoJS.LOGGER.error(
+                            "[NEKO-2301] Loot table JSON replacement unavailable for {}: registry context is unavailable on this node; keeping the previous table",
+                            id);
                 } else {
                     event.setTable(parse(json, registries));
                 }
