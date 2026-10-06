@@ -362,6 +362,74 @@ class ScriptReloadGenerationTest {
         }
     }
 
+    @Test
+    void ordinaryCandidateExecutionFailuresKeepActiveContextAndListeners() throws Exception {
+        for (String candidate : List.of("throw new Error('candidate failed');", "const invalid = ;")) {
+            try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+                harness.writeScript("entry.js", """
+                        globalThis.keptState = 'active';
+                        Counter.hit('active-entry');
+                        TestEvents.ping(event => Counter.hit('active-listener'));
+                        """);
+                harness.loadAndRun();
+                Context active = currentContext(harness.manager);
+                long generation = harness.manager.generationId();
+                harness.writeScript("entry.js", candidate);
+
+                var failure = assertThrows(com.tkisor.nekojs.core.lifecycle.NekoReloadException.class,
+                        harness::reload);
+                assertEquals(com.tkisor.nekojs.core.lifecycle.ReloadPhase.EXECUTION, failure.report().phase());
+                assertEquals("script-execution", failure.report().domain());
+                assertTrue(failure.report().sourceLocation().endsWith("entry.js"));
+                assertSame(active, currentContext(harness.manager));
+                assertEquals(generation, harness.manager.generationId());
+                assertEquals("active", active.eval("js", "globalThis.keptState").asString());
+                harness.bridge.postTestEvent();
+                assertEquals(1, harness.counter.hitsOf("active-listener"));
+                assertEquals(1, harness.counter.hitsOf("active-entry"));
+                assertTrue(harness.pluginRuntime.closedBindings.isEmpty());
+            }
+        }
+    }
+
+    @Test
+    void unreadableCandidateEntryKeepsActiveContext() throws Exception {
+        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+            harness.writeScript("entry.js", "globalThis.keptState = 'active';");
+            harness.loadAndRun();
+            Context active = currentContext(harness.manager);
+            long generation = harness.manager.generationId();
+            Files.write(ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve("entry.js"),
+                    new byte[] { (byte) 0xC3, (byte) 0x28 });
+
+            var failure = assertThrows(com.tkisor.nekojs.core.lifecycle.NekoReloadException.class,
+                    harness::reload);
+            assertEquals(com.tkisor.nekojs.core.lifecycle.ReloadPhase.PREPARATION, failure.report().phase());
+            assertEquals("script-preload", failure.report().domain());
+            assertSame(active, currentContext(harness.manager));
+            assertEquals(generation, harness.manager.generationId());
+            assertEquals("active", active.eval("js", "globalThis.keptState").asString());
+        }
+    }
+
+    @Test
+    void ordinaryClientCandidateFailureKeepsActiveScriptState() throws Exception {
+        try (ManagerHarness harness = new ManagerHarness(withStatementLimit(), ScriptType.CLIENT)) {
+            harness.writeScript("client-retention.js", "globalThis.keptState = 'typed input';");
+            harness.loadAndRun();
+            Context active = currentContext(harness.manager);
+            long generation = harness.manager.generationId();
+            harness.writeScript("client-retention.js", "throw new Error('candidate failed');");
+
+            assertThrows(com.tkisor.nekojs.core.lifecycle.NekoReloadException.class, harness::reload);
+            assertSame(active, currentContext(harness.manager));
+            assertEquals(generation, harness.manager.generationId());
+            assertEquals("typed input", active.eval("js", "globalThis.keptState").asString());
+        } finally {
+            Files.deleteIfExists(ScriptTypeEnv.scriptsDir(ScriptType.CLIENT).resolve("client-retention.js"));
+        }
+    }
+
     /** Candidate preparation/virtual registration must not replace the active source-map session. */
     @Test
     void failedEsmReloadKeepsActiveSourceMapAndSuccessfulCommitPublishesNewSession() throws Exception {

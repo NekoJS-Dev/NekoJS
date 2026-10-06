@@ -1167,6 +1167,10 @@ public final class ScriptManager implements AutoCloseable {
                                     + " candidate execution preempted by close before script "
                                     + script.id));
                 }
+                if (script.lastError != null) {
+                    throw reloadFailure(this.generation + 1, ReloadPhase.PREPARATION,
+                            sourceOf(script), "script-preload", script.lastError);
+                }
                 if (!script.shouldRun()) {
                     continue;
                 }
@@ -1175,6 +1179,10 @@ public final class ScriptManager implements AutoCloseable {
                         this.candidateEnvironment.moduleSession().bindingSchemaView());
                 if (!killedBefore && this.candidateKilled && this.candidateKillScript == null) {
                     this.candidateKillScript = script;
+                }
+                if (!this.candidateKilled && script.lastError != null) {
+                    throw reloadFailure(this.generation + 1, ReloadPhase.EXECUTION,
+                            sourceOf(script), "script-execution", script.lastError);
                 }
             }
         }

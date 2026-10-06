@@ -225,6 +225,20 @@ const loginHost = makeHost();
 const loginRoot = UI.createRoot(renderLoginForm, loginHost, { id: 'login-fixture-root' });
 check(loginHost.findById('login-username') != null && loginHost.findById('login-submit') != null,
   'login-fixture: the converted form mounts');
+check(findNodeById(loginHost.layoutSnapshot(), 'login-card').style.background === '#F5F5F5'
+  && findNodeById(loginHost.layoutSnapshot(), 'login-title').style.color === '#212529'
+  && findNodeById(loginHost.layoutSnapshot(), 'login-username-label').style.color === '#212529',
+  'login-fixture: opaque RGB colors and dark field labels match the light card');
+const usernameRect = findNodeById(loginHost.layoutSnapshot(), 'login-username').rect;
+const passwordRect = findNodeById(loginHost.layoutSnapshot(), 'login-password').rect;
+const submitRect = findNodeById(loginHost.layoutSnapshot(), 'login-submit').rect;
+check(usernameRect.width === 196 && passwordRect.width === 196
+  && usernameRect.height === 20 && passwordRect.height === 20,
+  'login-fixture: both inputs fill the card inner width with usable native height');
+check(submitRect.y >= passwordRect.y + passwordRect.height,
+  'login-fixture: actions do not overlap the password input');
+check(findNodeById(loginHost.layoutSnapshot(), 'login-submit').clip.height === 20,
+  'login-fixture: the submit button is not clipped by the card');
 check(findNodeById(loginHost.layoutSnapshot(), 'login-error').visible === false,
   'login-fixture: the error label starts hidden');
 check(loginRoot.dispatch('login-submit', 'click', {}) === true && error.get() !== '',

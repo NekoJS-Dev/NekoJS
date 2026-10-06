@@ -33,7 +33,15 @@
       "mounts with username/password/submit/cancel controls",
       "controlled inputs round-trip through onChange",
       "error visibility follows the error signal",
-      "profile six applies the title fontSize override"
+      "profile six applies the title fontSize override",
+      "both field groups give their inputs the full 196-unit card inner width",
+      "password input and actions do not overlap and the submit control is fully clipped inside the card",
+      "opaque RGB card colors and dark labels retain the source's readable light-card contrast"
+    ],
+    "localCorrections": [
+      "Native layout exposed narrow intrinsic field groups and overlapping actions: use fill widths, 31-unit field groups, 20-unit native controls, a 20-unit actions row and a 190-unit card.",
+      "Native screenshots exposed clipped 12-unit input glyphs and white labels on a light card: use 20-unit inputs and explicit dark text.",
+      "Opaque CSS RGB colors must remain six-digit RGB; CSS #RRGGBBAA cannot be copied as the native #AARRGGBB grammar."
     ],
     "result": "pass"
   },

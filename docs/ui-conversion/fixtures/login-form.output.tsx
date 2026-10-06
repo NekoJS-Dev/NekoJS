@@ -30,10 +30,10 @@ function cancel() {
 
 function UsernameField() {
   return (
-    <column id="login-username-group" gap={2}>
-      <label id="login-username-label" fontSize={9}>{'用户名'}</label>
+    <column id="login-username-group" width="fill" height={31} gap={2}>
+      <label id="login-username-label" color="#212529" fontSize={9}>{'用户名'}</label>
       <input id="login-username" width="fill" value={username.get()} placeholder="请输入用户名" maxLength={32}
-             height={12} disabled={submitting.get()}
+             height={20} disabled={submitting.get()}
              onChange={event => username.set(event.value == null ? '' : event.value)} />
     </column>
   );
@@ -41,10 +41,10 @@ function UsernameField() {
 
 function PasswordField() {
   return (
-    <column id="login-password-group" gap={2}>
-      <label id="login-password-label" fontSize={9}>{'密码'}</label>
+    <column id="login-password-group" width="fill" height={31} gap={2}>
+      <label id="login-password-label" color="#212529" fontSize={9}>{'密码'}</label>
       <input id="login-password" width="fill" value={password.get()} placeholder="请输入密码" maxLength={64}
-             height={12} disabled={submitting.get()}
+             height={20} disabled={submitting.get()}
              onChange={event => password.set(event.value == null ? '' : event.value)}
              onSubmit={() => submit()} />
     </column>
@@ -55,18 +55,18 @@ export function renderLoginForm() {
   const message = error.get();
   return (
     <screen id="login-screen" title="欢迎登录" pausesGame={false} closeOnEscape={true}>
-      <panel id="login-card" width={220} padding={12} gap={8}
-             background="#F5F5F5FF" borderColor="#DDDDDDFF" borderWidth={1} radius={4}>
-        <label id="login-title" fontSize={{ base: 10, profiles: { 6: 12 } }}>{'欢迎登录'}</label>
+      <panel id="login-card" width={220} height={190} padding={12} gap={8}
+             background="#F5F5F5" borderColor="#DDDDDD" borderWidth={1} radius={4}>
+        <label id="login-title" color="#212529" fontSize={{ base: 10, profiles: { 6: 12 } }}>{'欢迎登录'}</label>
         <label id="login-subtitle" color="gray" fontSize={8}>{'请输入您的账号信息'}</label>
         <UsernameField />
         <PasswordField />
         <label id="login-error" color="#DC3545" fontSize={8}
                visible={message !== ''}>{message}</label>
-        <row id="login-actions" gap={12}>
-          <button id="login-submit" width="fill" disabled={submitting.get()}
+        <row id="login-actions" width="fill" height={20} gap={12}>
+          <button id="login-submit" width="fill" height={20} disabled={submitting.get()}
                   onClick={() => submit()}>{submitting.get() ? '登录中…' : '登录'}</button>
-          <button id="login-cancel" width="fill" disabled={submitting.get()}
+          <button id="login-cancel" width="fill" height={20} disabled={submitting.get()}
                   onClick={() => cancel()}>{'取消'}</button>
         </row>
       </panel>

@@ -174,7 +174,6 @@ dependencies {
         add("jarJar", libs.icu4j)
     } else {
         runtimeOnly("com.ibm.icu:icu4j:73.2")
-        add("jarJar", "com.ibm.icu:icu4j:73.2")
         "additionalRuntimeClasspath"("com.ibm.icu:icu4j:73.2")
     }
 }
@@ -251,7 +250,7 @@ tasks.jar {
 val neoForgeJar = tasks.named<Jar>("jar")
 val verifyNeoForgeRuntimeArtifact = tasks.register("verifyNeoForgeRuntimeArtifact") {
     group = "verification"
-    description = "Verifies that the NeoForge runtime jar contains an intact ICU Jar-in-Jar dependency."
+    description = "Verifies that NeoForge ICU ownership matches the node's module layout."
     dependsOn(neoForgeJar)
     inputs.file(neoForgeJar.flatMap { it.archiveFile })
 
@@ -261,6 +260,38 @@ val verifyNeoForgeRuntimeArtifact = tasks.register("verifyNeoForgeRuntimeArtifac
             it.moduleVersion.id.group == "com.ibm.icu" && it.name == "icu4j"
         }
         ZipFile(archive).use { jar ->
+            val entries = jar.entries().asSequence().map { it.name }.toList()
+            if (entries.any { it.startsWith("com/ibm/icu/") }) {
+                throw GradleException("NeoForge runtime artifact ${archive.name} must not flatten ICU into the mod module.")
+            }
+            val embeddedIcu = entries.filter { it.startsWith("META-INF/jarjar/icu4j-") && it.endsWith(".jar") }
+            if (!modern) {
+                if (embeddedIcu.isNotEmpty()) {
+                    throw GradleException("Legacy NeoForge runtime artifact ${archive.name} must use Minecraft's ICU module.")
+                }
+                val metadataEntry = jar.getEntry("META-INF/jarjar/metadata.json")
+                if (metadataEntry != null) {
+                    val metadata = jar.getInputStream(metadataEntry).use { JsonSlurper().parse(it) } as? Map<*, *>
+                        ?: throw GradleException("NeoForge runtime artifact ${archive.name} has invalid Jar-in-Jar metadata.")
+                    val dependencies = metadata["jars"] as? List<*>
+                        ?: throw GradleException("NeoForge runtime artifact ${archive.name} has no Jar-in-Jar dependency list.")
+                    if (dependencies.filterIsInstance<Map<*, *>>().any { dependency ->
+                            val identifier = dependency["identifier"] as? Map<*, *>
+                            identifier?.get("group") == "com.ibm.icu" && identifier["artifact"] == "icu4j"
+                        }) {
+                        throw GradleException("Legacy NeoForge runtime artifact ${archive.name} must not redeclare Minecraft's ICU module.")
+                    }
+                }
+                JarInputStream(expectedIcu.file.inputStream()).use { icu ->
+                    val libraryEntries = generateSequence { icu.nextJarEntry }.map { it.name }.toSet()
+                    if ("com/ibm/icu/text/DateFormat.class" !in libraryEntries
+                        || libraryEntries.none { it.startsWith("com/ibm/icu/impl/data/") && it.endsWith(".res") }
+                        || icu.manifest?.mainAttributes?.getValue("Automatic-Module-Name") != "com.ibm.icu") {
+                        throw GradleException("Legacy NeoForge runtime classpath contains an incomplete ICU library.")
+                    }
+                }
+                return@use
+            }
             val metadataEntry = jar.getEntry("META-INF/jarjar/metadata.json")
                 ?: throw GradleException("NeoForge runtime artifact ${archive.name} has no Jar-in-Jar metadata for ICU.")
             val metadata = jar.getInputStream(metadataEntry).use { JsonSlurper().parse(it) } as? Map<*, *>
@@ -298,11 +329,6 @@ val verifyNeoForgeRuntimeArtifact = tasks.register("verifyNeoForgeRuntimeArtifac
                     }
                 }
             }
-            val entries = jar.entries().asSequence().map { it.name }.toList()
-            if (entries.any { it.startsWith("com/ibm/icu/") }) {
-                throw GradleException("NeoForge runtime artifact ${archive.name} must not flatten ICU into the mod module.")
-            }
-            val embeddedIcu = entries.filter { it.startsWith("META-INF/jarjar/icu4j-") && it.endsWith(".jar") }
             if (embeddedIcu != listOf(path)) {
                 throw GradleException("NeoForge runtime artifact ${archive.name} contains an unexpected ICU jar.")
             }
