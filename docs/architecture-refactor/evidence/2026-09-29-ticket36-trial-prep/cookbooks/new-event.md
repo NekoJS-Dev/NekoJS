@@ -1,7 +1,7 @@
 # Cookbook: add a new event (新增事件)
 
-> Status: **DRAFT — UNVALIDATED**. Prepared for ticket 36 (`docs/architecture-refactor/implementation-tickets/36-release-maintainer-trials.md`, AC12) maintainer trials.
-> Every path/symbol below was read at base commit `c8173622` (branch `ticket-36-trial-prep-a`). The real trial must confirm each step and correct this document.
+> Status: **MAINTAINER-ACCEPTED**, 2026-10-06. See the [direct confirmation](../TICKET36-AGENT-PREPARED-DRAFT.md).
+> Prepared at base commit `c8173622`; checklist paths are documented workflow entries, not reconstructed per-step observations.
 
 ## Purpose
 
@@ -75,17 +75,17 @@ Adding a member to an already-registered group (or a new group registered from a
 
 ## Trial checklist (maintainer fills during the real trial — AC1)
 
-| # | Task | Entry used | Result (pass/fail + evidence) | Problems hit |
+| # | Task | Documented entry (not a recorded trial path) | Aggregate acceptance | Per-step problems |
 |---|---|---|---|---|
-| 1 | Locate the group file and conventions without reading internals |  |  |  |
-| 2 | Declare the member (side, name, payload, dispatch key if any) |  |  |  |
-| 3 | Wire NeoForge firing (`FORGE_BRIDGE` bind or domain-owner post) |  |  |  |
-| 4 | Wire or explicitly gap Fabric |  |  |  |
-| 5 | Update `event-surface-domains.txt` from gate JSON; ticket 33 report record |  |  |  |
-| 6 | Run `:<node>:platformGateTest` on affected nodes |  |  |  |
-| 7 | Run ownership/catalog tests |  |  |  |
-| 8 | In-game or GameTest evidence that the bus fires |  |  |  |
-| 9 | Confirm no runtime/bootstrap diff |  |  |  |
-| 10 | Subscribing from a script (`ServerEvents.example(event => {})`) with only public declarations |  |  |  |
+| 1 | Locate the group file and conventions without reading internals | Public group and cookbook entries | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 2 | Declare the member (side, name, payload, dispatch key if any) | Public event declaration path | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 3 | Wire NeoForge firing (`FORGE_BRIDGE` bind or domain-owner post) | Existing public platform wiring path | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 4 | Wire or explicitly gap Fabric | Existing Fabric bridge/gate path | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 5 | Update `event-surface-domains.txt` from gate JSON; ticket 33 report record | Existing gate workflow | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 6 | Run `:<node>:platformGateTest` on affected nodes | Existing node gate commands | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 7 | Run ownership/catalog tests | Existing common checks | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 8 | In-game or GameTest evidence that the bus fires | Existing runtime smoke path | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 9 | Confirm no runtime/bootstrap diff | Existing architecture boundary | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 10 | Subscribing from a script (`ServerEvents.example(event => {})`) with only public declarations | Public script declaration path | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
 
 Anything that required guessing an owner, editing generated output by hand, or reading internal implementation to complete: record verbatim under Problems — that is the trial's real output.

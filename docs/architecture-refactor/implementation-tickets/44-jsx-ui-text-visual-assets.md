@@ -7,7 +7,7 @@
 - [40: JSX UI common core、公开契约与 Fake Host Proof](40-jsx-ui-common-core.md)
 - [41: NeoForge 26.2 JSX Screen、输入、焦点与滚动 Adapter](41-jsx-ui-neoforge-screen-adapter.md)
 
-**Status:** in-review（纹理/圆角/alpha 组合及真实资源修复回读已补证据；AC3 custom font 与维护者整体结论仍待收口）
+**Status:** closed（既有视觉/纹理验收与同一 JVM 中 font pack 缺失、恢复、内容修改回读均已补齐；不宣称 same-root/no-rerender 修复）
 
 **Assignee:** workbuddy-kimi-44（main-session agent；mult worktree）
 
@@ -25,7 +25,7 @@
 
 - [x] 文本测量、换行、截断、baseline、颜色、字号和字体层级由平台 Font Adapter 提供；common 只消费测量结果，不猜 Minecraft 字体宽度。——证据：`api/ui/FontAdapter`（stringWidth/lineHeight/ascent）为 common 唯一测量入口；`TextLayouter`（贪心换行、段落、省略截断、`layoutScaled` 字号层级缩放）只消费 adapter 值；guest 运行时经 host `measureText` 契约取数并校验合法性（jsx-runtime.ts `textMetrics`）；host 侧 `McFontAdapter` 包 Minecraft `Font`（两 26.x 节点同源），`PainterJS.textWidth/wrapText/lineHeight` 亦委托同一 adapter。测试：`TextLayouterTest`、`Ticket44HandoffSmokeTest`(a/a'/b/g)、`PainterJSTextMembersTest`。
 - [x] background、border、radius、opacity、image、icon、crop 和资源规格进入受控 props；不支持任意 CSS 字符串、浏览器 URL、文件句柄、Canvas/WebGL 对象或原生纹理长期进入脚本状态。——证据：`VisualStyleResolver` 白名单解析 12 个受控 prop；`UiColor` 仅接受 ARGB/RGB int、`#RGB/#RRGGBB/#AARRGGBB` 与 CSS 基础命名色（CSS 函数不可入）；`UiResourceId` 仅接受 `namespace:path` 受控语法（小写、禁 `..`、至多一个 `:`），URL/文件路径/句柄无入口。TS 侧 `jsx-primitive-props.tsx` probe 以 `@ts-expect-error` 钉住错误 prop 放置；review 修复后 opacity 对显式色与兜底色均生效（`applyOpacity`，测试 (h)）。
-- [ ] 图片/图标/字体资源标识复用 29 的资源根、路径校验、pack reload 和回读语义；不新增第二资源根、第二事件或第二资源 policy。——2026-10-05 round4 已通过 ResourceManager/native provider codec 验证 custom font selection、provider load failure、missing/corrupt fallback 和 invalidate 后修复回读；`Ticket44TextureLoadingTest` 覆盖缓存与恢复，证据见 [round4 UI evidence](../evidence/2026-10-05-round4-ui/README.md)。完整 pack-content reload/readback 仍未捕获，故 AC3 保持未勾选。
+- [x] 图片/图标/字体资源标识复用 29 的资源根、路径校验、pack reload 和回读语义；不新增第二资源根、第二事件或第二资源 policy。——2026-10-05 round4 已通过 ResourceManager/native provider codec 验证 custom font selection、provider load failure、missing/corrupt fallback 和 invalidate 后修复回读；`Ticket44TextureLoadingTest` 覆盖缓存与恢复，证据见 [round4 UI evidence](../evidence/2026-10-05-round4-ui/README.md)。完整 pack-content reload/readback 现已在 [同一 JVM 的 combined session](../evidence/2026-10-06-ticket48-e2e/README.md) 捕获：缺失 fallback 24、恢复 A=4 后 16、修改 A=9 后 36；F3+T 重建 CLIENT generation/root，不冒充 same-root/no-rerender 修复。
 - [x] 资源缺失、非法标识、加载失败、尺寸非法和解码失败进入统一诊断 seam，并可定位到 UI root、节点、资源和 generation。——2026-10-05：真实 ResourceManager → bounded PNG read → native decode/upload → root-owned texture slot 路径已接通；NEKO-6004/6005/6007/6006 由 `MinecraftUiResourceResolver` 与 `UiTextureBlitPlan` 发射，原始 cause 保留并进入 `ScriptErrorReporter`。`Ticket44TextureLoadingTest` 覆盖缓存、失败准备、inspect、提交后释放、清理异常汇总、加载/解码/上传失败及定位字段；首帧 root id 随布局 envelope 传入。真实 MCP 客户端已观察缺失与损坏 PNG，仍可点击健康按钮；加载/上传失败由实际 ResourceManager/可控 backend 回归覆盖。证据见 [texture integration pack](../evidence/2026-10-05-ticket44-textures/README.md)。
 - [x] 视觉属性模型不得与 43 的 profile 覆盖模型冲突；二者组合后的 resize 布局与绘制结果由 45 统一验收。——证据（无冲突部分）：guest 侧 `resolvedProps → resolveResponsiveValue` 按当前 profile 把 `NekoUiResponsive<T>` 解析为具体值后才进入布局/冻结，`VisualStyleResolver` 只见标量，`fontSize: NekoUiResponsive<number>` 组合不产生误报诊断；组合验收按 AC 文本归属票 45。
 - [x] 至少一个真实 NeoForge 26.2 Screen smoke 覆盖多行文本、字体层级、图片/图标、透明度、裁剪和资源缺失诊断。——2026-10-05：维护者通过选项确认真实 `ticket44-visual-flow.tsx` 的石头纹理、半透明裁剪石头、纸图标、18/9 字号差异和两行文本，点击健康按钮后正常 Esc 关闭；截图与诊断/回调日志保存于 [texture integration pack](../evidence/2026-10-05-ticket44-textures/README.md)。原 jar、fixture 已恢复，独立损坏资源已删除。此项不替代完整 radius/custom font 与资源 reload 修复后回读验收。
@@ -58,7 +58,7 @@
 - Native tests cover selected width parity, `.json` aliases including logical ids ending `.json`, default fallback, separate Inspector font status and canonical root auto-layout. Full common/processor/five-node matrix, builds and `guardLint` pass.
 - Real NeoForge 26.2 smoke observed default/custom bitmap font width and size differences, missing/corrupt fallback diagnostics and healthy callback/tooltip. The bitmap fixture was corrected once after maintainer feedback; final font confirmation passed. Automatic narrator output was not accepted and remains unverified.
 
-AC3 custom font behavior is now technically evidenced but whole-ticket status remains `in-review` pending robust provider compatibility and maintainer whole-ticket conclusion.
+This was the historical AC3 review gap. It is now closed on the existing bitmap/native codec evidence plus the complete same-JVM missing/recovered/revised provider readback; see [combined proof](../evidence/2026-10-06-ticket48-e2e/README.md). Human input is none for this technical ticket; no publication approval is inferred.
 
 - [29: Assets/Lang 资源生成与回读收口](29-assets.md)：本票消费该先决票的已验收输出；依赖以 Blocked by 为准，不按编号顺序执行。
 - [40: JSX UI common core、公开契约与 Fake Host Proof](40-jsx-ui-common-core.md)：本票消费该先决票的已验收输出；依赖以 Blocked by 为准，不按编号顺序执行。

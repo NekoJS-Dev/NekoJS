@@ -4,7 +4,7 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)、[05: 单 owner 预整理：闭合两个 loader 的运行时生命周期入口](05-runtime-root.md)、[06: 候选环境、阶段结果与 owner-thread commit 点](06-reload-commit.md)、[07: 同类型串行、close 优先与 watchdog 隔离恢复](07-runtime-threads.md)、[10: 按类型 global、显式 shared 与候选顶层写集联合提交](10-global-state.md)
 
-**Status:** in-review（实现路径与自动化证据已收口；AC10 NeoForge 26.2 真实 client sync 已通过，AC11 的 1.21.1 smoke 和 AC14 维护者删除确认仍未完成，release gate 未通过）
+**Status:** closed（NeoForge 26.2 独立 client sync、1.21.1 正式包 baseline/active/失败保留/restore/relog 与 AC14 当前维护者确认均已记录；不自动补 Fabric 真机 parity、不批准 release）
 
 **Assignee:** zcode-agent
 
@@ -40,15 +40,17 @@
 - [x] 脚本不再声明某项修改时，成功 reload 后 NekoJS 持有基线先恢复，再应用新的完整修改计划；平台无法证明可恢复的字段不得提交该批，旧 active 保持可用。诊断能区分 active、blocked/recovery-failed 和 restored，不得把静默 stale 当成成功。
 - [x] 显式 setter 与 JavaBean-style property assignment 调用同一 setter，并进入同一校验、规范化、definition fingerprint 和候选修改计划；不得用同名 public field 绕过校验，GraalJS runtime contract test 固定两种写法等价。
 - [x] 同一 candidate 的修改计划与 global/shared 顶层写集完成联合预检，并联合成功或失败；不得出现领域计划失败而状态半提交，或状态提交而修改计划失败。
-- [ ] Item/Block 修改后的客户端可见性有真实 fixture：自动同步、显式 resync、需要 relog 或明确 unsupported 均由节点 capability 与错误/提示表达，不出现服务端与客户端长期隐藏不一致。
-      **节点部分满足，未全局勾选**：NeoForge 26.2 active plan 通过既有 `NekoScriptPayload` channel 携带 generation-scoped declarations，client 使用同一 modification Adapter 应用；active 登录、fresh stack、空计划 restore、relog 和再次 active reload 均真实通过。旧 ItemStack 不做 retroactive rewrite，新建/relog stack 与 server 一致。Fabric 26.x 仅完成编译/接线验证，1.21.1 未完成真实 client smoke；证据见 [client records](../evidence/2026-10-05-ticket39-client/records.md)。
-- [ ] 26.x 与 1.21.1 的 item default components、block/state 属性、注册时机和同步差异只存在平台/版本 Adapter；五节点 capability/source-trace 与 smoke 记录实际结果，不自动补 Fabric parity。
-      **部分满足，未勾选**：版本 Adapter 与结构/source-trace 证据已交付；本次尝试用 MCP NeoForge 21.1.172 执行 1.21.1 smoke，但 server installer 的 headless processor replay 以 `unexpected end of file` 失败，因此没有真实 startup/reload/removal 结果。维护者仍需补真实节点证据后再关闭该 gate。
+- [x] Item/Block 修改后的客户端可见性有真实 fixture：自动同步、显式 resync、需要 relog 或明确 unsupported 均由节点 capability 与错误/提示表达，不出现服务端与客户端长期隐藏不一致。
+      **按节点证据验收**：NeoForge 26.2 独立 server/client 的 active、fresh stack、空计划 restore 和 relog 见 [client records](../evidence/2026-10-05-ticket39-client/records.md)；1.21.1 正式包 integrated baseline/active/失败保留/restore/fresh stack/relog 见 [legacy proof](../evidence/2026-10-06-ticket39-1211/README.md)。旧 ItemStack 不 retroactive rewrite；1.21.1 不冒充独立进程同步证据，Fabric 26.x 不自动补真机 parity。
+- [x] 26.x 与 1.21.1 的 item default components、block/state 属性、注册时机和同步差异只存在平台/版本 Adapter；五节点 capability/source-trace 与 smoke 记录实际结果，不自动补 Fabric parity。
+      **已补齐 legacy smoke**：正式 jar 的重复 ICU module 问题已在打包源头修复并经 node-specific artifact gate 校验；1.21.1 实际世界完整阶段已通过，详见 [production proof](../evidence/2026-10-06-ticket39-1211/README.md)。五节点仍只消费各自真实 capability/source-trace/test/smoke 结果，不把未运行的 Fabric 真机腿计为通过。
 - [x] 调用者 Interface、既有 Registry/Event/Adapter owner 契约、runtime member、TS/Python declaration、contract/golden 和迁移表互相追溯；不新增公开 Modification Runtime、第二 registry path 或第二事件框架，测试从脚本事件贯穿到平台 Adapter 可观察结果，不断言私有静态 Map。
 - [x] 随实现交付 Item/Block modification、setter/property parity、声明移除后的恢复/阻止提交和不可同步边界的最小可运行示例与必要迁移材料；示例只使用已通过 gate 的能力。
-- [ ] 旧 direct live mutation、restore-all 后整体重放、无 owner static snapshot 和不受测 server-only 旁路只能在替代路径 parity、失败保留、迁移表、无消费者证据和维护者确认后删除；不保留长期兼容双路径。【不勾选：维护者删除确认是门禁（Human input note）；替代路径 parity（parity/failure-retention/迁移表）+ 旧 route 无消费者证据 + 结构 guard 已交付，见 baseline REPORT §11/§12；待 sign-off】
+- [x] 旧 direct live mutation、restore-all 后整体重放、无 owner static snapshot 和不受测 server-only 旁路只能在替代路径 parity、失败保留、迁移表、无消费者证据和维护者确认后删除；不保留长期兼容双路径。【已确认：当前维护者选择「认可这份清单，完成 AC14」，见 [真实确认记录](../evidence/2026-10-06-ticket39-1211/AC14-confirmation.md)；本确认不批准发布或额外删除】
 
-## 维护者 sign-off 项（AC14 门禁，待确认）
+## 维护者 sign-off 项（AC14 已确认）
+
+Current confirmation and official legacy smoke: [AC14 answer](../evidence/2026-10-06-ticket39-1211/AC14-confirmation.md), [1.21.1 world proof](../evidence/2026-10-06-ticket39-1211/README.md). The following checklist explains the confirmed scope; earlier pending statements in delivery history describe their original timestamps.
 
 代码层的旧路径已在 `d2c49f2a` 删除（AC3/AC5 要求：无 owner 的 static 状态与 restore-all 重放必须收口），
 但删除的是**公开面符号**，构成 breaking，需维护者知情/追认后才可勾选 AC14 的删除项、才可宣布
@@ -97,7 +99,7 @@ javadoc）；结构 guard：`Ticket39ModificationOwnershipTest`（真跑）。
 - Initial active-listener collection now uses `EventBusJS.postForCollection`, preserving bus order while rejecting callback failure/dead Context instead of applying a partial plan. Normal nested events keep their report-and-continue mode; actual Graal regressions cover mode restoration, fatal Error and interruption.
 - Every 26.x Block declaration restores the owned baseline before application, matching the documented whole-declaration replacement behavior. Later item/block declarations do not merge omitted earlier fields.
 - New initial-collection and same-target regressions are in the five-node test matrix. Registry-free callbacks execute; vanilla-dependent component/block cases retain their existing explicit skips and are not counted as runtime proof.
-- [Client readiness and audited limits](../evidence/2026-10-05-ticket39-client/README.md) distinguish integrated-server observations from independent-client visibility. Relog/resync claims were corrected to not verified because no production client replay path exists. AC10/AC11/AC14 remain open.
+- [Client readiness and audited limits](../evidence/2026-10-05-ticket39-client/README.md) preserve the historical audit and later independent NeoForge 26.2 synchronization results. The remaining legacy and deletion gates are now closed by [official 1.21.1 smoke](../evidence/2026-10-06-ticket39-1211/README.md) and [the direct AC14 confirmation](../evidence/2026-10-06-ticket39-1211/AC14-confirmation.md).
 
 ## Sources
 

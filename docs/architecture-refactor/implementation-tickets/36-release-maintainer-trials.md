@@ -4,7 +4,7 @@
 
 **Blocked by:** [04: P4 前性能发布政策确认](04-perf-release-policy.md)、[39: Runtime Item/Block modification 候选计划与 snapshot ownership](39-item-block-modification.md)、[33: CI 用途子集与 Fabric processor 延期替代 gate](33-build-ci-processor-gate.md)、[08: 真实外部 PluginAddon 从 discovery 到贡献消费与 reload 存活](08-plugin-addon.md)、[18: PData 与 ClientData 数据同步路径保护和 generation 边界](18-data-sync.md)、[20: 管理命令权限、生命周期入口与阶段诊断结果](20-runtime-commands.md)、[23: Recipe/数据生成/loot/tags/recipe viewer 既有事件域路径](23-recipe-data-surface.md)、[24: Block/Item/Level/Player/Command/Capability/goal/实体行为既有事件面覆盖路径](24-gameplay-event-surface.md)、[25: DataMap 与 EntitySelectors 查询 binding/Adapter/declaration 路径](25-query-tools.md)、[30: 错误诊断、telemetry、workspace 与用户报告链路](30-diagnostics.md)、[15: 启动期注册、typed Builder 与连带注册垂直收口](15-registry-startup.md)、[21: Dynamic Registry 多人 prepare/ack/commit 门禁](21-registry-dynamic-sync.md)、[22: Villager Trades 声明事件与稳定查询](22-villager-trades.md)、[26: CLIENT 输入与 HUD callback 生命周期](26-client-input-hud.md)、[27: CLIENT GUI 与 render Adapter 资源呈现清理](27-client-gui-render.md)、[28: PostEffects 声明事件与运行 binding 分离](28-post-effects.md)、[29: Assets/Lang 资源生成与回读收口](29-assets.md)
 
-**Status:** ready-for-human
+**Status:** closed（2026-10-06：维护者本人已完成四类维护任务及脚本作者代表性任务，确认结果无问题；无需其他维护者重复试做）
 
 **Assignee:** unassigned
 
@@ -23,19 +23,30 @@
 
 ## Acceptance criteria
 
-- [ ] 维护者真实完成新增事件、新增 Adapter、新增扩展点和新增版本四类任务；四类记录分别保留任务、入口、结果和遇到的问题。
-- [ ] 维护者以脚本作者视角仅凭公开 declaration、示例、诊断和必要公开文档完成代表性脚本任务；阅读多份公开文档本身不算失败，只有必须读内部实现、重复事实源、猜 owner 或绕过 managed API 才记录为失败或待修复。
-- [ ] 脚本作者任务只使用对应节点已通过 gate 的 capability；unavailable/not verified 能力验证明确拒绝与说明，不得被拿来要求脚本作者寻找隐藏替代路径。
-- [ ] 每个脚本作者任务保留可复制示例、实际诊断/错误输出和公开材料是否足够的结论；需要读内部实现、重复事实源、猜 owner 或改 Java 才能完成的情况记录为失败或待修复。
-- [ ] Adapter 试做区分注册类型/Builder 与平台能力接线两类差异，不把平台原生时机错误抽象进共享运行时。
-- [ ] 每类任务都能从作者入口追踪到 owner、事实源、依赖方向、受影响节点和保护测试，不需要跨多处猜测或静默同步。
-- [ ] 扩展点试做复用既有 Point、Contributor、Hook、显式依赖、freeze 与 Handle 语义，不重造生命周期、静态结果表或第二事实源。
-- [ ] 新增版本试做覆盖节点身份、坐标、制品命名、CI 用途子集和受影响测试，不改变五节点支持等级。
-- [ ] 每个试做改动在相关节点上通过必要检查，并能说明未覆盖节点的 gate 差异。
-- [ ] 任何需要修改规则、复制共享逻辑、查多个登记点或猜 owner 才能完成的情况被记录为失败或待修复，不得宣称维护体验改善。
-- [ ] 四份维护 cookbook 分别覆盖入口、owner、事实源、contract/golden 再生成、受影响节点、必要测试和不需要修改 runtime/bootstrap 的情形，并经对应真实试做验证。
-- [ ] 维护者明确确认四类任务和 cookbook 可按新结构完成，未解决问题有 owner 和 release 影响。
-- [ ] 新增版本试做在临时试做分支或夹具完成，保留验证记录，不把演示节点或试做功能合入最终五节点支持矩阵。
+- [x] 维护者真实完成新增事件、新增 Adapter、新增扩展点和新增版本四类任务；四类记录分别保留任务、入口、结果和遇到的问题。
+- [x] 维护者以脚本作者视角仅凭公开 declaration、示例、诊断和必要公开文档完成代表性脚本任务；阅读多份公开文档本身不算失败，只有必须读内部实现、重复事实源、猜 owner 或绕过 managed API 才记录为失败或待修复。
+- [x] 脚本作者任务只使用对应节点已通过 gate 的 capability；unavailable/not verified 能力验证明确拒绝与说明，不得被拿来要求脚本作者寻找隐藏替代路径。
+- [x] 每个脚本作者任务保留可复制示例、实际诊断/错误输出和公开材料是否足够的结论；需要读内部实现、重复事实源、猜 owner 或改 Java 才能完成的情况记录为失败或待修复。
+- [x] Adapter 试做区分注册类型/Builder 与平台能力接线两类差异，不把平台原生时机错误抽象进共享运行时。
+- [x] 每类任务都能从作者入口追踪到 owner、事实源、依赖方向、受影响节点和保护测试，不需要跨多处猜测或静默同步。
+- [x] 扩展点试做复用既有 Point、Contributor、Hook、显式依赖、freeze 与 Handle 语义，不重造生命周期、静态结果表或第二事实源。
+- [x] 新增版本试做覆盖节点身份、坐标、制品命名、CI 用途子集和受影响测试，不改变五节点支持等级。
+- [x] 每个试做改动在相关节点上通过必要检查，并能说明未覆盖节点的 gate 差异。
+- [x] 任何需要修改规则、复制共享逻辑、查多个登记点或猜 owner 才能完成的情况被记录为失败或待修复，不得宣称维护体验改善。
+- [x] 四份维护 cookbook 分别覆盖入口、owner、事实源、contract/golden 再生成、受影响节点、必要测试和不需要修改 runtime/bootstrap 的情形，并经对应真实试做验证。
+- [x] 维护者明确确认四类任务和 cookbook 可按新结构完成，未解决问题有 owner 和 release 影响。
+- [x] 新增版本试做在临时试做分支或夹具完成，保留验证记录，不把演示节点或试做功能合入最终五节点支持矩阵。
+
+## Closure record (2026-10-06)
+
+The maintainer confirmed personally completing the ticket 36 trials:
+
+> 36的没问题是我自己都测了的了，其他维护者不需要做，有其他问题自然会开pr。
+
+All acceptance boxes reflect the maintainer's acceptance of the trial package, not independent agent observations of individual commands. No per-node output or trial branch identity is reconstructed. The supporting [confirmation record](../evidence/2026-09-29-ticket36-trial-prep/TICKET36-AGENT-PREPARED-DRAFT.md) preserves the acceptance boundary.
+
+Ticket 39 remains in-review. Closing ticket 36 before that predecessor is a maintainer-directed acceptance of completed human trials; it does not close ticket 39, approve its public breaking-symbol deletions, or authorize release. No other maintainer needs to repeat ticket 36.
+
 
 ## Sources
 

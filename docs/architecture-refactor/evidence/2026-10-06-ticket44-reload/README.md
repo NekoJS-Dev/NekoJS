@@ -11,6 +11,6 @@ Environment: isolated Minecraft 26.2 / NeoForge 26.2.0.75 / Zulu Java 25 / MCP 0
 - Missing font fallback emitted `NEKO-6004` with root/node/resource/generation location.
 - The filtered client log is saved as `client.log`.
 
-## Remaining
+## Later completion
 
-This run proves initial pack/resource loading and controlled font/fallback behavior. It does not claim a same-session modified pack content readback after F3+T; MCP hotkey injection did not produce a new ResourceManager reload record. Ticket 44 AC3 remains open for complete pack-content reload/readback and maintainer whole-ticket conclusion.
+This historical run proves initial pack/resource loading only; its MCP hotkey injection did not produce a ResourceManager reload record. The later [complete combined session](../2026-10-06-ticket48-e2e/README.md) closes the pack-content gap: same JVM missing fallback width 24 → recovered provider A=4 width 16 → revised provider A=9 width 36, with actual native F3+T reloads. Successful CLIENT reload recreated generations/roots; this is not same-root/no-rerender recovery. Existing bitmap-font smoke covers glyph appearance, while these space-provider revisions cover native selection/advance readback. Ticket 44 is closed on these combined technical results; publication remains separate.

@@ -1,0 +1,501 @@
+[0710月2026 01:07:46.008] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher running: args [--username, NekoDev, --version, 1.21.1-neoforge-21.1.172, --gameDir, D:\mcmodDemo\NekoJS-mult\build\ticket39-autonomous, --assetsDir, C:\Users\11515\AppData\Roaming\.minecraft\assets, --assetIndex, 17, --uuid, d096d89a-d096-989a-0bc4-5b5264e1bc7b, --accessToken, ❄❄❄❄❄❄❄❄, --clientId, , --xuid, , --userType, legacy, --versionType, release, --fml.neoForgeVersion, 21.1.172, --fml.fmlVersion, 4.0.39, --fml.mcVersion, 1.21.1, --fml.neoFormVersion, 20240808.144430, --launchTarget, forgeclient]
+[0710月2026 01:07:46.014] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: JVM identified as Oracle Corporation Java HotSpot(TM) 64-Bit Server VM 21.0.10+8-LTS-217
+[0710月2026 01:07:46.019] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher 11.0.4+main.d2e20e43 starting: java version 21.0.10 by Oracle Corporation; OS Windows 11 arch amd64 version 10.0
+[0710月2026 01:07:46.240] [main/INFO] [net.neoforged.fml.loading.ImmediateWindowHandler/]: Loading ImmediateWindowProvider fmlearlywindow
+[0710月2026 01:07:46.345] [main/INFO] [EARLYDISPLAY/]: Trying GL version 4.6
+[0710月2026 01:07:46.502] [main/INFO] [EARLYDISPLAY/]: Requested GL version 4.6 got version 4.6
+[0710月2026 01:07:46.587] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.7 Source=union:/C:/Users/11515/AppData/Roaming/.minecraft/libraries/net/fabricmc/sponge-mixin/0.15.2+mixin.0.8.7/sponge-mixin-0.15.2+mixin.0.8.7.jar%23121!/ Service=ModLauncher Env=CLIENT
+[0710月2026 01:07:46.785] [pool-2-thread-1/INFO] [EARLYDISPLAY/]: GL info: Intel(R) Iris(R) Xe Graphics GL version 4.6.0 - Build 31.0.101.3251, Intel
+[0710月2026 01:07:47.015] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found mod file "client-1.21.1-20240808.144430-srg.jar" [locator: production client provider +net.neoforged:neoforge:21.1.172:client]
+[0710月2026 01:07:47.046] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found mod file "neoforge-21.1.172-universal.jar" [locator: PathBasedLocator[name=neoforge, paths=[C:\Users\11515\AppData\Roaming\.minecraft\libraries\net\neoforged\neoforge\21.1.172\neoforge-21.1.172-universal.jar]], reader: mod manifest]
+[0710月2026 01:07:47.070] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found mod file "graal-1504336-8762962.jar" [locator: {mods folder locator at D:\mcmodDemo\NekoJS-mult\build\ticket39-autonomous\mods}, reader: mod manifest]
+[0710月2026 01:07:47.077] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found mod file "minecraft-mcp-1.21.1-neoforge.jar" [locator: {mods folder locator at D:\mcmodDemo\NekoJS-mult\build\ticket39-autonomous\mods}, reader: mod manifest]
+[0710月2026 01:07:47.086] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found mod file "nekojs-neoforge-1.21.1-1.1.0-preview3.jar" [locator: {mods folder locator at D:\mcmodDemo\NekoJS-mult\build\ticket39-autonomous\mods}, reader: mod manifest]
+[0710月2026 01:07:47.263] [main/INFO] [net.neoforged.fml.loading.moddiscovery.locators.JarInJarDependencyLocator/]: Found 2 dependencies adding them to mods collection
+[0710月2026 01:07:47.263] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found gamelibrary file "mixinextras-neoforge-0.4.1.jar" [parent: neoforge-21.1.172-universal.jar, locator: jarinjar, reader: mod manifest]
+[0710月2026 01:07:47.263] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found library file "net.neoforged.neoforge-coremods-21.1.172.jar" [parent: neoforge-21.1.172-universal.jar, locator: jarinjar, reader: mod manifest]
+[0710月2026 01:07:47.265] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/]: 
+     Mod List:
+		Name Version (Mod Id)
+
+		GraalMC 25.1.3.7 (graalmc)
+		Minecraft 1.21.1 (minecraft)
+		ModDev MCP 0.4.2 (mcpmod)
+		NekoJS 1.1.0-preview3 (nekojs)
+		NeoForge 21.1.172 (neoforge)
+[0710月2026 01:07:48.432] [main/INFO] [mixin/]: Compatibility level set to JAVA_21
+[0710月2026 01:07:48.461] [main/INFO] [cpw.mods.modlauncher.LaunchServiceHandler/MODLAUNCHER]: Launching target 'forgeclient' with arguments [--version, 1.21.1-neoforge-21.1.172, --gameDir, D:\mcmodDemo\NekoJS-mult\build\ticket39-autonomous, --assetsDir, C:\Users\11515\AppData\Roaming\.minecraft\assets, --uuid, d096d89a-d096-989a-0bc4-5b5264e1bc7b, --username, NekoDev, --assetIndex, 17, --accessToken, ❄❄❄❄❄❄❄❄, --clientId, , --xuid, , --userType, legacy, --versionType, release]
+[0710月2026 01:07:51.455] [main/INFO] [MixinExtras|Service/]: Initializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.4.1).
+[0710月2026 01:07:53.929] [Datafixer Bootstrap/INFO] [com.mojang.datafixers.DataFixerBuilder/]: 229 Datafixer optimizations took 823 milliseconds
+[0710月2026 01:08:02.603] [Render thread/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/C:/Users/11515/AppData/Roaming/.minecraft/libraries/net/minecraft/client/1.21.1-20240808.144430/client-1.21.1-20240808.144430-srg.jar%23191!/assets/.mcassetsroot' uses unexpected schema
+[0710月2026 01:08:02.604] [Render thread/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/C:/Users/11515/AppData/Roaming/.minecraft/libraries/net/minecraft/client/1.21.1-20240808.144430/client-1.21.1-20240808.144430-srg.jar%23191!/data/.mcassetsroot' uses unexpected schema
+[0710月2026 01:08:02.659] [Render thread/INFO] [com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService/]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
+[0710月2026 01:08:02.695] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Setting user: NekoDev
+[0710月2026 01:08:03.139] [Render thread/ERROR] [net.minecraft.client.OptionInstance/]: Illegal option value 2870 for translation{key='options.fov', args=[]}
+[0710月2026 01:08:03.152] [Render thread/ERROR] [net.minecraft.client.Options/]: Error parsing option value 0.5d for option Text Background Opacity: Failed to parse either. First: Not a number: "0.5d"; Second: Not a boolean: "0.5d"
+[0710月2026 01:08:03.163] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Backend library: LWJGL version 3.3.3+5
+[0710月2026 01:08:03.706] [modloading-worker-0/INFO] [net.neoforged.neoforge.common.NeoForgeMod/NEOFORGE-MOD]: NeoForge mod loading, version 21.1.172, for MC 1.21.1
+[0710月2026 01:08:03.831] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[0710月2026 01:08:04.663] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[0710月2026 01:08:04.755] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] 已初始化环境入口: D:\mcmodDemo\NekoJS-mult\build\ticket39-autonomous\nekojs\startup_scripts\src\main.js — workspace entry point created
+[0710月2026 01:08:04.756] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] 已初始化环境入口: D:\mcmodDemo\NekoJS-mult\build\ticket39-autonomous\nekojs\server_scripts\src\main.js — workspace entry point created
+[0710月2026 01:08:04.756] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] 已初始化环境入口: D:\mcmodDemo\NekoJS-mult\build\ticket39-autonomous\nekojs\client_scripts\src\main.js — workspace entry point created
+[0710月2026 01:08:04.756] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [NekoJS] NekoJS plugin runtime bootstrapped once (assembly)
+[0710月2026 01:08:05.752] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] 发现了 1 个 STARTUP 脚本 — scripts discovered
+[0710月2026 01:08:05.752] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本 — scripts discovered
+[0710月2026 01:08:05.753] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] 发现了 1 个 CLIENT 脚本 — scripts discovered
+[0710月2026 01:08:07.867] [modloading-worker-0/INFO] [NekoJS/]: 正在为 STARTUP 注册 14 个事件组... — registering event groups
+[0710月2026 01:08:08.445] [modloading-sync-worker/INFO] [NekoJS/]: 正在为 CLIENT 注册 14 个事件组... — registering event groups
+[0710月2026 01:08:08.750] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] Hello, World! (Loaded startup example script)
+[0710月2026 01:08:09.743] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] Hello, World! (Loaded client example script)
+[0710月2026 01:08:10.254] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources, mod/nekojs, mod/graalmc, mod/neoforge, mod/mcpmod, nekojs
+[0710月2026 01:08:10.664] [Render thread/INFO] [NekoJS/]: Generated default IDE workspace config at D:\mcmodDemo\NekoJS-mult\build\ticket39-autonomous\nekojs\server_scripts\jsconfig.json; later edits by the user are kept as-is
+[0710月2026 01:08:10.665] [Render thread/INFO] [NekoJS/]: Generated default IDE workspace config at D:\mcmodDemo\NekoJS-mult\build\ticket39-autonomous\nekojs\client_scripts\jsconfig.json; later edits by the user are kept as-is
+[0710月2026 01:08:10.666] [Render thread/INFO] [NekoJS/]: Generated default IDE workspace config at D:\mcmodDemo\NekoJS-mult\build\ticket39-autonomous\nekojs\startup_scripts\jsconfig.json; later edits by the user are kept as-is
+[0710月2026 01:08:10.667] [Render thread/INFO] [NekoJS/]: Generated default IDE workspace config at D:\mcmodDemo\NekoJS-mult\build\ticket39-autonomous\nekojs\test_scripts\jsconfig.json; later edits by the user are kept as-is
+[0710月2026 01:08:10.669] [Render thread/INFO] [NekoJS/]: Generated default IDE workspace config at D:\mcmodDemo\NekoJS-mult\build\ticket39-autonomous\.neko_probe\jsconfig.json; later edits by the user are kept as-is
+[0710月2026 01:08:10.680] [Worker-Main-8/INFO] [net.minecraft.client.gui.font.providers.UnihexProvider/]: Found unifont_all_no_pua-15.1.05.hex, loading
+[0710月2026 01:08:10.690] [Worker-Main-6/INFO] [net.minecraft.client.gui.font.providers.UnihexProvider/]: Found unifont_jp_patch-15.1.05.hex, loading
+[0710月2026 01:08:13.659] [Render thread/WARN] [net.minecraft.client.sounds.SoundEngine/]: Missing sound for event: minecraft:item.goat_horn.play
+[0710月2026 01:08:13.659] [Render thread/WARN] [net.minecraft.client.sounds.SoundEngine/]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[0710月2026 01:08:13.732] [Render thread/INFO] [com.mojang.blaze3d.audio.Library/]: OpenAL initialized on device OpenAL Soft on 扬声器 (Razer Barracuda X)
+[0710月2026 01:08:13.733] [Render thread/INFO] [net.minecraft.client.sounds.SoundEngine/SOUNDS]: Sound engine started
+[0710月2026 01:08:13.851] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x512x4 minecraft:textures/atlas/blocks.png-atlas
+[0710月2026 01:08:13.920] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x256x4 minecraft:textures/atlas/signs.png-atlas
+[0710月2026 01:08:13.924] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x512x4 minecraft:textures/atlas/shield_patterns.png-atlas
+[0710月2026 01:08:13.927] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x512x4 minecraft:textures/atlas/banner_patterns.png-atlas
+[0710月2026 01:08:13.930] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x1024x4 minecraft:textures/atlas/armor_trims.png-atlas
+[0710月2026 01:08:13.958] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x256x4 minecraft:textures/atlas/chest.png-atlas
+[0710月2026 01:08:13.959] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 128x64x4 minecraft:textures/atlas/decorated_pot.png-atlas
+[0710月2026 01:08:13.961] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x4 minecraft:textures/atlas/beds.png-atlas
+[0710月2026 01:08:13.962] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x4 minecraft:textures/atlas/shulker_boxes.png-atlas
+[0710月2026 01:08:14.168] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
+[0710月2026 01:08:14.175] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
+[0710月2026 01:08:14.178] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x128x0 minecraft:textures/atlas/mob_effects.png-atlas
+[0710月2026 01:08:14.180] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 64x64x0 minecraft:textures/atlas/map_decorations.png-atlas
+[0710月2026 01:08:14.181] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x512x0 minecraft:textures/atlas/gui.png-atlas
+[0710月2026 01:08:14.355] [Render thread/WARN] [net.minecraft.client.renderer.ShaderInstance/]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[0710月2026 01:08:14.718] [Render thread/INFO] [NekoJS/]: 正在为 CLIENT 注册 14 个事件组... — registering event groups
+[0710月2026 01:08:14.726] [Render thread/INFO] [NekoJS/]: [client] 正在重载 CLIENT 脚本... — reloading scripts (x2)
+[0710月2026 01:08:14.738] [Render thread/INFO] [NekoJS/]: [client] 发现了 1 个 CLIENT 脚本 — scripts discovered
+[0710月2026 01:08:14.743] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] Hello, World! (Loaded client example script)
+[0710月2026 01:08:14.756] [Render thread/INFO] [NekoJS PostEffects/]: Installed client post-effect generation 0 (0 definition(s), 0 removed)
+[0710月2026 01:08:14.778] [Render thread/INFO] [net.neoforged.neoforge.client.entity.animation.json.AnimationLoader/]: Loaded 0 entity animations
+[0710月2026 01:08:15.744] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] CLIENT 脚本重载完毕 — script reload finished (x2)
+[0710月2026 01:11:00.015] [Render thread/INFO] [net.minecraft.server.MinecraftServer/]: Found new data pack nekojs, loading it automatically
+[0710月2026 01:11:01.350] [Worker-Main-6/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组... — registering event groups
+[0710月2026 01:11:01.373] [Worker-Main-6/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... — reloading scripts (x2)
+[0710月2026 01:11:01.382] [Worker-Main-6/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本 — scripts discovered
+[0710月2026 01:11:01.488] [Worker-Main-6/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[0710月2026 01:11:01.496] [Worker-Main-6/INFO] [NekoJS/]: [server] SERVER 脚本重载完毕 — script reload finished (x2)
+[0710月2026 01:11:01.648] [Render thread/INFO] [net.minecraft.world.item.crafting.RecipeManager/]: Loaded 1290 recipes
+[0710月2026 01:11:01.743] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] generateData stage 'after_mods' published 0 file(s); skipped 0 user-owned file(s)
+[0710月2026 01:11:01.836] [Render thread/INFO] [net.minecraft.advancements.AdvancementTree/]: Loaded 1399 advancements
+[0710月2026 01:12:07.413] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Starting integrated minecraft server version 1.21.1
+[0710月2026 01:12:07.415] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Generating keypair
+[0710月2026 01:12:10.709] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Preparing start region for dimension minecraft:overworld
+[0710月2026 01:12:10.745] [Render thread/INFO] [net.minecraft.server.level.progress.LoggerChunkProgressListener/]: Preparing spawn area: 2%
+[0710月2026 01:12:11.240] [Render thread/INFO] [net.minecraft.server.level.progress.LoggerChunkProgressListener/]: Preparing spawn area: 2%
+[0710月2026 01:12:11.731] [Render thread/INFO] [net.minecraft.server.level.progress.LoggerChunkProgressListener/]: Preparing spawn area: 16%
+[0710月2026 01:12:12.269] [Render thread/INFO] [net.minecraft.server.level.progress.LoggerChunkProgressListener/]: Preparing spawn area: 51%
+[0710月2026 01:12:12.736] [Render thread/INFO] [net.minecraft.server.level.progress.LoggerChunkProgressListener/]: Preparing spawn area: 51%
+[0710月2026 01:12:12.912] [Render thread/INFO] [net.minecraft.server.level.progress.LoggerChunkProgressListener/]: Time elapsed: 2185 ms
+[0710月2026 01:12:12.915] [Server thread/INFO] [net.neoforged.neoforge.server.permission.PermissionAPI/]: Successfully initialized permission handler neoforge:default_handler
+[0710月2026 01:12:13.025] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Changing view distance to 8, from 10
+[0710月2026 01:12:13.025] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Changing simulation distance to 12, from 0
+[0710月2026 01:12:13.867] [Server thread/INFO] [net.minecraft.server.players.PlayerList/]: NekoDev[local:E:d811562f] logged in with entity id 11 at (-863.5, 84.0, -57.5)
+[0710月2026 01:12:13.950] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: NekoDev joined the game
+[0710月2026 01:12:14.468] [Render thread/INFO] [net.minecraft.advancements.AdvancementTree/]: Loaded 2 advancements
+[0710月2026 01:12:14.747] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] [ticket39-1211] server phase=baseline-or-restored diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON
+[0710月2026 01:17:17.968] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 01:17:18.151] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 01:17:18.215] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 01:17:18.217] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 01:25:58.718] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 01:25:58.736] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 01:25:58.744] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 01:25:58.746] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 01:27:44.340] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 01:27:44.544] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 01:27:44.564] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 01:27:44.564] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 01:40:36.353] [Render thread/INFO] [NekoJS/]: 正在为 CLIENT 注册 14 个事件组... — registering event groups
+[0710月2026 01:40:36.371] [Render thread/INFO] [NekoJS/]: [client] 正在重载 CLIENT 脚本... — reloading scripts (x2)
+[0710月2026 01:40:36.386] [Render thread/INFO] [NekoJS/]: [client] 发现了 2 个 CLIENT 脚本 — scripts discovered
+[0710月2026 01:40:36.433] [Render thread/INFO] [NekoJS PostEffects/]: Installed client post-effect generation 1 (0 definition(s), 0 removed)
+[0710月2026 01:40:36.434] [Render thread/INFO] [NekoJS/]: [client] Hello, World! (Loaded client example script)
+[0710月2026 01:40:36.451] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] NekoJS CLIENT reload scheduled on the client thread.
+[0710月2026 01:40:36.493] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] NekoJS client reload committed: generation=3 phase=COMMIT - no errors.
+[0710月2026 01:40:36.745] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] CLIENT 脚本重载完毕 — script reload finished (x2)
+[0710月2026 01:40:37.744] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON held=empty
+[0710月2026 01:40:48.936] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 01:40:48.997] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 01:40:49.024] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 01:40:49.025] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 01:41:22.290] [Server thread/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组... — registering event groups
+[0710月2026 01:41:22.303] [Server thread/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... — reloading scripts (x2)
+[0710月2026 01:41:22.314] [Server thread/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本 — scripts discovered
+[0710月2026 01:41:22.402] [Server thread/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[0710月2026 01:41:22.411] [Server thread/INFO] [NekoJS/]: NekoJS modifications applied at commit (2 item(s))
+[0710月2026 01:41:22.419] [Server thread/INFO] [NekoJS/]: [server] [ticket39-1211] declared items=2
+[0710月2026 01:41:22.549] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] [NekoJS] ✔ Scripts reloaded perfectly!
+[0710月2026 01:41:22.550] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] NekoJS server reload committed: generation=2 phase=COMMIT
+[0710月2026 01:41:22.745] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] SERVER 脚本重载完毕 — script reload finished (x2)
+[0710月2026 01:41:23.745] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] [ticket39-1211] server phase=active diamondMax=16 diamondRarity=EPIC stickMax=16 stickRarity=EPIC
+[0710月2026 01:41:23.745] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=16 diamondRarity=EPIC stickMax=16 stickRarity=EPIC held=empty
+[0710月2026 01:43:10.318] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 01:43:10.338] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 01:43:10.343] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 01:43:10.344] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 01:45:14.770] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: NekoDev has made the advancement [Diamonds!]
+[0710月2026 01:45:14.779] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: [NekoDev: Gave 20 [Diamond] to NekoDev]
+[0710月2026 01:45:14.799] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] NekoDev has made the advancement [Diamonds!]
+[0710月2026 01:45:14.801] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] Gave 20 [Diamond] to NekoDev
+[0710月2026 01:45:14.802] [Render thread/INFO] [net.minecraft.advancements.AdvancementTree/]: Loaded 21 advancements
+[0710月2026 01:45:15.747] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=16 diamondRarity=EPIC stickMax=16 stickRarity=EPIC heldId=minecraft:diamond heldCount=16 heldMax=16 heldRarity=EPIC
+[0710月2026 01:46:08.071] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 01:46:08.094] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 01:46:08.108] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 01:46:08.109] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 01:49:32.850] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 01:49:32.932] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 01:49:32.939] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 01:49:32.939] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 01:56:35.781] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 01:56:35.790] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 01:56:35.795] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 01:56:35.795] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 01:57:23.133] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 01:57:23.150] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 01:57:23.155] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 01:57:23.155] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 02:00:53.424] [Server thread/WARN] [net.minecraft.server.MinecraftServer/]: Can't keep up! Is the server overloaded? Running 2238ms or 44 ticks behind
+[0710月2026 02:06:02.766] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... — reloading scripts (x2)
+[0710月2026 02:06:02.874] [Server thread/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组... — registering event groups
+[0710月2026 02:06:02.898] [Server thread/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本 — scripts discovered
+[0710月2026 02:06:02.944] [Server thread/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[0710月2026 02:06:02.949] [Server thread/ERROR] [NekoJS/]: Reloading server scripts failed
+com.tkisor.nekojs.core.lifecycle.NekoReloadException: reload failed: type=server generation=3 phase=STATE_PLAN owner=ScriptManager[server] domain=state-plan-preflight:item-block-modification error=candidate state plan 'item-block-modification' failed joint preflight
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadFailure(ScriptManager.java:1217) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:939) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.doReloadScripts(ScriptManager.java:779) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScripts(ScriptManager.java:752) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot.reload(NekoRuntimeRoot.java:209) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.command.NekoJSCommands.reloadType(NekoJSCommands.java:238) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.command.NekoJSCommands.lambda$addReloadType$15(NekoJSCommands.java:199) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at MC-BOOTSTRAP/brigadier@1.3.10/com.mojang.brigadier.context.ContextChain.runExecutable(ContextChain.java:73) ~[brigadier-1.3.10.jar%23149!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.execution.tasks.ExecuteCommand.execute(ExecuteCommand.java:29) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.execution.tasks.ExecuteCommand.execute(ExecuteCommand.java:13) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.execution.UnboundEntryAction.lambda$bind$0(UnboundEntryAction.java:8) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.execution.CommandQueueEntry.execute(CommandQueueEntry.java:8) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.execution.ExecutionContext.runCommandQueue(ExecutionContext.java:107) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.Commands.executeCommandInContext(Commands.java:363) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.Commands.performCommand(Commands.java:284) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.network.ServerGamePacketListenerImpl.performUnsignedChatCommand(ServerGamePacketListenerImpl.java:1282) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.network.ServerGamePacketListenerImpl.lambda$handleChatCommand$7(ServerGamePacketListenerImpl.java:1269) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.TickTask.run(TickTask.java:18) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.util.thread.BlockableEventLoop.doRunTask(BlockableEventLoop.java:148) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.util.thread.ReentrantBlockableEventLoop.doRunTask(ReentrantBlockableEventLoop.java:23) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:872) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:170) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.util.thread.BlockableEventLoop.pollTask(BlockableEventLoop.java:122) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.pollTaskInternal(MinecraftServer.java:855) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.pollTask(MinecraftServer.java:849) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.util.thread.BlockableEventLoop.managedBlock(BlockableEventLoop.java:132) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.managedBlock(MinecraftServer.java:821) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.waitUntilNextTick(MinecraftServer.java:826) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java:712) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.lambda$spin$2(MinecraftServer.java:267) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at java.base/java.lang.Thread.run(Thread.java:1583) [?:?]
+Caused by: com.tkisor.nekojs.core.state.GlobalStateException: candidate state plan 'item-block-modification' failed joint preflight
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.state.GenerationGlobals.preflightJoint(GenerationGlobals.java:126) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:937) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	... 29 more
+Caused by: java.lang.IllegalArgumentException: Invalid maxStackSize 0: must be between 1 and 99
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.preflightItem(ModificationDomainOwner.java:144) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.preflight(ModificationDomainOwner.java:129) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.modification.ModificationCandidatePlan.preflight(ModificationCandidatePlan.java:144) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.state.GenerationGlobals.preflightJoint(GenerationGlobals.java:121) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:937) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	... 29 more
+[0710月2026 02:06:02.957] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] reload failed: type=server generation=3 phase=STATE_PLAN owner=ScriptManager[server] domain=state-plan-preflight:item-block-modification error=candidate state plan 'item-block-modification' failed joint preflight; candidate was discarded and the active generation remains unchanged.
+[0710月2026 02:06:03.765] [NekoJS-Log-Flusher/ERROR] [NekoJS/]: [server] [NEKO-1008] SERVER 脚本事务重载失败，候选 generation 已关闭，active 环境保持不变 — transactional script reload failed
+com.tkisor.nekojs.core.lifecycle.NekoReloadException: reload failed: type=server generation=3 phase=STATE_PLAN owner=ScriptManager[server] domain=state-plan-preflight:item-block-modification error=candidate state plan 'item-block-modification' failed joint preflight
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadFailure(ScriptManager.java:1217) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:939) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.doReloadScripts(ScriptManager.java:779) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScripts(ScriptManager.java:752) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot.reload(NekoRuntimeRoot.java:209) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.command.NekoJSCommands.reloadType(NekoJSCommands.java:238) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.command.NekoJSCommands.lambda$addReloadType$15(NekoJSCommands.java:199) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at MC-BOOTSTRAP/brigadier@1.3.10/com.mojang.brigadier.context.ContextChain.runExecutable(ContextChain.java:73) ~[brigadier-1.3.10.jar%23149!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.execution.tasks.ExecuteCommand.execute(ExecuteCommand.java:29) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.execution.tasks.ExecuteCommand.execute(ExecuteCommand.java:13) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.execution.UnboundEntryAction.lambda$bind$0(UnboundEntryAction.java:8) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.execution.CommandQueueEntry.execute(CommandQueueEntry.java:8) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.execution.ExecutionContext.runCommandQueue(ExecutionContext.java:107) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.Commands.executeCommandInContext(Commands.java:363) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.commands.Commands.performCommand(Commands.java:284) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.network.ServerGamePacketListenerImpl.performUnsignedChatCommand(ServerGamePacketListenerImpl.java:1282) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.network.ServerGamePacketListenerImpl.lambda$handleChatCommand$7(ServerGamePacketListenerImpl.java:1269) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.TickTask.run(TickTask.java:18) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.util.thread.BlockableEventLoop.doRunTask(BlockableEventLoop.java:148) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.util.thread.ReentrantBlockableEventLoop.doRunTask(ReentrantBlockableEventLoop.java:23) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:872) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:170) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.util.thread.BlockableEventLoop.pollTask(BlockableEventLoop.java:122) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.pollTaskInternal(MinecraftServer.java:855) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.pollTask(MinecraftServer.java:849) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.util.thread.BlockableEventLoop.managedBlock(BlockableEventLoop.java:132) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.managedBlock(MinecraftServer.java:821) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.waitUntilNextTick(MinecraftServer.java:826) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java:712) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.lambda$spin$2(MinecraftServer.java:267) ~[client-1.21.1-20240808.144430-srg.jar%23191!/:?]
+	at java.base/java.lang.Thread.run(Thread.java:1583) [?:?]
+Caused by: com.tkisor.nekojs.core.state.GlobalStateException: candidate state plan 'item-block-modification' failed joint preflight
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.state.GenerationGlobals.preflightJoint(GenerationGlobals.java:126) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:937) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	... 29 more
+Caused by: java.lang.IllegalArgumentException: Invalid maxStackSize 0: must be between 1 and 99
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.preflightItem(ModificationDomainOwner.java:144) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.preflight(ModificationDomainOwner.java:129) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.modification.ModificationCandidatePlan.preflight(ModificationCandidatePlan.java:144) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.state.GenerationGlobals.preflightJoint(GenerationGlobals.java:121) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:937) ~[nekojs-neoforge-1.21.1-1.1.0-preview3.jar%23195!/:?]
+	... 29 more
+[0710月2026 02:08:06.141] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 02:08:06.161] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 02:08:06.166] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 02:08:06.166] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 02:08:50.358] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: [NekoDev: Removed 20 item(s) from player NekoDev]
+[0710月2026 02:08:50.362] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] Removed 20 item(s) from player NekoDev
+[0710月2026 02:08:50.768] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=16 diamondRarity=EPIC stickMax=16 stickRarity=EPIC held=empty
+[0710月2026 02:09:02.092] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: [NekoDev: Gave 3 [Diamond] to NekoDev]
+[0710月2026 02:09:02.094] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] Gave 3 [Diamond] to NekoDev
+[0710月2026 02:09:02.768] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=16 diamondRarity=EPIC stickMax=16 stickRarity=EPIC heldId=minecraft:diamond heldCount=3 heldMax=16 heldRarity=EPIC
+[0710月2026 02:10:09.543] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 02:10:09.554] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 02:10:09.557] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 02:10:09.557] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 02:14:00.492] [Server thread/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组... — registering event groups
+[0710月2026 02:14:00.500] [Server thread/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... — reloading scripts (x2)
+[0710月2026 02:14:00.509] [Server thread/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本 — scripts discovered
+[0710月2026 02:14:00.524] [Server thread/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[0710月2026 02:14:00.565] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] [NekoJS] ✔ Scripts reloaded perfectly!
+[0710月2026 02:14:00.565] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] NekoJS server reload committed: generation=3 phase=COMMIT
+[0710月2026 02:14:00.771] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] SERVER 脚本重载完毕 — script reload finished (x2)
+[0710月2026 02:14:01.772] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] [ticket39-1211] server phase=baseline-or-restored diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON
+[0710月2026 02:14:01.772] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=3 heldMax=16 heldRarity=EPIC
+[0710月2026 02:17:36.125] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: [NekoDev: Removed 3 item(s) from player NekoDev]
+[0710月2026 02:17:36.129] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] Removed 3 item(s) from player NekoDev
+[0710月2026 02:17:36.774] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON held=empty
+[0710月2026 02:19:33.455] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: [NekoDev: Gave 20 [Diamond] to NekoDev]
+[0710月2026 02:19:33.459] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] Gave 20 [Diamond] to NekoDev
+[0710月2026 02:19:33.775] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:21:02.200] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 02:21:02.226] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 02:21:02.250] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 02:21:02.252] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 02:47:38.599] [Render thread/INFO] [NekoJS/]: 正在为 CLIENT 注册 14 个事件组... — registering event groups
+[0710月2026 02:47:38.602] [Render thread/INFO] [NekoJS/]: [client] 正在重载 CLIENT 脚本... — reloading scripts (x2)
+[0710月2026 02:47:38.608] [Render thread/INFO] [NekoJS/]: [client] 发现了 2 个 CLIENT 脚本 — scripts discovered
+[0710月2026 02:47:38.621] [Render thread/INFO] [NekoJS PostEffects/]: Installed client post-effect generation 2 (0 definition(s), 0 removed)
+[0710月2026 02:47:38.622] [Render thread/INFO] [NekoJS/]: [client] Hello, World! (Loaded client example script)
+[0710月2026 02:47:38.622] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] NekoJS CLIENT reload scheduled on the client thread.
+[0710月2026 02:47:38.628] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] NekoJS client reload committed: generation=4 phase=COMMIT - no errors.
+[0710月2026 02:47:38.790] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] CLIENT 脚本重载完毕 — script reload finished (x2)
+[0710月2026 02:47:39.790] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:47:43.791] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:47:48.789] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:47:53.791] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:47:58.791] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:48:03.790] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:48:08.790] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:48:13.790] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:48:18.791] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:48:23.790] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:48:28.790] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:48:33.790] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:48:38.790] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:48:43.790] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:48:48.790] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:48:53.790] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:48:58.791] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:49:03.791] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:49:08.790] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:49:13.791] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:49:18.792] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:49:23.791] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:49:28.792] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:49:33.791] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 02:49:35.165] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 02:49:35.173] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 02:49:35.192] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 02:49:35.192] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 03:11:37.998] [Server thread/INFO] [net.minecraft.server.network.ServerGamePacketListenerImpl/]: NekoDev lost connection: Disconnected
+[0710月2026 03:11:37.999] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: NekoDev left the game
+[0710月2026 03:11:38.019] [Server thread/INFO] [net.minecraft.server.network.ServerCommonPacketListenerImpl/]: Stopping singleplayer server as player logged out
+[0710月2026 03:11:38.102] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Stopping server
+[0710月2026 03:11:38.104] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving players
+[0710月2026 03:11:38.104] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving worlds
+[0710月2026 03:11:39.636] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 03:11:39.690] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 03:11:39.696] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 03:11:39.706] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (New World): All chunks are saved
+[0710月2026 03:11:39.707] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[0710月2026 03:11:39.707] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[0710月2026 03:11:39.707] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage: All dimensions are saved
+[0710月2026 03:14:06.302] [Worker-Main-70/INFO] [NekoJS/]: 正在为 SERVER 注册 14 个事件组... — registering event groups
+[0710月2026 03:14:06.307] [Worker-Main-70/INFO] [NekoJS/]: [server] 正在重载 SERVER 脚本... — reloading scripts (x2)
+[0710月2026 03:14:06.313] [Worker-Main-70/INFO] [NekoJS/]: [server] 发现了 2 个 SERVER 脚本 — scripts discovered
+[0710月2026 03:14:06.323] [Worker-Main-70/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[0710月2026 03:14:06.327] [Worker-Main-70/INFO] [NekoJS/]: [server] SERVER 脚本重载完毕 — script reload finished (x2)
+[0710月2026 03:14:06.452] [Render thread/INFO] [net.minecraft.world.item.crafting.RecipeManager/]: Loaded 1290 recipes
+[0710月2026 03:14:06.514] [Render thread/INFO] [net.minecraft.advancements.AdvancementTree/]: Loaded 1399 advancements
+[0710月2026 03:14:06.798] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] generateData stage 'after_mods' published 0 file(s); skipped 0 user-owned file(s)
+[0710月2026 03:14:06.941] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Starting integrated minecraft server version 1.21.1
+[0710月2026 03:14:06.942] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Generating keypair
+[0710月2026 03:14:07.816] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Preparing start region for dimension minecraft:overworld
+[0710月2026 03:14:08.063] [Render thread/INFO] [net.minecraft.server.level.progress.LoggerChunkProgressListener/]: Preparing spawn area: 0%
+[0710月2026 03:14:08.122] [Server thread/INFO] [net.neoforged.neoforge.server.permission.PermissionAPI/]: Successfully initialized permission handler neoforge:default_handler
+[0710月2026 03:14:08.135] [Render thread/INFO] [net.minecraft.server.level.progress.LoggerChunkProgressListener/]: Time elapsed: 307 ms
+[0710月2026 03:14:08.149] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Changing view distance to 8, from 10
+[0710月2026 03:14:08.149] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Changing simulation distance to 12, from 0
+[0710月2026 03:14:08.444] [Server thread/INFO] [net.minecraft.server.players.PlayerList/]: NekoDev[local:E:2552606a] logged in with entity id 8940 at (-863.5, 84.0, -57.5)
+[0710月2026 03:14:08.471] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: NekoDev joined the game
+[0710月2026 03:14:08.546] [Render thread/INFO] [net.minecraft.advancements.AdvancementTree/]: Loaded 21 advancements
+[0710月2026 03:14:08.689] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 03:14:08.708] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 03:14:08.711] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 03:14:08.711] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 03:22:18.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] [ticket39-1211] server phase=baseline-or-restored diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON
+[0710月2026 03:22:20.026] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Saving and pausing game...
+[0710月2026 03:22:20.045] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[0710月2026 03:22:20.053] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[0710月2026 03:22:20.054] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[0710月2026 03:22:31.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:22:36.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:22:41.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:22:46.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:22:51.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:22:56.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:23:01.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:23:06.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:23:11.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:23:16.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:23:21.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:23:26.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:23:31.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:23:36.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:23:41.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:23:46.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:23:51.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:23:56.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:24:01.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:24:06.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:24:11.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:24:16.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:24:21.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:24:26.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:24:31.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:24:36.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:24:41.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:24:46.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:24:51.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:24:56.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:25:01.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:25:06.801] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:25:11.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:25:16.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:25:21.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:25:26.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:25:31.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:25:36.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:25:41.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:25:46.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:25:51.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:25:56.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:26:01.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:26:06.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:26:11.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:26:16.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:26:21.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:26:26.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:26:31.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:26:36.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:26:41.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:26:46.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:26:51.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:26:56.804] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:27:01.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:27:06.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:27:11.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:27:16.804] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:27:21.804] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:27:26.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:27:31.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:27:36.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:27:41.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:27:46.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:27:51.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:27:56.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=20 heldMax=64 heldRarity=COMMON
+[0710月2026 03:27:59.134] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: [NekoDev: Gave 1 [Diamond] to NekoDev]
+[0710月2026 03:27:59.137] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [System] [CHAT] Gave 1 [Diamond] to NekoDev
+[0710月2026 03:28:00.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:28:01.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:28:06.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:28:11.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:28:16.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:28:21.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:28:26.812] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:28:31.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:28:36.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:28:41.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:28:46.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:28:51.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:28:56.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:29:01.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:29:06.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:29:11.802] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:29:16.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:29:21.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:29:26.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:29:31.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:29:36.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:29:41.830] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:29:46.829] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:29:51.908] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:29:56.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:30:01.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:30:06.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:30:11.804] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:30:16.804] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:30:21.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:30:26.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:30:31.821] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:30:36.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:30:41.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:30:46.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:30:51.833] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:30:56.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:31:01.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:31:06.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:31:11.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:31:16.812] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:31:21.852] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:31:26.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:31:31.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:31:36.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:31:41.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:31:46.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:31:51.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:31:56.807] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:32:01.816] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:32:06.818] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:32:08.352] [Server thread/WARN] [net.minecraft.server.MinecraftServer/]: Can't keep up! Is the server overloaded? Running 2123ms or 42 ticks behind
+[0710月2026 03:32:11.804] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:32:16.804] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:32:21.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:32:26.803] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:32:31.811] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON
+[0710月2026 03:32:36.814] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [ticket39-1211] client diamondMax=64 diamondRarity=COMMON stickMax=64 stickRarity=COMMON heldId=minecraft:diamond heldCount=21 heldMax=64 heldRarity=COMMON

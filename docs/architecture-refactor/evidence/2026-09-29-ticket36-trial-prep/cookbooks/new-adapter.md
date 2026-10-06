@@ -1,7 +1,7 @@
 # Cookbook: add a new adapter (新增 Adapter)
 
-> Status: **DRAFT — UNVALIDATED**. Prepared for ticket 36 (`docs/architecture-refactor/implementation-tickets/36-release-maintainer-trials.md`, AC12) maintainer trials.
-> Every path/symbol below was read at base commit `c8173622` (branch `ticket-36-trial-prep-a`). The real trial must confirm each step and correct this document.
+> Status: **MAINTAINER-ACCEPTED**, 2026-10-06. See the [direct confirmation](../TICKET36-AGENT-PREPARED-DRAFT.md).
+> Prepared at base commit `c8173622`; checklist paths are documented workflow entries, not reconstructed per-step observations.
 
 ## Purpose
 
@@ -86,15 +86,15 @@ Both adapter classes ride existing machinery: type adapters are collected by `Ad
 
 ## Trial checklist (maintainer fills during the real trial — AC1)
 
-| # | Task | Entry used | Result (pass/fail + evidence) | Problems hit |
+| # | Task | Documented entry (not a recorded trial path) | Aggregate acceptance | Per-step problems |
 |---|---|---|---|---|
-| 1 | Classify the difference (type conversion vs platform wiring vs rename) |  |  |  |
-| 2 | Choose placement per the handoff table without guessing |  |  |  |
-| 3 | Implement + register the adapter (A) or wiring (B) |  |  |  |
-| 4 | Confirm probe alias / dispatch conversion appears without hand-editing |  |  |  |
-| 5 | `guardLint` + `:common:check` clean |  |  |  |
-| 6 | `:<node>:check` on all affected nodes; note gate differences of uncovered nodes |  |  |  |
-| 7 | Golden regenerations reviewed (if any) |  |  |  |
-| 8 | Runtime/GameTest/MCP evidence when wiring is behavior-bearing |  |  |  |
-| 9 | Confirm no runtime/bootstrap diff |  |  |  |
-| 10 | Confirm platform timing differences are documented at the adapter, not abstracted into shared runtime (AC5) |  |  |  |
+| 1 | Classify the difference (type conversion vs platform wiring vs rename) | Existing adapter classification guidance | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 2 | Choose placement per the handoff table without guessing | Handoff placement table | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 3 | Implement + register the adapter (A) or wiring (B) | Existing adapter registration path | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 4 | Confirm probe alias / dispatch conversion appears without hand-editing | Existing generated probe path | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 5 | `guardLint` + `:common:check` clean | Existing verification commands | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 6 | `:<node>:check` on all affected nodes; note gate differences of uncovered nodes | Existing node checks | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 7 | Golden regenerations reviewed (if any) | Existing golden workflow | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 8 | Runtime/GameTest/MCP evidence when wiring is behavior-bearing | Existing runtime smoke path | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 9 | Confirm no runtime/bootstrap diff | Existing architecture boundary | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 10 | Confirm platform timing differences are documented at the adapter, not abstracted into shared runtime (AC5) | Existing adapter documentation | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |

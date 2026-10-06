@@ -1,7 +1,7 @@
 # Cookbook: add a new version node (新增版本)
 
-> Status: **DRAFT — UNVALIDATED**. Prepared for ticket 36 (`docs/architecture-refactor/implementation-tickets/36-release-maintainer-trials.md`, AC12) maintainer trials.
-> Every path/symbol below was read at base commit `c8173622` (branch `ticket-36-trial-prep-a`). The real trial must confirm each step and correct this document.
+> Status: **MAINTAINER-ACCEPTED**, 2026-10-06. See the [direct confirmation](../TICKET36-AGENT-PREPARED-DRAFT.md).
+> Prepared at base commit `c8173622`; checklist paths are documented workflow entries, not reconstructed per-step observations.
 
 ## Purpose
 
@@ -85,17 +85,17 @@ A new node is a build-graph concept: convention plugins, the version tree, and t
 
 ## Trial checklist (maintainer fills during the real trial — AC1)
 
-| # | Task | Entry used | Result (pass/fail + evidence) | Problems hit |
+| # | Task | Documented entry (not a recorded trial path) | Aggregate acceptance | Per-step problems |
 |---|---|---|---|---|
-| 1 | Register trial node in `settings.gradle.kts` (correct id, buildscript) |  |  |  |
-| 2 | Author `versions/<trial-node>/gradle.properties` (all `deps.*` keys) |  |  |  |
-| 3 | `:<trial-node>:build` green |  |  |  |
-| 4 | `guardLint` green |  |  |  |
-| 5 | `platformGateTest` + fixture rows for the trial node |  |  |  |
-| 6 | `tools/nekojs-ci-gates.py source-roots --node` + `all` outcomes |  |  |  |
-| 7 | Artifact name/version correct (`nekojs-neoforge-<mc>-<modVersion>` / `nekojs-fabric-...`) |  |  |  |
-| 8 | CI list updates and `gate_subsets` consistency |  |  |  |
-| 9 | Designed gate failures recorded (`verifyExternalAddonIsolation` 5-jar count; others) |  |  |  |
-| 10 | Existing five nodes unaffected (CI or `sandboxCheck` minus the designed failure) |  |  |  |
-| 11 | Node identity/coordinates/naming kept explicit; no support-matrix change (AC13) |  |  |  |
-| 12 | Confirm no runtime/bootstrap/engine diff |  |  |  |
+| 1 | Register trial node in `settings.gradle.kts` (correct id, buildscript) | Existing Stonecutter node graph | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 2 | Author `versions/<trial-node>/gradle.properties` (all `deps.*` keys) | Existing version-node template | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 3 | `:<trial-node>:build` green | Existing Gradle build | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 4 | `guardLint` green | Existing guard task | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 5 | `platformGateTest` + fixture rows for the trial node | Existing platform gate | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 6 | `tools/nekojs-ci-gates.py source-roots --node` + `all` outcomes | Existing CI gate tool | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 7 | Artifact name/version correct (`nekojs-neoforge-<mc>-<modVersion>` / `nekojs-fabric-...`) | Existing artifact naming rules | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 8 | CI list updates and `gate_subsets` consistency | Existing CI configuration | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 9 | Designed gate failures recorded (`verifyExternalAddonIsolation` 5-jar count; others) | Existing designed-failure checks | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 10 | Existing five nodes unaffected (CI or `sandboxCheck` minus the designed failure) | Existing five-node verification | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 11 | Node identity/coordinates/naming kept explicit; no support-matrix change (AC13) | Existing support matrix rules | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 12 | Confirm no runtime/bootstrap/engine diff | Existing architecture boundary | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |

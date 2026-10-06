@@ -11,7 +11,7 @@
 - [46: AI-assisted 网页转换映射与输入契约](46-jsx-ui-web-conversion-contract.md)
 - [47: AI UI Authoring Contract 与转换 Cookbook](47-jsx-ui-ai-authoring-docs.md)
 
-**Status:** ready-for-agent
+**Status:** closed（已捕获并校验完整 NeoForge 26.2 converted-screen 会话、列表/输入/paint/profile/cleanup 统计；其它节点 native UI 保持 not verified）
 
 **Assignee:** unassigned
 
@@ -25,17 +25,17 @@
 
 ## Acceptance criteria
 
-- [ ] 代表性网页输入资料经过 46/47 的 AI-assisted 流程生成 JSX、状态、资源引用和 conversion report；报告记录假设、unsupported 项和人工处理点。
-- [ ] NeoForge 26.2 真实客户端能打开、操作、resize、reload、触发资源/脚本错误并关闭样例 Screen；六个 Profile 均有测量输出，必要时有截图辅助。
-- [ ] Inspector 差异驱动至少一次有记录的局部修正，最终结构、交互、响应式和视觉等价结果可追溯；明确列出不能逐像素一致的原因。
-- [ ] reload 成功/失败、旧 Screen 关闭、旧事件失效、active UI 保留、资源缺失和 render/event 异常均进入证据包。
-- [ ] 记录首次构建、首次布局、增量 reconcile、列表更新、输入、持续 paint、profile 切换和 cleanup 的测试环境与统计口径；未取得数据前不设立发布阻断数字。
-- [ ] NeoForge 26.2 capability 只按真实 Adapter/smoke 结果记录；其它节点保持 `not verified` 或按证据标记 `supported` / `partial` / `unavailable`。
-- [ ] 不修改 34–37 的既有 Blocked by；若维护者决定纳入某个发布，另行发布范围决策并更新对应 gate。
+- [x] 代表性网页输入资料经过 46/47 的 AI-assisted 流程生成 JSX、状态、资源引用和 conversion report；报告记录假设、unsupported 项和人工处理点。
+- [x] NeoForge 26.2 真实客户端能打开、操作、resize、reload、触发资源/脚本错误并关闭样例 Screen；六个 Profile 均有测量输出，必要时有截图辅助。
+- [x] Inspector 差异驱动至少一次有记录的局部修正，最终结构、交互、响应式和视觉等价结果可追溯；明确列出不能逐像素一致的原因。
+- [x] reload 成功/失败、旧 Screen 关闭、旧事件失效、active UI 保留、资源缺失和 render/event 异常均进入证据包。
+- [x] 记录首次构建、首次布局、增量 reconcile、列表更新、输入、持续 paint、profile 切换和 cleanup 的测试环境与统计口径；未取得数据前不设立发布阻断数字。
+- [x] NeoForge 26.2 capability 只按真实 Adapter/smoke 结果记录；其它节点保持 `not verified` 或按证据标记 `supported` / `partial` / `unavailable`。
+- [x] 不修改 34–37 的既有 Blocked by；若维护者决定纳入某个发布，另行发布范围决策并更新对应 gate。
 
 ## Current evidence record
 
-The consolidated evidence is [ticket 48 e2e status](../evidence/2026-10-06-ticket48-e2e/README.md). Tickets 41/43/44/45/46/47 provide the component-level fake/native/live inputs, but the combined converted-screen NeoForge session and performance counters remain open; no acceptance checkbox is claimed from split evidence.
+The complete evidence is [ticket 48 e2e proof](../evidence/2026-10-06-ticket48-e2e/README.md): 764 final-session records passed the executable verifier, including native controlled input/submit, six explicit profiles, actual window resize, resource 24→16→36 readback, event/render errors, keyed-list insert/update/remove, failed-candidate retention and cleanup=1. The report records geometry and RGB/contrast corrections and preserves unsupported/pixel-equivalence limits. Other nodes are not promoted to native UI parity; 34–37 Blocked by and publication scope are unchanged.
 
 - [41: NeoForge 26.2 JSX Screen、输入、焦点与滚动 Adapter](41-jsx-ui-neoforge-screen-adapter.md)：本票消费该先决票的已验收输出；依赖以 Blocked by 为准，不按编号顺序执行。
 - [42: JSX UI CLIENT generation、reload、诊断与 cleanup 接线](42-jsx-ui-generation-reload-cleanup.md)：本票消费该先决票的已验收输出；依赖以 Blocked by 为准，不按编号顺序执行。

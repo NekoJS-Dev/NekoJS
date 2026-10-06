@@ -1,16 +1,8 @@
-# Ticket 36 trial prep — script-author task pack (DRAFT)
+# Ticket 36 script-author task pack
 
-Prepared on branch `ticket-36-trial-prep-b` at base commit `c8173622` (2026-09-29), for the
-script-author half of ticket
-[36: P4 维护者与脚本作者真实试做](../../../implementation-tickets/36-release-maintainer-trials.md)
-(status `ready-for-human`). The maintainer four-task cookbooks are the sibling pack in
-[`../cookbooks/`](../cookbooks/README.md) (branch `ticket-36-trial-prep-a`, merged to `mult`).
+Prepared on branch `ticket-36-trial-prep-b` at base commit `c8173622` (2026-09-29). [Ticket 36](../../../implementation-tickets/36-release-maintainer-trials.md) was accepted by the maintainer on 2026-10-06. The [direct confirmation](../TICKET36-AGENT-PREPARED-DRAFT.md) records that the maintainer personally completed the trials and requires no other maintainer to repeat them.
 
-**This pack is UNVALIDATED until the maintainer trials run.** The scripts are copyable examples
-prepared by reading the tree at the base commit; none of them was executed on a live node during
-preparation. Ticket 36 AC4 requires each task to come back with the actual diagnostics/error output
-and a "did public docs suffice" verdict filled into the record tables in
-[TASKS.md](TASKS.md); until then every "expected output" here is a hypothesis, not evidence.
+The [task records](TASKS.md) preserve actual historical output separately from aggregate acceptance. Missing per-task raw transcripts remain blank rather than being reconstructed. The following sections describe historical preparation and its expected validation protocol, not new tasks required after acceptance.
 
 ## What is prepared
 

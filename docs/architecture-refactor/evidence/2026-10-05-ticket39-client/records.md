@@ -55,4 +55,4 @@ Record any item defaults reset after login/handshake without a SERVER generation
 
 ## Human conclusion
 
-AC10 real visibility is now demonstrated for NeoForge 26.2: active plans, empty-plan restore, fresh stacks, and relog catch-up synchronize through the existing network channel. AC11 remains open because 1.21.1 server setup was blocked by the MCP NeoForge installer EOF. AC14 remains open pending maintainer deletion confirmation.
+AC10 real visibility is demonstrated for NeoForge 26.2: active plans, empty-plan restore, fresh stacks, and relog catch-up synchronize through the existing network channel. The historical installer EOF did not provide 1.21.1 evidence; the later [official 1.21.1 integrated smoke](../2026-10-06-ticket39-1211/README.md) now completes that legacy leg. AC14 has a separate [literal maintainer confirmation](../2026-10-06-ticket39-1211/AC14-confirmation.md), limited to its named deleted symbols and not release approval. Unrun phases in the 26.2 table above remain unrun.

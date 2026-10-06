@@ -1,6 +1,6 @@
 # Ticket 39 real-client acceptance readiness
 
-Status: **NeoForge 26.2 visibility verified; cross-version acceptance pending**. The isolated dedicated server and separate client use matching Issue4 startup registry scripts. The server active plan reports diamond `16/EPIC` and lamp `7`; the client receives generation-scoped declarations over the existing payload channel and reports the same values. Empty-plan restore, fresh server-issued stacks, relog catch-up, and a subsequent active reload pass. Existing ItemStack instances are not retroactively rewritten; newly created or relogged stacks match the server. No maintainer sign-off is provided for AC14, and 1.21.1 smoke remains blocked by the MCP installer EOF.
+Status: **NeoForge 26.2 independent-client visibility and 1.21.1 integrated item smoke verified within their recorded limits**. The isolated dedicated server and separate 26.2 client use matching Issue4 startup registry scripts. The server active plan reports diamond `16/EPIC` and lamp `7`; the client receives generation-scoped declarations over the existing payload channel and reports the same values. Empty-plan restore, fresh server-issued stacks, relog catch-up, and a subsequent active reload pass. Existing ItemStack instances are not retroactively rewritten. The later [official legacy proof](../2026-10-06-ticket39-1211/README.md) and [actual AC14 confirmation](../2026-10-06-ticket39-1211/AC14-confirmation.md) close the former legacy/confirmation gaps without asserting Fabric live parity or publication approval.
 
 ## Inputs and observable values
 
@@ -50,7 +50,9 @@ On a dedicated server, leave server fixtures only on the server, observer only o
 
 The existing policy deliberately declares automatic modification sync unsupported and forbids adding network references without updating the capability record. It does **not** preflight-block valid but client-sensitive properties such as block hardness/friction/lightEmission or item rarity/stack size based on connection topology. Its current documentation claim that relog is supported is not backed by a production modification replay path.
 
-## Production trace and actionable findings
+## Historical pre-fix production audit
+
+The following trace/findings describe the inspected pre-follow-up source, not the current synchronized implementation. Startup collection now propagates failures, whole-block declarations restore their baseline, and `ModificationSyncWire` sends committed declarations/login catch-up through the existing payload channel. Current execution results are in [records](records.md); the bytecode observations still explain why old stacks are not automatically rewritten.
 
 | Owner/path | Verified current behavior | Consequence |
 |---|---|---|
@@ -74,11 +76,11 @@ The existing policy deliberately declares automatic modification sync unsupporte
 
 Existing XML reports were read, not rerun. At the inspected 2026-10-04 timestamps, 26.2.0 has 6/6 `Ticket39ModificationScriptE2ETest`, 4/4 block E2E, 4/4 examples, 15/15 component tests and 2/4 legacy tests **skipped** due to vanilla registry gating. Parity 10, ownership 5, surface 2 and float coercion 9 ran with zero failures. 1.21.1 item E2E 6/6 and legacy 2/4 are skipped; parity8, ownership5, surface2, coercion9 ran. A green aggregate build does not turn these skipped runtime legs into passes.
 
-1.21.1 still needs its real item component reflection/startup/reload/removal smoke. Use [1211-server-item-active.js](fixtures/1211-server-item-active.js) and [1211-server-item-baseline-or-restore.js](fixtures/1211-server-item-baseline-or-restore.js), Java21 and the corresponding built jar/GraalMC pairing; do not deploy 26x block listeners or newer food/tool surfaces. The 26.2 session cannot close this node's leg. The relevant 1.21.1 modification mechanism is reflective `Item.components` replacement; static villager trade pools belong to ticket22 and are not this ticket's missing component test.
+The historical 1.21.1 smoke gap is now covered by [the unmodified official artifact's complete world run](../2026-10-06-ticket39-1211/README.md). It used the legacy item fixtures, Java21 and matching GraalMC; no 26x-only block/tool surface was inferred. Integrated legacy readings are not independent network evidence.
 
-## AC14 breaking-symbol checklist (no sign-off)
+## AC14 breaking-symbol checklist (confirmed)
 
-The migration already lists: public static `ItemModificationEventJS.fire(MinecraftServer)`, public static `BlockModificationEventJS.fire()`, public `ItemModificationEventJS(MinecraftServer)`, and implicit `BlockModificationEventJS()` constructor. Private static SNAPSHOTS and package-private ItemModificationJS.applyTo are structural/internal deletions, not public Script API members. Replacement is owner initial-plan application and SERVER DOMAIN_PLAN; `modify(String,Consumer)`, getters and script event names remain. Maintainer informed confirmation is still required; this preparation does not check AC14 or close ticket39.
+The migration lists public static `ItemModificationEventJS.fire(MinecraftServer)`, public static `BlockModificationEventJS.fire()`, public `ItemModificationEventJS(MinecraftServer)`, and implicit `BlockModificationEventJS()` constructor. Private static SNAPSHOTS and package-private ItemModificationJS.applyTo are internal deletions, not public Script API members. Replacement is owner initial-plan application and SERVER DOMAIN_PLAN; `modify(String,Consumer)`, getters and script event names remain. The current maintainer explicitly accepted the named list; see [literal confirmation](../2026-10-06-ticket39-1211/AC14-confirmation.md). This is not release approval.
 
 ## Local bytecode evidence
 
@@ -88,4 +90,4 @@ The [trace directory](trace/) was generated with Zulu25 `javap -p -c` against th
 
 All eight fixture files passed `node --check`; `actions.json` parsed successfully. These checks validate syntax only, not GraalJS preflight, Bean Property exposure or Minecraft execution. Existing diff whitespace check returned no errors; the directory remains new/untracked and has not been staged.
 
-All live phases, dedicated-client evidence, final-node smoke and maintainer conclusion: **NOT RUN / UNFILLED**. Fill [records.md](records.md) only from actual results. Fixtures are prepared source-checked scripts; their host property access is grounded in current declarations/source and must still be confirmed by the live run.
+Live 26.2 dedicated-client phases are recorded in [records.md](records.md). Later legacy smoke and AC14 confirmation are linked above. The unrun invalid-candidate, chunk-light and held-stick observations in the dedicated 26.2 table remain explicitly unrun; the legacy rejected-candidate trial does not retroactively fill them.

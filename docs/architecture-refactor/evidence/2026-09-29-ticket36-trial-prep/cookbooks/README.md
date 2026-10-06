@@ -2,12 +2,9 @@
 
 Prepared on branch `ticket-36-trial-prep-a` at base commit `c8173622` (2026-09-29), for ticket
 [36: P4 维护者与脚本作者真实试做](../../../implementation-tickets/36-release-maintainer-trials.md)
-(status `ready-for-human`; multiple blocking tickets are not yet closed).
+(status `closed`; maintainer confirmation recorded 2026-10-06).
 
-**These drafts are UNVALIDATED until the maintainer trials run.** They were written by reading the
-tree at the base commit, not by performing the tasks. Ticket 36 AC12 requires each cookbook to be
-corrected by the corresponding real trial performed by the maintainer; until then every step here is
-a hypothesis about the easiest legal path, not evidence.
+**Accepted by direct maintainer confirmation on 2026-10-06.** The maintainer confirmed personally completing ticket 36 and requires no other maintainer to repeat the trials. See the [literal confirmation and acceptance boundary](../TICKET36-AGENT-PREPARED-DRAFT.md). Exact node selections and command transcripts were not supplied with the confirmation. The following preparation expectations are historical, not additional post-acceptance requirements.
 
 ## What is drafted
 

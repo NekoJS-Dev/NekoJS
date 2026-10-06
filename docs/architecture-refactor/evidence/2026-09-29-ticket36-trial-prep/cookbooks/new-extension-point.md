@@ -1,7 +1,7 @@
 # Cookbook: add a new extension point (新增扩展点)
 
-> Status: **DRAFT — UNVALIDATED**. Prepared for ticket 36 (`docs/architecture-refactor/implementation-tickets/36-release-maintainer-trials.md`, AC12) maintainer trials.
-> Every path/symbol below was read at base commit `c8173622` (branch `ticket-36-trial-prep-a`). The real trial must confirm each step and correct this document.
+> Status: **MAINTAINER-ACCEPTED**, 2026-10-06. See the [direct confirmation](../TICKET36-AGENT-PREPARED-DRAFT.md).
+> Prepared at base commit `c8173622`; checklist paths are documented workflow entries, not reconstructed per-step observations.
 
 ## Purpose
 
@@ -86,15 +86,15 @@ Both scenarios ride the existing bootstrap machinery — ordering (Kahn topologi
 
 ## Trial checklist (maintainer fills during the real trial — AC1)
 
-| # | Task | Entry used | Result (pass/fail + evidence) | Problems hit |
+| # | Task | Documented entry (not a recorded trial path) | Aggregate acceptance | Per-step problems |
 |---|---|---|---|---|
-| 1 | Find the Point model docs + template without reading internals |  |  |  |
-| 2 | Write the self-contained Point file (id, merge policy, accumulator, finisher) |  |  |  |
-| 3 | Add facade hook + builtin manifest line + pairing row (four-part change) |  |  |  |
-| 4 | `:common:check` green incl. `PluginHookPairingTest` |  |  |  |
-| 5 | Manifest golden drift regenerated + reviewed (if applicable) |  |  |  |
-| 6 | Consume the product via Handle / `extensionProduct` and verify freeze semantics |  |  |  |
-| 7 | Reload survival: ordinary `/nekojs reload` does not re-collect or drop the product |  |  |  |
-| 8 | (S2) custom point from an external addon with zero engine edits |  |  |  |
-| 9 | Confirm no runtime/bootstrap diff |  |  |  |
-| 10 | Confirm no second facts source / static result table was needed (AC7) |  |  |  |
+| 1 | Find the Point model docs + template without reading internals | Existing Point/Contributor cookbook | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 2 | Write the self-contained Point file (id, merge policy, accumulator, finisher) | Public Point model | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 3 | Add facade hook + builtin manifest line + pairing row (four-part change) | Public plugin and pairing path | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 4 | `:common:check` green incl. `PluginHookPairingTest` | Existing common check | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 5 | Manifest golden drift regenerated + reviewed (if applicable) | Existing golden workflow | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 6 | Consume the product via Handle / `extensionProduct` and verify freeze semantics | Existing Handle contract | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 7 | Reload survival: ordinary `/nekojs reload` does not re-collect or drop the product | Existing reload contract | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 8 | (S2) custom point from an external addon with zero engine edits | Existing addon extension path | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 9 | Confirm no runtime/bootstrap diff | Existing architecture boundary | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
+| 10 | Confirm no second facts source / static result table was needed (AC7) | Existing ownership rules | Aggregate maintainer acceptance; no per-step output supplied | Not individually recorded |
