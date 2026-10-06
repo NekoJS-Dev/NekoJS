@@ -101,7 +101,7 @@ public final class NeoForgeMachineEventBindings {
 }
 ```
 
-Fabric wiring 模板：
+Fabric wiring 模板使用同一 fluent bridge 形状；只把 Fabric callback 的原生参数注册器作为 adapter 参数传入：
 
 ```java
 // src/fabric/java/.../FabricMachineEventBindings.java
@@ -109,19 +109,22 @@ public final class FabricMachineEventBindings {
     private FabricMachineEventBindings() {}
 
     public static void register() {
-        SomeFabricCallback.EVENT.register((player, machine, recipe, output) -> {
-            MachineCraftedEventJS payload = new MachineCraftedEventJS(
-                    player,
-                    machine.getId().toString(),
-                    recipe.getId().toString(),
-                    output.getCount());
-            ServerEvents.MACHINE_CRAFTED.post(payload);
-        });
+        FabricEventBusBridge.create()
+                .bind(
+                        MACHINE_CRAFTED,
+                        listener -> SomeFabricCallback.EVENT.register((player, machine, recipe, output) ->
+                                listener.accept(new MachineCraftedEventJS(
+                                        player,
+                                        machine.getId().toString(),
+                                        recipe.getId().toString(),
+                                        output.getCount()))));
     }
 }
 ```
 
-这里的 `SomeFabricCallback` 是占位符，必须由目标 Fabric API 的真实 callback 替换。如果没有 callback，检查项目是否已用 mixin/domain owner 覆盖该语义；没有实现就明确记录 capability，而不是留一个永远不触发的 bus。
+当 Fabric API 已提供单一 native payload type 时，可以用 `.bindTransformed(bus, registerCallback, transformer)` 分开写注册器与 payload 转换。`registerCallback` 仍是 Fabric 原生 callback 的薄 adapter，因为各 callback 的方法签名不同；NekoJS 侧的 bus forwarding 由 bridge 统一负责。所有 bind 形态都会在没有脚本监听器时跳过 post 和 payload 转换。若 callback 可返回取消结果，用 `.bindCancellable(bus, registerPredicate)`；注册 lambda 负责把 boolean 映射成该 Fabric API 的原生结果。总线不可取消时该方法立即抛 `IllegalArgumentException`。
+
+`SomeFabricCallback` 是占位符，必须换成目标 Fabric API 的真实 callback。如果没有 callback，检查项目是否已用 mixin/domain owner 覆盖该语义；没有实现就明确记录 capability，而不是留一个永远不触发的 bus。
 
 **双端一致的目标**：脚本侧契约必须一致（同组名、事件名、payload 语义、Script Type、cancel/dispatch 语义）；Loader 原生注册方式不可能总是相同，因为 NeoForge 常通过 `IEventBus`/`EventBusForgeBridge` 订阅原生 Event，而 Fabric 常通过 Fabric API 的 callback registry 或 mixin。维护者可把两种接线分别封装在 `NeoForgeMachineEventBindings.register()` 与 `FabricMachineEventBindings.register()`，并由各自 mod entrypoint 在同一生命周期阶段调用。这样业务代码和 JS 使用一致，差异只留在平台 adapter；不要为了“代码长得一样”把 Fabric callback 伪装成 EventBus listener。
 

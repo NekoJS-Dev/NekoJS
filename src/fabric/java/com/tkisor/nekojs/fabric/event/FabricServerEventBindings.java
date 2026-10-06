@@ -177,10 +177,13 @@ public final class FabricServerEventBindings {
             }
             STOPPED.post(new ServerLifecycleEventJS(server));
         });
+        FabricEventBusBridge.create().bindTransformed(
+                TICK_PRE,
+                listener -> ServerTickEvents.START_SERVER_TICK.register(listener::accept),
+                ServerTickEventJS::new);
+        // 玩家 tick：fabric-api 无 per-player tick 事件，在服务端 tick 首尾遍历
+        //（NeoForge 侧 PlayerTickEvent.Pre/Post 同为服务端 tick 驱动，时机等价）
         ServerTickEvents.START_SERVER_TICK.register(server -> {
-            TICK_PRE.post(new ServerTickEventJS(server));
-            // 玩家 tick：fabric-api 无 per-player tick 事件，在服务端 tick 首尾遍历
-            //（NeoForge 侧 PlayerTickEvent.Pre/Post 同为服务端 tick 驱动，时机等价）
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 PLAYER_TICK_PRE.post(new PlayerTickEventJS(player));
             }
