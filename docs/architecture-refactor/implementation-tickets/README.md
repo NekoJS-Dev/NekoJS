@@ -77,7 +77,7 @@
 | [35: P4 性能复测与政策对照](35-release-perf-compare.md) | 必选；agent 可执行 |
 | [36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md) | 必选；维护者给出真实结论 |
 | [37: 1.2.0 clean cutover 与发布交接](37-release-1-2-0-handoff.md) | 必选；agent 可执行 |
-| [38: 离线 validator / migration report（可选）](38-offline-migration-report.md) | 可选；默认未选用 |
+| [38: 离线 validator / migration report（可选）](38-offline-migration-report.md) | 可选；已选用并技术验收；非 release blocker |
 | [39: Runtime Item/Block modification 候选计划与 snapshot ownership](39-item-block-modification.md) | 必选；agent 可执行 |
 | [40: JSX UI common core、公开契约与 Fake Host Proof](40-jsx-ui-common-core.md) | JSX feature 必选；agent 可执行 |
 | [41: NeoForge 26.2 JSX Screen、输入、焦点与滚动 Adapter](41-jsx-ui-neoforge-screen-adapter.md) | JSX feature 必选；agent 可执行 |

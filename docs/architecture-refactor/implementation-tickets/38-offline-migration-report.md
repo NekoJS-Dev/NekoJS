@@ -4,7 +4,7 @@
 
 **Blocked by:** [03: 持久化与用户编辑数据保护基线：默认不改、可回滚才迁移](03-data-protection.md)、[09: Managed Surface 单一规范源与声明/Probe 派生链](09-managed-surface.md)
 
-**Status:** in-review（六项 AC 已完成；CLI 只读、确定性输出和输入保护均有 focused tests；该 Optional 票不阻塞 release，待票据审阅收口）
+**Status:** closed（2026-10-07 技术验收：六项 AC 已完成，三项 CLI focused tests 再跑通过；可选票不阻塞 release）
 
 **Assignee:** main-session agent
 
@@ -55,6 +55,6 @@
 
 - 消费各域随实现更新的迁移记录；报告缺少尚未实施域的结果时必须明示。
 
-**Note:** 本票只是随发布开放的可选票，未被选择实施；它不阻塞 release。
+**Note:** 本票已由维护者选用并完成技术验收；仍为可选票，不阻塞 release，不替代迁移/回滚验收。
 
 票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。

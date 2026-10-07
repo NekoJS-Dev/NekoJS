@@ -290,19 +290,22 @@ Stable JSON values do not expose Gson, `Map`/`List`, or raw filesystem paths. Pe
 
 NeoForge supports adding trades in server scripts. Fabric currently has no equivalent trade registry mutation; calls to this capability are rejected as unavailable and should not be used in Fabric scripts.
 
-On NeoForge, trades are staged when scripts load and written together at the end of reload. 26.x uses a reloadable trade registry; 1.21.1 replaces static trade tables. New trades appear when villagers next restock:
+Declare trades through `ServerEvents.tradeDeclaration` in server scripts. Collection is inert; the platform adapter applies the whole candidate batch after successful preflight and commit. Invalid declarations reject the batch rather than partially applying it. NeoForge 26.x uses reloadable trade registries; 1.21.1 uses static trade pools.
 
 ```javascript
-VillagerTrades.add('minecraft:farmer/level_1', {
-  cost: '1x minecraft:emerald',       // Also accepts 'minecraft:emerald' or { item: '...', count: n }
-  result: '5x minecraft:apple',
-  maxUses: 12, xp: 2, priceMultiplier: 0.05,
+ServerEvents.tradeDeclaration(event => {
+  event.add('minecraft:farmer/level_1', {
+    cost: '1x minecraft:emerald',
+    result: '5x minecraft:apple',
+    maxUses: 12, xp: 2, priceMultiplier: 0.05,
+  })
 })
-VillagerTrades.add('minecraft:wandering_trader/level_1', { cost: 'minecraft:book', result: 'minecraft:emerald' })
+console.info(VillagerTrades.query().describe())
 ```
 
-Trade set ids have the forms `minecraft:<profession>/level_1..5` and `minecraft:wandering_trader/level_1|level_2`
-(aliases `buying|common`→1, `uncommon|rare`→2). The trade set is checked for existence during staging; invalid ids produce a clear error.
+Farmer ids use `minecraft:<profession>/level_1..5`. Wandering trader ids differ: 26.x uses trade-set keys such as `minecraft:wandering_trader/buying`; 1.21.1 uses `minecraft:wandering_trader/level_1|level_2` (aliases `buying|common`→1, `uncommon|rare`→2). The adapter validates the target during preflight. Queries are read-only and generation-bound; `statusReason` explicitly reports stale/unavailable results.
+
+Ordinary omission is recorded as unrestored; `ServerEvents.tradeReload(event => event.declareObsolete(id))` explicitly retires a set. Do not mix old and new writers on one set. The old `VillagerTrades.add/pendingCount` remain only in canonical NeoForge 26.x pending migration approval; **1.21.1 already exposes only query/describe**. Fabric has no `VillagerTrades` global and rejects nonempty trade declarations explicitly.
 
 <a id="wiki-section-22"></a>
 ### `EntitySelectors`
@@ -326,16 +329,20 @@ for selectors that sort. NeoForge only (26.x/1.21.1).
 > Fabric currently does not register `PostEffects` or provide the corresponding custom GLSL runtime surface.
 
 Client post-processing chains: `PostEffects.set('minecraft:invert')` / `clear()` / `toggle(id)` / `current()`.
-Built-in presets (available on both 26.x/1.21.1): `minecraft:invert`, `spider`, `creeper`, `blur`,
-`entity_outline`, `transparency`. You can also register custom chains at runtime (inline GLSL, NeoForge 26.x only):
+Use `ClientEvents.postEffects` for generation-owned declarations, not the removed `PostEffects.register/unregister/has` methods. Runtime actions remain on the binding:
 
 ```javascript
-PostEffects.register('mymod:gray', {
-  chainJson: PostEffectChainJson.simpleBlit('mymod:gray_frag'),  // Generate a main→swap→main chain
-  fragmentShaders: { 'mymod:gray_frag': '#version 330\n...' },
+ClientEvents.postEffects(event => {
+  event.register('mymod:blur', { blurRadius: 8, blurRounds: 1 })
 })
-PostEffects.set('mymod:gray')
+ClientEvents.playerTickPost(() => {
+  if (PostEffects.isAvailable('minecraft:invert') && !PostEffects.active) {
+    PostEffects.set('minecraft:invert')
+  }
+})
 ```
+
+`hasDefinition(id)`, `installed()` and `activeGeneration()` read committed declarations; they do not prove an effect is drawable. In the current activation path, `isAvailable(id)` requires a resource-pack effect. A declared id without that resource cannot be activated by `set`. NeoForge 26.x can serve declared chains/shader sources through its ShaderManager hook for resource-backed ids (a declaration overriding `minecraft:invert` is verified); arbitrary new inline ids are not a supported activation promise. **1.21.1 is resources-only** and does not hook runtime declared chains. Failed candidate preflight preserves the old generation; binding teardown itself does not clear the runtime picture. Presets depend on active resource packs, so check availability rather than assume all listed names exist.
 
 Note: camera-entity visuals (enderman/spider/creeper) can override or clear script-selected effects.
 

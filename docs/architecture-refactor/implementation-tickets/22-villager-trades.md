@@ -4,7 +4,7 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** closed
+**Status:** in-progress（2026-10-07 补验：Fabric unavailable 已验；旧公开写入删除与 legacy 实机缺口未闭合）
 
 **Assignee:** zed-flash-22（main-session agent；deepseek-v4.1-flash subagent worktree）
 
@@ -39,8 +39,8 @@
       证据：`declarationsDroppedByANewGenerationAreRecordedAsUnrestoredInsteadOfBeingDeleted`、`Ticket22VillagerTradeEventSurfaceTest.declaringAReloadSubEventReleaseStaysUntilTheCommitSharesIt`；`getUnrestoredListingKeys/getRetiredListingKeys/describe()`；`MIGRATION.md` §1/§2 → REPORT §3 AC7。
 - [x] 第一版 Villager Trades 不定义 server/client 同步协议，也不把多人 registry 同步语义混入本票；任何未来同步需求必须另开决策与票据。
       证据：实现面无 packet/网络代码（common 域类型 + Adapter + binding）；`MIGRATION.md` §7 明示边界 → REPORT §3 AC8。
-- [ ] Fabric Villager Trades 的 unavailable 通过 capability/source-trace/smoke 显式验证为明确拒绝或不可用，不用无错误 no-op 冒充；NeoForge 节点 supported/partial 只按实际测试证据记录。
-      **部分满足**：结构 + 真跑证据齐（`nodeWithoutAnAdapterAnswersExplicitUnavailableInsteadOfSilentSuccess` 在 26.1.2-fabric 节点真跑：收集后整批 `preflight` 抛 `VillagerTradeUnavailableException` 且原因含 Fabric、未发布未提交；facade 无状态时返回 `unavailable:`）；**缺** capability 矩阵/golden 未新增 villager 行（该矩阵属票 25 的 query 域，本票不越界改他人 golden），且**无真机 smoke**。证据：REPORT §3 AC9、§6 G2/G4。
+- [x] Fabric Villager Trades 的 unavailable 通过 capability/source-trace/smoke 显式验证为明确拒绝或不可用，不用无错误 no-op 冒充；NeoForge 节点 supported/partial 只按实际测试证据记录。
+      2026-10-07 补验：两个 Fabric 节点 `Ticket22VillagerTradeEventSurfaceTest` 的实际 owner collect/preflight 明确拒绝、未发布断言通过。官方 26.2 Fabric 制品的 declaration-only SERVER 脚本在 STATE_PLAN 以 `VillagerTradeUnavailableException` 拒绝，未到 Done（预期负例，不算 boot 成功）；去掉不可用声明后独立启动到 Done，再经 RCON 正常 stop。P4 capability 矩阵已有 VillagerTrades U 行，不需要把票25 query golden 扩成全域矩阵。NeoForge26.2 实际 farmer Offers 包含脚本 emerald→5 apples/12 uses/xp2；legacy 静态池实机与全节点 offer parity 仍未验证。见 `evidence/ticket37-autonomous-closeout/{ACTUAL-OFFER.md,fabric-declaration-rejection.txt,VERIFICATION.md}`。
 - [ ] 旧 VillagerTradesJS 静态 add/pendingCount、全局 Manager 暂存和直连 registry surgery 只能在事件+Adapter+query parity、迁移表、旧 route 无消费者和维护者确认后删除；删除后不保留长期兼容 shim。
       **不勾选（门禁未完成）**：代码层旧路径**未删除**（本票选择保留，不越过 sign-off）；替代路径 parity、失败保留、迁移表与无消费者证据均已备（见下方「维护者 sign-off 项」与 `baseline/2026-09-21-villager-trades/MIGRATION.md` §2/§3/§5、`REPORT.md` §7）；**缺维护者确认**。
 - [x] 随实现交付 add/query、generation/stale 查询与 Fabric 明确不可用的最小可运行示例和必要迁移材料；示例只使用已通过 gate 的节点能力。
@@ -52,11 +52,11 @@
 breaking，需要维护者知情/追认。逐项清单与替代路径见
 `baseline/2026-09-21-villager-trades/MIGRATION.md` §2/§3/§5 与同目录 `REPORT.md` §7：
 
-- `VillagerTradesJS#add(String, Object)` / `#pendingCount()`（静态 binding 入口，26.x + 1.21.1 成对）
+- `VillagerTradesJS#add(String, Object)` / `#pendingCount()`：仅 canonical NeoForge26.x 仍在；1.21.1 已移除，需追认既有变化
 - `VillagerTradeManager`（26.x + 1.21.1 成对）：进程级 `static PENDING`、`HOLDER_SNAPSHOTS`、`ORIGINALS`、
   `PREVIOUSLY_REGISTERED`、`snapshotEpoch` 与全部静态入口（`stageAdd`/`beginReload`/`pendingCount`/
   `reset`/`apply`/`wanderingTraderLevels`）
-- `VillagerTradesPlugin` 的 binding 注册与 type doc
+- `VillagerTradesPlugin` 的旧 TypeDoc 已改为 event/query 文案；binding producer 必须保留 query/describe
 - `ServerEventListener`（26.x + 1.21.1）与 `NekoJSCommands`（26.x + 1.21.1）的 5 处调用点
 - `wiki/全局绑定.md` 的旧用法段落
 

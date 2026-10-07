@@ -38,10 +38,11 @@ pack was first authored and was consumed after ticket 35 landed and closed its t
   heap same band; probe 390 vs 389 files). Environment drift recorded in 35's REPORT §2
   (isolated GRADLE_USER_HOME recreated cold; Docker stopped — quieter than baseline's noise
   profile; favorable, no protocol change).
-- **Verdict: the perf gate is GREEN for this release candidate.** The F-perf entry in the
-  failures ledger is resolved; the release-blocking set no longer includes F-perf or the resolved
-  probe-types F1. Release-handoff note: reload's 7.3 ms margin — a noisier future
-  environment should re-test before final release conclusions (35's REPORT §8).
+- **Historical verdict: GREEN for the ticket35 candidate at `28283cc4`.** The original
+  F-perf entry was resolved for that revision. This is **not** a PASS for later runtime code:
+  current candidate remeasurement is required after subsequent lifecycle/runtime changes.
+  Ticket37 keeps its final performance gate open; no threshold or failed-sample policy changes.
+  The reload margin was only7.3ms, and35 REPORT §8 records the remeasurement triggers.
 
 ## 3. What is already green around the perf gate
 

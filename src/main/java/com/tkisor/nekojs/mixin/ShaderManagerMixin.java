@@ -22,12 +22,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.Set;
 
 /**
- * 运行时后处理链接入点（脚本经 {@code PostEffects.register} 注册的内联 GLSL / 链 JSON）：
+ * Serves active-generation shader sources and cached post chains declared through
+ * {@code ClientEvents.postEffects}.
  *
  * <ul>
- *   <li>{@code getShader} HEAD：命中脚本注册的 shader 源时直接返回，原版资源路径不参与；</li>
- *   <li>{@code getPostChain} HEAD：命中运行时链定义时返回（懒加载 + 缓存），否则放行原版；</li>
- *   <li>{@code apply}/{@code close}：资源 reload / 关闭时丢弃运行时链缓存（链持有 GPU 资源）。</li>
+ *   <li>{@code getShader} HEAD returns an installed shader source when present.</li>
+ *   <li>{@code getPostChain} HEAD returns a lazily loaded runtime chain or defers to vanilla.</li>
+ *   <li>{@code apply}/{@code close} invalidates cached chains and releases GPU resources.</li>
  * </ul>
  */
 @Mixin(ShaderManager.class)

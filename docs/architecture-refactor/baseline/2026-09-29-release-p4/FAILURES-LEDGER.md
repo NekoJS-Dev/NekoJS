@@ -45,6 +45,29 @@ recorded in the resolved section above; these rows are not current release block
 | N1 | 26.1.2 | real in-game server stop / world leave / CLIENT real for global shared state | manager-side semantics observed in-game | simulated via platform hooks at common layer; real leg not run | 34 real-machine round / minecraft-mcp | blocks the real leg of integration chain 3 (fixture-only leg stated in INTEGRATION-CHAINS). |
 | JSX-UI-inreview | 26.2.0 | tickets 41/43/44 remain in-review (outside ticket 34's blocker set; 48 blocked on them) | maintainer rulings | live Screen interaction, golden regeneration review, texture pipeline remain open per the 2026-09-29 digest | 41/43/44 + 48 chain | outside this pack's blocker scope; recorded because the release-readiness verdict must not imply the JSX UI chain is closed. |
 
+## Current reconciliation (2026-10-07)
+
+The rows below remain the historical 2026-09-29 pack inventory, not an unqualified description of
+current source. Fresh evidence is in `evidence/ticket37-autonomous-closeout/`:
+
+- PostEffects-render: official NeoForge26.2 resource inversion/clear and F3+T later-world view,
+  plus a declared resource-id override visibly producing blur, are now observed. Other nodes,
+  first-frame timing and arbitrary new inline-id activation remain open; do not mark the whole
+  domain verified.
+- DynReg-sync: adapter and transport registration now exist. Cross-process sync is still not
+  verified; "unwired" is no longer the reason. Frozen wire ids/contracts are unchanged.
+- JSX-UI-inreview: 41/44/48 now carry native combined/font/narration proof and scoped acceptance;
+  43 has its closed declaration review. These old headers are not current release blockers.
+  Existing node/render scope limits are retained in the individual evidence packs.
+- F-perf: ticket35 pass is revision-bound to `28283cc4`. Later runtime changes mean it cannot
+  automatically certify the current candidate; current remeasurement is still required.
+- Active26.1.2 build failure found in this session was a malformed inactive Fabric test branch;
+  only its canonical wrapper was fixed. Fresh five-node full builds, isolation, artifact and
+  NBT gates now pass (raw `five-node-build.txt`), without excluding those Fabric tests.
+- Village/Fabric: official26.2 negative declaration startup explicitly rejects in STATE_PLAN;
+  separate no-declaration startup reaches Done and stops normally. NeoForge26.2 custom quote
+  is read from actual vanilla Offers. This does not certify legacy pools or full-node parity.
+
 ## Statement
 
 No failure was downgraded or excluded to make the original pack green; no gate was weakened. F1 and

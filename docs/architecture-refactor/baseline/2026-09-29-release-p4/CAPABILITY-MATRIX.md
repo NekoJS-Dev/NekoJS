@@ -27,11 +27,11 @@ def = deferred (owner-recorded window). Evidence pointer per row in §2.
 | recipe/datagen/loot/tags/viewer (23) | S (runServer datagen smoke) | S (suite) | S (suite) | U (datagen publish absent, explicit absence smoke) | U (same) |
 | Item/Block modification snapshot (39) | S (fixture + suite; real GameTest collection blocked by F12, nv for real-machine leg) | S (suite) | S (suite) | P | P |
 | Villager Trades (22) | S | S | S | U (explicit unavailable, no silent no-op) | U (same) |
-| Dynamic Registry runtime (16/21) | P (activation gate + single-node surgery real; cross-node sync nv — platform adapter unwired) | P (same state, suite-level) | P | P | P |
+| Dynamic Registry runtime (16/21) | P (activation gate + single-node surgery real; cross-node sync nv — adapter/wire now registered, multiplayer behavior not yet proved) | P (same state, suite-level) | P | P | P |
 | startup registry, typed builders (15) | S (startup-builders golden) | S | S (own golden variant) | S | S |
 | client script, input/HUD (26) | S (realmachine keybind/HUD/consumeClick/reload) | S (suite) | S (suite; real leg def 34) | U (render/input seams absent, explicit) | U (same) |
 | GUI/render adapters, error dashboard (27) | S (realmachine error panel + VS Code open) | S (suite) | S (suite) | U (explicit, text degradation) | U (same) |
-| PostEffects (28) | S (node tests; real client render nv→def 34) | S (suite) | S (node tests 8+4/0) | P (partial surface) | P |
+| PostEffects (28) | S (node tests; native/first-frame nv) | S (26.2 official resource inversion/clear/F3+T and declared existing-resource-id blur observed; first-frame/all-id parity nv) | P (resources-only runtime chain; inline declared chain unavailable; node tests) | U (plugin, binding, payload and bus absent; two-node assertion 2026-10-07) | U (same) |
 | network, ClientData/PData, pack sync (17/18/19) | S (fixtures + wire-frozen gate) | S | S | S (wire contract; WORLD pack status recorded) | S (same) |
 | admin commands, permissions, CommandEvents (20/24) | S (real RCON full tree + watchdog chain) | S (suite; live dispatch nv) | S (suite; live dispatch nv) | S (suite; live dispatch nv) | S (suite; live dispatch nv) |
 | sandbox/config/pack trust/cache/persistence (03/06/11/19) | S | S | S | S | S |
@@ -54,8 +54,9 @@ def = deferred (owner-recorded window). Evidence pointer per row in §2.
 - **Dynamic Registry `P`**: ticket 21 closure — 31 JVM dual-adapter batch-transaction cases green,
   single-node activation + real `DynamicRegistries` surgery observed via script + `/nekojs registry`
   (`baseline/2026-09-22-registry-dynamic-sync/command-output/09-...-activation.txt`); cross-node
-  PREPARE/ack/STATE_SYNC and client surgery **not verified** (platform adapter/network payload
-  unwired; ticket 17 wire gate frozen at 6 calls/5 types) — public activation stays blocked.
+  PREPARE/ack/STATE_SYNC and client surgery **not verified**. Adapter and transport registration
+  now exist; this is no longer an "unwired" source claim. The frozen six-call/five-type wire
+  contract is not changed or expanded by this closeout.
 - **Assets/Lang 1.21.1 `U`**: recorded in ticket 29 evidence (`Assets` binding guarded `//? if >=26`);
   per-node capability pins added 2026-09-29 (`evidence/2026-09-29-ticket29-assets-fixture/`).
 - **`def 34` windows** (owner-deferred by the closed tickets' closure records, re-routed here):

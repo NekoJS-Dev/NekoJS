@@ -29,12 +29,8 @@ public class VillagerTradesPlugin implements NekoJSPlugin, com.tkisor.nekojs.cor
                 ScriptType.SERVER,
                 "VillagerTrades",
                 null,
-//? if >=26 {
-                "Server-side villager / wandering trader trade additions. Trades are staged during script load and flushed into the trade registries when the reload cycle finishes.",
-//?} else {
-/*                "Server-side villager / wandering trader trade additions. Trades are staged during script load and flushed when the reload cycle finishes; villagers offer them on their next restock.",
-*///?}
-                List.of("VillagerTrades.add('minecraft:farmer/level_1', { cost: '1x minecraft:emerald', result: '5x minecraft:apple', maxUses: 12, xp: 2 })")));
+                "Read-only, generation-bound villager trade queries. Declare trades through ServerEvents.tradeDeclaration; the platform adapter applies the candidate batch only after successful preflight and commit.",
+                List.of("ServerEvents.tradeDeclaration(event => { event.add('minecraft:farmer/level_1', { cost: '1x minecraft:emerald', result: '5x minecraft:apple', maxUses: 12, xp: 2 }) })", "VillagerTrades.query().describe()")));
     }
 }
 //?}

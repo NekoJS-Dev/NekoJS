@@ -1,0 +1,40 @@
+{
+  "kind": "bounded-offline-operator-rehearsal-not-minecraft-runtime",
+  "profile": "build/ticket37-rollback-rehearsal/owned-ymenykqr",
+  "oldArtifact": {
+    "path": "build/issue4-server-neoforge/mods/nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+    "sha256": "3e8f365eadb423b22325296ee1f70371e2c69ff15fbd9179e0ece11239ddc65e"
+  },
+  "candidateArtifact": {
+    "path": "versions/26.2.0/build/libs/nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+    "sha256": "600ca6cae32ed1fd7bc89d200aa283865f8e89f4694aeefb60cd55fbbfa8b88b"
+  },
+  "protectedFixtureHashes": {
+    ".vscode/settings.json": "15a28410851860fc293ebaf6272945b08efaf4938b4ddb709a7aee222de44512",
+    "logs/nekojs/user.log": "ab1cc6a1cc02e8ec4c9c8b4a22958e6a4788a6f934dbc8802589e32687e1916b",
+    "nekojs/config/engine.toml": "d81aa70493b86ee9b52f1924f63d963262298e79c8f649e9b9adef98af6c5ebe",
+    "nekojs/config/probe.toml": "ad2e4636faa4a44f40af4e0dc5c3e65dd1d90c7072bbffaa7a1ac022c49f714b",
+    "nekojs/config/trusted-servers.json": "f60f8aab798a9ac487d2647849263872efb47b372f316f8b76c55e899b26b2fb",
+    "nekojs/packs/user/.neko_pack.state.json": "5e453180be18e5dbdd70b7ea2e344ac5bce8b925b667188c3651c5cb7ab1890c",
+    "nekojs/packs/user/manifest.json": "23a16b004db8bafa498db9598f79cde9fa821a5bb10438103be22106b28be826",
+    "nekojs/server_scripts/jsconfig.json": "54cac3aa5751848053ffd6e809f2b35b624e6db9d12c268be34d55c608d93fce",
+    "nekojs/server_scripts/src/user.js": "5ddff1dce7c91d70f635160d885e915d3da24b4fbb17e1ce7169608c362d4fd0",
+    "world/entities/old-pdata.snbt": "ab5cfb8f21fe2989b553ae1eb4ab7bea216f61332beadb68c28565c52b33258d",
+    "world/nekojs_packs/world-user/manifest.json": "3926770125d93e99bd21c3a240d724a977ae966338e2bacca08b876c280fc6c2",
+    "world/playerdata/old-player.snbt": "9df17671670016a978acbcf62cccf2bed56bd67fb68959f35b5ed37903fbe3f6"
+  },
+  "artifactSwapAndRollbackPreserveProtectedBytes": true,
+  "artifactRollbackDoesNotUndoDataDamage": true,
+  "separateRestoreExactAndIdempotent": true,
+  "injectedRestoreFailure": "Injected operator cancellation after staging, before restore publish",
+  "failureBeforePublishPreservesDamagedLiveAndOriginal": true,
+  "backupAndDamagedOriginalRetained": true,
+  "productionMigrationIntroduced": false,
+  "minecraftRuntimeRollbackTested": false,
+  "limitations": [
+    "Synthetic file fixtures, not production config/NBT parsing.",
+    "No directory-wide atomic restore or power-loss guarantee.",
+    "No arbitrary Java/network/world side-effect undo.",
+    "Old artifact source revision not inferred from filename or hash."
+  ]
+}

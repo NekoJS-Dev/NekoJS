@@ -290,19 +290,22 @@ binary NBT 持久化固定在 `<gameDir>/nekojs/data/`。path 必须是 forward-
 
 NeoForge 支持在服务端脚本中追加交易。Fabric 当前没有等价的交易注册表 mutation；调用该能力会以 unavailable 原因拒绝，不应在 Fabric 脚本中使用。
 
-在 NeoForge 上，交易会在脚本加载时暂存，在 reload 收尾统一写入；26.x 走可 reload 的交易注册表，1.21.1 替换静态交易表，新交易在村民下次补货时出现：
+服务端脚本通过 `ServerEvents.tradeDeclaration` 声明交易。收集期不修改 live registry；整批通过 preflight 与 commit 后由平台 Adapter 应用。无效声明拒绝整批，不部分写入。NeoForge 26.x 使用可 reload 的交易注册表；1.21.1 使用静态交易池。
 
 ```javascript
-VillagerTrades.add('minecraft:farmer/level_1', {
-  cost: '1x minecraft:emerald',       // 也接受 'minecraft:emerald' 或 { item: '...', count: n }
-  result: '5x minecraft:apple',
-  maxUses: 12, xp: 2, priceMultiplier: 0.05,
+ServerEvents.tradeDeclaration(event => {
+  event.add('minecraft:farmer/level_1', {
+    cost: '1x minecraft:emerald',
+    result: '5x minecraft:apple',
+    maxUses: 12, xp: 2, priceMultiplier: 0.05,
+  })
 })
-VillagerTrades.add('minecraft:wandering_trader/level_1', { cost: 'minecraft:book', result: 'minecraft:emerald' })
+console.info(VillagerTrades.query().describe())
 ```
 
-交易集 id 形如 `minecraft:<职业>/level_1..5` 与 `minecraft:wandering_trader/level_1|level_2`
-（别名 `buying|common`→1、`uncommon|rare`→2）；staging 时即校验交易集存在，写错会得到明确报错。
+农民等职业 id 为 `minecraft:<职业>/level_1..5`。流浪商人 id 有版本差异：26.x 使用 `minecraft:wandering_trader/buying` 等 trade-set key；1.21.1 使用 `minecraft:wandering_trader/level_1|level_2`（别名 `buying|common`→1、`uncommon|rare`→2）。Adapter 在 preflight 校验目标。query 只读且绑定 generation；过期/不可用原因通过 `statusReason` 明确返回。
+
+普通遗漏记为 unrestored；`ServerEvents.tradeReload(event => event.declareObsolete(id))` 显式 retire 某交易集。同一交易集不可混用旧新写入路径。旧 `VillagerTrades.add/pendingCount` 仅 canonical NeoForge 26.x 暂留，等待迁移确认；**1.21.1 已只有 query/describe**。Fabric 无 `VillagerTrades` global，非空交易声明会明确拒绝。
 
 <a id="wiki-section-22"></a>
 ### `EntitySelectors`
@@ -326,16 +329,20 @@ const nearest = EntitySelectors.find(level, EntitySelectors.nearestPlayer().crea
 > Fabric 当前没有注册 `PostEffects`，也没有对应的自定义 GLSL runtime 面。
 
 客户端后处理链：`PostEffects.set('minecraft:invert')` / `clear()` / `toggle(id)` / `current()`。
-内置预设（26.x/1.21.1 均可用）：`minecraft:invert`、`spider`、`creeper`、`blur`、
-`entity_outline`、`transparency`。也可运行时注册自定义链（内联 GLSL，仅 NeoForge 26.x）：
+generation 定义通过 `ClientEvents.postEffects` 声明，不再使用已删除的 `PostEffects.register/unregister/has`。运行时动作仍放在 binding：
 
 ```javascript
-PostEffects.register('mymod:gray', {
-  chainJson: PostEffectChainJson.simpleBlit('mymod:gray_frag'),  // 生成 main→swap→main 链
-  fragmentShaders: { 'mymod:gray_frag': '#version 330\n...' },
+ClientEvents.postEffects(event => {
+  event.register('mymod:blur', { blurRadius: 8, blurRounds: 1 })
 })
-PostEffects.set('mymod:gray')
+ClientEvents.playerTickPost(() => {
+  if (PostEffects.isAvailable('minecraft:invert') && !PostEffects.active) {
+    PostEffects.set('minecraft:invert')
+  }
+})
 ```
+
+`hasDefinition(id)`、`installed()`、`activeGeneration()` 回读已提交定义，不代表实际可出图。当前 `isAvailable(id)` 要求资源包 effect；没有该资源的声明 id 不能由 `set` 激活。NeoForge 26.x 的 ShaderManager hook 可为 resource-backed id 提供声明链/Shader 源（已实测覆盖 `minecraft:invert` 的声明链），不承诺任意新 inline id 可激活。**1.21.1 仅 resources-only**，未接 runtime declared chain hook。候选 preflight 失败保留旧 generation；binding teardown 本身不清屏。预设是否存在取决于当前资源包，应检查 availability，不假定所有列出的名字均存在。
 
 注意：相机实体视觉（末影人/蜘蛛/苦力怕）会覆盖或清除脚本设置的效果。
 

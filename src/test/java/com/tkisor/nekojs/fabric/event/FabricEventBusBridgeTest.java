@@ -1,5 +1,5 @@
 //? if fabric {
-package com.tkisor.nekojs.fabric.event;
+/*package com.tkisor.nekojs.fabric.event;
 
 import com.tkisor.nekojs.api.event.CancellableEventBus;
 import com.tkisor.nekojs.api.event.EventBusJS;
@@ -84,4 +84,4 @@ class FabricEventBusBridgeTest {
         assertEquals("converted-42", observed.get());
     }
 }
-//?}
+*///?}

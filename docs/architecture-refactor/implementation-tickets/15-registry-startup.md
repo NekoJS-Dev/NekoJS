@@ -4,7 +4,7 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** closed
+**Status:** in-progress（2026-10-07 重核：历史实现交付保留；完整声明替代、实机缺口与公开删除门禁未闭合）
 
 **Assignee:** zcode-agent
 
@@ -37,6 +37,14 @@
 - [ ] 旧类型化启动入口、手写 declaration、重复 type catalog 或不受测兼容 wrapper 只能在替代路径 parity、旧 route 无消费者、迁移表覆盖所有公开写法并获得维护者删除确认后删除；本票不保留长期双路径。【不勾选：维护者删除确认是门禁（Human input note）；替代 parity + 旧 route 消费者清单（REPORT §6）+ 迁移表已交付，待 sign-off】
 
 - [x] 参照 PR 37 的收集与冻结边界补负例：Builder 配置 callback 抛错不得留可被 drain 的半成品，finish 后底层收集容器的变化不得修改已发布快照；只读 live view 不冒充冻结结果，任意 Supplier 的内部可变状态不被误称为深不可变。【callback 抛错不留半成品（先配置后入库）/快照不可变 + 后到声明进下一轮/live view 防御副本/Supplier 可变状态不称深不可变——4 用例全过】
+
+## 当前补验与删除门禁（2026-10-07）
+
+- 五节点完整 build/隔离/artifact/NBT门再次通过；不把unit或缓存结果外推成全节点实机连带注册/嵌套builder/probe。
+- 旧 `nekojs.registry` manual declaration 仍有真实 producer 与 TS consumer；structured builder 成员尚不完整替代 event sugar/custom/Supplier/RegistrySugar。不能因为builder golden通过就删除整份作者入口声明。
+- Runtime Potion.effect 3/5参数均有效；structured派生当前只选最长签名，短形式声明并未同时完整输出，历史AC4/AC9描述须与此精度缺口分开理解。
+- 旧14参数 `NekoScriptCatalogSnapshot` public ctor仍有测试消费者；完整新ctor存在，但不能声称无调用者。
+- 本轮不删除以上符号，也不伪造维护者确认。确切迁移/不删除清单见 `evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md`；技术缺口仍须后续补齐。
 
 ## Sources
 

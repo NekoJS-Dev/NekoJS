@@ -1,0 +1,123 @@
+{
+  "sourceRevisionBase": "d5484f9d71fa5fd5b297ffa14d1cad864b594a56",
+  "dirtyWIP": true,
+  "candidateVersion": "1.1.0-preview3",
+  "notFinalReleaseVersion": "1.2.0",
+  "candidateDirectory": "build/ticket37-local-candidate",
+  "artifacts": [
+    {
+      "node": "1.21.1",
+      "originalPath": "versions/1.21.1/build/libs/nekojs-neoforge-1.21.1-1.1.0-preview3.jar",
+      "candidatePath": "build/ticket37-local-candidate/nekojs-neoforge-1.21.1-1.1.0-preview3.jar",
+      "sha256": "d3c3565dd78d8baec42e8d0f7cc7beb8af3037b30eae59c77dd0f85bd2ff043f",
+      "copySha256": "d3c3565dd78d8baec42e8d0f7cc7beb8af3037b30eae59c77dd0f85bd2ff043f",
+      "sizeBytes": 2898491,
+      "metadataPath": "META-INF/neoforge.mods.toml",
+      "metadataSha256": "f69665a75f709ee1124614bb5c112c5b0266a31e53818399565a9bbce3d230f5",
+      "metadata": {
+        "modId": "nekojs", "modVersion": "1.1.0-preview3", "modLoader": "javafml", "loaderVersion": "[4,)",
+        "dependencies": [
+          {"modId": "neoforge", "type": "required", "versionRange": "[21.1,22.0)", "ordering": "NONE", "side": "BOTH"},
+          {"modId": "minecraft", "type": "required", "versionRange": "[1.21,1.22)", "ordering": "NONE", "side": "BOTH"},
+          {"modId": "graalmc", "type": "required", "versionRange": "[25.0.1,)", "ordering": "NONE", "side": "BOTH"}
+        ]
+      }
+    },
+    {
+      "node": "26.1.2",
+      "originalPath": "versions/26.1.2/build/libs/nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "candidatePath": "build/ticket37-local-candidate/nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "sha256": "71dfedb5b47bbeba38ba9b66761ed7610aa3ec6762fc23af1875ca96ea00211d",
+      "copySha256": "71dfedb5b47bbeba38ba9b66761ed7610aa3ec6762fc23af1875ca96ea00211d",
+      "sizeBytes": 16731318,
+      "metadataPath": "META-INF/neoforge.mods.toml",
+      "metadataSha256": "70fd7eae3ecb90bea1d8d68b587e3d708a3544fcc23ee855c153565396d11202",
+      "metadata": {
+        "modId": "nekojs", "modVersion": "1.1.0-preview3", "modLoader": "javafml", "loaderVersion": "[4,)",
+        "dependencies": [
+          {"modId": "neoforge", "type": "required", "versionRange": "[26,)", "ordering": "NONE", "side": "BOTH"},
+          {"modId": "minecraft", "type": "required", "versionRange": "[26.1.2,26.2)", "ordering": "NONE", "side": "BOTH"},
+          {"modId": "graalmc", "type": "required", "versionRange": "[25.0.1,)", "ordering": "NONE", "side": "BOTH"}
+        ]
+      }
+    },
+    {
+      "node": "26.2.0",
+      "originalPath": "versions/26.2.0/build/libs/nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+      "candidatePath": "build/ticket37-local-candidate/nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+      "sha256": "600ca6cae32ed1fd7bc89d200aa283865f8e89f4694aeefb60cd55fbbfa8b88b",
+      "copySha256": "600ca6cae32ed1fd7bc89d200aa283865f8e89f4694aeefb60cd55fbbfa8b88b",
+      "sizeBytes": 17203129,
+      "metadataPath": "META-INF/neoforge.mods.toml",
+      "metadataSha256": "848d9b656f0f0c3df03f4f977b55e4be1447fa3ef76d45127fb979e71c983fed",
+      "metadata": {
+        "modId": "nekojs", "modVersion": "1.1.0-preview3", "modLoader": "javafml", "loaderVersion": "[4,)",
+        "dependencies": [
+          {"modId": "neoforge", "type": "required", "versionRange": "[26,)", "ordering": "NONE", "side": "BOTH"},
+          {"modId": "minecraft", "type": "required", "versionRange": "[26.2.0,26.3)", "ordering": "NONE", "side": "BOTH"},
+          {"modId": "graalmc", "type": "required", "versionRange": "[25.0.1,)", "ordering": "NONE", "side": "BOTH"}
+        ]
+      }
+    },
+    {
+      "node": "26.1.2-fabric",
+      "originalPath": "versions/26.1.2-fabric/build/libs/nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+      "candidatePath": "build/ticket37-local-candidate/nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+      "sha256": "78e281b09552e7553b2154acc4e5431b0d72ec393381973564cf9cbc5e512b59",
+      "copySha256": "78e281b09552e7553b2154acc4e5431b0d72ec393381973564cf9cbc5e512b59",
+      "sizeBytes": 17996794,
+      "metadataPath": "fabric.mod.json",
+      "metadataSha256": "a86f5a8b7ee55ae07b53b1931720d952bdbf1810a930c2673d0ec604e8470ec3",
+      "metadata": {
+        "modId": "nekojs", "modVersion": "1.1.0-preview3",
+        "depends": {"fabricloader": ">=0.19.3", "fabric-api": ">=0.155.2+26.1.2", "minecraft": "~26.1.2", "java": ">=25"}
+      }
+    },
+    {
+      "node": "26.2.0-fabric",
+      "originalPath": "versions/26.2.0-fabric/build/libs/nekojs-fabric-26.2-1.1.0-preview3.jar",
+      "candidatePath": "build/ticket37-local-candidate/nekojs-fabric-26.2-1.1.0-preview3.jar",
+      "sha256": "6daf9141ee25ea69b19bb70e857429439d59ee62030dc986055e2a9f86921a81",
+      "copySha256": "6daf9141ee25ea69b19bb70e857429439d59ee62030dc986055e2a9f86921a81",
+      "sizeBytes": 17996793,
+      "metadataPath": "fabric.mod.json",
+      "metadataSha256": "563e5be4158d888783ed87e081ba3299ab3fba392e49d4bef723e0a2b63d802e",
+      "metadata": {
+        "modId": "nekojs", "modVersion": "1.1.0-preview3",
+        "depends": {"fabricloader": ">=0.19.3", "fabric-api": ">=0.159.0+26.2", "minecraft": "~26.2", "java": ">=25"}
+      }
+    }
+  ],
+  "changedJavaSourceHashes": {
+    "src/main/java/com/tkisor/nekojs/client/posteffect/NekoPostEffectPlugin.java": "33e37575c98bff1451522394cf81a1085064a9cb6da6966b1a4a8fc354de5e95",
+    "src/main/java/com/tkisor/nekojs/mixin/ShaderManagerMixin.java": "864dd0230759699caf8659ab11f626206252b14f6f5643c0bd5b8470a7b59a41",
+    "src/main/java/com/tkisor/nekojs/villager/VillagerTradesPlugin.java": "2f0cbf94d6926093de792b0bbf910e9f66056e810e43dab6b776303bbb14230b",
+    "src/test/java/com/tkisor/nekojs/fabric/event/FabricEventBusBridgeTest.java": "5c55eda7cc00bb1ae8ea5cba1df219cceccab0e52e7dac371662bfa9980daab3",
+    "src/test/java/com/tkisor/nekojs/client/posteffect/PostEffectDeclarationParityTest.java": "229573755ecbba99fd5bb731f77ae43b03ef7c71513d4ac228c74595ce770592"
+  },
+  "logs": {
+    "build/ticket37-final-build.log": {"sha256": "51f1513b89ea482fad5431ec0ff91833aed6a2474e9897ce26e446f9718acaf7", "buildSuccessful": true, "actionableTasks": 107, "executedTasks": 28, "upToDateTasks": 79},
+    "build/ticket37-full-tests.log": {"sha256": "783bd4ea39bbfc6b4e5aac7690f1f7ab9da67131ae4f0d7ffda48b4531b5d684", "buildSuccessful": true, "actionableTasks": 78, "executedTasks": 2, "upToDateTasks": 76, "ordinaryNodeTestTasks": "UP-TO-DATE"}
+  },
+  "ordinaryJUnitResults": {
+    "common": {"tests": 2041, "failures": 0, "errors": 0, "skipped": 4, "suites": 276, "timestampMin": "2026-10-06T18:47:54.791Z", "timestampMax": "2026-10-06T18:50:16.419Z", "focusedSuites": []},
+    "1.21.1": {"tests": 420, "failures": 0, "errors": 0, "skipped": 31, "suites": 94, "timestampMin": "2026-10-07T05:01:11.720Z", "timestampMax": "2026-10-07T05:02:33.727Z", "focusedSuites": [{"name": "com.tkisor.nekojs.client.posteffect.PostEffectDeclarationParityTest", "tests": 1, "failures": 0, "errors": 0, "skipped": 0, "timestamp": "2026-10-07T05:02:02.419Z"}]},
+    "26.1.2": {"tests": 644, "failures": 0, "errors": 0, "skipped": 81, "suites": 127, "timestampMin": "2026-10-07T05:01:12.406Z", "timestampMax": "2026-10-07T05:02:45.168Z", "focusedSuites": [{"name": "com.tkisor.nekojs.client.posteffect.PostEffectDeclarationParityTest", "tests": 1, "failures": 0, "errors": 0, "skipped": 0, "timestamp": "2026-10-07T05:01:58.690Z"}]},
+    "26.2.0": {"tests": 644, "failures": 0, "errors": 0, "skipped": 81, "suites": 127, "timestampMin": "2026-10-07T05:01:12.908Z", "timestampMax": "2026-10-07T05:02:50.772Z", "focusedSuites": [{"name": "com.tkisor.nekojs.client.posteffect.PostEffectDeclarationParityTest", "tests": 1, "failures": 0, "errors": 0, "skipped": 0, "timestamp": "2026-10-07T05:02:00.869Z"}]},
+    "26.1.2-fabric": {"tests": 378, "failures": 0, "errors": 0, "skipped": 37, "suites": 76, "timestampMin": "2026-10-07T05:01:12.698Z", "timestampMax": "2026-10-07T05:02:48.944Z", "focusedSuites": [{"name": "com.tkisor.nekojs.client.posteffect.PostEffectDeclarationParityTest", "tests": 1, "failures": 0, "errors": 0, "skipped": 0, "timestamp": "2026-10-07T05:01:55.403Z"}, {"name": "com.tkisor.nekojs.fabric.event.FabricEventBusBridgeTest", "tests": 5, "failures": 0, "errors": 0, "skipped": 0, "timestamp": "2026-10-07T05:02:05.495Z"}]},
+    "26.2.0-fabric": {"tests": 378, "failures": 0, "errors": 0, "skipped": 37, "suites": 76, "timestampMin": "2026-10-07T05:01:11.746Z", "timestampMax": "2026-10-07T05:02:43.148Z", "focusedSuites": [{"name": "com.tkisor.nekojs.client.posteffect.PostEffectDeclarationParityTest", "tests": 1, "failures": 0, "errors": 0, "skipped": 0, "timestamp": "2026-10-07T05:01:53.551Z"}, {"name": "com.tkisor.nekojs.fabric.event.FabricEventBusBridgeTest", "tests": 5, "failures": 0, "errors": 0, "skipped": 0, "timestamp": "2026-10-07T05:02:02.115Z"}]}
+  },
+  "exactCandidateRuntime": "not fully verified across five nodes",
+  "exactCandidatePerformance": "not verified",
+  "historicalNativeArtifacts": {
+    "neoforge26.2": "32309A66568C6E2EB57CF01CAA5A0D5B4201E01A6555F229EC10EAE107E0CDB8",
+    "neoforgeNativeMatchesCandidate": false,
+    "fabric26.2": "6DAF9141EE25EA69B19BB70E857429439D59EE62030DC986055E2A9F86921A81",
+    "fabricNativeMatchesCandidate": true,
+    "fabricScope": "Previously observed declaration rejection and empty-domain server startup only; not client rendering or general domain parity.",
+    "imagesRetestedAgainstCandidate": false
+  },
+  "remoteCIExecuted": false,
+  "remotePublicationExecuted": false,
+  "additionalTestsRunByManifestCapture": false
+}

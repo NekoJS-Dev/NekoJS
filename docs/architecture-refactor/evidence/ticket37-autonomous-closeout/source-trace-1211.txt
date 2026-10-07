@@ -1,0 +1,9 @@
+source-roots: 1.21.1 java=2 resources=6
+  java      build/generated/stonecutter/main/java
+  java      src/main/java
+  resources ../../src/main/resources-legacy
+  resources build/generated/sources/modMetadata
+  resources build/generated/stonecutter/generated/resources
+  resources build/generated/stonecutter/main/resources
+  resources src/generated/resources
+  resources src/main/resources

@@ -4,9 +4,9 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress（2026-10-07：按维护者授权自主补技术验收与本地交接；公开删除确认、最终策略和正式发布授权不代答）
 
-**Assignee:** unassigned
+**Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 
 **Optional:** false
 
@@ -23,19 +23,19 @@
 ## Acceptance criteria
 
 - [ ] 每个 Script/Plugin public breaking 符号都有旧写法、1.2.0 新写法、替代路径、数据影响和维护者确认；没有迁移项被可选工具替代。
-- [ ] 数据保护清单覆盖 config、world、实体/玩家 pdata、脚本与 pack、trust-store、workspace/declaration、日志与 cache 的可再生性、备份、保留和回滚。
+- [x] 数据保护清单覆盖 config、world、实体/玩家 pdata、脚本与 pack、trust-store、workspace/declaration、日志与 cache 的可再生性、备份、保留和回滚。【2026-10-07：`evidence/ticket37-autonomous-closeout/DATA-PROTECTION.md`；当前路径/owner核对及bounded rehearsal，未冒充实际用户数据恢复。】
 - [ ] release rollback 与 data rollback 分开验证；旧制品回退不宣称恢复脚本对外部世界、网络或 Java 对象造成的副作用。
 - [ ] 必要数据迁移具备备份或原子替换、版本/schema 标记、旧 fixture 回读、幂等验证、失败恢复和原始数据保留证据；无必要变化的默认路径、key、wire id、格式和启用规则未被暗中改变。
 - [ ] 各功能域迁移票已按自身删除条件移除旧 public route、compat shim、重复 runtime path 或第二语义 pipeline，并完成对应域验证；本票只复核无残留，并只删除已被调用者证据证明为无调用者的小量过渡项，不在验收后临时扩大代码清理。
 - [ ] 若最终清理、版本切换或发布包装改变确切候选制品，则对该候选制品重新执行必要 build、artifact、metadata、runtime smoke 和性能相关验证；旧制品证据不能冒充最终证据。
 - [ ] README、wiki、ADR 与支持/能力矩阵的发布说明一致，公开说明 Fabric processor 延期、WORLD pack 差异和其他 partial/unavailable 能力。
 - [ ] 各 API/功能域的最小可运行示例、迁移材料和 cookbook 已随对应实现票交付并通过验收；本票只汇总、核对链接和修正发布索引，不首次补写域内材料。
-- [ ] 可选离线 validator/migration report 保持显式运行、默认只读且不是 release blocker，也不进入普通 runtime 错误路径或第二套 Script API。
+- [x] 可选离线 validator/migration report 保持显式运行、默认只读且不是 release blocker，也不进入普通 runtime 错误路径或第二套 Script API。【票38技术验收，现有CLI3tests再次通过；无runtime接线。】
 - [ ] 发布产物在本地完成准备、校验和交接清单核对；远程上传、渠道公告或正式发布动作未在本票执行，需维护者另行明确授权。
 
 ## Current handoff record
 
-The current local checklist is [ticket 37 handoff status](../evidence/2026-10-06-ticket37-handoff/README.md). It prepares the agent-owned evidence and explicitly leaves maintainer trials, breaking-symbol sign-off, 1.21.1 smoke, and the combined ticket-48 proof as release blockers; it does not mark release acceptance.
+The current local checklist is [ticket 37 handoff status](../evidence/2026-10-06-ticket37-handoff/README.md), extended by the [autonomous technical closeout plan](../evidence/ticket37-autonomous-closeout/WORKPLAN.md). Ticket 36 maintainer acceptance, the legacy item smoke, and the combined ticket-48 proof are completed inputs, not current blockers. Exact candidate revalidation, remaining domain evidence, named public-breaking approvals and final release/rollback policy remain separate requirements; technical preparation is not release authorization.
 
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)
 - [PR 37 维护体验回归约束规格](../specs/00-pr37-maintainer-research.md)

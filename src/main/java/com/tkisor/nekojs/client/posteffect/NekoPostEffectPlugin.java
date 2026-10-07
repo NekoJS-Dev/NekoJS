@@ -8,9 +8,9 @@ import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 
 /**
- * Client-only plugin (feature 8b) registering the {@code PostEffects} binding for CLIENT
- * scripts. {@code PostEffectsJS} implements {@code Binding}, so its {@code close()} drops
- * runtime-registered definitions on CLIENT reload (matching NativeEventsJS teardown semantics).
+ * Client-only plugin registering the {@code PostEffects} runtime binding for CLIENT scripts.
+ * Declaration ownership and replacement belong to {@code PostEffectDomainOwner}; closing
+ * the binding does not clear the current runtime picture.
  */
 @RegisterNekoJSPlugin(clientOnly = true)
 public class NekoPostEffectPlugin implements NekoJSPlugin, com.tkisor.nekojs.core.plugin.BindingsPoint.Contributor {

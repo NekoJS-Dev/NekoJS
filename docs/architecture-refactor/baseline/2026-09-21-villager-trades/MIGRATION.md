@@ -5,8 +5,8 @@
 > collector → 合法 commit 点由平台/版本 Adapter 执行 registry mutation → generation/stale 绑定的
 > 只读 query」。
 >
-> **两条路径目前并存**：新路径（本票交付）与旧路径（保持原样，等待维护者 sign-off 后删除）。
-> 本文只描述现状与迁移方向，不宣称旧路径已删除。
+> **2026-10-07 当前勘误**：两条 Script 写入路径只在 canonical NeoForge 26.x 并存；1.21.1 的 `VillagerTradesJS` 已只有 query/describe，add/pendingCount 已移除。两个节点旧 Manager/listener/command hooks 仍在。删除与追认仍需精确 sign-off，不表示整个 Plugin binding producer 可删。
+> 本文历史清单以当时 revision 为准；最新消费者核对见 `evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md`。
 
 ## 1. 入口与能力（当前快照）
 
@@ -40,7 +40,7 @@ trade set id 形状（节点差异，旧新路径一致）：
 | registry mutation | `VillagerTradeManager#apply`（静态方法，reload 末端由 listener / 命令直接调用；反射 unfreeze + 内部 map surgery） | `VillagerTradeDomainOwner#apply`（平台/版本 Adapter，只在 commit 点由联合边界调用）；26.x 与 1.21.1 成对实现 |
 | 移除语义 | 上一轮注入的项先删、touched TradeSet 从 originals 恢复；脚本不再声明 = 静默消失 | 同一 commit 恢复 NekoJS 基线 → 应用完整新计划；不再声明进 `unrestored` 记录，显式 `declareObsolete` 才 `retired` 并恢复基线 |
 | 查询面 | 只有 `pendingCount()`（暂存计数） | `VillagerTrades.query()`：只读快照 + generation/stale 校验 + unrestored/retired 记录；不暴露 live registry view、不返回可写对象 |
-| Fabric | 无实现（默认无此 binding；无错误 no-op 风险由「binding 不存在」承担） | 显式 unavailable：事件面存在、collector 存在，整批在 preflight 以 `VillagerTradeUnavailableException` 拒绝；`query()` 返回 `STALE` + `unavailable:...` |
+| Fabric | 无实现（无此 binding） | 事件/collector 存在；非空声明在 preflight 以 `VillagerTradeUnavailableException` 明确拒绝。common facade 可回读 `STALE`/`unavailable:`；**Fabric script 没有 VillagerTrades global**，不能把 common query fixture 当作 Fabric 脚本调用指南。 |
 
 ## 3. 旧 route 消费者清单（截至 `d0974573`+本票工作区）
 
@@ -82,10 +82,11 @@ trade set id 形状（节点差异，旧新路径一致）：
 5. **维护者确认**：删除是公开面 breaking（`VillagerTrades.add` / `pendingCount` 与
    `VillagerTradeManager` 全部静态符号），需要维护者知情/追认。**本票不执行删除**，也不勾选 AC10。
 
-删除时应一并移除：`villager/VillagerTradeManager.java`（26.x + 1.21.1 成对）、`VillagerTradesPlugin`
-的 binding 注册与 type doc、`ServerEventListener`/`NekoJSCommands` 的 5 处调用、`VillagerTradesJS`
-的 `add`/`pendingCount` 与随之无用的 `ItemSpec` 解析（`query`/`describe` 保留）、以及
-`wiki/全局绑定.md` 的旧用法段落。删除后**不保留**任何长期兼容 shim。
+删除时只移除两个节点旧 Manager 及其 listener/command hooks、canonical26.x 的
+`VillagerTradesJS.add/pendingCount` 和仅服务旧路由的解析代码；1.21.1 Script methods 已移除，
+需单独追认既有变化。**保留 `VillagerTradesPlugin` binding 注册与 query/describe**；它不是纯旧路径。
+其 TypeDoc 已改为 declaration event/query 示例。wiki 的旧推荐示例已切到新事件路径，仍标明26.x
+暂留方法与 legacy/Fabric 差异。不因历史计数假定现有调用恰好只有5处；删除前重查所有消费者。
 
 ## 6. 接口/声明追溯
 
