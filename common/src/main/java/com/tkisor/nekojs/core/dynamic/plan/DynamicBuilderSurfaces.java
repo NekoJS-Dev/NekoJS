@@ -101,7 +101,8 @@ public final class DynamicBuilderSurfaces {
         if (returnType == void.class || returnType == Void.class) {
             return voidShape;
         }
-        if (builderClass.isAssignableFrom(returnType)) {
+        if (DynamicDefinitionBuilder.class.isAssignableFrom(returnType)
+                && (builderClass.isAssignableFrom(returnType) || returnType.isAssignableFrom(builderClass))) {
             return builderClass.getSimpleName();
         }
         return python ? DynamicBuilderContract.pyTypeOf(returnType) : DynamicBuilderContract.tsTypeOf(returnType);

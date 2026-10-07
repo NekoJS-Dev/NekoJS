@@ -1,0 +1,90 @@
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources UP-TO-DATE
+> Task :26.1.2:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2:stonecutterGenerate UP-TO-DATE
+> Task :common:compileJava UP-TO-DATE
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes UP-TO-DATE
+> Task :common-api-processor:compileJava UP-TO-DATE
+> Task :common-api-processor:classes UP-TO-DATE
+> Task :common-api-processor:jar UP-TO-DATE
+> Task :26.1.2:createMinecraftArtifacts UP-TO-DATE
+> Task :26.1.2:generateModMetadata UP-TO-DATE
+> Task :26.1.2:processResources UP-TO-DATE
+> Task :26.1.2:processTestResources UP-TO-DATE
+> Task :common:jar
+> Task :common:compileAddonFixtureJava UP-TO-DATE
+> Task :common:processAddonFixtureResources UP-TO-DATE
+> Task :common:addonFixtureClasses UP-TO-DATE
+> Task :common:externalAddonJar UP-TO-DATE
+
+> Task :26.1.2:compileJava
+D:\mcmodDemo\NekoJS-mult\src\main\java\com\tkisor\nekojs\api\inject\ItemStackExtension.java:162: ����: [deprecation] ItemStack�е�getEnchantments()�ѹ�ʱ
+        return self().getEnchantments().getLevel(enchantment) >= level;
+                     ^
+D:\mcmodDemo\NekoJS-mult\src\main\java\com\tkisor\nekojs\wrapper\event\server\ItemModificationJS.java:44: ����: [this-escape] ��������ȫ��ʼ������֮ǰ������ 'this'
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+                                                                               ^
+D:\mcmodDemo\NekoJS-mult\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:64: ����: [this-escape] ��������ȫ��ʼ������֮ǰ������ 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+3 ������
+
+> Task :26.1.2:classes
+> Task :26.1.2:compileTestJava
+> Task :26.1.2:testClasses
+
+> Task :26.1.2:test
+
+RegistryBuilderSurfaceGoldenTest > potionDeclarationsExposeBothEffectOverloads() FAILED
+    org.opentest4j.AssertionFailedError at RegistryBuilderSurfaceGoldenTest.java:144
+
+1 test completed, 1 failed
+
+> Task :26.1.2:test FAILED
+
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS-mult/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+27 actionable tasks: 4 executed, 23 up-to-date
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':26.1.2:test'.
+> There were failing tests. See the report at: file:///D:/mcmodDemo/NekoJS-mult/versions/26.1.2/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+BUILD FAILED in 33s

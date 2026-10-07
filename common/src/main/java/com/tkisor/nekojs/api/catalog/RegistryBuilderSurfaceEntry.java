@@ -17,7 +17,7 @@ import java.util.List;
  * @param registryKey    注册表完整键（如 {@code minecraft:item}）
  * @param typeName       注册表类型名（如 {@code basic}）
  * @param sugarName      脚本糖方法名（如 {@code item}；default 类型才有）
- * @param members        契约成员（字典序）
+ * @param members        contract members in name order; each method overload has its own entry
  * @param description    描述（probe 文档用）
  */
 public record RegistryBuilderSurfaceEntry(

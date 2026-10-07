@@ -40,7 +40,7 @@
 - Adapter与transport registration现已接线；historical unwired说明不再是当前source trace，但wire contract冻结不变、P能力不自动升级。
 - 旧Script facade六个overload/fluentbuilders/immediate handle仍需精确确认和消费者迁移，删除前必须转移其 `close -> beginServerReload` 生命周期。
 - 新路径仍使用 shared DynamicRegistries/RegistrySurgery/RegistryDataCollectorMixin/config gate/debug；这些不是旧路径删除对象。
-- `$DynamicRegistryEventJS` 声明import、fixedRange null与setMode fluent返回精度历史G3/G4仍开，不能用现有golden通过冒充完整类型精度。
+- 2026-10-07 已修复 fixedRange nullable与setMode concrete fluent返回：同一反射输入产生TS/Python精准类型，primitive stack size不变，新增两组red→green和5行dynamic golden差异通过。`$DynamicRegistryEventJS` 默认import/typed Proxy入口仍开：default ProbeConfig排除core包，payload的三个实际入口是private ProxyExecutable目录，不是public Java方法。此为当前source trace，不冒充完整默认Probe输出验收；不得用builder golden或放宽core安全扫描来掩盖。见 `evidence/ticket15-16-declaration-precision/README.md`。
 - 确切public迁移/不删除清单见 `evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md`；维护者确认未代答。
 
 ## Sources

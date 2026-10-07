@@ -42,7 +42,7 @@
 
 - 五节点完整 build/隔离/artifact/NBT门再次通过；不把unit或缓存结果外推成全节点实机连带注册/嵌套builder/probe。
 - 旧 `nekojs.registry` manual declaration 仍有真实 producer 与 TS consumer；structured builder 成员尚不完整替代 event sugar/custom/Supplier/RegistrySugar。不能因为builder golden通过就删除整份作者入口声明。
-- Runtime Potion.effect 3/5参数均有效；structured派生当前只选最长签名，短形式声明并未同时完整输出，历史AC4/AC9描述须与此精度缺口分开理解。
+- Runtime Potion.effect 3/5参数均有效；2026-10-07 已修复 structured 派生只选最长签名的问题。五节点真实契约→生产 TS/Python 渲染器同时输出3/5参数；Python用overload区分，不增加无runtime对应的4参数形式。两份startup golden各仅增加短形式1行；完整新构建与隔离通过。见 `evidence/ticket15-16-declaration-precision/README.md`。这不替代仍保留的event sugar/custom/Supplier作者声明或实机gate。
 - 旧14参数 `NekoScriptCatalogSnapshot` public ctor仍有测试消费者；完整新ctor存在，但不能声称无调用者。
 - 本轮不删除以上符号，也不伪造维护者确认。确切迁移/不删除清单见 `evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md`；技术缺口仍须后续补齐。
 

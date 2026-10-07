@@ -133,6 +133,7 @@ interface ParticleTypeBuilder {
 
 /** PotionBuilder — registry 'minecraft:potion', type 'basic', sugar 'potion'. */
 interface PotionBuilder {
+    effect(effect: any, durationTicks: number, amplifier: number): void;
     effect(effect: any, durationTicks: number, amplifier: number, ambient: boolean, visible: boolean): void;
     readonly id: any;
 }

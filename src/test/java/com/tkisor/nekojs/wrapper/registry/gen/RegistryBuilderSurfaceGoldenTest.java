@@ -137,6 +137,21 @@ class RegistryBuilderSurfaceGoldenTest {
     }
 
     @Test
+    void potionDeclarationsExposeBothEffectOverloads() {
+        List<RegistryBuilderSurfaceEntry> entries = loaderIndependentEntries();
+        String typescript = RegistryBuilderTsRenderer.render(entries);
+        String python = RegistryBuilderPyRenderer.render(entries);
+        assertTrue(typescript.contains("effect(effect: any, durationTicks: number, amplifier: number): void;"),
+                "Potion declarations must include the three-argument TypeScript effect overload");
+        assertTrue(typescript.contains("effect(effect: any, durationTicks: number, amplifier: number, ambient: boolean, visible: boolean): void;"),
+                "Potion declarations must include the five-argument TypeScript effect overload");
+        assertTrue(python.contains("    @overload\n    def effect(self, effect: Any, durationTicks: int, amplifier: int) -> None: ..."),
+                "Potion declarations must decorate the three-argument Python effect overload");
+        assertTrue(python.contains("    @overload\n    def effect(self, effect: Any, durationTicks: int, amplifier: int, ambient: bool, visible: bool) -> None: ..."),
+                "Potion declarations must decorate the five-argument Python effect overload");
+    }
+
+    @Test
     void derivedSurfaceCoversTheDocumentedBuilderSet() {
         List<String> names = loaderIndependentEntries().stream()
                 .map(RegistryBuilderSurfaceEntry::builderName).toList();
@@ -195,7 +210,8 @@ class RegistryBuilderSurfaceGoldenTest {
             }
             String trimmed = line.trim();
             if (trimmed.isEmpty() || trimmed.startsWith("/**") || trimmed.startsWith("*")
-                    || trimmed.startsWith("//") || trimmed.startsWith("#") || trimmed.startsWith("from ")) {
+                    || trimmed.startsWith("//") || trimmed.startsWith("#") || trimmed.startsWith("from ")
+                    || trimmed.startsWith("@")) {
                 continue;
             }
             if (trimmed.startsWith("def ")) {

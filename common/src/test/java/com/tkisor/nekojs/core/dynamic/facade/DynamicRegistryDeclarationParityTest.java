@@ -139,6 +139,41 @@ class DynamicRegistryDeclarationParityTest {
         assertFalse(ts.contains("registry_types"), "动态 builder 条目与启动 registry_types 清单无关（独立路径）");
     }
 
+    @Test
+    void inheritedFluentModeSetterKeepsTheConcreteBuilderTypeInBothLanguages() {
+        String ts = RegistryBuilderTsRenderer.render(DynamicBuilderSurfaces.derive());
+        String py = RegistryBuilderPyRenderer.render(DynamicBuilderSurfaces.derive());
+        for (String builder : List.of("DynamicItemBuilder", "DynamicMobEffectBuilder", "DynamicSoundEventBuilder")) {
+            assertTrue(ts.contains("setMode(mode: string): " + builder + ";"),
+                    "TypeScript fluent mode setter must keep " + builder);
+            assertTrue(py.contains("def setMode(self, mode: str) -> " + builder + ": ..."),
+                    "Python fluent mode setter must keep " + builder);
+        }
+    }
+
+    @Test
+    void nullableSoundRangeAppearsInPropertyAndSetterDeclarations() {
+        String typescript = RegistryBuilderTsRenderer.render(DynamicBuilderSurfaces.derive());
+        String python = RegistryBuilderPyRenderer.render(DynamicBuilderSurfaces.derive());
+
+        assertTrue(typescript.contains("fixedRange: number | null;"),
+                "TypeScript sound range property must permit its null default");
+        assertTrue(typescript.contains("setFixedRange(range: number | null): DynamicSoundEventBuilder;"),
+                "TypeScript sound range setter must permit explicit null and keep the concrete builder type");
+        assertTrue(python.contains("fixedRange: float | None"),
+                "Python sound range property must permit its null default");
+        assertTrue(python.contains("def setFixedRange(self, range: float | None) -> DynamicSoundEventBuilder: ..."),
+                "Python sound range setter must permit explicit null and keep the concrete builder type");
+        assertTrue(typescript.lines().map(String::trim).anyMatch("maxStackSize: number;"::equals),
+                "TypeScript primitive stack size must remain exactly non-nullable number");
+        assertTrue(python.lines().map(String::trim).anyMatch("maxStackSize: int"::equals),
+                "Python primitive stack size must remain exactly non-nullable int");
+        assertFalse(typescript.contains("maxStackSize: number | null"),
+                "TypeScript primitive stack size must not become nullable");
+        assertFalse(python.contains("maxStackSize: int | None"),
+                "Python primitive stack size must not become nullable");
+    }
+
     private static int count(String needle, String haystack) {
         int count = 0;
         int index = 0;

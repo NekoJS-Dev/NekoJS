@@ -9,7 +9,7 @@ interface DynamicItemBuilder {
     rarity: string;
     setFireResistant(value: boolean): DynamicItemBuilder;
     setMaxStackSize(size: number): DynamicItemBuilder;
-    setMode(mode: string): any;
+    setMode(mode: string): DynamicItemBuilder;
     setRarity(rarity: string): DynamicItemBuilder;
 }
 
@@ -20,14 +20,14 @@ interface DynamicMobEffectBuilder {
     mode: string;
     setCategory(category: string): DynamicMobEffectBuilder;
     setColor(color: number): DynamicMobEffectBuilder;
-    setMode(mode: string): any;
+    setMode(mode: string): DynamicMobEffectBuilder;
 }
 
 /** DynamicSoundEventBuilder — registry 'minecraft:sound_event', type 'dynamic', sugar 'soundEvent'. */
 interface DynamicSoundEventBuilder {
-    fixedRange: number;
+    fixedRange: number | null;
     mode: string;
-    setFixedRange(range: number): DynamicSoundEventBuilder;
-    setMode(mode: string): any;
+    setFixedRange(range: number | null): DynamicSoundEventBuilder;
+    setMode(mode: string): DynamicSoundEventBuilder;
 }
 

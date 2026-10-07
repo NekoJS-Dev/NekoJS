@@ -1,0 +1,313 @@
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources UP-TO-DATE
+> Task :26.1.2:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2:stonecutterGenerate UP-TO-DATE
+> Task :common:compileJava UP-TO-DATE
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes UP-TO-DATE
+> Task :common:jar UP-TO-DATE
+> Task :common-api-processor:compileJava UP-TO-DATE
+> Task :common-api-processor:classes UP-TO-DATE
+> Task :common:compileAddonFixtureJava UP-TO-DATE
+> Task :common-api-processor:jar UP-TO-DATE
+> Task :common:processAddonFixtureResources UP-TO-DATE
+> Task :common:addonFixtureClasses UP-TO-DATE
+> Task :common:externalAddonJar UP-TO-DATE
+> Task :26.2.0:stonecutterPrepare
+> Task :26.2.0-fabric:stonecutterPrepare
+> Task :26.1.2-fabric:stonecutterPrepare
+> Task :26.1.2:createMinecraftArtifacts UP-TO-DATE
+> Task :26.1.2:compileJava UP-TO-DATE
+> Task :26.1.2:generateModMetadata UP-TO-DATE
+> Task :26.1.2:processResources UP-TO-DATE
+> Task :26.1.2:classes UP-TO-DATE
+> Task :26.1.2:compileTestJava UP-TO-DATE
+> Task :26.1.2:processTestResources UP-TO-DATE
+> Task :26.1.2:testClasses UP-TO-DATE
+> Task :1.21.1:stonecutterPrepare
+> Task :26.2.0:stonecutterGenerate
+> Task :26.2.0:createMinecraftArtifacts UP-TO-DATE
+> Task :26.2.0-fabric:stonecutterGenerate
+> Task :1.21.1:stonecutterGenerate
+> Task :26.1.2-fabric:stonecutterGenerate
+> Task :1.21.1:createMinecraftArtifacts UP-TO-DATE
+
+> Task :26.1.2:test
+
+RegistryBuilderSurfaceGoldenTest > tsDeclarationIsByteStableAndMatchesGolden() FAILED
+    org.opentest4j.AssertionFailedError at RegistryBuilderSurfaceGoldenTest.java:104
+
+5 tests completed, 1 failed
+
+> Task :26.1.2:test FAILED
+> Task :26.2.0-fabric:compileJava
+> Task :26.1.2-fabric:compileJava
+> Task :26.2.0-fabric:extractIcuClasses UP-TO-DATE
+> Task :26.1.2-fabric:extractIcuClasses UP-TO-DATE
+> Task :26.2.0-fabric:generateModMetadata UP-TO-DATE
+> Task :26.1.2-fabric:generateModMetadata UP-TO-DATE
+> Task :26.2.0-fabric:processResources UP-TO-DATE
+> Task :26.2.0-fabric:classes
+> Task :26.1.2-fabric:processResources UP-TO-DATE
+> Task :26.1.2-fabric:classes
+> Task :26.2.0-fabric:stonecutterPrepareTest
+> Task :26.1.2-fabric:stonecutterPrepareTest
+> Task :26.1.2-fabric:stonecutterGenerateTest
+> Task :26.2.0-fabric:stonecutterGenerateTest
+
+> Task :26.2.0:compileJava
+D:\mcmodDemo\NekoJS-mult\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\api\inject\ItemStackExtension.java:162: ����: [deprecation] ItemStack�е�getEnchantments()�ѹ�ʱ
+        return self().getEnchantments().getLevel(enchantment) >= level;
+                     ^
+
+> Task :26.1.2-fabric:compileTestJava
+> Task :26.1.2-fabric:processTestResources UP-TO-DATE
+> Task :26.1.2-fabric:testClasses
+> Task :26.2.0-fabric:compileTestJava
+> Task :26.2.0-fabric:processTestResources UP-TO-DATE
+> Task :26.2.0-fabric:testClasses
+
+> Task :26.2.0:compileJava
+D:\mcmodDemo\NekoJS-mult\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\wrapper\event\server\ItemModificationJS.java:44: ����: [this-escape] ��������ȫ��ʼ������֮ǰ������ 'this'
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+                                                                               ^
+D:\mcmodDemo\NekoJS-mult\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:64: ����: [this-escape] ��������ȫ��ʼ������֮ǰ������ 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+3 ������
+
+> Task :26.1.2-fabric:test FAILED
+
+RegistryBuilderSurfaceGoldenTest > tsDeclarationIsByteStableAndMatchesGolden() FAILED
+    org.opentest4j.AssertionFailedError at RegistryBuilderSurfaceGoldenTest.java:104
+
+
+4 tests completed, 1 failed
+> Task :26.2.0-fabric:test FAILED
+
+RegistryBuilderSurfaceGoldenTest > tsDeclarationIsByteStableAndMatchesGolden() FAILED
+    org.opentest4j.AssertionFailedError at RegistryBuilderSurfaceGoldenTest.java:104
+
+4 tests completed, 1 failed
+
+> Task :26.2.0:generateModMetadata UP-TO-DATE
+> Task :26.2.0:processResources UP-TO-DATE
+> Task :26.2.0:classes
+> Task :26.2.0:stonecutterPrepareTest
+> Task :26.2.0:stonecutterGenerateTest
+
+> Task :1.21.1:compileJava
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\EntityTypeBuilder.java:400: ����: [unchecked] δ������ת��
+                () -> (EntityType<? extends net.minecraft.world.entity.Mob>) (EntityType<?>) this.get(),
+                                                                             ^
+  ��Ҫ: EntityType<? extends Mob>
+  �ҵ�:    EntityType<CAP#1>
+  ����, CAP#1�������ͱ���:
+    CAP#1��?�Ĳ�����չEntity
+
+> Task :26.2.0:compileTestJava
+> Task :26.2.0:processTestResources UP-TO-DATE
+> Task :26.2.0:testClasses
+
+> Task :1.21.1:compileJava
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\event\server\VillagerTradeDomainOwner.java:448: ����: [deprecation] Unsafe�е�staticFieldBase(Field)�ѹ�ʱ
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                   ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\event\server\VillagerTradeDomainOwner.java:448: ����: [deprecation] Unsafe�е�staticFieldOffset(Field)�ѹ�ʱ
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\villager\VillagerTradeManager.java:325: ����: [deprecation] Unsafe�е�staticFieldBase(Field)�ѹ�ʱ
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                   ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\villager\VillagerTradeManager.java:325: ����: [deprecation] Unsafe�е�staticFieldOffset(Field)�ѹ�ʱ
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\event\server\ItemModificationJS.java:32: ����: [this-escape] ��������ȫ��ʼ������֮ǰ������ 'this'
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+                                                                               ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:60: ����: [this-escape] ��������ȫ��ʼ������֮ǰ������ 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: ����: [removal] EventBusSubscriber �е� bus() �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: ����: [removal] EventBusSubscriber �е� Bus �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: ����: [removal] EventBusSubscriber �е� bus() �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: ����: [removal] EventBusSubscriber �е� Bus �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: ����: [removal] EventBusSubscriber �е� bus() �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: ����: [removal] EventBusSubscriber �е� Bus �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: ����: [removal] EventBusSubscriber �е� bus() �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: ����: [removal] EventBusSubscriber �е� Bus �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: ����: [removal] EventBusSubscriber �е� bus() �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: ����: [removal] EventBusSubscriber �е� Bus �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: ����: [removal] EventBusSubscriber �е� bus() �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: ����: [removal] EventBusSubscriber �е� Bus �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: ����: [removal] EventBusSubscriber �е� bus() �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: ����: [removal] EventBusSubscriber �е� Bus �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: ����: [removal] EventBusSubscriber �е� bus() �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: ����: [removal] EventBusSubscriber �е� Bus �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: ����: [removal] EventBusSubscriber �е� bus() �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: ����: [removal] EventBusSubscriber �е� Bus �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: ����: [removal] EventBusSubscriber �е� bus() �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: ����: [removal] EventBusSubscriber �е� Bus �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\ScriptPackDataManager.java:381: ����: [deprecation] Unsafe�е�objectFieldOffset(Field)�ѹ�ʱ
+        return theUnsafe().getObject(target, theUnsafe().objectFieldOffset(field));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\ScriptPackDataManager.java:386: ����: [deprecation] Unsafe�е�objectFieldOffset(Field)�ѹ�ʱ
+        theUnsafe().putObject(target, theUnsafe().objectFieldOffset(field), value);
+                                                 ^
+29 ������
+
+> Task :1.21.1:generateModMetadata UP-TO-DATE
+> Task :1.21.1:processResources UP-TO-DATE
+> Task :1.21.1:classes
+
+> Task :26.2.0:test
+
+RegistryBuilderSurfaceGoldenTest > tsDeclarationIsByteStableAndMatchesGolden() FAILED
+    org.opentest4j.AssertionFailedError at RegistryBuilderSurfaceGoldenTest.java:104
+
+5 tests completed, 1 failed
+
+> Task :1.21.1:stonecutterPrepareTest
+> Task :26.2.0:test FAILED
+> Task :1.21.1:stonecutterGenerateTest
+> Task :1.21.1:compileTestJava
+> Task :1.21.1:processTestResources UP-TO-DATE
+> Task :1.21.1:testClasses
+
+> Task :1.21.1:test
+
+RegistryBuilderSurfaceGoldenTest > tsDeclarationIsByteStableAndMatchesGolden() FAILED
+    org.opentest4j.AssertionFailedError at RegistryBuilderSurfaceGoldenTest.java:104
+
+5 tests completed, 1 failed
+
+> Task :1.21.1:test FAILED
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS-mult/build/reports/problems/problems-report.html
+
+FAILURE: Build completed with 5 failures.
+
+1: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':26.1.2:test'.
+> There were failing tests. See the report at: file:///D:/mcmodDemo/NekoJS-mult/versions/26.1.2/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+==============================================================================
+
+2: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':26.1.2-fabric:test'.
+> There were failing tests. See the report at: file:///D:/mcmodDemo/NekoJS-mult/versions/26.1.2-fabric/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+==============================================================================
+
+3: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':26.2.0-fabric:test'.
+> There were failing tests. See the report at: file:///D:/mcmodDemo/NekoJS-mult/versions/26.2.0-fabric/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+==============================================================================
+
+4: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':26.2.0:test'.
+> There were failing tests. See the report at: file:///D:/mcmodDemo/NekoJS-mult/versions/26.2.0/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+==============================================================================
+
+5: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':1.21.1:test'.
+> There were failing tests. See the report at: file:///D:/mcmodDemo/NekoJS-mult/versions/1.21.1/build/reports/tests/test/index.html
+
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+71 actionable tasks: 29 executed, 42 up-to-date
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+==============================================================================
+
+BUILD FAILED in 54s

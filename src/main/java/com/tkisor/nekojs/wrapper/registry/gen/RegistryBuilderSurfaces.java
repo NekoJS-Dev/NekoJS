@@ -52,17 +52,24 @@ public final class RegistryBuilderSurfaces {
             Class<? extends RegistryObjectBuilder<?>> builderClass, String sugarName) {
         RegistryBuilderContract contract = RegistryBuilderContract.of(builderClass);
         List<RegistryBuilderSurfaceEntry.Member> members = new ArrayList<>();
-        contract.members().forEach(member -> members.add(switch (member.kind()) {
-            case WRITABLE_PROPERTY -> new RegistryBuilderSurfaceEntry.Member(
-                    member.name(), RegistryBuilderSurfaceEntry.MemberKind.WRITABLE_PROPERTY,
-                    member.tsType(), member.pyType());
-            case READ_ONLY_PROPERTY -> new RegistryBuilderSurfaceEntry.Member(
-                    member.name(), RegistryBuilderSurfaceEntry.MemberKind.READ_ONLY_PROPERTY,
-                    member.tsType(), member.pyType());
-            case METHOD -> new RegistryBuilderSurfaceEntry.Member(
-                    member.name(), RegistryBuilderSurfaceEntry.MemberKind.METHOD,
-                    tsSignature(member.overloads()), pySignature(member.name(), member.overloads()));
-        }));
+        for (RegistryBuilderContract.Member member : contract.members()) {
+            switch (member.kind()) {
+                case WRITABLE_PROPERTY -> members.add(new RegistryBuilderSurfaceEntry.Member(
+                        member.name(), RegistryBuilderSurfaceEntry.MemberKind.WRITABLE_PROPERTY,
+                        member.tsType(), member.pyType()));
+                case READ_ONLY_PROPERTY -> members.add(new RegistryBuilderSurfaceEntry.Member(
+                        member.name(), RegistryBuilderSurfaceEntry.MemberKind.READ_ONLY_PROPERTY,
+                        member.tsType(), member.pyType()));
+                case METHOD -> member.overloads().stream()
+                        .sorted(Comparator.comparingInt(Method::getParameterCount)
+                                .thenComparing(method -> Arrays.toString(method.getParameterTypes())))
+                        .map(method -> new RegistryBuilderSurfaceEntry.Member(
+                                member.name(), RegistryBuilderSurfaceEntry.MemberKind.METHOD,
+                                tsSignature(method), pySignature(method)))
+                        .distinct()
+                        .forEach(members::add);
+            }
+        }
         return new RegistryBuilderSurfaceEntry(
                 builderClass.getSimpleName(),
                 registryKey.identifier().toString(),
@@ -86,24 +93,20 @@ public final class RegistryBuilderSurfaces {
         return name.toString();
     }
 
-    /**
-     * 方法成员的 TS 形状：声明面每名冻结一个<b>确定性</b>签名（参数最多者，再按签名串稳定——
-     * {@code deterministicOverload}）；同名重载在脚本侧由实参个数解析（{@code BuilderSurface}
-     * 的 {@code resolveOverload}，3 参/5 参 {@code effect} 双形态都可达）。声明不逐重载展开
-     * 是渲染面选择，不是能力面事实。
-     */
-    private static String tsSignature(List<Method> overloads) {
-        Method method = deterministicOverload(overloads);
+    /** Renders the TypeScript signature of one reflected overload without changing its arity. */
+    private static String tsSignature(Method method) {
         StringBuilder sb = new StringBuilder(method.getName()).append('(');
-        Parameter[] params = method.getParameters();
-        for (int i = 0; i < params.length; i++) {
-            if (i > 0) {
+        Parameter[] parameters = method.getParameters();
+        for (int parameterIndex = 0; parameterIndex < parameters.length; parameterIndex++) {
+            if (parameterIndex > 0) {
                 sb.append(", ");
             }
-            if (method.isVarArgs() && i == params.length - 1) {
-                sb.append("...").append(paramName(params[i], i)).append(tsParamShape(params[i]));
+            if (method.isVarArgs() && parameterIndex == parameters.length - 1) {
+                sb.append("...").append(paramName(parameters[parameterIndex], parameterIndex))
+                        .append(tsParamShape(parameters[parameterIndex]));
             } else {
-                sb.append(paramName(params[i], i)).append(tsParamShape(params[i]));
+                sb.append(paramName(parameters[parameterIndex], parameterIndex))
+                        .append(tsParamShape(parameters[parameterIndex]));
             }
         }
         sb.append("): ").append(method.getReturnType() == void.class || method.getReturnType() == Void.class
@@ -123,19 +126,18 @@ public final class RegistryBuilderSurfaces {
         return ": " + RegistryBuilderContract.tsTypeOf(type);
     }
 
-    /** 方法成员的 Python 形状（与 TS 同一 Method 输入派生；成员名保持 JS 面 verbatim）。 */
-    private static String pySignature(String name, List<Method> overloads) {
-        Method method = deterministicOverload(overloads);
-        StringBuilder sb = new StringBuilder("def ").append(name).append("(self");
-        Parameter[] params = method.getParameters();
-        for (int i = 0; i < params.length; i++) {
+    /** Renders the Python signature from the same reflected overload as TypeScript. */
+    private static String pySignature(Method method) {
+        StringBuilder sb = new StringBuilder("def ").append(method.getName()).append("(self");
+        Parameter[] parameters = method.getParameters();
+        for (int parameterIndex = 0; parameterIndex < parameters.length; parameterIndex++) {
             sb.append(", ");
-            if (method.isVarArgs() && i == params.length - 1) {
-                // Python varargs：*name: component（Callable/List 包装不适用于剩余参数）
-                sb.append("*").append(paramName(params[i], i)).append(": ")
-                        .append(RegistryBuilderContract.pyTypeOf(params[i].getType().getComponentType()));
+            if (method.isVarArgs() && parameterIndex == parameters.length - 1) {
+                sb.append("*").append(paramName(parameters[parameterIndex], parameterIndex)).append(": ")
+                        .append(RegistryBuilderContract.pyTypeOf(parameters[parameterIndex].getType().getComponentType()));
             } else {
-                sb.append(paramName(params[i], i)).append(pyParamShape(params[i]));
+                sb.append(paramName(parameters[parameterIndex], parameterIndex))
+                        .append(pyParamShape(parameters[parameterIndex]));
             }
         }
         sb.append(") -> ").append(method.getReturnType() == void.class || method.getReturnType() == Void.class
@@ -153,15 +155,6 @@ public final class RegistryBuilderSurfaces {
             return ": list[" + RegistryBuilderContract.pyTypeOf(type.getComponentType()) + "]";
         }
         return ": " + RegistryBuilderContract.pyTypeOf(type);
-    }
-
-    /** {@code getMethods()} 顺序不保证：重载取参数最多者（再按签名串稳定），golden 输出确定。 */
-    private static Method deterministicOverload(List<Method> overloads) {
-        return overloads.stream()
-                .sorted(java.util.Comparator.comparing((Method m) -> -m.getParameterCount())
-                        .thenComparing(m -> Arrays.toString(m.getParameterTypes())))
-                .findFirst()
-                .orElseThrow();
     }
 
     private static String paramName(Parameter param, int index) {
