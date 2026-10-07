@@ -2,7 +2,7 @@
 
 Date: 2026-10-07. Behavior revision: `ac810fa71d061d31983220c0d9b198af5d4253ac`. Primary node: NeoForge `26.1.2`. This evidence does not authorize publication or close the remaining domain tickets.
 
-Latest source/results: [root-owned preparation and native source-map optimization](../ticket37-reload-optimization/README.md), source`1b406626`: five-formal startup mean22825.6msPASS and five-formal reload mean304.4msFAIL against285.3ms. The two algorithmic repairs, real red/green and1026byte-parity cases, fullfive-node4530-test build and refreshed exactartifact SHA manifest are recorded there. This older pack remains historical `ac810fa7` evidence; its no-optimization/no-JFR statements below describe that earlier scope, not the later implementation. No failed group or adverse early reload is removed.
+Latest same-source confirmations: [complete reload repeats and streamed diagnosis](../ticket37-reload-confirmation/README.md), source`1b406626`: independent five-formal reload groups276.4msPASS and244.4msPASS. All15same-source valid formal reload values, including the retained304.4msFAIL group and469ms first sample, average275.06666666666666ms; the aggregate audit does not relabel that failed group. Same-source startup22825.6msPASS and [two-hotspot/fullfive-node4530-test proof](../ticket37-reload-optimization/README.md) remain bound to`1b406626`. Later [default Proxy declaration repair](../ticket16-default-proxy-declarations/README.md) at`b7c788cb`has a new4534-test/five-artifact build manifest; it still needs its own performance validation. This older pack remains historical`ac810fa7`; no failed group or adverse reload is removed.
 
 ## Policy and result
 

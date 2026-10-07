@@ -1,0 +1,4 @@
+validation/*.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+validation/*.xml -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+typecheck/*-check.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+typecheck/existing-probe-types.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

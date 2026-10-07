@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": false,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "types": []
+  },
+  "files": ["generated/typescript/@side-only/server/events/index.d.ts", "caller.ts"]
+}

@@ -1,0 +1,38 @@
+# Default dynamic Proxy payload declarations
+
+This is a narrow repair of the [verified default gap](../ticket15-16-declaration-precision/DEFAULT-PROXY-GAP.md), not completion of ticket15/16, public API deletion, runtime activation widening or release authorization. Validated source revision:`b7c788cbbc1c18822b465feb9f0cda0330735570`.
+
+Final integrated command:`gradlew.bat :common:check :common-api-processor:test :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build verifyExternalAddonIsolation guardLint --console=plain`. Exit0,1m21s,104tasks/33executed/71up-to-date; all seven selected JUnit report roots total4534tests,271skipped,0failures/errors. The [manifest](artifact-manifest.json) records actualfive productionJAR paths/sizes/SHA; no installed-JAR boot or publication is inferred. Matrix firstFAIL and finalGREEN are both retained.
+
+Execution note: this route still required the explicit current`danger-full-access`/nonempty justification fields. Using them was not compliance with the user's request to omit`sandbox_permissions`; no approval prompt, receipt, escalation or broader policy change occurred. The unnecessary/mandatory field difference does not excuse the instruction-following deviation; it is not recorded as a permission success.
+
+## Implemented contract
+
+The existing `RegistryBuilderSurfaceEntry` catalog record gains optional declaration-only`EventPayload` metadata. Existing six-argument constructor and accessors remain; the additive seventh canonical component participates in record equality/hash/string representation. Old six-argument values carry null metadata. This is an explicit catalog-metadata extension, not an unchanged record-component contract or a new persisted/wire format. Existing `type_docs` Point/Plugin Hook/snapshot carries it; there is no new runtime owner/channel or singleton.
+
+`DynamicBuilderSurfaces` derives the exact closed`item`,`soundEvent`,`mobEffect` operation signatures from existing`DynamicDefinitionType` and concrete builder facts, associating the actual internal event class identity only as declaration lookup data. Both complete backends select this association before excluded-Java-class fallback: TSscript interface and PythonProtocol callback payload with concrete optional builder callback and boolean return. Callback omission is allowed; explicitnull is not. Concrete fluent returns and nullable sound range remain intact. No dynamic`create`,`custom`,`block` or Java-host constructor/import is invented; STARTUP's genuine3create shapes and handwritten producer are untouched.
+
+Python imports the actual3builders from`nekojs._registry_builders`. The TSassociated event file conditionally references`../../../@registry-builders/index.d.ts`, because default script-dir project includes did not otherwise pull that global builder surface into scope. Actual strict caller validation includes only the generated SERVER event file and caller, not an extra builder include;`skipLibCheck=false`. Metadata-free standalone renderer overloads and their existing goldens remain compatible.
+
+Default`ProbeConfig`/collector still rejects all core classes; ClassFilter and production host-access policy are unchanged. The same default collected catalog renders both backends, rather than a test-only core scan or a handwritten declaration.
+
+## Behavioral evidence
+
+- Actual plugin bootstrap/registerTypeDocs → catalog → defaultcollector → sharedIR → both complete backend.render path first failed on dangling/missing payload linkage; compiled true behavioral RED, thenGREEN.
+- Second RED caught missing default-project builder reference; conditional reference fixed it, not editor-config loosening or golden edits.
+- Focused implementer checks52tests/9suites/0skip/fail/error, strictactual-generated TScaller and existingTSfixture exit0. A requested`ProbeClassCollectorTest` pattern matched no existing class: actual collector coverage is the new integration seam, not a fictitious named suite.
+- Actual production`NekoSharedHostAccess`+default`ClassFilter` realGraalJS supports all3omitted/typed callback operations returningtrue, rejects internal`Java.type`, explicitnull callback and block operation. No allowAllAccess.
+- Captured25Pythonstub files parse withCPythonAST; all3surfaceimports resolve and closedoptional/bool signatures are checked. Pyright is NOTRUN/notinstalled; AST/import validation is not a full Python typechecker claim.
+- Lead independently recaptured exact committed`b7c788cb`outputs. First attempt was FROM-CACHE and produced no requested external capture; it is retained as an unsuccessful capture attempt, not fresh proof. The corrected invocation adds`--rerun-tasks`for the same default/legacy/script-event suites: exit0,35s,17tasks actuallyexecuted. All four actual SERVER/builder TS/Python outputs match the implementation-captured SHA byte-for-byte. Strictgenerated TScaller and existingTSfixture rerun exit0; PythonAST25/import3/signature3 rerun exit0. Full4534test matrixXML was archived before the targeted invocation overwrote Gradle's current test-report directory.
+
+## Integration found and corrected defects
+
+The first whole`common:check`/five-node matrix exposed two introduced null-host regressions in existing`LegacyProbeCompatibilityTest` and`ScriptEventsDeclarationDiagnosticsTest`. Empty associations returned`Map.of()`, whose`get(null)` rejects valid script-defined event identities. The shared resolver now uses standard`Collections.emptyMap()` to preserve the existing null-host fallback behavior; no renderer-specific suppression, disabled test or golden change. Those existing public-renderer tests pass after the correction; fullmatrix firstFAIL is retained separately.
+
+Independent Spec review found allowed empty`EventPayload.members` emitted a bodylessPythonProtocol. A test through the same realtype_docs/defaultfullbackend seam first obtained trueAssertionFailedErrorRED, then a minimal explicit`...`class body made itGREEN. This supports the newly allowed metadata rather than inventing a rejection/permission change.
+
+Independent Standards review:0demonstrated hardbreaches,1nonblocking policy judgment. Same-host contributions with different payload names currently merge members into the first name; builtin contributions all use one fixed name, so no current default producer failure is observed. This public conflict policy remains a tracked hardening gap, not hidden behind a default-pathPASS. Independent Spec review:0narrow-default blockers,1empty-Protocol edge (subsequently fixed as above). Both were static read-only reviews; they did not independently rerun the lead's tests/builds.
+
+## Boundaries
+
+No handwritten STARTUP producer deletion, unsupported platform dynamic-effect acceptance, realMobEffect/multiplayer/first-frame/all-installed-JAR windows, permanent persisted/wire-format change, version bump or publication. Earlier source`1b406626` performance windows are retained in [reload confirmation](../ticket37-reload-confirmation/README.md); those scores are not rebound to this later declaration tree. Further exact-candidate sampling/installed-binary acceptance remains separate.

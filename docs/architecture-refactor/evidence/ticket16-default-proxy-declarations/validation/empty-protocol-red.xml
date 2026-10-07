@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.tkisor.nekojs.probe.DynamicRegistryDefaultDeclarationsTest" tests="1" skipped="0" failures="1" errors="0" timestamp="2026-10-07T16:09:48.044Z" hostname="TKI_SOR" time="0.258">
+  <properties/>
+  <testcase name="emptyAssociatedPayloadHasAnExplicitPythonProtocolBody()" classname="com.tkisor.nekojs.probe.DynamicRegistryDefaultDeclarationsTest" time="0.258">
+    <failure message="org.opentest4j.AssertionFailedError: expected: &lt;true&gt; but was: &lt;false&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: expected: &lt;true&gt; but was: &lt;false&gt;
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:158)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:139)
+	at org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:69)
+	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:41)
+	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:35)
+	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:195)
+	at com.tkisor.nekojs.probe.DynamicRegistryDefaultDeclarationsTest.emptyAssociatedPayloadHasAnExplicitPythonProtocolBody(DynamicRegistryDefaultDeclarationsTest.java:65)
+</failure>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+]]></system-err>
+</testsuite>

@@ -37,4 +37,8 @@ Ticket15's `RegistryEventJS` has different arities and builder returns, plus sta
 
 ## Verification status
 
-Source inspected and existing golden read. No new regression test, implementation change, golden generation or default live Probe run was performed for this gap in this record. Ticket16 remains in-progress. Performance measurements and A22/A28 approval records are separate evidence.
+Source inspected and existing golden read. No new regression test, implementation change, golden generation or default live Probe run was performed **in this original ac810fa7 trace**. Ticket16 remains in-progress. Performance measurements and A22/A28 approval records are separate evidence.
+
+## Implemented follow-up
+
+Source`b7c788cbbc1c18822b465feb9f0cda0330735570`implements this narrow association through existing`type_docs`, defaultcollector and both complete backends; [retained implementation/verification evidence](../ticket16-default-proxy-declarations/README.md) contains true behavioral reds, resolved strictTS caller/PythonProtocol imports, actual production host-access/ClassFilter denials, legacy-null-host and emptyProtocol integration fixes, and fullfive-node4534test report (271skipped,0failures/errors). No golden regeneration, core scan, public deletion or dynamic`create`was added. The original chain above is retained as historical source diagnosis, not current missing-link state. Live installed/runtime, Pyright and ticket15startup scopes remain explicitly separate.

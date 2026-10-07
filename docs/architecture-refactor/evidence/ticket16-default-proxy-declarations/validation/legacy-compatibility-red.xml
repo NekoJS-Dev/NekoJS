@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.tkisor.nekojs.probe.LegacyProbeCompatibilityTest" tests="3" skipped="0" failures="1" errors="0" timestamp="2026-10-07T15:58:03.013Z" hostname="TKI_SOR" time="0.061">
+  <properties/>
+  <testcase name="legacyEventDeclarationMatchesGolden()" classname="com.tkisor.nekojs.probe.LegacyProbeCompatibilityTest" time="0.058"/>
+  <testcase name="legacyBindingDeclarationMatchesGolden()" classname="com.tkisor.nekojs.probe.LegacyProbeCompatibilityTest" time="0.001"/>
+  <testcase name="scriptDefinedEventRendersAnyPayloadAndPost()" classname="com.tkisor.nekojs.probe.LegacyProbeCompatibilityTest" time="0.001">
+    <failure message="java.lang.NullPointerException" type="java.lang.NullPointerException">java.lang.NullPointerException
+	at java.base/java.util.Objects.requireNonNull(Objects.java:233)
+	at java.base/java.util.ImmutableCollections$MapN.get(ImmutableCollections.java:1239)
+	at com.tkisor.nekojs.probe.backend.typescript.EventDeclarationGenerator.generate(EventDeclarationGenerator.java:133)
+	at com.tkisor.nekojs.probe.backend.typescript.EventDeclarationGenerator.generate(EventDeclarationGenerator.java:51)
+	at com.tkisor.nekojs.probe.LegacyProbeCompatibilityTest.scriptDefinedEventRendersAnyPayloadAndPost(LegacyProbeCompatibilityTest.java:72)
+</failure>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

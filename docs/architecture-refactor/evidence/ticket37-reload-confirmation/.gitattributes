@@ -1,0 +1,6 @@
+*/samples.jsonl -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+*/env-snapshot.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+*-console.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+profiling/*.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+profiling/*.jfc -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+profiling/record-profile.ps1 -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
