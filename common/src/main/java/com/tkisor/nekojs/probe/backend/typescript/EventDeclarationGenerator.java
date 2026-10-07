@@ -2,6 +2,9 @@ package com.tkisor.nekojs.probe.backend.typescript;
 
 import com.tkisor.nekojs.probe.ProbeConfigLoader;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
+import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
+import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry.EventPayload;
+import com.tkisor.nekojs.probe.EventPayloadDeclarations;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
@@ -45,12 +48,21 @@ public final class EventDeclarationGenerator {
      * 为指定 ScriptType 生成事件声明。
      */
     public String generate(List<EventCatalogEntry> events, ScriptType scriptType) {
+        return generate(events, scriptType, List.of());
+    }
+
+    public String generate(List<EventCatalogEntry> events, ScriptType scriptType,
+                           List<RegistryBuilderSurfaceEntry> builders) {
+        Map<Class<?>, EventPayload> payloads = EventPayloadDeclarations.resolve(events, builders);
         StringBuilder sb = new StringBuilder();
+        if (!payloads.isEmpty()) {
+            sb.append("/// <reference path=\"../../../@registry-builders/index.d.ts\" />\n\n");
+        }
 
         // 收集所有需要 import 的类型
         Set<String> imports = new LinkedHashSet<>();
         for (EventCatalogEntry event : events) {
-            if (event.eventType() != null) {
+            if (event.eventType() != null && !payloads.containsKey(event.eventType())) {
                 collectImports(event.eventType(), imports);
             }
             if (event.dispatchKeyType() != null) {
@@ -85,6 +97,20 @@ public final class EventDeclarationGenerator {
             sb.append("\n");
         }
 
+        for (EventPayload payload : payloads.values()) {
+            sb.append("interface ").append(payload.name()).append(" {\n");
+            for (RegistryBuilderSurfaceEntry.Member member : payload.members()) {
+                switch (member.kind()) {
+                    case WRITABLE_PROPERTY -> sb.append("    ").append(member.name()).append(": ")
+                            .append(member.tsType()).append(";\n");
+                    case READ_ONLY_PROPERTY -> sb.append("    readonly ").append(member.name()).append(": ")
+                            .append(member.tsType()).append(";\n");
+                    case METHOD -> sb.append("    ").append(member.tsType()).append(";\n");
+                }
+            }
+            sb.append("}\n\n");
+        }
+
         // 空的 module 声明（保持结构一致）
         sb.append("declare module \"@side-only/").append(scriptType.name).append("/events\" {\n");
         sb.append("}\n\n");
@@ -104,7 +130,7 @@ public final class EventDeclarationGenerator {
             sb.append("    namespace ").append(group).append(" {\n");
 
             for (EventCatalogEntry event : groupEvents) {
-                sb.append(generateEventMethod(event));
+                sb.append(generateEventMethod(event, payloads.get(event.eventType())));
             }
 
             sb.append("    }\n\n");
@@ -124,7 +150,7 @@ public final class EventDeclarationGenerator {
         return cls.getSimpleName();
     }
 
-    private String generateEventMethod(EventCatalogEntry event) {
+    private String generateEventMethod(EventCatalogEntry event, EventPayload payload) {
         StringBuilder sb = new StringBuilder();
 
         // ScriptEvents 声明的自定义事件：载荷任意、且脚本可自己触发
@@ -139,7 +165,9 @@ public final class EventDeclarationGenerator {
 
         // 事件类类型
         String eventType = "any";
-        if (event.eventType() != null) {
+        if (payload != null) {
+            eventType = payload.name();
+        } else if (event.eventType() != null) {
             eventType = "$" + getTsClassName(event.eventType());
             // 处理泛型
             TypeVariable<?>[] typeParams = event.eventType().getTypeParameters();

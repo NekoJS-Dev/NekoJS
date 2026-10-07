@@ -375,7 +375,7 @@ public final class PythonProbeBackend implements ProbeBackend {
                     .filter(e -> e.scriptType().test(side))
                     .toList();
             if (sideEvents.isEmpty()) continue;
-            files.put("nekojs/_events/" + side.name + "/__init__.pyi", eventR.render(side, sideEvents, adapterAliases));
+            files.put("nekojs/_events/" + side.name + "/__init__.pyi", eventR.render(side, sideEvents, adapterAliases, snapshot.registryBuilderSurfaces()));
             count++;
         }
         if (count > 0) {

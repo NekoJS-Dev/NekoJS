@@ -19,6 +19,7 @@ import java.util.List;
  * @param sugarName      脚本糖方法名（如 {@code item}；default 类型才有）
  * @param members        contract members in name order; each method overload has its own entry
  * @param description    描述（probe 文档用）
+ * @param eventPayload   optional declaration-only event association; never grants host lookup access
  */
 public record RegistryBuilderSurfaceEntry(
         String builderName,
@@ -26,7 +27,13 @@ public record RegistryBuilderSurfaceEntry(
         String typeName,
         String sugarName,
         List<Member> members,
-        String description) {
+        String description,
+        EventPayload eventPayload) {
+
+    public RegistryBuilderSurfaceEntry(String builderName, String registryKey, String typeName,
+                                       String sugarName, List<Member> members, String description) {
+        this(builderName, registryKey, typeName, sugarName, members, description, null);
+    }
 
     public RegistryBuilderSurfaceEntry {
         members = List.copyOf(members == null ? List.of() : members);
@@ -44,4 +51,14 @@ public record RegistryBuilderSurfaceEntry(
      * @param pyType      Python 形状：属性为类型标注；方法为完整签名行——与 TS 同一反射输入派生
      */
     public record Member(String name, MemberKind kind, String tsType, String pyType) {}
+
+    /**
+     * Associate script-only members with an event's host identity without reflecting or exposing that host.
+     * Entries for the same event and payload name contribute members to one declaration in each backend.
+     */
+    public record EventPayload(Class<?> eventType, String name, List<Member> members) {
+        public EventPayload {
+            members = List.copyOf(members == null ? List.of() : members);
+        }
+    }
 }

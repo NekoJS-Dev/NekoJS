@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.dynamic.plan;
 
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
+import com.tkisor.nekojs.core.dynamic.facade.DynamicRegistryEventJS;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -59,7 +60,14 @@ public final class DynamicBuilderSurfaces {
                 members,
                 "Dynamic registry candidate builder for '" + type.registryKey()
                         + "' (runtime only; activation gated by the transaction/sync gate);"
-                        + " property writes and explicit setters hit the same setter.");
+                        + " property writes and explicit setters hit the same setter.",
+                new RegistryBuilderSurfaceEntry.EventPayload(DynamicRegistryEventJS.class,
+                        "DynamicRegistryEvent", List.of(new RegistryBuilderSurfaceEntry.Member(
+                        type.apiName(), RegistryBuilderSurfaceEntry.MemberKind.METHOD,
+                        type.apiName() + "(id: string, build?: (build: " + builderClass.getSimpleName()
+                                + ") => void): boolean",
+                        "def " + type.apiName() + "(self, id: str, build: Callable[["
+                                + builderClass.getSimpleName() + "], None] = ...) -> bool: ..."))));
     }
 
     /**

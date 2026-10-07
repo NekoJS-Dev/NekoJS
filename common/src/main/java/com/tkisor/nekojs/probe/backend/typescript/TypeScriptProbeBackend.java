@@ -457,7 +457,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                     .toList();
             if (events.isEmpty()) continue;
 
-            files.put("@side-only/" + type.name + "/events/index.d.ts", eventGenerator.generate(events, type));
+            files.put("@side-only/" + type.name + "/events/index.d.ts", eventGenerator.generate(events, type, snapshot.registryBuilderSurfaces()));
         }
     }
 
