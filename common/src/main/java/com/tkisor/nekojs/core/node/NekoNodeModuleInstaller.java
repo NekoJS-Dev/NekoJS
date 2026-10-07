@@ -42,7 +42,7 @@ public final class NekoNodeModuleInstaller {
             moduleLoaderHost.registerSpecialModules(pluginModules.keySet());
             // 全局 timers 由 manifest 的 modules/timers.ts 注册（manifest 同步加载完毕后才执行任何用户脚本，
             // 无需在 manifest 之前预装一版会丢弃额外参数的简化实现）
-            loadManifest(context);
+            loadManifest(context, preparationCache);
             loadPluginModules(context, pluginModules);
             return runtime;
         } catch (Throwable failure) {
@@ -61,23 +61,27 @@ public final class NekoNodeModuleInstaller {
         }
     }
 
-    private static void loadManifest(Context context) {        String manifest = readResource(MANIFEST);
+    private static void loadManifest(Context context, NekoModulePipelineCache preparationCache) {
+        String manifest = readResource(MANIFEST);
         for (String line : manifest.split("\\R")) {
             String entry = line.trim();
             if (entry.isEmpty() || entry.startsWith("#")) {
                 continue;
             }
             String resourcePath = RESOURCE_ROOT + entry;
-            String source = readResource(resourcePath);
-            // .ts 条目：擦除类型注解后求值；.js 条目原样求值
-            String js = entry.endsWith(".ts")
-                ? NekoTypeScriptCompiler.eraseTypescript(Path.of(resourcePath), source)
-                : source;
-            try {
-                context.eval(Source.newBuilder("js", js, resourcePath).build());
-            } catch (IOException e) {
-                throw new IllegalStateException("Failed to evaluate NekoJS Node module resource: " + resourcePath, e);
-            }
+            Source prepared = preparationCache.prepareBuiltinSource(resourcePath, () -> {
+                String source = readResource(resourcePath);
+                String js = entry.endsWith(".ts")
+                        ? NekoTypeScriptCompiler.eraseTypescript(Path.of(resourcePath), source)
+                        : source;
+                try {
+                    return Source.newBuilder("js", js, resourcePath).build();
+                } catch (IOException failure) {
+                    throw new IllegalStateException(
+                            "Failed to prepare NekoJS Node module resource: " + resourcePath, failure);
+                }
+            });
+            context.eval(prepared);
         }
     }
 

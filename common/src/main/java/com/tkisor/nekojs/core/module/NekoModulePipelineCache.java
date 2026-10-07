@@ -12,6 +12,7 @@ import com.tkisor.nekojs.core.fs.ScriptPathProvider;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import graal.graalvm.polyglot.Source;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,6 +28,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 /**
  * 模块准备缓存（Script Preparation + Module Resolution/Cache 的 prepared 层）：
@@ -49,6 +51,7 @@ import java.util.function.BiConsumer;
 public final class NekoModulePipelineCache implements AutoCloseable {
     private final NekoModulePipeline pipeline;
     private final Map<Path, PreparedEntry> preparedCache = new ConcurrentHashMap<>();
+    private final Map<String, Source> builtinSources;
     private final SourceMapRegistry sourceMaps;
     private final NekoEsmVirtualModuleRegistry virtualModules;
     private final NekoTrustContext trustContext;
@@ -85,6 +88,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         this.bindingSchema = Objects.requireNonNull(bindingSchema, "bindingSchema");
         this.bindingSchemaView = Objects.requireNonNull(bindingSchemaView, "bindingSchemaView");
         this.owner = owner;
+        this.builtinSources = owner == null ? new ConcurrentHashMap<>() : owner.builtinSources;
     }
 
     /**
@@ -164,6 +168,23 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     /** Runtime composition roots may only be built from the owner cache, never a generation child. */
     public boolean isRootOwner() {
         return owner == null;
+    }
+
+    /**
+     * Prepare immutable bundled Node code once per runtime owner, never guest module state.
+     * Every Context must still evaluate the Source; plugin and user modules use their own paths.
+     * Clear/close follows the existing serialized runtime lifecycle, not concurrent revocation.
+     */
+    public Source prepareBuiltinSource(String resourcePath, Supplier<Source> preparation) {
+        ensureOpen();
+        rootOwner().ensureOpen();
+        Objects.requireNonNull(resourcePath, "resourcePath");
+        if (!resourcePath.startsWith("nekojs/node/")) {
+            throw new IllegalArgumentException("Only bundled Node module resources may use builtin preparation");
+        }
+        Objects.requireNonNull(preparation, "preparation");
+        return builtinSources.computeIfAbsent(resourcePath,
+                ignored -> Objects.requireNonNull(preparation.get(), "prepared builtin source"));
     }
 
     public NekoPreparedModule prepare(Path path) throws IOException {
@@ -259,6 +280,9 @@ public final class NekoModulePipelineCache implements AutoCloseable {
 
     private void clearLocal() {
         preparedCache.clear();
+        if (owner == null) {
+            builtinSources.clear();
+        }
         sourceMaps.clear();
         virtualModules.clear();
         preparationObservers.clear();

@@ -85,6 +85,35 @@ class NodeModulesJsRegressionTest {
     }
 
     @Test
+    void sharedBuiltinSourcesStillInstallIndependentModuleObjects() {
+        NekoJSPaths paths = NekoJSPaths.get();
+        SandboxConfig config = SandboxConfig.defaultConfig();
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        NekoModuleResolver resolver = new NekoModuleResolver(paths.gameDir(), paths.root(),
+                paths.nodeModules(), new ScriptFilePolicy(compilers));
+        try (graal.graalvm.polyglot.Engine engine = graal.graalvm.polyglot.Engine.create();
+             NekoModulePipelineCache cache = new NekoModulePipelineCache(
+                     new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config),
+                     new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                     NekoTrustContext.local())) {
+            try (NekoModulePipelineCache firstSession = cache.openSession();
+                 Context first = Context.newBuilder("js").engine(engine).allowAllAccess(true).build();
+                 NekoNodeRuntime firstRuntime = NekoNodeModuleInstaller.install(first, ScriptType.TEST,
+                         resolver, paths, new DefaultErrorTracker(paths, config), config, firstSession)) {
+                first.eval("js", "globalThis.__nekoNodeResolve('node:events').generationMarker = 'first';");
+                assertTrue(first.eval("js", "globalThis.__nekoNodeResolve('node:events').generationMarker === 'first'").asBoolean());
+            }
+            try (NekoModulePipelineCache secondSession = cache.openSession();
+                 Context second = Context.newBuilder("js").engine(engine).allowAllAccess(true).build();
+                 NekoNodeRuntime secondRuntime = NekoNodeModuleInstaller.install(second, ScriptType.TEST,
+                         resolver, paths, new DefaultErrorTracker(paths, config), config, secondSession)) {
+                assertTrue(second.eval("js", "typeof globalThis.__nekoNodeResolve('node:events').generationMarker === 'undefined'").asBoolean());
+                assertTrue(second.eval("js", "typeof globalThis.__nekoNodeResolve('node:events').EventEmitter === 'function'").asBoolean());
+            }
+        }
+    }
+
+    @Test
     void nodeModuleSurfaceMatchesNodeSemantics() {
         try (Installed installed = new Installed()) {
             installed.eval(SYNC_CHECKS_JS);

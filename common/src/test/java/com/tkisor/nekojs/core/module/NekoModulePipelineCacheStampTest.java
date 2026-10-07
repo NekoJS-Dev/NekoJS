@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.module;
 
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.compiler.IScriptCompiler;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.config.SandboxConfig;
@@ -62,6 +63,59 @@ class NekoModulePipelineCacheStampTest {
     @AfterEach
     void clearCaches() {
         cache.clear();
+    }
+
+    @Test
+    void builtinSourcesSurviveSessionCloseWithoutSharingGuestState() {
+        java.util.concurrent.atomic.AtomicInteger preparations = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.function.Supplier<graal.graalvm.polyglot.Source> prepare = () -> {
+            preparations.incrementAndGet();
+            return graal.graalvm.polyglot.Source.create("js",
+                    "globalThis.builtinRuns = (globalThis.builtinRuns || 0) + 1; builtinRuns;");
+        };
+        NekoModulePipelineCache firstSession = cache.openSession();
+        graal.graalvm.polyglot.Source firstSource =
+                firstSession.prepareBuiltinSource("nekojs/node/fixture.js", prepare);
+        firstSession.closeSession();
+        try (NekoModulePipelineCache secondSession = cache.openSession();
+             graal.graalvm.polyglot.Context firstContext = graal.graalvm.polyglot.Context.create("js");
+             graal.graalvm.polyglot.Context secondContext = graal.graalvm.polyglot.Context.create("js")) {
+            graal.graalvm.polyglot.Source secondSource =
+                    secondSession.prepareBuiltinSource("nekojs/node/fixture.js", prepare);
+            assertSame(firstSource, secondSource);
+            assertEquals(1, preparations.get());
+            assertEquals(1, firstContext.eval(firstSource).asInt());
+            assertEquals(2, firstContext.eval(firstSource).asInt());
+            assertEquals(1, secondContext.eval(secondSource).asInt());
+        }
+    }
+
+    @Test
+    void builtinPreparationRetriesAndRespectsOwnerInvalidation() {
+        java.util.concurrent.atomic.AtomicInteger attempts = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.function.Supplier<graal.graalvm.polyglot.Source> prepare = () -> {
+            if (attempts.incrementAndGet() == 1) {
+                throw new IllegalStateException("Fixture preparation failure");
+            }
+            return graal.graalvm.polyglot.Source.create("js", "42");
+        };
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> cache.prepareBuiltinSource("nekojs/node/retry.js", prepare));
+        graal.graalvm.polyglot.Source prepared =
+                cache.prepareBuiltinSource("nekojs/node/retry.js", prepare);
+        assertEquals(2, attempts.get());
+        cache.clear(ScriptType.TEST);
+        assertSame(prepared, cache.prepareBuiltinSource("nekojs/node/retry.js", prepare));
+        assertEquals(2, attempts.get());
+        cache.clear();
+        cache.prepareBuiltinSource("nekojs/node/retry.js", prepare);
+        assertEquals(3, attempts.get());
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> cache.prepareBuiltinSource("user-script.js", prepare));
+        cache.close();
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> cache.prepareBuiltinSource("nekojs/node/retry.js", prepare));
+        assertEquals(3, attempts.get());
     }
 
     // ---- 行为回归：等长覆盖 + 显式恢复 mtime 仍必须重新编译 ----
