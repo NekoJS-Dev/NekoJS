@@ -4,7 +4,7 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** in-progress（2026-10-07 补验：生产双语言parity/Fabric失败已验；跨节点首帧与公开删除追认未闭合）
+**Status:** in-progress（生产双语言 parity/Fabric 失败已验；精确公开删除与 binding teardown 变化已获追认，跨节点首帧与视觉缺口未闭合）
 
 **Assignee:** zed-flash-28（main-session agent；deepseek-v4.1-flash subagent worktree）
 
@@ -31,7 +31,7 @@
 - [ ] 26.x 与 1.21.1 的 PostChain/Shader JSON 形状、资源路径和 mixin/Adapter 时机有 fixture 与节点 smoke 证明；平台差异不进入 common 作者契约。【**部分满足，不勾选**：已做的是 unit fixture + 成对实现 + 三节点编译执行；**缺的是节点 smoke（真机客户端渲染、F3+T 首帧、mixin 注入时机）**，owner 票 34，见 baseline REPORT §5/§7。成对文件：`PostEffectManager`/`PostEffectsJS`/`PostEffectEventJS`/`PostEffectDomainOwner` 各有 `versions/1.21.1` 实现（legacy `shaders/post` 链 + `lastSetId`，无 GLSL 源覆盖）；fixture 在三个 NeoForge 节点真跑（`PostEffectDeclarationLifecycleTest` 8 tests / `PostEffectDeclarationSurfaceTest` 4 tests，26.1.2 + 1.21.1 + 26.2.0 全 0 失败）；JSON 形状由既有 `PostEffectChainJsonTest`（common，6 tests）覆盖；公共契约只读 `common` 的 MC-free 面板；REPORT §4.1/§5】
 - [x] TS/Python declaration、runtime member、contract/golden 与实际事件/binding 成员一致；EntitySelectors、Assets 和已事件化 render 域不被并入本票或重复声明。【2026-10-07 自主补验：`PostEffectDeclarationParityTest` 使用真实插件 binding 注册、真实 ClientEvents bus 元数据、生产 `ProbeCoordinator.collectClasses` / `TypeReflector` 和 TS/Python backend，逐节点验证 payload 与 instance binding 的类型、成员分离、Bean 属性、旧 binding 成员缺席及重复渲染确定性；五节点定向执行通过（NeoForge 三节点完整渲染，Fabric 两节点真实事件注册与类缺席断言）。既有 `DeclaredEventSurfaceGoldenTest` 的 NeoForge TS event golden 已包含 `postEffects` callback/import；portable common manifest 零命中是隔离设计，不是本域声明缺失。未扩展 common 契约、未手改 golden。详见 `evidence/ticket37-autonomous-closeout/WORKPLAN.md`。】
 - [x] Fabric 或旧版本不可用时 capability/source-trace/smoke 显式记录 unavailable 或 partial 并给出确定失败；不用静默 no-op、空画面或无错误返回冒充支持。【2026-10-07：`PostEffectDeclarationParityTest` 在两个 Fabric 节点真跑，核对真实客户端注册面无 `postEffects` bus、plugin/payload/binding 类缺席，并用真实 `EventGroupJS` + Graal 执行订阅，得到包含 `postEffects` 的明确异常；不是成功 no-op。P4 `CAPABILITY-MATRIX.md` Fabric 行已更正为 U。1.21.1 明示 resources-only runtime chain / inline declared chain 不可用；不把 generation 定义回读冒充实际画面。官方制品跨节点渲染和首帧时机仍属 AC6，不由这里的脚本失败测试外推。】
-- [ ] 旧 PostEffectsJS 静态 register/unregister 直连路径只有在事件资源生命周期、运行 binding parity、迁移表、旧 route 无消费者和维护者确认后删除；运行时操作仍保留在最终 binding 面。【不勾选：维护者删除确认是门禁（Human input note）。代码层的旧路径已删除（`PostEffectsJS#register`/`#unregister`/`#has`），替代路径 parity（`PostEffectDeclarationLifecycleTest` 8 tests × 3 节点）、迁移表（`MIGRATION.md` §1）、旧 route 无消费者证据（`command-output/05-old-route-consumers.txt`：源码零调用点）均已交付；待 sign-off，见下方「维护者 sign-off 项」】
+- [ ] 旧 PostEffectsJS 静态 register/unregister 直连路径只有在事件资源生命周期、运行 binding parity、迁移表、旧 route 无消费者和维护者确认后删除；运行时操作仍保留在最终 binding 面。【维护者已在主会话选择「追认以下精确接口及行为变化」，仅覆盖已删除的 `PostEffectsJS#register(String, Map)` / `#unregister(String)` / `#has(String)`、`PostEffectManager#register` / `#unregister` / `#clearRegistered` 及 binding close 不再 teardown 清屏；保留 set/clear/toggle/current/query。已披露 legacy resources-only 及任意新 inline id 激活限制。精确追认不再待办，但不把跨节点首帧/视觉或其他未验证项算作通过；完整删除条件仍按对应证据逐项核对，本票继续 in-progress。替代 parity、迁移表与无消费者证据沿用下方引用；确认原文及边界见 [公开迁移记录](../evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md#已取得的维护者结论主会话原文)。】
 - [x] 随实现交付声明事件与 set/clear/toggle/current 分工的最小可运行示例和必要迁移材料；示例只使用已通过 gate 的客户端能力。【`baseline/2026-09-21-post-effects/examples/post-effects-declaration.js`（只用 `ClientEvents.postEffects` + `ClientEvents.tickPost`/`loggedOut` + `PostEffects.set/clear/isAvailable/activeGeneration/installed/hasDefinition`）；`MIGRATION.md`（旧→新对照、breaking 清单、删除条件）】
 
 ## Sources
@@ -58,11 +58,9 @@
 - 与 EVENT_SURFACE owner 确认资源/reload 子事件的 catalog/golden 唯一性。
 - 与 RUNTIME_ROOT/RELOAD_COMMIT owner 对齐 candidate 资源、commit 与清理顺序。
 
-## 维护者 sign-off 项（AC9 门禁，待确认）
+## 维护者 sign-off 记录（A28 精确追认已取得，非整票验收）
 
-代码层的旧声明直连路径已在本票删除（这是 AC1/AC2/AC5 的结构前提：声明不得在脚本执行期直接
-写进程级注册表），但删除的是**脚本可见公开面**，构成 breaking，需维护者知情/追认后才可勾选 AC9、
-才可宣布「不保留长期兼容双路径」。逐项清单与替代路径见
+代码层的旧声明直连路径已删除。维护者在主会话选择「追认以下精确接口及行为变化」，确认下列 Script members 和 Manager 旧 writers 的既有移除，并追认 `PostEffectsJS#close(ScriptType)` 不再 teardown 清屏；保留 set/clear/toggle/current 与 query。已披露 1.21.1 resources-only 及任意新 inline id 激活限制。本结论不批准其他符号删除，不代替节点首帧/视觉或性能验证，也不是正式发布授权。逐项替代路径见
 `baseline/2026-09-21-post-effects/MIGRATION.md` §2.1 与同目录 `REPORT.md` §3：
 
 - `PostEffectsJS#register(String, Map)`（脚本成员）→ `PostEffectEventJS#register(String, Map)`（`ClientEvents.postEffects`）

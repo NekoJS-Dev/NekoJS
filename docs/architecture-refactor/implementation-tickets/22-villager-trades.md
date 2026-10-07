@@ -4,7 +4,7 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** in-progress（2026-10-07 补验：Fabric unavailable 已验；旧公开写入删除与 legacy 实机缺口未闭合）
+**Status:** in-progress（Fabric unavailable 已验；1.21.1 两个旧 Script 入口已获追认，剩余旧路径删除与 legacy 实机缺口未闭合）
 
 **Assignee:** zed-flash-22（main-session agent；deepseek-v4.1-flash subagent worktree）
 
@@ -42,17 +42,16 @@
 - [x] Fabric Villager Trades 的 unavailable 通过 capability/source-trace/smoke 显式验证为明确拒绝或不可用，不用无错误 no-op 冒充；NeoForge 节点 supported/partial 只按实际测试证据记录。
       2026-10-07 补验：两个 Fabric 节点 `Ticket22VillagerTradeEventSurfaceTest` 的实际 owner collect/preflight 明确拒绝、未发布断言通过。官方 26.2 Fabric 制品的 declaration-only SERVER 脚本在 STATE_PLAN 以 `VillagerTradeUnavailableException` 拒绝，未到 Done（预期负例，不算 boot 成功）；去掉不可用声明后独立启动到 Done，再经 RCON 正常 stop。P4 capability 矩阵已有 VillagerTrades U 行，不需要把票25 query golden 扩成全域矩阵。NeoForge26.2 实际 farmer Offers 包含脚本 emerald→5 apples/12 uses/xp2；legacy 静态池实机与全节点 offer parity 仍未验证。见 `evidence/ticket37-autonomous-closeout/{ACTUAL-OFFER.md,fabric-declaration-rejection.txt,VERIFICATION.md}`。
 - [ ] 旧 VillagerTradesJS 静态 add/pendingCount、全局 Manager 暂存和直连 registry surgery 只能在事件+Adapter+query parity、迁移表、旧 route 无消费者和维护者确认后删除；删除后不保留长期兼容 shim。
-      **不勾选（门禁未完成）**：代码层旧路径**未删除**（本票选择保留，不越过 sign-off）；替代路径 parity、失败保留、迁移表与无消费者证据均已备（见下方「维护者 sign-off 项」与 `baseline/2026-09-21-villager-trades/MIGRATION.md` §2/§3/§5、`REPORT.md` §7）；**缺维护者确认**。
+      **不勾选（其余门禁未完成）**：canonical NeoForge26.x 旧 add/pendingCount、两个节点旧 Manager 及 listener/command hooks 仍在，尚无删除批准；1.21.1 `VillagerTradesJS#add(String, Object)` / `#pendingCount()` 已移除，维护者已明确选择「追认仅1.21.1已发生的移除」。该追认不扩大到 26.x 入口、Managers/hooks 或 query producer，也不替代 legacy 静态池实机验证。替代路径 parity、迁移表与既有消费者清单见下方 sign-off 项及 `baseline/2026-09-21-villager-trades/MIGRATION.md` §2/§3/§5、`REPORT.md` §7；确认原文及边界见 [公开迁移记录](../evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md#已取得的维护者结论主会话原文)。
 - [x] 随实现交付 add/query、generation/stale 查询与 Fabric 明确不可用的最小可运行示例和必要迁移材料；示例只使用已通过 gate 的节点能力。
       证据：`baseline/2026-09-21-villager-trades/examples/villager-trades-add-and-query.js`、`examples/villager-trades-unavailable-fabric.js`、`MIGRATION.md`；**注**：示例为源码级、未经真机执行（REPORT §6 G2）→ REPORT §3 AC11。
 
-## 维护者 sign-off 项（AC10 门禁，待确认）
+## 维护者 sign-off 项（AC10 门禁，1.21.1 入口已追认，其余待确认）
 
-旧公开路径（静态 binding + 进程级暂存 + 直连 registry surgery）在本票**没有被删除**：删除是公开面
-breaking，需要维护者知情/追认。逐项清单与替代路径见
+当前 canonical NeoForge26.x 的旧 Script 入口、两个节点旧 Manager 及 listener/command hooks 仍保留；1.21.1 两个 Script 入口已移除。维护者在主会话选择「追认仅1.21.1已发生的移除」，仅确认 `VillagerTradesJS#add(String, Object)` / `#pendingCount()` 的既有移除，不批准其余删除。逐项替代与消费者记录见
 `baseline/2026-09-21-villager-trades/MIGRATION.md` §2/§3/§5 与同目录 `REPORT.md` §7：
 
-- `VillagerTradesJS#add(String, Object)` / `#pendingCount()`：仅 canonical NeoForge26.x 仍在；1.21.1 已移除，需追认既有变化
+- `VillagerTradesJS#add(String, Object)` / `#pendingCount()`：canonical NeoForge26.x 仍在、删除未批准；1.21.1 既有移除已获上述追认
 - `VillagerTradeManager`（26.x + 1.21.1 成对）：进程级 `static PENDING`、`HOLDER_SNAPSHOTS`、`ORIGINALS`、
   `PREVIOUSLY_REGISTERED`、`snapshotEpoch` 与全部静态入口（`stageAdd`/`beginReload`/`pendingCount`/
   `reset`/`apply`/`wanderingTraderLevels`）
@@ -67,9 +66,11 @@ generation/stale 绑定）。parity 证据：`Ticket22VillagerTradeDomainTest`�
 `command-output/`。无消费者证据：`MIGRATION.md` §3（仓库内消费者仅旧 binding 自身、两个 listener、
 两个 command 入口与一个 wiki 段落；无测试断言旧静态路径，无其它域引用）。
 
-**待维护者确认**后才可删除、才可勾选 AC10、才可宣布「不保留长期兼容双路径」。
+剩余 26.x 入口、两个节点旧 Manager 及 listener/command hooks 仍须精确维护者确认并满足消费者迁移与域验证条件；AC10 继续不勾选。1.21.1 两个 Script 入口的既有移除不再列为待追认，也不据此宣布全域 cutover 完成。
 
-## 越过门禁的事实（如实记录）
+## 历史越过门禁的事实（2026-09-21 记录）
+
+以下保留当时记录，不表示当前 1.21.1 仍有 add/pendingCount；其既有移除现已获范围明确的 A22 追认。其余删除与 legacy 实机验证仍未完成。
 
 本票在删除门禁未满足的情况下把 **Status 置为 closed**：AC1–AC8、AC11 已真跑满足（AC5 的 26.2.0 /
 26.2.0-fabric 缺口已由主会话补跑关闭）；AC9 为**部分满足**（缺口：无真机 smoke、capability 矩阵未

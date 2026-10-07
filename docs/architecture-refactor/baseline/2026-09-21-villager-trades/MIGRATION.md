@@ -5,8 +5,8 @@
 > collector → 合法 commit 点由平台/版本 Adapter 执行 registry mutation → generation/stale 绑定的
 > 只读 query」。
 >
-> **2026-10-07 当前勘误**：两条 Script 写入路径只在 canonical NeoForge 26.x 并存；1.21.1 的 `VillagerTradesJS` 已只有 query/describe，add/pendingCount 已移除。两个节点旧 Manager/listener/command hooks 仍在。删除与追认仍需精确 sign-off，不表示整个 Plugin binding producer 可删。
-> 本文历史清单以当时 revision 为准；最新消费者核对见 `evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md`。
+> **当前确认补充**：两条 Script 写入路径只在 canonical NeoForge 26.x 并存；1.21.1 的 `VillagerTradesJS` 已只有 query/describe，add/pendingCount 已移除。维护者主会话明确选择「追认仅1.21.1已发生的移除」，仅覆盖这两个入口的既有移除，不批准 26.x 入口、两个节点旧 Manager/listener/command hooks 或 query producer 删除。legacy 静态池实机与其余删除条件仍未闭合。
+> 本文历史清单以当时 revision 为准；最新消费者核对与真实确认见 [公开迁移记录](../../evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md#已取得的维护者结论主会话原文)。
 
 ## 1. 入口与能力（当前快照）
 
@@ -82,9 +82,8 @@ trade set id 形状（节点差异，旧新路径一致）：
 5. **维护者确认**：删除是公开面 breaking（`VillagerTrades.add` / `pendingCount` 与
    `VillagerTradeManager` 全部静态符号），需要维护者知情/追认。**本票不执行删除**，也不勾选 AC10。
 
-删除时只移除两个节点旧 Manager 及其 listener/command hooks、canonical26.x 的
-`VillagerTradesJS.add/pendingCount` 和仅服务旧路由的解析代码；1.21.1 Script methods 已移除，
-需单独追认既有变化。**保留 `VillagerTradesPlugin` binding 注册与 query/describe**；它不是纯旧路径。
+如后续取得对应精确批准，删除时只移除两个节点旧 Manager 及其 listener/command hooks、canonical26.x 的
+`VillagerTradesJS.add/pendingCount` 和仅服务旧路由的解析代码；这些剩余删除当前未批准。1.21.1 Script methods 的既有移除已获 A22 范围明确的追认，不扩大其余删除面。**保留 `VillagerTradesPlugin` binding 注册与 query/describe**；它不是纯旧路径。
 其 TypeDoc 已改为 declaration event/query 示例。wiki 的旧推荐示例已切到新事件路径，仍标明26.x
 暂留方法与 legacy/Fabric 差异。不因历史计数假定现有调用恰好只有5处；删除前重查所有消费者。
 

@@ -41,7 +41,9 @@ ClientEvents.tickPost(() => {
 
 最小可运行示例：同目录 `examples/post-effects-declaration.js`。
 
-## 2. 删除条件与 breaking 清单（维护者 sign-off 项，未勾选）
+## 2. 删除条件与 breaking 清单（精确追认已取得，完整 AC9 未勾选）
+
+当前维护者确认补充：主会话已选择「追认以下精确接口及行为变化」，范围仅为 `PostEffectsJS#register(String, Map)` / `#unregister(String)` / `#has(String)`、`PostEffectManager#register` / `#unregister` / `#clearRegistered` 及 binding close 不再 teardown 清屏；保留 runtime/query，且不把 `getRuntimeShaderSource` 误列为删除。legacy resources-only 与任意新 inline id 激活限制已披露。本确认不替代首帧/全节点视觉、性能或正式发布验收。原文及边界见 [公开迁移记录](../../evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md#已取得的维护者结论主会话原文)；下文历史技术证据不因追认扩大。
 
 ### 2.1 已删除的公开符号
 
@@ -59,8 +61,7 @@ ClientEvents.tickPost(() => {
   `collectionErrorFailsTheWholeBatchInDomainPlanAndALaterCandidateStillCommits`；
 - ✅ 迁移表：本文档 §1/§1.1；
 - ✅ 旧 route 无消费者：见上表最后一列；
-- ⬜ **维护者确认删除**：`PostEffects.register` / `unregister` / `has` 是脚本可见公开面，
-  属 breaking；按票据 Human input note，不等同于勾选 AC9。
+- ✅ **维护者精确追认**：已确认上述 `PostEffectsJS` 三个成员、Manager 三个旧 writers 及 binding teardown no-clear 的既有变化；不扩大到其他符号或行为，也不等同于整票 AC9/视觉/发布验收。
 
 ### 2.2 保留但语义收紧的行为
 

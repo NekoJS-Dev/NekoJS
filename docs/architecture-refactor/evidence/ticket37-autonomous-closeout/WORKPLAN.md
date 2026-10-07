@@ -4,7 +4,7 @@ Scope: repair the active-node test guard; supplement tickets 22/28 declaration, 
 
 Verification uses the existing public script event/binding, production declaration renderers, build/artifact gates and native client seams. The Stonecutter fix must keep the five FabricEventBusBridge tests discoverable on both Fabric nodes. No blanket test exclusion or golden editing.
 
-Public removals require the precise maintainer confirmation named by the originating tickets. Ticket 39's confirmation is not broadened to tickets 15/16/22/28. Until such confirmation exists, preserve retained public paths and record the gate instead of claiming clean cutover.
+Public removals require the precise maintainer confirmation named by the originating tickets. Ticket 39's confirmation is not broadened to tickets 15/16/22/28. The maintainer has now approved only A22's two already-removed 1.21.1 Script entries and A28's exact already-removed declaration/writer symbols and binding teardown no-clear behavior; see [the canonical confirmation record](PUBLIC-MIGRATIONS.md#已取得的维护者结论主会话原文). Remaining 26.x trade entries, Managers/hooks and tickets 15/16 retain their separate deletion gates. These confirmations do not imply native visual, performance, release or rollback acceptance.
 
 ## Established checks
 
@@ -28,7 +28,7 @@ Public removals require the precise maintainer confirmation named by the origina
 
 ## Remaining sequence
 
-1. Seal this scoped technical preparation with the authorized commit/push; do not stage provisional onboarding images or unrelated local directories.
-2. Continue narrow15/16 declaration precision/replacement deficits where feasible, then repeat affected gates/candidate provenance rather than silently reusing these hashes.
-3. Current revision performance, exact new NeoForge runtime, legacy/all-node/first-frame and multiplayer/MobEffect evidence remain open; prior evidence cannot certify them.
-4. Obtain only the originating tickets' precise public-breaking approval and final release/cutover policy when technically ready; do not invent those conclusions.15/16/22/28/37 remain in-progress,38 is accepted optional/nonblocking.
+1. Initial closeout and declaration-precision changes were committed/pushed through `ac810fa7`; the separate confirmation/performance records now need scoped verification and commit. Do not stage provisional onboarding images or unrelated local directories.
+2. Continue the default typed Proxy event payload linkage using the existing `type_docs` channel and complete-backend regression seam in [DEFAULT-PROXY-GAP.md](../ticket15-16-declaration-precision/DEFAULT-PROXY-GAP.md). The overload/fluent/nullable repairs are already delivered, not pending.
+3. [Current performance evidence](../ticket37-current-perf/README.md) retains the initial FAIL and complete startup repeats; use its exact current verdict, not the prior historical PASS. Exact new NeoForge artifact runtime, legacy/all-node/first-frame and multiplayer/MobEffect evidence remain open.
+4. A22's two legacy Script removals and A28's exact listed symbols/teardown behavior have actual retrospective confirmation. Remaining15/16/26.x-trade deletion and final release/cutover/rollback policy must still receive their own precise conclusions.15/16/22/28/37 remain in-progress;38 is accepted optional/nonblocking.
