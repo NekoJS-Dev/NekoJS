@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.tkisor.nekojs.core.compiler.NekoSourceMapBuilderTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-07T14:33:44.352Z" hostname="TKI_SOR" time="0.16">
+  <properties/>
+  <testcase name="exactNativeIdentityHandlesLargeMultilineSourceWithoutRepeatedPrefixScans()" classname="com.tkisor.nekojs.core.compiler.NekoSourceMapBuilderTest" time="0.148"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

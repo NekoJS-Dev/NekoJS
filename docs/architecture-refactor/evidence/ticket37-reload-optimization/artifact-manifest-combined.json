@@ -1,0 +1,60 @@
+{
+  "source_revision": "1b406626662b7c6334eb05fed0d964563eb10f01",
+  "version": "1.1.0-preview3",
+  "status": "local-development-handoff-only",
+  "release_uploaded": false,
+  "build_command": ":common:check :common-api-processor:test :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build verifyExternalAddonIsolation guardLint --console=plain",
+  "build_exit": 0,
+  "build_elapsed": "1m 45s",
+  "tasks_total": 104,
+  "tasks_executed": 33,
+  "tasks_up_to_date": 71,
+  "tests": {
+    "failures": 0,
+    "tests": 4530,
+    "errors": 0,
+    "skipped": 271
+  },
+  "artifacts": [
+    {
+      "node": "1.21.1",
+      "loader": "neoforge",
+      "path": "versions/1.21.1/build/libs/nekojs-neoforge-1.21.1-1.1.0-preview3.jar",
+      "bytes": 2899758,
+      "sha256": "57E604D8ED152063F702644FFE4C2B4FC55482633644963A8F65041B6A771043",
+      "source_map_class_sha256": "9564DF811CA9D27F1650FF5AC7C0302A7AAF83BCB4AFAD03F5151E6B9AC152B6"
+    },
+    {
+      "node": "26.1.2",
+      "loader": "neoforge",
+      "path": "versions/26.1.2/build/libs/nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "bytes": 16732588,
+      "sha256": "266A8997F43F25C0A4715803C802E59D975F7D6CDE37DB0BBFD01B57363842F0",
+      "source_map_class_sha256": "9564DF811CA9D27F1650FF5AC7C0302A7AAF83BCB4AFAD03F5151E6B9AC152B6"
+    },
+    {
+      "node": "26.2.0",
+      "loader": "neoforge",
+      "path": "versions/26.2.0/build/libs/nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+      "bytes": 17204399,
+      "sha256": "DB5CFDA9513ED079A663B22CFAEB6A8BF98566024D8B1B7F2647EC45E13C03B3",
+      "source_map_class_sha256": "9564DF811CA9D27F1650FF5AC7C0302A7AAF83BCB4AFAD03F5151E6B9AC152B6"
+    },
+    {
+      "node": "26.1.2-fabric",
+      "loader": "fabric",
+      "path": "versions/26.1.2-fabric/build/libs/nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+      "bytes": 17998064,
+      "sha256": "3CD038AA3F416D7A7F0E5736CD1021A42B186A3D34813E7CD430C57DF2E06C6B",
+      "source_map_class_sha256": "9564DF811CA9D27F1650FF5AC7C0302A7AAF83BCB4AFAD03F5151E6B9AC152B6"
+    },
+    {
+      "node": "26.2.0-fabric",
+      "loader": "fabric",
+      "path": "versions/26.2.0-fabric/build/libs/nekojs-fabric-26.2-1.1.0-preview3.jar",
+      "bytes": 17998063,
+      "sha256": "06E303BEB8FA43033173F86FC41115F933AD3096460EBA0D3B640765D6C6A859",
+      "source_map_class_sha256": "9564DF811CA9D27F1650FF5AC7C0302A7AAF83BCB4AFAD03F5151E6B9AC152B6"
+    }
+  ]
+}

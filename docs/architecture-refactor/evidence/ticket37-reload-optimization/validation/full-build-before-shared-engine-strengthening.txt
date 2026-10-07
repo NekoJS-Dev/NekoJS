@@ -1,0 +1,571 @@
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/C:/Users/11515/.gradle/wrapper/dists/gradle-9.6.0-bin/42k10rwplmzkhuboz9kdazi7s/gradle-9.6.0/lib/native-platform-0.22-milestone-29.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :26.1.2-fabric:validateAccessWidener UP-TO-DATE
+> Task :26.2.0-fabric:validateAccessWidener UP-TO-DATE
+> Task :common-api-processor:processResources
+> Task :common-api-processor:processTestResources NO-SOURCE
+> Task :26.1.2:stonecutterPrepare UP-TO-DATE
+> Task :26.2.0:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2-fabric:stonecutterPrepare UP-TO-DATE
+> Task :26.2.0-fabric:stonecutterPrepare UP-TO-DATE
+> Task :1.21.1:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2-fabric:stonecutterGenerate UP-TO-DATE
+> Task :26.2.0-fabric:stonecutterGenerate UP-TO-DATE
+
+> Task :guardLint
+guardLint: 守卫块 376，扫描 542 个文件；超限豁免 0 个；警告 0 条
+
+> Task :26.1.2-fabric:extractIcuClasses UP-TO-DATE
+> Task :26.1.2-fabric:generateModMetadata UP-TO-DATE
+> Task :26.1.2-fabric:processResources UP-TO-DATE
+> Task :26.1.2-fabric:processIncludeJars UP-TO-DATE
+> Task :26.1.2-fabric:stonecutterPrepareTest UP-TO-DATE
+> Task :26.1.2:stonecutterGenerate
+> Task :26.2.0:stonecutterGenerate
+> Task :1.21.1:stonecutterGenerate
+> Task :common:checkCommonIsolation
+> Task :26.1.2-fabric:stonecutterGenerateTest UP-TO-DATE
+> Task :26.2.0-fabric:extractIcuClasses UP-TO-DATE
+> Task :26.1.2-fabric:processTestResources UP-TO-DATE
+> Task :26.2.0-fabric:generateModMetadata UP-TO-DATE
+> Task :26.2.0-fabric:processResources UP-TO-DATE
+> Task :26.2.0-fabric:processIncludeJars UP-TO-DATE
+> Task :common:compileJava UP-TO-DATE
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes UP-TO-DATE
+> Task :common:compileAddonFixtureJava UP-TO-DATE
+> Task :common:processAddonFixtureResources UP-TO-DATE
+> Task :common:addonFixtureClasses UP-TO-DATE
+> Task :26.2.0-fabric:stonecutterPrepareTest UP-TO-DATE
+> Task :common:externalAddonJar UP-TO-DATE
+> Task :common-api-processor:compileJava UP-TO-DATE
+> Task :common-api-processor:classes
+> Task :common-api-processor:jar
+> Task :common-api-processor:compileTestJava UP-TO-DATE
+> Task :common-api-processor:testClasses UP-TO-DATE
+> Task :common:jar
+> Task :common:compileTestJava UP-TO-DATE
+> Task :common:processTestResources UP-TO-DATE
+> Task :common:testClasses UP-TO-DATE
+
+> Task :26.2.0:createMinecraftArtifacts
+Loaded 157 artifacts from D:\mcmodDemo\NekoJS-mult\versions\26.2.0\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+*** Started working on downloadManifest
+Waiting for lock on downloadManifest_5014bdd0ad2a5e976245ebd187d1027b7a1c2dee...
+> Task :1.21.1:createMinecraftArtifacts
+Loaded 145 artifacts from D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+*** Started working on downloadJson
+ DONE  Completed downloadJson in 0.03s
+*** Started working on downloadClient
+*** Started working on downloadClientMappings
+*** Started working on downloadServer
+ DONE  Completed downloadClientMappings in 0.05s
+ DONE  Completed downloadServer in 0.05s
+ DONE  Completed downloadClient in 0.05s
+*** Started working on mergeMappings
+ REUSE Used cache of mergeMappings in 0.01s
+*** Started working on stripClient
+ REUSE Used cache of stripClient in 0.00s
+*** Started working on extractServer
+ REUSE Used cache of extractServer in 0.00s
+*** Started working on stripServer
+ REUSE Used cache of stripServer in 0.02s
+*** Started working on merge
+ REUSE Used cache of merge in 0.01s
+*** Started working on rename
+ REUSE Used cache of rename in 0.00s
+*** Started working on decompile
+ REUSE Used cache of decompile in 0.00s
+*** Started working on inject
+ REUSE Used cache of inject in 0.00s
+*** Started working on patch
+ REUSE Used cache of patch in 0.00s
+*** Started working on applyNeoforgePatches
+ REUSE Used cache of applyNeoforgePatches in 0.00s
+*** Started working on transformSources
+ REUSE Used cache of transformSources in 0.00s
+*** Started working on recompile
+ REUSE Used cache of recompile in 0.00s
+*** Started working on sourcesWithNeoForge
+ REUSE Used cache of sourcesWithNeoForge in 0.00s
+*** Started working on compiledWithNeoForge
+ REUSE Used cache of compiledWithNeoForge in 0.00s
+*** Started working on sourcesAndCompiledWithNeoForge
+ REUSE Used cache of sourcesAndCompiledWithNeoForge in 0.00s
+Total runtime: 2.28s
+
+
+> Task :26.1.2:createMinecraftArtifacts
+Loaded 141 artifacts from D:\mcmodDemo\NekoJS-mult\versions\26.1.2\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+*** Started working on downloadManifest
+  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
+ DONE  Completed downloadManifest in 2.38s
+*** Started working on downloadJson
+ DONE  Completed downloadJson in 0.01s
+*** Started working on downloadClient
+*** Started working on downloadServer
+ DONE  Completed downloadClient in 0.11s
+ DONE  Completed downloadServer in 0.11s
+*** Started working on preProcessJar
+ REUSE Used cache of preProcessJar in 0.00s
+*** Started working on decompile
+ REUSE Used cache of decompile in 0.00s
+*** Started working on patch
+ REUSE Used cache of patch in 0.01s
+*** Started working on applyNeoforgePatches
+ REUSE Used cache of applyNeoforgePatches in 0.00s
+*** Started working on transformSources
+ REUSE Used cache of transformSources in 0.00s
+*** Started working on recompile
+ REUSE Used cache of recompile in 0.01s
+*** Started working on mergeWithSources
+ REUSE Used cache of mergeWithSources in 0.00s
+
+> Task :common-api-processor:test
+
+> Task :26.2.0:createMinecraftArtifacts
+...  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
+
+> Task :26.1.2:createMinecraftArtifacts
+Total runtime: 4.89s
+
+
+> Task :26.1.2-fabric:compileJava
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+30 个警告
+
+> Task :26.2.0-fabric:compileJava
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+30 个警告
+
+> Task :26.2.0-fabric:classes
+> Task :26.1.2-fabric:classes
+
+> Task :26.2.0:createMinecraftArtifacts
+ DONE  Completed downloadManifest in 5.63s
+*** Started working on downloadJson
+ DONE  Completed downloadJson in 0.01s
+*** Started working on downloadServer
+*** Started working on downloadClient
+ DONE  Completed downloadClient in 0.20s
+ DONE  Completed downloadServer in 0.20s
+*** Started working on preProcessJar
+ REUSE Used cache of preProcessJar in 0.00s
+*** Started working on decompile
+ REUSE Used cache of decompile in 0.01s
+*** Started working on patch
+ REUSE Used cache of patch in 0.00s
+*** Started working on applyNeoforgePatches
+ REUSE Used cache of applyNeoforgePatches in 0.00s
+*** Started working on transformSources
+ REUSE Used cache of transformSources in 0.00s
+*** Started working on recompile
+ REUSE Used cache of recompile in 0.00s
+*** Started working on mergeWithSources
+ REUSE Used cache of mergeWithSources in 0.01s
+Total runtime: 8.15s
+
+
+> Task :1.21.1:compileJava
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\EntityTypeBuilder.java:400: 警告: [unchecked] 未经检查的转换
+                () -> (EntityType<? extends net.minecraft.world.entity.Mob>) (EntityType<?>) this.get(),
+                                                                             ^
+  需要: EntityType<? extends Mob>
+  找到:    EntityType<CAP#1>
+  其中, CAP#1是新类型变量:
+    CAP#1从?的捕获扩展Entity
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\event\server\VillagerTradeDomainOwner.java:448: 警告: [deprecation] Unsafe中的staticFieldBase(Field)已过时
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                   ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\event\server\VillagerTradeDomainOwner.java:448: 警告: [deprecation] Unsafe中的staticFieldOffset(Field)已过时
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\villager\VillagerTradeManager.java:325: 警告: [deprecation] Unsafe中的staticFieldBase(Field)已过时
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                   ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\villager\VillagerTradeManager.java:325: 警告: [deprecation] Unsafe中的staticFieldOffset(Field)已过时
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\event\server\ItemModificationJS.java:32: 警告: [this-escape] 可能在完全初始化子类之前逃逸了 'this'
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+                                                                               ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:60: 警告: [this-escape] 可能在完全初始化子类之前逃逸了 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: 警告: [removal] EventBusSubscriber 中的 bus() 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: 警告: [removal] EventBusSubscriber 中的 Bus 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: 警告: [removal] EventBusSubscriber 中的 bus() 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: 警告: [removal] EventBusSubscriber 中的 Bus 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: 警告: [removal] EventBusSubscriber 中的 bus() 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: 警告: [removal] EventBusSubscriber 中的 Bus 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: 警告: [removal] EventBusSubscriber 中的 bus() 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: 警告: [removal] EventBusSubscriber 中的 Bus 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: 警告: [removal] EventBusSubscriber 中的 bus() 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\network\NekoJSNetwork.java:21: 警告: [removal] EventBusSubscriber 中的 Bus 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: 警告: [removal] EventBusSubscriber 中的 bus() 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: 警告: [removal] EventBusSubscriber 中的 Bus 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: 警告: [removal] EventBusSubscriber 中的 bus() 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: 警告: [removal] EventBusSubscriber 中的 Bus 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: 警告: [removal] EventBusSubscriber 中的 bus() 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: 警告: [removal] EventBusSubscriber 中的 Bus 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: 警告: [removal] EventBusSubscriber 中的 bus() 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: 警告: [removal] EventBusSubscriber 中的 Bus 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: 警告: [removal] EventBusSubscriber 中的 bus() 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+          ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\NekoJSPackLoader.java:21: 警告: [removal] EventBusSubscriber 中的 Bus 已过时, 且标记为待删除
+        , bus = EventBusSubscriber.Bus.MOD
+                                  ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\ScriptPackDataManager.java:381: 警告: [deprecation] Unsafe中的objectFieldOffset(Field)已过时
+        return theUnsafe().getObject(target, theUnsafe().objectFieldOffset(field));
+                                                        ^
+D:\mcmodDemo\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\ScriptPackDataManager.java:386: 警告: [deprecation] Unsafe中的objectFieldOffset(Field)已过时
+        theUnsafe().putObject(target, theUnsafe().objectFieldOffset(field), value);
+                                                 ^
+29 个警告
+
+> Task :26.1.2-fabric:jar
+> Task :26.2.0-fabric:jar
+
+> Task :26.1.2:compileJava
+D:\mcmodDemo\NekoJS-mult\src\main\java\com\tkisor\nekojs\api\inject\ItemStackExtension.java:162: 警告: [deprecation] ItemStack中的getEnchantments()已过时
+        return self().getEnchantments().getLevel(enchantment) >= level;
+                     ^
+D:\mcmodDemo\NekoJS-mult\src\main\java\com\tkisor\nekojs\wrapper\event\server\ItemModificationJS.java:44: 警告: [this-escape] 可能在完全初始化子类之前逃逸了 'this'
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+                                                                               ^
+D:\mcmodDemo\NekoJS-mult\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:64: 警告: [this-escape] 可能在完全初始化子类之前逃逸了 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+3 个警告
+
+> Task :26.2.0-fabric:stonecutterGenerateTest UP-TO-DATE
+> Task :26.2.0-fabric:assemble
+
+> Task :26.2.0:compileJava
+D:\mcmodDemo\NekoJS-mult\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\api\inject\ItemStackExtension.java:162: 警告: [deprecation] ItemStack中的getEnchantments()已过时
+        return self().getEnchantments().getLevel(enchantment) >= level;
+                     ^
+D:\mcmodDemo\NekoJS-mult\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\wrapper\event\server\ItemModificationJS.java:44: 警告: [this-escape] 可能在完全初始化子类之前逃逸了 'this'
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+                                                                               ^
+D:\mcmodDemo\NekoJS-mult\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:64: 警告: [this-escape] 可能在完全初始化子类之前逃逸了 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+3 个警告
+
+> Task :26.1.2-fabric:compileTestJava
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()': 找不到com.google.errorprone.annotations.DoNotCall的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotMock' 的批注方法 'value()': 找不到com.google.errorprone.annotations.DoNotMock的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+21 个警告
+
+> Task :26.1.2-fabric:assemble
+> Task :26.1.2-fabric:testClasses
+
+> Task :26.2.0-fabric:compileTestJava
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.14.0\efc0e34ede4e3204eaefb84a00e55e8c86634382\gson-2.14.0.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()': 找不到com.google.errorprone.annotations.DoNotCall的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableList.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotMock' 的批注方法 'value()': 找不到com.google.errorprone.annotations.DoNotMock的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.6.0-jre\c376b13067cc99a5774403530953f7b05a91e218\guava-33.6.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): 警告: [classfile] 无法找到类型 'DoNotCall' 的批注方法 'value()'
+21 个警告
+
+> Task :26.2.0-fabric:processTestResources UP-TO-DATE
+> Task :26.2.0-fabric:testClasses
+> Task :1.21.1:generateModMetadata
+> Task :1.21.1:processResources
+> Task :1.21.1:classes
+> Task :1.21.1:jarJar NO-SOURCE
+> Task :1.21.1:jar
+> Task :1.21.1:assemble
+> Task :1.21.1:stonecutterPrepareTest UP-TO-DATE
+> Task :1.21.1:stonecutterGenerateTest
+> Task :26.1.2:generateModMetadata
+> Task :26.2.0:generateModMetadata
+> Task :26.1.2:processResources
+> Task :26.2.0:processResources
+> Task :26.1.2:classes
+> Task :26.2.0:classes
+> Task :26.2.0:jarJar UP-TO-DATE
+> Task :26.1.2:jarJar UP-TO-DATE
+> Task :1.21.1:compileTestJava
+> Task :1.21.1:processTestResources
+> Task :1.21.1:testClasses
+> Task :26.2.0:jar
+> Task :26.2.0:assemble
+> Task :26.2.0:stonecutterPrepareTest UP-TO-DATE
+> Task :26.1.2:jar
+> Task :26.1.2:assemble
+> Task :26.2.0:stonecutterGenerateTest
+> Task :common:test
+
+> Task :26.1.2:compileTestJava
+D:\mcmodDemo\NekoJS-mult\src\test\java\com\tkisor\nekojs\wrapper\event\server\Ticket39BlockModificationScriptE2ETest.java:74: 警告: [deprecation] BlockStateBase中的getLightEmission()已过时
+                .map(net.minecraft.world.level.block.state.BlockState::getLightEmission)
+                     ^
+D:\mcmodDemo\NekoJS-mult\src\test\java\com\tkisor\nekojs\wrapper\event\server\Ticket39ModificationExamplesTest.java:181: 警告: [deprecation] BlockStateBase中的getLightEmission()已过时
+                .map(net.minecraft.world.level.block.state.BlockState::getLightEmission)
+                     ^
+2 个警告
+
+> Task :26.2.0:compileTestJava
+D:\mcmodDemo\NekoJS-mult\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\Ticket39BlockModificationScriptE2ETest.java:74: 警告: [deprecation] BlockStateBase中的getLightEmission()已过时
+                .map(net.minecraft.world.level.block.state.BlockState::getLightEmission)
+                     ^
+D:\mcmodDemo\NekoJS-mult\versions\26.2.0\build\generated\stonecutter\test\java\com\tkisor\nekojs\wrapper\event\server\Ticket39ModificationExamplesTest.java:181: 警告: [deprecation] BlockStateBase中的getLightEmission()已过时
+                .map(net.minecraft.world.level.block.state.BlockState::getLightEmission)
+                     ^
+2 个警告
+
+> Task :26.1.2:processTestResources
+> Task :26.1.2:testClasses
+
+> Task :verifyExternalAddonIsolation
+verifyExternalAddonIsolation: 5 production jars carry no fixture content; fixture jar metadata complete
+
+> Task :26.2.0:processTestResources
+> Task :26.2.0:testClasses
+> Task :26.2.0-fabric:platformGateTest
+> Task :26.1.2-fabric:platformGateTest
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+> Task :1.21.1:platformGateTest
+> Task :26.2.0:platformGateTest
+> Task :26.1.2:platformGateTest
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/org.joml/joml/1.10.8/fc0a71dad90a2cf41d82a76156a0e700af8e4f8d/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/org.joml/joml/1.10.8/fc0a71dad90a2cf41d82a76156a0e700af8e4f8d/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762963/dd59af0c156c118b9aae5893e38127c1c709d401/graal-1504336-8762963.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762963/dd59af0c156c118b9aae5893e38127c1c709d401/graal-1504336-8762963.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :26.2.0-fabric:test
+> Task :26.1.2-fabric:test
+> Task :26.1.2-fabric:verifyFabricRuntimeArtifact
+> Task :26.1.2-fabric:check
+> Task :26.1.2-fabric:build
+> Task :26.2.0-fabric:verifyFabricRuntimeArtifact
+> Task :26.2.0-fabric:check
+> Task :26.2.0-fabric:build
+> Task :1.21.1:test
+> Task :1.21.1:verifyDevModSourceSets
+> Task :1.21.1:verifyNeoForgeRuntimeArtifact
+> Task :1.21.1:check
+> Task :1.21.1:build
+> Task :26.1.2:test
+> Task :26.1.2:verifyDevModSourceSets
+> Task :26.2.0:test
+> Task :26.1.2:verifyNeoForgeRuntimeArtifact
+> Task :26.1.2:check
+> Task :26.1.2:build
+> Task :26.2.0:verifyDevModSourceSets
+> Task :26.2.0:verifyNeoForgeRuntimeArtifact
+> Task :26.2.0:check
+> Task :26.2.0:build
+> Task :common:verifyAddonFixtureDependencySurface
+> Task :common:check
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS-mult/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 48s
+104 actionable tasks: 59 executed, 45 up-to-date

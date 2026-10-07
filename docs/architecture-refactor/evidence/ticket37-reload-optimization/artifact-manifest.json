@@ -1,0 +1,56 @@
+{
+  "source_revision": "2bf28fa77113a38acaecaa34537010a783b73dfc",
+  "branch": "stonecutter",
+  "version": "1.1.0-preview3",
+  "status": "local-development-handoff-only",
+  "release_uploaded": false,
+  "build_command": ":common:check :common-api-processor:test :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build verifyExternalAddonIsolation guardLint --console=plain",
+  "build_exit": 0,
+  "build_elapsed": "2m 8s",
+  "tasks_total": 104,
+  "tasks_executed": 34,
+  "tasks_up_to_date": 70,
+  "tests": {
+    "tests": 4528,
+    "skipped": 271,
+    "failures": 0,
+    "errors": 0
+  },
+  "artifacts": [
+    {
+      "node": "1.21.1",
+      "loader": "neoforge",
+      "path": "versions/1.21.1/build/libs/nekojs-neoforge-1.21.1-1.1.0-preview3.jar",
+      "bytes": 2899880,
+      "sha256": "A05E5A3D4DDFA11E6859EA3BEA835613C68BF02B95402D9FE815EDC55D7C8258"
+    },
+    {
+      "node": "26.1.2",
+      "loader": "neoforge",
+      "path": "versions/26.1.2/build/libs/nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "bytes": 16732710,
+      "sha256": "10730BAE0B5E57765906483B71A64FC439CE174D61DD8A82E3E754856EA0D220"
+    },
+    {
+      "node": "26.2.0",
+      "loader": "neoforge",
+      "path": "versions/26.2.0/build/libs/nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+      "bytes": 17204521,
+      "sha256": "F1F1B541936EF2032DCA7696A84AAAFC97BC50D252BFA8113A001011567D88DA"
+    },
+    {
+      "node": "26.1.2-fabric",
+      "loader": "fabric",
+      "path": "versions/26.1.2-fabric/build/libs/nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+      "bytes": 17998186,
+      "sha256": "131F0FE8CD1AE0FCF562F7FC295491DAC2901A3C22888E1181D7C9853D0A3745"
+    },
+    {
+      "node": "26.2.0-fabric",
+      "loader": "fabric",
+      "path": "versions/26.2.0-fabric/build/libs/nekojs-fabric-26.2-1.1.0-preview3.jar",
+      "bytes": 17998185,
+      "sha256": "2EB3C67DE147AE47C7BF571365E184CFD0D67E043D35C0BE98D09BAB081FFAE1"
+    }
+  ]
+}

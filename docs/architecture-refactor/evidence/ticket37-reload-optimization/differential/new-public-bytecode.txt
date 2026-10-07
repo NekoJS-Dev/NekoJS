@@ -1,0 +1,131 @@
+Compiled from "NekoSourceMapBuilder.java"
+public final class com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder {
+  public static java.lang.String identity(java.nio.file.Path, java.lang.String, java.lang.String);
+    Code:
+         0: new           #11                 // class com/tkisor/nekojs/core/compiler/NekoSourceMapBuilder
+         3: dup
+         4: aload_0
+         5: aload_1
+         6: invokespecial #26                 // Method "<init>":(Ljava/nio/file/Path;Ljava/lang/String;)V
+         9: astore_3
+        10: aload_2
+        11: ifnonnull     19
+        14: ldc           #20                 // String
+        16: goto          20
+        19: aload_2
+        20: astore        4
+        22: aload_3
+        23: getfield      #22                 // Field source:Ljava/lang/String;
+        26: invokestatic  #29                 // Method authoredLineCount:(Ljava/lang/String;)I
+        29: istore        5
+        31: aload_3
+        32: getfield      #22                 // Field source:Ljava/lang/String;
+        35: aload         4
+        37: invokevirtual #33                 // Method java/lang/String.equals:(Ljava/lang/Object;)Z
+        40: istore        6
+        42: aload         4
+        44: invokestatic  #39                 // Method lineCount:(Ljava/lang/String;)I
+        47: istore        7
+        49: iconst_0
+        50: istore        8
+        52: iconst_0
+        53: istore        9
+        55: iload         9
+        57: iload         7
+        59: if_icmpge     166
+        62: aload         4
+        64: iload         8
+        66: invokestatic  #42                 // Method lineLength:(Ljava/lang/String;I)I
+        69: istore        10
+        71: iload         9
+        73: iload         5
+        75: iconst_1
+        76: isub
+        77: invokestatic  #46                 // Method java/lang/Math.min:(II)I
+        80: istore        11
+        82: iload         6
+        84: ifeq          118
+        87: iconst_0
+        88: istore        12
+        90: iload         12
+        92: iload         10
+        94: if_icmpgt     115
+        97: aload_3
+        98: iload         9
+       100: iload         12
+       102: iload         11
+       104: iload         12
+       106: invokevirtual #52                 // Method add:(IIII)V
+       109: iinc          12, 1
+       112: goto          90
+       115: goto          128
+       118: aload_3
+       119: iload         9
+       121: iconst_0
+       122: iload         11
+       124: iconst_0
+       125: invokevirtual #52                 // Method add:(IIII)V
+       128: iload         8
+       130: iload         10
+       132: iadd
+       133: istore        8
+       135: iload         8
+       137: aload         4
+       139: invokevirtual #56                 // Method java/lang/String.length:()I
+       142: if_icmpge     160
+       145: aload         4
+       147: iload         8
+       149: invokevirtual #60                 // Method java/lang/String.charAt:(I)C
+       152: bipush        10
+       154: if_icmpne     160
+       157: iinc          8, 1
+       160: iinc          9, 1
+       163: goto          55
+       166: aload_3
+       167: invokevirtual #64                 // Method build:()Ljava/lang/String;
+       170: areturn
+
+  static com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder$Emitter emitter(java.nio.file.Path, java.lang.String);
+    Code:
+         0: new           #68                 // class com/tkisor/nekojs/core/compiler/NekoSourceMapBuilder$Emitter
+         3: dup
+         4: new           #11                 // class com/tkisor/nekojs/core/compiler/NekoSourceMapBuilder
+         7: dup
+         8: aload_0
+         9: aload_1
+        10: invokespecial #26                 // Method "<init>":(Ljava/nio/file/Path;Ljava/lang/String;)V
+        13: invokespecial #70                 // Method com/tkisor/nekojs/core/compiler/NekoSourceMapBuilder$Emitter."<init>":(Lcom/tkisor/nekojs/core/compiler/NekoSourceMapBuilder;)V
+        16: areturn
+
+  static java.lang.String prependUnmappedGeneratedLines(java.lang.String, int);
+    Code:
+         0: aload_0
+         1: ifnull        15
+         4: aload_0
+         5: invokevirtual #73                 // Method java/lang/String.isEmpty:()Z
+         8: ifne          15
+        11: iload_1
+        12: ifgt          17
+        15: aload_0
+        16: areturn
+        17: aload_0
+        18: invokestatic  #77                 // Method com/google/gson/JsonParser.parseString:(Ljava/lang/String;)Lcom/google/gson/JsonElement;
+        21: invokevirtual #83                 // Method com/google/gson/JsonElement.getAsJsonObject:()Lcom/google/gson/JsonObject;
+        24: astore_2
+        25: aload_2
+        26: ldc           #89                 // String mappings
+        28: invokevirtual #90                 // Method com/google/gson/JsonObject.get:(Ljava/lang/String;)Lcom/google/gson/JsonElement;
+        31: invokevirtual #95                 // Method com/google/gson/JsonElement.getAsString:()Ljava/lang/String;
+        34: astore_3
+        35: aload_2
+        36: ldc           #89                 // String mappings
+        38: ldc           #98                 // String ;
+        40: iload_1
+        41: invokevirtual #100                // Method java/lang/String.repeat:(I)Ljava/lang/String;
+        44: aload_3
+        45: invokedynamic #104,  0            // InvokeDynamic #0:makeConcatWithConstants:(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+        50: invokevirtual #108                // Method com/google/gson/JsonObject.addProperty:(Ljava/lang/String;Ljava/lang/String;)V
+        53: aload_2
+        54: invokevirtual #112                // Method com/google/gson/JsonObject.toString:()Ljava/lang/String;
+        57: areturn
+}

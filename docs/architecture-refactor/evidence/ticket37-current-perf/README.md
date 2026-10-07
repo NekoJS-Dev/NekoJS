@@ -2,6 +2,8 @@
 
 Date: 2026-10-07. Behavior revision: `ac810fa71d061d31983220c0d9b198af5d4253ac`. Primary node: NeoForge `26.1.2`. This evidence does not authorize publication or close the remaining domain tickets.
 
+Latest source/results: [root-owned preparation and native source-map optimization](../ticket37-reload-optimization/README.md), source`1b406626`: five-formal startup mean22825.6msPASS and five-formal reload mean304.4msFAIL against285.3ms. The two algorithmic repairs, real red/green and1026byte-parity cases, fullfive-node4530-test build and refreshed exactartifact SHA manifest are recorded there. This older pack remains historical `ac810fa7` evidence; its no-optimization/no-JFR statements below describe that earlier scope, not the later implementation. No failed group or adverse early reload is removed.
+
 ## Policy and result
 
 The unchanged [ticket04 policy](../../implementation-tickets/04-perf-release-policy.md) requires startup `wall_done_ms` mean <= 41173ms and reload `marker_ms` mean <= 285.3ms, with at least five formal samples per dimension. Warmups are separate. No adverse sample is deleted; forced-kill/timeout samples must be repeated rather than silently accepted.

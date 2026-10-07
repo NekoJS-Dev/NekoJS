@@ -1,0 +1,11 @@
+*/samples.jsonl -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+*/env-snapshot.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+*-console.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+validation/*.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+validation/*.xml -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+profiling/*.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+profiling/analysis.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+profiling/reload.jfc -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+profiling/record-profile.ps1 -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+profiling/analyze-profile.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+differential/*.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

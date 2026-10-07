@@ -1,0 +1,475 @@
+{
+  "diagnostic_only": true,
+  "server_sample_count": 595,
+  "reload_path_sample_count": 271,
+  "reload_leaf_samples": [
+    [
+      "sun.nio.fs.WindowsNativeDispatcher.FindFirstFile0(long, WindowsNativeDispatcher$FirstFile)",
+      26
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler$Eraser.outKeywordAt(int, String) line: 1157",
+      24
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder.lineOffset(String, int) line: 193",
+      17
+    ],
+    [
+      "java.util.regex.Pattern$Bound.match(Matcher, int, CharSequence) line: 5591",
+      10
+    ],
+    [
+      "sun.nio.fs.WindowsNativeDispatcher.FindClose(long)",
+      8
+    ],
+    [
+      "java.lang.StringLatin1.charAt(byte[], int) line: 46",
+      5
+    ],
+    [
+      "sun.nio.fs.WindowsNativeDispatcher.GetFileAttributesEx0(long, long)",
+      4
+    ],
+    [
+      "java.util.HashMap.putVal(int, Object, Object, boolean, boolean) line: 655",
+      4
+    ],
+    [
+      "java.lang.StringLatin1.newString(byte[], int, int) line: 760",
+      4
+    ],
+    [
+      "java.lang.Character.isWhitespace(int) line: 11711",
+      3
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler$Eraser.scanStructure() line: 263",
+      3
+    ],
+    [
+      "java.lang.AbstractStringBuilder.substring(int, int) line: 1191",
+      3
+    ],
+    [
+      "graal.graalvm.collections.EconomicMapImpl.find(Object) line: 246",
+      2
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder.lineCount(String) line: 178",
+      2
+    ],
+    [
+      "com.oracle.truffle.api.object.TrieNode$BitmapNode.find(Object, int, int) line: 262",
+      2
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder.identity(Path, String, String) line: 48",
+      2
+    ],
+    [
+      "com.tkisor.nekojs.core.error.SourceMapRegistry.parseMappings(String, int, int) line: 233",
+      2
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler$Eraser.nextOutNonWhitespace(int) line: 1144",
+      2
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler$Eraser.findClassBodyOpen(int) line: 889",
+      2
+    ],
+    [
+      "com.tkisor.nekojs.core.pack.ScriptPackRegistry.refreshGlobalPacks() line: 80",
+      2
+    ]
+  ],
+  "nearest_neko_frames": [
+    [
+      "com.tkisor.nekojs.core.node.NekoNodeModuleInstaller.loadManifest(Context)",
+      37
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler$Eraser.outKeywordAt(int, String)",
+      32
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder.lineOffset(String, int)",
+      17
+    ],
+    [
+      "com.tkisor.nekojs.core.NekoSandboxFactory.build(ScriptType, NekoModulePipelineCache)",
+      11
+    ],
+    [
+      "com.tkisor.nekojs.core.module.NekoCanonicalPath.pathOf(Path)",
+      10
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator.matchAll(String, Pattern, Set)",
+      9
+    ],
+    [
+      "com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost.executeScriptModule(NekoResolvedModule, ModuleState, NekoPreparedModule)",
+      9
+    ],
+    [
+      "com.tkisor.nekojs.core.node.NekoNodeModuleInstaller.readResource(String)",
+      8
+    ],
+    [
+      "com.tkisor.nekojs.core.module.NekoModuleResolver.canonicalSplicedForm(Path)",
+      8
+    ],
+    [
+      "com.tkisor.nekojs.core.error.SourceMapRegistry.parseMappings(String, int, int)",
+      8
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator.collectSourceLevelNames(String, Set)",
+      6
+    ],
+    [
+      "com.tkisor.nekojs.core.module.NekoModuleResolver.moduleRecord(Path, Path)",
+      5
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler$Eraser.scanStructure()",
+      5
+    ],
+    [
+      "com.tkisor.nekojs.core.module.NekoModuleResolver.verifyInsideGameDir(Path)",
+      5
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler$Eraser.eraseClassMemberModifiers(int, int)",
+      4
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder.build()",
+      4
+    ],
+    [
+      "com.tkisor.nekojs.core.module.NekoModuleResolver.verifyModulePath(Path, Path)",
+      4
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoSourceLexerBase.previousNonWhitespace(String, int, int)",
+      4
+    ],
+    [
+      "com.tkisor.nekojs.api.event.ScriptBindingSchema$BindingMembers.<init>(Set, Set, boolean)",
+      3
+    ],
+    [
+      "com.tkisor.nekojs.script.ScriptContainer.preload()",
+      3
+    ]
+  ],
+  "neko_inclusive_sample_counts": [
+    [
+      "com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional()",
+      271
+    ],
+    [
+      "com.tkisor.nekojs.script.ScriptManager.doReloadScripts()",
+      271
+    ],
+    [
+      "com.tkisor.nekojs.script.ScriptManager.reloadScripts()",
+      270
+    ],
+    [
+      "com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot.reload(ScriptType)",
+      269
+    ],
+    [
+      "com.tkisor.nekojs.command.NekoJSCommands.reloadType(CommandSourceStack, ScriptType, NekoRuntimeRoot)",
+      265
+    ],
+    [
+      "com.tkisor.nekojs.command.NekoJSCommands.lambda$reloadCommand$0(NekoRuntimeRoot, CommandContext)",
+      264
+    ],
+    [
+      "com.tkisor.nekojs.script.ScriptManager.loadCandidateScripts(List, Context, NekoNodeRuntime)",
+      129
+    ],
+    [
+      "com.tkisor.nekojs.script.ScriptExecutor.executeEntry(Context, ScriptContainer, NekoNodeRuntime, ScriptBindingSchema$View)",
+      126
+    ],
+    [
+      "com.tkisor.nekojs.core.NekoSandboxFactory.build(ScriptType, NekoModulePipelineCache)",
+      121
+    ],
+    [
+      "com.tkisor.nekojs.script.ScriptEnvironmentFactory.createContext(ScriptType, NekoModulePipelineCache)",
+      121
+    ],
+    [
+      "com.tkisor.nekojs.script.ScriptEnvironmentFactory.createContext(ScriptType, GenerationGlobals, NekoModulePipelineCache)",
+      121
+    ],
+    [
+      "com.tkisor.nekojs.script.ScriptManager.createCandidateEnvironment(long)",
+      121
+    ],
+    [
+      "com.tkisor.nekojs.core.node.NekoNodeModuleInstaller.install(Context, ScriptType, NekoModuleResolver, NekoJSPaths, ErrorTracker, SandboxConfig, NekoModulePipelineCache)",
+      109
+    ],
+    [
+      "com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost.loadEntryAsync(String)",
+      109
+    ],
+    [
+      "com.tkisor.nekojs.script.ScriptExecutor.waitForEntryModule(Context, ScriptContainer, String, NekoNodeRuntime)",
+      109
+    ],
+    [
+      "com.tkisor.nekojs.core.node.NekoNodeModuleInstaller.loadManifest(Context)",
+      106
+    ],
+    [
+      "com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost.loadResolvedAsync(NekoResolvedModule)",
+      85
+    ],
+    [
+      "com.tkisor.nekojs.core.module.NekoModulePipelineCache.prepare(Path)",
+      73
+    ],
+    [
+      "com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost.prepare(NekoResolvedModule)",
+      73
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler.eraseTypescript(Path, String)",
+      61
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler$Eraser.erase()",
+      56
+    ],
+    [
+      "com.tkisor.nekojs.core.module.NekoModulePipelineCache.lambda$prepare$1(NekoModulePipelineCache$SourceSnapshot, NekoTrustApprovedSource, Path, NekoModulePipelineCache$PreparedEntry)",
+      45
+    ],
+    [
+      "com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler$Eraser.transform()",
+      44
+    ],
+    [
+      "com.tkisor.nekojs.core.module.NekoModulePipeline.prepareCaptured(Path, String, NekoTrustApprovedSource, NekoModulePipeline$LanguageBinding, ScriptBindingSchema$View)",
+      44
+    ],
+    [
+      "com.tkisor.nekojs.core.module.NekoModulePipelineCache.prepareSource(Path, NekoModulePipelineCache$SourceSnapshot, NekoTrustApprovedSource, ScriptBindingSchema$View)",
+      44
+    ]
+  ],
+  "server_park_count": 1009,
+  "server_park_top_frames": [
+    [
+      "jdk.internal.misc.Unsafe.park",
+      1009
+    ]
+  ],
+  "reload_path_parks": [],
+  "sample_examples": [
+    {
+      "type": "jdk.ExecutionSample",
+      "time": "21:25:45.734 (2026-10-07)",
+      "frames": [
+        "sun.misc.Unsafe.getByte(Object, long) line: 279",
+        "com.oracle.truffle.api.strings.TStringUnsafe.getByte(byte[], long) line: 197",
+        "com.oracle.truffle.api.strings.TStringOps.readS0(byte[], long, int, int) line: 96",
+        "com.oracle.truffle.api.strings.TruffleString$EqualNode.checkContentEqualsUncached(AbstractTruffleString, AbstractTruffleString) line: 6943",
+        "com.oracle.truffle.api.strings.AbstractTruffleString.equals(Object) line: 1324",
+        "graal.graalvm.collections.EconomicMapImpl.compareKeys(Object, Object) line: 268",
+        "graal.graalvm.collections.EconomicMapImpl.findHash(Object) line: 280",
+        "graal.graalvm.collections.EconomicMapImpl.find(Object) line: 246",
+        "graal.graalvm.collections.EconomicMapImpl.get(Object, Object) line: 237",
+        "graal.graalvm.collections.EconomicMapImpl.get(Object) line: 229",
+        "com.oracle.truffle.js.builtins.JSBuiltinsContainer.lookupFunctionByKey(Object) line: 75",
+        "com.oracle.truffle.js.runtime.JSRealm.lookupFunction(JSBuiltinsContainer, Object) line: 1271",
+        "com.oracle.truffle.js.runtime.JSRealm.createObjectConstructor(JSRealm, JSDynamicObject) line: 1302",
+        "com.oracle.truffle.js.runtime.JSRealm.<init>(JSContext, TruffleLanguage$Env, JSRealm) line: 696",
+        "com.oracle.truffle.js.runtime.JSContext.createRealm(TruffleLanguage$Env, JSRealm) line: 887",
+        "com.oracle.truffle.js.runtime.JSContext.createRealm(TruffleLanguage$Env) line: 877",
+        "com.oracle.truffle.js.lang.JavaScriptLanguage.createContext(TruffleLanguage$Env) line: 352",
+        "com.oracle.truffle.js.lang.JavaScriptLanguage.createContext(TruffleLanguage$Env) line: 119",
+        "com.oracle.truffle.api.LanguageAccessor$LanguageImpl.createEnvContext(TruffleLanguage$Env, List) line: 280",
+        "com.oracle.truffle.polyglot.PolyglotLanguageContext.ensureCreated(PolyglotLanguage) line: 666",
+        "com.oracle.truffle.polyglot.PolyglotLanguageContext.ensureInitialized(PolyglotLanguage) line: 794",
+        "com.oracle.truffle.polyglot.PolyglotContextImpl.eval(String, Object) line: 1901",
+        "com.oracle.truffle.polyglot.PolyglotContextDispatch.eval(Object, String, Object) line: 62",
+        "graal.graalvm.polyglot.Context.eval(Source) line: 419",
+        "graal.graalvm.polyglot.Context.eval(String, CharSequence) line: 449",
+        "com.tkisor.nekojs.core.NekoSandboxFactory.build(ScriptType, NekoModulePipelineCache) line: 165",
+        "com.tkisor.nekojs.script.ScriptEnvironmentFactory.createContext(ScriptType, NekoModulePipelineCache) line: 80",
+        "com.tkisor.nekojs.script.ScriptEnvironmentFactory.createContext(ScriptType, GenerationGlobals, NekoModulePipelineCache) line: 227",
+        "com.tkisor.nekojs.script.ScriptManager.createCandidateEnvironment(long) line: 986",
+        "com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional() line: 829",
+        "com.tkisor.nekojs.script.ScriptManager.doReloadScripts() line: 779",
+        "com.tkisor.nekojs.script.ScriptManager.reloadScripts() line: 752",
+        "com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot.reload(ScriptType) line: 209",
+        "com.tkisor.nekojs.command.NekoJSCommands.reloadType(CommandSourceStack, ScriptType, NekoRuntimeRoot) line: 346",
+        "com.tkisor.nekojs.command.NekoJSCommands.lambda$reloadCommand$0(NekoRuntimeRoot, CommandContext) line: 297",
+        "com.mojang.brigadier.context.ContextChain.runExecutable(CommandContext, Object, ResultConsumer, boolean) line: 73",
+        "net.minecraft.commands.execution.tasks.ExecuteCommand.execute(ExecutionCommandSource, ExecutionContext, Frame) line: 29",
+        "net.minecraft.commands.execution.tasks.ExecuteCommand.execute(Object, ExecutionContext, Frame) line: 13",
+        "net.minecraft.commands.execution.UnboundEntryAction.lambda$bind$0(Object, ExecutionContext, Frame) line: 8",
+        "net.minecraft.commands.execution.CommandQueueEntry.execute(ExecutionContext) line: 5",
+        "net.minecraft.commands.execution.ExecutionContext.runCommandQueue() line: 100",
+        "net.minecraft.commands.Commands.executeCommandInContext(CommandSourceStack, Consumer) line: 414",
+        "net.minecraft.commands.Commands.performCommand(ParseResults, String) line: 338",
+        "net.minecraft.commands.Commands.performPrefixedCommand(CommandSourceStack, String) line: 314",
+        "net.minecraft.server.dedicated.DedicatedServer.lambda$runCommand$0(String) line: 763",
+        "net.minecraft.util.thread.BlockableEventLoop.lambda$submitAsync$0(Runnable) line: 68",
+        "java.util.concurrent.CompletableFuture$AsyncSupply.run() line: 1789",
+        "net.minecraft.server.TickTask.run() line: 18",
+        "net.minecraft.util.thread.BlockableEventLoop.doRunTask(Runnable) line: 163",
+        "net.minecraft.util.thread.ReentrantBlockableEventLoop.doRunTask(Runnable) line: 24",
+        "net.minecraft.server.MinecraftServer.doRunTask(TickTask) line: 936",
+        "net.minecraft.server.MinecraftServer.doRunTask(Runnable) line: 196",
+        "net.minecraft.util.thread.BlockableEventLoop.pollTask() line: 137",
+        "net.minecraft.server.MinecraftServer.pollTaskInternal() line: 919",
+        "net.minecraft.server.MinecraftServer.pollTask() line: 913",
+        "net.minecraft.util.thread.BlockableEventLoop.managedBlock(BooleanSupplier) line: 147",
+        "net.minecraft.server.MinecraftServer.waitUntilNextTick() line: 886",
+        "net.minecraft.server.MinecraftServer.runServer() line: 784",
+        "net.minecraft.server.MinecraftServer.lambda$spin$0(AtomicReference) line: 302",
+        "..."
+      ]
+    },
+    {
+      "type": "jdk.ExecutionSample",
+      "time": "21:25:45.738 (2026-10-07)",
+      "frames": [
+        "com.oracle.js.parser.AbstractParser.nextOrEOL() line: 194",
+        "com.oracle.js.parser.AbstractParser.next() line: 177",
+        "com.oracle.js.parser.Parser.functionDeclarationOrExpression(long, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean) line: 5542",
+        "com.oracle.js.parser.Parser.functionExpression() line: 5516",
+        "com.oracle.js.parser.Parser.memberExpression(boolean, boolean, CoverExpressionError) line: 5167",
+        "com.oracle.js.parser.Parser.leftHandSideExpression(boolean, boolean, CoverExpressionError) line: 4919",
+        "com.oracle.js.parser.Parser.unaryExpression(boolean, boolean, CoverExpressionError) line: 6211",
+        "com.oracle.js.parser.Parser.expression(int, boolean, boolean, boolean, CoverExpressionError) line: 6523",
+        "com.oracle.js.parser.Parser.conditionalExpression(boolean, boolean, boolean, CoverExpressionError) line: 6683",
+        "com.oracle.js.parser.Parser.assignmentExpression(boolean, boolean, boolean, CoverExpressionError) line: 6629",
+        "com.oracle.js.parser.Parser.parenthesizedExpressionAndArrowParameterList(boolean, boolean) line: 6428",
+        "com.oracle.js.parser.Parser.primaryExpression(boolean, boolean, CoverExpressionError) line: 4246",
+        "com.oracle.js.parser.Parser.memberExpression(boolean, boolean, CoverExpressionError) line: 5223",
+        "com.oracle.js.parser.Parser.leftHandSideExpression(boolean, boolean, CoverExpressionError) line: 4919",
+        "com.oracle.js.parser.Parser.unaryExpression(boolean, boolean, CoverExpressionError) line: 6211",
+        "com.oracle.js.parser.Parser.expression(int, boolean, boolean, boolean, CoverExpressionError) line: 6523",
+        "com.oracle.js.parser.Parser.conditionalExpression(boolean, boolean, boolean, CoverExpressionError) line: 6683",
+        "com.oracle.js.parser.Parser.assignmentExpression(boolean, boolean, boolean, CoverExpressionError) line: 6629",
+        "com.oracle.js.parser.Parser.expression(boolean, boolean, boolean, CoverExpressionError) line: 6370",
+        "com.oracle.js.parser.Parser.expression(boolean, boolean, boolean) line: 6362",
+        "com.oracle.js.parser.Parser.expression(boolean, boolean) line: 6366",
+        "com.oracle.js.parser.Parser.expressionStatement(boolean, boolean) line: 2986",
+        "com.oracle.js.parser.Parser.statement(boolean, boolean, boolean, int, boolean, boolean, boolean, boolean) line: 1614",
+        "com.oracle.js.parser.Parser.statement(boolean, boolean, boolean, int, boolean, boolean, boolean) line: 1457",
+        "com.oracle.js.parser.Parser.sourceElements(boolean, boolean, int) line: 1314",
+        "com.oracle.js.parser.Parser.program(TruffleString, int, Scope, List) line: 1201",
+        "com.oracle.js.parser.Parser.parse(TruffleString, int, int, int, Scope, List) line: 545",
+        "com.oracle.js.parser.Parser.parse() line: 456",
+        "com.oracle.truffle.js.parser.GraalJSParserHelper.parseSource(JSContext, Source, JSParserOptions, boolean, boolean, boolean, Scope, String, String, List) line: 131",
+        "com.oracle.truffle.js.parser.GraalJSParserHelper.parseScript(JSContext, Source, JSParserOptions, boolean, boolean, Scope, String, String, List) line: 90",
+        "com.oracle.truffle.js.parser.JavaScriptTranslator.translateScript(NodeFactory, JSContext, Environment, Source, boolean, boolean, boolean, DirectEvalContext, String, String, List, ScriptOrModule) line: 96",
+        "com.oracle.truffle.js.parser.JavaScriptTranslator.translateScript(NodeFactory, JSContext, Source, boolean, String, String, List) line: 78",
+        "com.oracle.truffle.js.parser.GraalJSEvaluator.parseScript(JSContext, Source, String, String, boolean, List) line: 260",
+        "com.oracle.truffle.js.lang.JavaScriptLanguage.parseScript(JSContext, Source, String, String, boolean, List) line: 323",
+        "com.oracle.truffle.js.lang.JavaScriptLanguage.parse(TruffleLanguage$ParsingRequest) line: 225",
+        "com.oracle.truffle.api.TruffleLanguage$ParsingRequest.parse(TruffleLanguage) line: 1204",
+        "com.oracle.truffle.api.TruffleLanguage.parse(Source, OptionValues, String[]) line: 1618",
+        "com.oracle.truffle.api.LanguageAccessor$LanguageImpl.parse(TruffleLanguage$Env, Source, OptionValues, Node, String[]) line: 309",
+        "com.oracle.truffle.polyglot.PolyglotSourceCache.parseImpl(PolyglotSourceCache$ParseOrigin, PolyglotLanguageContext, String[], Source) line: 114",
+        "com.oracle.truffle.polyglot.PolyglotSourceCache$WeakCache.lookup(PolyglotSourceCache$ParseOrigin, PolyglotLanguageContext, Source, String[], boolean) line: 351",
+        "com.oracle.truffle.polyglot.PolyglotSourceCache.parseCached(PolyglotSourceCache$ParseOrigin, PolyglotLanguageContext, Source, String[]) line: 94",
+        "com.oracle.truffle.polyglot.PolyglotLanguageContext.parseCached(PolyglotSourceCache$ParseOrigin, PolyglotLanguage, Source, String[]) line: 377",
+        "com.oracle.truffle.polyglot.PolyglotContextImpl.eval(String, Object) line: 1902",
+        "com.oracle.truffle.polyglot.PolyglotContextDispatch.eval(Object, String, Object) line: 62",
+        "graal.graalvm.polyglot.Context.eval(Source) line: 419",
+        "graal.graalvm.polyglot.Context.eval(String, CharSequence) line: 449",
+        "com.tkisor.nekojs.core.NekoSandboxFactory.build(ScriptType, NekoModulePipelineCache) line: 165",
+        "com.tkisor.nekojs.script.ScriptEnvironmentFactory.createContext(ScriptType, NekoModulePipelineCache) line: 80",
+        "com.tkisor.nekojs.script.ScriptEnvironmentFactory.createContext(ScriptType, GenerationGlobals, NekoModulePipelineCache) line: 227",
+        "com.tkisor.nekojs.script.ScriptManager.createCandidateEnvironment(long) line: 986",
+        "com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional() line: 829",
+        "com.tkisor.nekojs.script.ScriptManager.doReloadScripts() line: 779",
+        "com.tkisor.nekojs.script.ScriptManager.reloadScripts() line: 752",
+        "com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot.reload(ScriptType) line: 209",
+        "com.tkisor.nekojs.command.NekoJSCommands.reloadType(CommandSourceStack, ScriptType, NekoRuntimeRoot) line: 346",
+        "com.tkisor.nekojs.command.NekoJSCommands.lambda$reloadCommand$0(NekoRuntimeRoot, CommandContext) line: 297",
+        "com.mojang.brigadier.context.ContextChain.runExecutable(CommandContext, Object, ResultConsumer, boolean) line: 73",
+        "net.minecraft.commands.execution.tasks.ExecuteCommand.execute(ExecutionCommandSource, ExecutionContext, Frame) line: 29",
+        "net.minecraft.commands.execution.tasks.ExecuteCommand.execute(Object, ExecutionContext, Frame) line: 13",
+        "net.minecraft.commands.execution.UnboundEntryAction.lambda$bind$0(Object, ExecutionContext, Frame) line: 8",
+        "net.minecraft.commands.execution.CommandQueueEntry.execute(ExecutionContext) line: 5",
+        "net.minecraft.commands.execution.ExecutionContext.runCommandQueue() line: 100",
+        "..."
+      ]
+    },
+    {
+      "type": "jdk.NativeMethodSample",
+      "time": "21:25:45.741 (2026-10-07)",
+      "frames": [
+        "sun.nio.fs.WindowsNativeDispatcher.GetFileAttributesEx0(long, long)",
+        "sun.nio.fs.WindowsNativeDispatcher.GetFileAttributesEx(String, long) line: 364",
+        "sun.nio.fs.WindowsFileAttributes.get(WindowsPath, boolean) line: 298",
+        "sun.nio.fs.WindowsFileAttributeViews$Basic.readAttributes() line: 50",
+        "sun.nio.fs.WindowsFileAttributeViews$Basic.readAttributes() line: 38",
+        "sun.nio.fs.WindowsFileSystemProvider.readAttributes(Path, Class, LinkOption[]) line: 195",
+        "java.nio.file.spi.FileSystemProvider.readAttributesIfExists(Path, Class, LinkOption[]) line: 1099",
+        "java.nio.file.Files.isRegularFile(Path, LinkOption[]) line: 2150",
+        "net.neoforged.fml.jarcontents.FolderJarContents.findFile(String) line: 121",
+        "net.neoforged.fml.jarcontents.CompositeJarContents.findFile(String) line: 176",
+        "net.neoforged.fml.classloading.JarContentsModuleReader.find(String) line: 31",
+        "net.neoforged.fml.classloading.ModuleClassLoader.enumerateResources(String) line: 333",
+        "net.neoforged.fml.classloading.ModuleClassLoader.getResource(String) line: 266",
+        "java.lang.ClassLoader.getResourceAsStream(String) line: 1680",
+        "com.tkisor.nekojs.core.node.NekoNodeModuleInstaller.readResource(String) line: 135",
+        "com.tkisor.nekojs.core.node.NekoNodeModuleInstaller.loadManifest(Context) line: 71",
+        "com.tkisor.nekojs.core.node.NekoNodeModuleInstaller.install(Context, ScriptType, NekoModuleResolver, NekoJSPaths, ErrorTracker, SandboxConfig, NekoModulePipelineCache) line: 45",
+        "com.tkisor.nekojs.core.NekoSandboxFactory.build(ScriptType, NekoModulePipelineCache) line: 167",
+        "com.tkisor.nekojs.script.ScriptEnvironmentFactory.createContext(ScriptType, NekoModulePipelineCache) line: 80",
+        "com.tkisor.nekojs.script.ScriptEnvironmentFactory.createContext(ScriptType, GenerationGlobals, NekoModulePipelineCache) line: 227",
+        "com.tkisor.nekojs.script.ScriptManager.createCandidateEnvironment(long) line: 986",
+        "com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional() line: 829",
+        "com.tkisor.nekojs.script.ScriptManager.doReloadScripts() line: 779",
+        "com.tkisor.nekojs.script.ScriptManager.reloadScripts() line: 752",
+        "com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot.reload(ScriptType) line: 209",
+        "com.tkisor.nekojs.command.NekoJSCommands.reloadType(CommandSourceStack, ScriptType, NekoRuntimeRoot) line: 346",
+        "com.tkisor.nekojs.command.NekoJSCommands.lambda$reloadCommand$0(NekoRuntimeRoot, CommandContext) line: 297",
+        "com.mojang.brigadier.context.ContextChain.runExecutable(CommandContext, Object, ResultConsumer, boolean) line: 73",
+        "net.minecraft.commands.execution.tasks.ExecuteCommand.execute(ExecutionCommandSource, ExecutionContext, Frame) line: 29",
+        "net.minecraft.commands.execution.tasks.ExecuteCommand.execute(Object, ExecutionContext, Frame) line: 13",
+        "net.minecraft.commands.execution.UnboundEntryAction.lambda$bind$0(Object, ExecutionContext, Frame) line: 8",
+        "net.minecraft.commands.execution.CommandQueueEntry.execute(ExecutionContext) line: 5",
+        "net.minecraft.commands.execution.ExecutionContext.runCommandQueue() line: 100",
+        "net.minecraft.commands.Commands.executeCommandInContext(CommandSourceStack, Consumer) line: 414",
+        "net.minecraft.commands.Commands.performCommand(ParseResults, String) line: 338",
+        "net.minecraft.commands.Commands.performPrefixedCommand(CommandSourceStack, String) line: 314",
+        "net.minecraft.server.dedicated.DedicatedServer.lambda$runCommand$0(String) line: 763",
+        "net.minecraft.util.thread.BlockableEventLoop.lambda$submitAsync$0(Runnable) line: 68",
+        "java.util.concurrent.CompletableFuture$AsyncSupply.run() line: 1789",
+        "net.minecraft.server.TickTask.run() line: 18",
+        "net.minecraft.util.thread.BlockableEventLoop.doRunTask(Runnable) line: 163",
+        "net.minecraft.util.thread.ReentrantBlockableEventLoop.doRunTask(Runnable) line: 24",
+        "net.minecraft.server.MinecraftServer.doRunTask(TickTask) line: 936",
+        "net.minecraft.server.MinecraftServer.doRunTask(Runnable) line: 196",
+        "net.minecraft.util.thread.BlockableEventLoop.pollTask() line: 137",
+        "net.minecraft.server.MinecraftServer.pollTaskInternal() line: 919",
+        "net.minecraft.server.MinecraftServer.pollTask() line: 913",
+        "net.minecraft.util.thread.BlockableEventLoop.managedBlock(BooleanSupplier) line: 147",
+        "net.minecraft.server.MinecraftServer.waitUntilNextTick() line: 886",
+        "net.minecraft.server.MinecraftServer.runServer() line: 784",
+        "net.minecraft.server.MinecraftServer.lambda$spin$0(AtomicReference) line: 302",
+        "java.lang.Thread.run() line: 1474"
+      ]
+    }
+  ],
+  "limitations": "Sample counts are not exact milliseconds; native samples and parked durations are not CPU utilization. The JFR thread scrub does not retain sampledThread events, so sampled stacks are filtered from the safe full CPU text instead."
+}
