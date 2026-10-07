@@ -45,7 +45,7 @@ public final class NekoSourceMapBuilder {
             int originalLine = Math.min(generatedLine, authoredLineCount - 1);
             if (exactSource) {
                 for (int column = 0; column <= generatedLength; column++) {
-                    builder.add(generatedLine, column, originalLine, Math.min(column, lineLength(builder.source, lineOffset(builder.source, originalLine))));
+                    builder.add(generatedLine, column, originalLine, column);
                 }
             } else {
                 builder.add(generatedLine, 0, originalLine, 0);
@@ -186,19 +186,6 @@ public final class NekoSourceMapBuilder {
     private static int authoredLineCount(String text) {
         int count = lineCount(text);
         return Math.max(1, count - (text.endsWith("\n") ? 1 : 0));
-    }
-
-    private static int lineOffset(String text, int line) {
-        int currentLine = 0;
-        for (int i = 0; i < text.length(); i++) {
-            if (currentLine == line) {
-                return i;
-            }
-            if (text.charAt(i) == '\n') {
-                currentLine++;
-            }
-        }
-        return text.length();
     }
 
     private static int lineLength(String text, int offset) {
