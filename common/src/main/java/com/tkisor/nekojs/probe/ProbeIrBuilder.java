@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 /**
@@ -64,12 +65,19 @@ final class ProbeIrBuilder {
                     // 中断不能当「反射失败」吞掉：恢复中断标志并向上传播，probe 立刻终止
                     // （携带半截 IR 继续渲染会把残缺产物提交到磁盘）
                     Thread.currentThread().interrupt();
+                    futures.forEach(pending -> pending.cancel(true));
                     throw new IllegalStateException("Interrupted while building shared probe IR", e);
-                } catch (Throwable t) {
-                    // 无法反射的类跳过：各 backend 自行按需补反射；Python 不产出其 stub。
-                    // 降级必须可见：该类会从对应产物里整体消失，debug 日志等于静默
+                } catch (ExecutionException failure) {
+                    Throwable cause = failure.getCause() == null ? failure : failure.getCause();
+                    if (cause instanceof VirtualMachineError || cause instanceof ThreadDeath) {
+                        futures.forEach(pending -> pending.cancel(true));
+                        throw (Error) cause;
+                    }
+                    String warning = "[NEKO-4029] Probe type reflection failed for " + fqn
+                            + "; its shared declaration was omitted (" + cause + ")";
+                    warnings.add(warning);
                     com.tkisor.nekojs.core.error.Diagnostics.report("probe-ir", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
-                            "类 " + fqn + " 反射进共享 IR 失败，已跳过（该类不会出现在部分类型产物中）", t);
+                            warning, cause);
                 }
             }
         }

@@ -206,7 +206,8 @@ public final class ProbeCoordinator {
                     .toList();
         }
 
-        LinkedHashSet<Class<?>> collected = ProbeClassCollector.collect(snapshot, cfg);
+        List<String> runWarnings = new ArrayList<>();
+        LinkedHashSet<Class<?>> collected = ProbeClassCollector.collect(snapshot, cfg, runWarnings);
         NekoJSPaths paths = this.paths;
 
         // 共享 IR：当 modify_type/assign_type 有监听器，或某 backend 需要 IR（TS 与 Python 内置
@@ -214,8 +215,7 @@ public final class ProbeCoordinator {
         boolean needIr = ProbeEvents.MODIFY_TYPE.hasListeners()
                 || ProbeEvents.ASSIGN_TYPE.hasListeners()
                 || backends.stream().anyMatch(ProbeBackend::requiresIr);
-        // 本次运行级降级信息（事件监听器抛异常等）：追加到每个 backend 的结果 warnings
-        List<String> runWarnings = new ArrayList<>();
+        // Collection, reflection and event warnings are shared by all selected backends.
         Map<String, ApiTypeRef> assignMap = ProbeEvents.ASSIGN_TYPE.hasListeners()
                 ? ProbeIrBuilder.fireAssignType(runWarnings)
                 : Map.of();

@@ -1,0 +1,167 @@
+{
+  "baseline": "87e9b863",
+  "files": [
+    {
+      "path": "common/src/test/resources/nekojs/probe/legacy-events.expected.d.ts",
+      "beforeSha256": "8ce8b814411a9652f04268063f76336bd7125c1a91143c1d0ddf1288c0608f96",
+      "afterSha256": "a915e9fd4228051c79aa84dc8cbe131cd02aa4ef0615bffd8fdb3ee0dd082ea7",
+      "oldImportLines": 29,
+      "newImportLines": 1,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "common/src/test/resources/nekojs/probe/legacy-tree/@side-only/server/events/index.d.ts",
+      "beforeSha256": "333fb7f5b88b8e6b9b6a959d11c1d5151a539a4e021e9f7e6016694bb951bc93",
+      "afterSha256": "9cfd6d4ac6c3dea19f58b3831988e79af889b35df90ff787d8af4a373b1e3bb3",
+      "oldImportLines": 29,
+      "newImportLines": 1,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "common/src/test/resources/nekojs/probe/legacy-tree/@side-only/startup/events/index.d.ts",
+      "beforeSha256": "273096200548abc58f4707b6faa8983ca6b66261b667382890565b80184d958a",
+      "afterSha256": "397a6882e0714d364934026b184c5701c06f800eb44ded6095173dc171799250",
+      "oldImportLines": 29,
+      "newImportLines": 1,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "common/src/test/resources/nekojs/probe/legacy-tree/@side-only/test/events/index.d.ts",
+      "beforeSha256": "13acad6dbbbce526cca5aa7d008f0da74f3e85fccbd5f230d23355245891079d",
+      "afterSha256": "11a81ff452c60ed4d4a7edc5c1c624a4edc813e51c05c18fc502a90b36c9d245",
+      "oldImportLines": 29,
+      "newImportLines": 1,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "common/src/test/resources/nekojs/probe/probe-events.expected.d.ts",
+      "beforeSha256": "2e22ddd486d73458fb6f9277f463f1ed0e0b2435ad403dfc75ea10efcb7ff710",
+      "afterSha256": "fb673b8c28409a399d44056915807d44ad9026238be2174dad92c17a20a1ed02",
+      "oldImportLines": 31,
+      "newImportLines": 1,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/1.21.1.client-events.d.ts",
+      "beforeSha256": "243b26974a111ca8e617a261d1313a6fdf30782455345b216d46c91f76ce1af5",
+      "afterSha256": "bd7f08f28da66ca00a44d39a3686593c3a0140df69e3ce5ff39123b913af0b53",
+      "oldImportLines": 328,
+      "newImportLines": 9,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/1.21.1.server-events.d.ts",
+      "beforeSha256": "fb6a29ec626f4505fe3e632f42ee1833afd003466bdfc3f671c458fb26e1f1ff",
+      "afterSha256": "3ce3bac51c009ff3e411f6ba7babc8b1d055c4a3b7fe40f3e866a8fd2665b2ba",
+      "oldImportLines": 333,
+      "newImportLines": 19,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/1.21.1.startup-events.d.ts",
+      "beforeSha256": "bcdb077260eced04f0caa471526209b8f3d83235ece1324f9eb0d90cdac4af03",
+      "afterSha256": "896078334fb5650de891786db88b2585c1b4e2fc73d4c13c5eb74ef2d63c7613",
+      "oldImportLines": 341,
+      "newImportLines": 25,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/26.1.2-fabric.client-events.d.ts",
+      "beforeSha256": "c5b6fb3edbbd7eb760bc4cae5e3cf7805310f072ddd9eadae3f82d672ef1bcc1",
+      "afterSha256": "7a971f5119ac96f761ce6dc49aa7a4db27a72ee1a8695d1c84e33d245180e6d6",
+      "oldImportLines": 331,
+      "newImportLines": 7,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/26.1.2-fabric.server-events.d.ts",
+      "beforeSha256": "1c2b9d467c95851164b08bada58292dd322b2a0532ea397c23b47268e0b7fc29",
+      "afterSha256": "cb2ffe81c0bc9f1a7e10270e7ba7f2da416027168e69d7814a2e7ad45cd41a90",
+      "oldImportLines": 255,
+      "newImportLines": 9,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/26.1.2-fabric.startup-events.d.ts",
+      "beforeSha256": "ce3fec82d8d179076aedda6b125e584bc4f45076bd54b84067072fb5a56128a8",
+      "afterSha256": "c832a53bc3cb14eed6d98f0d1c28a57d758c520721becc50aab0f3fed099bca3",
+      "oldImportLines": 341,
+      "newImportLines": 15,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/26.1.2.client-events.d.ts",
+      "beforeSha256": "0c9e2c4c130d887c144805ccc3008d59ecdd6ee89d74d5a6cfc38801640230d7",
+      "afterSha256": "0815ea86e71c55f313862decb920c2e74ac0c8d17f6c92eea047bfd9e1871174",
+      "oldImportLines": 428,
+      "newImportLines": 10,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/26.1.2.server-events.d.ts",
+      "beforeSha256": "854474534fe418d02a5d2cb1f7b76f2bdfd534a21106dddbf68e74bb999dd7d8",
+      "afterSha256": "c986d9afef117dcf330d51bc45ca12d818f7dd3c448a3c81f0918fa42cc06873",
+      "oldImportLines": 327,
+      "newImportLines": 19,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/26.1.2.startup-events.d.ts",
+      "beforeSha256": "55aab32337bf9e11933f62a613f778b2b366b8aac6db256be6051d70652772ee",
+      "afterSha256": "184c947aa7f0588efdfb8ab136853a5f34db7d4f3fee0f5a30744adb02e84738",
+      "oldImportLines": 441,
+      "newImportLines": 26,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/26.2.0-fabric.client-events.d.ts",
+      "beforeSha256": "54cc65344775c086f63aa1a238a75b6ceed13f5d09ca8666d58e8ae4acfdd818",
+      "afterSha256": "7a971f5119ac96f761ce6dc49aa7a4db27a72ee1a8695d1c84e33d245180e6d6",
+      "oldImportLines": 293,
+      "newImportLines": 7,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/26.2.0-fabric.server-events.d.ts",
+      "beforeSha256": "bb9941c58573818b073a69bf66ac52a1a904687a3366158a8d80e0e94040dd68",
+      "afterSha256": "cb2ffe81c0bc9f1a7e10270e7ba7f2da416027168e69d7814a2e7ad45cd41a90",
+      "oldImportLines": 213,
+      "newImportLines": 9,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/26.2.0-fabric.startup-events.d.ts",
+      "beforeSha256": "c6cee1f8aa1bf157b0530fdb65b4d4355eeb8211b5d7ea585122b4f03dfff8c4",
+      "afterSha256": "c832a53bc3cb14eed6d98f0d1c28a57d758c520721becc50aab0f3fed099bca3",
+      "oldImportLines": 303,
+      "newImportLines": 15,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/26.2.0.client-events.d.ts",
+      "beforeSha256": "080e72446ba89bc3f5cddb2162fa61ff7eb0e0374494caac5a684b9a96b699b1",
+      "afterSha256": "0815ea86e71c55f313862decb920c2e74ac0c8d17f6c92eea047bfd9e1871174",
+      "oldImportLines": 392,
+      "newImportLines": 10,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/26.2.0.server-events.d.ts",
+      "beforeSha256": "be6549d25880a98d9dc5d0c3c71f41203914fe150b680752bda4d8d84d3e56e2",
+      "afterSha256": "c986d9afef117dcf330d51bc45ca12d818f7dd3c448a3c81f0918fa42cc06873",
+      "oldImportLines": 285,
+      "newImportLines": 19,
+      "nonImportBodyIdentical": true
+    },
+    {
+      "path": "src/test/resources/golden/events-declared/26.2.0.startup-events.d.ts",
+      "beforeSha256": "27a7b4292a28e579b8865e5b8a6e90604aa19e04d48b2ec5eef41dda9baf3629",
+      "afterSha256": "184c947aa7f0588efdfb8ab136853a5f34db7d4f3fee0f5a30744adb02e84738",
+      "oldImportLines": 404,
+      "newImportLines": 26,
+      "nonImportBodyIdentical": true
+    }
+  ],
+  "signaturesAndNonImportContentUnchanged": true,
+  "humanAcceptance": "PENDING; no maintainer conclusion invented"
+}

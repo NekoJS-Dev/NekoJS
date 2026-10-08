@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.probe;
 
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
@@ -37,8 +38,15 @@ final class ProbeClassCollector {
      *
      * <p>确定性：BFS 访问顺序依赖 getDeclaredMethods/getInterfaces 等反射顺序（JVM 规范不保证，
      * 跨 JDK 版本/平台可能不同）。返回前按全限定名字典序排序，保证 probe 产物可复现。
+     *
+     * <p>Unavailable signature metadata stops traversal of that type, while other queued
+     * types remain collectable. The coordinator reports the incomplete closure to each backend.
      */
     static LinkedHashSet<Class<?>> collect(NekoScriptCatalogSnapshot snapshot, ProbeConfig cfg) {
+        return collect(snapshot, cfg, new ArrayList<>());
+    }
+
+    static LinkedHashSet<Class<?>> collect(NekoScriptCatalogSnapshot snapshot, ProbeConfig cfg, List<String> warnings) {
         List<String> platformPkgs = ProbeConfigLoader.platformDefaultPackages();
         Set<String> forcedPkgs = cfg.forcedPackages();
         LinkedHashSet<Class<?>> visited = new LinkedHashSet<>();
@@ -74,22 +82,31 @@ final class ProbeClassCollector {
             int nextDepth = depth + 1;
             if (nextDepth > maxDepth) continue;
 
-            if (cls.getSuperclass() != null) queue.add(new Object[]{cls.getSuperclass(), nextDepth});
-            for (Class<?> iface : cls.getInterfaces()) queue.add(new Object[]{iface, nextDepth});
+            try {
+                if (cls.getSuperclass() != null) queue.add(new Object[]{cls.getSuperclass(), nextDepth});
+                for (Class<?> iface : cls.getInterfaces()) queue.add(new Object[]{iface, nextDepth});
 
-            for (Constructor<?> ctor : cls.getDeclaredConstructors()) {
-                if (Modifier.isPublic(ctor.getModifiers())) {
-                    for (Type p : ctor.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
+                for (Constructor<?> ctor : cls.getDeclaredConstructors()) {
+                    if (Modifier.isPublic(ctor.getModifiers())) {
+                        for (Type p : ctor.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
+                    }
                 }
-            }
-            for (Method method : cls.getDeclaredMethods()) {
-                if (Modifier.isPublic(method.getModifiers())) {
-                    collectTypeToQueue(method.getGenericReturnType(), queue, nextDepth);
-                    for (Type p : method.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
+                for (Method method : cls.getDeclaredMethods()) {
+                    if (Modifier.isPublic(method.getModifiers())) {
+                        collectTypeToQueue(method.getGenericReturnType(), queue, nextDepth);
+                        for (Type p : method.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
+                    }
                 }
-            }
-            for (Field field : cls.getDeclaredFields()) {
-                if (Modifier.isPublic(field.getModifiers())) collectTypeToQueue(field.getGenericType(), queue, nextDepth);
+                for (Field field : cls.getDeclaredFields()) {
+                    if (Modifier.isPublic(field.getModifiers())) collectTypeToQueue(field.getGenericType(), queue, nextDepth);
+                }
+            } catch (RuntimeException | LinkageError unavailable) {
+                // A loader can reject a signature dependency even after its declaring class loaded.
+                // Keep other queued types and report the incomplete closure to every backend.
+                String warning = "[NEKO-4029] Probe type scan incomplete for " + cls.getName()
+                        + "; reachable declarations may be missing (" + unavailable + ")";
+                warnings.add(warning);
+                NekoJS.LOGGER.warn(warning, unavailable);
             }
         }
 

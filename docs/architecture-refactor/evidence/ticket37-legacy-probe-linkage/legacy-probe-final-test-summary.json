@@ -1,0 +1,109 @@
+{
+  "sourceBase": "87e9b863",
+  "sourceWip": true,
+  "productionPatchSha256": "9b70e7439799f09ebf2c7fc2f551cd4e39da4118e62b861b27444e6c9715ea6f",
+  "projects": [
+    {
+      "project": "common",
+      "xml": 280,
+      "tests": 2063,
+      "skipped": 4,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "common-api-processor",
+      "xml": 1,
+      "tests": 13,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/1.21.1",
+      "xml": 95,
+      "tests": 426,
+      "skipped": 31,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/26.1.2",
+      "xml": 130,
+      "tests": 661,
+      "skipped": 81,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/26.2.0",
+      "xml": 130,
+      "tests": 661,
+      "skipped": 81,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/26.1.2-fabric",
+      "xml": 77,
+      "tests": 384,
+      "skipped": 37,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/26.2.0-fabric",
+      "xml": 77,
+      "tests": 384,
+      "skipped": 37,
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "total": {
+    "xml": 790,
+    "tests": 4592,
+    "skipped": 271,
+    "failures": 0,
+    "errors": 0
+  },
+  "artifacts": [
+    {
+      "node": "1.21.1",
+      "file": "nekojs-neoforge-1.21.1-1.1.0-preview3-server.jar",
+      "bytes": 16535250,
+      "sha256": "1bd35c6a79e243bf4094633e6fb194fd35d4aa0a8f7d84e5b4a8abcef5b84ba9"
+    },
+    {
+      "node": "1.21.1",
+      "file": "nekojs-neoforge-1.21.1-1.1.0-preview3.jar",
+      "bytes": 2914828,
+      "sha256": "32b6646d5fda603415eac6da1f2f7bc0937f15f2435dbe330c926be8d81db527"
+    },
+    {
+      "node": "26.1.2",
+      "file": "nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "bytes": 16756618,
+      "sha256": "66a72bcca76d76484bde698e4dfd564c85c1f10b69613732ef53deb1963e5379"
+    },
+    {
+      "node": "26.2.0",
+      "file": "nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+      "bytes": 17228429,
+      "sha256": "6f7e01679fb812e7384576906e9b52cd30fb586f9e1b71edd11b00e637406152"
+    },
+    {
+      "node": "26.1.2-fabric",
+      "file": "nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+      "bytes": 18013229,
+      "sha256": "81ba12cfe97e672aa9a6a9e3282fd6726cfeeffcba38736695a3bf19aed1eae5"
+    },
+    {
+      "node": "26.2.0-fabric",
+      "file": "nekojs-fabric-26.2-1.1.0-preview3.jar",
+      "bytes": 18013228,
+      "sha256": "1d896a8d1b60650f9e2e74f2dd6481fac3d82f70541a1195e0858b6151f6b679"
+    }
+  ],
+  "note": "Ordinary test report snapshot; up-to-date outputs are included. Platform gates are separate. Baseline maintainer conclusion remains pending."
+}

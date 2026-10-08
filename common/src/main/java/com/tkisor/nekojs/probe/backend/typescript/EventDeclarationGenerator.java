@@ -10,7 +10,7 @@ import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.api.ScriptType;
 
-import java.lang.reflect.*;
+import java.lang.reflect.TypeVariable;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -210,50 +210,9 @@ public final class EventDeclarationGenerator {
         String name = cls.getName();
         if (!isRelevantClass(name)) return;
 
-        // 防止循环引用导致无限递归（StackOverflowError）
-        if (!imports.add(name)) return;
-
-        // 收集父类
-        if (cls.getSuperclass() != null) {
-            collectImports(cls.getSuperclass(), imports);
-        }
-
-        // 收集接口
-        for (Class<?> iface : cls.getInterfaces()) {
-            collectImports(iface, imports);
-        }
-
-        // 收集公共方法参数和返回值类型
-        for (Method method : cls.getDeclaredMethods()) {
-            if (Modifier.isPublic(method.getModifiers())) {
-                collectTypeImports(method.getGenericReturnType(), imports);
-                for (Type paramType : method.getGenericParameterTypes()) {
-                    collectTypeImports(paramType, imports);
-                }
-            }
-        }
-
-        // 收集公共字段类型
-        for (Field field : cls.getDeclaredFields()) {
-            if (Modifier.isPublic(field.getModifiers())) {
-                collectTypeImports(field.getGenericType(), imports);
-            }
-        }
-    }
-
-    private void collectTypeImports(Type type, Set<String> imports) {
-        if (type instanceof Class<?> cls) {
-            collectImports(cls, imports);
-        } else if (type instanceof ParameterizedType pt) {
-            if (pt.getRawType() instanceof Class<?> rawCls) {
-                collectImports(rawCls, imports);
-            }
-            for (Type arg : pt.getActualTypeArguments()) {
-                collectTypeImports(arg, imports);
-            }
-        } else if (type instanceof GenericArrayType gat) {
-            collectTypeImports(gat.getGenericComponentType(), imports);
-        }
+        // Event signatures reference only the event and dispatch-key symbols. Their member
+        // dependencies belong to package declarations and the shared bounded scan.
+        imports.add(name);
     }
 
     private boolean isRelevantClass(String name) {

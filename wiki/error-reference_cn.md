@@ -89,6 +89,7 @@
 | `NEKO-4026` | texture dimensions must be positive | 纹理尺寸必须为正数 |
 | `NEKO-4027` | storage persistence attempted during an uncommitted transfer transaction | 未提交传输事务期间不能加载或保存存储 |
 | `NEKO-4028` | Fabric registry drain did not consume a selected pending registry | Fabric 注册表抽干未消费选定的待注册条目 |
+| `NEKO-4029` | Probe type reflection is incomplete; declarations may be omitted | Probe 类型反射不完整，部分声明可能缺失 |
 
 <a id="wiki-section-6"></a>
 ## 配方与数据
