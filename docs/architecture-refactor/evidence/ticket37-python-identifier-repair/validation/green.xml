@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.tkisor.nekojs.probe.backend.python.PythonRendererTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-08T11:14:44.667Z" hostname="TKI_SOR" time="0.083">
+  <properties/>
+  <testcase name="renderClass_emitsMethodAndFieldDocs()" classname="com.tkisor.nekojs.probe.backend.python.PythonRendererTest" time="0.051"/>
+  <testcase name="renameClass_enumSelfRefsFollowInPy()" classname="com.tkisor.nekojs.probe.backend.python.PythonRendererTest" time="0.001"/>
+  <testcase name="addMethod_emitsPythonDef()" classname="com.tkisor.nekojs.probe.backend.python.PythonRendererTest" time="0.002"/>
+  <testcase name="renderClass_javaOverloadsUseOverloadDecorator()" classname="com.tkisor.nekojs.probe.backend.python.PythonRendererTest" time="0.002"/>
+  <testcase name="renameClass_usesNewPyName()" classname="com.tkisor.nekojs.probe.backend.python.PythonRendererTest" time="0.0"/>
+  <testcase name="render_symbolAvailability()" classname="com.tkisor.nekojs.probe.backend.python.PythonRendererTest" time="0.001"/>
+  <testcase name="javaOnlyMembersDoNotInventPythonAliasesOrInvalidBeanProperties()" classname="com.tkisor.nekojs.probe.backend.python.PythonRendererTest" time="0.002"/>
+  <testcase name="renderClass_emitsFieldsGetterMethodsCtor()" classname="com.tkisor.nekojs.probe.backend.python.PythonRendererTest" time="0.0"/>
+  <testcase name="render_primitives()" classname="com.tkisor.nekojs.probe.backend.python.PythonRendererTest" time="0.001"/>
+  <testcase name="render_arrayUnionTypeVar()" classname="com.tkisor.nekojs.probe.backend.python.PythonRendererTest" time="0.003"/>
+  <testcase name="simplePyName_nestedDollarToUnderscore()" classname="com.tkisor.nekojs.probe.backend.python.PythonRendererTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,18 @@
+{
+  "runtime_source": "859d7a2489a77d81b885071c911efae3b2d81006",
+  "node": "26.2.0 NeoForge",
+  "loader": "26.2.0.75",
+  "java": "jdk-25.0.2",
+  "sha256": "E75CB9B933CD469F3A4D605EA500963F0442AC464613D8889C2CEECB762DF78C",
+  "server_pid": 13864,
+  "server_exit_code": 0,
+  "stop_channel": "rcon",
+  "actual_live_python_ast_pass": 344,
+  "actual_live_python_ast_fail": 0,
+  "python_static_typecheck_not_run": true,
+  "typescript_full_live_strict_not_passed": true,
+  "single_server_actual_effect_before_after_reload": "PASS",
+  "clients_tested": 0,
+  "world": "fresh agent-owned normal-generation test world",
+  "old_b7_failed_archive_retained": true
+}

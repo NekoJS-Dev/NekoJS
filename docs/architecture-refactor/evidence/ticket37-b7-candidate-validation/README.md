@@ -1,5 +1,7 @@
 # Exact b7 candidate: performance and installed domain validation
 
+Later [source859Pythonidentifierrepair](../ticket37-python-identifier-repair/README.md)addsactualnewinstalledJAR344PythonAST/0syntaxfailures and repeatedsingle-servereffectproof, with4535testmatrix. This pack's b7Python4FAIL/strictTS3116FAIL/reloadFAIL stayhistoricalobservedresults; no oldoutput is overwritten and no newerperformancePASS inferred. The four localraw`.log`copies ignored by repositoryrules are now separatelytracked inbyteverified`installed-26.2/raw-server-logs.zip`; original localcopiesremain.
+
 Runtime source:`b7c788cbbc1c18822b465feb9f0cda0330735570`; main documentation revision before this supplement:`678efcb734926d0c3828870466a70e1bb615adbf`. The same source already passed [common/isolation/five-node4534test validation](../ticket16-default-proxy-declarations/README.md), with271skipped and0failures/errors. No new production code or version bump is made in this supplement.
 
 ## Exact-source formal performance

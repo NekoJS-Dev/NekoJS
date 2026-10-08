@@ -36,7 +36,7 @@
 
 ## 当前补验与删除门禁（2026-10-07）
 
-- 五节点build再次通过；`b7c788cb`精确官方26.2NeoForge生产JAR安装到全新专属world后，实际三类registrycounts为1registered/0stale，vanilla effect give/data get证明MobEffect真实施加，identical-definitionreloadgeneration2COMMIT后clear/reapply与实体active_effects/amplifier1通过。实际默认Probe命令产出TS359/Python346files，动态payload关联三入口/concreteoptionalbool/导入通过；完整实机PythonAST340pass/4syntaxFAIL（$方法/数字开头Bean属性），不宣称完整IDE验收。首试未加载实体区块失败和WindowsNetty日志appender诊断完整保留。见[精确安装/性能补验](../evidence/ticket37-b7-candidate-validation/README.md)。此为26.2单服scope，跨进程多人同步、客户端ACK/abort/registryparity与其他节点actualeffect仍未验证，能力表不自动全面升级。
+- 五节点build再次通过；`b7c788cb`精确官方26.2NeoForge生产JAR安装到全新专属world后，实际三类registrycounts为1registered/0stale，vanilla effect give/data get证明MobEffect真实施加，identical-definitionreloadgeneration2COMMIT后clear/reapply与实体active_effects/amplifier1通过。实际默认Probe命令产出TS359/Python346files，动态payload关联三入口/concreteoptionalbool/导入通过；完整实机PythonAST340pass/4syntaxFAIL（$方法/数字开头Bean属性），不宣称完整IDE验收。首试未加载实体区块失败和WindowsNetty日志appender诊断完整保留。见[精确安装/性能补验](../evidence/ticket37-b7-candidate-validation/README.md)。此为26.2单服scope，跨进程多人同步、客户端ACK/abort/registryparity与其他节点actualeffect仍未验证，能力表不自动全面升级。2026-10-08后续`859d7a24`修复共享Pythonidentifier投影，真实红绿/五节点4535test报告零失败，精确新官方JAR在另一个freshworld重跑全部344PythonAST/0syntaxFAIL，并重复真实MobEffect/reload通过；见[标识符修复与实际重放](../evidence/ticket37-python-identifier-repair/README.md)。旧4FAIL包保留；Pyright未跑，完整严格TS的manual/structured冲突仍开放，不升格为完整IDE通过。
 - Adapter与transport registration现已接线；historical unwired说明不再是当前source trace，但wire contract冻结不变、P能力不自动升级。
 - 旧Script facade六个overload/fluentbuilders/immediate handle仍需精确确认和消费者迁移，删除前必须转移其 `close -> beginServerReload` 生命周期。
 - 新路径仍使用 shared DynamicRegistries/RegistrySurgery/RegistryDataCollectorMixin/config gate/debug；这些不是旧路径删除对象。

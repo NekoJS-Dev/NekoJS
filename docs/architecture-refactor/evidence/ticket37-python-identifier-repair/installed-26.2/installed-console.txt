@@ -1,0 +1,16 @@
+OWNED_INSTALLED_PYTHON_SERVER_PID=13864
+
+COMMAND=effect give @e[type=minecraft:pig,tag=b7_effect_proof,limit=1] ticket37_b7:proof_effect 60 1 true
+RESPONSE=Applied effect effect.ticket37_b7.proof_effect to Pig
+
+COMMAND=data get entity @e[type=minecraft:pig,tag=b7_effect_proof,limit=1]
+RESPONSE=Pig has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, sound_variant: "minecraft:classic", PortalCooldown: 0, AbsorptionAmount: 0.0f, active_effects: [{duration: 1200, show_icon: 0b, amplifier: 1b, id: "ticket37_b7:proof_effect", show_particles: 0b}], InLove: 0, DeathTime: 0s, variant: "minecraft:temperate", PersistenceRequired: 1b, UUID: [I; -679096013, 525878285, -1693759861, -614588436], Tags: ["b7_effect_proof"], Age: 0, Motion: [0.0d, 0.0d, 0.0d], Health: 5.0f, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 0b, NoAI: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 80.0d, 0.5d], Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: "minecraft:movement_speed", base: 0.25d}, {id: "minecraft:oxygen_bonus", base: 0.0d}], HurtTime: 0s}
+
+ACTUAL_INSTALLED_SINGLE_SERVER_EFFECT_BEFORE_AFTER_RELOAD_PASS=true
+CLIENTS_AND_MULTIPLAYER_NOT_TESTED=true
+COMMAND=stop
+RESPONSE=Stopping the server
+
+INSTALLED_REPAIRED_SERVER_EXIT=0
+{"actual_dynamic_payload_methods": ["item", "mobEffect", "soundEvent"], "actual_installed_python_ast_failures": [], "actual_installed_python_ast_pass": 344, "actual_script_surface_imports_resolve": 3, "concrete_optional_bool_methods": 3, "default_core_modules_absent": true, "entire_live_typescript_ide_typecheck_not_claimed": true, "pyright_not_run": true, "typescript_relative_builder_reference_resolves": true}
+EXACT_INSTALLED_ALL_PYTHON_AST_AND_DYNAMIC_DOMAIN_REPLAY_PASS

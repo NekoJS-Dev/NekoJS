@@ -1,0 +1,42 @@
+{
+  "source_revision": "859d7a2489a77d81b885071c911efae3b2d81006",
+  "command": "gradlew.bat :common:check :common-api-processor:test :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build verifyExternalAddonIsolation guardLint --offline --console=plain",
+  "exit_code": 0,
+  "elapsed": "1m34s",
+  "tasks": 104,
+  "executed": 33,
+  "up_to_date": 71,
+  "reports": 779,
+  "reported_tests": 4535,
+  "skipped": 271,
+  "failures": 0,
+  "errors": 0,
+  "performance_not_run_for_this_revision": true,
+  "artifacts": [
+    {
+      "path": "versions/1.21.1/build/libs/nekojs-neoforge-1.21.1-1.1.0-preview3.jar",
+      "size": 2907774,
+      "sha256": "C2976A31C73E73DBE893037DA3FB911906D58820F1897C66CF85E4D6B1527A43"
+    },
+    {
+      "path": "versions/26.1.2/build/libs/nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "size": 16740604,
+      "sha256": "98321E2E9B916E1818A28B7787DB16175199305E6DE2C43C4BC51479105B73A3"
+    },
+    {
+      "path": "versions/26.2.0/build/libs/nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+      "size": 17212415,
+      "sha256": "E75CB9B933CD469F3A4D605EA500963F0442AC464613D8889C2CEECB762DF78C"
+    },
+    {
+      "path": "versions/26.1.2-fabric/build/libs/nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+      "size": 18006144,
+      "sha256": "3F3126AB550E1024D66DDC85528178A5DB3534A2BE6ED8AC2FF0DD680DB6C9CE"
+    },
+    {
+      "path": "versions/26.2.0-fabric/build/libs/nekojs-fabric-26.2-1.1.0-preview3.jar",
+      "size": 18006143,
+      "sha256": "6AA0E7891A53D6BEC6C0C0294943281D0890383079EEBA32737A87B55526ABAE"
+    }
+  ]
+}
