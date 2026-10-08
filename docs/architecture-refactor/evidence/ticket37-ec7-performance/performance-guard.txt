@@ -1,0 +1,1 @@
+HEAD is now at ec7fe6848 fix(sync): synchronize dynamic registries before configuration validation

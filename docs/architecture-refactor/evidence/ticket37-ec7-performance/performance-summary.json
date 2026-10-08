@@ -1,0 +1,194 @@
+{
+  "source_revision": "ec7fe6848afc1970661ee1f38a7c7c6d4575530c",
+  "sampler_sha256": "1F9C5D14A1A586DA4B3F1CA8E71B2407CE089EE8BEE185418963E1B5745DF0B4",
+  "groups": [
+    {
+      "group": "20261008T170421Z-reload-26.1.2",
+      "mode": "reload",
+      "values_ms": [
+        274,
+        156,
+        252,
+        247,
+        218
+      ],
+      "mean_ms": 229.4,
+      "threshold_ms": 285.3,
+      "verdict": "PASS",
+      "warmups_ms": [],
+      "sampler_exit_code": 0,
+      "archive_entries": [
+        {
+          "path": "env-snapshot.txt",
+          "size": 202,
+          "sha256": "702174ed8179096bca486ca5f2d1024347db735fc52b0d014710c28609ff2f9e"
+        },
+        {
+          "path": "reload-session-stderr.log",
+          "size": 1180,
+          "sha256": "976031cca273167e7d80ec29f5581ea34560ac8f2b4520e3ccc929bf5aafdf58"
+        },
+        {
+          "path": "reload-session-stdout.log",
+          "size": 4426792,
+          "sha256": "8332d6a99e35deef48c27a8793b48d938bfa534fb090ab1f3747d467084cc18c"
+        },
+        {
+          "path": "samples.jsonl",
+          "size": 2580,
+          "sha256": "99d58c7a40d05e4915ff49c50d687992ec0c91132414a1d02351673e014aa725"
+        }
+      ]
+    },
+    {
+      "group": "20261008T170503Z-reload-26.1.2",
+      "mode": "reload",
+      "values_ms": [
+        338,
+        188,
+        288,
+        253,
+        268
+      ],
+      "mean_ms": 267.0,
+      "threshold_ms": 285.3,
+      "verdict": "PASS",
+      "warmups_ms": [],
+      "sampler_exit_code": 0,
+      "archive_entries": [
+        {
+          "path": "env-snapshot.txt",
+          "size": 202,
+          "sha256": "785efe326587adf6f180bd5ea40238de59b81bab9b1d0c62884de7d96d8dfd2a"
+        },
+        {
+          "path": "reload-session-stderr.log",
+          "size": 1180,
+          "sha256": "16a6b661879d6a7912f3ae87d9ec0dab44e3a126e0e0d20bc37260e2644553a0"
+        },
+        {
+          "path": "reload-session-stdout.log",
+          "size": 4435706,
+          "sha256": "1144dd9e2ee8e3b28c58855583b9d1ac7dce5275b6d4c4fb2b9f03ebe1d0c0dd"
+        },
+        {
+          "path": "samples.jsonl",
+          "size": 2580,
+          "sha256": "9ac5d1a69c11c2cf05822080f0c7722c1371db306c7133eeea9a2e1c3ab85fc9"
+        }
+      ]
+    },
+    {
+      "group": "20261008T170539Z-startup-26.1.2",
+      "mode": "startup",
+      "values_ms": [
+        26168,
+        24017,
+        24559,
+        24521,
+        25754
+      ],
+      "mean_ms": 25003.8,
+      "threshold_ms": 41173,
+      "verdict": "PASS",
+      "warmups_ms": [
+        26495,
+        26650
+      ],
+      "sampler_exit_code": 0,
+      "archive_entries": [
+        {
+          "path": "channel-test.txt",
+          "size": 29,
+          "sha256": "fac56165db8e5adecf84b26812552c82a3b1253f1abd0f511528e2b277cdf4a9"
+        },
+        {
+          "path": "env-snapshot.txt",
+          "size": 202,
+          "sha256": "52736af53dd57cc30597920059be73e7b1285c79873e69312fe5ad91a7f22920"
+        },
+        {
+          "path": "samples.jsonl",
+          "size": 2015,
+          "sha256": "b9920c5b3d766cff22cdfd61f725c40cc9d0aab61e53f5e30ea06b2746008ad4"
+        },
+        {
+          "path": "startup-1-warmup-stderr.log",
+          "size": 1180,
+          "sha256": "59185fe6c990e991ee88ba49209bab10d7c8a20148345ad6376839860822bf5f"
+        },
+        {
+          "path": "startup-1-warmup-stdout.log",
+          "size": 4418746,
+          "sha256": "449ea6f4cb775ecbf4f36d3e48c565bbb2d34270c3c2f5e40a458b10789252a4"
+        },
+        {
+          "path": "startup-2-warmup-stderr.log",
+          "size": 1180,
+          "sha256": "1fcf1ba9782851f331b005b258c71a4f34599c5e8544c00094dae996b2fc0eb0"
+        },
+        {
+          "path": "startup-2-warmup-stdout.log",
+          "size": 4429219,
+          "sha256": "9055670031ba45f943c00cd54bd3bd7bf1dae876653968c0b35d015e9dd3190d"
+        },
+        {
+          "path": "startup-3-formal-stderr.log",
+          "size": 1180,
+          "sha256": "526358f24c8459a906ec67bc233feb96cefe1d11edbbc2df1dcd24e9cacaaab4"
+        },
+        {
+          "path": "startup-3-formal-stdout.log",
+          "size": 4429225,
+          "sha256": "a13783e39f45cd68782dc50fd9a1bb15a737b169c5455ed471371424ebebf5e7"
+        },
+        {
+          "path": "startup-4-formal-stderr.log",
+          "size": 1180,
+          "sha256": "37acb35c7cb2906622d75221d6317bb70aacb5b20fc570be7f53ece7e1928f11"
+        },
+        {
+          "path": "startup-4-formal-stdout.log",
+          "size": 4429219,
+          "sha256": "5612cc1eb894e2b8920d08609609a5e090b44b726d10b17c9d63d1a7fed56249"
+        },
+        {
+          "path": "startup-5-formal-stderr.log",
+          "size": 1180,
+          "sha256": "903ea97abb5137a080b0674ff06ec98bbe454d2a341acd326ad474595eb6076c"
+        },
+        {
+          "path": "startup-5-formal-stdout.log",
+          "size": 4433686,
+          "sha256": "bd7be3fee017a83db01c136999ed12eaf7b0b7a52b924c1531d41b96c8474c06"
+        },
+        {
+          "path": "startup-6-formal-stderr.log",
+          "size": 1180,
+          "sha256": "1d6eb4dda03c7c2d2e5f53a704b49ecc383c033ebd29b4f64242ed55a3600966"
+        },
+        {
+          "path": "startup-6-formal-stdout.log",
+          "size": 4423175,
+          "sha256": "ffdad0d6464989ef4d0f519b48341d33a16d211564898cf7250fc7fdb6084de3"
+        },
+        {
+          "path": "startup-7-formal-stderr.log",
+          "size": 1180,
+          "sha256": "74bd58e19e9d5773774da2f2365a434fe9da961e6183f959537fa55516380eca"
+        },
+        {
+          "path": "startup-7-formal-stdout.log",
+          "size": 4423161,
+          "sha256": "b23f4c6e3ca510013398a916d799ca4b74d3a700ed8df51a4afe3d12df037dae"
+        }
+      ]
+    }
+  ],
+  "all_ten_reload_mean_ms": 248.2,
+  "combined_verdict": "PASS",
+  "outer_runner_exit_code": 0,
+  "game_shutdown": "All nine sessions used normal RCON; no forced kill",
+  "comparison_scope": "Exact ec7 runtime only; historical revisions and diagnostic JFR are not pooled",
+  "causal_speedup_claim": false
+}
