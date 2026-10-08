@@ -20,6 +20,8 @@ NekoJS 依赖 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal)（提�
 
 > 版本必须匹配。发布页面会标注每个 NekoJS 对应的 Minecraft、加载器和 Java 版本。
 
+仓库构建的 **NeoForge 1.21.1** 制品按运行环境选择：客户端使用普通 `.jar`；独立专服使用同版本的 `-server.jar`，它额外携带专服缺少的 ICU 模块。每个安装目录只放其中一种 NekoJS 制品，仍需安装对应 Graal。客户端使用专服变体会与 Minecraft 自带 ICU 模块冲突；专服使用普通客户端制品会缺少 ICU。`./gradlew :1.21.1:build` 同时生成并检查两种制品。NeoForge26.x 和 Fabric 的制品选择方式保持现状。发布包以发布页实际列出的文件为准。
+
 <a id="wiki-section-3"></a>
 ## 2. 目录结构
 

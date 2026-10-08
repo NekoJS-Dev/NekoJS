@@ -20,6 +20,8 @@ NekoJS depends on [Graal](https://www.curseforge.com/minecraft/mc-mods/graal), w
 
 > Versions must match. Release pages list the Minecraft, loader, and Java versions for each NekoJS artifact.
 
+For repository builds of **NeoForge 1.21.1**, clients use the ordinary `.jar`; dedicated servers use the matching `-server.jar`, which also contains the ICU module missing from that server distribution. Install one NekoJS variant per directory, together with the corresponding Graal mod. The server variant conflicts with Minecraft's existing ICU module on clients; the ordinary client artifact lacks ICU on dedicated servers. `./gradlew :1.21.1:build` produces and verifies both variants. Artifact selection for NeoForge26.x and Fabric stays unchanged. Consult the release page for the files actually published.
+
 <a id="wiki-section-3"></a>
 ## 2. Directory structure
 
