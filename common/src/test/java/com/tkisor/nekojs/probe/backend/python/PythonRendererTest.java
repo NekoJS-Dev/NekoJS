@@ -31,6 +31,37 @@ class PythonRendererTest {
         public static int helper(int n) { return n; }
     }
 
+    public static class JavaOnlyNames {
+        public void nekojs$applyScripts() {}
+        public int get2DigitYearStart() { return 0; }
+        public void set2DigitYearStart(int value) {}
+        public void applyScripts() {}
+    }
+
+    public interface JavaOnlyInterface {
+        void loader$invoke();
+        void invoke();
+    }
+
+    @Test
+    void javaOnlyMembersDoNotInventPythonAliasesOrInvalidBeanProperties() {
+        TypeReflector reflector = new TypeReflector();
+        TypeDecl declaration = reflector.reflect(JavaOnlyNames.class);
+        PythonClassRenderer renderer = new PythonClassRenderer(new ApiTypeRefPyRenderer(Set.of(declaration.fqn)));
+        String output = renderer.render(declaration);
+        assertFalse(output.contains("def nekojs$applyScripts"), output);
+        assertFalse(output.contains("def nekojs_applyScripts"), output);
+        assertFalse(output.contains("def 2DigitYearStart"), output);
+        assertFalse(output.contains("@2DigitYearStart.setter"), output);
+        assertTrue(output.contains("def get2DigitYearStart(self) -> int"), output);
+        assertTrue(output.contains("def set2DigitYearStart(self, value: int) -> None"), output);
+        assertTrue(output.contains("def applyScripts(self) -> None"), output);
+        String interfaceOutput = renderer.render(reflector.reflect(JavaOnlyInterface.class));
+        assertFalse(interfaceOutput.contains("def loader$invoke"), interfaceOutput);
+        assertFalse(interfaceOutput.contains("def loader_invoke"), interfaceOutput);
+        assertTrue(interfaceOutput.contains("def invoke(self) -> None"), interfaceOutput);
+    }
+
     // -------------------- ApiTypeRefPyRenderer --------------------
 
     @Test

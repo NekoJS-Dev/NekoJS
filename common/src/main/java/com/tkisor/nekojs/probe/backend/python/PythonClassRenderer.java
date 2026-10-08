@@ -45,7 +45,7 @@ public final class PythonClassRenderer {
 
         // 字段：静态（ClassVar）+ 实例
         for (FieldDecl f : d.fields) {
-            if (f.hidden) continue;
+            if (f.hidden || !isPythonIdentifier(f.effectiveName())) continue;
             sb.append("    ").append(pyIdent(f.effectiveName())).append(": ").append(fieldType(f));
             appendFieldDoc(sb, f.docs, "    ");
             sb.append("\n");
@@ -62,7 +62,7 @@ public final class PythonClassRenderer {
         }
         // getter → @property（+ setter）
         for (MethodDecl m : d.methods) {
-            if (m.hidden || !m.isGetter) continue;
+            if (m.hidden || !m.isGetter || !isPythonIdentifier(m.property)) continue;
             String ret = renderSlot(m.returnType);
             sb.append("    @property\n");
             sb.append("    def ").append(pyIdent(m.property)).append("(self) -> ").append(ret);
@@ -80,11 +80,11 @@ public final class PythonClassRenderer {
         // （与 PythonEventRenderer 对 dispatch 事件的处理一致）。
         Map<String, Integer> methodNameCount = new HashMap<>();
         for (MethodDecl m : d.methods) {
-            if (m.hidden || m.isGetter || m.isSetter || m.isConstructor) continue;
+            if (!isOrdinaryPythonMethod(m)) continue;
             methodNameCount.merge(pyIdent(m.effectiveName()), 1, Integer::sum);
         }
         for (MethodDecl m : d.methods) {
-            if (m.hidden || m.isGetter || m.isSetter || m.isConstructor) continue;
+            if (!isOrdinaryPythonMethod(m)) continue;
             boolean overloaded = methodNameCount.getOrDefault(pyIdent(m.effectiveName()), 0) > 1;
             if (m.isStatic) sb.append("    @staticmethod\n");
             if (overloaded) sb.append("    @overload\n");
@@ -109,11 +109,11 @@ public final class PythonClassRenderer {
         // 接口方法同样可能有 Java 重载 → 同名 def 需 @overload
         Map<String, Integer> nameCount = new HashMap<>();
         for (MethodDecl m : d.methods) {
-            if (m.hidden) continue;
+            if (m.hidden || !isPythonIdentifier(m.effectiveName())) continue;
             nameCount.merge(pyIdent(m.effectiveName()), 1, Integer::sum);
         }
         for (MethodDecl m : d.methods) {
-            if (m.hidden) continue;
+            if (m.hidden || !isPythonIdentifier(m.effectiveName())) continue;
             if (nameCount.getOrDefault(pyIdent(m.effectiveName()), 0) > 1) sb.append("    @overload\n");
             sb.append("    def ").append(pyIdent(m.effectiveName()))
               .append("(").append(params(m, true)).append(") -> ")
@@ -122,7 +122,7 @@ public final class PythonClassRenderer {
             hasMember = true;
         }
         for (FieldDecl f : d.fields) {
-            if (f.hidden || !(f.isStatic && f.isFinal)) continue;
+            if (f.hidden || !(f.isStatic && f.isFinal) || !isPythonIdentifier(f.effectiveName())) continue;
             sb.append("    ").append(pyIdent(f.effectiveName())).append(": ClassVar[").append(renderSlot(f.type)).append("]");
             appendFieldDoc(sb, f.docs, "    ");
             sb.append("\n");
@@ -141,7 +141,7 @@ public final class PythonClassRenderer {
         appendDoc(sb, d.docs);
         boolean hasMember = false;
         for (FieldDecl f : d.fields) {
-            if (f.hidden || !f.isEnumConstant) continue;
+            if (f.hidden || !f.isEnumConstant || !isPythonIdentifier(f.effectiveName())) continue;
             sb.append("    ").append(pyIdent(f.effectiveName())).append(": ").append(name);
             appendFieldDoc(sb, f.docs, "    ");
             sb.append("\n");
@@ -161,7 +161,7 @@ public final class PythonClassRenderer {
         if (d.constructors.stream().filter(c -> !c.hidden).count() > 1) return true;
         Map<String, Integer> nameCount = new HashMap<>();
         for (MethodDecl m : d.methods) {
-            if (m.hidden || m.isGetter || m.isSetter || m.isConstructor) continue;
+            if (!isOrdinaryPythonMethod(m)) continue;
             nameCount.merge(pyIdent(m.effectiveName()), 1, Integer::sum);
         }
         return nameCount.values().stream().anyMatch(count -> count > 1);
@@ -279,6 +279,27 @@ public final class PythonClassRenderer {
         return docs.stream().map(String::strip)
                 .collect(Collectors.joining("\n"))
                 .replace("\"\"\"", "'''");
+    }
+
+    private static boolean isOrdinaryPythonMethod(MethodDecl method) {
+        if (method.hidden || method.isConstructor || !isPythonIdentifier(method.effectiveName())) return false;
+        if (method.isGetter) return !isPythonIdentifier(method.property);
+        if (method.isSetter) return method.effectiveName().length() > 3
+                && !isPythonIdentifier(method.effectiveName().substring(3));
+        return true;
+    }
+
+    /** Java-only member names are omitted, not renamed to nonexistent Python call targets. */
+    private static boolean isPythonIdentifier(String name) {
+        if (name == null || name.isEmpty()) return false;
+        int first = name.codePointAt(0);
+        if (first != '_' && !Character.isUnicodeIdentifierStart(first)) return false;
+        for (int offset = Character.charCount(first); offset < name.length();) {
+            int character = name.codePointAt(offset);
+            if (!Character.isUnicodeIdentifierPart(character) || Character.isIdentifierIgnorable(character)) return false;
+            offset += Character.charCount(character);
+        }
+        return true;
     }
 
     /** 规避 Python 关键字/软关键字：命中则末尾加 {@code _}。 */
