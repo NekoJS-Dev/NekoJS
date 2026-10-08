@@ -64,7 +64,14 @@ class MixinTargetResolutionTest {
 
     @Test
     void everyConfiguredMixinTargetResolves() throws Exception {
-        JsonObject root = readConfig(CONFIG_RESOURCE);
+        verifyConfig(CONFIG_RESOURCE);
+        if (getClass().getClassLoader().getResource("nekojs-dynamic.mixins.json") != null) {
+            verifyConfig("nekojs-dynamic.mixins.json");
+        }
+    }
+
+    private void verifyConfig(String resource) throws Exception {
+        JsonObject root = readConfig(resource);
         String pkg = root.get("package").getAsString();
 
         List<String> failures = new ArrayList<>();
@@ -75,7 +82,7 @@ class MixinTargetResolutionTest {
                 String internalName = (pkg + "." + entry).replace('.', '/');
                 ClassFileAnnotations.ClassData data = readClass(internalName);
                 if (data == null) {
-                    failures.add(CONFIG_RESOURCE + " [" + section + "] " + entry
+                    failures.add(resource + " [" + section + "] " + entry
                             + ": class bytes not found on classpath");
                     continue;
                 }

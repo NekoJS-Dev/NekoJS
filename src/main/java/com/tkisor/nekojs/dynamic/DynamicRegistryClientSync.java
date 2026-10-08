@@ -12,6 +12,8 @@ import com.tkisor.nekojs.network.DynamicRegistrySyncPacket;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
+import java.util.function.Consumer;
+
 /**
  * Ticket 21 platform wiring (client node): holds this node's
  * {@link DynamicRegistryClientParticipant}, turns server S2C protocol messages (through
@@ -47,17 +49,17 @@ public final class DynamicRegistryClientSync {
 
     /** Client handler for S2C protocol messages; registered by Nf26xPlatformCompat. */
     public static void handleOnClient(DynamicRegistrySyncPacket payload, IPayloadContext context) {
-        context.enqueueWork(() -> onServerMessage(payload.json()));
+        context.enqueueWork(() -> onServerMessage(payload.json(), context::reply));
     }
 
     // ---- protocol dispatch (client main thread) ----
 
-    private static void onServerMessage(String json) {
+    private static void onServerMessage(String json, Consumer<DynamicRegistrySyncPacket> replySender) {
         DynamicSyncMessage message;
         try {
             message = DynamicSyncWireCodec.decodeServerMessage(json);
         } catch (IllegalArgumentException e) {
-            NekoJS.LOGGER.warn("Dropping malformed dynamic registry sync message from server: {}", e.getMessage());
+            NekoJS.LOGGER.warn("[NEKO-3014] Malformed dynamic registry sync message dropped from server: {}", e.getMessage());
             return;
         }
         DynamicRegistryClientParticipant node = participant();
@@ -66,22 +68,22 @@ public final class DynamicRegistryClientSync {
                 DynamicRegistryClientParticipant.PrepareDecision decision = gateRejected()
                         ? gateDecision()
                         : node.onPrepare(message);
-                sendReply(DynamicSyncReply.ack(message.generation(), decision.accepted(), decision.reason()));
+                sendReply(DynamicSyncReply.ack(message.generation(), decision.accepted(), decision.reason()), replySender);
             }
             case STATE_SYNC -> {
                 DynamicRegistryClientParticipant.PrepareDecision decision = gateRejected()
                         ? gateDecision()
                         : node.onStateSync(message);
-                sendReply(DynamicSyncReply.ack(message.generation(), decision.accepted(), decision.reason()));
+                sendReply(DynamicSyncReply.ack(message.generation(), decision.accepted(), decision.reason()), replySender);
             }
             case COMMIT -> {
                 DynamicRegistryClientParticipant.ActivationResult result =
                         node.onCommit(message);
                 sendReply(DynamicSyncReply.activationReport(message.generation(), result.activated(),
-                        result.detail() == null ? result.outcome() : result.detail()));
+                        result.detail() == null ? result.outcome() : result.detail()), replySender);
             }
             case ABORT -> node.onAbort(message);
-            default -> NekoJS.LOGGER.warn("Unknown dynamic registry sync kind '{}' ignored", message.kind());
+            default -> NekoJS.LOGGER.warn("[NEKO-3014] Unknown dynamic registry sync kind '{}' ignored", message.kind());
         }
     }
 
@@ -112,12 +114,11 @@ public final class DynamicRegistryClientSync {
         return current;
     }
 
-    private static void sendReply(DynamicSyncReply reply) {
+    private static void sendReply(DynamicSyncReply reply, Consumer<DynamicRegistrySyncPacket> replySender) {
         try {
-            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
-                    new DynamicRegistrySyncPacket(DynamicSyncWireCodec.encodeReply(reply)));
+            replySender.accept(new DynamicRegistrySyncPacket(DynamicSyncWireCodec.encodeReply(reply)));
         } catch (Exception e) {
-            NekoJS.LOGGER.warn("DynamicRegistry sync reply {} (generation {}) could not be sent: {}",
+            NekoJS.LOGGER.warn("[NEKO-3015] Dynamic registry sync reply {} (generation {}) could not be sent: {}",
                     reply.kind(), reply.generation(),
                     e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
         }

@@ -11,6 +11,7 @@ import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.network.DynamicRegistrySyncPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -48,7 +49,7 @@ import java.util.function.Consumer;
 @EventBusSubscriber(modid = NekoJS.MODID)
 public final class DynamicRegistrySyncWire {
 
-    /** Ack deadline: a conservative upper bound for one play-phase round trip plus client main-thread queueing (ms). */
+    /** Ack deadline for a remote round trip plus client main-thread queueing (ms). */
     static final long ACK_TIMEOUT_MILLIS = 10_000L;
 
     private DynamicRegistrySyncWire() {}
@@ -83,7 +84,12 @@ public final class DynamicRegistrySyncWire {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            withEngine(engine -> engine.onParticipantJoined(player.getStringUUID()));
+            withEngine(engine -> {
+                if (!(engine.transport() instanceof NeoForgeDynamicSyncTransport transport)
+                        || !transport.handoff(player.getStringUUID())) {
+                    engine.onParticipantJoined(player.getStringUUID());
+                }
+            });
         }
     }
 
@@ -99,6 +105,10 @@ public final class DynamicRegistrySyncWire {
     @SubscribeEvent
     public static void onServerTickPost(ServerTickEvent.Post event) {
         DynamicRegistryFacadeRuntime runtime = DynamicRegistryFacade.runtime();
+        DynamicRegistryTransactionCoordinator bound = runtime.activationEngine();
+        if (bound != null && bound.transport() instanceof NeoForgeDynamicSyncTransport transport) {
+            transport.tick(bound, System.currentTimeMillis());
+        }
         runtime.pumpActivation();
         DynamicRegistryTransactionCoordinator engine = runtime.activationEngine();
         if (engine != null) {
@@ -110,25 +120,29 @@ public final class DynamicRegistrySyncWire {
 
     /** Server handler for client ACK / ACTIVATION_REPORT replies; registered by Nf26xPlatformCompat. */
     public static void handleOnServer(DynamicRegistrySyncPacket payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer sender)) {
-            return; // play-phase reply: only a logged-in player can be the participant
-        }
         context.enqueueWork(() -> {
+            if (!(context.listener() instanceof ServerCommonPacketListenerImpl sender)) {
+                return;
+            }
+            String participantId = sender.getOwner().id().toString();
             DynamicSyncReply reply;
             try {
                 reply = DynamicSyncWireCodec.decodeReply(payload.json());
             } catch (IllegalArgumentException e) {
-                NekoJS.LOGGER.warn("Dropping malformed dynamic registry sync reply from {}: {}",
-                        sender.getName().getString(), e.getMessage());
+                NekoJS.LOGGER.warn("[NEKO-3014] Malformed dynamic registry sync reply dropped from {}: {}",
+                        participantId, e.getMessage());
                 return;
             }
             withEngine(engine -> {
                 if (reply.kind() == DynamicSyncReply.Kind.ACK) {
-                    engine.onAck(sender.getStringUUID(), reply.generation(),
+                    engine.onAck(participantId, reply.generation(),
                             Boolean.TRUE.equals(reply.accepted()), reply.reason());
                 } else {
-                    engine.onParticipantActivationReport(sender.getStringUUID(), reply.generation(),
+                    engine.onParticipantActivationReport(participantId, reply.generation(),
                             Boolean.TRUE.equals(reply.activated()), reply.detail());
+                }
+                if (engine.transport() instanceof NeoForgeDynamicSyncTransport transport) {
+                    transport.onReply(participantId, reply);
                 }
             });
         });

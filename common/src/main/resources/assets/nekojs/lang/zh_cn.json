@@ -1,4 +1,5 @@
 {
+  "nekojs.dynamic_registry.configuration_failed": "动态注册表同步失败。请检查客户端与服务端日志，在两端启用 dynamicRegistry 后重新连接。",
   "nekojs.command.reloading": "§e[NekoJS] 正在重载脚本...",
   "nekojs.command.reload.fatal": "§c[NekoJS] ✖ 重载发生致命崩溃！请查看后台日志。",
   "nekojs.command.usage": "用法：/nekojs <%s>。运行 /help nekojs 查看完整命令列表。",

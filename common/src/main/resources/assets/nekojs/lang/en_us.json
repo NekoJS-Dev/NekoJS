@@ -1,4 +1,5 @@
 {
+  "nekojs.dynamic_registry.configuration_failed": "Dynamic registry synchronization failed. Check both client and server logs, enable dynamicRegistry on both sides, and reconnect.",
   "nekojs.command.reloading": "§e[NekoJS] Reloading scripts...",
   "nekojs.command.reload.fatal": "§c[NekoJS] ✖ A fatal error occurred during reload! Check the console logs.",
   "nekojs.command.usage": "Usage: /nekojs <%s>. Run /help nekojs for the full command list.",

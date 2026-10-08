@@ -311,6 +311,17 @@ public final class DynamicRegistryTransactionCoordinator {
         return ackTimeoutMillis;
     }
 
+    /** The bound delivery owner, also used for configuration-to-play handoff. */
+    public DynamicSyncTransport transport() {
+        return transport;
+    }
+
+    /** Aborts queued/in-flight work before releasing the bound connection owner. */
+    public synchronized void close(String cause) {
+        abortInFlight(cause);
+        transport.close();
+    }
+
     // ---- internals ----
 
     private void beginNext(StagedBatch staged) {

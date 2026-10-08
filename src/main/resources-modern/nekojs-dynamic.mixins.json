@@ -4,6 +4,7 @@
   "package": "com.tkisor.nekojs.dynamic.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ConfigurationInitializationMixin"
   ],
   "client": [
     "RegistryDataCollectorMixin"

@@ -7,6 +7,7 @@
 package com.tkisor.nekojs.network;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -35,11 +36,15 @@ public record DynamicRegistrySyncPacket(String json) implements CustomPacketPayl
     public static final Type<DynamicRegistrySyncPacket> TYPE =
             new Type<>(Identifier.fromNamespaceAndPath("nekojs", "dynamic_registry_sync"));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, DynamicRegistrySyncPacket> CODEC =
-            StreamCodec.composite(
-                    ByteBufCodecs.STRING_UTF8, DynamicRegistrySyncPacket::json,
-                    DynamicRegistrySyncPacket::new
-            );
+    public static final StreamCodec<RegistryFriendlyByteBuf, DynamicRegistrySyncPacket> CODEC = codec();
+
+    /** The identical JSON encoding needs no registry access during configuration. */
+    public static final StreamCodec<FriendlyByteBuf, DynamicRegistrySyncPacket> COMMON_CODEC = codec();
+
+    private static <B extends FriendlyByteBuf> StreamCodec<B, DynamicRegistrySyncPacket> codec() {
+        return StreamCodec.composite(ByteBufCodecs.STRING_UTF8, DynamicRegistrySyncPacket::json,
+                DynamicRegistrySyncPacket::new);
+    }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {

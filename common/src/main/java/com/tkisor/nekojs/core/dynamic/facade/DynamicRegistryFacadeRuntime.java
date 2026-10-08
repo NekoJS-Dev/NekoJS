@@ -52,7 +52,7 @@ import java.util.function.LongSupplier;
  * wired yet (activation stays gated by the transaction/sync gates, see the ticket 21
  * baseline REPORT).
  */
-public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollector {
+public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollector, AutoCloseable {
 
     /** 一轮收集的可观察结果（测试/诊断；不携带内部状态）。 */
     public record CollectionOutcome(
@@ -133,6 +133,7 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
     public synchronized void bindActivationEngine(
             DynamicRegistryAdapter adapter, DynamicSyncTransport transport,
             long ackTimeoutMillis, LongSupplier clock) {
+        clearActivationEngine("engine-rebound");
         this.activationEngine = new DynamicRegistryTransactionCoordinator(
                 adapter, transport, ackTimeoutMillis, clock);
     }
@@ -140,9 +141,15 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
     /** Drops the activation engine (server stopped); aborts and discards in-flight work first. */
     public synchronized void clearActivationEngine(String cause) {
         if (activationEngine != null) {
-            activationEngine.abortInFlight(cause);
+            activationEngine.close(cause);
         }
         this.activationEngine = null;
+    }
+
+    /** Root-owned domain release; ordinary script generation reload never closes this runtime. */
+    @Override
+    public void close() {
+        clearActivationEngine("runtime-root-closed");
     }
 
     /** Bound activation engine, or null while unbound (inert local plans only). */

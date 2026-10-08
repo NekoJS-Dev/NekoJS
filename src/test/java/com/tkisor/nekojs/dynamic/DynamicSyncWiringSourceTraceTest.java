@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * sync face —
  *
  * <ul>
- *   <li><b>register-once</b>: the {@code playBidirectional} registration of
+ *   <li><b>register-once</b>: the common-phase registration of
  *       {@code DynamicRegistrySyncPacket} lives only in the two 26.x node compat impls
  *       (Nf261/Nf262PlatformCompat) — zero registration calls in the shared
  *       assembly/event/reload faces;</li>
@@ -100,7 +100,9 @@ class DynamicSyncWiringSourceTraceTest {
             try (Stream<Path> walk = Files.walk(dir)) {
                 for (Path file : walk.filter(p -> p.toString().endsWith(".java")).toList()) {
                     String code = codeLinesOnly(read(file));
-                    registrations += countOccurrences(code, "DynamicRegistrySyncPacket.TYPE");
+                    registrations += (int) java.util.regex.Pattern.compile(
+                            "(?:play|common)Bidirectional\\(\\s*DynamicRegistrySyncPacket\\.TYPE")
+                            .matcher(code).results().count();
                 }
             } catch (IOException e) {
                 throw new IllegalStateException(e);
@@ -113,11 +115,12 @@ class DynamicSyncWiringSourceTraceTest {
                 "versions/26.1.2/src/main/java/com/tkisor/nekojs/platform/compat/Nf261PlatformCompat.java"));
         String nf262 = read(root.resolve(
                 "versions/26.2.0/src/main/java/com/tkisor/nekojs/platform/compat/Nf262PlatformCompat.java"));
-        // Exactly two playBidirectional calls per 26.x compat impl: script_payload + dynamic_registry_sync
-        assertEquals(2, countOccurrences(codeLinesOnly(nf261), "playBidirectional("),
-                "Nf261 registers script_payload + dynamic_registry_sync, nothing else");
-        assertEquals(2, countOccurrences(codeLinesOnly(nf262), "playBidirectional("),
-                "Nf262 registers script_payload + dynamic_registry_sync, nothing else");
+        // Script messages remain play-only; dynamic state must arrive before frozen-registry sync.
+        for (String node : List.of(nf261, nf262)) {
+            String code = codeLinesOnly(node);
+            assertEquals(1, countOccurrences(code, "playBidirectional("));
+            assertEquals(1, countOccurrences(code, "commonBidirectional("));
+        }
     }
 
     @Test
@@ -131,7 +134,7 @@ class DynamicSyncWiringSourceTraceTest {
                 root.resolve("src/main/java/com/tkisor/nekojs/dynamic/DynamicRegistryFacade.java"));
         for (Path path : wiringFaces) {
             String code = codeLinesOnly(read(path));
-            for (String token : List.of("playBidirectional(", "PayloadTypeRegistry",
+            for (String token : List.of("playBidirectional(", "commonBidirectional(", "PayloadTypeRegistry",
                     "registerGlobalReceiver", "playToClient(", "configurationToClient(")) {
                 assertFalse(code.contains(token),
                         () -> path.getFileName() + " must not register payloads itself"

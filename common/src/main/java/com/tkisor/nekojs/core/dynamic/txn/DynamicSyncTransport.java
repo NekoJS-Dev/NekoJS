@@ -6,7 +6,7 @@ import java.util.List;
  * Delivery seam between the Dynamic Registry transaction coordinator and the network
  * owner's payload transport (ticket 21, built on ticket 17's register-once payload
  * foundation). Implementations live in the version tree and wrap the existing
- * play-phase payload channel; they never register a second channel and never touch a
+ * configuration/play payload channel; they never register a second channel and never touch a
  * script Context directly.
  *
  * <p>Contract:
@@ -23,7 +23,7 @@ import java.util.List;
  *       fact itself.</li>
  * </ul>
  */
-public interface DynamicSyncTransport {
+public interface DynamicSyncTransport extends AutoCloseable {
 
     /** Remote participant ids (stable across the transaction; typically player UUIDs). */
     List<String> participants();
@@ -33,4 +33,8 @@ public interface DynamicSyncTransport {
 
     /** Delivers a COMMIT or ABORT message to every current participant. */
     void broadcast(DynamicSyncMessage message);
+
+    /** Releases connection-scoped resources when the activation engine's owner stops. */
+    @Override
+    default void close() {}
 }

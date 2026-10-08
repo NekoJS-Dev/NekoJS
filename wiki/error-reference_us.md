@@ -56,6 +56,10 @@ Codes from #58 that have no call site on this branch are not used:
 |---|---|---|
 | `NEKO-3010` | persistent data sync skipped because the payload exceeds the limit | PData 同步因数据超过上限而跳过 |
 | `NEKO-3011` | server Item/Block modification sync rejected | 服务端 Item/Block modification 同步被客户端拒绝 |
+| `NEKO-3012` | dynamic registry message delivery failed | 动态注册表消息发送失败 |
+| `NEKO-3013` | dynamic registry configuration failed; connection disconnected | 动态注册表配置同步失败，连接已断开 |
+| `NEKO-3014` | malformed dynamic registry message or reply dropped | 无效动态注册表消息或回执已丢弃 |
+| `NEKO-3015` | dynamic registry sync reply could not be sent | 动态注册表同步回执发送失败 |
 
 <a id="wiki-section-5"></a>
 ## Registration and bindings

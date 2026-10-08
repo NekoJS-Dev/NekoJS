@@ -29,8 +29,15 @@ class MixinConfigIntegrityTest {
 
     @Test
     void mixinConfigParsesAndEveryListedClassLoads() throws Exception {
-        InputStream in = getClass().getResourceAsStream("/nekojs.mixins.json");
-        assertNotNull(in, "nekojs.mixins.json resource must be present on the test classpath");
+        verifyConfig("nekojs.mixins.json");
+        if (getClass().getResource("/nekojs-dynamic.mixins.json") != null) {
+            verifyConfig("nekojs-dynamic.mixins.json");
+        }
+    }
+
+    private void verifyConfig(String resource) throws Exception {
+        InputStream in = getClass().getResourceAsStream("/" + resource);
+        assertNotNull(in, resource + " resource must be present on the test classpath");
 
         JsonObject root;
         try (Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {

@@ -50,11 +50,9 @@ public final class McPlatformCompat {
         void registerScriptPayload(PayloadRegistrar registrar);
 
         /**
-         * Dynamic Registry 批事务同步 payload（{@code nekojs:dynamic_registry_sync}）的双向注册
-         * （票 21 平台接线；注册形状与 NekoScriptPayload 相同的 playBidirectional）。默认空实现＝
-         * 该节点没有动态注册面（1.21.1 整包 {@code >=26} 守卫缺席、fabric 显式子集），不是故障
-         * 屏蔽——{@code NekoJSNetwork} 对所有 NeoForge 节点统一调用本方法，注册只发生在 26.x
-         * 实现（Nf261/Nf262），其余节点保持票 17 冻结的显式 payload 子集。
+         * Registers the single dynamic registry payload for configuration and play on supported nodes.
+         * The default remains inert for 1.21.1; Fabric has its own explicit networking subset.
+         * NekoJSNetwork calls this once at assembly, never during reload or connection handling.
          */
         default void registerDynamicSyncPayload(PayloadRegistrar registrar) {
         }

@@ -10,6 +10,7 @@ import com.tkisor.nekojs.core.dynamic.txn.DynamicSyncReply;
 import com.tkisor.nekojs.core.dynamic.txn.DynamicSyncWireCodec;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
@@ -130,6 +131,22 @@ class DynamicSyncPayloadWireFormatTest {
     @Test
     void ackEncodesToGoldenWireBytes() {
         assertEquals(ACK_HEX, encodeHex(ackBody()));
+    }
+
+    @Test
+    void configurationCodecPreservesGoldenBytesWithoutRegistryAccess() {
+        for (String[] pair : List.of(new String[] {COMMIT_HEX, commitBody()},
+                new String[] {PREPARE_HEX, prepareBody()}, new String[] {ACK_HEX, ackBody()})) {
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                DynamicRegistrySyncPacket.COMMON_CODEC.encode(buffer, new DynamicRegistrySyncPacket(pair[1]));
+                assertEquals(pair[0], java.util.HexFormat.of().formatHex(io.netty.buffer.ByteBufUtil.getBytes(buffer)));
+                assertEquals(pair[1], DynamicRegistrySyncPacket.COMMON_CODEC.decode(buffer).json());
+                assertEquals(0, buffer.readableBytes());
+            } finally {
+                buffer.release();
+            }
+        }
     }
 
     // ---- decode side: golden bytes decode to the equivalent payload ----

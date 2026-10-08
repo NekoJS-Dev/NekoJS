@@ -42,9 +42,9 @@ public final class Nf261PlatformCompat implements McPlatformCompat.Impl {
 
     @Override
     public void registerDynamicSyncPayload(PayloadRegistrar registrar) {
-        registrar.playBidirectional(
+        registrar.commonBidirectional(
                 DynamicRegistrySyncPacket.TYPE,
-                DynamicRegistrySyncPacket.CODEC,
+                DynamicRegistrySyncPacket.COMMON_CODEC,
                 DynamicRegistrySyncWire::handleOnServer,
                 DynamicRegistryClientSync::handleOnClient
         );
