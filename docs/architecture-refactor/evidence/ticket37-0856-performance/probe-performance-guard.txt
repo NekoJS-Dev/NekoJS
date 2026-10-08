@@ -1,0 +1,2 @@
+Previous HEAD position was ec7fe6848 fix(sync): synchronize dynamic registries before configuration validation
+HEAD is now at 085698ab1 fix(probe): retain available declarations after host linkage failures

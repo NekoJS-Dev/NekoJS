@@ -1,0 +1,4 @@
+# Preserve raw PowerShell captures, including CRLF and terminal blank rows.
+*.txt -text whitespace=-blank-at-eol,-blank-at-eof,space-before-tab,cr-at-eol
+*.ps1 -text whitespace=-blank-at-eol,-blank-at-eof,space-before-tab,cr-at-eol
+fixture-hashes.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

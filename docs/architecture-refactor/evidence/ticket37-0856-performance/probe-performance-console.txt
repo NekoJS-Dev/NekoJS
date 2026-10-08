@@ -1,0 +1,13 @@
+OWNED_SAMPLER_GROUP=reload-1 PID=31076
+FORMAL_GROUP=reload-1 EXIT=
+[sample] "tag":"reload-session","wall_total_ms":100960,"ts_utc":"2026-10-08T18:10:57.3186249Z","rcon_response":"NekoJS server reload committed: generation=4 phase=COMMIT - no errors. ","pid":34472,"mode":"reload","rev":"085698ab","rcon_rtt_ms":228,"index":3,"kind":"formal","marker_ms":343,"marker_line":"[02:10:49] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791482956251-tick ","stop_channel":"rcon","done_s":"0.451","wall_done_ms":82934,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":100960,"ts_utc":"2026-10-08T18:10:57.3216454Z","rcon_response":"NekoJS server reload committed: generation=5 phase=COMMIT - no errors. ","pid":34472,"mode":"reload","rev":"085698ab","rcon_rtt_ms":216,"index":4,"kind":"formal","marker_ms":330,"marker_line":"[02:10:52] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791482956251-tick ","stop_channel":"rcon","done_s":"0.451","wall_done_ms":82934,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":100960,"ts_utc":"2026-10-08T18:10:57.3246529Z","rcon_response":"NekoJS server reload committed: generation=6 phase=COMMIT - no errors. ","pid":34472,"mode":"reload","rev":"085698ab","rcon_rtt_ms":214,"index":5,"kind":"formal","marker_ms":331,"marker_line":"[02:10:56] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791482956251-tick ","stop_channel":"rcon","done_s":"0.451","wall_done_ms":82934,"node":"26.1.2","forced_kill":false,"killed":false
+[done] reload sampling -> D:\mcmodDemo\NekoJS-mult\build\ticket37-perf-owned-ac810fa7\bench\perf\out\20261008T180914Z-reload-26.1.2
+Formal sampler failed
+At D:\mcmodDemo\NekoJS-mult\build\ticket37-config-sync-repair\run-probe-performance.ps1:20 char:35
++     if($sampler.ExitCode -ne 0) { throw 'Formal sampler failed' }
++                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Formal sampler failed:String) [], RuntimeException
+    + FullyQualifiedErrorId : Formal sampler failed
+ 

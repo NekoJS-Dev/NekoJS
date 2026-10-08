@@ -1,0 +1,74 @@
+﻿[
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\client_scripts\\src\\main.js",
+        "sha256":  "F6761879F26B6307F738AFFA36FAA6298800B9E8EDB857D6723918EAA7A4D08F"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\server_scripts\\adapter-bench.js",
+        "sha256":  "0940215D42A0FA143FF796607CB219167E39E0F684DE62EC91601FB59E950C7A"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\server_scripts\\arith-bench.js",
+        "sha256":  "0910E7BE74A4E7C98B4DDA37A95B49C5EBBCB6307729017EF6BED6130068A26B"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\server_scripts\\main.js",
+        "sha256":  "2ED0821FA466811AAD6D42AAEC8DF8B22D8AB099D3769BCFA2F4C9D7805D29FE"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\server_scripts\\mem-bench.js",
+        "sha256":  "A53D683EC08050DCD0B5F195CD91833E9505DF62E9009037155E972B474C9DBE"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\server_scripts\\tick-bench.js",
+        "sha256":  "E2959ED32909D5C534DB8D34998380DEFA481144A8BE4C2AD5614479EADD87AC"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\server_scripts\\src\\main.js",
+        "sha256":  "512D5B04384A2F9B4CD8BF033A2B68DD2DB768D1C2A4841CCEBEAAD7FB18A625"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s01-items-basic.js",
+        "sha256":  "7A862FA65087ED414689BCD080BF93225E3DB172AFA93A23B0DAB73D331EF08C"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s02-items-tagged.js",
+        "sha256":  "3EEA534154A96922BE25F986A1F541B017E0E37989C96A97984F8265C359A1CA"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s03-blocks-basic.js",
+        "sha256":  "0F0CC04570ADC2FE9E20B14127875D9C28A1C27041B96B3E399C2B72F9670848"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s04-blocks-tagged.js",
+        "sha256":  "A55D194E38ADDA6B59C72A2D452FEDC142613ECEB390D29ECD963E1C45E28C34"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s05-entitytypes.js",
+        "sha256":  "2F6C656B0F7BEAE76E49654B2A858CADEEA8A5611E57BD064C64A2D5827B2466"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s06-fluids-tabs.js",
+        "sha256":  "75589AA6504718DB31B03C3419A03FE8145A3F82F2E2333425B2430D14FB0B7C"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s07-script-events.js",
+        "sha256":  "36601D10F2131700FDC0B7DB1230E5C636C57CD6CC5CF3E383ABDAA795EBDD52"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s08-data-setup.js",
+        "sha256":  "E8B480609A48C296426AF3B01BA5D8B3FF2367A401BDB09757B71C4A873C8544"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s09-interop-refs.js",
+        "sha256":  "C3189069593DB09076CB1FA29AE1FA788EF079DCED1BECB59F91A469D2CC7A03"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s10-marker.js",
+        "sha256":  "C743247C414B97A2BD2B38C12F3608FA393A50424F5F7D42A0A501D9CC85814A"
+    },
+    {
+        "path":  "bench\\perf\\fixtures\\nekojs\\startup_scripts\\src\\main.js",
+        "sha256":  "3D8DB2102AB2A6D275B76B914AE96A38BC3B8E2531C71B38769FBE1E89A70D8A"
+    }
+]
