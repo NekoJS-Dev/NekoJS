@@ -1,0 +1,317 @@
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/C:/Users/11515/.gradle/wrapper/dists/gradle-9.6.0-bin/42k10rwplmzkhuboz9kdazi7s/gradle-9.6.0/lib/native-platform-0.22-milestone-29.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins
+> Task :buildSrc:compilePluginsBlocks FROM-CACHE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors
+> Task :buildSrc:generateScriptPluginAdapters
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:compileKotlin
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources UP-TO-DATE
+> Task :1.21.1:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2-fabric:stonecutterPrepare UP-TO-DATE
+> Task :common-api-processor:processTestResources NO-SOURCE
+> Task :26.2.0:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2:stonecutterGenerate UP-TO-DATE
+> Task :26.2.0:stonecutterGenerate UP-TO-DATE
+> Task :26.1.2-fabric:stonecutterGenerate UP-TO-DATE
+> Task :1.21.1:stonecutterGenerate UP-TO-DATE
+> Task :26.1.2-fabric:extractIcuClasses UP-TO-DATE
+> Task :26.1.2-fabric:generateModMetadata UP-TO-DATE
+> Task :26.1.2-fabric:processResources UP-TO-DATE
+> Task :26.1.2-fabric:processIncludeJars
+> Task :26.1.2-fabric:stonecutterPrepareTest UP-TO-DATE
+> Task :26.1.2-fabric:stonecutterGenerateTest UP-TO-DATE
+> Task :26.1.2-fabric:processTestResources UP-TO-DATE
+> Task :common:checkCommonIsolation
+> Task :common:compileJava UP-TO-DATE
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes UP-TO-DATE
+> Task :common:compileAddonFixtureJava UP-TO-DATE
+> Task :common-api-processor:compileJava UP-TO-DATE
+> Task :common-api-processor:classes UP-TO-DATE
+> Task :common:processAddonFixtureResources UP-TO-DATE
+> Task :common:addonFixtureClasses UP-TO-DATE
+> Task :common-api-processor:jar UP-TO-DATE
+> Task :common:externalAddonJar UP-TO-DATE
+> Task :common:jar UP-TO-DATE
+
+> Task :guardLint
+guardLint: 守卫块 384，扫描 548 个文件；超限豁免 0 个；警告 0 条
+
+> Task :common-api-processor:compileTestJava UP-TO-DATE
+> Task :common:compileTestJava UP-TO-DATE
+> Task :common-api-processor:testClasses UP-TO-DATE
+> Task :common-api-processor:test UP-TO-DATE
+> Task :common:processTestResources UP-TO-DATE
+> Task :common:testClasses UP-TO-DATE
+
+> Task :26.1.2:createMinecraftArtifacts
+Loaded 141 artifacts from C:\Users\11515\.codex\worktrees\config-sync-validation\NekoJS-mult\versions\26.1.2\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+*** Started working on downloadManifest
+  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
+
+> Task :26.1.2-fabric:validateAccessWidener
+> Task :26.2.0-fabric:validateAccessWidener
+> Task :26.2.0-fabric:stonecutterPrepare UP-TO-DATE
+> Task :26.2.0-fabric:stonecutterGenerate UP-TO-DATE
+> Task :26.1.2-fabric:compileJava UP-TO-DATE
+> Task :26.1.2-fabric:classes UP-TO-DATE
+> Task :26.2.0-fabric:compileJava UP-TO-DATE
+
+> Task :1.21.1:createMinecraftArtifacts
+Loaded 145 artifacts from C:\Users\11515\.codex\worktrees\config-sync-validation\NekoJS-mult\versions\1.21.1\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+*** Started working on downloadJson
+ DONE  Completed downloadJson in 0.03s
+*** Started working on downloadClient
+*** Started working on downloadClientMappings
+*** Started working on downloadServer
+ DONE  Completed downloadServer in 0.06s
+ DONE  Completed downloadClient in 0.07s
+ DONE  Completed downloadClientMappings in 0.07s
+*** Started working on mergeMappings
+ REUSE Used cache of mergeMappings in 0.00s
+*** Started working on stripClient
+ REUSE Used cache of stripClient in 0.00s
+*** Started working on extractServer
+ REUSE Used cache of extractServer in 0.00s
+*** Started working on stripServer
+ REUSE Used cache of stripServer in 0.00s
+*** Started working on merge
+ REUSE Used cache of merge in 0.00s
+*** Started working on rename
+ REUSE Used cache of rename in 0.00s
+*** Started working on decompile
+ REUSE Used cache of decompile in 0.00s
+*** Started working on inject
+ REUSE Used cache of inject in 0.00s
+*** Started working on patch
+ REUSE Used cache of patch in 0.00s
+*** Started working on applyNeoforgePatches
+ REUSE Used cache of applyNeoforgePatches in 0.00s
+*** Started working on transformSources
+ REUSE Used cache of transformSources in 0.00s
+*** Started working on recompile
+ REUSE Used cache of recompile in 0.00s
+*** Started working on sourcesWithNeoForge
+ REUSE Used cache of sourcesWithNeoForge in 0.00s
+*** Started working on compiledWithNeoForge
+ REUSE Used cache of compiledWithNeoForge in 0.00s
+*** Started working on sourcesAndCompiledWithNeoForge
+ REUSE Used cache of sourcesAndCompiledWithNeoForge in 0.00s
+Total runtime: 1.89s
+
+
+> Task :1.21.1:compileJava UP-TO-DATE
+> Task :1.21.1:generateModMetadata UP-TO-DATE
+> Task :1.21.1:processResources UP-TO-DATE
+> Task :1.21.1:classes UP-TO-DATE
+> Task :1.21.1:jarJar NO-SOURCE
+> Task :1.21.1:jar UP-TO-DATE
+> Task :1.21.1:assemble UP-TO-DATE
+
+> Task :26.2.0:createMinecraftArtifacts
+Loaded 157 artifacts from C:\Users\11515\.codex\worktrees\config-sync-validation\NekoJS-mult\versions\26.2.0\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+*** Started working on downloadManifest
+Waiting for lock on downloadManifest_5014bdd0ad2a5e976245ebd187d1027b7a1c2dee...
+> Task :26.2.0-fabric:extractIcuClasses UP-TO-DATE
+> Task :26.2.0-fabric:generateModMetadata UP-TO-DATE
+> Task :26.2.0-fabric:processResources UP-TO-DATE
+> Task :26.2.0-fabric:classes UP-TO-DATE
+> Task :26.2.0-fabric:processIncludeJars
+> Task :1.21.1:legacyServerJarJar
+
+> Task :26.1.2:createMinecraftArtifacts
+ DONE  Completed downloadManifest in 1.19s
+*** Started working on downloadJson
+ DONE  Completed downloadJson in 0.01s
+*** Started working on downloadServer
+*** Started working on downloadClient
+ DONE  Completed downloadServer in 0.04s
+ DONE  Completed downloadClient in 0.04s
+*** Started working on preProcessJar
+ REUSE Used cache of preProcessJar in 0.00s
+*** Started working on decompile
+ REUSE Used cache of decompile in 0.00s
+*** Started working on patch
+ REUSE Used cache of patch in 0.00s
+*** Started working on applyNeoforgePatches
+ REUSE Used cache of applyNeoforgePatches in 0.00s
+*** Started working on transformSources
+ REUSE Used cache of transformSources in 0.00s
+*** Started working on recompile
+ REUSE Used cache of recompile in 0.00s
+*** Started working on mergeWithSources
+ REUSE Used cache of mergeWithSources in 0.00s
+Total runtime: 2.77s
+
+
+> Task :26.1.2:compileJava UP-TO-DATE
+> Task :26.1.2:generateModMetadata UP-TO-DATE
+> Task :26.1.2:processResources UP-TO-DATE
+> Task :26.1.2:classes UP-TO-DATE
+> Task :26.1.2:jarJar
+> Task :26.1.2:jar UP-TO-DATE
+> Task :26.1.2:assemble UP-TO-DATE
+> Task :26.1.2:compileTestJava UP-TO-DATE
+> Task :26.1.2:processTestResources UP-TO-DATE
+> Task :26.1.2:testClasses UP-TO-DATE
+> Task :26.1.2:platformGateTest UP-TO-DATE
+> Task :1.21.1:legacyServerJar
+> Task :1.21.1:stonecutterPrepareTest UP-TO-DATE
+> Task :1.21.1:stonecutterGenerateTest UP-TO-DATE
+> Task :1.21.1:compileTestJava UP-TO-DATE
+> Task :1.21.1:processTestResources UP-TO-DATE
+> Task :1.21.1:testClasses UP-TO-DATE
+> Task :1.21.1:platformGateTest UP-TO-DATE
+
+> Task :26.2.0:createMinecraftArtifacts
+  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
+ DONE  Completed downloadManifest in 3.29s
+*** Started working on downloadJson
+ DONE  Completed downloadJson in 0.01s
+*** Started working on downloadClient
+*** Started working on downloadServer
+ DONE  Completed downloadServer in 0.06s
+ DONE  Completed downloadClient in 0.06s
+*** Started working on preProcessJar
+ REUSE Used cache of preProcessJar in 0.00s
+*** Started working on decompile
+ REUSE Used cache of decompile in 0.00s
+*** Started working on patch
+ REUSE Used cache of patch in 0.00s
+*** Started working on applyNeoforgePatches
+ REUSE Used cache of applyNeoforgePatches in 0.00s
+*** Started working on transformSources
+ REUSE Used cache of transformSources in 0.00s
+*** Started working on recompile
+ REUSE Used cache of recompile in 0.00s
+*** Started working on mergeWithSources
+ REUSE Used cache of mergeWithSources in 0.00s
+Total runtime: 5.05s
+
+
+> Task :26.2.0:compileJava UP-TO-DATE
+> Task :26.2.0:generateModMetadata UP-TO-DATE
+> Task :26.2.0:processResources UP-TO-DATE
+> Task :26.2.0:classes UP-TO-DATE
+> Task :26.2.0:jarJar
+> Task :26.2.0:jar UP-TO-DATE
+> Task :26.2.0:assemble UP-TO-DATE
+> Task :26.2.0:stonecutterPrepareTest UP-TO-DATE
+> Task :26.2.0:stonecutterGenerateTest UP-TO-DATE
+> Task :26.2.0:compileTestJava UP-TO-DATE
+> Task :26.2.0:processTestResources UP-TO-DATE
+> Task :26.2.0:testClasses UP-TO-DATE
+> Task :26.2.0:platformGateTest UP-TO-DATE
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :26.1.2-fabric:compileTestJava UP-TO-DATE
+> Task :26.1.2-fabric:testClasses UP-TO-DATE
+> Task :26.1.2-fabric:platformGateTest UP-TO-DATE
+> Task :26.1.2-fabric:jar
+> Task :26.2.0-fabric:stonecutterPrepareTest UP-TO-DATE
+> Task :26.2.0-fabric:stonecutterGenerateTest UP-TO-DATE
+> Task :26.2.0-fabric:compileTestJava UP-TO-DATE
+> Task :26.2.0-fabric:processTestResources UP-TO-DATE
+> Task :26.2.0-fabric:testClasses UP-TO-DATE
+> Task :26.2.0-fabric:platformGateTest UP-TO-DATE
+> Task :26.2.0-fabric:jar
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/org.joml/joml/1.10.8/fc0a71dad90a2cf41d82a76156a0e700af8e4f8d/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/org.joml/joml/1.10.8/fc0a71dad90a2cf41d82a76156a0e700af8e4f8d/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762963/dd59af0c156c118b9aae5893e38127c1c709d401/graal-1504336-8762963.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762963/dd59af0c156c118b9aae5893e38127c1c709d401/graal-1504336-8762963.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :common:test
+> Task :1.21.1:test
+> Task :1.21.1:verifyDevModSourceSets
+> Task :26.1.2:test
+> Task :26.1.2:verifyDevModSourceSets
+> Task :1.21.1:verifyLegacyNeoForgeServerArtifact
+> Task :26.1.2:verifyNeoForgeRuntimeArtifact
+> Task :26.1.2:check
+> Task :26.1.2:build
+> Task :1.21.1:verifyNeoForgeRuntimeArtifact
+> Task :1.21.1:check
+> Task :1.21.1:build
+> Task :26.2.0:test
+> Task :26.2.0:verifyDevModSourceSets
+> Task :26.2.0:verifyNeoForgeRuntimeArtifact
+> Task :26.2.0:check
+> Task :26.2.0:build
+> Task :26.1.2-fabric:test
+> Task :26.1.2-fabric:assemble
+> Task :26.1.2-fabric:verifyFabricRuntimeArtifact
+> Task :26.1.2-fabric:check
+> Task :26.1.2-fabric:build
+> Task :26.2.0-fabric:test
+> Task :26.2.0-fabric:assemble
+> Task :26.2.0-fabric:verifyFabricRuntimeArtifact
+> Task :26.2.0-fabric:check
+> Task :26.2.0-fabric:build
+> Task :common:verifyAddonFixtureDependencySurface
+> Task :common:check
+
+[Incubating] Problems report is available at: file:///C:/Users/11515/.codex/worktrees/config-sync-validation/NekoJS-mult/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 36s
+106 actionable tasks: 36 executed, 1 from cache, 69 up-to-date
