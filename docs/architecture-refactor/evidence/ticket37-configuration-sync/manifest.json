@@ -1,0 +1,566 @@
+{
+  "source": "ec7fe6848afc1970661ee1f38a7c7c6d4575530c",
+  "artifacts": [
+    {
+      "side": "server",
+      "sha256": "ec3263cc5a4ab568d4ccd5e2d6f71544f3c766cac8af439378270f5b4931b7f7",
+      "bytes": 17228506
+    },
+    {
+      "side": "clientA",
+      "sha256": "ec3263cc5a4ab568d4ccd5e2d6f71544f3c766cac8af439378270f5b4931b7f7",
+      "bytes": 17228506
+    },
+    {
+      "side": "clientB",
+      "sha256": "ec3263cc5a4ab568d4ccd5e2d6f71544f3c766cac8af439378270f5b4931b7f7",
+      "bytes": 17228506
+    },
+    {
+      "side": "clientC",
+      "sha256": "ec3263cc5a4ab568d4ccd5e2d6f71544f3c766cac8af439378270f5b4931b7f7",
+      "bytes": 17228506
+    }
+  ],
+  "staticStartupSha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76",
+  "testSummary": {
+    "source": "ec7fe6848afc1970661ee1f38a7c7c6d4575530c",
+    "projects": [
+      {
+        "project": "common",
+        "xml": 279,
+        "tests": 2058,
+        "skipped": 4,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "common-api-processor",
+        "xml": 1,
+        "tests": 13,
+        "skipped": 0,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/1.21.1",
+        "xml": 95,
+        "tests": 426,
+        "skipped": 31,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/26.1.2",
+        "xml": 130,
+        "tests": 661,
+        "skipped": 81,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/26.2.0",
+        "xml": 130,
+        "tests": 661,
+        "skipped": 81,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/26.1.2-fabric",
+        "xml": 77,
+        "tests": 384,
+        "skipped": 37,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/26.2.0-fabric",
+        "xml": 77,
+        "tests": 384,
+        "skipped": 37,
+        "failures": 0,
+        "errors": 0
+      }
+    ],
+    "total": {
+      "xml": 789,
+      "tests": 4587,
+      "skipped": 271,
+      "failures": 0,
+      "errors": 0
+    },
+    "note": "Ordinary report snapshot; tasks may include up-to-date outputs. PlatformGate reports are separate."
+  },
+  "runtime": {
+    "source": "ec7fe6848afc1970661ee1f38a7c7c6d4575530c",
+    "liveAdd": {
+      "generation": 5,
+      "ack": 2,
+      "successfulActivationReports": 2
+    },
+    "lateClient": {
+      "readback": [
+        "ticket37_b7:proof_item",
+        "ticket37_b7:proof_sound",
+        "ticket37_b7:proof_effect",
+        "ticket37_b7:live_item",
+        "ticket37_b7:live_sound",
+        "ticket37_b7:live_effect"
+      ],
+      "preseeded": false
+    },
+    "rejection": {
+      "generation": 6,
+      "status": "ABORTED",
+      "activatedGeneration": 5,
+      "committed": false,
+      "newServerItemPresent": false,
+      "outcomes": [
+        {
+          "participant": "ed918d82-d612-333e-9f59-5ff2fedc0d1c",
+          "generation": 6,
+          "outcome": "ack",
+          "reason": null
+        },
+        {
+          "participant": "35df6609-fbb1-398e-95c6-7d87d301ee4a",
+          "generation": 6,
+          "outcome": "ack-rejected",
+          "reason": "dynamic registry sync is disabled on this client: set [dynamicRegistry] enabled = true in nekojs/config/engine.toml and reconnect"
+        },
+        {
+          "participant": "7d2d0f6f-f3ad-3538-8f9b-746f80a4a6fb",
+          "generation": 6,
+          "outcome": "late-ack-outside-transaction",
+          "reason": null
+        }
+      ]
+    },
+    "recovery": {
+      "generation": 7,
+      "ack": 2,
+      "successfulActivationReports": 2,
+      "serverItemPresent": true,
+      "rejectingParticipantRemoved": true
+    }
+  },
+  "archive": {
+    "file": "configuration-sync-evidence.zip",
+    "bytes": 872796,
+    "sha256": "28eb92fd0d0d3ba5d7dbd04ad2b7fed79f4ffe52dc2b3d968e68c1a7820e27d4"
+  },
+  "entries": [
+    {
+      "path": "repair/ci-gates.txt",
+      "bytes": 5947,
+      "sha256": "90d52698d59986c0a244ee1791a89f53fb89bdeb43899c743bce0fc7e55d6bf0"
+    },
+    {
+      "path": "repair/common-channel-green.txt",
+      "bytes": 8306,
+      "sha256": "9bf8a3ac43e5bc0f1260795473aadb3cc3209f2b459b10b6ec65828959e7780f"
+    },
+    {
+      "path": "repair/config-first-build.txt",
+      "bytes": 6743,
+      "sha256": "7c9394f54be52c9bbf7669e8f9056cd411dbcb05dd16bc1cd864a3ba73ea5e98"
+    },
+    {
+      "path": "repair/full-matrix-first.txt",
+      "bytes": 23176,
+      "sha256": "1760fad703553ca6def1b7bb6cb2f2d2c21e43ca43c7158fd087832020c132f4"
+    },
+    {
+      "path": "repair/isolated-full-matrix-retry.txt",
+      "bytes": 19805,
+      "sha256": "1af95a1644d1f7edc1b9246bc379a55704d4b36d3e7c4817da4621b15f818dea"
+    },
+    {
+      "path": "repair/isolated-full-matrix.txt",
+      "bytes": 3466,
+      "sha256": "4bb01f5eb808255755af35154f26d6e8ecb0df9394e106b0fe871cf4b39d7c30"
+    },
+    {
+      "path": "repair/managed-full-matrix.txt",
+      "bytes": 16470,
+      "sha256": "e46da2e0288fcfd80a9c5241d3170766ffe7f787b4786bf5ab67fc4763d58b49"
+    },
+    {
+      "path": "repair/owner-green.txt",
+      "bytes": 2747,
+      "sha256": "34f9f1e542e76b1101f2819cafb30f08aa46102341e5561000e2b88c379a6a99"
+    },
+    {
+      "path": "repair/owner-red.txt",
+      "bytes": 3701,
+      "sha256": "0ff14e2ae4090486877017a5351426935dccbd791f4b6af046905412c1c4d689"
+    },
+    {
+      "path": "repair/participants-first.txt",
+      "bytes": 6313,
+      "sha256": "cc69624e7e71ccca7fb73b9a9da35783c204022b727200419ece1434465526eb"
+    },
+    {
+      "path": "repair/phase-green.txt",
+      "bytes": 5246,
+      "sha256": "8cfcb158c7856a0e8ae152c88b22271001cf04995d845d1dcf372cf996344667"
+    },
+    {
+      "path": "repair/phase-red.txt",
+      "bytes": 3978,
+      "sha256": "ebff34e3d3205b0bcb934c6e40eb280ce0b3874dd1f3b02f4b4ed45314358b74"
+    },
+    {
+      "path": "repair/prepare-attempt1.txt",
+      "bytes": 124,
+      "sha256": "21d068d35c8104cbbf1b5760749b6113dfa9d8af2bdbc2c904da80984967227b"
+    },
+    {
+      "path": "repair/ci-gates.json",
+      "bytes": 10840,
+      "sha256": "1592f579d0f03137d92a51e1a3731cd718e1db8c37d87921d02a0afae369a1bb"
+    },
+    {
+      "path": "repair/partial-overwritten-report-summary.json",
+      "bytes": 1329,
+      "sha256": "ee899756aa6b778a80e7ef586984c726dde8212d0577201165ca2349fac2d0c0"
+    },
+    {
+      "path": "repair/test-summary.json",
+      "bytes": 1331,
+      "sha256": "11700013c5edda79cc76b00bea46bad8c40c8a1a16ad73f0d9bdc6a3843bf7b7"
+    },
+    {
+      "path": "repair/archive-evidence.py",
+      "bytes": 3739,
+      "sha256": "d9155948006f6e56269dc51cc0454593bc2148f7df869fc318529598dc839d16"
+    },
+    {
+      "path": "repair/extract-runtime.py",
+      "bytes": 2828,
+      "sha256": "e8d23e00eecc788ef0fe51652513daeea316b799482fe3b37d79e6e41962217f"
+    },
+    {
+      "path": "repair/summarize-tests.py",
+      "bytes": 1615,
+      "sha256": "3151027a4c7ac1d29ec0bf19a763d1dfe93b23f2264ced8cf8693726e88a75c1"
+    },
+    {
+      "path": "repair/prepare-attempt1.ps1",
+      "bytes": 3950,
+      "sha256": "bf278c27f3ba6408cac678b31d39c3934bf47bed75c8491105b1283ea681eb3c"
+    },
+    {
+      "path": "repair/source-diff.patch",
+      "bytes": 63231,
+      "sha256": "38fa1472847061e6726500142d1d18ab60382d5a33f5b4f0b4b063085860d8b0"
+    },
+    {
+      "path": "repair/owner-red.xml",
+      "bytes": 3528,
+      "sha256": "b5c47b8b3c128810348f7150cd14cb35862103553470f8eaab7feff0d12574d8"
+    },
+    {
+      "path": "repair/participants-red.xml",
+      "bytes": 3984,
+      "sha256": "84bc45b0a4965ce3e8881a0d750c2f6a384daba117bf0cec25646589b2e3b54b"
+    },
+    {
+      "path": "repair/phase-green.xml",
+      "bytes": 516,
+      "sha256": "0b0d461cdbf4e568e453aabbfd037dfb388d6560957b9addc0cd250f3f290679"
+    },
+    {
+      "path": "repair/phase-red.xml",
+      "bytes": 1885,
+      "sha256": "50a80ccc86b3001c55b93a83aa085eee9b61b938190946ed3c053251dc6099fe"
+    },
+    {
+      "path": "repair/full-matrix-ordinary-xml.zip",
+      "bytes": 810301,
+      "sha256": "0a75fe2a49ad338fc7386da6fdf84cc00d79d84a7798c8abde43478a9f775da8"
+    },
+    {
+      "path": "runtime/clientA-launch-resumed.txt",
+      "bytes": 334,
+      "sha256": "f75963c8f27556c202edd3e74b2f1d93ec897d524a7cfb5f2fea93d1dcd93411"
+    },
+    {
+      "path": "runtime/clientA-launch.txt",
+      "bytes": 334,
+      "sha256": "aa368eb9949219108f587a27400c64956b1493c875ac8071d23db84a44d37a6f"
+    },
+    {
+      "path": "runtime/clientB-launch.txt",
+      "bytes": 334,
+      "sha256": "11fae36484b6072d7d753df8bc050a614ed269ce7a0d5dd63d713f7e51223ff5"
+    },
+    {
+      "path": "runtime/clientC-launch-corrected.txt",
+      "bytes": 334,
+      "sha256": "dc3972d4f5a96ff0c79826c47ac75f354755c63b6536540c7a9e414916db4870"
+    },
+    {
+      "path": "runtime/clientC-launch.txt",
+      "bytes": 334,
+      "sha256": "c3e01e8dcfeb5341e705ab66b5bc7862349646b1d36f87d9e7547fa31401c966"
+    },
+    {
+      "path": "runtime/final-stop.txt",
+      "bytes": 46,
+      "sha256": "25ff3e6f29665df902e1c88a9e98e82f0323b1aa2984c84cc4707514d01b9eab"
+    },
+    {
+      "path": "runtime/kick-C-after-abort.txt",
+      "bytes": 118,
+      "sha256": "f62767c3c7f55c1738378c44708b10c4b9b3ee0f1f16543cf68ca5788ff53bb6"
+    },
+    {
+      "path": "runtime/kick-C-for-reconnect.txt",
+      "bytes": 110,
+      "sha256": "018ff0d21f15df2cc65fbc962547447e5daeba4a02c1f8be40273e583d01f8ca"
+    },
+    {
+      "path": "runtime/live-effect-B.txt",
+      "bytes": 138,
+      "sha256": "7aa61fda2c8c5aab4c2527221beb0e79e184d95ca3ff1b7e5b586cff438d4df7"
+    },
+    {
+      "path": "runtime/live-give-A.txt",
+      "bytes": 111,
+      "sha256": "efb42413d999c55a96af6cce7780086cee79cb466f2a14f890f51dbd980a69e8"
+    },
+    {
+      "path": "runtime/old-effect-after-abort.txt",
+      "bytes": 140,
+      "sha256": "540c749fdc3813b6e352b015faf4e5b5d6fed1df033d04155551faa77937c012"
+    },
+    {
+      "path": "runtime/owned-server-pid.txt",
+      "bytes": 6,
+      "sha256": "b1f1680257e6469d10ab93743ca5dd1007d932aa3214a8bf81700f14a92c0545"
+    },
+    {
+      "path": "runtime/proof-before-reload.txt",
+      "bytes": 73,
+      "sha256": "12bb9b11a65051d17ee1bff0d69f14b2bbc0ace9328036ab71360ae7b2854ca2"
+    },
+    {
+      "path": "runtime/real-rejection-reload.txt",
+      "bytes": 113,
+      "sha256": "b3a081935b3ada3a54d0d10d3281b6d2d875585a0ce7f007f202d2ea9b38d880"
+    },
+    {
+      "path": "runtime/recovered-give-B.txt",
+      "bytes": 113,
+      "sha256": "eb9b8c13ce393c01a73c178cf098e56a5fb4e73937f37bd6600755f9619b7fb9"
+    },
+    {
+      "path": "runtime/recovery-reload.txt",
+      "bytes": 113,
+      "sha256": "89b5360b8398b6addeb316a8e338e79ded7e10f24373960ce1bae86935e7cbb4"
+    },
+    {
+      "path": "runtime/resume-list.txt",
+      "bytes": 79,
+      "sha256": "2f9333c54ae21de835939c8344aa405cea54c37ed98d17529019b23e73f7965c"
+    },
+    {
+      "path": "runtime/server-console.txt",
+      "bytes": 85386,
+      "sha256": "5ce1be6c392b5117617f7001960f276d7d9bcb7a5b6a8ca15b0cd301083afcc7"
+    },
+    {
+      "path": "runtime/server-stderr.txt",
+      "bytes": 11698,
+      "sha256": "38750f651abc8e34905f24c2a49cf6bc83b2de04d28beff425429933eb358327"
+    },
+    {
+      "path": "runtime/two-client-live-add.txt",
+      "bytes": 113,
+      "sha256": "8f74be44a088c361431c05756c3582973907eb088627323febaa69f744493ef5"
+    },
+    {
+      "path": "runtime/two-client-reload1.txt",
+      "bytes": 113,
+      "sha256": "ebb61882929d4b50d68fd202e994440985398434fa0dabcd78fe23f59a4df12e"
+    },
+    {
+      "path": "runtime/two-client-reload2.txt",
+      "bytes": 120,
+      "sha256": "736a7f0f9703e03c7693ba309da73ab7e67a94c12b8f510c952b73c3c33273b3"
+    },
+    {
+      "path": "runtime/cleanup.json",
+      "bytes": 715,
+      "sha256": "81ab21cb3f3d6aeed0dcb593794a852d45404501397be99817857bed7df050eb"
+    },
+    {
+      "path": "runtime/runtime-verdict.json",
+      "bytes": 1384,
+      "sha256": "b79411a987a2178375c303f57560f0b9946122b9742c96ff29c78c7b456f726f"
+    },
+    {
+      "path": "runtime/clientC-catchup-before-fixture-correction.log",
+      "bytes": 41838,
+      "sha256": "6f0c5f5901f109a9ca0f108d9252d7286b581aab54016d2b35c247b6d3ad23ff"
+    },
+    {
+      "path": "runtime/proof-dynamic-before-live-add.js",
+      "bytes": 562,
+      "sha256": "c4617dd02c7b0350b53f9a8adf96040ac4b68b55bbdf3c21f60e4e78f60d9560"
+    },
+    {
+      "path": "runtime/proof-dynamic-before-rejection.js",
+      "bytes": 814,
+      "sha256": "2b928ec9a30e09c8646fc857ea99d8373533ef7c23091d50c7336f523941c4fe"
+    },
+    {
+      "path": "runtime/clientC-engine-before-reject.toml",
+      "bytes": 3515,
+      "sha256": "0392fbec08696fe0c63bca81033c33ed7dc7d93a43ae3956dfd4a3bf3b38c7f8"
+    },
+    {
+      "path": "runtime/server/logs/2026-10-08-1.log.gz",
+      "bytes": 4455,
+      "sha256": "beb1adb954b30d74aa521660bd222db0469b36874592c0ab21a6e4872f9ddab6"
+    },
+    {
+      "path": "runtime/server/logs/debug.log",
+      "bytes": 179025,
+      "sha256": "07d44c917fcc98418de78d57ac0d55ae0d1d816b74dbaa4afab620735050dc83"
+    },
+    {
+      "path": "runtime/server/logs/latest.log",
+      "bytes": 67846,
+      "sha256": "7326325fed83cb9f42d571a4d2faa913545b385baa82862258be30a8597bda5e"
+    },
+    {
+      "path": "runtime/server/nekojs/server_scripts/proof-dynamic.js",
+      "bytes": 896,
+      "sha256": "7517bbf09b1a7fea9e5dd506bf32d2876e37684c1e68d3a22ca64773ef4d99b3"
+    },
+    {
+      "path": "runtime/server/nekojs/server_scripts/proof-sync-observer.js",
+      "bytes": 2093,
+      "sha256": "9f3c15678dd6717988545c8aa68ec7a21624db32403f69775486d47099f09e60"
+    },
+    {
+      "path": "runtime/server/nekojs/startup_scripts/proof-startup.js",
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    {
+      "path": "runtime/server/nekojs/test_scripts/config-sync-proof.mjs",
+      "bytes": 1831,
+      "sha256": "492b62af98113e6e79f563ceb8c72e354c95305870ac94bf2006c6195a6ffba1"
+    },
+    {
+      "path": "runtime/clientA/logs/2026-10-08-1.log.gz",
+      "bytes": 6538,
+      "sha256": "4f0edb32a7602b09009822fba84625d27fc7bad3826bfa1559460abfc7b245c4"
+    },
+    {
+      "path": "runtime/clientA/logs/debug-1.log.gz",
+      "bytes": 16326,
+      "sha256": "8de35c5e7edd5afd86876bf2ac65e89b7eb8c24ec4dd6e9e68ff9f95d2c52f1e"
+    },
+    {
+      "path": "runtime/clientA/logs/debug.log",
+      "bytes": 129666,
+      "sha256": "eda37d27b9e391d36cfb50797540c6ad0051a01395ff511ca5f50c42b33add69"
+    },
+    {
+      "path": "runtime/clientA/logs/latest.log",
+      "bytes": 39407,
+      "sha256": "f91be366832e0d32a0340f37b606d736dfc17a3a744e9c2ee927e996b8760d16"
+    },
+    {
+      "path": "runtime/clientA/logs/mc-stderr.log",
+      "bytes": 19929,
+      "sha256": "8f6c125513a457bce4a576e1f4e940d976c3784ceffcef4ce3f02ed588e2f638"
+    },
+    {
+      "path": "runtime/clientA/logs/mc-stdout.log",
+      "bytes": 72713,
+      "sha256": "4c354b42fc6a69cf51cff3016c21ece2a66f667c873600051d9cfac4f5db56dd"
+    },
+    {
+      "path": "runtime/clientA/nekojs/startup_scripts/proof-startup.js",
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    {
+      "path": "runtime/clientB/logs/debug.log",
+      "bytes": 131641,
+      "sha256": "e049db06957c2a8e376b61961362c2602567d4c5626262263e101502742e8d32"
+    },
+    {
+      "path": "runtime/clientB/logs/latest.log",
+      "bytes": 41421,
+      "sha256": "3801393f0fbd62581f665d2e21f3f0da1f674c5d2dfce84c7f27c192d0c7c7b9"
+    },
+    {
+      "path": "runtime/clientB/logs/mc-stderr.log",
+      "bytes": 9966,
+      "sha256": "25ce826c5036f64f99469bf74d35e8a31d9b4dd13612d1e195c0b1e8d8bafb53"
+    },
+    {
+      "path": "runtime/clientB/logs/mc-stdout.log",
+      "bytes": 37091,
+      "sha256": "be417de40ffa5f815e7220dd499ab91a8bb42197dd3fb30cd3c169f24a3358b8"
+    },
+    {
+      "path": "runtime/clientB/nekojs/startup_scripts/proof-startup.js",
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    {
+      "path": "runtime/clientC/logs/2026-10-09-1.log.gz",
+      "bytes": 7089,
+      "sha256": "dcb3140acbb84588e378f158a2dc1e6aa2650085a00247e4bba639dc1a40e613"
+    },
+    {
+      "path": "runtime/clientC/logs/debug-1.log.gz",
+      "bytes": 16831,
+      "sha256": "616fdd2c141c7752be417dc04c0dbdce10353e0ba4d49f88c051c8eac6e1c003"
+    },
+    {
+      "path": "runtime/clientC/logs/debug.log",
+      "bytes": 128857,
+      "sha256": "82a83cb19a49b09fe417d316bbad36849a422fe75e4429adab01868dd2dd4619"
+    },
+    {
+      "path": "runtime/clientC/logs/latest.log",
+      "bytes": 38634,
+      "sha256": "8c9ed74e9ee099a9876c0ffa197cf318b4809d046ea4c7cf1f5d45b6e1b6dcb2"
+    },
+    {
+      "path": "runtime/clientC/logs/mc-stderr.log",
+      "bytes": 19929,
+      "sha256": "6fcfb959a63d22a8520097aefb8d952e15fdf931d1e9d1d950d9b6bf6f631896"
+    },
+    {
+      "path": "runtime/clientC/logs/mc-stdout.log",
+      "bytes": 72395,
+      "sha256": "807b7a70a5593f82c2abd1a882cee4393c7fc85732b2531b9b2948b790e992ae"
+    },
+    {
+      "path": "runtime/clientC/nekojs/client_scripts/late-client-proof.js",
+      "bytes": 1559,
+      "sha256": "7b462ca4c55288cc7889806c0f16baf7f72e82ee6e4badec47927218021fe675"
+    },
+    {
+      "path": "runtime/clientC/nekojs/startup_scripts/proof-startup.js",
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    }
+  ],
+  "exclusions": [
+    "server.properties/RCON credentials",
+    "launcher/account configs",
+    "worlds",
+    "raw JFR"
+  ]
+}
