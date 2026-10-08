@@ -1,0 +1,57 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
+    "jsx": "react",
+    "jsxFactory": "__nekoJsxFactory",
+    "jsxFragmentFactory": "__nekoJsxFragment",
+    "lib": [
+      "ESNext"
+    ],
+    "allowJs": true,
+    "checkJs": false,
+    "skipLibCheck": true,
+    "typeRoots": [
+      "../../.neko_probe/typescript/@package",
+      "../node_modules/@types"
+    ],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": false,
+    "strict": true,
+    "paths": {
+      "java:*": [
+        "../../.neko_probe/typescript/@package/*"
+      ],
+      "@side-only/server": [
+        "../../.neko_probe/typescript/@side-only/server"
+      ],
+      "@side-only/server/*": [
+        "../../.neko_probe/typescript/@side-only/server/*"
+      ],
+      "@special": [
+        "../../.neko_probe/typescript/@special"
+      ],
+      "@special/*": [
+        "../../.neko_probe/typescript/@special/*"
+      ]
+    }
+  },
+  "typeAcquisition": {
+    "enable": false
+  },
+  "include": [
+    "./**/*.js",
+    "./**/*.mjs",
+    "./**/*.cjs",
+    "./**/*.ts",
+    "./**/*.jsx",
+    "./**/*.tsx",
+    "../../.neko_probe/typescript/@package/**/*.d.ts",
+    "../../.neko_probe/typescript/@manual/**/*.d.ts",
+    "../../.neko_probe/typescript/@side-only/server/**/*.d.ts",
+    "../../.neko_probe/typescript/@nekojs/managed/server/**/*.d.ts"
+  ]
+}

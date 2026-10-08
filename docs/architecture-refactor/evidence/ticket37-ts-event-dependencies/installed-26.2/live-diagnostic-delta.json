@@ -1,0 +1,23 @@
+{
+  "comparison_normalization": "Owned profile prefix and diagnostic line/column removed; file/code/message and duplicate counts preserved. Six existing diagnostics moved with declaration order.",
+  "old_diagnostics": 3116,
+  "new_diagnostics": 3109,
+  "removed": [
+    "<owned-profile>/.neko_probe/typescript/@registry-builders/index.d.ts: error TS2717: Subsequent property declarations must have the same type.  Property 'item' must be of type 'ItemBuilder | null', but here has type 'any'.",
+    "<owned-profile>/.neko_probe/typescript/@registry-builders/index.d.ts: error TS2717: Subsequent property declarations must have the same type.  Property 'renderType' must be of type 'string | null', but here has type 'string'.",
+    "<owned-profile>/.neko_probe/typescript/@registry-builders/index.d.ts: error TS2717: Subsequent property declarations must have the same type.  Property 'supportedItems' must be of type 'string | null', but here has type 'string'.",
+    "<owned-profile>/.neko_probe/typescript/@registry-builders/index.d.ts: error TS2717: Subsequent property declarations must have the same type.  Property 'category' must be of type 'EntityCategoryInput', but here has type 'string'.",
+    "<owned-profile>/.neko_probe/typescript/@registry-builders/index.d.ts: error TS2717: Subsequent property declarations must have the same type.  Property 'displayName' must be of type 'string | null', but here has type 'string'.",
+    "<owned-profile>/.neko_probe/typescript/@registry-builders/index.d.ts: error TS2717: Subsequent property declarations must have the same type.  Property 'groupTab' must be of type 'string | null', but here has type 'string'.",
+    "<owned-profile>/.neko_probe/typescript/@registry-builders/index.d.ts: error TS2717: Subsequent property declarations must have the same type.  Property 'fixedRange' must be of type 'number | null', but here has type 'number'."
+  ],
+  "added": [],
+  "full_strict_tsc_exit": 2,
+  "legacy_registry_builders_byte_identical": true,
+  "manual_byte_identical": true,
+  "event_builder_interfaces": [
+    "DynamicItemBuilder",
+    "DynamicMobEffectBuilder",
+    "DynamicSoundEventBuilder"
+  ]
+}

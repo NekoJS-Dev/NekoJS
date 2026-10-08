@@ -1,0 +1,51 @@
+{
+  "source_revision": "f370c6af2e87975747d2507bd58294e72813bb69",
+  "base_revision": "2af1bf71dc6a83fc5f17afd1d35c2a43d77af1b0",
+  "command": "gradlew.bat :common:check :common-api-processor:test :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build verifyExternalAddonIsolation guardLint --offline --console=plain",
+  "build_exit_code": 0,
+  "elapsed": "2m13s",
+  "tasks": 104,
+  "executed": 39,
+  "up_to_date": 65,
+  "ordinary_test_reports": 779,
+  "ordinary_test_counts": {
+    "tests": 4536,
+    "skipped": 271,
+    "failures": 0,
+    "errors": 0
+  },
+  "actual_probe_zip_entries": 707,
+  "performance_not_run_for_this_revision": true,
+  "full_strict_ts_exit_code": 2,
+  "full_strict_ts_diagnostics": 3109,
+  "python_ast_files": 344,
+  "python_ast_failures": 0,
+  "pyright": "NOT RUN",
+  "artifacts": [
+    {
+      "path": "versions/1.21.1/build/libs/nekojs-neoforge-1.21.1-1.1.0-preview3.jar",
+      "size": 2908139,
+      "sha256": "3569A02A47606F499C91BAEE72A5073FE6ADCA020410DB3615B44D983D0BB762"
+    },
+    {
+      "path": "versions/26.1.2/build/libs/nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "size": 16740969,
+      "sha256": "139EF459EBACEC0089A386ACFCF322F1155764E7C97D26F3D9F7F04BC3BAF04A"
+    },
+    {
+      "path": "versions/26.2.0/build/libs/nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+      "size": 17212780,
+      "sha256": "7928D3CC2ABB19B2B34214D0D7344A80B29C04BB045853B7363B5DD515B856A7"
+    },
+    {
+      "path": "versions/26.1.2-fabric/build/libs/nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+      "size": 18006509,
+      "sha256": "F4B05E88F5B02E2EA9A66585D17868102A9592EB78475F3EAC88955A9A2E7DD0"
+    },
+    {
+      "path": "versions/26.2.0-fabric/build/libs/nekojs-fabric-26.2-1.1.0-preview3.jar",
+      "size": 18006508,
+      "sha256": "EA025B357A1514BD40446CCAD4FBAF8E29C2503F879B54E24CED857BD5BA87D0"
+    }
+  ]
+}

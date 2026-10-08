@@ -1,0 +1,3 @@
+# Preserve captured command output byte-for-byte, including CRLF and diagnostic indentation.
+validation/* -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+installed-26.2/* -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

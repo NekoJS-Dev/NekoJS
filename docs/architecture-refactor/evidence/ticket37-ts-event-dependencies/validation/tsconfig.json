@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": false,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "types": []
+  },
+  "files": [
+    "combined-capture/@side-only/server/events/index.d.ts",
+    "combined-capture/@manual/index.d.ts",
+    "caller.ts"
+  ]
+}

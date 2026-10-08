@@ -1,0 +1,8 @@
+build/ticket37-ts-event-dependencies/caller.ts(4,1): error TS2304: Cannot find name 'ServerEvents'.
+build/ticket37-ts-event-dependencies/caller.ts(4,30): error TS7006: Parameter 'event' implicitly has an 'any' type.
+build/ticket37-ts-event-dependencies/caller.ts(5,55): error TS7006: Parameter 'build' implicitly has an 'any' type.
+build/ticket37-ts-event-dependencies/caller.ts(7,9): error TS2578: Unused '@ts-expect-error' directive.
+build/ticket37-ts-event-dependencies/caller.ts(10,59): error TS7006: Parameter 'build' implicitly has an 'any' type.
+build/ticket37-ts-event-dependencies/caller.ts(14,36): error TS7006: Parameter 'build' implicitly has an 'any' type.
+build/ticket37-ts-event-dependencies/caller.ts(15,5): error TS2578: Unused '@ts-expect-error' directive.
+build/ticket37-ts-event-dependencies/caller.ts(17,5): error TS2578: Unused '@ts-expect-error' directive.

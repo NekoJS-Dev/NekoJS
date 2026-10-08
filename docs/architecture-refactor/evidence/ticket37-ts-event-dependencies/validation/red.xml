@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.tkisor.nekojs.probe.DynamicRegistryDefaultDeclarationsTest" tests="1" skipped="0" failures="1" errors="0" timestamp="2026-10-08T11:38:02.424Z" hostname="TKI_SOR" time="0.645">
+  <properties/>
+  <testcase name="eventBuilderDependenciesExcludeUnassociatedLegacyGlobalsAndSameNameSpoofs()" classname="com.tkisor.nekojs.probe.DynamicRegistryDefaultDeclarationsTest" time="0.602">
+    <failure message="org.opentest4j.AssertionFailedError: /// &lt;reference path=&quot;../../../@registry-builders/index.d.ts&quot; /&gt;&#10;&#10;interface DynamicRegistryEvent {&#10;    item(id: string, build?: (build: DynamicItemBuilder) =&gt; void): boolean;&#10;    mobEffect(id: string, build?: (build: DynamicMobEffectBuilder) =&gt; void): boolean;&#10;    soundEvent(id: string, build?: (build: DynamicSoundEventBuilder) =&gt; void): boolean;&#10;}&#10;&#10;declare module &quot;@side-only/server/events&quot; {&#10;}&#10;&#10;export {};&#10;&#10;declare global {&#10;    namespace DynamicRegistryEvents {&#10;        function dynamicRegistry(handler: ((event: DynamicRegistryEvent) =&gt; void)): void;&#10;    }&#10;&#10;}&#10; ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: /// &lt;reference path=&quot;../../../@registry-builders/index.d.ts&quot; /&gt;
+
+interface DynamicRegistryEvent {
+    item(id: string, build?: (build: DynamicItemBuilder) =&gt; void): boolean;
+    mobEffect(id: string, build?: (build: DynamicMobEffectBuilder) =&gt; void): boolean;
+    soundEvent(id: string, build?: (build: DynamicSoundEventBuilder) =&gt; void): boolean;
+}
+
+declare module &quot;@side-only/server/events&quot; {
+}
+
+export {};
+
+declare global {
+    namespace DynamicRegistryEvents {
+        function dynamicRegistry(handler: ((event: DynamicRegistryEvent) =&gt; void)): void;
+    }
+
+}
+ ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:158)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:139)
+	at org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:69)
+	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:41)
+	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:228)
+	at com.tkisor.nekojs.probe.DynamicRegistryDefaultDeclarationsTest.eventBuilderDependenciesExcludeUnassociatedLegacyGlobalsAndSameNameSpoofs(DynamicRegistryDefaultDeclarationsTest.java:73)
+</failure>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+]]></system-err>
+</testsuite>

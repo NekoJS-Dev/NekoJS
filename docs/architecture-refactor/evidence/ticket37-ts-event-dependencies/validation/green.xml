@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.tkisor.nekojs.probe.DynamicRegistryDefaultDeclarationsTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-08T11:39:59.831Z" hostname="TKI_SOR" time="2.9">
+  <properties/>
+  <testcase name="scriptOnlyPayloadOperationsWorkWithProductionHostAccessWhileCoreJavaLookupStaysDenied()" classname="com.tkisor.nekojs.probe.DynamicRegistryDefaultDeclarationsTest" time="1.225"/>
+  <testcase name="eventBuilderDependenciesExcludeUnassociatedLegacyGlobalsAndSameNameSpoofs()" classname="com.tkisor.nekojs.probe.DynamicRegistryDefaultDeclarationsTest" time="1.217"/>
+  <testcase name="matchingBuilderNamesAndDynamicTypeAloneDoNotInventAnEventPayloadAssociation()" classname="com.tkisor.nekojs.probe.DynamicRegistryDefaultDeclarationsTest" time="0.108"/>
+  <testcase name="emptyAssociatedPayloadHasAnExplicitPythonProtocolBody()" classname="com.tkisor.nekojs.probe.DynamicRegistryDefaultDeclarationsTest" time="0.095"/>
+  <testcase name="defaultCatalogResolvesDynamicProxyPayloadInBothCompleteBackendsWithoutScanningCore()" classname="com.tkisor.nekojs.probe.DynamicRegistryDefaultDeclarationsTest" time="0.226"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[[To redirect Truffle log output to a file use one of the following options:
+* '--log.file=<path>' if the option is passed using a guest language launcher.
+* '-Dpolyglot.log.file=<path>' if the option is passed using the host Java launcher.
+* Configure logging using the polyglot embedding API.]
+[engine] WARNING: The polyglot engine uses a fallback runtime that does not support runtime compilation to native code.
+Execution without runtime compilation will negatively impact the guest application performance.
+The following cause was found: Version check failed.
+Your Java runtime '21.0.10+8-LTS-217' is incompatible with optimized Truffle runtime version '25.1.3'.
+The Java runtime version must be greater or equal to JDK '25' and smaller than JDK '26'.
+In order to use the optimizing runtime:
+- Update your Java runtime to resolve this. See https://www.graalvm.org/latest/reference-manual/embed-languages/#runtime-optimization-support for optimizing runtime compatibility.
+- Switch to polyglot isolates to run the guest language as a native image. See https://www.graalvm.org/latest/reference-manual/embed-languages/#polyglot-isolates for instructions.
+To disable this version check the '-Dpolyglotimpl.DisableVersionChecks=true' system property can be used.
+It is not recommended to disable version checks.
+
+For more information see: https://www.graalvm.org/latest/reference-manual/embed-languages/#runtime-optimization-support.
+To disable this warning use the '--engine.WarnInterpreterOnly=false' option or the '-Dpolyglot.engine.WarnInterpreterOnly=false' system property.
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+]]></system-err>
+</testsuite>

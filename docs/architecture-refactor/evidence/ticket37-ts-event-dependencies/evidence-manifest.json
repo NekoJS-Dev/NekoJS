@@ -1,0 +1,142 @@
+[
+  {
+    "path": "validation/caller-tsc-corrected.txt",
+    "size": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "validation/caller-tsc.txt",
+    "size": 888,
+    "sha256": "445586d0503ec2e6a55aa4f5e9ba4b1675ce6820e1651d7e2bedfed5385b7ed3"
+  },
+  {
+    "path": "validation/caller.ts",
+    "size": 893,
+    "sha256": "febc0153e560d92ee7e09762556822918487cd9297ec64c93f03159d1f8bdb5e"
+  },
+  {
+    "path": "validation/combined-capture.zip",
+    "size": 30673,
+    "sha256": "e16ae264db07cc154831f03deb3437c6c20ebea208c1c5fecac09daca3841b4a"
+  },
+  {
+    "path": "validation/full-build.txt",
+    "size": 23736,
+    "sha256": "d4bc05a610b59f93d564af8f58f3cf5f51cfac1fbdd10f216c3b27b418a3f4ff"
+  },
+  {
+    "path": "validation/full-matrix-xml.zip",
+    "size": 798568,
+    "sha256": "4019dc2f541a7859af7d2678255fb99190aa024fdf1b193511784be8f1ddb545"
+  },
+  {
+    "path": "validation/green.txt",
+    "size": 2769,
+    "sha256": "7c88c68c7be90430a96980dff4674a53e5a8bb301e0ecd556b8a12298f809fc6"
+  },
+  {
+    "path": "validation/green.xml",
+    "size": 3055,
+    "sha256": "41986bd18bd5f80bca1cd29a72790dc9effb77d22cb14317837edc9c20e1e055"
+  },
+  {
+    "path": "validation/probe-types-raw.zip",
+    "size": 201,
+    "sha256": "a62ce6c81a2f14cb4d3b7fa439e4ff2c6029bb2df155277a9bd6539e90d96033"
+  },
+  {
+    "path": "validation/red.txt",
+    "size": 3392,
+    "sha256": "124fbb259c838038cd60f55d25ccda765dc25fd93d66bbad2370a87e6694ae21"
+  },
+  {
+    "path": "validation/red.xml",
+    "size": 2870,
+    "sha256": "5c59d823aed60440abf6d01cb0795b524112eb0b39e77d38cf6c717348049645"
+  },
+  {
+    "path": "validation/tsconfig.json",
+    "size": 331,
+    "sha256": "e849740cda1cb183c50c1a5603a7042634350d87c4a415ed1f924b0e1d6c8e03"
+  },
+  {
+    "path": "installed-26.2/actual-live-probe-output.zip",
+    "size": 1179025,
+    "sha256": "85c09d13032c77a37aa7a4edca296491bd7c7fc7878715948a5725bf463acbae"
+  },
+  {
+    "path": "installed-26.2/actual-server-jsconfig.json",
+    "size": 1450,
+    "sha256": "dc00b4b9a09e5c53f4ac846194d5714c91646bb57168e386441fdc061c21111f"
+  },
+  {
+    "path": "installed-26.2/audit-installed.py",
+    "size": 3468,
+    "sha256": "84efd5bf9eccc46a2ed086e4359d0096985211816fb3acc335bf29307385caa5"
+  },
+  {
+    "path": "installed-26.2/installed-console.txt",
+    "size": 1075,
+    "sha256": "406af8f6faf03716ba625d852fb0f20d27df4067df2b397d280407a3fc7a757b"
+  },
+  {
+    "path": "installed-26.2/live-audit-corrected.txt",
+    "size": 2808,
+    "sha256": "cf717a9d10075f5c7f8647bee3e43e927a1288047747ae250d9389dfffcec452"
+  },
+  {
+    "path": "installed-26.2/live-audit.txt",
+    "size": 3933,
+    "sha256": "dd1e68393f14289a8475302fce347bb2e7eb2b188ae4f74e6f53030131f3d16e"
+  },
+  {
+    "path": "installed-26.2/live-dependency-closure.txt",
+    "size": 52817,
+    "sha256": "8511aa0d86365fece3be848a2dd9e6420a615ff939879079eeb54084f04fc44b"
+  },
+  {
+    "path": "installed-26.2/live-diagnostic-delta.json",
+    "size": 2181,
+    "sha256": "4a209c6863354005228d3e76b7e7c1b68acc058aa844731757ee0e35668d3534"
+  },
+  {
+    "path": "installed-26.2/live-strict-output.txt",
+    "size": 811407,
+    "sha256": "d338c0c811f15e9dc800469d7d83d18cfed715c8ce2eb644a21db05b240ebd1d"
+  },
+  {
+    "path": "installed-26.2/live-strict.json",
+    "size": 159,
+    "sha256": "e753448e5fb081758f5754dd0830e1da56a8e508d2d4ae069993805d32f5ac6b"
+  },
+  {
+    "path": "installed-26.2/prepare-installed.ps1",
+    "size": 2067,
+    "sha256": "8f64396697470f9cc25f5c6b76da4a6498c4c1ee2b05cc3b423a668409715164"
+  },
+  {
+    "path": "installed-26.2/prior-live-probe-audit.py",
+    "size": 3020,
+    "sha256": "a24bcf48a6f95e7f81cb6910e462e1ac8a650ec1c9b5e0a8283caf719f950c3a"
+  },
+  {
+    "path": "installed-26.2/proof-dynamic.js",
+    "size": 562,
+    "sha256": "c4617dd02c7b0350b53f9a8adf96040ac4b68b55bbdf3c21f60e4e78f60d9560"
+  },
+  {
+    "path": "installed-26.2/raw-server-command-logs.zip",
+    "size": 26414,
+    "sha256": "3fc9f693d6e1a30605206fc66b5f1d92fd94330e45a91094cf2b6b9adc7380a1"
+  },
+  {
+    "path": "installed-26.2/run-installed.ps1",
+    "size": 2314,
+    "sha256": "2cbf05d8c1c2696b427801fc4c75c12feba5dc0b405a07613517b0e9e53ee69d"
+  },
+  {
+    "path": "installed-26.2/ticket37-installed-proof.py",
+    "size": 3472,
+    "sha256": "2dccf6ee228399a8e7190b3461ab97057f7f40cfc48298331d9923b7a8e64148"
+  }
+]
