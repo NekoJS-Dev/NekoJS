@@ -14,6 +14,27 @@ public final class RegistryBuilderTsRenderer {
 
     private RegistryBuilderTsRenderer() {}
 
+    /** Keeps explicitly scoped event builders separate from legacy global interfaces. */
+    static String renderEventDependencies(List<RegistryBuilderSurfaceEntry> entries) {
+        var groups = new java.util.LinkedHashMap<String, java.util.List<RegistryBuilderSurfaceEntry>>();
+        for (var entry : entries) {
+            String namespace = entry.eventPayload().typescriptBuilderNamespace();
+            groups.computeIfAbsent(namespace == null ? "" : namespace, ignored -> new java.util.ArrayList<>()).add(entry);
+        }
+        StringBuilder output = new StringBuilder();
+        groups.forEach((namespace, builders) -> {
+            String declaration = render(builders);
+            if (namespace.isEmpty()) {
+                output.append(declaration);
+            } else {
+                output.append("declare namespace ").append(namespace).append(" {\n");
+                declaration.lines().forEach(line -> output.append(line.isEmpty() ? "" : "    " + line).append('\n'));
+                output.append("}\n\n");
+            }
+        });
+        return output.toString();
+    }
+
     /** 渲染 {@code @registry-builders/index.d.ts} 内容；空列表返回空串。 */
     public static String render(List<RegistryBuilderSurfaceEntry> entries) {
         if (entries == null || entries.isEmpty()) {

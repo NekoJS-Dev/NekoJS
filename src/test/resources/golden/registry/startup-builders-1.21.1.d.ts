@@ -140,9 +140,9 @@ interface PotionBuilder {
 
 /** SoundEventBuilder — registry 'minecraft:sound_event', type 'basic', sugar 'soundEvent'. */
 interface SoundEventBuilder {
-    fixedRange: number;
+    fixedRange: number | null;
     readonly id: any;
-    setFixedRange(fixedRange: number): void;
+    setFixedRange(fixedRange: number | null): void;
 }
 
 /** VillagerTypeBuilder — registry 'minecraft:villager_type', type 'basic', sugar 'villagerType'. */

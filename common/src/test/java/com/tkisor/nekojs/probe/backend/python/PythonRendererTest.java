@@ -8,10 +8,16 @@ import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.ScriptTypePredicate;
+import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
+import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
+import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,6 +25,31 @@ import static org.junit.jupiter.api.Assertions.*;
  * {@link ApiTypeRefPyRenderer} + {@link PythonClassRenderer} 单测：类型映射 + IR→.pyi 渲染。
  */
 class PythonRendererTest {
+
+    @Test
+    void associatedPayloadMethodsPreserveEveryOverloadAndLeaveSingleMethodsUndecorated() {
+        TestPlatformInit.ensureInitialized();
+        var members = List.of(
+                new RegistryBuilderSurfaceEntry.Member("item", RegistryBuilderSurfaceEntry.MemberKind.METHOD,
+                        "item(id: string, build: (build: FixtureBuilder) => void): FixtureBuilder",
+                        "def item(self, id: str, build: Callable[[FixtureBuilder], None]) -> FixtureBuilder: ..."),
+                new RegistryBuilderSurfaceEntry.Member("item", RegistryBuilderSurfaceEntry.MemberKind.METHOD,
+                        "item(id: string, typeName: string, build: (build: FixtureBuilder) => void): FixtureBuilder",
+                        "def item(self, id: str, typeName: str, build: Callable[[FixtureBuilder], None]) -> FixtureBuilder: ..."),
+                new RegistryBuilderSurfaceEntry.Member("register", RegistryBuilderSurfaceEntry.MemberKind.METHOD,
+                        "register(registry: string, id: string, supplier: () => unknown): unknown",
+                        "def register(self, registry: str, id: str, supplier: Callable[[], Any]) -> Any: ..."));
+        var builder = new RegistryBuilderSurfaceEntry("FixtureBuilder", "test:item", "basic", "item", List.of(), "",
+                new RegistryBuilderSurfaceEntry.EventPayload(Sample.class, "FixtureRegistryEvent", members));
+        var event = EventCatalogEntry.of("FixtureEvents", "register", ScriptTypePredicate.exact(ScriptType.STARTUP),
+                Sample.class, null, false, false);
+        String output = new PythonEventRenderer(new ApiTypeRefPyRenderer(Set.of()), Set.of())
+                .render(ScriptType.STARTUP, List.of(event), Map.of(), List.of(builder));
+        assertEquals(2, countOccurrences(output, "    @overload\n    def item("), output);
+        assertFalse(output.contains("    @overload\n    def register("), output);
+        assertTrue(output.contains("from typing import Any, Callable, overload, Protocol"), output);
+        assertTrue(output.contains("typeName: str, build: Callable[[FixtureBuilder], None]"), output);
+    }
 
     /** 反射样本：实例字段、getter、实例方法、静态方法、构造器（含 Java 重载）。 */
     public static class Sample {

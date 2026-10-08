@@ -137,6 +137,29 @@ class RegistryBuilderSurfaceGoldenTest {
     }
 
     @Test
+    void startupSoundDeclarationsPreserveNullableBoxedFloatAndRuntimeWrites() {
+        List<RegistryBuilderSurfaceEntry> entries = loaderIndependentEntries();
+        String typescript = RegistryBuilderTsRenderer.render(entries);
+        String python = RegistryBuilderPyRenderer.render(entries);
+        assertTrue(typescript.contains("fixedRange: number | null;"), typescript);
+        assertTrue(typescript.contains("setFixedRange(fixedRange: number | null): void;"), typescript);
+        assertTrue(python.contains("fixedRange: float | None"), python);
+        assertTrue(python.contains("def setFixedRange(self, fixedRange: float | None) -> None: ..."), python);
+        assertEquals("number", RegistryBuilderContract.tsTypeOf(float.class));
+        assertEquals("float", RegistryBuilderContract.pyTypeOf(float.class));
+        SoundEventBuilder builder = new SoundEventBuilder(net.minecraft.resources.Identifier.parse("test:nullable_sound"));
+        try (graal.graalvm.polyglot.Context context = graal.graalvm.polyglot.Context.newBuilder("js")
+                .allowHostAccess(new com.tkisor.nekojs.core.NekoSharedHostAccess(List.of()).get())
+                .allowHostClassLookup(name -> false).build()) {
+            context.getBindings("js").putMember("build", BuilderSurface.of(builder));
+            context.eval("js", "build.fixedRange = 16; build.fixedRange = null;");
+            org.junit.jupiter.api.Assertions.assertNull(builder.getFixedRange());
+            context.eval("js", "build.setFixedRange(32); build.setFixedRange(null);");
+            org.junit.jupiter.api.Assertions.assertNull(builder.getFixedRange());
+        }
+    }
+
+    @Test
     void potionDeclarationsExposeBothEffectOverloads() {
         List<RegistryBuilderSurfaceEntry> entries = loaderIndependentEntries();
         String typescript = RegistryBuilderTsRenderer.render(entries);

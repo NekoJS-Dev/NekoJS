@@ -40,7 +40,7 @@ public final class EventPayloadDeclarations {
                         members.add(member);
                     }
                 }
-                return new EventPayload(previous.eventType(), previous.name(), members);
+                return new EventPayload(previous.eventType(), previous.name(), members, previous.typescriptBuilderNamespace());
             });
         }
         return payloads;

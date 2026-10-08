@@ -242,10 +242,13 @@ public final class RegistryBuilderContract {
         return Character.toLowerCase(rest.charAt(0)) + rest.substring(1);
     }
 
-    /** Java 类型 → TS 类型（declaration 与 runtime 成员同一映射）。 */
+    /** Maps Java types to TypeScript; boxed Float retains the nullable sound-range contract. */
     public static String tsTypeOf(Class<?> type) {
+        if (type == Float.class) {
+            return "number | null";
+        }
         if (type == int.class || type == long.class || type == double.class || type == float.class
-                || type == Integer.class || type == Long.class || type == Double.class || type == Float.class) {
+                || type == Integer.class || type == Long.class || type == Double.class) {
             return "number";
         }
         if (type == boolean.class || type == Boolean.class) {
@@ -257,12 +260,15 @@ public final class RegistryBuilderContract {
         return "any";
     }
 
-    /** Java 类型 → Python 类型（与 TS 同一输入，成员语义一致）。 */
+    /** Maps the same Java types to Python, preserving nullable boxed Float independently of primitive float. */
     public static String pyTypeOf(Class<?> type) {
+        if (type == Float.class) {
+            return "float | None";
+        }
         if (type == int.class || type == long.class || type == Integer.class || type == Long.class) {
             return "int";
         }
-        if (type == double.class || type == float.class || type == Double.class || type == Float.class) {
+        if (type == double.class || type == float.class || type == Double.class) {
             return "float";
         }
         if (type == boolean.class || type == Boolean.class) {

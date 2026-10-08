@@ -596,7 +596,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         var eventBuilders = entries.stream().filter(entry -> entry.eventPayload() != null
                 && payloads.containsKey(entry.eventPayload().eventType())).distinct().toList();
         if (!eventBuilders.isEmpty()) {
-            files.put("@event-builders/index.d.ts", RegistryBuilderTsRenderer.render(eventBuilders));
+            files.put("@event-builders/index.d.ts", RegistryBuilderTsRenderer.renderEventDependencies(eventBuilders));
         }
     }
 

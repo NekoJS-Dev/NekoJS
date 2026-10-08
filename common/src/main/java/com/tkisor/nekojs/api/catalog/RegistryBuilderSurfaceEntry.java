@@ -55,8 +55,15 @@ public record RegistryBuilderSurfaceEntry(
     /**
      * Associate script-only members with an event's host identity without reflecting or exposing that host.
      * Entries for the same event and payload name contribute members to one declaration in each backend.
+     * A nonempty TypeScript builder namespace isolates associated types from legacy global declarations;
+     * the three-argument constructor retains global builder names for existing contributors.
      */
-    public record EventPayload(Class<?> eventType, String name, List<Member> members) {
+    public record EventPayload(Class<?> eventType, String name, List<Member> members,
+                               String typescriptBuilderNamespace) {
+        public EventPayload(Class<?> eventType, String name, List<Member> members) {
+            this(eventType, name, members, null);
+        }
+
         public EventPayload {
             members = List.copyOf(members == null ? List.of() : members);
         }

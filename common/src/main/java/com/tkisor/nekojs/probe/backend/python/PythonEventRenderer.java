@@ -69,7 +69,12 @@ public final class PythonEventRenderer {
         sb.append("# Do not edit; regenerate with `/nekojs probe python`.\n\n");
         // overload 始终引入（即使本文件没有 dispatch 事件；stub 中未使用不报错）
         sb.append("from typing import Any, Callable, overload")
-                .append(payloads.isEmpty() ? "\n" : ", Protocol\n");
+                .append(payloads.isEmpty() ? "" : ", Protocol");
+        if (payloads.values().stream().flatMap(payload -> payload.members().stream())
+                .anyMatch(member -> member.pyType().contains("Literal["))) {
+            sb.append(", Literal");
+        }
+        sb.append('\n');
         List<String> builderNames = EventPayloadDeclarations.builderNames(payloads, builders);
         if (!builderNames.isEmpty()) {
             sb.append("from nekojs._registry_builders import ").append(String.join(", ", builderNames)).append("\n");
@@ -83,13 +88,21 @@ public final class PythonEventRenderer {
             if (payload.members().isEmpty()) {
                 sb.append("    ...\n");
             }
+            Map<String, Long> methodCounts = payload.members().stream()
+                    .filter(member -> member.kind() == RegistryBuilderSurfaceEntry.MemberKind.METHOD)
+                    .collect(Collectors.groupingBy(RegistryBuilderSurfaceEntry.Member::name, Collectors.counting()));
             for (RegistryBuilderSurfaceEntry.Member member : payload.members()) {
                 switch (member.kind()) {
                     case WRITABLE_PROPERTY -> sb.append("    ").append(member.name()).append(": ")
                             .append(member.pyType()).append("\n");
                     case READ_ONLY_PROPERTY -> sb.append("    ").append(member.name()).append(": ")
                             .append(member.pyType()).append("  # read-only\n");
-                    case METHOD -> sb.append("    ").append(member.pyType()).append("\n");
+                    case METHOD -> {
+                        if (methodCounts.get(member.name()) > 1) {
+                            sb.append("    @overload\n");
+                        }
+                        sb.append("    ").append(member.pyType()).append("\n");
+                    }
                 }
             }
         }

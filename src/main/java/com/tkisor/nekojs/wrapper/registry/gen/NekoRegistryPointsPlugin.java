@@ -49,7 +49,7 @@ public final class NekoRegistryPointsPlugin
         // typed Builder 契约条目（ticket 15 AC7/AC9）：从 registry_types 登记的 builder 类
         // 契约反射派生，驱动 TS/Python declaration 与 contract/golden——与手写 manual
         // declaration（legacy 迁移观察面）并存，删除走维护者 gate
-        RegistryBuilderSurfaces.register(registry, registryTypes());
+        RegistryBuilderSurfaces.register(registry, registryInfos(), registryTypes());
     }
 
     @Override

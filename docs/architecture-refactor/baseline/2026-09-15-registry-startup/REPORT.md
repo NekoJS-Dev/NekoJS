@@ -1,5 +1,11 @@
 # Ticket 15 实施报告：启动期注册、typed Builder 与连带注册垂直收口
 
+## 2026-10-08 nullable SoundEvent golden 补验
+
+真实 `SoundEventBuilder#setFixedRange(Float)` 接受 null，属性写入与显式 setter 同一路径。新增受限 HostAccess/禁止宿主类查找的 Proxy 实测分别写入16/null和32/null；两种清除都通过。原 structured TS/Python 将 boxed Float 投影成不可空类型，新映射仅让 boxed Float 成为 `number | null` / `float | None`，primitive float 保持原类型。
+
+普通 golden 测试在26.1.2和1.21.1分别输出待审产物到各节点 `build/nekojs-gates/`；已核对旧新差异每份仅2行：`fixedRange: number` → `fixedRange: number | null`，`setFixedRange(fixedRange: number)` → `setFixedRange(fixedRange: number | null)`。两份 golden 从测试真实产物复制，未手工构造期望或放宽 byte gate。旧值及完整差异保留于 `build/ticket15-startup-declarations/`。这是 agent 对差异的审阅，不伪造维护者 golden 验收；完整 STARTUP event 声明及实机门继续单独验证。
+
 > 工单：`docs/architecture-refactor/implementation-tickets/15-registry-startup.md`。
 > 权威 spec：`08-ported-features-event-surface.md`（Builder 单一写入语义、连带注册、
 > Dynamic Registry 分离）、`04-public-contract-and-plugin-model.md`（契约反射派生、
