@@ -16,6 +16,8 @@ The old event reference included every global structured builder, including unas
 
 Exact artifact hashes, report scope and evidence hashes are in [artifact-manifest.json](artifact-manifest.json) and [evidence-manifest.json](evidence-manifest.json). ZIP contents were byte-verified against their source files. Credentials, server.properties, worlds and raw JFR are excluded. Raw logs include existing Windows Netty appender diagnostics; this is not an error-free boot claim.
 
+A delivery check found that Git had normalized one derived JSON (`live-diagnostic-delta.json`) before the raw-capture attributes took effect. Re-adding it with the established attributes restores its original CRLF bytes; all28 evidence entries now match their committed/index bytes and manifest SHA256. Diagnostic contents and verdicts are unchanged.
+
 The archived harnesses retain their actual execution paths; the corrected audit loads the previous build audit with the companion-reference expectation updated. That previous audit is also archived for provenance. Restoring these scripts elsewhere requires restoring or adjusting paths, not editing generated declarations.
 
 [Two-axis source review](REVIEW.md): zero demonstrated standards breaches, one nonblocking duplication suggestion, zero spec findings. Source-only review does not independently certify runtime evidence.
