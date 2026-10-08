@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe.backend.typescript;
 
 import com.tkisor.nekojs.probe.EditorConfigContributor;
+import com.tkisor.nekojs.probe.EventPayloadDeclarations;
 import com.tkisor.nekojs.probe.FileEditorConfigContributor;
 import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeConfig;
@@ -581,6 +582,9 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
      * 输入是 {@link com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry}——由版本树
      * 对 builder 类的契约反射派生；Python 后端从<b>同一</b>条目列表渲染
      * {@code nekojs/_registry_builders/__init__.pyi}，成员语义两侧一致。
+     *
+     * <p>Event dependencies use only explicitly associated entries from the same facts;
+     * the complete legacy file remains available without merging unrelated globals into default events.
      */
     private void renderRegistryBuilderSurfaces(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {
         var entries = snapshot.registryBuilderSurfaces();
@@ -588,6 +592,12 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             return;
         }
         files.put("@registry-builders/index.d.ts", RegistryBuilderTsRenderer.render(entries));
+        var payloads = EventPayloadDeclarations.resolve(snapshot.events(), entries);
+        var eventBuilders = entries.stream().filter(entry -> entry.eventPayload() != null
+                && payloads.containsKey(entry.eventPayload().eventType())).distinct().toList();
+        if (!eventBuilders.isEmpty()) {
+            files.put("@event-builders/index.d.ts", RegistryBuilderTsRenderer.render(eventBuilders));
+        }
     }
 
     private void renderManualDeclarations(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {

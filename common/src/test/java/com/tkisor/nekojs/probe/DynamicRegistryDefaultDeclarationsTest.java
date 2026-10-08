@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
@@ -55,6 +56,38 @@ class DynamicRegistryDefaultDeclarationsTest {
     }
 
     @Test
+    void eventBuilderDependenciesExcludeUnassociatedLegacyGlobalsAndSameNameSpoofs() throws IOException {
+        RegistryBuilderSurfaceEntry legacy = new RegistryBuilderSurfaceEntry("SoundEventBuilder", "minecraft:sound_event",
+                "basic", "soundEvent", List.of(new RegistryBuilderSurfaceEntry.Member("fixedRange", RegistryBuilderSurfaceEntry.MemberKind.WRITABLE_PROPERTY, "number", "float")), "");
+        RegistryBuilderSurfaceEntry spoof = new RegistryBuilderSurfaceEntry("DynamicItemBuilder", "test:spoof",
+                "basic", "spoof", List.of(new RegistryBuilderSurfaceEntry.Member("spoofMember", RegistryBuilderSurfaceEntry.MemberKind.WRITABLE_PROPERTY, "boolean", "bool")), "");
+        List<RegistryBuilderSurfaceEntry> builders = new java.util.ArrayList<>(DynamicBuilderSurfaces.derive());
+        builders.add(legacy);
+        builders.add(spoof);
+        String manual = "interface SoundEventBuilder { fixedRange: number | null; }";
+        var snapshot = NekoScriptCatalog.snapshot(NekoPluginBootstrap.bootstrap(List.of(new DeclarationPlugin(builders,
+                List.of(ManualDeclarationCatalogEntry.of("test:legacy", manual, "", List.of())))),
+                new ScriptPropertyRegistry.Impl()));
+        Map<String, String> outputs = render(snapshot).typescript();
+        String events = outputs.get("@side-only/server/events/index.d.ts");
+        assertTrue(events.contains("/// <reference path=\"../../../@event-builders/index.d.ts\" />"), events);
+        assertFalse(events.contains("../../../@registry-builders/"), events);
+        String dependencies = outputs.get("@event-builders/index.d.ts");
+        assertTrue(dependencies.contains("interface DynamicItemBuilder {"), dependencies);
+        assertTrue(dependencies.contains("interface DynamicSoundEventBuilder {"), dependencies);
+        assertTrue(dependencies.contains("interface DynamicMobEffectBuilder {"), dependencies);
+        assertFalse(dependencies.contains("interface SoundEventBuilder {"), dependencies);
+        assertFalse(dependencies.contains("spoofMember"), dependencies);
+        assertTrue(outputs.get("@registry-builders/index.d.ts").contains("interface SoundEventBuilder {"));
+        assertTrue(outputs.get("@registry-builders/index.d.ts").contains("spoofMember"));
+        assertTrue(outputs.get("@manual/index.d.ts").contains(manual));
+        String captureDirectory = System.getenv("NEKO_EVENT_DEPENDENCY_CAPTURE");
+        if (captureDirectory != null) {
+            capture(Path.of(captureDirectory), outputs);
+        }
+    }
+
+    @Test
     void emptyAssociatedPayloadHasAnExplicitPythonProtocolBody() throws IOException {
         RegistryBuilderSurfaceEntry builder = DynamicBuilderSurfaces.derive().getFirst();
         RegistryBuilderSurfaceEntry emptyPayload = new RegistryBuilderSurfaceEntry(
@@ -79,8 +112,8 @@ class DynamicRegistryDefaultDeclarationsTest {
         String pyEvents = python.get("nekojs/_events/server/__init__.pyi");
         assertTrue(tsEvents.contains("event: DynamicRegistryEvent"),
                 "Default SERVER callback must reference a declared script-only payload instead of the excluded host class");
-        assertTrue(tsEvents.contains("/// <reference path=\"../../../@registry-builders/index.d.ts\" />"),
-                "The included side event declaration must pull the existing global builder file into default projects");
+        assertTrue(tsEvents.contains("/// <reference path=\"../../../@event-builders/index.d.ts\" />"),
+                "The side event declaration must include only explicitly associated builder facts");
         assertTrue(tsEvents.contains("interface DynamicRegistryEvent {"));
         assertTrue(pyEvents.contains("Callable[[DynamicRegistryEvent], None]"));
         assertTrue(pyEvents.contains("class DynamicRegistryEvent(Protocol):"));
@@ -134,6 +167,8 @@ class DynamicRegistryDefaultDeclarationsTest {
         BackendOutputs outputs = render(catalog(unassociated));
         String tsEvents = outputs.typescript().get("@side-only/server/events/index.d.ts");
         String pyEvents = outputs.python().get("nekojs/_events/server/__init__.pyi");
+        assertFalse(tsEvents.contains("../../../@event-builders/"));
+        assertFalse(outputs.typescript().containsKey("@event-builders/index.d.ts"));
         assertFalse(tsEvents.contains("interface DynamicRegistryEvent {"));
         assertFalse(pyEvents.contains("class DynamicRegistryEvent(Protocol):"));
         assertFalse(pyEvents.contains("from nekojs._registry_builders import"));
@@ -192,7 +227,11 @@ class DynamicRegistryDefaultDeclarationsTest {
                 new ScriptPropertyRegistry.Impl()));
     }
 
-    private record DeclarationPlugin(List<RegistryBuilderSurfaceEntry> builders) implements NekoJSPlugin {
+    private record DeclarationPlugin(List<RegistryBuilderSurfaceEntry> builders,
+                                     List<ManualDeclarationCatalogEntry> manualDeclarations) implements NekoJSPlugin {
+        private DeclarationPlugin(List<RegistryBuilderSurfaceEntry> builders) {
+            this(builders, List.of());
+        }
         @Override
         public void registerEvents(EventGroupRegistry registry) {
             registry.register(DynamicRegistryEvents.GROUP);
@@ -206,6 +245,7 @@ class DynamicRegistryDefaultDeclarationsTest {
         @Override
         public void registerTypeDocs(TypeDocsRegister registry) {
             builders.forEach(registry::registerRegistryBuilderSurface);
+            manualDeclarations.forEach(registry::registerManualDeclaration);
         }
     }
 

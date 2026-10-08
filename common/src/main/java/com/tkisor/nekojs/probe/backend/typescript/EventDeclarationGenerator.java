@@ -56,7 +56,7 @@ public final class EventDeclarationGenerator {
         Map<Class<?>, EventPayload> payloads = EventPayloadDeclarations.resolve(events, builders);
         StringBuilder sb = new StringBuilder();
         if (!payloads.isEmpty()) {
-            sb.append("/// <reference path=\"../../../@registry-builders/index.d.ts\" />\n\n");
+            sb.append("/// <reference path=\"../../../@event-builders/index.d.ts\" />\n\n");
         }
 
         // 收集所有需要 import 的类型
