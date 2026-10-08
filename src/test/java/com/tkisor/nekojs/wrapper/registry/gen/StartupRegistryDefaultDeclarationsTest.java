@@ -94,6 +94,32 @@ class StartupRegistryDefaultDeclarationsTest {
     }
 
     @Test
+    void untypedFactoryOverrideDoesNotRetainThePreviousBuilderClass() {
+        initializePlatform();
+        RegistryTypesPoint.Contributor addon = new RegistryTypesPoint.Contributor() {
+            @Override
+            public void registerRegistryTypes(RegistryTypesPoint.RegistryTypesCollector collector) {
+                collector.registerType(net.minecraft.core.registries.Registries.SOUND_EVENT, "basic", VariantSoundBuilder::new);
+            }
+        };
+        var runtime = NekoPluginBootstrap.bootstrap(List.of(new NekoRegistryPointsPlugin(), addon), new ScriptPropertyRegistry.Impl());
+        var types = NekoRegistryPointsPlugin.registryTypes();
+        var soundRegistry = net.minecraft.core.registries.Registries.SOUND_EVENT;
+        assertInstanceOf(VariantSoundBuilder.class, types.defaultType(soundRegistry)
+                .apply(net.minecraft.resources.Identifier.parse("test:overridden")));
+        assertFalse(types.builderClassesOf(soundRegistry).containsKey("basic"),
+                "An untyped replacement factory must discard the previous factory's class metadata");
+        var snapshot = NekoScriptCatalog.snapshot(runtime);
+        var payload = com.tkisor.nekojs.probe.EventPayloadDeclarations.resolve(snapshot.events(), snapshot.registryBuilderSurfaces())
+                .get(RegistryEventJS.class);
+        List<String> signatures = payload.members().stream().map(member -> member.tsType()).toList();
+        assertTrue(signatures.contains("soundEvent(id: string, build: (build: any) => void): any"));
+        assertTrue(signatures.contains("soundEvent(id: string, typeName: \"basic\", build: (build: any) => void): any"));
+        assertTrue(payload.members().stream().filter(member -> member.name().equals("soundEvent"))
+                .allMatch(member -> member.pyType().contains("Callable[[Any], None]) -> Any")));
+    }
+
+    @Test
     void realPluginAndDefaultCollectorExposeTheProxyContractInBothBackends() throws Exception {
         initializePlatform();
         var runtime = NekoPluginBootstrap.bootstrap(List.of(new NekoRegistryPointsPlugin()), new ScriptPropertyRegistry.Impl());

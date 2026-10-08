@@ -65,15 +65,19 @@ public final class RegistryTypesPoint {
         public <B extends RegistryObjectBuilder<?>> void registerType(
                 ResourceKey<? extends Registry<?>> registry, String name,
                 Class<B> builderType, Function<Identifier, B> factory) {
-            byRegistry.computeIfAbsent(registry, k -> new LinkedHashMap<>()).merge(name, factory,
-                    (oldFactory, newFactory) -> {
-                        boolean keepNew = POLICY.resolveDuplicate(ID + "(" + registry.identifier() + ")",
-                                "plugin", name, LOGGER);
-                        return keepNew ? newFactory : oldFactory;
-                    });
+            java.util.Objects.requireNonNull(factory);
+            var factories = byRegistry.computeIfAbsent(registry, k -> new LinkedHashMap<>());
+            if (factories.containsKey(name) && !POLICY.resolveDuplicate(ID + "(" + registry.identifier() + ")",
+                    "plugin", name, LOGGER)) {
+                return;
+            }
+            factories.put(name, factory);
+            // Class metadata belongs to the selected factory; an untyped override invalidates the old class.
             if (builderType != null) {
                 builderClasses.computeIfAbsent(registry, k -> new LinkedHashMap<>())
                         .put(name, builderType);
+            } else if (builderClasses.containsKey(registry)) {
+                builderClasses.get(registry).remove(name);
             }
         }
 
