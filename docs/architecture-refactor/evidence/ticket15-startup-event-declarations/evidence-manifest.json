@@ -1,0 +1,52 @@
+[
+  {
+    "path": "artifact-manifest.json",
+    "size": 3863,
+    "sha256": "950ebd6e917d38f32ae044c732b409a1a43059149f8cec81c4c061bdd8b3da2c"
+  },
+  {
+    "path": "initial-bdfd7777-actual-probe.zip",
+    "size": 1181176,
+    "sha256": "169a42c6f4eae80e1a23c39be143622cb8191b0fc4a5fb5dcb71ba6d5103d217"
+  },
+  {
+    "path": "initial-bdfd7777-installed-evidence.zip",
+    "size": 29989,
+    "sha256": "3f8fe1cd176dbce0c888b07011bc170641c8c2c8360484a572764896f21eec02"
+  },
+  {
+    "path": "matrix-capture.zip",
+    "size": 446650,
+    "sha256": "0a9d5cf8b615b9bebb0d813abeb7814277c556844f57d43bf2dce0955ac4a983"
+  },
+  {
+    "path": "README.md",
+    "size": 6453,
+    "sha256": "bfca18c20150f5b692ea5c4ad735cdfbcb5e0f01d42ffbd5dc2f371bb23b3252"
+  },
+  {
+    "path": "REVIEW.md",
+    "size": 1837,
+    "sha256": "7cf86ea061f3ebbcf4156a08668ba1adb759f346c10632770099a8f99da2d24c"
+  },
+  {
+    "path": "reviewed-4431faeb-actual-probe.zip",
+    "size": 1181146,
+    "sha256": "2075ac1851f4dd353f8a59383b4ff827f26df8722bc624bc658a30b54a801422"
+  },
+  {
+    "path": "reviewed-4431faeb-installed-evidence.zip",
+    "size": 29609,
+    "sha256": "5adb7cea3ca4539ce41457c891a53b58838b24b7fa964fde44063f242f139fed"
+  },
+  {
+    "path": "reviewed-matrix-capture.zip",
+    "size": 446650,
+    "sha256": "0a9d5cf8b615b9bebb0d813abeb7814277c556844f57d43bf2dce0955ac4a983"
+  },
+  {
+    "path": "validation.zip",
+    "size": 2271978,
+    "sha256": "2f6a23d19f6f5e63c3744810d00448563185b8e8ebd36db7f354def60df955d0"
+  }
+]

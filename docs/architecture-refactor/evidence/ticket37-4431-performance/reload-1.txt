@@ -1,0 +1,19 @@
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult\build\ticket37-perf-owned-ac810fa7\versions\26.1.2\run
+[session] reload-session started pid=27716
+[session] reload-session Done(0.533) wall=72020ms
+[reload] #1 marker=491 ms rcon=329 ms resp=NekoJS server reload committed: generation=2 phase=COMMIT - no errors.
+
+[reload] #2 marker=358 ms rcon=248 ms resp=NekoJS server reload committed: generation=3 phase=COMMIT - no errors.
+
+[reload] #3 marker=328 ms rcon=326 ms resp=NekoJS server reload committed: generation=4 phase=COMMIT - no errors.
+
+[reload] #4 marker=344 ms rcon=234 ms resp=NekoJS server reload committed: generation=5 phase=COMMIT - no errors.
+
+[reload] #5 marker=339 ms rcon=210 ms resp=NekoJS server reload committed: generation=6 phase=COMMIT - no errors.
+
+[sample] "tag":"reload-session","wall_total_ms":90094,"ts_utc":"2026-10-08T12:18:09.6578669Z","rcon_response":"NekoJS server reload committed: generation=2 phase=COMMIT - no errors. ","pid":27716,"mode":"reload","rev":"4431faeb","rcon_rtt_ms":329,"index":1,"kind":"formal","marker_ms":491,"marker_line":"[20:17:54] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791461799505-tick ","stop_channel":"rcon","done_s":"0.533","wall_done_ms":72020,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":90094,"ts_utc":"2026-10-08T12:18:09.6834509Z","rcon_response":"NekoJS server reload committed: generation=3 phase=COMMIT - no errors. ","pid":27716,"mode":"reload","rev":"4431faeb","rcon_rtt_ms":248,"index":2,"kind":"formal","marker_ms":358,"marker_line":"[20:17:58] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791461799505-tick ","stop_channel":"rcon","done_s":"0.533","wall_done_ms":72020,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":90094,"ts_utc":"2026-10-08T12:18:09.6971551Z","rcon_response":"NekoJS server reload committed: generation=4 phase=COMMIT - no errors. ","pid":27716,"mode":"reload","rev":"4431faeb","rcon_rtt_ms":326,"index":3,"kind":"formal","marker_ms":328,"marker_line":"[20:18:01] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791461799505-tick ","stop_channel":"rcon","done_s":"0.533","wall_done_ms":72020,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":90094,"ts_utc":"2026-10-08T12:18:09.6991507Z","rcon_response":"NekoJS server reload committed: generation=5 phase=COMMIT - no errors. ","pid":27716,"mode":"reload","rev":"4431faeb","rcon_rtt_ms":234,"index":4,"kind":"formal","marker_ms":344,"marker_line":"[20:18:05] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791461799505-tick ","stop_channel":"rcon","done_s":"0.533","wall_done_ms":72020,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":90094,"ts_utc":"2026-10-08T12:18:09.7011482Z","rcon_response":"NekoJS server reload committed: generation=6 phase=COMMIT - no errors. ","pid":27716,"mode":"reload","rev":"4431faeb","rcon_rtt_ms":210,"index":5,"kind":"formal","marker_ms":339,"marker_line":"[20:18:08] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791461799505-tick ","stop_channel":"rcon","done_s":"0.533","wall_done_ms":72020,"node":"26.1.2","forced_kill":false,"killed":false
+[done] reload sampling -> D:\mcmodDemo\NekoJS-mult\build\ticket37-perf-owned-ac810fa7\bench\perf\out\20261008T121637Z-reload-26.1.2

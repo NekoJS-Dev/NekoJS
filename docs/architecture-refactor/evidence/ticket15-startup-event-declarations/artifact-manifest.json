@@ -1,0 +1,148 @@
+{
+  "source_revision": "4431faeb2b404c914e66e85c41c2fd0ba3d14535",
+  "initial_source_revision": "bdfd77774b2a0fb505964fa76127eb42673724c5",
+  "base_revision": "f26f76a2d7d915fa3ef5b515da47eefd9b5ba828",
+  "command": "gradlew.bat :common:check :common-api-processor:test :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build verifyExternalAddonIsolation guardLint --offline --console=plain",
+  "build_exit": 0,
+  "elapsed": "50s",
+  "tasks": 104,
+  "executed": 51,
+  "up_to_date": 53,
+  "ordinary_tests": {
+    "tests": 4562,
+    "skipped": 271,
+    "failures": 0,
+    "errors": 0,
+    "reports": 784
+  },
+  "python_ast_files": 344,
+  "python_ast_failures": 0,
+  "focused_pyright": {
+    "filesAnalyzed": 3,
+    "errorCount": 0,
+    "warningCount": 0,
+    "informationCount": 0,
+    "timeInSec": 0.575
+  },
+  "negative_pyright": {
+    "filesAnalyzed": 1,
+    "errorCount": 7,
+    "warningCount": 0,
+    "informationCount": 0,
+    "timeInSec": 0.19
+  },
+  "full_pyright": {
+    "filesAnalyzed": 344,
+    "errorCount": 2036,
+    "warningCount": 0,
+    "informationCount": 0,
+    "timeInSec": 3.91
+  },
+  "full_strict_tsc": {
+    "server": {
+      "exit": 2,
+      "diagnostics": 3109,
+      "codes": {
+        "TS2304": 539,
+        "TS2749": 11,
+        "TS2300": 134,
+        "TS1038": 4,
+        "TS1225": 2,
+        "TS2420": 136,
+        "TS1070": 448,
+        "TS2307": 138,
+        "TS2305": 165,
+        "TS2314": 478,
+        "TS1268": 38,
+        "TS2724": 21,
+        "TS2344": 530,
+        "TS1337": 29,
+        "TS1341": 1,
+        "TS1089": 1,
+        "TS1093": 2,
+        "TS2506": 1,
+        "TS2315": 25,
+        "TS2416": 322,
+        "TS2430": 14,
+        "TS2552": 4,
+        "TS7051": 12,
+        "TS7008": 1,
+        "TS2507": 6,
+        "TS2426": 4,
+        "TS2694": 12,
+        "TS2610": 2,
+        "TS2423": 1,
+        "TS2611": 1,
+        "TS2417": 23,
+        "TS2693": 4
+      }
+    },
+    "startup": {
+      "exit": 2,
+      "diagnostics": 3110,
+      "codes": {
+        "TS2304": 539,
+        "TS2749": 11,
+        "TS2300": 134,
+        "TS1038": 4,
+        "TS1225": 2,
+        "TS2420": 136,
+        "TS1070": 448,
+        "TS2307": 139,
+        "TS2305": 165,
+        "TS2314": 478,
+        "TS1268": 38,
+        "TS2724": 21,
+        "TS2344": 530,
+        "TS1337": 29,
+        "TS1341": 1,
+        "TS1089": 1,
+        "TS1093": 2,
+        "TS2506": 1,
+        "TS2315": 25,
+        "TS2416": 322,
+        "TS2430": 14,
+        "TS2552": 4,
+        "TS7051": 12,
+        "TS7008": 1,
+        "TS2507": 6,
+        "TS2426": 4,
+        "TS2694": 12,
+        "TS2610": 2,
+        "TS2423": 1,
+        "TS2611": 1,
+        "TS2417": 23,
+        "TS2693": 4
+      }
+    }
+  },
+  "actual_caller_diagnostics": 0,
+  "manual_byte_identical": true,
+  "artifacts": [
+    {
+      "path": "versions/1.21.1/build/libs/nekojs-neoforge-1.21.1-1.1.0-preview3.jar",
+      "size": 2914462,
+      "sha256": "373CECD759954098E1E4022743D7AE819989A4C392F13C8915A9D657987CD995"
+    },
+    {
+      "path": "versions/26.1.2/build/libs/nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "size": 16747302,
+      "sha256": "697B1A1619294E7DD55120822EA6DCBCF72A6F47FD60D0DB945D807A4A3C4358"
+    },
+    {
+      "path": "versions/26.2.0/build/libs/nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+      "size": 17219113,
+      "sha256": "1209F0FC75528607DD1CDFB9D5D01F8876E501377B689C07418E05B170AAEB7C"
+    },
+    {
+      "path": "versions/26.1.2-fabric/build/libs/nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+      "size": 18012863,
+      "sha256": "4FBC0AA1446865B67BEB5FC12F7863454E1CE9A1ABC890E03A60835DD7E8E371"
+    },
+    {
+      "path": "versions/26.2.0-fabric/build/libs/nekojs-fabric-26.2-1.1.0-preview3.jar",
+      "size": 18012862,
+      "sha256": "5D0859B79AC0D276937E8EA49D3F2710A4A192761FE04ECFB30D202E44837767"
+    }
+  ]
+}

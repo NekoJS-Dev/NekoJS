@@ -46,6 +46,12 @@
 - 旧14参数 `NekoScriptCatalogSnapshot` public ctor仍有测试消费者；完整新ctor存在，但不能声称无调用者。
 - 本轮不删除以上符号，也不伪造维护者确认。确切迁移/不删除清单见 `evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md`；技术缺口仍须后续补齐。
 
+## 2026-10-08 定向声明补验
+
+`4431faeb` 从生产 registry infos/types 通过既有 type_docs 派生 STARTUP 必需 callback、二/三参数、具名工厂、custom/register 声明；TS builder namespace 隔离并保留 manual，Python overload/Literal 与 SoundEvent nullable 同步。审查发现并修复无 class 元数据覆盖工厂后残留旧类的问题。最终五节点4562测试/271跳过/零失败；五节点定向严格Pyright通过，两个Fabric定向严格TSC通过，三个NeoForge保留六条manual错误。
+
+精确新NeoForge26.2 JAR实机完成14项注册检查、嵌套block item、fluid连带/抑制、block/fluid放置、Probe和MobEffect重载后施加；正常RCON关服。全部344份实机Python stub语法通过，但完整严格Pyright仍有2036诊断；真实默认严格TSC为server3109/startup3110诊断，STARTUP caller不增加诊断。证据与边界见[补验包](../evidence/ticket15-startup-event-declarations/README.md)。单节点注册存在性不等于嵌套指纹parity、FluidType身份、全部节点安装包、多人或视觉验收；manual删除与维护者golden结论仍未取得，本票保持in-progress。
+
 ## Sources
 
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)

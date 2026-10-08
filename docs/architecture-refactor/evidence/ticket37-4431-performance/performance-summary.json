@@ -1,0 +1,63 @@
+{
+  "source_revision": "4431faeb2b404c914e66e85c41c2fd0ba3d14535",
+  "sampler_sha256": "1F9C5D14A1A586DA4B3F1CA8E71B2407CE089EE8BEE185418963E1B5745DF0B4",
+  "groups": [
+    {
+      "group": "20261008T121637Z-reload-26.1.2",
+      "mode": "reload",
+      "values_ms": [
+        491,
+        358,
+        328,
+        344,
+        339
+      ],
+      "mean_ms": 372.0,
+      "threshold_ms": 285.3,
+      "verdict": "FAIL",
+      "warmups_ms": [],
+      "sampler_exit_code": null
+    },
+    {
+      "group": "20261008T122001Z-reload-26.1.2",
+      "mode": "reload",
+      "values_ms": [
+        366,
+        386,
+        375,
+        249,
+        324
+      ],
+      "mean_ms": 340.0,
+      "threshold_ms": 285.3,
+      "verdict": "FAIL",
+      "warmups_ms": [],
+      "sampler_exit_code": 0
+    },
+    {
+      "group": "20261008T122047Z-startup-26.1.2",
+      "mode": "startup",
+      "values_ms": [
+        14002,
+        12639,
+        21303,
+        23766,
+        23921
+      ],
+      "mean_ms": 19126.2,
+      "threshold_ms": 41173,
+      "verdict": "PASS",
+      "warmups_ms": [
+        25135,
+        24469
+      ],
+      "sampler_exit_code": 0
+    }
+  ],
+  "all_ten_reload_mean_ms": 356.0,
+  "combined_verdict": "NOT GREEN",
+  "first_outer_capture_exit": -1,
+  "first_sampler_exit_code_observed": false,
+  "game_shutdown": "All nine sessions used normal RCON; no forced kill",
+  "comparison_scope": "Same exact runtime revision; no cross-revision or JFR pooling"
+}
