@@ -1,0 +1,29 @@
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult\build\ticket37-perf-owned-ac810fa7\versions\26.1.2\run
+[session] startup-1-warmup started pid=13196
+[session] startup-1-warmup Done(0.427) wall=43384ms
+[sample] "pid":13196,"ts_utc":"2026-10-07T16:31:26.6318919Z","forced_kill":false,"timeout":null,"rev":"b7c788cb","node":"26.1.2","stop_channel":"rcon","wall_total_ms":45525,"wall_done_ms":43384,"kind":"warmup","index":1,"killed":false,"done_s":"0.427","tag":"startup-1-warmup","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult\build\ticket37-perf-owned-ac810fa7\versions\26.1.2\run
+[session] startup-2-warmup started pid=25240
+[session] startup-2-warmup Done(0.538) wall=27724ms
+[sample] "pid":25240,"ts_utc":"2026-10-07T16:31:56.6326319Z","forced_kill":false,"timeout":null,"rev":"b7c788cb","node":"26.1.2","stop_channel":"rcon","wall_total_ms":29950,"wall_done_ms":27724,"kind":"warmup","index":2,"killed":false,"done_s":"0.538","tag":"startup-2-warmup","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult\build\ticket37-perf-owned-ac810fa7\versions\26.1.2\run
+[session] startup-3-formal started pid=536
+[session] startup-3-formal Done(0.574) wall=27147ms
+[sample] "pid":536,"ts_utc":"2026-10-07T16:32:25.9182579Z","forced_kill":false,"timeout":null,"rev":"b7c788cb","node":"26.1.2","stop_channel":"rcon","wall_total_ms":29242,"wall_done_ms":27147,"kind":"formal","index":3,"killed":false,"done_s":"0.574","tag":"startup-3-formal","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult\build\ticket37-perf-owned-ac810fa7\versions\26.1.2\run
+[session] startup-4-formal started pid=28060
+[session] startup-4-formal Done(0.403) wall=25060ms
+[sample] "pid":28060,"ts_utc":"2026-10-07T16:32:52.9423822Z","forced_kill":false,"timeout":null,"rev":"b7c788cb","node":"26.1.2","stop_channel":"rcon","wall_total_ms":26982,"wall_done_ms":25060,"kind":"formal","index":4,"killed":false,"done_s":"0.403","tag":"startup-4-formal","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult\build\ticket37-perf-owned-ac810fa7\versions\26.1.2\run
+[session] startup-5-formal started pid=22480
+[session] startup-5-formal Done(0.471) wall=25023ms
+[sample] "pid":22480,"ts_utc":"2026-10-07T16:33:20.1698689Z","forced_kill":false,"timeout":null,"rev":"b7c788cb","node":"26.1.2","stop_channel":"rcon","wall_total_ms":27156,"wall_done_ms":25023,"kind":"formal","index":5,"killed":false,"done_s":"0.471","tag":"startup-5-formal","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult\build\ticket37-perf-owned-ac810fa7\versions\26.1.2\run
+[session] startup-6-formal started pid=4616
+[session] startup-6-formal Done(0.420) wall=29625ms
+[sample] "pid":4616,"ts_utc":"2026-10-07T16:33:52.1452266Z","forced_kill":false,"timeout":null,"rev":"b7c788cb","node":"26.1.2","stop_channel":"rcon","wall_total_ms":31920,"wall_done_ms":29625,"kind":"formal","index":6,"killed":false,"done_s":"0.420","tag":"startup-6-formal","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-mult\build\ticket37-perf-owned-ac810fa7\versions\26.1.2\run
+[session] startup-7-formal started pid=30152
+[session] startup-7-formal Done(0.469) wall=28602ms
+[sample] "pid":30152,"ts_utc":"2026-10-07T16:34:23.0370448Z","forced_kill":false,"timeout":null,"rev":"b7c788cb","node":"26.1.2","stop_channel":"rcon","wall_total_ms":30858,"wall_done_ms":28602,"kind":"formal","index":7,"killed":false,"done_s":"0.469","tag":"startup-7-formal","mode":"startup"
+[done] stdin-ok= -> D:\mcmodDemo\NekoJS-mult\build\ticket37-perf-owned-ac810fa7\bench\perf\out\20261007T163039Z-startup-26.1.2

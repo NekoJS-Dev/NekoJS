@@ -1,0 +1,8 @@
+{
+  "runtime_source": "b7c788cb",
+  "config": "extends actual installed server_scripts/jsconfig.json, only skipLibCheckfalse/noEmittrue",
+  "exit_code": 2,
+  "diagnostic_count": 3116,
+  "scope": "all actual default editor includes and plugins",
+  "product_config_unchanged": true
+}

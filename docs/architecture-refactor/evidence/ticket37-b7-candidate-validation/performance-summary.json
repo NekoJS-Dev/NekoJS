@@ -1,0 +1,50 @@
+[
+  {
+    "group": "20261007T163039Z-startup-26.1.2",
+    "mode": "startup",
+    "metric": "wall_done_ms",
+    "formal": 5,
+    "warmup": 2,
+    "values": [
+      27147,
+      25060,
+      25023,
+      29625,
+      28602
+    ],
+    "mean_ms": 27091.4,
+    "source_revision": "b7c788cbbc1c18822b465feb9f0cda0330735570"
+  },
+  {
+    "group": "20261007T163426Z-reload-26.1.2",
+    "mode": "reload",
+    "metric": "marker_ms",
+    "formal": 5,
+    "warmup": 0,
+    "values": [
+      293,
+      357,
+      240,
+      340,
+      373
+    ],
+    "mean_ms": 320.6,
+    "source_revision": "b7c788cbbc1c18822b465feb9f0cda0330735570"
+  },
+  {
+    "group": "20261007T163516Z-reload-26.1.2",
+    "mode": "reload",
+    "metric": "marker_ms",
+    "formal": 5,
+    "warmup": 0,
+    "values": [
+      404,
+      209,
+      282,
+      386,
+      355
+    ],
+    "mean_ms": 327.2,
+    "source_revision": "b7c788cbbc1c18822b465feb9f0cda0330735570"
+  }
+]

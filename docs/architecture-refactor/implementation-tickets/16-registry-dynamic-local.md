@@ -36,11 +36,11 @@
 
 ## 当前补验与删除门禁（2026-10-07）
 
-- 五节点build现已再次通过。旧 local/inert fixture不等于跨进程同步或actual MobEffect激活证据，这两项仍未验证。
+- 五节点build再次通过；`b7c788cb`精确官方26.2NeoForge生产JAR安装到全新专属world后，实际三类registrycounts为1registered/0stale，vanilla effect give/data get证明MobEffect真实施加，identical-definitionreloadgeneration2COMMIT后clear/reapply与实体active_effects/amplifier1通过。实际默认Probe命令产出TS359/Python346files，动态payload关联三入口/concreteoptionalbool/导入通过；完整实机PythonAST340pass/4syntaxFAIL（$方法/数字开头Bean属性），不宣称完整IDE验收。首试未加载实体区块失败和WindowsNetty日志appender诊断完整保留。见[精确安装/性能补验](../evidence/ticket37-b7-candidate-validation/README.md)。此为26.2单服scope，跨进程多人同步、客户端ACK/abort/registryparity与其他节点actualeffect仍未验证，能力表不自动全面升级。
 - Adapter与transport registration现已接线；historical unwired说明不再是当前source trace，但wire contract冻结不变、P能力不自动升级。
 - 旧Script facade六个overload/fluentbuilders/immediate handle仍需精确确认和消费者迁移，删除前必须转移其 `close -> beginServerReload` 生命周期。
 - 新路径仍使用 shared DynamicRegistries/RegistrySurgery/RegistryDataCollectorMixin/config gate/debug；这些不是旧路径删除对象。
-- 2026-10-07 已修复 fixedRange nullable与setMode concrete fluent返回：同一反射输入产生TS/Python精准类型，primitive stack size不变，新增两组red→green和5行dynamic golden差异通过。`$DynamicRegistryEventJS` 默认import/typed Proxy入口仍开：default ProbeConfig排除core包，payload的三个实际入口是private ProxyExecutable目录，不是public Java方法。此为当前source trace，不冒充完整默认Probe输出验收；不得用builder golden或放宽core安全扫描来掩盖。见 `evidence/ticket15-16-declaration-precision/README.md`。
+- 2026-10-07 fixedRange nullable与setMode concrete fluent修复已交付；随后`b7c788cb`通过既有type_docs添加declaration-only精确payload关联，在实际插件bootstrap→default collector→两完整backend路径修复默认`$DynamicRegistryEventJS`悬空/typed Proxy声明。严格实际生成TS调用者通过；25Python stub AST与三个builder导入解析通过（Pyright未运行）；生产HostAccess/ClassFilter仍拒绝core Java.type，三实际入口/optional omission/boolean返回保持一致。全五节点common隔离/构建4534报告tests、271skipped、0failures/errors；旧脚本事件null-host与空Protocol回归经过真实red→green修复，无golden改动。此窄缺口已闭合，但不是完整live Probe、actual MobEffect/多人激活或删除批准。见[精确声明证据](../evidence/ticket16-default-proxy-declarations/README.md)；[历史缺口链](../evidence/ticket15-16-declaration-precision/DEFAULT-PROXY-GAP.md)保留为旧版本诊断。
 - 确切public迁移/不删除清单见 `evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md`；维护者确认未代答。
 
 ## Sources

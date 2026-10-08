@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "D:\mcmodDemo\NekoJS-mult\build\ticket37-check-live-probe.py", line 12, in <module>
+    parsed[file] = ast.parse(file.read_text(encoding='utf-8'), filename=str(file))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\11515\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\Lib\ast.py", line 52, in parse
+    return compile(source, filename, mode, flags,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\mcmodDemo\NekoJS-mult\build\ticket37-b7-installed-26.2\.neko_probe\python\nekojs\_java\com\tkisor\nekojs\api\recipe\__init__.pyi", line 18
+    def nekojs$applyScripts(self) -> None: ...
+              ^
+SyntaxError: expected '('

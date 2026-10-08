@@ -1,0 +1,81 @@
+OWNED_INSTALLED_SERVER_PID=32844
+COMMAND=nekojs probe typescript
+RESPONSE=Generating probe (typescript:builtin)...
+Probe generated: 359 files in 407ms
+  Output: .neko_probe\typescript
+
+COMMAND=nekojs probe python
+RESPONSE=Generating probe (python:builtin)...
+Probe generated: 346 files in 211ms
+  Output: .neko_probe\python
+
+COMMAND=forceload add 0 0
+RESPONSE=Marked chunk [0, 0] in Overworld to be force loaded
+
+COMMAND=fill -1 79 -1 1 79 1 minecraft:stone
+RESPONSE=Successfully filled 9 block(s)
+
+COMMAND=summon minecraft:pig 0.5 80 0.5 {Tags:["b7_effect_proof"],NoAI:1b,PersistenceRequired:1b}
+RESPONSE=Summoned new Pig
+
+COMMAND=data get entity @e[type=minecraft:pig,tag=b7_effect_proof,limit=1]
+RESPONSE=Pig has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, sound_variant: "minecraft:classic", PortalCooldown: 0, AbsorptionAmount: 0.0f, InLove: 0, DeathTime: 0s, variant: "minecraft:temperate", PersistenceRequired: 1b, UUID: [I; -2005461060, 1833651802, -2000822907, 584297104], Tags: ["b7_effect_proof"], Age: 0, Motion: [0.0d, 0.0d, 0.0d], Health: 10.0f, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 0b, NoAI: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 1.0d, 0.5d], Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: "minecraft:oxygen_bonus", base: 0.0d}, {id: "minecraft:movement_speed", base: 0.25d}], HurtTime: 0s}
+
+COMMAND=effect give @e[type=minecraft:pig,tag=b7_effect_proof,limit=1] ticket37_b7:proof_effect 60 0 true
+RESPONSE=Applied effect effect.ticket37_b7.proof_effect to Pig
+
+COMMAND=data get entity @e[type=minecraft:pig,tag=b7_effect_proof,limit=1]
+RESPONSE=Pig has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, sound_variant: "minecraft:classic", PortalCooldown: 0, AbsorptionAmount: 0.0f, active_effects: [{duration: 1199, show_icon: 0b, id: "ticket37_b7:proof_effect", show_particles: 0b}], InLove: 0, DeathTime: 0s, variant: "minecraft:temperate", PersistenceRequired: 1b, UUID: [I; -2005461060, 1833651802, -2000822907, 584297104], Tags: ["b7_effect_proof"], Age: 0, Motion: [0.0d, 0.0d, 0.0d], Health: 10.0f, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 0b, NoAI: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 1.0d, 0.5d], Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: "minecraft:oxygen_bonus", base: 0.0d}, {id: "minecraft:movement_speed", base: 0.25d}], HurtTime: 0s}
+
+COMMAND=nekojs reload server
+RESPONSE=NekoJS server reload committed: generation=2 phase=COMMIT - no errors.
+
+COMMAND=nekojs registry
+RESPONSE=sound_event: 1 registered, 0 stale
+mob_effect: 1 registered, 0 stale
+item: 1 registered, 0 stale
+
+COMMAND=effect clear @e[type=minecraft:pig,tag=b7_effect_proof,limit=1] ticket37_b7:proof_effect
+RESPONSE=Removed effect effect.ticket37_b7.proof_effect from Pig
+
+COMMAND=effect give @e[type=minecraft:pig,tag=b7_effect_proof,limit=1] ticket37_b7:proof_effect 60 1 true
+RESPONSE=Applied effect effect.ticket37_b7.proof_effect to Pig
+
+COMMAND=data get entity @e[type=minecraft:pig,tag=b7_effect_proof,limit=1]
+RESPONSE=Pig has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, sound_variant: "minecraft:classic", PortalCooldown: 0, AbsorptionAmount: 0.0f, active_effects: [{duration: 1200, show_icon: 0b, amplifier: 1b, id: "ticket37_b7:proof_effect", show_particles: 0b}], InLove: 0, DeathTime: 0s, variant: "minecraft:temperate", PersistenceRequired: 1b, UUID: [I; -2005461060, 1833651802, -2000822907, 584297104], Tags: ["b7_effect_proof"], Age: 0, Motion: [0.0d, 0.0d, 0.0d], Health: 10.0f, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 0b, NoAI: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 1.0d, 0.5d], Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: "minecraft:oxygen_bonus", base: 0.0d}, {id: "minecraft:movement_speed", base: 0.25d}], HurtTime: 0s}
+
+ACTUAL_INSTALLED_SINGLE_SERVER_EFFECT_BEFORE_AFTER_RELOAD_PASS=true
+CLIENTS_AND_MULTIPLAYER_NOT_TESTED=true
+COMMAND=stop
+RESPONSE=Stopping the server
+
+INSTALLED_SERVER_EXIT=0
+ �� script reload finished (x2)
+[00:39:05] [RCON Client /127.0.0.1 #11/INFO] [minecraft/RconClient]: Thread RCON Client /127.0.0.1 shutting down
+[00:39:07] [RCON Listener #1/INFO] [minecraft/GenericThread]: Thread RCON Client /127.0.0.1 started
+[00:39:07] [RCON Client /127.0.0.1 #12/INFO] [minecraft/RconClient]: Thread RCON Client /127.0.0.1 shutting down
+[00:39:07] [RCON Listener #1/INFO] [minecraft/GenericThread]: Thread RCON Client /127.0.0.1 started
+[00:39:07] [Server thread/INFO] [minecraft/MinecraftServer]: [Rcon: Removed effect effect.ticket37_b7.proof_effect from Pig]
+[00:39:07] [RCON Client /127.0.0.1 #13/INFO] [minecraft/RconClient]: Thread RCON Client /127.0.0.1 shutting down
+[00:39:07] [RCON Listener #1/INFO] [minecraft/GenericThread]: Thread RCON Client /127.0.0.1 started
+[00:39:07] [Server thread/INFO] [minecraft/MinecraftServer]: [Rcon: Applied effect effect.ticket37_b7.proof_effect to Pig]
+[00:39:07] [RCON Client /127.0.0.1 #14/INFO] [minecraft/RconClient]: Thread RCON Client /127.0.0.1 shutting down
+[00:39:07] [RCON Listener #1/INFO] [minecraft/GenericThread]: Thread RCON Client /127.0.0.1 started
+[00:39:07] [RCON Client /127.0.0.1 #15/INFO] [minecraft/RconClient]: Thread RCON Client /127.0.0.1 shutting down
+[00:39:07] [RCON Listener #1/INFO] [minecraft/GenericThread]: Thread RCON Client /127.0.0.1 started
+[00:39:07] [Server thread/INFO] [minecraft/MinecraftServer]: [Rcon: Stopping the server]
+[00:39:07] [RCON Client /127.0.0.1 #16/INFO] [minecraft/RconClient]: Thread RCON Client /127.0.0.1 shutting down
+[00:39:07] [Server thread/INFO] [minecraft/MinecraftServer]: Stopping server
+[00:39:07] [Server thread/INFO] [minecraft/MinecraftServer]: Saving players
+[00:39:07] [Server thread/INFO] [minecraft/MinecraftServer]: Saving worlds
+[00:39:07] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[b7-proof-world]'/minecraft:overworld
+[00:39:08] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[b7-proof-world]'/minecraft:the_end
+[00:39:08] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[b7-proof-world]'/minecraft:the_nether
+[00:39:08] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (world): All chunks are saved
+[00:39:08] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[00:39:08] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[00:39:08] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage: All dimensions are saved
+[00:39:08] [Server thread/INFO] [minecraft/GenericThread]: Thread RCON Listener stopped
+[00:39:08] [main/INFO] [ne.ne.fm.lo.FMLLoader/]: Closing FML Loader 48ef060d
+[00:39:08] [main/INFO] [ne.ne.fm.ModLoader/]: Clearing ModLoader
+EXACT_OFFICIAL_INSTALLED_SINGLE_SERVER_DOMAIN_PROOF_PASS

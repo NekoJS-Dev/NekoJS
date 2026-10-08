@@ -1,0 +1,31 @@
+# Allows scripts to create unmanaged background threads. May cause lag or resource leaks.
+allowThreads = false
+# Allows scripts to bypass access controls via reflection and modify private Java data.
+allowReflection = false
+# Allows scripts to directly manipulate Java bytecode. Incorrect usage may cause severe crashes.
+allowAsm = false
+# Allows Node fs write/delete operations anywhere under the game directory instead of only under nekojs/. Still blocks paths outside .minecraft.
+allowFsWriteOutsideNekojs = false
+# Enables ESM authoring support for .js/.mjs/.ts/.jsx/.tsx scripts. When enabled, NekoJS parses each module and transforms ESM syntax into the unified script runtime. Disable only if you need pure CommonJS require compatibility.
+enableEsmAuthoring = true
+# Emits direct source-focused script errors by default. Set false to log full verbose diagnostics and stack traces for analysis.
+conciseScriptErrorLogs = true
+# Uses the automatic JSX runtime for .jsx/.tsx scripts: emits jsx()/Fragment() calls and imports from 'nekojs/jsx-runtime' instead of the classic globalThis.__nekoJsxFactory. Requires a jsx-runtime module (place one at nekojs/node_modules/nekojs/jsx-runtime.js).
+jsxAutomaticRuntime = false
+# Enables compile-time validation of global-binding and event-callback member accesses. Reports typos and missing members to the in-game error panel. Disable to skip all AST parsing overhead in production modpacks.
+scriptMemberValidation = true
+# Maximum seconds to wait for a script entry to finish evaluating (top-level await / native ESM). On timeout the script is marked as failed and the server thread stops waiting instead of hanging forever. Set 0 or a negative value to disable the timeout.
+scriptEvaluationTimeoutSeconds = 0
+# Optional absolute cumulative statement budget per Context (0 = disabled, the default). Context-lifetime total; when reached the Context is closed and the current evaluation is aborted, then the environment is rebuilt on next use (registered listeners/timers are lost). Long-lived busy environments eventually hit any non-zero budget - the recommended runaway protection is scriptRunawayTimeoutSeconds; keep this only if you need a hard lifetime cap.
+scriptStatementLimit = 0
+# Runaway watchdog for synchronous script execution, in seconds (0 = disabled, the default). Implemented as a sliding window over statement checkpoints: as long as guest code keeps executing without yielding back to Java (checkpoint gaps <= 250ms), the window accumulates; exceeding this many seconds closes the Context and aborts the evaluation - the only reliable way to stop a while(true){} freezing the server thread. The window resets on every yield, so long-lived environments are never killed regardless of total statements executed. Blockage inside host calls that executes no statements is invisible to this watchdog.
+scriptRunawayTimeoutSeconds = 0
+
+[dynamicRegistry]
+	enabled = true
+
+[packSync]
+	# Multiplayer script pack distribution (server -> client). off (default) = disabled; hashOnly = server sends pack hashes only, clients never execute remote packs; all = server pushes packs (manifest + files) during the configuration phase, verified and executed on the client BEFORE vanilla registry validation. Only packs with clientSync != false in their manifest are synced.
+	mode = "off"
+	# Accept server script packs without an Ed25519 signature. false (default) rejects unsigned packs and disconnects with a prompt.
+	allowUnsigned = false

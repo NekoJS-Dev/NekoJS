@@ -1,0 +1,55 @@
+OWNED_INSTALLED_SERVER_PID=2324
+COMMAND=nekojs registry
+RESPONSE=sound_event: 1 registered, 0 stale
+mob_effect: 1 registered, 0 stale
+item: 1 registered, 0 stale
+
+COMMAND=nekojs probe typescript
+RESPONSE=Generating probe (typescript:builtin)...
+Probe generated: 359 files in 559ms
+  Output: .neko_probe\typescript
+
+COMMAND=nekojs probe python
+RESPONSE=Generating probe (python:builtin)...
+Probe generated: 346 files in 275ms
+  Output: .neko_probe\python
+
+COMMAND=summon minecraft:pig 0 1 0 {Tags:["b7_effect_proof"],NoAI:1b,PersistenceRequired:1b}
+RESPONSE=Summoned new Pig
+
+COMMAND=effect give @e[type=minecraft:pig,tag=b7_effect_proof,limit=1] ticket37_b7:proof_effect 60 0 true
+RESPONSE=No entity was found
+
+PROOF_FAILURE=Actual installed dynamic MobEffect application before reload did not succeed
+COMMAND=stop
+RESPONSE=Stopping the server
+
+INSTALLED_SERVER_EXIT=0
+[00:36:30] [RCON Listener #1/INFO] [minecraft/GenericThread]: Thread RCON Client /127.0.0.1 started
+[00:36:31] [Server thread/INFO] [NekoJS/]: Probe [typescript]: 2510 classes to generate
+[00:36:31] [Server thread/INFO] [NekoJS/]: Probe [typescript] generated 359 files in 559ms (359 written, 0 unchanged, 0 stale removed)
+[00:36:31] [RCON Client /127.0.0.1 #3/INFO] [minecraft/RconClient]: Thread RCON Client /127.0.0.1 shutting down
+[00:36:31] [RCON Listener #1/INFO] [minecraft/GenericThread]: Thread RCON Client /127.0.0.1 started
+[00:36:32] [Server thread/INFO] [NekoJS/]: Probe [python] generated 346 files in 275ms (346 written, 0 unchanged, 0 stale removed)
+[00:36:32] [RCON Client /127.0.0.1 #4/INFO] [minecraft/RconClient]: Thread RCON Client /127.0.0.1 shutting down
+[00:36:32] [RCON Listener #1/INFO] [minecraft/GenericThread]: Thread RCON Client /127.0.0.1 started
+[00:36:32] [Server thread/INFO] [minecraft/MinecraftServer]: [Rcon: Summoned new Pig]
+[00:36:32] [RCON Client /127.0.0.1 #5/INFO] [minecraft/RconClient]: Thread RCON Client /127.0.0.1 shutting down
+[00:36:32] [RCON Listener #1/INFO] [minecraft/GenericThread]: Thread RCON Client /127.0.0.1 started
+[00:36:32] [RCON Client /127.0.0.1 #6/INFO] [minecraft/RconClient]: Thread RCON Client /127.0.0.1 shutting down
+[00:36:32] [RCON Listener #1/INFO] [minecraft/GenericThread]: Thread RCON Client /127.0.0.1 started
+[00:36:32] [Server thread/INFO] [minecraft/MinecraftServer]: [Rcon: Stopping the server]
+[00:36:32] [RCON Client /127.0.0.1 #7/INFO] [minecraft/RconClient]: Thread RCON Client /127.0.0.1 shutting down
+[00:36:32] [Server thread/INFO] [minecraft/MinecraftServer]: Stopping server
+[00:36:32] [Server thread/INFO] [minecraft/MinecraftServer]: Saving players
+[00:36:32] [Server thread/INFO] [minecraft/MinecraftServer]: Saving worlds
+[00:36:32] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[b7-proof-world]'/minecraft:overworld
+[00:36:32] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[b7-proof-world]'/minecraft:the_end
+[00:36:32] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[b7-proof-world]'/minecraft:the_nether
+[00:36:32] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (world): All chunks are saved
+[00:36:32] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[00:36:32] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[00:36:32] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage: All dimensions are saved
+[00:36:32] [Server thread/INFO] [minecraft/GenericThread]: Thread RCON Listener stopped
+[00:36:32] [main/INFO] [ne.ne.fm.lo.FMLLoader/]: Closing FML Loader 7681e7b7
+[00:36:32] [main/INFO] [ne.ne.fm.ModLoader/]: Clearing ModLoader

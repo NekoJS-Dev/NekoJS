@@ -1,0 +1,7 @@
+{
+  "extends": "./ticket37-b7-installed-26.2/nekojs/server_scripts/jsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": false
+  }
+}
