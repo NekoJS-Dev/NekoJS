@@ -54,7 +54,8 @@ class TypeScriptClassRendererTest {
 
             // 基础形态断言（沿用旧渲染器的契约）
             assertTrue(first.startsWith("    export "), "decl must start with export block: " + cls.getName());
-            assertTrue(first.trim().endsWith("}"), "decl must end with closing brace: " + cls.getName());
+            assertTrue(first.trim().endsWith("}") || first.trim().endsWith("};"),
+                    "declarations must close the class/interface or its static object surface: " + cls.getName());
         }
     }
 

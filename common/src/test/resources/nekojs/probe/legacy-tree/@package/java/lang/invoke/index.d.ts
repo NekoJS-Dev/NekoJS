@@ -33,19 +33,21 @@ declare module "java:java/lang/invoke" {
         getName(): string;
         getReferenceKind(): number;
         isVarArgs(): boolean;
-        referenceKindToString(arg0: number): string;
         reflectAs<T>(arg0: $Class<T>, arg1: $MethodHandles$Lookup): T;
-        toString(arg0: number, arg1: $Class<any>, arg2: string, arg3: $MethodType): string;
-        static REF_getField: number;
-        static REF_getStatic: number;
-        static REF_invokeInterface: number;
-        static REF_invokeSpecial: number;
-        static REF_invokeStatic: number;
-        static REF_invokeVirtual: number;
-        static REF_newInvokeSpecial: number;
-        static REF_putField: number;
-        static REF_putStatic: number;
     }
+    export const $MethodHandleInfo: {
+        referenceKindToString(arg0: number): string;
+        toString(arg0: number, arg1: $Class<any>, arg2: string, arg3: $MethodType): string;
+        readonly REF_getField: number;
+        readonly REF_getStatic: number;
+        readonly REF_invokeInterface: number;
+        readonly REF_invokeSpecial: number;
+        readonly REF_invokeStatic: number;
+        readonly REF_invokeVirtual: number;
+        readonly REF_newInvokeSpecial: number;
+        readonly REF_putField: number;
+        readonly REF_putStatic: number;
+    };
 
     export class $MethodHandles$Lookup {
         static MODULE: number;

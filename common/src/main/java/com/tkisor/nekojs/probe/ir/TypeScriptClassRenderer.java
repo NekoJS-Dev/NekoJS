@@ -163,12 +163,28 @@ public final class TypeScriptClassRenderer {
         }
         sb.append(" {\n");
         for (MethodDecl m : d.methods) {
-            if (!m.hidden) sb.append(formatMethod(m, false));
-        }
-        for (FieldDecl f : d.fields) {
-            if (!f.hidden && f.isStatic && f.isFinal) sb.append(formatField(f, true));
+            if (!m.hidden && !m.isStatic) sb.append(formatMethod(m, false));
         }
         sb.append("    }\n");
+
+        boolean hasStaticMembers = d.methods.stream().anyMatch(m -> !m.hidden && m.isStatic)
+                || d.fields.stream().anyMatch(f -> !f.hidden && f.isStatic && f.isFinal);
+        if (!hasStaticMembers) return sb.toString();
+
+        // TypeScript interfaces describe instances; Java.type exposes static members on a separate value.
+        // A merged object declaration retains quoted names and overloads without inheriting interface factories.
+        sb.append("    export const $").append(effectiveClassName(d)).append(": {\n");
+        for (MethodDecl m : d.methods) {
+            if (!m.hidden && m.isStatic) sb.append(formatMethod(m, false));
+        }
+        for (FieldDecl f : d.fields) {
+            if (!f.hidden && f.isStatic && f.isFinal) {
+                appendDoc(sb, "        ", f.docs);
+                sb.append("        readonly ").append(tsMemberName(f.effectiveName())).append(": ")
+                        .append(renderSlot(f.type, false)).append(";\n");
+            }
+        }
+        sb.append("    };\n");
         return sb.toString();
     }
 
@@ -209,7 +225,7 @@ public final class TypeScriptClassRenderer {
         sb.append("        constructor(");
         appendParameters(sb, c.params);
         sb.append(");\n");
-        appendOverloads(sb, c, true);
+        appendOverloads(sb, c, true, false);
         return sb.toString();
     }
 
@@ -234,7 +250,7 @@ public final class TypeScriptClassRenderer {
         sb.append("(");
         appendParameters(sb, m.params);
         sb.append("): ").append(renderSlot(m.returnType, false)).append(";\n");
-        appendOverloads(sb, m, false);
+        appendOverloads(sb, m, false, isStatic);
         return sb.toString();
     }
 
@@ -243,14 +259,14 @@ public final class TypeScriptClassRenderer {
      * TypeScript 片段原样拼接；returns 为空沿用反射返回类型。参数与返回类型不经 renderSlot，
      * 也不参与 import 收集——引用的类型须已在本模块可见（{@code $Foo} 形式），由注解作者保证。
      */
-    private void appendOverloads(StringBuilder sb, MethodDecl m, boolean constructor) {
+    private void appendOverloads(StringBuilder sb, MethodDecl m, boolean constructor, boolean isStatic) {
         for (MethodDecl.Overload o : m.overloads) {
             appendDoc(sb, "        ", o.docs);
             sb.append("        ");
             if (constructor) {
                 sb.append("constructor(");
             } else {
-                if (m.isStatic) sb.append("static ");
+                if (isStatic) sb.append("static ");
                 sb.append(tsMemberName(m.effectiveName())).append("(");
             }
             sb.append(String.join(", ", o.params)).append(")");

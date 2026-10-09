@@ -12,9 +12,11 @@ declare module "java:java/util/function" {
     }
 
     export interface $BinaryOperator<T> extends $BiFunction<T, T, T> {
+    }
+    export const $BinaryOperator: {
         maxBy<T>(arg0: $Comparator_<T, T, T, number>): $BinaryOperator<T>;
         minBy<T>(arg0: $Comparator_<T, T, T, number>): $BinaryOperator<T>;
-    }
+    };
 
     export interface $Consumer<T> {
         accept(arg0: T): void;
@@ -57,15 +59,19 @@ declare module "java:java/util/function" {
         andThen(arg0: $DoubleUnaryOperator_<number, number>): $DoubleUnaryOperator;
         applyAsDouble(arg0: number): number;
         compose(arg0: $DoubleUnaryOperator_<number, number>): $DoubleUnaryOperator;
-        identity(): $DoubleUnaryOperator;
     }
+    export const $DoubleUnaryOperator: {
+        identity(): $DoubleUnaryOperator;
+    };
 
     export interface $Function<T, R> {
         andThen<V>(arg0: $Function_<R, V, R, V>): $Function<T, V>;
         apply(arg0: T): R;
         compose<V>(arg0: $Function_<V, T, V, T>): $Function<V, R>;
-        identity<T>(): $Function<T, T>;
     }
+    export const $Function: {
+        identity<T>(): $Function<T, T>;
+    };
 
     export interface $IntBinaryOperator {
         applyAsInt(arg0: number, arg1: number): number;
@@ -103,8 +109,10 @@ declare module "java:java/util/function" {
         andThen(arg0: $IntUnaryOperator_<number, number>): $IntUnaryOperator;
         applyAsInt(arg0: number): number;
         compose(arg0: $IntUnaryOperator_<number, number>): $IntUnaryOperator;
-        identity(): $IntUnaryOperator;
     }
+    export const $IntUnaryOperator: {
+        identity(): $IntUnaryOperator;
+    };
 
     export interface $LongBinaryOperator {
         applyAsLong(arg0: number, arg1: number): number;
@@ -142,8 +150,10 @@ declare module "java:java/util/function" {
         andThen(arg0: $LongUnaryOperator_<number, number>): $LongUnaryOperator;
         applyAsLong(arg0: number): number;
         compose(arg0: $LongUnaryOperator_<number, number>): $LongUnaryOperator;
-        identity(): $LongUnaryOperator;
     }
+    export const $LongUnaryOperator: {
+        identity(): $LongUnaryOperator;
+    };
 
     export interface $ObjDoubleConsumer<T> {
         accept(arg0: T, arg1: number): void;
@@ -159,12 +169,14 @@ declare module "java:java/util/function" {
 
     export interface $Predicate<T> {
         and(arg0: $Predicate_<T, T, boolean>): $Predicate<T>;
-        isEqual<T>(arg0: object): $Predicate<T>;
         negate(): $Predicate<T>;
-        not<T>(arg0: $Predicate_<T, T, boolean>): $Predicate<T>;
         or(arg0: $Predicate_<T, T, boolean>): $Predicate<T>;
         test(arg0: T): boolean;
     }
+    export const $Predicate: {
+        isEqual<T>(arg0: object): $Predicate<T>;
+        not<T>(arg0: $Predicate_<T, T, boolean>): $Predicate<T>;
+    };
 
     export interface $Supplier<T> {
         get(): T;
@@ -183,8 +195,10 @@ declare module "java:java/util/function" {
     }
 
     export interface $UnaryOperator<T> extends $Function<T, T> {
-        identity<T>(): $UnaryOperator<T>;
     }
+    export const $UnaryOperator: {
+        identity<T>(): $UnaryOperator<T>;
+    };
 
     export type $BiConsumer_<Host0 = any, Host1 = any, CallbackArg0 = Host0, CallbackArg1 = Host1> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | $BiConsumer<Host0, Host1>;
     export type $BiFunction_<Host0 = any, Host1 = any, Host2 = any, CallbackArg0 = Host0, CallbackArg1 = Host1, CallbackResult = Host2> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | $BiFunction<Host0, Host1, Host2>;

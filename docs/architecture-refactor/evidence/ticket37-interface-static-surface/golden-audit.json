@@ -1,0 +1,49 @@
+{
+  "typescriptVersion": "5.8.3",
+  "sourceBase": "77aa54b00b3d22aa7fade97eef5ee635a2dabbf9",
+  "files": [
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/constant/index.d.ts",
+      "movedMembers": 12,
+      "memberNamesSignaturesPreserved": true,
+      "otherDeclarationsPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/index.d.ts",
+      "movedMembers": 1,
+      "memberNamesSignaturesPreserved": true,
+      "otherDeclarationsPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/invoke/index.d.ts",
+      "movedMembers": 11,
+      "memberNamesSignaturesPreserved": true,
+      "otherDeclarationsPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/reflect/index.d.ts",
+      "movedMembers": 2,
+      "memberNamesSignaturesPreserved": true,
+      "otherDeclarationsPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/util/function/index.d.ts",
+      "movedMembers": 9,
+      "memberNamesSignaturesPreserved": true,
+      "otherDeclarationsPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/util/index.d.ts",
+      "movedMembers": 62,
+      "memberNamesSignaturesPreserved": true,
+      "otherDeclarationsPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/util/stream/index.d.ts",
+      "movedMembers": 39,
+      "memberNamesSignaturesPreserved": true,
+      "otherDeclarationsPreserved": true
+    }
+  ],
+  "allPassed": true
+}

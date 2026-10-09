@@ -1,0 +1,80 @@
+[
+  {
+    "node": "1.21.1",
+    "mapCodecClassByteIdentical": true,
+    "classSha256": "4555cc185f6da3f0c6ad06f07d39980135e35b5846e135c801f30e7d235fad5e",
+    "survivingInterfaceInstanceMembersByteIdentical": true,
+    "missingClassMembersBeforeAndAfter": {
+      "$MapDecoder": [
+        "ap",
+        "compressedDecode",
+        "compressor",
+        "decoder",
+        "decode",
+        "flatMap",
+        "map"
+      ],
+      "$MapEncoder": [
+        "comap",
+        "compressedBuilder",
+        "compressor",
+        "encoder",
+        "encode",
+        "flatComap"
+      ]
+    },
+    "interpretation": "Observed: the unchanged class omits inherited interface methods and the surviving interface signatures are byte-identical. Inference: corrected static separation reveals this structural gap. A modifier-only control did not reproduce the expected two Codec diagnostics, so invalid static poisoning alone is not established."
+  },
+  {
+    "node": "26.1.2",
+    "mapCodecClassByteIdentical": true,
+    "classSha256": "9db31d43dabbb9fe520d1c334f678f816bd0da7bc4fbb53ef6a1ded0e2ec7c69",
+    "survivingInterfaceInstanceMembersByteIdentical": true,
+    "missingClassMembersBeforeAndAfter": {
+      "$MapDecoder": [
+        "ap",
+        "compressedDecode",
+        "compressor",
+        "decoder",
+        "decode",
+        "flatMap",
+        "map"
+      ],
+      "$MapEncoder": [
+        "comap",
+        "compressedBuilder",
+        "compressor",
+        "encoder",
+        "encode",
+        "flatComap"
+      ]
+    },
+    "interpretation": "Observed: the unchanged class omits inherited interface methods and the surviving interface signatures are byte-identical. Inference: corrected static separation reveals this structural gap. A modifier-only control did not reproduce the expected two Codec diagnostics, so invalid static poisoning alone is not established."
+  },
+  {
+    "node": "26.2.0",
+    "mapCodecClassByteIdentical": true,
+    "classSha256": "9db31d43dabbb9fe520d1c334f678f816bd0da7bc4fbb53ef6a1ded0e2ec7c69",
+    "survivingInterfaceInstanceMembersByteIdentical": true,
+    "missingClassMembersBeforeAndAfter": {
+      "$MapDecoder": [
+        "ap",
+        "compressedDecode",
+        "compressor",
+        "decoder",
+        "decode",
+        "flatMap",
+        "map"
+      ],
+      "$MapEncoder": [
+        "comap",
+        "compressedBuilder",
+        "compressor",
+        "encoder",
+        "encode",
+        "flatComap"
+      ]
+    },
+    "interpretation": "Observed: the unchanged class omits inherited interface methods and the surviving interface signatures are byte-identical. Inference: corrected static separation reveals this structural gap. A modifier-only control did not reproduce the expected two Codec diagnostics, so invalid static poisoning alone is not established."
+  }
+]

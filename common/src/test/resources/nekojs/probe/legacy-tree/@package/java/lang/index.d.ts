@@ -88,12 +88,14 @@ declare module "java:java/lang" {
         charAt(arg0: number): string;
         chars(): $IntStream;
         codePoints(): $IntStream;
-        compare(arg0: $CharSequence, arg1: $CharSequence): number;
         isEmpty(): boolean;
         length(): number;
         subSequence(arg0: number, arg1: number): $CharSequence;
         toString(): string;
     }
+    export const $CharSequence: {
+        compare(arg0: $CharSequence, arg1: $CharSequence): number;
+    };
 
     export class $Character implements $Serializable, $Comparable<$Character>, $Constable {
         constructor(arg0: string);

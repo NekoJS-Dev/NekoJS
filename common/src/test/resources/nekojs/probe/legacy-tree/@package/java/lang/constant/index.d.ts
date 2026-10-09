@@ -15,13 +15,15 @@ declare module "java:java/lang/constant" {
         isPrimitive(): boolean;
         nested(arg0: string, arg1?: string[]): $ClassDesc;
         nested(arg0: string): $ClassDesc;
+        packageName(): string;
+        resolveConstantDesc(arg0: $MethodHandles$Lookup): $Class<any>;
+    }
+    export const $ClassDesc: {
         ofDescriptor(arg0: string): $ClassDesc;
         ofInternalName(arg0: string): $ClassDesc;
         of(arg0: string, arg1: string): $ClassDesc;
         of(arg0: string): $ClassDesc;
-        packageName(): string;
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): $Class<any>;
-    }
+    };
 
     export interface $Constable {
         describeConstable(): $Optional<$ConstantDesc>;
@@ -79,12 +81,14 @@ declare module "java:java/lang/constant" {
         asType(arg0: $MethodTypeDesc): $MethodHandleDesc;
         equals(arg0: object): boolean;
         invocationType(): $MethodTypeDesc;
+        resolveConstantDesc(arg0: $MethodHandles$Lookup): $MethodHandle;
+    }
+    export const $MethodHandleDesc: {
         ofConstructor(arg0: $ClassDesc, arg1?: $ClassDesc[]): $DirectMethodHandleDesc;
         ofField(arg0: $DirectMethodHandleDesc$Kind_, arg1: $ClassDesc, arg2: string, arg3: $ClassDesc): $DirectMethodHandleDesc;
         ofMethod(arg0: $DirectMethodHandleDesc$Kind_, arg1: $ClassDesc, arg2: string, arg3: $MethodTypeDesc): $DirectMethodHandleDesc;
         of(arg0: $DirectMethodHandleDesc$Kind_, arg1: $ClassDesc, arg2: string, arg3: string): $DirectMethodHandleDesc;
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): $MethodHandle;
-    }
+    };
 
     export interface $MethodTypeDesc extends $ConstantDesc, $TypeDescriptor$OfMethod<$ClassDesc, $MethodTypeDesc> {
         changeParameterType(arg0: number, arg1: $ClassDesc): $MethodTypeDesc;
@@ -94,10 +98,6 @@ declare module "java:java/lang/constant" {
         dropParameterTypes(arg0: number, arg1: number): $MethodTypeDesc;
         equals(arg0: object): boolean;
         insertParameterTypes(arg0: number, arg1?: $ClassDesc[]): $MethodTypeDesc;
-        ofDescriptor(arg0: string): $MethodTypeDesc;
-        of(arg0: $ClassDesc, arg1?: $ClassDesc[]): $MethodTypeDesc;
-        of(arg0: $ClassDesc, arg1: $ClassDesc[]): $MethodTypeDesc;
-        of(arg0: $ClassDesc): $MethodTypeDesc;
         parameterArray(): $ClassDesc[];
         parameterCount(): number;
         parameterList(): $List<$ClassDesc>;
@@ -105,6 +105,12 @@ declare module "java:java/lang/constant" {
         resolveConstantDesc(arg0: $MethodHandles$Lookup): $MethodType;
         returnType(): $ClassDesc;
     }
+    export const $MethodTypeDesc: {
+        ofDescriptor(arg0: string): $MethodTypeDesc;
+        of(arg0: $ClassDesc, arg1?: $ClassDesc[]): $MethodTypeDesc;
+        of(arg0: $ClassDesc, arg1: $ClassDesc[]): $MethodTypeDesc;
+        of(arg0: $ClassDesc): $MethodTypeDesc;
+    };
 
     export type $Constable_<CallbackResult = $Optional<$ConstantDesc_<$MethodHandles$Lookup, object>>> = (() => CallbackResult) | $Constable;
     export type $ConstantDesc_<CallbackArg0 = $MethodHandles$Lookup, CallbackResult = object> = ((arg0: CallbackArg0) => CallbackResult) | $ConstantDesc;

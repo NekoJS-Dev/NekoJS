@@ -255,9 +255,11 @@ declare module "java:java/lang/reflect" {
         getModifiers(): number;
         getName(): string;
         isSynthetic(): boolean;
-        static DECLARED: number;
-        static PUBLIC: number;
     }
+    export const $Member: {
+        readonly DECLARED: number;
+        readonly PUBLIC: number;
+    };
 
     export class $Method extends $Executable {
         get annotatedReturnType(): $AnnotatedType;
