@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.probe.ir;
 
+import com.google.gson.JsonPrimitive;
 import com.tkisor.nekojs.probe.backend.typescript.IndexFileGenerator;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
@@ -112,7 +113,7 @@ public final class TypeScriptClassRenderer {
             // 只渲染原方法名（getter 标记使方法段排除它，这里降级补发），脚本仍可调用
             if (!isValidTsIdentifier(m.property)) {
                 appendDoc(sb, "        ", m.docs);
-                sb.append("        ").append(m.effectiveName()).append("(): ")
+                sb.append("        ").append(tsMemberName(m.effectiveName())).append("(): ")
                   .append(renderSlot(m.returnType, false)).append(";\n");
                 continue;
             }
@@ -126,7 +127,7 @@ public final class TypeScriptClassRenderer {
             }
             String type = renderSlot(m.returnType, false);
             sb.append("        get ").append(m.property).append("(): ").append(type).append(";\n");
-            sb.append("        ").append(m.effectiveName()).append("(): ").append(type).append(";\n");
+            sb.append("        ").append(tsMemberName(m.effectiveName())).append("(): ").append(type).append(";\n");
             if (m.setterParamType != null) {
                 sb.append("        set ").append(m.property).append("(value: ")
                   .append(renderSlot(m.setterParamType, true)).append(");\n");
@@ -178,7 +179,7 @@ public final class TypeScriptClassRenderer {
         for (FieldDecl f : d.fields) {
             if (!f.hidden && f.isEnumConstant) {
                 appendDoc(sb, "        ", f.docs);
-                sb.append("        static ").append(f.effectiveName()).append(": ").append(name).append(";\n");
+                sb.append("        static ").append(tsMemberName(f.effectiveName())).append(": ").append(name).append(";\n");
             }
         }
         sb.append("        name(): string;\n");
@@ -216,7 +217,7 @@ public final class TypeScriptClassRenderer {
         appendDoc(sb, "        ", f.docs);
         sb.append("        ");
         if (isStatic) sb.append("static ");
-        sb.append(f.effectiveName()).append(": ").append(renderSlot(f.type, false)).append(";\n");
+        sb.append(tsMemberName(f.effectiveName())).append(": ").append(renderSlot(f.type, false)).append(";\n");
         return sb.toString();
     }
 
@@ -225,7 +226,7 @@ public final class TypeScriptClassRenderer {
         appendDoc(sb, "        ", m.docs);
         sb.append("        ");
         if (isStatic) sb.append("static ");
-        sb.append(m.effectiveName());
+        sb.append(tsMemberName(m.effectiveName()));
         if (!m.typeParams.isEmpty()) {
             sb.append("<").append(String.join(", ", m.typeParams)).append(">");
         }
@@ -249,7 +250,7 @@ public final class TypeScriptClassRenderer {
                 sb.append("constructor(");
             } else {
                 if (m.isStatic) sb.append("static ");
-                sb.append(m.effectiveName()).append("(");
+                sb.append(tsMemberName(m.effectiveName())).append("(");
             }
             sb.append(String.join(", ", o.params)).append(")");
             if (!constructor) {
@@ -270,6 +271,11 @@ public final class TypeScriptClassRenderer {
             sb.append(renderSlot(p.type, true));
             if (p.varargs) sb.append("[]");
         }
+    }
+
+    /** Preserve non-identifier member names as escaped string literals for bracket access. */
+    private static String tsMemberName(String name) {
+        return isValidTsIdentifier(name) ? name : new JsonPrimitive(name).toString();
     }
 
     /** TS 参数名转义：JS/TS 保留字不能作参数名（如 Java 参数 {@code function}），追加 {@code _}。 */

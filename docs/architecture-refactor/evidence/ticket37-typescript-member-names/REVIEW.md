@@ -1,0 +1,9 @@
+# TypeScript member-name owner review
+
+Baseline8a8aa2d7. Production ownership is limited to TypeScriptClassRenderer; TypeScriptMemberNameTest owns regression fixtures. This is a manual responsible-agent review, not independent review or maintainer acceptance.
+
+The reflected @Remap fixture reaches the same effective-name path as the observed Fabric Mixin method. Valid names retain their existing spelling. Invalid names become escaped string literal member names, preserving bracket access to the exact original name. Existing Gson is already a common compile/runtime dependency; no new dependency or public interface is introduced. Methods, static methods, handwritten overloads, original getter fallbacks, fields, enum constants and interface methods all use the same private rule. Illegal Bean aliases retain the existing fallback instead of expanding the Script API.
+
+The rule affects member syntax only. Parameter/type naming, reflection/import closure, manual declarations, Java/Graal runtime lookup, HostAccess/ClassFilter, reload/resource ownership, persistent data and wire contracts are unchanged. No class name is rewritten, member omitted, fake callable added or Any downgrade used. Escaping is exercised with quotes, backslashes and a newline, plus a same-caller strictTSC RED→GREEN. Edited field/enum/interface coverage tests the existing mutable IR path. Ordinary/no-op/golden checks run without regeneration.
+
+Two independent reviewer jobs for the preceding Python repair failed before findings due to the service's account usage limit. No new independent conclusion is inferred or borrowed for this repair. Independent review remains NOT COMPLETED. Full actual runtime, IDE, matrix and performance status belongs in README after evidence capture; focused successes alone do not imply ticket/release acceptance.

@@ -11,7 +11,7 @@
 ## 已通过
 
 - 既有源码先运行真实 RED：两个初始用例中声明冲突用例失败、实际 HostAccess 调用通过。修复后同一反馈环 GREEN；补充 String/int setter 重载和隐藏/重命名边界后，三个回归及既有 Python renderer/backend integration 聚焦测试通过。
-- 精确新官方 JAR 在五个专属服务器安装、生成 Probe、完成实际注册与重载。NeoForge26.1.2/26.2 验证14类注册、嵌套 fingerprint、FluidType 身份、方块/流体放置及重载前后 MobEffect；Fabric26.1.2/26.2 验证支持的7类子集、放置及重载。全部服务器正常 RCON 关闭，进程退出码直接观测为0。
+- 精确新官方 JAR 在五个专属服务器安装、生成 Probe、完成实际注册与重载。NeoForge26.1.2/26.2 验证14项注册检查、嵌套 fingerprint、FluidType 身份、方块/流体放置及重载前后 MobEffect；Fabric26.1.2/26.2 验证支持的7项子集、放置及重载。全部服务器正常 RCON 关闭，进程退出码直接观测为0。
 - 全部1590份 Python stub AST 通过：legacy317、NF26.1.2 377、NF26.2 344、Fabric26.1.2 293、Fabric26.2 259。legacy 的8类不可用类型仍明确发出 NEKO-4029；其声明闭包状态是 **PARTIAL**。
 - legacy 全量 Pyright 同节点、同 fixture 比较129→79：按文件/规则/消息归一化后移除50条诊断、新增0条；重复声明58→8。行号移动不算诊断变化。
 - 原始证据归档逐项 SHA/readback 与凭据扫描通过，排除了服务器属性、world、凭据、账户文件、二进制制品及原始 JFR。

@@ -1,0 +1,7 @@
+# TypeScript member-name syntax repair
+
+基线8a8aa2d7。五节点实际全量strictTSC仍FAIL；Fabric26.2首个语法错误位于ServerPlayer的`handler$zek000$fabric-events-interaction-v0$fakePlayerGameMode`。这个真实Mixin成员含连字符，原生成器未加引号直接拼接成员名，导致语法级联。只修共享TypeScriptClassRenderer的成员名表达，保留真实名字和调用形式，不删成员或放宽库检查。
+
+反馈环先通过既有反射/Remap路径生成同名方法、静态方法、非法Bean原getter和带引号/反斜线/换行的成员，保留实际RED输出和TSC语法错误。另验证编辑字段/枚举常量和接口方法共享规则。首次GREEN有fixture命名期望错误：synthetic声明sourceClass=null会按既有逻辑生成Unknown，fixture明确renameTo=Edited后通过；该失败记录保留，未改生产类型命名逻辑。
+
+有效标识符维持逐字输出；无效名称使用已有Gson依赖生成转义字符串字面量。覆盖普通/静态方法、手写overload、字段、枚举常量和原getter调用入口。非法Bean属性的既有降级行为保持，不额外暴露新属性。聚焦回归和严格caller通过后运行完整普通矩阵、npm gate，再用精确新JAR实机生成所有5节点Probe与完整默认includes严格TSC。全IDE、文件系统间歇失败、性能与整体验收各自记录，不能互相替代。

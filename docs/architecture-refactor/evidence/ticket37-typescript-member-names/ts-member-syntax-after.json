@@ -1,0 +1,36 @@
+{
+  "typescriptVersion": "5.8.3",
+  "purpose": "Read-only isolated declaration parse, separate from full default-includes strict TSC",
+  "nodes": [
+    {
+      "node": "1.21.1",
+      "files": 334,
+      "syntaxDiagnostics": 0,
+      "diagnostics": []
+    },
+    {
+      "node": "26.1.2",
+      "files": 391,
+      "syntaxDiagnostics": 0,
+      "diagnostics": []
+    },
+    {
+      "node": "26.2.0",
+      "files": 360,
+      "syntaxDiagnostics": 0,
+      "diagnostics": []
+    },
+    {
+      "node": "26.1.2-fabric",
+      "files": 307,
+      "syntaxDiagnostics": 0,
+      "diagnostics": []
+    },
+    {
+      "node": "26.2.0-fabric",
+      "files": 275,
+      "syntaxDiagnostics": 0,
+      "diagnostics": []
+    }
+  ]
+}
