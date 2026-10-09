@@ -1,0 +1,486 @@
+{
+  "sourceRevision": "7e98fd15175d15c8dad062bf40e2a284e04eaf51",
+  "archive": {
+    "file": "live-evidence.zip",
+    "bytes": 941380,
+    "entries": 116,
+    "sha256": "ebf59e9f6f8c835ce97757a74f5e350fcf101ad7bcff2fb0eac9aec7d4ab3267"
+  },
+  "entries": {
+    "runtime/C-prepare-held": {
+      "bytes": 1198,
+      "sha256": "0dcd590c4c1b5d966d503c8ab880579949f98d92cf0439837f2b873ef266151f"
+    },
+    "runtime/D-handshake-held": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runtime/D-prepare-held": {
+      "bytes": 1198,
+      "sha256": "62fd385de545f789898b0e74217cedf874c1adb78ef7b1005d0e77148d20c9a3"
+    },
+    "runtime/E-handshake-held": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runtime/clientA/exit.json": {
+      "bytes": 28,
+      "sha256": "f1a72245c772c24af0c991a8cb033483f08580a98fc1fb74ff01c0f9465004c1"
+    },
+    "runtime/clientA/logs/debug.log": {
+      "bytes": 162404,
+      "sha256": "94cf12506785b177f62fd025c7d9f0afd32be22aeb9d56665196ac18b7fa6a00"
+    },
+    "runtime/clientA/logs/latest.log": {
+      "bytes": 77011,
+      "sha256": "57ec2df6a0b5e990f857adeb19089e912e3a2bbb629875f5f14991d290e2396d"
+    },
+    "runtime/clientA/nekojs/client_scripts/src/main.js": {
+      "bytes": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "runtime/clientA/nekojs/client_scripts/visual-reload.js": {
+      "bytes": 1269,
+      "sha256": "a2dcab9be6d6c1755d735bde00ff1481dd195c819423065d3a1c08c008374d2d"
+    },
+    "runtime/clientA/nekojs/config/engine.toml": {
+      "bytes": 3515,
+      "sha256": "0392fbec08696fe0c63bca81033c33ed7dc7d93a43ae3956dfd4a3bf3b38c7f8"
+    },
+    "runtime/clientA/nekojs/config/probe.toml": {
+      "bytes": 2921,
+      "sha256": "19159ec056650d5d66b784dc644767c9d414b2b539ae492bce0240cd7d1f9db3"
+    },
+    "runtime/clientA/nekojs/server_scripts/src/main.js": {
+      "bytes": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "runtime/clientA/nekojs/startup_scripts/proof-startup.js": {
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    "runtime/clientA/nekojs/startup_scripts/src/main.js": {
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "runtime/clientA/options.txt": {
+      "bytes": 5217,
+      "sha256": "8ed09b37533c1cba002e0055435c709649283d256afd77b3e72e6e447a091b49"
+    },
+    "runtime/clientA/owned-process.json": {
+      "bytes": 189,
+      "sha256": "0aa5d30bb57c8f6bb0e203cb4fb726cfb8f61c2b91a66a98aa2dac4cecc1c1b1"
+    },
+    "runtime/clientA/screenshots/2026-10-10_00.51.39.png": {
+      "bytes": 190318,
+      "sha256": "be98e2feb4beace4645413813a6b87749e023419df8d241fe26759d6ace4d032"
+    },
+    "runtime/clientA/screenshots/2026-10-10_01.00.07.png": {
+      "bytes": 177254,
+      "sha256": "d50d93e584f8bf6fc7cdc33c759a52b7ac48f05d16fa6f5b24153fed3ae70460"
+    },
+    "runtime/clientA/screenshots/2026-10-10_01.00.23.png": {
+      "bytes": 157440,
+      "sha256": "27194af9802dd6b812c0d7924d76b6657382601baba13c00116c608b5c0b1ca8"
+    },
+    "runtime/clientA/screenshots/2026-10-10_01.01.08.png": {
+      "bytes": 186035,
+      "sha256": "950987a4fa4ab502d57c29d8968fa3714278c009d2490504c1bc43f8bc165620"
+    },
+    "runtime/clientA/stderr.log": {
+      "bytes": 9939,
+      "sha256": "af680c2a2d7eba55f3c69e72871a8f1da73add765a7df4e52f1467f389dfa6e3"
+    },
+    "runtime/clientA/stdout.log": {
+      "bytes": 66152,
+      "sha256": "67633cfca06b79d6523ad77adeecaadcfe2850e4de5a900275848dafcad7db7f"
+    },
+    "runtime/clientB/exit.json": {
+      "bytes": 28,
+      "sha256": "735703eda18c59b676c573841d24d6a5ad8aea4e423697d19898768c0e8e033e"
+    },
+    "runtime/clientB/logs/debug.log": {
+      "bytes": 120198,
+      "sha256": "c6dc70d1d7a4c109b8689727478748d9bf89f20044bd8b59cad4a11af7626d81"
+    },
+    "runtime/clientB/logs/latest.log": {
+      "bytes": 35198,
+      "sha256": "8446ead0dc503a21f58cf4fefc3eedfbe2e5a19077c8ccaab7f8faabb62613b0"
+    },
+    "runtime/clientB/nekojs/client_scripts/src/main.js": {
+      "bytes": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "runtime/clientB/nekojs/config/engine.toml": {
+      "bytes": 3515,
+      "sha256": "0392fbec08696fe0c63bca81033c33ed7dc7d93a43ae3956dfd4a3bf3b38c7f8"
+    },
+    "runtime/clientB/nekojs/config/probe.toml": {
+      "bytes": 2921,
+      "sha256": "19159ec056650d5d66b784dc644767c9d414b2b539ae492bce0240cd7d1f9db3"
+    },
+    "runtime/clientB/nekojs/server_scripts/src/main.js": {
+      "bytes": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "runtime/clientB/nekojs/startup_scripts/proof-startup.js": {
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    "runtime/clientB/nekojs/startup_scripts/src/main.js": {
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "runtime/clientB/options.txt": {
+      "bytes": 5217,
+      "sha256": "8ed09b37533c1cba002e0055435c709649283d256afd77b3e72e6e447a091b49"
+    },
+    "runtime/clientB/owned-process.json": {
+      "bytes": 189,
+      "sha256": "2d83e7a01b0af2d28b59af011d5214b67bc816347b49a6120ddf036548bd1ecd"
+    },
+    "runtime/clientB/stderr.log": {
+      "bytes": 9945,
+      "sha256": "a0ea746b297ebe3b17d1edb6190b684faae62c9364351a1d2bd1197be511d003"
+    },
+    "runtime/clientB/stdout.log": {
+      "bytes": 30691,
+      "sha256": "2931b91e950d70fc18b1ce5a369d8f71c928c4de9a94bf2a307a720ca881ed4d"
+    },
+    "runtime/clientC/exit.json": {
+      "bytes": 28,
+      "sha256": "fec66b1ce435dbf45497659f5ed6c4a4efdfbf31db96b7f02058f22866e45537"
+    },
+    "runtime/clientC/logs/debug.log": {
+      "bytes": 119879,
+      "sha256": "0e42a39ca8781a40520eb92d81c7290f5389b31afe62c20b2b8ef420d4eff787"
+    },
+    "runtime/clientC/logs/latest.log": {
+      "bytes": 34849,
+      "sha256": "1e9c0820f5f4f588bfd1e7e33271b441d42f1862b84c69d402e776ad8a563e8c"
+    },
+    "runtime/clientC/nekojs/client_scripts/src/main.js": {
+      "bytes": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "runtime/clientC/nekojs/config/engine.toml": {
+      "bytes": 3515,
+      "sha256": "0392fbec08696fe0c63bca81033c33ed7dc7d93a43ae3956dfd4a3bf3b38c7f8"
+    },
+    "runtime/clientC/nekojs/config/probe.toml": {
+      "bytes": 2921,
+      "sha256": "19159ec056650d5d66b784dc644767c9d414b2b539ae492bce0240cd7d1f9db3"
+    },
+    "runtime/clientC/nekojs/server_scripts/src/main.js": {
+      "bytes": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "runtime/clientC/nekojs/startup_scripts/proof-startup.js": {
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    "runtime/clientC/nekojs/startup_scripts/src/main.js": {
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "runtime/clientC/options.txt": {
+      "bytes": 5217,
+      "sha256": "8ed09b37533c1cba002e0055435c709649283d256afd77b3e72e6e447a091b49"
+    },
+    "runtime/clientC/owned-process.json": {
+      "bytes": 189,
+      "sha256": "81bd133fd099070010c349e715e35df860be1642d950c144d92db0997414e41c"
+    },
+    "runtime/clientC/stderr.log": {
+      "bytes": 9945,
+      "sha256": "fc77ec340bcf387111422a00d74517b9737abb52c74342882aa9df722cd46345"
+    },
+    "runtime/clientC/stdout.log": {
+      "bytes": 30422,
+      "sha256": "250d00eb7c59e120ce8dd7a77bbdd7856086c3c2b73537df11f1ae5aa2eb67a8"
+    },
+    "runtime/clientD/exit.json": {
+      "bytes": 28,
+      "sha256": "378e0ccd177a67a37f22ef9066c1e108d918ee371135b0bf4424448af0b2e5b9"
+    },
+    "runtime/clientD/logs/debug.log": {
+      "bytes": 113065,
+      "sha256": "918f59aedf170b2de918d700db76b8cd577a1ef5ebfecb35ac3fbb97241676f3"
+    },
+    "runtime/clientD/logs/latest.log": {
+      "bytes": 31358,
+      "sha256": "1677183805a85de7f740bb1545aa4f8422c520173ac7e154f79d8b18fdce5144"
+    },
+    "runtime/clientD/nekojs/client_scripts/src/main.js": {
+      "bytes": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "runtime/clientD/nekojs/config/engine.toml": {
+      "bytes": 3515,
+      "sha256": "0392fbec08696fe0c63bca81033c33ed7dc7d93a43ae3956dfd4a3bf3b38c7f8"
+    },
+    "runtime/clientD/nekojs/config/probe.toml": {
+      "bytes": 2921,
+      "sha256": "19159ec056650d5d66b784dc644767c9d414b2b539ae492bce0240cd7d1f9db3"
+    },
+    "runtime/clientD/nekojs/server_scripts/src/main.js": {
+      "bytes": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "runtime/clientD/nekojs/startup_scripts/proof-startup.js": {
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    "runtime/clientD/nekojs/startup_scripts/src/main.js": {
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "runtime/clientD/options.txt": {
+      "bytes": 5218,
+      "sha256": "07bacd91ce4de281903035d78f23dc744c7fce869778c95181defc882b12f70e"
+    },
+    "runtime/clientD/owned-process.json": {
+      "bytes": 188,
+      "sha256": "5f08d628732d4c3b4e2a81ea6de99bc442e49dfd8d5f6f523e74e6ce5098bdb3"
+    },
+    "runtime/clientD/stderr.log": {
+      "bytes": 9945,
+      "sha256": "b9a607adfa647cf897e7927fffb3ca8483edb1c7765a0074b7fb81852049d51b"
+    },
+    "runtime/clientD/stdout.log": {
+      "bytes": 28631,
+      "sha256": "1d4710eadaef621ea9c3e5616d87de21abac8dedf552575de0ba4de2173fc948"
+    },
+    "runtime/clientE/exit.json": {
+      "bytes": 28,
+      "sha256": "bf46c05cd394ccd172a6f1286dd1c45d1bab4e2baaaa2dc9b030054a680158e4"
+    },
+    "runtime/clientE/logs/debug.log": {
+      "bytes": 118236,
+      "sha256": "515d06d21d36c2e14cc1279b1b9cfa97ee6de3b517e224eb4b23728c8a13b6c3"
+    },
+    "runtime/clientE/logs/latest.log": {
+      "bytes": 33629,
+      "sha256": "cae5708ab5ec3aebd1ca46fd825a54492292af09d0510f4b219347d8d23ef074"
+    },
+    "runtime/clientE/nekojs/client_scripts/first-hud-visual.js": {
+      "bytes": 768,
+      "sha256": "15e11b88be090fd9d495fb6a7e16d7b8da26ace98843cf819a8c817dff543fc5"
+    },
+    "runtime/clientE/nekojs/client_scripts/src/main.js": {
+      "bytes": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "runtime/clientE/nekojs/config/engine.toml": {
+      "bytes": 3515,
+      "sha256": "0392fbec08696fe0c63bca81033c33ed7dc7d93a43ae3956dfd4a3bf3b38c7f8"
+    },
+    "runtime/clientE/nekojs/config/probe.toml": {
+      "bytes": 2921,
+      "sha256": "19159ec056650d5d66b784dc644767c9d414b2b539ae492bce0240cd7d1f9db3"
+    },
+    "runtime/clientE/nekojs/server_scripts/src/main.js": {
+      "bytes": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "runtime/clientE/nekojs/startup_scripts/proof-startup.js": {
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    "runtime/clientE/nekojs/startup_scripts/src/main.js": {
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "runtime/clientE/options.txt": {
+      "bytes": 5217,
+      "sha256": "8ed09b37533c1cba002e0055435c709649283d256afd77b3e72e6e447a091b49"
+    },
+    "runtime/clientE/owned-process.json": {
+      "bytes": 189,
+      "sha256": "e23dddb57dc422e31ece943f78f6500f76fe56f430799a4fd25e3de7950f9a3f"
+    },
+    "runtime/clientE/stderr.log": {
+      "bytes": 9945,
+      "sha256": "63f85a679e847080a5826e2a1b7be8bd87bbe10456ddb6dbb0e1fa131ec43b37"
+    },
+    "runtime/clientE/stdout.log": {
+      "bytes": 30447,
+      "sha256": "f224922e3600a7abb9e616787f34a5c1125eac4f9a997cb9b311dcf44b11b0b4"
+    },
+    "runtime/configuration-commit-console.txt": {
+      "bytes": 88,
+      "sha256": "b0b85ec1d1afb5f1b26527b5ceb3f84e55773eb5ec88e5a733127920ebbe280b"
+    },
+    "runtime/configuration-commit-verdict.json": {
+      "bytes": 12001,
+      "sha256": "e09fb50acc09aff4abfd533f9cd202dfae00a7e631e3b0fe24c30811b04c112a"
+    },
+    "runtime/disconnect-D": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runtime/dynamic-before-window.js": {
+      "bytes": 562,
+      "sha256": "c4617dd02c7b0350b53f9a8adf96040ac4b68b55bbdf3c21f60e4e78f60d9560"
+    },
+    "runtime/first-C-prepare-held": {
+      "bytes": 1198,
+      "sha256": "21e39319e55742a7a62bec625158bdd993ea4a5c7063f73da2986b9025d42f7b"
+    },
+    "runtime/first-release-C-prepare": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runtime/hold-C-prepare": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runtime/hold-D-prepare": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runtime/preparation.json": {
+      "bytes": 322,
+      "sha256": "a1184fc37f97d03a4643970e23486edcc1a6d5bfdcf07e28d554cf975e4b297d"
+    },
+    "runtime/proxyC.jsonl": {
+      "bytes": 1802,
+      "sha256": "2cb446069822a499b84776e93c74695dd6238721bf7c0cf3cfd3fb0c165ec7db"
+    },
+    "runtime/proxyD.jsonl": {
+      "bytes": 753,
+      "sha256": "df394b0a9ec3cabc8fa5eb575f1e3d8e56903e2f0841d887340653abd26ac299"
+    },
+    "runtime/proxyE.jsonl": {
+      "bytes": 682,
+      "sha256": "106a2af2d413cb9fabf0cd64d9be4573b4594f96eeae9b2ee926fbb85c619b28"
+    },
+    "runtime/rcon.jsonl": {
+      "bytes": 1066,
+      "sha256": "042a13c5b1f7df4940b798c0def9812bc362dec00e221f9b1c07894f3c2c1fb4"
+    },
+    "runtime/rejected-visual-candidate.js": {
+      "bytes": 94,
+      "sha256": "be193abb49d27daa03d757fc9e238d91a53968f29a6b76a187c0033c3641ceb4"
+    },
+    "runtime/release-C-prepare": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runtime/release-D-handshake": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runtime/release-E-handshake": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runtime/server/exit.json": {
+      "bytes": 33,
+      "sha256": "2ebc2dfad61a873144337b3b8e293e6e8ec2537c0e2c99f887238872a63da3af"
+    },
+    "runtime/server/logs/debug.log": {
+      "bytes": 262572,
+      "sha256": "be478c38cdcbfa2198c2ce79c205efe8ea04c571f6ab3017b56e57b1b212bd2f"
+    },
+    "runtime/server/logs/latest.log": {
+      "bytes": 177223,
+      "sha256": "3148410196efdf1b9fe7d2b01e63e2939f6ab8332c473a1e44def5830f2aad27"
+    },
+    "runtime/server/nekojs/client_scripts/src/main.js": {
+      "bytes": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "runtime/server/nekojs/config/engine.toml": {
+      "bytes": 3515,
+      "sha256": "0392fbec08696fe0c63bca81033c33ed7dc7d93a43ae3956dfd4a3bf3b38c7f8"
+    },
+    "runtime/server/nekojs/config/probe.toml": {
+      "bytes": 2921,
+      "sha256": "19159ec056650d5d66b784dc644767c9d414b2b539ae492bce0240cd7d1f9db3"
+    },
+    "runtime/server/nekojs/server_scripts/live-window-observer.js": {
+      "bytes": 1336,
+      "sha256": "124d61fe988f25d9c4de0b1ff94157f81959793a64c6f49bb6741578287051aa"
+    },
+    "runtime/server/nekojs/server_scripts/proof-dynamic.js": {
+      "bytes": 660,
+      "sha256": "2aad4f71b2494d13eb27bcb049ed15f4cc0095bde1842d284ec843ed0c29a4ae"
+    },
+    "runtime/server/nekojs/server_scripts/proof-sync-observer.js": {
+      "bytes": 2093,
+      "sha256": "9f3c15678dd6717988545c8aa68ec7a21624db32403f69775486d47099f09e60"
+    },
+    "runtime/server/nekojs/server_scripts/src/main.js": {
+      "bytes": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "runtime/server/nekojs/startup_scripts/proof-startup.js": {
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    "runtime/server/nekojs/startup_scripts/src/main.js": {
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "runtime/server/owned-process.json": {
+      "bytes": 193,
+      "sha256": "fd3dc41ca27494122a1bad7779df95403b25085f68efed783325ffe483965d30"
+    },
+    "runtime/server/stderr.log": {
+      "bytes": 11677,
+      "sha256": "cdac7d7035321d3bbcb2bc4b3ff3f813d06f31325e921753969e523755002201"
+    },
+    "runtime/server/stdout.log": {
+      "bytes": 172220,
+      "sha256": "1144817a7041c4ef6c34cd5b7d4a79f8823b59c7479f619f73a80aed15fb8c13"
+    },
+    "runtime/window-proof-console.txt": {
+      "bytes": 118,
+      "sha256": "f61e91afe59f9c9645eb37f0f34e9f6e782383ec56652eeb98e6498c1cbdb3b9"
+    },
+    "runtime/window-verdict.json": {
+      "bytes": 16753,
+      "sha256": "3e111290d4873bad65eb15cb47e1ea8c1fabcb476b31d1747db84b6334a20f15"
+    },
+    "scripts/archive-live-7e98.py": {
+      "bytes": 5906,
+      "sha256": "86219c46b915d302fc72d54669c0d5633f31903b52fc378e420874c05e66c19d"
+    },
+    "scripts/live-proxy-7e98.py": {
+      "bytes": 4716,
+      "sha256": "8c539987b6e6f552578dc5f40e064f5802ed6dd892c7a6e8eca3609a78c35f10"
+    },
+    "scripts/live-rcon-7e98.py": {
+      "bytes": 1048,
+      "sha256": "8cd1e87ac82bf7c88c34c777335271897101868b6164b1d4b87945fadeb0162b"
+    },
+    "scripts/prepare-live-7e98.py": {
+      "bytes": 2724,
+      "sha256": "8b72409993731bd584ef25427c0e17f8126c919379c73a5cb514e273baabf59b"
+    },
+    "scripts/prove-live-config-commit-7e98.py": {
+      "bytes": 2299,
+      "sha256": "57dc8ab59e5107d06c6e8aebfb96fb845eb4cad56fc14b4a7226086a95f66b91"
+    },
+    "scripts/prove-live-window-7e98.py": {
+      "bytes": 3814,
+      "sha256": "94dfbdb90a634e562e7c69a75110813ab957e969cc82f53f3c1e2ea59008d87f"
+    },
+    "scripts/run-live-7e98.py": {
+      "bytes": 4546,
+      "sha256": "09be7fc6926cf569ef3c391df83e42c2b8829dce977c28588d6c5bc5c1c5640b"
+    }
+  },
+  "exclusions": [
+    "server.properties/RCON credentials",
+    "world",
+    "account/launcher arguments",
+    "binaries/libraries/assets",
+    "raw hs_err native crash reports"
+  ],
+  "rawCrashReports": {
+    "clientD\\hs_err_pid7068.log": "42f7a69a823e53544fb3e6f1845fc8a8e648257d0796785803cc3e845e6388aa",
+    "clientE\\hs_err_pid40508.log": "71e0b2f3d392f2d39fba8c43aa062028d911731ef30cdb5bf65cb065b6af3e88"
+  }
+}

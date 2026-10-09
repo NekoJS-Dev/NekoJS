@@ -1,0 +1,80 @@
+{
+  "sourceRevision": "7e98fd15175d15c8dad062bf40e2a284e04eaf51",
+  "artifactSha256": "9acfb41ec223240054d852f04fc6f892c1be62f64dea1af71008c417fa70bd93",
+  "multiplayerWindows": "PASS",
+  "visualResourceOverrideClearAndCandidateRecovery": "PASS",
+  "firstHudAfterResourceReload": "PASS",
+  "firstPixelFrame": "NOT_VERIFIED",
+  "allNodeClientVisual": "NOT_RUN",
+  "nativeClientOverall": "FAIL",
+  "exits": {
+    "server": 0,
+    "clientA": 0,
+    "clientB": 0,
+    "clientC": 0,
+    "clientD": 1,
+    "clientE": 1
+  },
+  "nativeCrashes": [
+    "clientD: glfw.dll+0x10fa1",
+    "clientE: glfw.dll+0x10fa1"
+  ],
+  "crashCause": "NOT_ESTABLISHED",
+  "loginSetFirstHud": {
+    "setAccepted": true,
+    "current": null,
+    "active": false
+  },
+  "reloadFirstHud": [
+    {
+      "generation": 2,
+      "declared": true,
+      "current": "minecraft:invert",
+      "active": true
+    },
+    {
+      "generation": 3,
+      "declared": true,
+      "current": "minecraft:invert",
+      "active": true
+    }
+  ],
+  "steps": [
+    {
+      "step": "blur",
+      "accepted": true,
+      "generation": 2,
+      "declared": true,
+      "current": "minecraft:invert",
+      "active": true
+    },
+    {
+      "step": "clear",
+      "accepted": true,
+      "generation": 2,
+      "declared": true,
+      "current": null,
+      "active": false
+    },
+    {
+      "step": "blur",
+      "accepted": true,
+      "generation": 2,
+      "declared": true,
+      "current": "minecraft:invert",
+      "active": true
+    },
+    {
+      "step": "blur",
+      "accepted": true,
+      "generation": 3,
+      "declared": true,
+      "current": "minecraft:invert",
+      "active": true
+    }
+  ],
+  "ownedPortsFree": true,
+  "productionSourceChanged": false,
+  "fakeReplies": false,
+  "packetBytesModified": false
+}
