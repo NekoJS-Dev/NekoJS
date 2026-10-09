@@ -1,0 +1,724 @@
+{
+  "nodes": [
+    {
+      "node": "1.21.1",
+      "pyright": {
+        "version": "1.1.414",
+        "summary": {
+          "filesAnalyzed": 317,
+          "errorCount": 79,
+          "warningCount": 0,
+          "informationCount": 0,
+          "timeInSec": 13.732
+        },
+        "exitCode": 1,
+        "explicitStubCount": 317,
+        "rules": {
+          "reportInconsistentOverload": 57,
+          "reportAssignmentType": 3,
+          "reportGeneralTypeIssues": 11,
+          "reportRedeclaration": 8
+        }
+      },
+      "typescript": [
+        {
+          "side": "server",
+          "exitCode": 2,
+          "diagnosticCount": 2785,
+          "codes": {
+            "TS2304": 535,
+            "TS2749": 11,
+            "TS2300": 112,
+            "TS1038": 4,
+            "TS1225": 2,
+            "TS2420": 181,
+            "TS1070": 399,
+            "TS2307": 105,
+            "TS2305": 30,
+            "TS2314": 321,
+            "TS1268": 24,
+            "TS2344": 568,
+            "TS2416": 327,
+            "TS1337": 24,
+            "TS1341": 1,
+            "TS1089": 1,
+            "TS1093": 2,
+            "TS2506": 1,
+            "TS2315": 28,
+            "TS2430": 9,
+            "TS2552": 4,
+            "TS7051": 12,
+            "TS7008": 1,
+            "TS2507": 5,
+            "TS2426": 5,
+            "TS2724": 13,
+            "TS2610": 3,
+            "TS2417": 29,
+            "TS2694": 20,
+            "TS2611": 2,
+            "TS2423": 1,
+            "TS2320": 1,
+            "TS2693": 4
+          },
+          "includesInheritedFromActualEditorConfig": true,
+          "skipLibCheck": false
+        },
+        {
+          "side": "startup",
+          "exitCode": 2,
+          "diagnosticCount": 2786,
+          "codes": {
+            "TS2304": 535,
+            "TS2749": 11,
+            "TS2300": 112,
+            "TS1038": 4,
+            "TS1225": 2,
+            "TS2420": 181,
+            "TS1070": 399,
+            "TS2307": 106,
+            "TS2305": 30,
+            "TS2314": 321,
+            "TS1268": 24,
+            "TS2344": 568,
+            "TS2416": 327,
+            "TS1337": 24,
+            "TS1341": 1,
+            "TS1089": 1,
+            "TS1093": 2,
+            "TS2506": 1,
+            "TS2315": 28,
+            "TS2430": 9,
+            "TS2552": 4,
+            "TS7051": 12,
+            "TS7008": 1,
+            "TS2507": 5,
+            "TS2426": 5,
+            "TS2724": 13,
+            "TS2610": 3,
+            "TS2417": 29,
+            "TS2694": 20,
+            "TS2611": 2,
+            "TS2423": 1,
+            "TS2320": 1,
+            "TS2693": 4
+          },
+          "includesInheritedFromActualEditorConfig": true,
+          "skipLibCheck": false
+        }
+      ]
+    },
+    {
+      "node": "26.1.2",
+      "pyright": {
+        "version": "1.1.414",
+        "summary": {
+          "filesAnalyzed": 377,
+          "errorCount": 88,
+          "warningCount": 0,
+          "informationCount": 0,
+          "timeInSec": 15.335
+        },
+        "exitCode": 1,
+        "explicitStubCount": 377,
+        "rules": {
+          "reportInconsistentOverload": 69,
+          "reportAssignmentType": 4,
+          "reportGeneralTypeIssues": 7,
+          "reportRedeclaration": 8
+        }
+      },
+      "typescript": [
+        {
+          "side": "server",
+          "exitCode": 2,
+          "diagnosticCount": 3552,
+          "codes": {
+            "TS2304": 687,
+            "TS2749": 11,
+            "TS2300": 112,
+            "TS1038": 4,
+            "TS1225": 2,
+            "TS2420": 195,
+            "TS1070": 497,
+            "TS2307": 145,
+            "TS2305": 26,
+            "TS2314": 484,
+            "TS1268": 36,
+            "TS2724": 3,
+            "TS2344": 780,
+            "TS1337": 29,
+            "TS1341": 1,
+            "TS1089": 1,
+            "TS1093": 2,
+            "TS2506": 1,
+            "TS2315": 25,
+            "TS2416": 424,
+            "TS2430": 14,
+            "TS2552": 4,
+            "TS7051": 12,
+            "TS7008": 1,
+            "TS2507": 6,
+            "TS2426": 5,
+            "TS2694": 12,
+            "TS2611": 2,
+            "TS2610": 2,
+            "TS2423": 1,
+            "TS2417": 24,
+            "TS2693": 4
+          },
+          "includesInheritedFromActualEditorConfig": true,
+          "skipLibCheck": false
+        },
+        {
+          "side": "startup",
+          "exitCode": 2,
+          "diagnosticCount": 3553,
+          "codes": {
+            "TS2304": 687,
+            "TS2749": 11,
+            "TS2300": 112,
+            "TS1038": 4,
+            "TS1225": 2,
+            "TS2420": 195,
+            "TS1070": 497,
+            "TS2307": 146,
+            "TS2305": 26,
+            "TS2314": 484,
+            "TS1268": 36,
+            "TS2724": 3,
+            "TS2344": 780,
+            "TS1337": 29,
+            "TS1341": 1,
+            "TS1089": 1,
+            "TS1093": 2,
+            "TS2506": 1,
+            "TS2315": 25,
+            "TS2416": 424,
+            "TS2430": 14,
+            "TS2552": 4,
+            "TS7051": 12,
+            "TS7008": 1,
+            "TS2507": 6,
+            "TS2426": 5,
+            "TS2694": 12,
+            "TS2611": 2,
+            "TS2610": 2,
+            "TS2423": 1,
+            "TS2417": 24,
+            "TS2693": 4
+          },
+          "includesInheritedFromActualEditorConfig": true,
+          "skipLibCheck": false
+        }
+      ]
+    },
+    {
+      "node": "26.2.0",
+      "pyright": {
+        "version": "1.1.414",
+        "summary": {
+          "filesAnalyzed": 344,
+          "errorCount": 87,
+          "warningCount": 0,
+          "informationCount": 0,
+          "timeInSec": 9.726
+        },
+        "exitCode": 1,
+        "explicitStubCount": 344,
+        "rules": {
+          "reportInconsistentOverload": 68,
+          "reportAssignmentType": 4,
+          "reportGeneralTypeIssues": 7,
+          "reportRedeclaration": 8
+        }
+      },
+      "typescript": [
+        {
+          "side": "server",
+          "exitCode": 2,
+          "diagnosticCount": 2927,
+          "codes": {
+            "TS2304": 539,
+            "TS2749": 11,
+            "TS2300": 112,
+            "TS1038": 4,
+            "TS1225": 2,
+            "TS2420": 136,
+            "TS1070": 448,
+            "TS2307": 134,
+            "TS2305": 27,
+            "TS2314": 478,
+            "TS1268": 38,
+            "TS2724": 3,
+            "TS2344": 530,
+            "TS1337": 29,
+            "TS1341": 1,
+            "TS1089": 1,
+            "TS1093": 2,
+            "TS2506": 1,
+            "TS2315": 25,
+            "TS2416": 322,
+            "TS2430": 14,
+            "TS2552": 4,
+            "TS7051": 12,
+            "TS7008": 1,
+            "TS2507": 6,
+            "TS2426": 4,
+            "TS2694": 12,
+            "TS2610": 2,
+            "TS2423": 1,
+            "TS2611": 1,
+            "TS2417": 23,
+            "TS2693": 4
+          },
+          "includesInheritedFromActualEditorConfig": true,
+          "skipLibCheck": false
+        },
+        {
+          "side": "startup",
+          "exitCode": 2,
+          "diagnosticCount": 2928,
+          "codes": {
+            "TS2304": 539,
+            "TS2749": 11,
+            "TS2300": 112,
+            "TS1038": 4,
+            "TS1225": 2,
+            "TS2420": 136,
+            "TS1070": 448,
+            "TS2307": 135,
+            "TS2305": 27,
+            "TS2314": 478,
+            "TS1268": 38,
+            "TS2724": 3,
+            "TS2344": 530,
+            "TS1337": 29,
+            "TS1341": 1,
+            "TS1089": 1,
+            "TS1093": 2,
+            "TS2506": 1,
+            "TS2315": 25,
+            "TS2416": 322,
+            "TS2430": 14,
+            "TS2552": 4,
+            "TS7051": 12,
+            "TS7008": 1,
+            "TS2507": 6,
+            "TS2426": 4,
+            "TS2694": 12,
+            "TS2610": 2,
+            "TS2423": 1,
+            "TS2611": 1,
+            "TS2417": 23,
+            "TS2693": 4
+          },
+          "includesInheritedFromActualEditorConfig": true,
+          "skipLibCheck": false
+        }
+      ]
+    },
+    {
+      "node": "26.1.2-fabric",
+      "pyright": {
+        "version": "1.1.414",
+        "summary": {
+          "filesAnalyzed": 293,
+          "errorCount": 88,
+          "warningCount": 0,
+          "informationCount": 0,
+          "timeInSec": 9.768
+        },
+        "exitCode": 1,
+        "explicitStubCount": 293,
+        "rules": {
+          "reportAssignmentType": 2,
+          "reportGeneralTypeIssues": 8,
+          "reportInconsistentOverload": 65,
+          "reportRedeclaration": 13
+        }
+      },
+      "typescript": [
+        {
+          "side": "server",
+          "exitCode": 2,
+          "diagnosticCount": 673,
+          "codes": {
+            "TS1434": 12,
+            "TS1068": 12,
+            "TS1005": 505,
+            "TS1109": 127,
+            "TS1011": 5,
+            "TS1128": 12
+          },
+          "includesInheritedFromActualEditorConfig": true,
+          "skipLibCheck": false
+        },
+        {
+          "side": "startup",
+          "exitCode": 2,
+          "diagnosticCount": 673,
+          "codes": {
+            "TS1434": 12,
+            "TS1068": 12,
+            "TS1005": 505,
+            "TS1109": 127,
+            "TS1011": 5,
+            "TS1128": 12
+          },
+          "includesInheritedFromActualEditorConfig": true,
+          "skipLibCheck": false
+        }
+      ]
+    },
+    {
+      "node": "26.2.0-fabric",
+      "pyright": {
+        "version": "1.1.414",
+        "summary": {
+          "filesAnalyzed": 259,
+          "errorCount": 88,
+          "warningCount": 0,
+          "informationCount": 0,
+          "timeInSec": 7.455
+        },
+        "exitCode": 1,
+        "explicitStubCount": 259,
+        "rules": {
+          "reportAssignmentType": 2,
+          "reportGeneralTypeIssues": 8,
+          "reportInconsistentOverload": 65,
+          "reportRedeclaration": 13
+        }
+      },
+      "typescript": [
+        {
+          "side": "server",
+          "exitCode": 2,
+          "diagnosticCount": 630,
+          "codes": {
+            "TS1434": 9,
+            "TS1068": 9,
+            "TS1005": 478,
+            "TS1109": 120,
+            "TS1011": 5,
+            "TS1128": 9
+          },
+          "includesInheritedFromActualEditorConfig": true,
+          "skipLibCheck": false
+        },
+        {
+          "side": "startup",
+          "exitCode": 2,
+          "diagnosticCount": 630,
+          "codes": {
+            "TS1434": 9,
+            "TS1068": 9,
+            "TS1005": 478,
+            "TS1109": 120,
+            "TS1011": 5,
+            "TS1128": 9
+          },
+          "includesInheritedFromActualEditorConfig": true,
+          "skipLibCheck": false
+        }
+      ]
+    }
+  ],
+  "legacyComparison": {
+    "before": {
+      "filesAnalyzed": 317,
+      "errorCount": 129,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 2.582
+    },
+    "after": {
+      "filesAnalyzed": 317,
+      "errorCount": 79,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 13.732
+    },
+    "removed": [
+      {
+        "file": "nekojs/_java/com/mojang/brigadier/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"read\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/com/mojang/brigadier/builder/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"fork\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/com/mojang/brigadier/builder/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"literal\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/com/mojang/brigadier/builder/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"redirect\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/com/mojang/brigadier/suggestion/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"empty\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/com/tkisor/nekojs/api/data/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"namespace\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/com/tkisor/nekojs/api/data/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"path\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/com/tkisor/nekojs/api/surface/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"constructor\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/java/lang/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"componentType\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/java/lang/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"interrupted\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/java/net/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"inetAddresses\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/java/net/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"subInterfaces\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/java/util/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"empty\" is obscured by a declaration of the same name",
+        "count": 4
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/core/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"key\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/network/chat/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"system\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/network/protocol/game/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"type\" is obscured by a declaration of the same name",
+        "count": 2
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/server/level/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"level\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/server/level/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"structureManager\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/server/network/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"player\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/server/network/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"filtered\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/server/packs/repository/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"hidden\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/server/packs/repository/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"vanilla\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/tags/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"id\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/tags/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"required\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/tags/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"tag\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/util/random/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"weight\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/entity/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"value\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/entity/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"yHeadRot\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/entity/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"tame\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/entity/item/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"age\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/entity/player/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"selected\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/entity/player/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"hurt\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/item/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"advanced\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/item/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"creative\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/item/crafting/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"group\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/item/crafting/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"ingredients\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/item/crafting/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"stackingIds\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/item/crafting/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"values\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/level/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"random\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/level/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"customSpawnRules\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/level/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"entityToSpawn\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/level/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"equipment\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/level/block/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"pitch\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/level/block/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Declaration \"volume\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/minecraft/world/level/levelgen/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"aquifersEnabled\" is obscured by a declaration of the same name",
+        "count": 1
+      },
+      {
+        "file": "nekojs/_java/net/neoforged/neoforge/fluids/crafting/__init__.pyi",
+        "rule": "reportRedeclaration",
+        "message": "Method declaration \"empty\" is obscured by a declaration of the same name",
+        "count": 1
+      }
+    ],
+    "added": [],
+    "lineNumbersIgnoredForIdentity": true,
+    "sameNodeSameFixtures": true
+  }
+}

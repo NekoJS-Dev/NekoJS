@@ -1,0 +1,227 @@
+[
+  {
+    "node": "1.21.1",
+    "beforeFiles": 334,
+    "afterFiles": 334,
+    "byteIdentical": false,
+    "differences": [
+      "@side-only/client/events/index.d.ts",
+      "@side-only/server/bindings/index.d.ts",
+      "@side-only/server/events/index.d.ts",
+      "@side-only/server/events/recipes/index.d.ts",
+      "@side-only/startup/bindings/index.d.ts",
+      "@side-only/startup/events/index.d.ts",
+      "@side-only/test/bindings/index.d.ts",
+      "@side-only/test/events/index.d.ts"
+    ],
+    "differenceAudit": [
+      {
+        "file": "@side-only/client/events/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/server/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/server/events/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/server/events/recipes/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/startup/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/startup/events/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/test/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/test/events/index.d.ts",
+        "lineMultisetIdentical": true
+      }
+    ]
+  },
+  {
+    "node": "26.1.2",
+    "beforeFiles": 391,
+    "afterFiles": 391,
+    "byteIdentical": false,
+    "differences": [
+      "@side-only/server/bindings/index.d.ts",
+      "@side-only/server/events/recipes/index.d.ts",
+      "@side-only/startup/bindings/index.d.ts",
+      "@side-only/startup/events/index.d.ts",
+      "@side-only/test/bindings/index.d.ts"
+    ],
+    "differenceAudit": [
+      {
+        "file": "@side-only/server/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/server/events/recipes/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/startup/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/startup/events/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/test/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      }
+    ]
+  },
+  {
+    "node": "26.2.0",
+    "beforeFiles": 360,
+    "afterFiles": 360,
+    "byteIdentical": false,
+    "differences": [
+      "@side-only/client/events/index.d.ts",
+      "@side-only/server/bindings/index.d.ts",
+      "@side-only/server/events/index.d.ts",
+      "@side-only/server/events/recipes/index.d.ts",
+      "@side-only/startup/bindings/index.d.ts",
+      "@side-only/startup/events/index.d.ts",
+      "@side-only/test/bindings/index.d.ts",
+      "@side-only/test/events/index.d.ts"
+    ],
+    "differenceAudit": [
+      {
+        "file": "@side-only/client/events/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/server/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/server/events/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/server/events/recipes/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/startup/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/startup/events/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/test/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/test/events/index.d.ts",
+        "lineMultisetIdentical": true
+      }
+    ]
+  },
+  {
+    "node": "26.1.2-fabric",
+    "beforeFiles": 307,
+    "afterFiles": 307,
+    "byteIdentical": false,
+    "differences": [
+      "@side-only/server/bindings/index.d.ts",
+      "@side-only/server/events/index.d.ts",
+      "@side-only/server/events/recipes/index.d.ts",
+      "@side-only/startup/bindings/index.d.ts",
+      "@side-only/startup/events/index.d.ts",
+      "@side-only/test/events/index.d.ts"
+    ],
+    "differenceAudit": [
+      {
+        "file": "@side-only/server/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/server/events/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/server/events/recipes/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/startup/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/startup/events/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/test/events/index.d.ts",
+        "lineMultisetIdentical": true
+      }
+    ]
+  },
+  {
+    "node": "26.2.0-fabric",
+    "beforeFiles": 275,
+    "afterFiles": 275,
+    "byteIdentical": false,
+    "differences": [
+      "@side-only/client/events/index.d.ts",
+      "@side-only/server/bindings/index.d.ts",
+      "@side-only/server/events/index.d.ts",
+      "@side-only/server/events/recipes/index.d.ts",
+      "@side-only/startup/bindings/index.d.ts",
+      "@side-only/startup/events/index.d.ts",
+      "@side-only/test/bindings/index.d.ts",
+      "@side-only/test/events/index.d.ts"
+    ],
+    "differenceAudit": [
+      {
+        "file": "@side-only/client/events/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/server/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/server/events/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/server/events/recipes/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/startup/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/startup/events/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/test/bindings/index.d.ts",
+        "lineMultisetIdentical": true
+      },
+      {
+        "file": "@side-only/test/events/index.d.ts",
+        "lineMultisetIdentical": true
+      }
+    ]
+  }
+]

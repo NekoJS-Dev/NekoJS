@@ -8,6 +8,7 @@ import com.tkisor.nekojs.probe.ir.TypeSlot;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -42,6 +43,7 @@ public final class PythonClassRenderer {
         sb.append("class ").append(name).append(bases(d, true)).append(":\n");
         appendDoc(sb, d.docs);
         boolean hasMember = false;
+        Set<String> propertyConflicts = beanPropertyConflicts(d);
 
         // 字段：静态（ClassVar）+ 实例
         for (FieldDecl f : d.fields) {
@@ -62,7 +64,8 @@ public final class PythonClassRenderer {
         }
         // getter → @property（+ setter）
         for (MethodDecl m : d.methods) {
-            if (m.hidden || !m.isGetter || !isPythonIdentifier(m.property)) continue;
+            if (m.hidden || !m.isGetter || !isPythonIdentifier(m.property)
+                    || propertyConflicts.contains(pyIdent(m.property))) continue;
             String ret = renderSlot(m.returnType);
             sb.append("    @property\n");
             sb.append("    def ").append(pyIdent(m.property)).append("(self) -> ").append(ret);
@@ -80,11 +83,11 @@ public final class PythonClassRenderer {
         // （与 PythonEventRenderer 对 dispatch 事件的处理一致）。
         Map<String, Integer> methodNameCount = new HashMap<>();
         for (MethodDecl m : d.methods) {
-            if (!isOrdinaryPythonMethod(m)) continue;
+            if (!isOrdinaryPythonMethod(m, propertyConflicts)) continue;
             methodNameCount.merge(pyIdent(m.effectiveName()), 1, Integer::sum);
         }
         for (MethodDecl m : d.methods) {
-            if (!isOrdinaryPythonMethod(m)) continue;
+            if (!isOrdinaryPythonMethod(m, propertyConflicts)) continue;
             boolean overloaded = methodNameCount.getOrDefault(pyIdent(m.effectiveName()), 0) > 1;
             if (m.isStatic) sb.append("    @staticmethod\n");
             if (overloaded) sb.append("    @overload\n");
@@ -159,9 +162,10 @@ public final class PythonClassRenderer {
     public static boolean hasOverloads(TypeDecl d) {
         if (d == null) return false;
         if (d.constructors.stream().filter(c -> !c.hidden).count() > 1) return true;
+        Set<String> propertyConflicts = beanPropertyConflicts(d);
         Map<String, Integer> nameCount = new HashMap<>();
         for (MethodDecl m : d.methods) {
-            if (!isOrdinaryPythonMethod(m)) continue;
+            if (!isOrdinaryPythonMethod(m, propertyConflicts)) continue;
             nameCount.merge(pyIdent(m.effectiveName()), 1, Integer::sum);
         }
         return nameCount.values().stream().anyMatch(count -> count > 1);
@@ -281,11 +285,29 @@ public final class PythonClassRenderer {
                 .replace("\"\"\"", "'''");
     }
 
-    private static boolean isOrdinaryPythonMethod(MethodDecl method) {
+    private static Set<String> beanPropertyConflicts(TypeDecl declaration) {
+        Set<String> names = new LinkedHashSet<>();
+        for (FieldDecl field : declaration.fields) {
+            if (!field.hidden && isPythonIdentifier(field.effectiveName())) names.add(pyIdent(field.effectiveName()));
+        }
+        for (MethodDecl method : declaration.methods) {
+            if (isOrdinaryPythonMethod(method, Set.of())) names.add(pyIdent(method.effectiveName()));
+        }
+        return names;
+    }
+
+    private static boolean isOrdinaryPythonMethod(MethodDecl method, Set<String> propertyConflicts) {
         if (method.hidden || method.isConstructor || !isPythonIdentifier(method.effectiveName())) return false;
-        if (method.isGetter) return !isPythonIdentifier(method.property);
-        if (method.isSetter) return method.effectiveName().length() > 3
-                && !isPythonIdentifier(method.effectiveName().substring(3));
+        // A stub cannot declare a property and a method/field under the same name.
+        // Preserve the real accessor call targets when the Bean alias would collide.
+        if (method.isGetter) return !isPythonIdentifier(method.property)
+                || propertyConflicts.contains(pyIdent(method.property));
+        if (method.isSetter && method.effectiveName().length() > 3) {
+            String suffix = method.effectiveName().substring(3);
+            String property = suffix.substring(0, 1).toLowerCase(Locale.ROOT) + suffix.substring(1);
+            return !isPythonIdentifier(property) || propertyConflicts.contains(pyIdent(property));
+        }
+        if (method.isSetter) return false;
         return true;
     }
 

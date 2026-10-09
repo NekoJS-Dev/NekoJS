@@ -1,0 +1,1213 @@
+{
+  "input": "build\\ticket37-config-sync-repair\\legacy-probe-actual-explicit-pyright.json",
+  "diagnosticRules": {
+    "reportRedeclaration": 58,
+    "reportInconsistentOverload": 57,
+    "reportAssignmentType": 3,
+    "reportGeneralTypeIssues": 11
+  },
+  "redeclarationCategories": {
+    "property/member collision": 51,
+    "other duplicate": 7
+  },
+  "redeclarations": [
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/com/mojang/brigadier/__init__.pyi",
+      "owner": "StringReader",
+      "member": "read",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 104,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 137,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/com/mojang/brigadier/builder/__init__.pyi",
+      "owner": "ArgumentBuilder",
+      "member": "redirect",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 25,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 35,
+          "kind": "FunctionDef",
+          "decorators": [
+            "overload"
+          ]
+        },
+        {
+          "line": 37,
+          "kind": "FunctionDef",
+          "decorators": [
+            "overload"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/com/mojang/brigadier/builder/__init__.pyi",
+      "owner": "ArgumentBuilder",
+      "member": "fork",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 29,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 32,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/com/mojang/brigadier/builder/__init__.pyi",
+      "owner": "LiteralArgumentBuilder",
+      "member": "literal",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 46,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 49,
+          "kind": "FunctionDef",
+          "decorators": [
+            "staticmethod"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/com/mojang/brigadier/suggestion/__init__.pyi",
+      "owner": "Suggestions",
+      "member": "empty",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 42,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 46,
+          "kind": "FunctionDef",
+          "decorators": [
+            "staticmethod"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/com/tkisor/nekojs/api/data/__init__.pyi",
+      "owner": "NekoId",
+      "member": "namespace",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 30,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 36,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/com/tkisor/nekojs/api/data/__init__.pyi",
+      "owner": "NekoId",
+      "member": "path",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 32,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 43,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/com/tkisor/nekojs/api/surface/__init__.pyi",
+      "owner": "ApiSignature",
+      "member": "constructor",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 21,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 25,
+          "kind": "FunctionDef",
+          "decorators": [
+            "staticmethod"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/java/lang/__init__.pyi",
+      "owner": "Class",
+      "member": "componentType",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 585,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 678,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/java/lang/__init__.pyi",
+      "owner": "Thread",
+      "member": "interrupted",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 2109,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 2129,
+          "kind": "FunctionDef",
+          "decorators": [
+            "staticmethod"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/java/net/__init__.pyi",
+      "owner": "NetworkInterface",
+      "member": "inetAddresses",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 122,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 151,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/java/net/__init__.pyi",
+      "owner": "NetworkInterface",
+      "member": "subInterfaces",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 132,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 154,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/java/util/__init__.pyi",
+      "owner": "Optional",
+      "member": "empty",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 837,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 841,
+          "kind": "FunctionDef",
+          "decorators": [
+            "staticmethod"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/java/util/__init__.pyi",
+      "owner": "OptionalDouble",
+      "member": "empty",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 868,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 872,
+          "kind": "FunctionDef",
+          "decorators": [
+            "staticmethod"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/java/util/__init__.pyi",
+      "owner": "OptionalInt",
+      "member": "empty",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 892,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 896,
+          "kind": "FunctionDef",
+          "decorators": [
+            "staticmethod"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/java/util/__init__.pyi",
+      "owner": "OptionalLong",
+      "member": "empty",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 916,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 920,
+          "kind": "FunctionDef",
+          "decorators": [
+            "staticmethod"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/core/__init__.pyi",
+      "owner": "Holder_Reference",
+      "member": "key",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 333,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 354,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/network/chat/__init__.pyi",
+      "owner": "PlayerChatMessage",
+      "member": "system",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 432,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 454,
+          "kind": "FunctionDef",
+          "decorators": [
+            "staticmethod"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/network/protocol/game/__init__.pyi",
+      "owner": "ClientboundAddEntityPacket",
+      "member": "type",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 83,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 105,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/network/protocol/game/__init__.pyi",
+      "owner": "ClientboundBlockEntityDataPacket",
+      "member": "type",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 114,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 122,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/server/level/__init__.pyi",
+      "owner": "ServerChunkCache",
+      "member": "level",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 405,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 416,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/server/level/__init__.pyi",
+      "owner": "ServerLevel",
+      "member": "noSave",
+      "category": "other duplicate",
+      "declarations": [
+        {
+          "line": 483,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 615,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/server/level/__init__.pyi",
+      "owner": "ServerLevel",
+      "member": "structureManager",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 542,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 643,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/server/network/__init__.pyi",
+      "owner": "FilteredText",
+      "member": "filtered",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 108,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 111,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/server/network/__init__.pyi",
+      "owner": "ServerGamePacketListenerImpl",
+      "member": "player",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 176,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 179,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/server/packs/repository/__init__.pyi",
+      "owner": "KnownPack",
+      "member": "vanilla",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 27,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 34,
+          "kind": "FunctionDef",
+          "decorators": [
+            "staticmethod"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/server/packs/repository/__init__.pyi",
+      "owner": "Pack",
+      "member": "hidden",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 58,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 66,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/tags/__init__.pyi",
+      "owner": "TagEntry",
+      "member": "id",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 18,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 22,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/tags/__init__.pyi",
+      "owner": "TagEntry",
+      "member": "required",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 19,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 24,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/tags/__init__.pyi",
+      "owner": "TagEntry",
+      "member": "tag",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 20,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 26,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 36,
+          "kind": "FunctionDef",
+          "decorators": [
+            "staticmethod"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/tags/__init__.pyi",
+      "owner": "TagEntry",
+      "member": "tag",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 20,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 26,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 36,
+          "kind": "FunctionDef",
+          "decorators": [
+            "staticmethod"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/util/random/__init__.pyi",
+      "owner": "WeightedEntry_Wrapper",
+      "member": "weight",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 56,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 63,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/entity/__init__.pyi",
+      "owner": "ExperienceOrb",
+      "member": "value",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 1447,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 1459,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/entity/__init__.pyi",
+      "owner": "LivingEntity",
+      "member": "yHeadRot",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 1602,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 1729,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 1731,
+          "kind": "FunctionDef",
+          "decorators": [
+            "yHeadRot.setter"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/entity/__init__.pyi",
+      "owner": "TamableAnimal",
+      "member": "tame",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 2288,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 2300,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/entity/item/__init__.pyi",
+      "owner": "ItemEntity",
+      "member": "age",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 61,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 71,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/entity/player/__init__.pyi",
+      "owner": "Inventory",
+      "member": "selected",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 121,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 130,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/entity/player/__init__.pyi",
+      "owner": "Player",
+      "member": "hurt",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 300,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 385,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/item/__init__.pyi",
+      "owner": "TooltipFlag_Default",
+      "member": "advanced",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 1912,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 1915,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/item/__init__.pyi",
+      "owner": "TooltipFlag_Default",
+      "member": "creative",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 1914,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 1917,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/item/crafting/__init__.pyi",
+      "owner": "Ingredient",
+      "member": "stackingIds",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 196,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 207,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/item/crafting/__init__.pyi",
+      "owner": "Ingredient",
+      "member": "values",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 197,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 209,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/item/crafting/__init__.pyi",
+      "owner": "ShapedRecipe",
+      "member": "showNotification",
+      "category": "other duplicate",
+      "declarations": [
+        {
+          "line": 364,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 386,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/item/crafting/__init__.pyi",
+      "owner": "ShapelessRecipe",
+      "member": "group",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 420,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 425,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/item/crafting/__init__.pyi",
+      "owner": "ShapelessRecipe",
+      "member": "ingredients",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 421,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 427,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/level/__init__.pyi",
+      "owner": "Explosion",
+      "member": "radius",
+      "category": "other duplicate",
+      "declarations": [
+        {
+          "line": 413,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 448,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/level/__init__.pyi",
+      "owner": "Level",
+      "member": "random",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 643,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 675,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/level/__init__.pyi",
+      "owner": "SpawnData",
+      "member": "customSpawnRules",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 1067,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 1072,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/level/__init__.pyi",
+      "owner": "SpawnData",
+      "member": "entityToSpawn",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 1069,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 1073,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/level/__init__.pyi",
+      "owner": "SpawnData",
+      "member": "equipment",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 1071,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 1075,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/level/block/__init__.pyi",
+      "owner": "SoundType",
+      "member": "pitch",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 1422,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 1432,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/level/block/__init__.pyi",
+      "owner": "SoundType",
+      "member": "volume",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 1423,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 1438,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/level/levelgen/__init__.pyi",
+      "owner": "NoiseGeneratorSettings",
+      "member": "aquifersEnabled",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 202,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 203,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/level/saveddata/maps/__init__.pyi",
+      "owner": "MapItemSavedData",
+      "member": "locked",
+      "category": "other duplicate",
+      "declarations": [
+        {
+          "line": 95,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 119,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/phys/__init__.pyi",
+      "owner": "Vec3",
+      "member": "x",
+      "category": "other duplicate",
+      "declarations": [
+        {
+          "line": 162,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 229,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/phys/__init__.pyi",
+      "owner": "Vec3",
+      "member": "y",
+      "category": "other duplicate",
+      "declarations": [
+        {
+          "line": 163,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 231,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/minecraft/world/phys/__init__.pyi",
+      "owner": "Vec3",
+      "member": "z",
+      "category": "other duplicate",
+      "declarations": [
+        {
+          "line": 164,
+          "kind": "AnnAssign",
+          "decorators": []
+        },
+        {
+          "line": 233,
+          "kind": "FunctionDef",
+          "decorators": []
+        }
+      ]
+    },
+    {
+      "file": "ticket37-legacy-probe-candidate2/1.21.1/.neko_probe/python/nekojs/_java/net/neoforged/neoforge/fluids/crafting/__init__.pyi",
+      "owner": "FluidIngredient",
+      "member": "empty",
+      "category": "property/member collision",
+      "declarations": [
+        {
+          "line": 31,
+          "kind": "FunctionDef",
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "line": 35,
+          "kind": "FunctionDef",
+          "decorators": [
+            "staticmethod"
+          ]
+        }
+      ]
+    }
+  ]
+}

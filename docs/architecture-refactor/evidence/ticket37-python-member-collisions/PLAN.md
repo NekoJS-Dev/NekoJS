@@ -1,0 +1,11 @@
+# Python 成员冲突诊断
+
+基线085698ab。完整legacy实机317stub的Pyright1.1.414报告129错误，原文件保留于上一验收包。只读AST分类进一步确认58个重复声明诊断中51个含property/member冲突，另7个为其他重复；57个静态/实例重载不一致、3个类型导入赋值和11个继承等问题不能合并归因。
+
+## 反馈环与待验证假设
+
+1. Bean属性名与真实方法/公开字段重名时，Python同时生成@property和同名成员，导致遮盖。以StringReader.getRead/read、ArgumentBuilder.getRedirect/redirect等真实输入为参照，建立同结构Java反射fixture。先通过既有NekoSharedHostAccess和Nashorn兼容选项观察真实访问优先级、确认getter/setter原调用入口，再验证生成声明不重名且保留真实入口。
+2. Java静态/实例同名重载的Python装饰器一致性是独立问题。普通@overload混用@staticmethod无法准确表达，不为消除诊断而删掉某一调用形态；本轮先记录，不混入Bean修复。
+3. 模块按简单名导入导致类型遮盖（如PersistentDataJS继承同名外包类型、java.util.concurrent.Callable与typing.Callable）。需要单独的有作用域符号解析验证；不改名真实Script入口或将其降为Any。
+
+以真实运行期访问、现有后端完整渲染、Pyright实际诊断构成验证链。当前源码性能采样在独立固定提交 checkout 运行期间只准备源码和只读诊断，不并发运行新测试/构建或修改采样器。确认根因后再按RED→GREEN修改共享Python成员选择。保留所有失败和未运行项目，不宣称完整IDE通过。

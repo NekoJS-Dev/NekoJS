@@ -1,0 +1,177 @@
+{
+  "baseline": "0d06a6fb",
+  "productionPackCacheUnchanged": true,
+  "productionGitBytesSha256": "21359106b8d2dfa5bcac3e525d48bdd5749bc9bcc456c5a0ddc8479f4a438d49",
+  "runs": [
+    {
+      "file": "pack-move-delayed-probes-1000.xml",
+      "tests": 1000,
+      "failures": 20,
+      "skipped": 0,
+      "time": "70.142",
+      "timestamp": "2026-10-09T11:02:10.378Z"
+    },
+    {
+      "file": "pack-move-delayed-probes.xml",
+      "tests": 300,
+      "failures": 0,
+      "skipped": 0,
+      "time": "5.908",
+      "timestamp": "2026-10-09T11:01:12.246Z"
+    },
+    {
+      "file": "pack-move-minimal-1000.xml",
+      "tests": 1000,
+      "failures": 0,
+      "skipped": 0,
+      "time": "16.88",
+      "timestamp": "2026-10-09T10:58:01.850Z"
+    },
+    {
+      "file": "pack-move-minimal.xml",
+      "tests": 100,
+      "failures": 0,
+      "skipped": 0,
+      "time": "1.573",
+      "timestamp": "2026-10-09T10:57:38.383Z"
+    },
+    {
+      "file": "pack-move-nested-1000.xml",
+      "tests": 1000,
+      "failures": 4,
+      "skipped": 0,
+      "time": "51.795",
+      "timestamp": "2026-10-09T10:59:30.441Z"
+    },
+    {
+      "file": "pack-move-repeated-baseline.xml",
+      "tests": 100,
+      "failures": 2,
+      "skipped": 0,
+      "time": "4.639",
+      "timestamp": "2026-10-09T10:56:50.869Z"
+    }
+  ],
+  "archive": {
+    "file": "filesystem-diagnostic-evidence.zip",
+    "sha256": "bed5af78869333a2de3abe8f97870382f73c875ee71399564f949b09ed0f4ae7"
+  },
+  "entries": [
+    {
+      "path": "pack-move-delayed-1000-diagnostic.java",
+      "bytes": 2899,
+      "sha256": "b789e528db433f041d87a6b82865192b8f7e69e9217c91370580a350d302ca6c"
+    },
+    {
+      "path": "pack-move-delayed-diagnostic.java",
+      "bytes": 2896,
+      "sha256": "d9f733ae0cde66f014cdbf16c22b872803f9588bfa4f7c4b144894207125601f"
+    },
+    {
+      "path": "pack-move-delayed-probes-1000-exit.json",
+      "bytes": 23,
+      "sha256": "c34bc644b4dfc96082e294ccb49ac40bdf34a3c659c956ffef43981ed30b2234"
+    },
+    {
+      "path": "pack-move-delayed-probes-1000.txt",
+      "bytes": 7086,
+      "sha256": "6191a11703e63e0176712e14294f84f2bf91c0709555b889ffc4d20022c3082b"
+    },
+    {
+      "path": "pack-move-delayed-probes-1000.xml",
+      "bytes": 163839,
+      "sha256": "60e14e43ec7a3effcb1b29b6d1089064fe18f0542cb60adb9c08aa3a2288e285"
+    },
+    {
+      "path": "pack-move-delayed-probes-exit.json",
+      "bytes": 23,
+      "sha256": "ea61d7736f0b7ecb9b35158f03de77013db6b100cf1d36c957e78e6c8817c5b6"
+    },
+    {
+      "path": "pack-move-delayed-probes.txt",
+      "bytes": 2833,
+      "sha256": "b3d7c0cee7fbff6b88c849172c9b13941ec6b270a7d77765f6b5bf34343bb5bf"
+    },
+    {
+      "path": "pack-move-delayed-probes.xml",
+      "bytes": 41027,
+      "sha256": "dc0429e735be6588cc7cad4a6085a877127bf49117a0adfb44ace55c91622e10"
+    },
+    {
+      "path": "pack-move-minimal-1000-exit.json",
+      "bytes": 23,
+      "sha256": "ea61d7736f0b7ecb9b35158f03de77013db6b100cf1d36c957e78e6c8817c5b6"
+    },
+    {
+      "path": "pack-move-minimal-1000.txt",
+      "bytes": 2833,
+      "sha256": "b13337b0ad6820b37986320d59a97ed8c783a5ee1ed8a045bef611e0ef5f89cb"
+    },
+    {
+      "path": "pack-move-minimal-1000.xml",
+      "bytes": 137155,
+      "sha256": "7961a66d9c75c3ac2472fb4595efc90c8ad4bb499a1356ac66b7fe8f10fc7936"
+    },
+    {
+      "path": "pack-move-minimal-diagnostic.java",
+      "bytes": 1147,
+      "sha256": "2589c20c31e69284cc248aaa1474d43a89368fa894717c48b2b002b381049533"
+    },
+    {
+      "path": "pack-move-minimal-exit.json",
+      "bytes": 23,
+      "sha256": "ea61d7736f0b7ecb9b35158f03de77013db6b100cf1d36c957e78e6c8817c5b6"
+    },
+    {
+      "path": "pack-move-minimal.txt",
+      "bytes": 2832,
+      "sha256": "1c96f44aa2a283c709ebcbf5bfada4250f1facd66817f681b08e4bb33575ca8b"
+    },
+    {
+      "path": "pack-move-minimal.xml",
+      "bytes": 13839,
+      "sha256": "7ad71cda0d55c2d8cc959b61456707c81a6aabaaaebff54b6c0f3fd52760867f"
+    },
+    {
+      "path": "pack-move-nested-1000-exit.json",
+      "bytes": 23,
+      "sha256": "c34bc644b4dfc96082e294ccb49ac40bdf34a3c659c956ffef43981ed30b2234"
+    },
+    {
+      "path": "pack-move-nested-1000.txt",
+      "bytes": 4024,
+      "sha256": "804f1410a50c79d699eada946e9eef3abe990f0ea500f00c141832d2c432495b"
+    },
+    {
+      "path": "pack-move-nested-1000.xml",
+      "bytes": 141385,
+      "sha256": "dc01f6113698a4b2081608ccc46099e06444702ed75ca1e4857535d105a831aa"
+    },
+    {
+      "path": "pack-move-nested-diagnostic.java",
+      "bytes": 1578,
+      "sha256": "630f77dfc3847c5b88ff140a43c958039da0b3ee3285bd3095220700ca8050dc"
+    },
+    {
+      "path": "pack-move-original-diagnostic.java",
+      "bytes": 1615,
+      "sha256": "0552a905fe0cf5cd83e5c7ee67f62c6ed25be893ea6c949c8c1b1f4854934373"
+    },
+    {
+      "path": "pack-move-repeated-baseline-exit.json",
+      "bytes": 23,
+      "sha256": "c34bc644b4dfc96082e294ccb49ac40bdf34a3c659c956ffef43981ed30b2234"
+    },
+    {
+      "path": "pack-move-repeated-baseline.txt",
+      "bytes": 3688,
+      "sha256": "02010964f0441feb95092bda0c1b5162670b2b45f7199c7542b8f0c5a81daaab"
+    },
+    {
+      "path": "pack-move-repeated-baseline.xml",
+      "bytes": 16386,
+      "sha256": "43af2daa749b990d281c33c8bc57850b9ef90aa7e440ce286c7a4535f4e538d1"
+    }
+  ],
+  "verdict": "Existing actual move failure reproduced; transient same-path recovery observed, owner/root cause and production recovery policy unresolved; original failures retained."
+}
