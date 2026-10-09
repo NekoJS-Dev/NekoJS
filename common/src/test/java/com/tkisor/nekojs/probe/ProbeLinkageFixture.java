@@ -26,6 +26,16 @@ public final class ProbeLinkageFixture {
         }
     }
 
+    public interface ClientCallback {
+        Missing clientModel();
+    }
+
+    public static class CallbackHost extends Host {
+        public ClientCallback callback() {
+            return null;
+        }
+    }
+
     public static class Host {
         static {
             rejectInitialization();

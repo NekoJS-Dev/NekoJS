@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe.backend.typescript;
 
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
@@ -46,20 +47,29 @@ public final class FunctionalInterfaceAliasGenerator {
         Collections.sort(ordered);
         for (String fqn : ordered) {
             if (registry.getRegisteredAlias(fqn) != null) continue;
-            Class<?> cls = load(fqn);
-            if (cls == null || !cls.isInterface()) continue;
-            // Graal converts Iterable through iterator interop rather than executable-to-SAM conversion.
-            if (cls == Iterable.class) continue;
-            FunctionalInterfaceResolver.Signature signature = FunctionalInterfaceResolver.resolve(cls);
-            if (signature == null) continue;
+            try {
+                Class<?> cls = load(fqn);
+                if (cls == null || !cls.isInterface()) continue;
+                // Graal converts Iterable through iterator interop rather than executable-to-SAM conversion.
+                if (cls == Iterable.class) continue;
+                FunctionalInterfaceResolver.Signature signature = FunctionalInterfaceResolver.resolve(cls);
+                if (signature == null) continue;
 
-            String aliasName = "$" + tsClassName(cls) + "_";
-            TypeAliasRegistry.FunctionalInterfaceAlias alias =
-                    new TypeAliasRegistry.FunctionalInterfaceAlias(aliasName, cls, signature, visibleClasses);
-            aliases.put(fqn, alias);
-            registry.registerFunctionalInterfaceAlias(fqn, alias);
-            for (Type parameter : signature.parameterTypes()) collectClasses(parameter, hostImports);
-            collectClasses(signature.returnType(), hostImports);
+                Set<String> signatureImports = new LinkedHashSet<>();
+                for (Type parameter : signature.parameterTypes()) collectClasses(parameter, signatureImports);
+                collectClasses(signature.returnType(), signatureImports);
+                String aliasName = "$" + tsClassName(cls) + "_";
+                TypeAliasRegistry.FunctionalInterfaceAlias alias =
+                        new TypeAliasRegistry.FunctionalInterfaceAlias(aliasName, cls, signature, visibleClasses);
+                aliases.put(fqn, alias);
+                registry.registerFunctionalInterfaceAlias(fqn, alias);
+                hostImports.addAll(signatureImports);
+            } catch (RuntimeException | LinkageError unavailable) {
+                // Loading an interface can succeed while a signature dependency is rejected by the loader.
+                // Match shared Probe reflection: retain other types, report the omission, and propagate VM failures.
+                NekoJS.LOGGER.warn("[NEKO-4029] Probe functional alias omitted for {}; its signature is unavailable ({})",
+                        fqn, unavailable.toString(), unavailable);
+            }
         }
         hostImports.removeIf(name -> name.equals(Object.class.getName()));
     }

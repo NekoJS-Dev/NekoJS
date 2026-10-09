@@ -1,0 +1,976 @@
+{
+  "profile": "ticket37-892-sam-installed",
+  "sourceBase": "8922627e75f903fb8efbbbf7ceb89dd51b1f50d0",
+  "productionPatchSha256": "6ae6e3b4c651f1b056a34cb13f70d6bfb9cee73b2edebfab29d165bbd72a2179",
+  "runtime": [
+    {
+      "node": "1.21.1",
+      "commands": [
+        {
+          "command": "nekojs registry",
+          "response": "Incorrect argument for command\nnekojs registry<--[HERE]\n"
+        },
+        {
+          "command": "nekojs probe typescript",
+          "response": "Generating probe (typescript:builtin)...\n  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientItemExtensions; reachable declarations may be missing (java.lang.NoClassDefFoundError: net/minecraft/client/model/Model)\n  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.network.protocol.game.ClientGamePacketListener; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/Gui for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.network.protocol.common.ClientCommonPacketListener; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.world.inventory.RecipeBookMenu; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/RecipeBookCategories for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.network.protocol.common.ClientCommonPacketListener; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.network.protocol.game.ClientGamePacketListener; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.world.inventory.RecipeBookMenu; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/RecipeBookCategories for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientItemExtensions; its shared declaration was omitted (java.lang.NoClassDefFoundError: net/minecraft/client/model/Model)\n  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/Gui for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\nProbe generated: 334 files in 912ms\n  Output: .neko_probe\\typescript\n"
+        },
+        {
+          "command": "nekojs probe python",
+          "response": "Generating probe (python:builtin)...\n  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientItemExtensions; reachable declarations may be missing (java.lang.NoClassDefFoundError: net/minecraft/client/model/Model)\n  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.network.protocol.game.ClientGamePacketListener; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/Gui for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.network.protocol.common.ClientCommonPacketListener; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.world.inventory.RecipeBookMenu; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/RecipeBookCategories for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.network.protocol.common.ClientCommonPacketListener; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.network.protocol.game.ClientGamePacketListener; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.world.inventory.RecipeBookMenu; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/RecipeBookCategories for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientItemExtensions; its shared declaration was omitted (java.lang.NoClassDefFoundError: net/minecraft/client/model/Model)\n  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/Gui for invalid dist DEDICATED_SERVER)\n  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)\nProbe generated: 319 files in 664ms\n  Output: .neko_probe\\python\n"
+        },
+        {
+          "command": "forceload add 0 0",
+          "response": "Marked chunk [0, 0] in Overworld to be force loaded\n"
+        },
+        {
+          "command": "fill -1 79 -1 1 79 1 minecraft:stone",
+          "response": "Successfully filled 9 block(s)\n"
+        },
+        {
+          "command": "setblock 2 80 0 installed_ec7:stone",
+          "response": "Changed the block at 2, 80, 0\n"
+        },
+        {
+          "command": "setblock 3 80 0 installed_ec7:spring",
+          "response": "Changed the block at 3, 80, 0\n"
+        },
+        {
+          "command": "nekojs reload server",
+          "response": "NekoJS server reload committed: generation=2 phase=COMMIT - no errors.\n"
+        },
+        {
+          "command": "stop",
+          "response": "Stopping the server\n"
+        }
+      ],
+      "checks": {
+        "startupCallbacks": true,
+        "registrations": true,
+        "nestedFingerprint": true,
+        "fluidTypeIdentity": true,
+        "typescriptGenerated": true,
+        "pythonGenerated": true,
+        "blockPlacement": true,
+        "fluidPlacement": true,
+        "reloadCommitted": true,
+        "pythonStubCount": 317,
+        "pythonAst": true
+      },
+      "errors": [],
+      "probeWarnings": [
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientItemExtensions; reachable declarations may be missing (java.lang.NoClassDefFoundError: net/minecraft/client/model/Model)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.network.protocol.game.ClientGamePacketListener; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/Gui for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.network.protocol.common.ClientCommonPacketListener; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.world.inventory.RecipeBookMenu; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/RecipeBookCategories for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.network.protocol.common.ClientCommonPacketListener; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.network.protocol.game.ClientGamePacketListener; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.world.inventory.RecipeBookMenu; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/RecipeBookCategories for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientItemExtensions; its shared declaration was omitted (java.lang.NoClassDefFoundError: net/minecraft/client/model/Model)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/Gui for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientItemExtensions; reachable declarations may be missing (java.lang.NoClassDefFoundError: net/minecraft/client/model/Model)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.network.protocol.game.ClientGamePacketListener; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/Gui for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.network.protocol.common.ClientCommonPacketListener; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.world.inventory.RecipeBookMenu; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/RecipeBookCategories for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.network.protocol.common.ClientCommonPacketListener; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.network.protocol.game.ClientGamePacketListener; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.world.inventory.RecipeBookMenu; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/RecipeBookCategories for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientItemExtensions; its shared declaration was omitted (java.lang.NoClassDefFoundError: net/minecraft/client/model/Model)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/Gui for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)"
+      ],
+      "pythonAstFailures": [],
+      "shutdown": "RCON stop requested; process exit verified separately",
+      "verdict": "PARTIAL: available output generated; reflection omissions remain explicit"
+    },
+    {
+      "node": "26.1.2",
+      "commands": [
+        {
+          "command": "nekojs registry",
+          "response": "sound_event: 1 registered, 0 stale\nmob_effect: 1 registered, 0 stale\nitem: 1 registered, 0 stale\n"
+        },
+        {
+          "command": "nekojs probe typescript",
+          "response": "Generating probe (typescript:builtin)...\nProbe generated: 391 files in 1452ms\n  Output: .neko_probe\\typescript\n"
+        },
+        {
+          "command": "nekojs probe python",
+          "response": "Generating probe (python:builtin)...\nProbe generated: 379 files in 788ms\n  Output: .neko_probe\\python\n"
+        },
+        {
+          "command": "forceload add 0 0",
+          "response": "Marked chunk [0, 0] in Overworld to be force loaded\n"
+        },
+        {
+          "command": "fill -1 79 -1 1 79 1 minecraft:stone",
+          "response": "Successfully filled 9 block(s)\n"
+        },
+        {
+          "command": "setblock 2 80 0 installed_ec7:stone",
+          "response": "Changed the block at 2, 80, 0\n"
+        },
+        {
+          "command": "setblock 3 80 0 installed_ec7:spring",
+          "response": "Changed the block at 3, 80, 0\n"
+        },
+        {
+          "command": "summon minecraft:pig 0.5 80 0.5 {Tags:[\"ec7_installed_proof\"],NoAI:1b,PersistenceRequired:1b}",
+          "response": "Summoned new Pig\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1]",
+          "response": "No entity was found\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1]",
+          "response": "No entity was found\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1]",
+          "response": "Pig has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, HurtByTimestamp: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, sound_variant: \"minecraft:classic\", PortalCooldown: 0, AbsorptionAmount: 0.0f, InLove: 0, DeathTime: 0s, variant: \"minecraft:temperate\", PersistenceRequired: 1b, UUID: [I; 1713801715, 1687897351, -1791063840, -583040651], Tags: [\"ec7_installed_proof\"], Age: 0, Motion: [0.0d, 0.0d, 0.0d], Health: 10.0f, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 0b, NoAI: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 80.0d, 0.5d], Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:movement_speed\", base: 0.25d}], HurtTime: 0s}\n"
+        },
+        {
+          "command": "effect give @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1] installed_ec7:proof_effect 60 0 true",
+          "response": "Applied effect effect.installed_ec7.proof_effect to Pig\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1]",
+          "response": "Pig has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, HurtByTimestamp: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, sound_variant: \"minecraft:classic\", PortalCooldown: 0, AbsorptionAmount: 0.0f, active_effects: [{duration: 1200, show_icon: 0b, id: \"installed_ec7:proof_effect\", show_particles: 0b}], InLove: 0, DeathTime: 0s, variant: \"minecraft:temperate\", PersistenceRequired: 1b, UUID: [I; 1713801715, 1687897351, -1791063840, -583040651], Tags: [\"ec7_installed_proof\"], Age: 0, Motion: [0.0d, 0.0d, 0.0d], Health: 10.0f, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 0b, NoAI: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 80.0d, 0.5d], Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:movement_speed\", base: 0.25d}], HurtTime: 0s}\n"
+        },
+        {
+          "command": "nekojs reload server",
+          "response": "NekoJS server reload committed: generation=2 phase=COMMIT - no errors.\n"
+        },
+        {
+          "command": "effect clear @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1] installed_ec7:proof_effect",
+          "response": "Removed effect effect.installed_ec7.proof_effect from Pig\n"
+        },
+        {
+          "command": "effect give @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1] installed_ec7:proof_effect 60 1 true",
+          "response": "Applied effect effect.installed_ec7.proof_effect to Pig\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1]",
+          "response": "Pig has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, HurtByTimestamp: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, sound_variant: \"minecraft:classic\", PortalCooldown: 0, AbsorptionAmount: 0.0f, active_effects: [{duration: 1200, show_icon: 0b, amplifier: 1b, id: \"installed_ec7:proof_effect\", show_particles: 0b}], InLove: 0, DeathTime: 0s, variant: \"minecraft:temperate\", PersistenceRequired: 1b, UUID: [I; 1713801715, 1687897351, -1791063840, -583040651], Tags: [\"ec7_installed_proof\"], Age: 0, Motion: [0.0d, 0.0d, 0.0d], Health: 10.0f, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 0b, NoAI: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 80.0d, 0.5d], Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:movement_speed\", base: 0.25d}], HurtTime: 0s}\n"
+        },
+        {
+          "command": "stop",
+          "response": "Stopping the server\n"
+        }
+      ],
+      "checks": {
+        "startupCallbacks": true,
+        "registrations": true,
+        "nestedFingerprint": true,
+        "fluidTypeIdentity": true,
+        "typescriptGenerated": true,
+        "pythonGenerated": true,
+        "blockPlacement": true,
+        "fluidPlacement": true,
+        "effectBeforeReload": true,
+        "reloadCommitted": true,
+        "effectAfterReload": true,
+        "pythonStubCount": 377,
+        "pythonAst": true
+      },
+      "errors": [],
+      "probeWarnings": [],
+      "pythonAstFailures": [],
+      "shutdown": "RCON stop requested; process exit verified separately",
+      "verdict": "PASS"
+    },
+    {
+      "node": "26.2.0",
+      "commands": [
+        {
+          "command": "nekojs registry",
+          "response": "sound_event: 1 registered, 0 stale\nmob_effect: 1 registered, 0 stale\nitem: 1 registered, 0 stale\n"
+        },
+        {
+          "command": "nekojs probe typescript",
+          "response": "Generating probe (typescript:builtin)...\nProbe generated: 360 files in 1248ms\n  Output: .neko_probe\\typescript\n"
+        },
+        {
+          "command": "nekojs probe python",
+          "response": "Generating probe (python:builtin)...\nProbe generated: 346 files in 648ms\n  Output: .neko_probe\\python\n"
+        },
+        {
+          "command": "forceload add 0 0",
+          "response": "Marked chunk [0, 0] in Overworld to be force loaded\n"
+        },
+        {
+          "command": "fill -1 79 -1 1 79 1 minecraft:stone",
+          "response": "Successfully filled 9 block(s)\n"
+        },
+        {
+          "command": "setblock 2 80 0 installed_ec7:stone",
+          "response": "Changed the block at 2, 80, 0\n"
+        },
+        {
+          "command": "setblock 3 80 0 installed_ec7:spring",
+          "response": "Changed the block at 3, 80, 0\n"
+        },
+        {
+          "command": "summon minecraft:pig 0.5 80 0.5 {Tags:[\"ec7_installed_proof\"],NoAI:1b,PersistenceRequired:1b}",
+          "response": "Summoned new Pig\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1]",
+          "response": "Pig has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, sound_variant: \"minecraft:classic\", PortalCooldown: 0, AbsorptionAmount: 0.0f, InLove: 0, DeathTime: 0s, variant: \"minecraft:temperate\", PersistenceRequired: 1b, UUID: [I; 943531277, 1584024777, -1809603729, 262400742], Tags: [\"ec7_installed_proof\"], Age: 0, Motion: [0.0d, 0.0d, 0.0d], Health: 10.0f, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 0b, NoAI: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 80.0d, 0.5d], Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:oxygen_bonus\", base: 0.0d}, {id: \"minecraft:movement_speed\", base: 0.25d}], HurtTime: 0s}\n"
+        },
+        {
+          "command": "effect give @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1] installed_ec7:proof_effect 60 0 true",
+          "response": "Applied effect effect.installed_ec7.proof_effect to Pig\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1]",
+          "response": "Pig has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, sound_variant: \"minecraft:classic\", PortalCooldown: 0, AbsorptionAmount: 0.0f, active_effects: [{duration: 1200, show_icon: 0b, id: \"installed_ec7:proof_effect\", show_particles: 0b}], InLove: 0, DeathTime: 0s, variant: \"minecraft:temperate\", PersistenceRequired: 1b, UUID: [I; 943531277, 1584024777, -1809603729, 262400742], Tags: [\"ec7_installed_proof\"], Age: 0, Motion: [0.0d, 0.0d, 0.0d], Health: 10.0f, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 0b, NoAI: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 80.0d, 0.5d], Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:oxygen_bonus\", base: 0.0d}, {id: \"minecraft:movement_speed\", base: 0.25d}], HurtTime: 0s}\n"
+        },
+        {
+          "command": "nekojs reload server",
+          "response": "NekoJS server reload committed: generation=2 phase=COMMIT - no errors.\n"
+        },
+        {
+          "command": "effect clear @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1] installed_ec7:proof_effect",
+          "response": "Removed effect effect.installed_ec7.proof_effect from Pig\n"
+        },
+        {
+          "command": "effect give @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1] installed_ec7:proof_effect 60 1 true",
+          "response": "Applied effect effect.installed_ec7.proof_effect to Pig\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:pig,tag=ec7_installed_proof,limit=1]",
+          "response": "Pig has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, sound_variant: \"minecraft:classic\", PortalCooldown: 0, AbsorptionAmount: 0.0f, active_effects: [{duration: 1200, show_icon: 0b, amplifier: 1b, id: \"installed_ec7:proof_effect\", show_particles: 0b}], InLove: 0, DeathTime: 0s, variant: \"minecraft:temperate\", PersistenceRequired: 1b, UUID: [I; 943531277, 1584024777, -1809603729, 262400742], Tags: [\"ec7_installed_proof\"], Age: 0, Motion: [0.0d, 0.0d, 0.0d], Health: 10.0f, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 0b, NoAI: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 80.0d, 0.5d], Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:oxygen_bonus\", base: 0.0d}, {id: \"minecraft:movement_speed\", base: 0.25d}], HurtTime: 0s}\n"
+        },
+        {
+          "command": "stop",
+          "response": "Stopping the server\n"
+        }
+      ],
+      "checks": {
+        "startupCallbacks": true,
+        "registrations": true,
+        "nestedFingerprint": true,
+        "fluidTypeIdentity": true,
+        "typescriptGenerated": true,
+        "pythonGenerated": true,
+        "blockPlacement": true,
+        "fluidPlacement": true,
+        "effectBeforeReload": true,
+        "reloadCommitted": true,
+        "effectAfterReload": true,
+        "pythonStubCount": 344,
+        "pythonAst": true
+      },
+      "errors": [],
+      "probeWarnings": [],
+      "pythonAstFailures": [],
+      "shutdown": "RCON stop requested; process exit verified separately",
+      "verdict": "PASS"
+    },
+    {
+      "node": "26.1.2-fabric",
+      "commands": [
+        {
+          "command": "nekojs registry",
+          "response": "sound_event: 0 registered, 0 stalemob_effect: 0 registered, 0 staleitem: 0 registered, 0 stale"
+        },
+        {
+          "command": "nekojs probe typescript",
+          "response": "Generating probe (typescript:builtin)...Probe generated: 307 files in 952ms  Output: .neko_probe\\typescript"
+        },
+        {
+          "command": "nekojs probe python",
+          "response": "Generating probe (python:builtin)...Probe generated: 295 files in 409ms  Output: .neko_probe\\python"
+        },
+        {
+          "command": "forceload add 0 0",
+          "response": "Marked chunk [0, 0] in minecraft:overworld to be force loaded"
+        },
+        {
+          "command": "fill -1 79 -1 1 79 1 minecraft:stone",
+          "response": "Successfully filled 9 block(s)"
+        },
+        {
+          "command": "setblock 2 80 0 installed_ec7:stone",
+          "response": "Changed the block at 2, 80, 0"
+        },
+        {
+          "command": "nekojs reload server",
+          "response": "NekoJS server reload committed: generation=2 phase=COMMIT - no errors."
+        },
+        {
+          "command": "stop",
+          "response": "Stopping the server"
+        }
+      ],
+      "checks": {
+        "startupCallbacks": true,
+        "registrations": true,
+        "nestedFingerprint": true,
+        "typescriptGenerated": true,
+        "pythonGenerated": true,
+        "blockPlacement": true,
+        "reloadCommitted": true,
+        "pythonStubCount": 293,
+        "pythonAst": true
+      },
+      "errors": [],
+      "probeWarnings": [],
+      "pythonAstFailures": [],
+      "shutdown": "RCON stop requested; process exit verified separately",
+      "verdict": "PASS"
+    },
+    {
+      "node": "26.2.0-fabric",
+      "commands": [
+        {
+          "command": "nekojs registry",
+          "response": "sound_event: 0 registered, 0 stalemob_effect: 0 registered, 0 staleitem: 0 registered, 0 stale"
+        },
+        {
+          "command": "nekojs probe typescript",
+          "response": "Generating probe (typescript:builtin)...Probe generated: 275 files in 761ms  Output: .neko_probe\\typescript"
+        },
+        {
+          "command": "nekojs probe python",
+          "response": "Generating probe (python:builtin)...Probe generated: 261 files in 357ms  Output: .neko_probe\\python"
+        },
+        {
+          "command": "forceload add 0 0",
+          "response": "Marked chunk [0, 0] in minecraft:overworld to be force loaded"
+        },
+        {
+          "command": "fill -1 79 -1 1 79 1 minecraft:stone",
+          "response": "No blocks were filled"
+        },
+        {
+          "command": "setblock 2 80 0 installed_ec7:stone",
+          "response": "Changed the block at 2, 80, 0"
+        },
+        {
+          "command": "nekojs reload server",
+          "response": "NekoJS server reload committed: generation=2 phase=COMMIT - no errors."
+        },
+        {
+          "command": "stop",
+          "response": "Stopping the server"
+        }
+      ],
+      "checks": {
+        "startupCallbacks": true,
+        "registrations": true,
+        "nestedFingerprint": true,
+        "typescriptGenerated": true,
+        "pythonGenerated": true,
+        "blockPlacement": true,
+        "reloadCommitted": true,
+        "pythonStubCount": 259,
+        "pythonAst": true
+      },
+      "errors": [],
+      "probeWarnings": [],
+      "pythonAstFailures": [],
+      "shutdown": "RCON stop requested; process exit verified separately",
+      "verdict": "PASS"
+    }
+  ],
+  "matrix": {
+    "productionPatchSha256": "6ae6e3b4c651f1b056a34cb13f70d6bfb9cee73b2edebfab29d165bbd72a2179",
+    "sourceRevision": "8922627e75f903fb8efbbbf7ceb89dd51b1f50d0",
+    "projects": [
+      {
+        "project": "common",
+        "xml": 288,
+        "tests": 2152,
+        "skipped": 4,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "common-api-processor",
+        "xml": 1,
+        "tests": 13,
+        "skipped": 0,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/1.21.1",
+        "xml": 95,
+        "tests": 426,
+        "skipped": 31,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/26.1.2",
+        "xml": 130,
+        "tests": 661,
+        "skipped": 81,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/26.2.0",
+        "xml": 130,
+        "tests": 661,
+        "skipped": 81,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/26.1.2-fabric",
+        "xml": 77,
+        "tests": 384,
+        "skipped": 37,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/26.2.0-fabric",
+        "xml": 77,
+        "tests": 384,
+        "skipped": 37,
+        "failures": 0,
+        "errors": 0
+      }
+    ],
+    "total": {
+      "xml": 798,
+      "tests": 4681,
+      "skipped": 271,
+      "failures": 0,
+      "errors": 0
+    },
+    "exitCode": 0,
+    "commonAndProcessor": "common tests executed after focused checks; processor UP-TO-DATE; all five node test tasks executed",
+    "xmlArchiveSha256": "055a62e291ef48b4f3b60c8c9709fc993bbaa477a2d6f7d9ad9b5e5d86441e66"
+  },
+  "ide": {
+    "sourceRevision": "8922627e75f903fb8efbbbf7ceb89dd51b1f50d0",
+    "nodes": [
+      {
+        "node": "1.21.1",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 1,
+          "summary": {
+            "filesAnalyzed": 317,
+            "errorCount": 79,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 3.684
+          },
+          "stubCount": 317,
+          "rules": {
+            "reportInconsistentOverload": 57,
+            "reportAssignmentType": 3,
+            "reportGeneralTypeIssues": 11,
+            "reportRedeclaration": 8
+          },
+          "previousCb5ErrorCount": 79,
+          "removed": 0,
+          "added": 0
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 2514,
+            "codes": {
+              "TS2304": 606,
+              "TS2749": 11,
+              "TS2300": 110,
+              "TS1038": 4,
+              "TS1225": 2,
+              "TS2420": 280,
+              "TS1070": 399,
+              "TS2307": 105,
+              "TS2305": 32,
+              "TS1268": 27,
+              "TS2344": 384,
+              "TS2416": 406,
+              "TS1337": 24,
+              "TS2430": 15,
+              "TS2320": 3,
+              "TS1341": 1,
+              "TS1089": 1,
+              "TS1093": 2,
+              "TS2506": 1,
+              "TS2417": 31,
+              "TS2314": 10,
+              "TS2724": 14,
+              "TS2552": 4,
+              "TS2315": 6,
+              "TS2426": 5,
+              "TS2610": 4,
+              "TS2694": 20,
+              "TS2611": 2,
+              "TS2423": 1,
+              "TS2693": 4
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 2515,
+            "codes": {
+              "TS2304": 606,
+              "TS2749": 11,
+              "TS2300": 110,
+              "TS1038": 4,
+              "TS1225": 2,
+              "TS2420": 280,
+              "TS1070": 399,
+              "TS2307": 106,
+              "TS2305": 32,
+              "TS1268": 27,
+              "TS2344": 384,
+              "TS2416": 406,
+              "TS1337": 24,
+              "TS2430": 15,
+              "TS2320": 3,
+              "TS1341": 1,
+              "TS1089": 1,
+              "TS1093": 2,
+              "TS2506": 1,
+              "TS2417": 31,
+              "TS2314": 10,
+              "TS2724": 14,
+              "TS2552": 4,
+              "TS2315": 6,
+              "TS2426": 5,
+              "TS2610": 4,
+              "TS2694": 20,
+              "TS2611": 2,
+              "TS2423": 1,
+              "TS2693": 4
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      },
+      {
+        "node": "26.1.2",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 1,
+          "summary": {
+            "filesAnalyzed": 377,
+            "errorCount": 88,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 4.33
+          },
+          "stubCount": 377,
+          "rules": {
+            "reportInconsistentOverload": 69,
+            "reportAssignmentType": 4,
+            "reportGeneralTypeIssues": 7,
+            "reportRedeclaration": 8
+          },
+          "previousCb5ErrorCount": 88,
+          "removed": 0,
+          "added": 0
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 3330,
+            "codes": {
+              "TS2304": 779,
+              "TS2749": 11,
+              "TS2300": 110,
+              "TS1038": 4,
+              "TS1225": 2,
+              "TS2420": 433,
+              "TS1070": 497,
+              "TS2307": 145,
+              "TS2305": 28,
+              "TS1268": 36,
+              "TS2724": 4,
+              "TS2344": 617,
+              "TS2416": 535,
+              "TS1337": 29,
+              "TS2430": 25,
+              "TS2320": 2,
+              "TS1341": 1,
+              "TS1089": 1,
+              "TS1093": 2,
+              "TS2506": 1,
+              "TS2417": 26,
+              "TS2314": 10,
+              "TS2552": 4,
+              "TS2315": 1,
+              "TS2426": 5,
+              "TS2694": 12,
+              "TS2611": 2,
+              "TS2610": 3,
+              "TS2423": 1,
+              "TS2693": 4
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 3331,
+            "codes": {
+              "TS2304": 779,
+              "TS2749": 11,
+              "TS2300": 110,
+              "TS1038": 4,
+              "TS1225": 2,
+              "TS2420": 433,
+              "TS1070": 497,
+              "TS2307": 146,
+              "TS2305": 28,
+              "TS1268": 36,
+              "TS2724": 4,
+              "TS2344": 617,
+              "TS2416": 535,
+              "TS1337": 29,
+              "TS2430": 25,
+              "TS2320": 2,
+              "TS1341": 1,
+              "TS1089": 1,
+              "TS1093": 2,
+              "TS2506": 1,
+              "TS2417": 26,
+              "TS2314": 10,
+              "TS2552": 4,
+              "TS2315": 1,
+              "TS2426": 5,
+              "TS2694": 12,
+              "TS2611": 2,
+              "TS2610": 3,
+              "TS2423": 1,
+              "TS2693": 4
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      },
+      {
+        "node": "26.2.0",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 1,
+          "summary": {
+            "filesAnalyzed": 344,
+            "errorCount": 87,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 3.905
+          },
+          "stubCount": 344,
+          "rules": {
+            "reportInconsistentOverload": 68,
+            "reportAssignmentType": 4,
+            "reportGeneralTypeIssues": 7,
+            "reportRedeclaration": 8
+          },
+          "previousCb5ErrorCount": 87,
+          "removed": 0,
+          "added": 0
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 2784,
+            "codes": {
+              "TS2304": 605,
+              "TS2749": 11,
+              "TS2300": 110,
+              "TS1038": 4,
+              "TS1225": 2,
+              "TS2420": 368,
+              "TS1070": 448,
+              "TS2307": 134,
+              "TS2305": 29,
+              "TS1268": 38,
+              "TS2724": 5,
+              "TS2344": 468,
+              "TS2416": 434,
+              "TS1337": 29,
+              "TS2430": 25,
+              "TS2320": 2,
+              "TS1341": 1,
+              "TS1089": 1,
+              "TS1093": 2,
+              "TS2506": 1,
+              "TS2417": 25,
+              "TS2314": 12,
+              "TS2552": 4,
+              "TS2315": 1,
+              "TS2426": 4,
+              "TS2694": 12,
+              "TS2610": 3,
+              "TS2423": 1,
+              "TS2611": 1,
+              "TS2693": 4
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 2785,
+            "codes": {
+              "TS2304": 605,
+              "TS2749": 11,
+              "TS2300": 110,
+              "TS1038": 4,
+              "TS1225": 2,
+              "TS2420": 368,
+              "TS1070": 448,
+              "TS2307": 135,
+              "TS2305": 29,
+              "TS1268": 38,
+              "TS2724": 5,
+              "TS2344": 468,
+              "TS2416": 434,
+              "TS1337": 29,
+              "TS2430": 25,
+              "TS2320": 2,
+              "TS1341": 1,
+              "TS1089": 1,
+              "TS1093": 2,
+              "TS2506": 1,
+              "TS2417": 25,
+              "TS2314": 12,
+              "TS2552": 4,
+              "TS2315": 1,
+              "TS2426": 4,
+              "TS2694": 12,
+              "TS2610": 3,
+              "TS2423": 1,
+              "TS2611": 1,
+              "TS2693": 4
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      },
+      {
+        "node": "26.1.2-fabric",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 1,
+          "summary": {
+            "filesAnalyzed": 293,
+            "errorCount": 88,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 3.804
+          },
+          "stubCount": 293,
+          "rules": {
+            "reportAssignmentType": 2,
+            "reportGeneralTypeIssues": 8,
+            "reportInconsistentOverload": 65,
+            "reportRedeclaration": 13
+          },
+          "previousCb5ErrorCount": 88,
+          "removed": 0,
+          "added": 0
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 3230,
+            "codes": {
+              "TS1038": 4,
+              "TS1225": 2,
+              "TS2300": 104,
+              "TS2304": 678,
+              "TS1070": 442,
+              "TS2307": 452,
+              "TS1268": 29,
+              "TS2506": 1,
+              "TS2416": 435,
+              "TS2430": 12,
+              "TS2305": 11,
+              "TS2420": 375,
+              "TS2344": 573,
+              "TS2417": 1,
+              "TS2552": 2,
+              "TS2314": 54,
+              "TS2724": 3,
+              "TS1337": 22,
+              "TS2320": 1,
+              "TS2315": 1,
+              "TS2426": 5,
+              "TS2694": 12,
+              "TS2611": 2,
+              "TS2610": 3,
+              "TS2423": 1,
+              "TS1093": 1,
+              "TS2693": 4
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 3231,
+            "codes": {
+              "TS1038": 4,
+              "TS1225": 2,
+              "TS2300": 104,
+              "TS2304": 678,
+              "TS1070": 442,
+              "TS2307": 453,
+              "TS1268": 29,
+              "TS2506": 1,
+              "TS2416": 435,
+              "TS2430": 12,
+              "TS2305": 11,
+              "TS2420": 375,
+              "TS2344": 573,
+              "TS2417": 1,
+              "TS2552": 2,
+              "TS2314": 54,
+              "TS2724": 3,
+              "TS1337": 22,
+              "TS2320": 1,
+              "TS2315": 1,
+              "TS2426": 5,
+              "TS2694": 12,
+              "TS2611": 2,
+              "TS2610": 3,
+              "TS2423": 1,
+              "TS1093": 1,
+              "TS2693": 4
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      },
+      {
+        "node": "26.2.0-fabric",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 1,
+          "summary": {
+            "filesAnalyzed": 259,
+            "errorCount": 88,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 3.066
+          },
+          "stubCount": 259,
+          "rules": {
+            "reportAssignmentType": 2,
+            "reportGeneralTypeIssues": 8,
+            "reportInconsistentOverload": 65,
+            "reportRedeclaration": 13
+          },
+          "previousCb5ErrorCount": 88,
+          "removed": 0,
+          "added": 0
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 2667,
+            "codes": {
+              "TS1038": 4,
+              "TS1225": 2,
+              "TS2300": 112,
+              "TS2304": 479,
+              "TS1070": 392,
+              "TS2307": 423,
+              "TS1268": 31,
+              "TS2506": 1,
+              "TS2416": 334,
+              "TS2430": 12,
+              "TS2305": 11,
+              "TS2420": 315,
+              "TS2344": 422,
+              "TS2417": 1,
+              "TS2552": 2,
+              "TS2314": 72,
+              "TS2724": 4,
+              "TS1337": 22,
+              "TS2320": 1,
+              "TS2315": 1,
+              "TS2426": 4,
+              "TS2694": 12,
+              "TS2610": 3,
+              "TS2423": 1,
+              "TS2611": 1,
+              "TS1093": 1,
+              "TS2693": 4
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 2668,
+            "codes": {
+              "TS1038": 4,
+              "TS1225": 2,
+              "TS2300": 112,
+              "TS2304": 479,
+              "TS1070": 392,
+              "TS2307": 424,
+              "TS1268": 31,
+              "TS2506": 1,
+              "TS2416": 334,
+              "TS2430": 12,
+              "TS2305": 11,
+              "TS2420": 315,
+              "TS2344": 422,
+              "TS2417": 1,
+              "TS2552": 2,
+              "TS2314": 72,
+              "TS2724": 4,
+              "TS1337": 22,
+              "TS2320": 1,
+              "TS2315": 1,
+              "TS2426": 4,
+              "TS2694": 12,
+              "TS2610": 3,
+              "TS2423": 1,
+              "TS2611": 1,
+              "TS1093": 1,
+              "TS2693": 4
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      }
+    ]
+  }
+}

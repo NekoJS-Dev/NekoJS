@@ -55,6 +55,31 @@ class ProbeUnavailableTypeTest {
     }
 
     @Test
+    void missingSamSignatureKeepsAvailableOutputAndReportsBothBackendWarnings(@TempDir Path directory) throws Exception {
+        assertAvailableOutputWithWarning(directory, MissingType.ABSENT, false, true);
+    }
+
+    @Test
+    void loaderRejectedSamSignatureKeepsAvailableOutputAndReportsBothBackendWarnings(@TempDir Path directory) throws Exception {
+        assertAvailableOutputWithWarning(directory, MissingType.REJECTED, false, true);
+    }
+
+    @Test
+    void fatalSamReflectionIsNotReportedAsAnUnavailableAlias() throws Exception {
+        Thread thread = Thread.currentThread();
+        ClassLoader previous = thread.getContextClassLoader();
+        try {
+            thread.setContextClassLoader(fixtureLoader(MissingType.FATAL));
+            var aliases = new com.tkisor.nekojs.probe.backend.typescript.FunctionalInterfaceAliasGenerator(
+                    new com.tkisor.nekojs.probe.types.TypeAliasRegistry());
+            assertThrows(OutOfMemoryError.class, () -> aliases.prepare(
+                    java.util.Set.of(ProbeLinkageFixture.ClientCallback.class.getName()), java.util.Set.of()));
+        } finally {
+            thread.setContextClassLoader(previous);
+        }
+    }
+
+    @Test
     void virtualMachineFailureIsNotReportedAsPartialSuccess() throws Exception {
         Class<?> host = fixtureLoader(MissingType.FATAL).loadClass(ProbeLinkageFixture.Host.class.getName());
         assertThrows(OutOfMemoryError.class,
@@ -99,9 +124,16 @@ class ProbeUnavailableTypeTest {
     }
 
     private static void assertAvailableOutputWithWarning(Path directory, MissingType missingType, boolean generic) throws Exception {
+        assertAvailableOutputWithWarning(directory, missingType, generic, false);
+    }
+
+    private static void assertAvailableOutputWithWarning(Path directory, MissingType missingType,
+                                                        boolean generic, boolean callback) throws Exception {
         ClassLoader loader = fixtureLoader(missingType);
-        Class<?> host = loader.loadClass((generic ? ProbeLinkageFixture.GenericHost.class : ProbeLinkageFixture.Host.class).getName());
-        Class<?> extension = loader.loadClass((generic ? ProbeLinkageFixture.GenericExtension.class : ProbeLinkageFixture.Extension.class).getName());
+        Class<?> host = loader.loadClass((callback ? ProbeLinkageFixture.CallbackHost.class
+                : generic ? ProbeLinkageFixture.GenericHost.class : ProbeLinkageFixture.Host.class).getName());
+        Class<?> extension = loader.loadClass((callback ? ProbeLinkageFixture.ClientCallback.class
+                : generic ? ProbeLinkageFixture.GenericExtension.class : ProbeLinkageFixture.Extension.class).getName());
         if (generic) {
             assertThrows(TypeNotPresentException.class,
                     () -> extension.getDeclaredMethod("clientModels").getGenericReturnType());
