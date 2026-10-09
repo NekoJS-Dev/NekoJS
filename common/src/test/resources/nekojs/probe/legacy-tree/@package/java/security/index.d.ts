@@ -1,5 +1,5 @@
 import { $Serializable } from "java:java/io";
-import { $ClassLoader, $String } from "java:java/lang";
+import { $ClassLoader } from "java:java/lang";
 import { $URL } from "java:java/net";
 import { $Certificate } from "java:java/security/cert";
 import { $Enumeration } from "java:java/util";

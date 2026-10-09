@@ -100,6 +100,22 @@ class IndexFileGeneratorTest {
         registry.registerClassAlias("java.time.DayOfWeek", "string");
         assertEquals("string", registry.getAlias("java.time.DayOfWeek"));
     }
+
+    @Test
+    void functionalAliasRetainsHostInterfaceType() {
+        TypeAliasRegistry registry = new TypeAliasRegistry();
+        IndexFileGenerator gen = generator(registry);
+        TypeDecl function = new TypeReflector().reflect(java.util.function.Function.class);
+        gen.prepareFunctionalInterfaceAliases(Set.of(function.fqn), Set.of());
+        gen.predeclareClass(function.fqn, function, Set.of());
+
+        String out = gen.generate("java.util.function", List.of("Function"), List.of(), Set.of(function.fqn));
+
+        assertTrue(out.contains("export type $Function_<Host0 = any, Host1 = any, CallbackArg0 = Host0, CallbackResult = Host1> ="), out);
+        assertTrue(out.contains("=> CallbackResult"), out);
+        assertTrue(out.contains("| $Function<Host0, Host1>;"),
+                "the callback alias must also accept the Java host interface instance: " + out);
+    }
 }
 
 /** 枚举夹具：真实反射路径（常量按名字排序 → BLUE, GREEN, RED）。 */

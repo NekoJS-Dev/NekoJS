@@ -2,6 +2,7 @@ package com.tkisor.nekojs.probe.ir;
 
 import com.tkisor.nekojs.api.annotation.HideFromJS;
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -100,6 +101,23 @@ class TypeReflectorTest {
         @Override
         public String neko$data() { return "x"; }
         public void neko$setId(String id) {}
+    }
+
+    public static class GenericBase<T> {}
+
+    public static class StringChild extends GenericBase<String> {}
+
+    @Test
+    void genericSuperclassKeepsResolvedArguments() {
+        TypeDecl decl = new TypeReflector().reflect(StringChild.class);
+
+        assertTrue(decl.superType.sourceType instanceof java.lang.reflect.ParameterizedType,
+                "generic superclass reflection must keep its actual type arguments");
+        assertEquals("string", decl.superType.ref.arguments().get(0).name(),
+                "generic superclass IR must retain the inherited argument");
+
+        String out = new TypeScriptClassRenderer(new TypeAliasRegistry()).render(decl);
+        assertTrue(out.contains("extends $TypeReflectorTest$GenericBase<string>"), out);
     }
 
     @Test

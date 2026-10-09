@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
@@ -57,6 +58,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
     private final Map<String, EventGroup> eventGroups;
     private final List<TypeDocCatalogEntry> typeDocs;
     private final List<ManualDeclarationCatalogEntry> manualDeclarations;
+    private final List<ClassDeclarationCatalogEntry> classDeclarations;
     private final List<RegistryBuilderSurfaceEntry> registryBuilderSurfaces;
     private final Map<String, String> nodeModules;
     private final Map<String, RecipeNamespaceEntry> recipeNamespaces;
@@ -76,6 +78,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         this.eventGroups = EventsPoint.mergedEventGroups(extensionProducts);
         this.typeDocs = mergedTypeDocs();
         this.manualDeclarations = mergedManualDeclarations();
+        this.classDeclarations = mergedClassDeclarations();
         this.registryBuilderSurfaces = mergedRegistryBuilderSurfaces();
         this.nodeModules = product(NodeModulesPoint.ID);
         this.recipeNamespaces = product(RecipeNamespacesPoint.ID);
@@ -313,6 +316,18 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         merged.addAll(typeDocsSnapshot(NodeTypeDocsPoint.ID).manualDeclarations());
         merged.sort(Comparator.comparingInt(ManualDeclarationCatalogEntry::priority));
         return List.copyOf(merged);
+    }
+
+    private List<ClassDeclarationCatalogEntry> mergedClassDeclarations() {
+        List<ClassDeclarationCatalogEntry> merged = new ArrayList<>(
+                typeDocsSnapshot(TypeDocsPoint.ID).classDeclarations());
+        merged.addAll(typeDocsSnapshot(NodeTypeDocsPoint.ID).classDeclarations());
+        return ClassDeclarationCatalogEntry.resolve(merged);
+    }
+
+    @Override
+    public List<ClassDeclarationCatalogEntry> classDeclarations() {
+        return classDeclarations;
     }
 
     /** type_docs 与 node_type_docs 两点 builder 契约条目的合并（ticket 15，与手写声明同序合并）。 */

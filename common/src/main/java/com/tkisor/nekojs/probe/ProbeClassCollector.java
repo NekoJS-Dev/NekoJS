@@ -4,6 +4,7 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
+import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -12,6 +13,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Type;
+import java.lang.reflect.WildcardType;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -65,6 +67,15 @@ final class ProbeClassCollector {
             }
         }
 
+        // Authored declarations can reference types absent from every reflected signature.
+        // Treat those dependencies as seeds so they share scan filters, IR edits, and depth limits.
+        for (var declaration : snapshot.classDeclarations()) {
+            if (!passesScanFilter(cfg, declaration.targetType().getName(), platformPkgs, forcedPkgs)) continue;
+            queue.add(new Object[]{declaration.targetType(), 0});
+            declaration.imports().stream().sorted(Comparator.comparing(Class::getName))
+                    .forEach(imported -> queue.add(new Object[]{imported, 0}));
+        }
+
         int maxDepth = cfg.scan().maxDepth() <= 0 ? 5 : cfg.scan().maxDepth();
 
         while (!queue.isEmpty()) {
@@ -83,8 +94,8 @@ final class ProbeClassCollector {
             if (nextDepth > maxDepth) continue;
 
             try {
-                if (cls.getSuperclass() != null) queue.add(new Object[]{cls.getSuperclass(), nextDepth});
-                for (Class<?> iface : cls.getInterfaces()) queue.add(new Object[]{iface, nextDepth});
+                if (cls.getGenericSuperclass() != null) collectTypeToQueue(cls.getGenericSuperclass(), queue, nextDepth);
+                for (Type iface : cls.getGenericInterfaces()) collectTypeToQueue(iface, queue, nextDepth);
 
                 for (Constructor<?> ctor : cls.getDeclaredConstructors()) {
                     if (Modifier.isPublic(ctor.getModifiers())) {
@@ -138,12 +149,21 @@ final class ProbeClassCollector {
             queue.add(new Object[]{cls, depth});
         } else if (type instanceof ParameterizedType pt) {
             if (pt.getRawType() instanceof Class<?> rawCls) queue.add(new Object[]{rawCls, depth});
-            for (Type arg : pt.getActualTypeArguments()) collectTypeToQueue(arg, queue, depth);
+            boolean functional = FunctionalInterfaceResolver.resolve(pt) != null;
+            for (Type arg : pt.getActualTypeArguments()) {
+                if (functional && arg instanceof WildcardType wildcard) {
+                    // Callback signatures project wildcard bounds into concrete host parameter types.
+                    // Follow only these bounds, through the existing depth and package filters.
+                    for (Type bound : wildcard.getLowerBounds()) collectTypeToQueue(bound, queue, depth);
+                    for (Type bound : wildcard.getUpperBounds()) collectTypeToQueue(bound, queue, depth);
+                } else {
+                    collectTypeToQueue(arg, queue, depth);
+                }
+            }
         } else if (type instanceof GenericArrayType gat) {
             collectTypeToQueue(gat.getGenericComponentType(), queue, depth);
         }
-        // 刻意不跟随 TypeVariable 上界与 WildcardType 上/下界：跟随它们（尤其在 java.* 内）会触发
-        // 级联爆炸——例如 File 的签名拉入 URI/URL/Path/Charset/Locale…，5 层 BFS 穿过 java.io/java.util
-        // 产出海量类。原行为（不跟随）是有意的范围控制，保持 probe 输出有界。
+        // Ordinary type-variable and wildcard bounds remain unvisited to keep the scan bounded.
+        // Functional-interface arguments above are the sole exception required by callback declarations.
     }
 }

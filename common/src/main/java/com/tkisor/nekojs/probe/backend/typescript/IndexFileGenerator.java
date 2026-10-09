@@ -5,6 +5,7 @@ import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
+import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 
 import java.lang.reflect.*;
 import java.util.*;
@@ -25,6 +26,7 @@ import java.util.*;
 public final class IndexFileGenerator {
     private final TypeScriptClassRenderer irRenderer;
     private final AdapterAliasGenerator adapterAliasGenerator;
+    private final FunctionalInterfaceAliasGenerator functionalInterfaceAliasGenerator;
 
     // 性能缓存（线程安全，支持并行生成）
     private final java.util.concurrent.ConcurrentHashMap<String, Class<?>> classCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -49,8 +51,19 @@ public final class IndexFileGenerator {
     private volatile Set<String> hiddenClasses = Set.of();
 
     public IndexFileGenerator(TypeScriptClassRenderer irRenderer, AdapterAliasGenerator adapterAliasGenerator) {
+        this(irRenderer, adapterAliasGenerator,
+                new FunctionalInterfaceAliasGenerator(adapterAliasGenerator.aliasRegistry()));
+    }
+
+    public IndexFileGenerator(TypeScriptClassRenderer irRenderer, AdapterAliasGenerator adapterAliasGenerator,
+                              FunctionalInterfaceAliasGenerator functionalInterfaceAliasGenerator) {
         this.irRenderer = irRenderer;
         this.adapterAliasGenerator = adapterAliasGenerator;
+        this.functionalInterfaceAliasGenerator = functionalInterfaceAliasGenerator;
+    }
+
+    public void prepareFunctionalInterfaceAliases(Set<String> generatedClasses, Set<String> hiddenClasses) {
+        functionalInterfaceAliasGenerator.prepare(generatedClasses, hiddenClasses);
     }
 
     /**
@@ -105,6 +118,11 @@ public final class IndexFileGenerator {
                 AdapterAliasGenerator.AdapterAlias alias = adapterAliasGenerator.getAlias(fqn);
                 if (alias != null) {
                     names.add(alias.aliasName());
+                }
+                TypeAliasRegistry.FunctionalInterfaceAlias functionalAlias =
+                        functionalInterfaceAliasGenerator.getAlias(fqn);
+                if (functionalAlias != null) {
+                    names.add(functionalAlias.aliasName());
                 }
                 // 枚举同理：参数放宽为 $Enum_ 后需导入枚举所在模块的别名声明
                 EnumAlias enumAlias = enumAliasCache.get(fqn);
@@ -162,6 +180,7 @@ public final class IndexFileGenerator {
             // （$DyeColor_ = $DyeColor | "RED" | ...），否则回退到集合/残留别名
             for (String simpleName : classNames) {
                 String fullName = packageName + "." + simpleName;
+                if (hiddenClasses.contains(fullName)) continue;
                 AdapterAliasGenerator.AdapterAlias adapterAlias = adapterAliasGenerator.getAlias(fullName);
                 if (adapterAlias != null) {
                     adapterAlias.doc().ifPresent(doc ->
@@ -173,6 +192,11 @@ public final class IndexFileGenerator {
                 EnumAlias enumAlias = enumAliasCache.get(fullName);
                 if (enumAlias != null) {
                     sb.append(enumAlias.declaration());
+                    continue;
+                }
+                String functionalAlias = functionalInterfaceAliasGenerator.declaration(fullName);
+                if (functionalAlias != null) {
+                    sb.append(functionalAlias);
                     continue;
                 }
                 String alias = generateTypeAlias(fullName, simpleName);
@@ -217,7 +241,10 @@ public final class IndexFileGenerator {
                 collectTypeImports(cls.getComponentType(), imports, currentPackage);
                 return;
             }
-            if (!cls.isPrimitive() && !inSamePackage(cls, currentPackage) && cls != Object.class) {
+            // Primitive TS mappings (including String and boxed scalars) never reference a Java symbol.
+            if (com.tkisor.nekojs.probe.ir.TypeReflector.toRef(cls).kind()
+                    == com.tkisor.nekojs.api.surface.ApiTypeRef.Kind.SYMBOL
+                    && !inSamePackage(cls, currentPackage)) {
                 imports.add(cls.getName());
             }
         } else if (type instanceof ParameterizedType pt) {
@@ -231,6 +258,13 @@ public final class IndexFileGenerator {
             }
         } else if (type instanceof GenericArrayType gat) {
             collectTypeImports(gat.getGenericComponentType(), imports, currentPackage);
+        } else if (type instanceof WildcardType wildcard) {
+            for (Type upper : wildcard.getUpperBounds()) {
+                collectTypeImports(upper, imports, currentPackage);
+            }
+            for (Type lower : wildcard.getLowerBounds()) {
+                collectTypeImports(lower, imports, currentPackage);
+            }
         }
     }
 
@@ -265,26 +299,6 @@ public final class IndexFileGenerator {
                  "java.util.stream.Stream", "java.util.stream.IntStream",
                  "java.util.stream.LongStream", "java.util.stream.DoubleStream" ->
                     "{0}[]";
-            case "java.util.function.Consumer", "java.util.function.IntConsumer",
-                 "java.util.function.LongConsumer", "java.util.function.DoubleConsumer" ->
-                    "({0}) => void";
-            case "java.util.function.Function", "java.util.function.UnaryOperator" ->
-                    "({0}) => {1}";
-            case "java.util.function.BiFunction" ->
-                    "({0}, {1}) => any";
-            case "java.util.function.Supplier", "java.util.function.IntSupplier",
-                 "java.util.function.LongSupplier", "java.util.function.DoubleSupplier",
-                 "java.util.function.BooleanSupplier" ->
-                    "() => {0}";
-            case "java.util.function.Predicate", "java.util.function.IntPredicate",
-                 "java.util.function.LongPredicate", "java.util.function.DoublePredicate" ->
-                    "({0}) => boolean";
-            case "java.util.function.BiConsumer" ->
-                    "({0}, {1}) => void";
-            case "java.util.function.BiPredicate" ->
-                    "({0}, {1}) => boolean";
-            case "java.util.function.BinaryOperator" ->
-                    "({0}, {0}) => {0}";
             // ========== 非 adapter 的残留输入别名（无对应适配器，固定类型）==========
             case "net.minecraft.world.item.Items" ->
                     "NON_GENERIC:$Items";
@@ -337,21 +351,15 @@ public final class IndexFileGenerator {
      */
     public Set<String> collectImportsFromIr(TypeDecl decl, String currentPackage) {
         Set<String> imports = new LinkedHashSet<>();
-        Class<?> source = decl.sourceClass;
 
-        // 父类：镜像旧实现（class 取 getSuperclass；interface 为 null；enum 为 java.lang.Enum）
-        if (source != null) {
-            Class<?> superClass = source.getSuperclass();
-            if (superClass != null && superClass != Object.class && !inSamePackage(superClass, currentPackage)) {
-                imports.add(superClass.getName());
-            }
+        // Heritage slots retain generic arguments so their referenced types need imports too.
+        if (decl.superType != null) {
+            collectTypeImports(decl.superType.sourceType, imports, currentPackage);
         }
 
         // 接口
         for (TypeSlot iface : decl.interfaces) {
-            if (iface.sourceType instanceof Class<?> cls && !inSamePackage(cls, currentPackage)) {
-                imports.add(cls.getName());
-            }
+            collectTypeImports(iface.sourceType, imports, currentPackage);
         }
 
         // 公开字段（IR 字段集 = 旧实现的公开字段集，含枚举常量）
@@ -435,9 +443,30 @@ public final class IndexFileGenerator {
         this.hiddenClasses = hidden == null || hidden.isEmpty() ? Set.of() : Set.copyOf(hidden);
     }
 
-    /**
-     * 清理生成过程中积累的缓存，释放内存。
-     */
+    /** Replaces one class body while retaining the package generator and explicit dependency imports. */
+    public void predeclareClassDeclaration(String fqn, String declaration, Set<String> importFqns,
+                                          TypeDecl reflected) {
+        if (reflected != null) registerEnumAlias(fqn, reflected);
+        StringBuilder body = new StringBuilder();
+        for (String line : declaration.split("\n", -1)) {
+            if (!line.isBlank()) body.append("    ").append(line);
+            body.append('\n');
+        }
+        declCache.put(fqn, body.toString());
+        String currentPackage = packageOf(fqn);
+        Set<String> imports = new LinkedHashSet<>();
+        for (String imported : importFqns) {
+            if (!packageOf(imported).equals(currentPackage)) imports.add(imported);
+        }
+        importCache.put(fqn, imports);
+    }
+
+    public boolean hasDeclaration(String fqn) {
+        String declaration = declCache.get(fqn);
+        return declaration != null && !declaration.isBlank();
+    }
+
+    /** Clears the declaration caches after rendering. */
     public void clearCaches() {
         classCache.clear();
         declCache.clear();

@@ -1,4 +1,4 @@
-import { $Appendable, $CharSequence, $Comparable, $Readable, $String } from "java:java/lang";
+import { $Appendable, $CharSequence, $Comparable, $Comparable_, $Readable, $Readable_ } from "java:java/lang";
 import { $IntStream } from "java:java/util/stream";
 
 export * as charset from "java:java/nio/charset";
@@ -29,7 +29,7 @@ declare module "java:java/nio" {
         slice(): $Buffer;
     }
 
-    export class $ByteBuffer extends $Buffer implements $Comparable {
+    export class $ByteBuffer extends $Buffer implements $Comparable<$ByteBuffer> {
         get char(): string;
         getChar(): string;
         get double(): number;
@@ -119,7 +119,7 @@ declare module "java:java/nio" {
         toString(): string;
     }
 
-    export class $CharBuffer extends $Buffer implements $Comparable, $Appendable, $CharSequence, $Readable {
+    export class $CharBuffer extends $Buffer implements $Comparable<$CharBuffer>, $Appendable, $CharSequence, $Readable {
         get direct(): boolean;
         isDirect(): boolean;
         get empty(): boolean;
@@ -176,7 +176,7 @@ declare module "java:java/nio" {
         toString(): string;
     }
 
-    export class $DoubleBuffer extends $Buffer implements $Comparable {
+    export class $DoubleBuffer extends $Buffer implements $Comparable<$DoubleBuffer> {
         get direct(): boolean;
         isDirect(): boolean;
         static allocate(arg0: number): $DoubleBuffer;
@@ -219,7 +219,7 @@ declare module "java:java/nio" {
         toString(): string;
     }
 
-    export class $FloatBuffer extends $Buffer implements $Comparable {
+    export class $FloatBuffer extends $Buffer implements $Comparable<$FloatBuffer> {
         get direct(): boolean;
         isDirect(): boolean;
         static allocate(arg0: number): $FloatBuffer;
@@ -262,7 +262,7 @@ declare module "java:java/nio" {
         toString(): string;
     }
 
-    export class $IntBuffer extends $Buffer implements $Comparable {
+    export class $IntBuffer extends $Buffer implements $Comparable<$IntBuffer> {
         get direct(): boolean;
         isDirect(): boolean;
         static allocate(arg0: number): $IntBuffer;
@@ -305,7 +305,7 @@ declare module "java:java/nio" {
         toString(): string;
     }
 
-    export class $LongBuffer extends $Buffer implements $Comparable {
+    export class $LongBuffer extends $Buffer implements $Comparable<$LongBuffer> {
         get direct(): boolean;
         isDirect(): boolean;
         static allocate(arg0: number): $LongBuffer;
@@ -348,7 +348,7 @@ declare module "java:java/nio" {
         toString(): string;
     }
 
-    export class $ShortBuffer extends $Buffer implements $Comparable {
+    export class $ShortBuffer extends $Buffer implements $Comparable<$ShortBuffer> {
         get direct(): boolean;
         isDirect(): boolean;
         static allocate(arg0: number): $ShortBuffer;

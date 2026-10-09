@@ -257,6 +257,23 @@ public void registerTypeDocs(TypeDocsRegister docs) {
 
 **`TypeDocsRegister` is the single source of truth**. Manual declaration registration for built-in wrappers/helpers is centralized in `NekoCommonManualDeclarations`.
 
+To express TypeScript inference that Java reflection cannot represent, register an authored class declaration:
+
+```java
+docs.registerClassDeclaration(ClassDeclarationCatalogEntry.of(
+        RpcBuilder.class,
+        """
+        export class $RpcBuilder<T extends Record<string, 'string' | 'int'> = {}> {
+            schema<const S extends Record<string, 'string' | 'int'>>(value: S): $RpcBuilder<S>;
+            fn(callback: (args: { [K in keyof T]: T[K] extends 'string' ? string : number }) => void): void;
+        }
+        """));
+```
+
+The body replaces the generated class in its `java:` package module; omit the `declare module` wrapper. Export its canonical `$JavaName` (`$Outer$Inner` for nested classes). The generator still owns input aliases such as `$JavaName_`, including enum and functional-interface aliases; do not redeclare them in the body. Use the overload with a `Set<Class<?>>` to list every referenced Java type, including types with input aliases. Those imports enter Probe collection under the configured scan filters; an excluded, hidden, or unavailable required dependency fails generation with `NEKO-4033`.
+
+Replacements apply to every Script Type because Java package declarations are shared. Both `registerTypeDocs` and `registerNodeTypeDocs` contribute through the existing type-docs Points. The highest `priority` wins for a class; conflicting definitions at an equal priority fail with `NEKO-4032`. Identical definitions are idempotent. `ProbeEvents.modifyType` hiding takes precedence; other reflected member edits are replaced by the authored body. This only changes TypeScript declarations, so keep the body consistent with the Java runtime implementation.
+
 <a id="wiki-section-18"></a>
 ## Cross-platform plugins
 

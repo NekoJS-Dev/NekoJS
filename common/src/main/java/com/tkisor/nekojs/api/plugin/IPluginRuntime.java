@@ -2,6 +2,7 @@ package com.tkisor.nekojs.api.plugin;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.data.Binding;
@@ -32,6 +33,11 @@ public interface IPluginRuntime {
     List<TypeDocCatalogEntry> typeDocs();
 
     List<ManualDeclarationCatalogEntry> manualDeclarations();
+
+    /** Returns immutable global class replacements collected during Plugin Runtime bootstrap. */
+    default List<ClassDeclarationCatalogEntry> classDeclarations() {
+        return List.of();
+    }
 
     /**
      * typed Builder 面的结构化契约条目（ticket 15）：版本树契约反射派生，TS/Python declaration 同源渲染。

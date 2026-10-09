@@ -2,6 +2,7 @@ package com.tkisor.nekojs.probe.ir;
 
 import com.google.gson.JsonPrimitive;
 import com.tkisor.nekojs.probe.backend.typescript.IndexFileGenerator;
+import com.tkisor.nekojs.probe.backend.typescript.FunctionalInterfaceAliasGenerator;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 
@@ -348,9 +349,13 @@ public final class TypeScriptClassRenderer {
         return !renderedTs.contains("|") && !renderedTs.contains("=>");
     }
 
-    /** 渲染类型槽：唯一路径 = ref（input=true 时应用输入别名放宽）。 */
+    /** Renders edits from IR; ordinary input slots retain reflection generics for callback substitution. */
     private String renderSlot(TypeSlot slot, boolean input) {
         if (slot == null || slot.ref == null) return "any";
+        if (input && !slot.overridden && slot.sourceType != null) {
+            return FunctionalInterfaceAliasGenerator.renderJavaTypeInput(
+                    slot.sourceType, aliases, new LinkedHashSet<>());
+        }
         return renderTypeRef(slot.ref, aliases, input);
     }
 
@@ -365,27 +370,42 @@ public final class TypeScriptClassRenderer {
      * {@code ", "} 拆坏），非参数化符号查类别名（适配器/枚举惰性别名）。
      */
     public static String renderTypeRef(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input) {
+        return renderTypeRef(ref, aliases, input, new LinkedHashSet<>());
+    }
+
+    /** Internal recursive renderer carrying functional-alias recursion state. */
+    public static String renderTypeRef(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input,
+                                      Set<String> expandingFunctionalAliases) {
         if (ref == null) return "any";
         return switch (ref.kind()) {
             case VOID -> "void";
             case PRIMITIVE -> mapPrimT(ref.name());
             case TYPE_VARIABLE -> ref.name();
-            case ARRAY -> renderTypeRef(ref.arguments().get(0), aliases, input) + "[]";
+            case ARRAY -> renderTypeRef(ref.arguments().get(0), aliases, input, expandingFunctionalAliases) + "[]";
             case UNION -> ref.arguments().stream()
-                    .map(a -> renderTypeRef(a, aliases, input))
+                    .map(a -> renderTypeRef(a, aliases, input, expandingFunctionalAliases))
                     .collect(Collectors.joining(" | "));
-            case SYMBOL -> renderSymbol(ref, aliases, input);
+            case SYMBOL -> renderSymbol(ref, aliases, input, expandingFunctionalAliases);
             case CALLBACK -> "(...args: any[]) => any";
         };
     }
 
     /** SYMBOL 渲染：input 别名（集合/类）优先，否则 {@code $Name<实参...>}（实参递归、input 传播）。 */
-    private static String renderSymbol(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input) {
+    private static String renderSymbol(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input,
+                                       Set<String> expandingFunctionalAliases) {
         String fqn = fqnOfSymbol(ref.name());
         if (input && aliases != null) {
+            String registeredAlias = aliases.getRegisteredAlias(fqn);
+            if (registeredAlias != null) return registeredAlias;
+            TypeAliasRegistry.FunctionalInterfaceAlias functionalAlias =
+                    aliases.getFunctionalInterfaceAlias(fqn);
+            if (functionalAlias != null) {
+                return FunctionalInterfaceAliasGenerator.renderInputType(ref, functionalAlias, aliases,
+                        expandingFunctionalAliases);
+            }
             if (!ref.arguments().isEmpty()) {
                 String[] renderedArgs = ref.arguments().stream()
-                        .map(a -> renderTypeRef(a, aliases, true))
+                        .map(a -> renderTypeRef(a, aliases, true, expandingFunctionalAliases))
                         .toArray(String[]::new);
                 String alias = aliases.getCollectionAlias(fqn, renderedArgs);
                 if (alias != null) return alias;
@@ -397,7 +417,7 @@ public final class TypeScriptClassRenderer {
         if (!ref.arguments().isEmpty()) {
             sb.append('<');
             sb.append(ref.arguments().stream()
-                    .map(a -> renderTypeRef(a, aliases, input))
+                    .map(a -> renderTypeRef(a, aliases, input, expandingFunctionalAliases))
                     .collect(Collectors.joining(", ")));
             sb.append('>');
         }

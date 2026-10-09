@@ -256,6 +256,23 @@ public void registerTypeDocs(TypeDocsRegister docs) {
 
 **单一真相源是 `TypeDocsRegister`**。内置 wrapper/helper 的人工声明注册收敛在 `NekoCommonManualDeclarations`。
 
+当 Java 反射无法表达 TypeScript 的推导关系时，可以注册手写类声明：
+
+```java
+docs.registerClassDeclaration(ClassDeclarationCatalogEntry.of(
+        RpcBuilder.class,
+        """
+        export class $RpcBuilder<T extends Record<string, 'string' | 'int'> = {}> {
+            schema<const S extends Record<string, 'string' | 'int'>>(value: S): $RpcBuilder<S>;
+            fn(callback: (args: { [K in keyof T]: T[K] extends 'string' ? string : number }) => void): void;
+        }
+        """));
+```
+
+声明体替换对应 `java:` 包模块中的生成类，不要添加 `declare module` 外壳。保留标准导出名 `$JavaName`（嵌套类使用 `$Outer$Inner`）。`$JavaName_` 等输入别名仍由生成器提供，包括枚举与函数接口别名，不要在声明体中重复定义。引用其他 Java 类型时，使用带 `Set<Class<?>>` 的重载列全依赖，包括具有输入别名的类型。依赖按当前扫描规则进入 Probe 收集；必需依赖被排除、隐藏或不可生成时，以 `NEKO-4033` 使本次生成失败。
+
+Java 包声明在所有 Script Type 间共享，因此替换全局生效。`registerTypeDocs` 和 `registerNodeTypeDocs` 均通过现有类型文档 Point 收集。同一类取最高 `priority`；相同优先级的冲突定义以 `NEKO-4032` 拒绝，完全相同的定义可重复注册。`ProbeEvents.modifyType` 的隐藏操作优先于替换；其他反射成员编辑会被手写声明体覆盖。该功能只改变 TypeScript 声明，需要插件保证声明与 Java 运行时实现一致。
+
 <a id="wiki-section-18"></a>
 ## 跨平台插件
 

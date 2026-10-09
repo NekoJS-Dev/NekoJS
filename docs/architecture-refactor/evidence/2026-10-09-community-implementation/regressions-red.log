@@ -1,0 +1,146 @@
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/C:/Users/11515/.gradle/wrapper/dists/gradle-9.6.0-bin/42k10rwplmzkhuboz9kdazi7s/gradle-9.6.0/lib/native-platform-0.22-milestone-29.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common:compileJava
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes
+> Task :common:compileAddonFixtureJava UP-TO-DATE
+> Task :common:processAddonFixtureResources UP-TO-DATE
+> Task :common:addonFixtureClasses UP-TO-DATE
+> Task :common:externalAddonJar UP-TO-DATE
+> Task :common:compileTestJava
+> Task :common:processTestResources UP-TO-DATE
+> Task :common:testClasses
+
+> Task :common:test
+
+TypeScriptErasureParseCorpusTest > thisParameterErasurePreservesCallBehavior() FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:397
+
+TypeScriptErasureParseCorpusTest > classMethodOverloadSignaturesPreserveImplementation() FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:383
+
+TypeScriptErasureParseCorpusTest > nestedNamespaceExportsRemainAccessible() FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:414
+
+TypeScriptErasureParseCorpusTest > callbackAndObjectTypeErasurePreserveValues() FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:367
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=arrow-fn-type-as-param, source=function check(name: string, fn: () => boolean): boolean { return fn() }<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=arrow-fn-type-generic-param, source=function check<T>(name: string, fn: () => T): boolean { return true }<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=arrow-fn-type-with-args, source=function each(list: string[], visit: (item: string) => void): void {}<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=arrow-fn-type-two-args, source=function fold(items: number[], f: (acc: number, item: number) => number): number { return 0 }<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=arrow-fn-type-as-field, source=class Handler {<LF>  callback: () => void = () => {};<LF>  transform: (n: number) => string = String;<LF>}<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=arrow-fn-type-nested-return, source=function factory(): () => number { return () => 1 }<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=arrow-fn-type-returning-arrow, source=const mk: () => () => number = () => () => 1;<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=arrow-fn-type-optional-param, source=function go(handler?: (e: unknown) => void): void {}<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=arrow-fn-type-in-union, source=type Cb = ((n: number) => void) | null;<LF>function use(cb: ((n: number) => void) | null): void {}<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=arrow-fn-type-generic-arg, source=function map<T>(items: T[], f: (item: T) => T): T[] { return items }<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=type-annotation-destructuring-object, source=const { a, b }: { a: number; b: string } = source;<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=generic-class-and-method, source=class Box<T, U extends object = {}> {<LF>  value: T;<LF>  map<V>(f: T): V { throw new Error('x') }<LF>}<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=union-intersection-types, source=let value: string | number | null = null;<LF>let mixed: A & B & { c: number } = source;<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=object-type-literals, source=let cfg: { host: string; port?: number; readonly id: number } = source;<LF>let nested: { inner: { deep: boolean } } = source;<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=export-type-and-reexport, source=export type { A } from './a';<LF>export * from './b';<LF>export * as ns from './c';<LF>export default function main(): void {}<LF>, module=true, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:314
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=class-overload-signatures, source=class O {<LF>  run(n: number): string;<LF>  run(s: string): string;<LF>  run(v: unknown): string { return String(v) }<LF>}<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=params-this-parameter, source=function f(this: Window, name: string): void {}<LF>, module=false, lineInvariant=true] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+TypeScriptErasureParseCorpusTest > erasedOutputParsesAndKeepsLineCount(CorpusCase) > CorpusCase[name=namespace-nested-and-merged, source=namespace A {<LF>  export namespace B {<LF>    export const x: number = 1;<LF>  }<LF>  export type T = string;<LF>}<LF>, module=false, lineInvariant=false] FAILED
+    graal.graalvm.polyglot.PolyglotException at TypeScriptErasureParseCorpusTest.java:316
+
+ClassDeclarationTypeScriptBackendTest > explicitImportExcludedByProbeConfigurationFailsWithStableCode(Path) FAILED
+    org.opentest4j.AssertionFailedError at ClassDeclarationTypeScriptBackendTest.java:104
+
+ClassDeclarationTypeScriptBackendTest > replacementEmitsOnceAndItsExplicitImportsAreReachable(Path) FAILED
+    org.opentest4j.AssertionFailedError at ClassDeclarationTypeScriptBackendTest.java:65
+
+IndexFileGeneratorTest > functionalAliasRetainsHostInterfaceType() FAILED
+    org.opentest4j.AssertionFailedError at IndexFileGeneratorTest.java:115
+
+TypeReflectorTest > genericSuperclassKeepsResolvedArguments() FAILED
+    org.opentest4j.AssertionFailedError at TypeReflectorTest.java:114
+
+131 tests completed, 26 failed
+
+> Task :common:test FAILED
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS-mult/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':common:test'.
+> There were failing tests. See the report at: file:///D:/mcmodDemo/NekoJS-mult/common/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 10s
+17 actionable tasks: 3 executed, 14 up-to-date

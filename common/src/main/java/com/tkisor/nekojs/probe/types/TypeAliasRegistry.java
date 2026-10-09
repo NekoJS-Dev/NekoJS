@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.probe.types;
 
+import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
 import com.tkisor.nekojs.probe.backend.typescript.IndexFileGenerator;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class TypeAliasRegistry {
     private final Map<String, String> classAliases = new LinkedHashMap<>();
     private final Map<String, CollectionAlias> collectionAliases = new LinkedHashMap<>();
+    private final Map<String, FunctionalInterfaceAlias> functionalAliases = new LinkedHashMap<>();
     /**
      * 枚举输入别名的惰性解析缓存：FQN → {@code $<SimpleName>_}；空串 = 已确认非枚举/不可加载。
      *
@@ -72,6 +74,7 @@ public final class TypeAliasRegistry {
     public void clear() {
         classAliases.clear();
         collectionAliases.clear();
+        functionalAliases.clear();
         enumAliasCache.clear();
         registerDefaults();
     }
@@ -159,6 +162,25 @@ public final class TypeAliasRegistry {
         classAliases.put(className, tsType);
     }
 
+    /** Returns an explicitly registered class alias without resolving the lazy enum aliases. */
+    public String getRegisteredAlias(String className) {
+        return classAliases.get(className);
+    }
+
+    public FunctionalInterfaceAlias getFunctionalInterfaceAlias(String className) {
+        return functionalAliases.get(className);
+    }
+
+    public void clearFunctionalInterfaceAliases() {
+        functionalAliases.clear();
+    }
+
+    public void registerFunctionalInterfaceAlias(String className, FunctionalInterfaceAlias alias) {
+        if (!classAliases.containsKey(className)) {
+            functionalAliases.put(className, alias);
+        }
+    }
+
     /**
      * 注册自定义集合别名。
      */
@@ -178,6 +200,15 @@ public final class TypeAliasRegistry {
         public String getInputType(String[] typeArgs) {
             if (typeArgs.length == 0) return "any" + suffix;
             return typeArgs[0] + suffix;
+        }
+    }
+
+    /** A SAM signature expressed with the declaring interface's type variables. */
+    public record FunctionalInterfaceAlias(String aliasName, Class<?> interfaceClass,
+                                           FunctionalInterfaceResolver.Signature signature,
+                                           java.util.Set<String> generatedTypes) {
+        public FunctionalInterfaceAlias {
+            generatedTypes = java.util.Set.copyOf(generatedTypes);
         }
     }
 }

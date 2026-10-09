@@ -49,12 +49,13 @@ public final class TypeReflector {
         if (kind == TypeDecl.Kind.CLASS) {
             Class<?> sc = cls.getSuperclass();
             if (sc != null && sc != Object.class) {
-                decl.superType = TypeSlot.of(sc, toRef(sc));
+                Type genericSuperclass = cls.getGenericSuperclass();
+                decl.superType = TypeSlot.of(genericSuperclass, toRef(genericSuperclass));
             }
         }
 
         // 接口
-        for (Class<?> iface : cls.getInterfaces()) {
+        for (Type iface : cls.getGenericInterfaces()) {
             decl.interfaces.add(TypeSlot.of(iface, toRef(iface)));
         }
 

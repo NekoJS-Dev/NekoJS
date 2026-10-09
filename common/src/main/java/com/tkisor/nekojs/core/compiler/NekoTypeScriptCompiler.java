@@ -36,10 +36,15 @@ public final class NekoTypeScriptCompiler {
     record TypeScriptTransformResult(String code, String sourceMap) {}
 
     private static final class Eraser {
+        private record ClassBodyRange(int open, int close) {}
+        private record BraceRange(int open, int close) {}
+
         private final Path file;
         private final String source;
         private final StringBuilder out;
         private final int length;
+        private final List<ClassBodyRange> classBodies = new ArrayList<>();
+        private final List<BraceRange> braceRanges = new ArrayList<>();
         /** 预扫描：该偏移的 ':' 是 switch case/default 或 label 冒号（typeAnnotationAt 必须拒判）。*/
         private final boolean[] caseOrLabelColon;
         /** 预扫描：该偏移处于 import/export 的值别名子句（named {...} 或 * as X）——其中的 as 是 JS 原生别名。*/
@@ -53,6 +58,8 @@ public final class NekoTypeScriptCompiler {
             this.caseOrLabelColon = new boolean[length];
             this.aliasClause = new boolean[length];
             scanStructure();
+            scanClassBodies();
+            scanBraceRanges();
         }
 
         private String erase() {
@@ -141,6 +148,12 @@ public final class NekoTypeScriptCompiler {
                             continue;
                         }
                     }
+                    int overloadEnd = methodOverloadEnd(i, end);
+                    if (overloadEnd > 0) {
+                        eraseRange(i, overloadEnd);
+                        i = overloadEnd;
+                        continue;
+                    }
                     i = end;
                     continue;
                 }
@@ -160,6 +173,12 @@ public final class NekoTypeScriptCompiler {
                     // 可选参数 name?: T → 连带擦 ?
                     int q = previousNonWhitespace(i - 1);
                     int start = (q >= 0 && source.charAt(q) == '?') ? q : i;
+                    int thisParameter = thisParameterStart(i);
+                    if (thisParameter >= 0) {
+                        start = thisParameter;
+                        int comma = nextNonWhitespace(end);
+                        if (comma < length && source.charAt(comma) == ',') end = comma + 1;
+                    }
                     eraseRange(start, end);
                     i = end;
                     continue;
@@ -724,7 +743,31 @@ public final class NekoTypeScriptCompiler {
             String body = out.substring(braceOpen + 1, braceClose);
             String wrapped = generateNamespaceIife(name, body);
             out.replace(start, braceClose + 1, wrapped);
-            return start + wrapped.length();
+            return transformNamespacesInRange(start, start + wrapped.length());
+        }
+
+        /** Transforms nested namespaces and adjusts the scan boundary as each replacement changes the output length. */
+        private int transformNamespacesInRange(int start, int endExclusive) {
+            int limit = Math.min(endExclusive, out.length());
+            int i = Math.max(0, start);
+            while (i < limit) {
+                char c = out.charAt(i);
+                if (c == '\'' || c == '"') { i = skipOutString(i, c); continue; }
+                if (c == '`') { i = skipOutTemplate(i); continue; }
+                if (c == '/' && i + 1 < out.length() && out.charAt(i + 1) == '/') { i = skipOutLine(i + 2); continue; }
+                if (c == '/' && i + 1 < out.length() && out.charAt(i + 1) == '*') { i = skipOutBlock(i + 2); continue; }
+                if (isIdentifierStart(c) && (outKeywordAt(i, "namespace") || outKeywordAt(i, "module"))) {
+                    int oldLength = out.length();
+                    int transformedEnd = transformOneNamespace(i);
+                    if (transformedEnd > i) {
+                        limit += out.length() - oldLength;
+                        i = transformedEnd;
+                        continue;
+                    }
+                }
+                i++;
+            }
+            return limit;
         }
 
         private String generateNamespaceIife(String name, String body) {
@@ -737,6 +780,10 @@ public final class NekoTypeScriptCompiler {
                 if (c == '`') { while (i < n && body.charAt(i) != '`') i++; if (i < n) i++; continue; }
                 if (c == '/' && i + 1 < n && body.charAt(i + 1) == '/') { while (i < n && body.charAt(i) != '\n') i++; continue; }
                 if (c == '/' && i + 1 < n && body.charAt(i + 1) == '*') { i += 2; while (i + 1 < n && !(body.charAt(i) == '*' && body.charAt(i + 1) == '/')) i++; i += 2; continue; }
+                if (c == '/') {
+                    int regexEnd = skipBodyRegex(body, i);
+                    if (regexEnd > i) { i = regexEnd; continue; }
+                }
                 if (bodyKeywordAt(body, i, "export")) {
                     int after = skipInWs(body, i + 6);
                     int kwLen = declKwLen(body, after);
@@ -746,9 +793,10 @@ public final class NekoTypeScriptCompiler {
                         while (me < n && isIdentifierPart(body.charAt(me))) me++;
                         String member = body.substring(ms, me);
                         if (!member.isEmpty()) members.add(member);
+                        int namespaceEnd = (kwLen == 9 || kwLen == 6) ? namespaceBodyEnd(body, me) : -1;
                         cleaned.append(body, lastCopy, i).append("      "); // 6 空格擦 export
                         lastCopy = i + 6;
-                        i += 6;
+                        i = namespaceEnd > me ? namespaceEnd : i + 6;
                         continue;
                     } else if (kwLen == -1) {
                         // interface/type：运行时无值，剥除 export 但不作为成员导出。
@@ -772,6 +820,76 @@ public final class NekoTypeScriptCompiler {
             return sb.toString();
         }
 
+        private int skipBodyRegex(String body, int slash) {
+            if (!bodyRegexStartsAt(body, slash)) return slash;
+            int i = slash + 1;
+            boolean inClass = false;
+            while (i < body.length()) {
+                char c = body.charAt(i);
+                if (c == '\\') { i += 2; continue; }
+                if (c == '[') inClass = true;
+                else if (c == ']') inClass = false;
+                else if (c == '/' && !inClass) {
+                    i++;
+                    while (i < body.length() && isIdentifierPart(body.charAt(i))) i++;
+                    return i;
+                }
+                i++;
+            }
+            return body.length();
+        }
+
+        private int namespaceBodyEnd(String body, int afterName) {
+            int i = afterName;
+            while (i < body.length()) {
+                char c = body.charAt(i);
+                if (c == '\'' || c == '"') { i = skipIn(body, i, c); continue; }
+                if (c == '`') { i++; while (i < body.length() && body.charAt(i) != '`') i++; if (i < body.length()) i++; continue; }
+                if (c == '/' && i + 1 < body.length() && body.charAt(i + 1) == '/') { while (i < body.length() && body.charAt(i) != '\n') i++; continue; }
+                if (c == '/' && i + 1 < body.length() && body.charAt(i + 1) == '*') { i += 2; while (i + 1 < body.length() && !(body.charAt(i) == '*' && body.charAt(i + 1) == '/')) i++; i += 2; continue; }
+                if (c == '/') { int regexEnd = skipBodyRegex(body, i); if (regexEnd > i) { i = regexEnd; continue; } }
+                if (c == '{') {
+                    int close = matchingBodyBrace(body, i);
+                    return close < 0 ? -1 : close + 1;
+                }
+                if (c == ';' || c == '\n' || c == '\r') return -1;
+                i++;
+            }
+            return -1;
+        }
+
+        private int matchingBodyBrace(String body, int open) {
+            int depth = 0;
+            int i = open;
+            while (i < body.length()) {
+                char c = body.charAt(i);
+                if (c == '\'' || c == '"') { i = skipIn(body, i, c); continue; }
+                if (c == '`') { i++; while (i < body.length() && body.charAt(i) != '`') i++; if (i < body.length()) i++; continue; }
+                if (c == '/' && i + 1 < body.length() && body.charAt(i + 1) == '/') { while (i < body.length() && body.charAt(i) != '\n') i++; continue; }
+                if (c == '/' && i + 1 < body.length() && body.charAt(i + 1) == '*') { i += 2; while (i + 1 < body.length() && !(body.charAt(i) == '*' && body.charAt(i + 1) == '/')) i++; i += 2; continue; }
+                if (c == '/') { int regexEnd = skipBodyRegex(body, i); if (regexEnd > i) { i = regexEnd; continue; } }
+                if (c == '{') depth++;
+                else if (c == '}' && --depth == 0) return i;
+                i++;
+            }
+            return -1;
+        }
+
+        private boolean bodyRegexStartsAt(String body, int slash) {
+            int previous = slash - 1;
+            while (previous >= 0 && Character.isWhitespace(body.charAt(previous))) previous--;
+            if (previous < 0) return true;
+            char c = body.charAt(previous);
+            if ("=(:,[!&|?;{}<>+-*/%\n\r".indexOf(c) >= 0) return true;
+            if (!isIdentifierPart(c)) return false;
+            int start = previous;
+            while (start > 0 && isIdentifierPart(body.charAt(start - 1))) start--;
+            String word = body.substring(start, previous + 1);
+            return word.equals("return") || word.equals("throw") || word.equals("case")
+                || word.equals("delete") || word.equals("void") || word.equals("typeof")
+                || word.equals("instanceof") || word.equals("in") || word.equals("of");
+        }
+
         private boolean bodyKeywordAt(String body, int i, String kw) {
             int n = body.length();
             if (i < 0 || i + kw.length() > n || !body.startsWith(kw, i)) return false;
@@ -784,6 +902,8 @@ public final class NekoTypeScriptCompiler {
             if (bodyKeywordAt(body, i, "function")) return 8;
             if (bodyKeywordAt(body, i, "const")) return 5;
             if (bodyKeywordAt(body, i, "class")) return 5;
+            if (bodyKeywordAt(body, i, "namespace")) return 9;
+            if (bodyKeywordAt(body, i, "module")) return 6;
             if (bodyKeywordAt(body, i, "let")) return 3;
             if (bodyKeywordAt(body, i, "var")) return 3;
             // interface/type：运行时不产生值成员，但 phase1 已把它们的声明体擦成空格，
@@ -1220,6 +1340,15 @@ public final class NekoTypeScriptCompiler {
          * 用 statementOrBlockDeclarationEnd：interface 的 {...} 体匹配后即停。
          */
         private int eraseExportTypeDeclaration(int start) {
+            int typeStart = nextNonWhitespace(start + "export".length());
+            int typeEnd = readIdentifierEnd(typeStart);
+            int clauseStart = nextNonWhitespace(typeEnd);
+            if (startsWithKeyword(typeStart, "type") && clauseStart < length
+                    && (source.charAt(clauseStart) == '{' || source.charAt(clauseStart) == '*')) {
+                int reexportEnd = statementEnd(start);
+                eraseRange(start, reexportEnd);
+                return reexportEnd;
+            }
             int end = statementOrBlockDeclarationEnd(start);
             eraseRange(start, end);
             return end;
@@ -1450,8 +1579,18 @@ public final class NekoTypeScriptCompiler {
             int next = nextNonWhitespace(colon + 1);
             if (next >= length) return false;
             char nextChar = source.charAt(next);
-            if (nextChar == ':' || nextChar == ',' || nextChar == ';' || nextChar == ')' || nextChar == '{') return false;
+            if (nextChar == ':' || nextChar == ',' || nextChar == ';' || nextChar == ')') return false;
             return !objectLiteralPropertyColon(colon);
+        }
+
+        private int thisParameterStart(int colon) {
+            int end = previousNonWhitespace(colon - 1);
+            if (end < 0 || !isIdentifierPart(source.charAt(end))) return -1;
+            int start = end;
+            while (start > 0 && isIdentifierPart(source.charAt(start - 1))) start--;
+            if (!source.substring(start, end + 1).equals("this")) return -1;
+            int before = previousNonWhitespace(start - 1);
+            return before >= 0 && source.charAt(before) == '(' ? start : -1;
         }
 
         /** ) 是否函数声明参数列表的闭合（返回类型合法位置）；方法调用/三元返回 false。*/
@@ -1598,7 +1737,28 @@ public final class NekoTypeScriptCompiler {
             }
             // => 后的 { 是箭头函数体 block（非对象字面量），如 (() => { function f(a: T) {} })
             if (c == '>' && previous - 1 >= 0 && source.charAt(previous - 1) == '=') return false;
+            if (c == '>' && classBodyHeader(openBrace)) return false;
             return "=(:,[!&|?;{}<>+-*/%".indexOf(c) >= 0;
+        }
+
+        private boolean classBodyHeader(int bodyOpen) {
+            int angle = 0;
+            int paren = 0;
+            int bracket = 0;
+            for (int i = bodyOpen - 1; i >= 0; i--) {
+                char c = source.charAt(i);
+                if (c == '>') angle++;
+                else if (c == '<' && angle > 0) angle--;
+                else if (c == ')') paren++;
+                else if (c == '(' && paren > 0) paren--;
+                else if (c == ']') bracket++;
+                else if (c == '[' && bracket > 0) bracket--;
+                if (angle == 0 && paren == 0 && bracket == 0) {
+                    if (c == ';' || c == '{' || c == '}') return false;
+                    if (isIdentifierStart(c) && startsWithKeyword(i, "class")) return true;
+                }
+            }
+            return false;
         }
 
         private int propertyStart(int endInclusive) {
@@ -1626,8 +1786,11 @@ public final class NekoTypeScriptCompiler {
             int paren = 0;
             int bracket = 0;
             int brace = 0;
+            int conditionalQuestions = 0;
+            boolean conditionalType = false;
             while (i < length) {
                 char c = source.charAt(i);
+                boolean closedTypeParen = false;
                 if (c == '\'' || c == '"') {
                     i = skipString(i, c);
                     continue;
@@ -1639,23 +1802,70 @@ public final class NekoTypeScriptCompiler {
                 if (c == '<') angle++;
                 else if (c == '>' && angle > 0) angle--;
                 else if (c == '(') paren++;
-                else if (c == ')' && paren > 0) paren--;
+                else if (c == ')' && paren > 0) {
+                    paren--;
+                    closedTypeParen = paren == 0;
+                }
                 else if (c == '[') bracket++;
                 else if (c == ']' && bracket > 0) bracket--;
                 else if (c == '{') {
-                    if (angle == 0 && paren == 0 && bracket == 0 && brace == 0) return i;
+                    if (angle == 0 && paren == 0 && bracket == 0 && brace == 0
+                            && !typeObjectBraceAt(i, start, conditionalType)) return i;
                     brace++;
-                } else if (c == '}' && brace > 0) brace--;
+                } else if (c == '}' && brace > 0) {
+                    brace--;
+                    i++;
+                    continue;
+                }
                 if (angle == 0 && paren == 0 && bracket == 0 && brace == 0) {
+                    if (startsWithKeyword(i, "extends")) conditionalType = true;
+                    if (c == ')' && closedTypeParen) {
+                        int afterClose = nextNonWhitespace(i + 1);
+                        if (afterClose + 1 < length && source.charAt(afterClose) == '=' && source.charAt(afterClose + 1) == '>') {
+                            i = afterClose + 2;
+                            continue;
+                        }
+                        if (afterClose < length && ("|&[.?".indexOf(source.charAt(afterClose)) >= 0
+                                || startsWithKeyword(afterClose, "extends"))) {
+                            i++;
+                            continue;
+                        }
+                    }
+                    if (conditionalType && c == '?' && !(i + 1 < length && (source.charAt(i + 1) == '.' || source.charAt(i + 1) == '?'))) {
+                        conditionalQuestions++;
+                        i++;
+                        continue;
+                    }
+                    if (conditionalType && c == ':' && conditionalQuestions > 0) {
+                        conditionalQuestions--;
+                        i++;
+                        continue;
+                    }
                     // 顶层（非对象/函数/泛型内）的 : 必是三元分隔（如 expr as T : fallback）→ 类型到此结束；
                     // 对象类型 { a: T } 的 : 在 brace>0，函数/箭头类型 (a: T)=>R 的 : 在 paren>0，均不在此分支
-                    if (c == '=' || c == ',' || c == ';' || c == ')' || c == '{' || c == '}' || c == ':' || c == '\n' || c == '\r') {
+                    if (c == '=' || c == ',' || c == ';' || c == ')' || c == '}' || c == ':' || c == '\n' || c == '\r') {
                         return i;
                     }
                 }
                 i++;
             }
             return i;
+        }
+
+        private boolean typeObjectBraceAt(int braceStart, int typeStart, boolean conditionalType) {
+            if (braceStart == nextNonWhitespace(typeStart)) return true;
+            int previous = previousNonWhitespace(braceStart - 1);
+            if (previous < 0) return false;
+            char c = source.charAt(previous);
+            if (c == '&' || c == '|') return true;
+            if (conditionalType && (c == '?' || c == ':')) return true;
+            if (c == '>' && previous > 0 && source.charAt(previous - 1) == '=') return true;
+            if (isIdentifierPart(c)) {
+                int wordStart = previous;
+                while (wordStart > 0 && isIdentifierPart(source.charAt(wordStart - 1))) wordStart--;
+                return source.substring(wordStart, previous + 1).equals("keyof");
+            }
+            return false;
         }
 
         private boolean definiteAssignmentAt(int bang) {
@@ -1740,6 +1950,7 @@ public final class NekoTypeScriptCompiler {
                 i++;
             }
             if (bodyStart < 0) return statementEnd(start);
+            if (conditionalTypeAliasBefore(start, bodyStart)) return statementEnd(start);
             int bodyEnd = matchingCloseBrace(bodyStart);
             if (bodyEnd < 0) return length;
             // A type alias may continue past the matched body (e.g. `type A = { .. } | B`
@@ -1754,6 +1965,41 @@ public final class NekoTypeScriptCompiler {
                 }
             }
             return bodyEnd + 1;
+        }
+
+        private boolean conditionalTypeAliasBefore(int start, int before) {
+            int keyword = nextNonWhitespace(start);
+            if (startsWithKeyword(keyword, "export")) keyword = nextNonWhitespace(keyword + "export".length());
+            if (!startsWithKeyword(keyword, "type")) return false;
+
+            int angle = 0;
+            int paren = 0;
+            int bracket = 0;
+            boolean sawExtends = false;
+            int i = start;
+            while (i < before) {
+                char c = source.charAt(i);
+                if (c == '\'' || c == '"') { i = skipString(i, c); continue; }
+                if (c == '`') { i = skipTemplate(i); continue; }
+                if (c == '/') {
+                    int skipped = skipSlash(i);
+                    if (skipped != i) { i = skipped; continue; }
+                }
+                if (c == '<') angle++;
+                else if (c == '>' && angle > 0) angle--;
+                else if (c == '(') paren++;
+                else if (c == ')' && paren > 0) paren--;
+                else if (c == '[') bracket++;
+                else if (c == ']' && bracket > 0) bracket--;
+                if (angle == 0 && paren == 0 && bracket == 0) {
+                    if (startsWithKeyword(i, "extends")) sawExtends = true;
+                    if (sawExtends && c == '?' && !(i + 1 < before && (source.charAt(i + 1) == '.' || source.charAt(i + 1) == '?'))) {
+                        return true;
+                    }
+                }
+                i++;
+            }
+            return false;
         }
 
         private int statementEnd(int start) {
@@ -1851,6 +2097,182 @@ public final class NekoTypeScriptCompiler {
             }
             if (after < length && source.charAt(after) == ';') return after + 1; // 重载签名（无函数体）
             return -1; // 有 { 或 =，是函数实现，保留
+        }
+
+        /** Returns the end of a bodyless method signature without consuming ordinary calls in class fields or methods. */
+        private int methodOverloadEnd(int nameStart, int nameEnd) {
+            int i = nextNonWhitespace(nameEnd);
+            if (i < length && source.charAt(i) == '?') i = nextNonWhitespace(i + 1);
+            if (i < length && source.charAt(i) == '<') {
+                int closeAngle = matchingAngle(i);
+                if (closeAngle < 0) return -1;
+                i = nextNonWhitespace(closeAngle + 1);
+            }
+            if (i >= length || source.charAt(i) != '(') return -1;
+            int close = matchingParen(i);
+            if (close < 0) return -1;
+            int after = nextNonWhitespace(close + 1);
+            boolean hasReturnType = after < length && source.charAt(after) == ':';
+            if (hasReturnType) {
+                after = nextNonWhitespace(typeExpressionEnd(after + 1));
+            }
+            if (after < length && source.charAt(after) == ';'
+                    && (hasReturnType || (insideClassBody(nameEnd) && methodMemberPrefix(nameStart)))) return after + 1;
+            return -1;
+        }
+
+        private boolean methodMemberPrefix(int nameStart) {
+            int previous = previousNonWhitespace(nameStart - 1);
+            while (previous >= 0 && isIdentifierPart(source.charAt(previous))) {
+                int wordEnd = previous + 1;
+                int wordStart = previous;
+                while (wordStart > 0 && isIdentifierPart(source.charAt(wordStart - 1))) wordStart--;
+                String word = source.substring(wordStart, wordEnd);
+                if (!word.equals("public") && !word.equals("private") && !word.equals("protected")
+                        && !word.equals("static") && !word.equals("readonly") && !word.equals("abstract")
+                        && !word.equals("async") && !word.equals("override") && !word.equals("declare")
+                        && !word.equals("get") && !word.equals("set")) return false;
+                previous = previousNonWhitespace(wordStart - 1);
+            }
+            return previous >= 0 && "{};*".indexOf(source.charAt(previous)) >= 0;
+        }
+
+        /** Checks pre-scanned class-body ranges so an ordinary call inside a method is not mistaken for an overload. */
+        private boolean insideClassBody(int position) {
+            int open = innermostBraceOpenAt(position);
+            if (open < 0) return false;
+            int low = 0;
+            int high = classBodies.size() - 1;
+            while (low <= high) {
+                int middle = (low + high) >>> 1;
+                int candidate = classBodies.get(middle).open();
+                if (candidate == open) return true;
+                if (candidate < open) low = middle + 1;
+                else high = middle - 1;
+            }
+            return false;
+        }
+
+        private void scanClassBodies() {
+            int i = 0;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '\'' || c == '"') { i = skipString(i, c); continue; }
+                if (c == '`') { i = skipTemplate(i); continue; }
+                if (c == '/') {
+                    int skipped = skipSlash(i);
+                    if (skipped != i) { i = skipped; continue; }
+                }
+                if (isIdentifierStart(c) && startsWithKeyword(i, "class")) {
+                    int bodyOpen = classBodyOpenAfter(i + "class".length());
+                    if (bodyOpen >= 0) {
+                        int bodyClose = matchingClassBodyClose(bodyOpen);
+                        if (bodyClose >= 0) classBodies.add(new ClassBodyRange(bodyOpen, bodyClose));
+                    }
+                    i += "class".length();
+                    continue;
+                }
+                i++;
+            }
+            classBodies.sort((left, right) -> Integer.compare(left.open(), right.open()));
+        }
+
+        private void scanBraceRanges() {
+            int[] opens = new int[16];
+            int size = 0;
+            int i = 0;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '\'' || c == '"') { i = skipString(i, c); continue; }
+                if (c == '`') { i = skipTemplate(i); continue; }
+                if (c == '/') {
+                    int skipped = skipSlash(i);
+                    if (skipped != i) { i = skipped; continue; }
+                }
+                if (c == '{') {
+                    if (size == opens.length) {
+                        int[] expanded = new int[opens.length * 2];
+                        System.arraycopy(opens, 0, expanded, 0, size);
+                        opens = expanded;
+                    }
+                    opens[size++] = i;
+                } else if (c == '}' && size > 0) {
+                    braceRanges.add(new BraceRange(opens[--size], i));
+                }
+                i++;
+            }
+            braceRanges.sort((left, right) -> Integer.compare(left.open(), right.open()));
+        }
+
+        private int innermostBraceOpenAt(int position) {
+            int low = 0;
+            int high = braceRanges.size() - 1;
+            int candidate = -1;
+            while (low <= high) {
+                int middle = (low + high) >>> 1;
+                if (braceRanges.get(middle).open() <= position) {
+                    candidate = middle;
+                    low = middle + 1;
+                } else {
+                    high = middle - 1;
+                }
+            }
+            for (int i = candidate; i >= 0; i--) {
+                BraceRange range = braceRanges.get(i);
+                if (range.close() > position) return range.open();
+            }
+            return -1;
+        }
+
+        private int classBodyOpenAfter(int keywordEnd) {
+            int i = nextNonWhitespace(keywordEnd);
+            if (i < length && source.charAt(i) == '{') return i;
+            if (i < length && isIdentifierStart(source.charAt(i)) && !startsWithKeyword(i, "extends")) {
+                i = nextNonWhitespace(readIdentifierEnd(i + 1));
+            } else if (i >= length || !startsWithKeyword(i, "extends")) {
+                return -1;
+            }
+
+            int angle = 0;
+            int paren = 0;
+            int bracket = 0;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '\'' || c == '"') { i = skipString(i, c); continue; }
+                if (c == '`') { i = skipTemplate(i); continue; }
+                if (c == '/') {
+                    int skipped = skipSlash(i);
+                    if (skipped != i) { i = skipped; continue; }
+                }
+                if (c == '<') angle++;
+                else if (c == '>' && angle > 0) angle--;
+                else if (c == '(') paren++;
+                else if (c == ')' && paren > 0) paren--;
+                else if (c == '[') bracket++;
+                else if (c == ']' && bracket > 0) bracket--;
+                else if (c == '{' && angle == 0 && paren == 0 && bracket == 0) return i;
+                else if ((c == ';' || c == '}') && angle == 0 && paren == 0 && bracket == 0) return -1;
+                i++;
+            }
+            return -1;
+        }
+
+        private int matchingClassBodyClose(int bodyOpen) {
+            int depth = 0;
+            int i = bodyOpen;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '\'' || c == '"') { i = skipString(i, c); continue; }
+                if (c == '`') { i = skipTemplate(i); continue; }
+                if (c == '/') {
+                    int skipped = skipSlash(i);
+                    if (skipped != i) { i = skipped; continue; }
+                }
+                if (c == '{') depth++;
+                else if (c == '}' && --depth == 0) return i;
+                i++;
+            }
+            return -1;
         }
 
         private int matchingParen(int open) {

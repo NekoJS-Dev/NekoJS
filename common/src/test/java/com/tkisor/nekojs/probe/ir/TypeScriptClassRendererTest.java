@@ -3,10 +3,12 @@ package com.tkisor.nekojs.probe.ir;
 import com.tkisor.nekojs.api.surface.ApiSignature;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import com.tkisor.nekojs.probe.backend.typescript.FunctionalInterfaceAliasGenerator;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -54,6 +56,32 @@ class TypeScriptClassRendererTest {
             assertTrue(first.startsWith("    export "), "decl must start with export block: " + cls.getName());
             assertTrue(first.trim().endsWith("}"), "decl must end with closing brace: " + cls.getName());
         }
+    }
+
+    @Test
+    void iterableConsumerWildcardUsesIterableElementAsCallbackArgument() {
+        TypeAliasRegistry aliases = new TypeAliasRegistry();
+        new FunctionalInterfaceAliasGenerator(aliases).prepare(
+                Set.of(Iterable.class.getName(), java.util.function.Consumer.class.getName()), Set.of());
+
+        TypeDecl iterable = new TypeReflector().reflect(Iterable.class);
+        String output = new TypeScriptClassRenderer(aliases).render(iterable);
+
+        assertTrue(output.contains("forEach(arg0: $Consumer_<T, T>): void;"), output);
+    }
+
+    @Test
+    void functionAndThenRetainsCallerClassAndMethodVariables() {
+        TypeAliasRegistry aliases = new TypeAliasRegistry();
+        new FunctionalInterfaceAliasGenerator(aliases).prepare(
+                Set.of(java.util.function.Function.class.getName()), Set.of());
+
+        String output = new TypeScriptClassRenderer(aliases)
+                .render(new TypeReflector().reflect(java.util.function.Function.class));
+
+        assertTrue(output.contains("andThen<V>("), output);
+        assertTrue(output.contains("$Function_<R, V, R, V>"), output);
+        assertFalse(output.contains("$Function_<any, any, any, any>"), output);
     }
 
     // ---------------- 确定性 getter/setter 候选选择 ----------------
@@ -142,8 +170,8 @@ class TypeScriptClassRendererTest {
     void nonPrimitiveSuperClassStillRendersExtends() {
         TypeDecl decl = new TypeReflector().reflect(java.util.ArrayList.class);
         String out = render(decl);
-        // superType 取 getSuperclass()（erased Class），故泛型上界不渲染类型实参
-        assertTrue(out.contains("export class $ArrayList<E> extends $AbstractList implements"),
+        // Preserve superclass arguments instead of reducing ArrayList's parent to raw AbstractList.
+        assertTrue(out.contains("export class $ArrayList<E> extends $AbstractList<E> implements"),
                 "regular super class must keep its extends clause:\n" + out);
     }
 

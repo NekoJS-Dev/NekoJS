@@ -14,6 +14,7 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
+import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
@@ -49,10 +50,13 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
     private final TypeAliasRegistry aliasRegistry = new TypeAliasRegistry();
     private final AdapterAliasGenerator adapterAliasGenerator = new AdapterAliasGenerator(aliasRegistry);
+    private final FunctionalInterfaceAliasGenerator functionalInterfaceAliasGenerator =
+            new FunctionalInterfaceAliasGenerator(aliasRegistry);
     // IR 唯一渲染路径（Phase 2.7）：所有类声明与 import 均由 TypeReflector → IR → renderer 产出，
     // 旧的 ClassDeclGenerator 直接反射渲染已删除
     private final TypeScriptClassRenderer tsClassRenderer = new TypeScriptClassRenderer(aliasRegistry);
-    private final IndexFileGenerator indexFileGenerator = new IndexFileGenerator(tsClassRenderer, adapterAliasGenerator);
+    private final IndexFileGenerator indexFileGenerator = new IndexFileGenerator(tsClassRenderer,
+            adapterAliasGenerator, functionalInterfaceAliasGenerator);
     private final EventDeclarationGenerator eventGenerator = new EventDeclarationGenerator(aliasRegistry, adapterAliasGenerator);
     private final BindingDeclarationGenerator bindingGenerator = new BindingDeclarationGenerator();
     private final RecipeEventDeclarationGenerator recipeEventGenerator = new RecipeEventDeclarationGenerator(aliasRegistry);
@@ -113,18 +117,31 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 }
             }
 
-            // 准备适配器输入别名：仅处理会被实际生成的目标，填充 TypeAliasRegistry（放宽引用该类型的
-            // 方法参数）+ 别名表（就近发声明）。必须在 predeclareDeclarations 之前，因为参数渲染依赖已注册的别名。
-            // 每次运行先清空 TypeAliasRegistry（恢复默认表），防止上一轮注册的适配器别名在目标类缺席时泄漏。
+            // Register input aliases before rendering parameters; their dependencies join the class set until stable.
+            AuthoredClassDeclarations authored = AuthoredClassDeclarations.prepare(ctx, classesToGenerate);
             aliasRegistry.clear();
-            adapterAliasGenerator.prepare(snapshot.adapters(), classesToGenerate);
-
-            // 别名引用的跨包 host 类型（如 NekoId、Item）也需生成声明，否则别名里的 $NekoId 等会悬空
-            for (String host : adapterAliasGenerator.hostImports()) {
-                if (ctx.config().isRelevantClass(host, platformPkgs)) {
-                    classesToGenerate.add(host);
+            Set<String> hiddenFqns = hiddenClasses(ctx.ir());
+            indexFileGenerator.setHiddenClasses(hiddenFqns);
+            boolean closureChanged;
+            do {
+                int previousSize = classesToGenerate.size();
+                Set<String> aliasEligibleClasses = new LinkedHashSet<>(classesToGenerate);
+                aliasEligibleClasses.removeAll(hiddenFqns);
+                adapterAliasGenerator.prepare(snapshot.adapters(), aliasEligibleClasses);
+                for (String host : adapterAliasGenerator.hostImports()) {
+                    if (ctx.config().isRelevantClass(host, platformPkgs) && !hiddenFqns.contains(host)) {
+                        classesToGenerate.add(host);
+                    }
                 }
-            }
+
+                functionalInterfaceAliasGenerator.prepare(classesToGenerate, hiddenFqns);
+                for (String host : functionalInterfaceAliasGenerator.hostImports()) {
+                    if (ctx.config().isRelevantClass(host, platformPkgs) && !hiddenFqns.contains(host)) {
+                        classesToGenerate.add(host);
+                    }
+                }
+                closureChanged = classesToGenerate.size() != previousSize;
+            } while (closureChanged);
 
             NekoJS.LOGGER.info("Probe [typescript]: {} classes to generate", classesToGenerate.size());
 
@@ -144,7 +161,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                     ? provided
                     : Executors.newFixedThreadPool(parallelism());
             try {
-                predeclareClasses(ctx.ir(), classesToGenerate, pool);
+                predeclareClasses(ctx.ir(), classesToGenerate, pool, authored);
+                authored.validateGeneratedImports(indexFileGenerator);
 
                 // 4. 渲染 @package Java 类型声明（并行渲染，产物进内存，复用同一线程池）
                 renderPackageDeclarations(tree, files, pool);
@@ -225,7 +243,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
      * 类供 import/别名过滤。每类只反射一次（共享 IR 已反射的不再反射），一次反射同时产出
      * 声明与 import 两个产物。
      */
-    private void predeclareClasses(List<TypeDecl> sharedIr, Set<String> classNames, ExecutorService pool) {
+    private void predeclareClasses(List<TypeDecl> sharedIr, Set<String> classNames, ExecutorService pool,
+                                  AuthoredClassDeclarations authored) {
         Map<String, TypeDecl> irByFqn = new LinkedHashMap<>();
         if (sharedIr != null) {
             for (TypeDecl d : sharedIr) {
@@ -238,6 +257,18 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             futures.add(pool.submit(() -> {
                 try {
                     TypeDecl decl = irByFqn.get(fqn);
+                    ClassDeclarationCatalogEntry replacement = authored.get(fqn);
+                    if (replacement != null) {
+                        // Authored bodies bypass member reflection; shared hide decisions already won during selection.
+                        // Auxiliary enum aliases use canonical runtime names, independently of replaced IR edits.
+                        if (replacement.targetType().isEnum()) {
+                            decl = new TypeReflector().reflect(replacement.targetType());
+                        }
+                        Set<String> imports = new LinkedHashSet<>();
+                        for (Class<?> imported : replacement.imports()) imports.add(imported.getName());
+                        indexFileGenerator.predeclareClassDeclaration(fqn, replacement.declaration(), imports, decl);
+                        return;
+                    }
                     if (decl == null) {
                         // 共享 IR 缺失（共享层反射失败，或测试直连 ir=null）：本 backend 自行反射
                         Class<?> cls = Class.forName(fqn, false, Thread.currentThread().getContextClassLoader());
@@ -284,6 +315,15 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     private static String pkgOf(String fqn) {
         int dot = fqn.lastIndexOf('.');
         return dot >= 0 ? fqn.substring(0, dot) : "";
+    }
+
+    private static Set<String> hiddenClasses(List<TypeDecl> declarations) {
+        if (declarations == null || declarations.isEmpty()) return Set.of();
+        Set<String> hidden = new LinkedHashSet<>();
+        for (TypeDecl declaration : declarations) {
+            if (declaration.hidden) hidden.add(declaration.fqn);
+        }
+        return hidden;
     }
 
     /**

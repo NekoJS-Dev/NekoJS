@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 
@@ -33,15 +34,17 @@ public final class TypeDocsPoint {
         }
     }
 
-    /** type_docs / node_type_docs 两点的产物：优先级排序后的类型文档、手写声明与 builder 契约条目快照。 */
+    /** Shared products for type_docs and node_type_docs; class replacements resolve after both products merge. */
     record TypeDocsSnapshot(
             List<TypeDocCatalogEntry> docs,
             List<ManualDeclarationCatalogEntry> manualDeclarations,
+            List<ClassDeclarationCatalogEntry> classDeclarations,
             List<RegistryBuilderSurfaceEntry> registryBuilderSurfaces) {
         TypeDocsSnapshot {
             docs = docs.stream().sorted(Comparator.comparingInt(TypeDocCatalogEntry::priority)).toList();
             manualDeclarations = manualDeclarations.stream()
                     .sorted(Comparator.comparingInt(ManualDeclarationCatalogEntry::priority)).toList();
+            classDeclarations = List.copyOf(classDeclarations);
             registryBuilderSurfaces = registryBuilderSurfaces.stream()
                     .sorted(Comparator.comparing(RegistryBuilderSurfaceEntry::builderName)
                             .thenComparing(RegistryBuilderSurfaceEntry::typeName))
@@ -49,10 +52,11 @@ public final class TypeDocsPoint {
         }
     }
 
-    /** 累积器：文档与手写声明两个列表；snapshot 后密封。 */
+    /** Collects documentation and declaration channels, then seals them when a snapshot is taken. */
     static final class Bucket implements TypeDocsRegister, Sealable {
         private final List<TypeDocCatalogEntry> docs = new ArrayList<>();
         private final List<ManualDeclarationCatalogEntry> manualDeclarations = new ArrayList<>();
+        private final List<ClassDeclarationCatalogEntry> classDeclarations = new ArrayList<>();
         private final List<RegistryBuilderSurfaceEntry> registryBuilderSurfaces = new ArrayList<>();
         private boolean sealed;
 
@@ -75,6 +79,12 @@ public final class TypeDocsPoint {
         }
 
         @Override
+        public void registerClassDeclaration(ClassDeclarationCatalogEntry entry) {
+            checkSealed();
+            classDeclarations.add(java.util.Objects.requireNonNull(entry, "entry"));
+        }
+
+        @Override
         public void registerRegistryBuilderSurface(RegistryBuilderSurfaceEntry entry) {
             checkSealed();
             registryBuilderSurfaces.add(java.util.Objects.requireNonNull(entry, "entry"));
@@ -83,7 +93,7 @@ public final class TypeDocsPoint {
         TypeDocsSnapshot snapshot() {
             sealed = true;
             return new TypeDocsSnapshot(List.copyOf(docs), List.copyOf(manualDeclarations),
-                    List.copyOf(registryBuilderSurfaces));
+                    List.copyOf(classDeclarations), List.copyOf(registryBuilderSurfaces));
         }
 
         @Override

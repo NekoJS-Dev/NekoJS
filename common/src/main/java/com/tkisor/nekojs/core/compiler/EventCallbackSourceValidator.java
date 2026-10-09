@@ -10,13 +10,10 @@ import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
 import com.tkisor.nekojs.core.module.esm.NekoEsmSpan;
+import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
 
-import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -161,14 +158,10 @@ public final class EventCallbackSourceValidator {
                 if (candidate.isVarArgs() ? argCount < fixed - 1 : argCount != fixed) continue;
                 if (argIndex >= fixed) continue;
                 Type declared = candidate.getGenericParameterTypes()[argIndex];
-                Class<?> raw = rawClass(declared);
-                Method sam = singleAbstractMethod(raw);
+                FunctionalInterfaceResolver.Signature sam = FunctionalInterfaceResolver.resolve(declared);
                 if (sam == null) continue;
-                Map<TypeVariable<?>, Type> arguments = interfaceArguments(declared, sam.getDeclaringClass(), Map.of());
-                if (arguments == null) continue;
-                Type[] inputs = sam.getGenericParameterTypes();
-                for (int index = 0; index < params.size() && index < inputs.length; index++) {
-                    Class<?> inputClass = rawClass(substitute(inputs[index], arguments));
+                for (int index = 0; index < params.size() && index < sam.parameterTypes().size(); index++) {
+                    Class<?> inputClass = FunctionalInterfaceResolver.rawClass(sam.parameterTypes().get(index));
                     if (inputClass != null && inputClass != Object.class) {
                         out.computeIfAbsent(params.get(index), ignored -> new LinkedHashSet<>()).add(inputClass);
                     }
@@ -176,76 +169,6 @@ public final class EventCallbackSourceValidator {
             }
         }
         return out;
-    }
-
-    private static Method singleAbstractMethod(Class<?> raw) {
-        if (raw == null || !raw.isInterface()) return null;
-        Map<MethodSignature, Method> methods = new HashMap<>();
-        for (Method method : raw.getMethods()) {
-            if (!Modifier.isAbstract(method.getModifiers()) || Modifier.isStatic(method.getModifiers())
-                    || method.isDefault() || isObjectMethod(method)) continue;
-            MethodSignature signature = new MethodSignature(method.getName(), List.of(method.getParameterTypes()));
-            Method previous = methods.get(signature);
-            if (previous == null || previous.getReturnType().isAssignableFrom(method.getReturnType())) {
-                methods.put(signature, method);
-            } else if (!method.getReturnType().isAssignableFrom(previous.getReturnType())) {
-                return null;
-            }
-        }
-        return methods.size() == 1 ? methods.values().iterator().next() : null;
-    }
-
-    private static boolean isObjectMethod(Method method) {
-        try {
-            Method objectMethod = Object.class.getMethod(method.getName(), method.getParameterTypes());
-            return objectMethod.getReturnType() == method.getReturnType();
-        } catch (NoSuchMethodException absent) {
-            return false;
-        }
-    }
-
-    private record MethodSignature(String name, List<Class<?>> parameters) {}
-
-    private static Map<TypeVariable<?>, Type> interfaceArguments(Type declared, Class<?> target,
-                                                                 Map<TypeVariable<?>, Type> inherited) {
-        Class<?> raw = rawClass(declared);
-        if (raw == null) return null;
-        Map<TypeVariable<?>, Type> arguments = new HashMap<>(inherited);
-        if (declared instanceof ParameterizedType parameterized) {
-            TypeVariable<?>[] variables = raw.getTypeParameters();
-            Type[] actual = parameterized.getActualTypeArguments();
-            for (int index = 0; index < variables.length; index++) {
-                arguments.put(variables[index], substitute(actual[index], inherited));
-            }
-        }
-        if (raw == target) return arguments;
-        for (Type parent : raw.getGenericInterfaces()) {
-            Map<TypeVariable<?>, Type> resolved = interfaceArguments(parent, target, arguments);
-            if (resolved != null) return resolved;
-        }
-        return null;
-    }
-
-    private static Type substitute(Type declared, Map<TypeVariable<?>, Type> arguments) {
-        Set<Type> visited = new HashSet<>();
-        while (declared instanceof TypeVariable<?> variable && visited.add(declared)) {
-            Type replacement = arguments.get(variable);
-            if (replacement == null) break;
-            declared = replacement;
-        }
-        if (declared instanceof GenericArrayType array) {
-            Class<?> component = rawClass(substitute(array.getGenericComponentType(), arguments));
-            if (component != null) return component.arrayType();
-        }
-        return declared;
-    }
-
-    private static Class<?> rawClass(Type type) {
-        if (type instanceof Class<?> raw) return raw;
-        if (type instanceof ParameterizedType parameterized && parameterized.getRawType() instanceof Class<?> raw) {
-            return raw;
-        }
-        return null;
     }
 
     private static String classNames(Set<Class<?>> classes) {

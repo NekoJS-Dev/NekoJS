@@ -1,5 +1,3 @@
-import { $String } from "java:java/lang";
-
 declare module "java:com/tkisor/nekojs/probe" {
     export class $LegacyProbeFixture$SampleCancellableEvent {
         constructor();

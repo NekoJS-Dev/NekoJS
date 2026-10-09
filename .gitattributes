@@ -13,6 +13,7 @@
 *.yaml text eol=lf
 *.sh text eol=lf
 *.properties text eol=lf
+*.d.ts text eol=lf
 # 无扩展名脚本不匹配 *.sh，单独声明（仓库内 LF）
 gradlew text eol=lf
 scripts/check-translation-drift text eol=lf

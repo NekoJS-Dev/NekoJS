@@ -36,6 +36,10 @@ public final class AdapterAliasGenerator {
         this.aliasRegistry = aliasRegistry;
     }
 
+    TypeAliasRegistry aliasRegistry() {
+        return aliasRegistry;
+    }
+
     /**
      * 解析适配器的形状，填充别名注册表与别名缓存。
      *
