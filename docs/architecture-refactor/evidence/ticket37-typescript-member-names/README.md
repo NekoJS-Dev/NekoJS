@@ -42,3 +42,5 @@ npm run test:probe-types
 ```
 
 [固定原始证据包](ts-member-evidence.zip)含RED/首个GREEN失败/确认GREEN、严格caller、完整XML/矩阵日志、全部实际输出/fixture/configs、五服日志/退出、IDE命令/原始诊断与脚本副本。排除服务器属性/RCON凭据、world、账户、二进制与原始JFR。摘要分别见 [矩阵](ts-member-final-test-summary.json)、[IDE](ts-member-ide-summary.json)、[旧解析](ts-member-syntax-before.json)、[新解析](ts-member-syntax-after.json)。
+
+后续精确提交cb5f7fe6的[正式性能窗口](../ticket37-cb5-performance/README.md)已运行：startup34231.8ms PASS，第二重载346.8ms FAIL，首组275.4ms但exit未观测；性能仍NOT GREEN。上面的NOT RUN是构建/安装归档时状态，不能替代后续结果。
