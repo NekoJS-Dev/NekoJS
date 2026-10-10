@@ -1,0 +1,9 @@
+{
+  "archiveSha256": "09cafc3bd8810cf173fab89059c94d4fca92d21bd5570455dfcd55d5f346ae68",
+  "entryHashReadback": true,
+  "completedConsoleByteEquality": true,
+  "allEightFinalComparisonsIncluded": true,
+  "newSourceIncludedAndPatchEqual": true,
+  "strictCallerControlsRetained": true,
+  "archiveSelfConsole": "The initial ZIP entry is empty while archiving; complete packaging console is retained separately."
+}

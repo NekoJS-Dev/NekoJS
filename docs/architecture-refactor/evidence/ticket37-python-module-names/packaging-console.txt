@@ -1,0 +1,1 @@
+{"archive": {"file": "python-module-candidate.zip", "entries": 4099, "bytes": 8377758, "sha256": "09cafc3bd8810cf173fab89059c94d4fca92d21bd5570455dfcd55d5f346ae68"}, "matrix": {"xml": 800, "tests": 4733, "skipped": 271, "failures": 0, "errors": 0}, "productionPatchSha256": "2d46d7a7997d91c0994ba7d1289ef2aa71d259ce040c738f5f6a1ca89d941b2b"}

@@ -1,0 +1,42 @@
+{
+  "sourceCommit": "7588b67f632c8a16da86a419146759fcb0fa02ef",
+  "sourceBase": "b2895779661720f0f173c37c6a30d05d93c353a9",
+  "exactProductionPatchSha256": "2d46d7a7997d91c0994ba7d1289ef2aa71d259ce040c738f5f6a1ca89d941b2b",
+  "sourceCommittedAfterInstalledValidation": true,
+  "artifacts": [
+    {
+      "node": "1.21.1",
+      "artifact": "nekojs-neoforge-1.21.1-1.1.0-preview3-server.jar",
+      "sha256": "bb6b48d75768d0a8d1afd9c3bc3fb82f991da7ee34f7a9276a6c66336fd4bedc",
+      "exitCode": 0
+    },
+    {
+      "node": "26.1.2",
+      "artifact": "nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "sha256": "e731b4dc3f7a3adab6e70e0de346952972e77426e8398f7ee9779804d71e61b1",
+      "exitCode": 0
+    },
+    {
+      "node": "26.2.0",
+      "artifact": "nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+      "sha256": "835a19db3a07b27c7e3f2fe4485a5ac91c7303917e0b98514e4ceb99d36666a1",
+      "exitCode": 0
+    },
+    {
+      "node": "26.1.2-fabric",
+      "artifact": "nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+      "sha256": "1b09e6fd6a32e4f99adeca58c62dc8afae7ecb87439db4eaaaacc6289420f2b3",
+      "exitCode": 0
+    },
+    {
+      "node": "26.2.0-fabric",
+      "artifact": "nekojs-fabric-26.2-1.1.0-preview3.jar",
+      "sha256": "64195b2bae5aa9e1ead63510b03942bf44bf26f36d44f1f35aae2166721b719b",
+      "exitCode": 0
+    }
+  ],
+  "overallAcceptance": "NOT ACCEPTED",
+  "maintainerConclusion": "NOT RECORDED",
+  "performance": "Current source NOT RUN; historical failures retained",
+  "remoteVerification": "Separate post-evidence push check"
+}

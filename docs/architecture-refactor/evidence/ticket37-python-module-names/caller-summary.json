@@ -1,0 +1,1985 @@
+[
+  {
+    "case": "cross-package",
+    "control": "positive",
+    "exitCode": 0,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 0,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.495
+    },
+    "diagnostics": []
+  },
+  {
+    "case": "cross-package",
+    "control": "negative",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 3,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.453
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\cross-package\\negative.py",
+        "severity": "error",
+        "message": "Type of \"secondOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 11
+          },
+          "end": {
+            "line": 2,
+            "character": 40
+          }
+        },
+        "rule": "reportUnknownMemberType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\cross-package\\negative.py",
+        "severity": "error",
+        "message": "Return type is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 11
+          },
+          "end": {
+            "line": 2,
+            "character": 42
+          }
+        },
+        "rule": "reportUnknownVariableType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\cross-package\\negative.py",
+        "severity": "error",
+        "message": "Cannot access attribute \"secondOnly\" for class \"Record\"\n\u00a0\u00a0Attribute \"secondOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 30
+          },
+          "end": {
+            "line": 2,
+            "character": 40
+          }
+        },
+        "rule": "reportAttributeAccessIssue"
+      }
+    ]
+  },
+  {
+    "case": "cross-package",
+    "control": "whole-stubs-strict",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 13,
+      "errorCount": 9,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.498
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\cross-package\\generated\\nekojs\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 19
+          },
+          "end": {
+            "line": 4,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\cross-package\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\consumer\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\cross-package\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\consumer\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\cross-package\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\cross-package\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\cross-package\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\cross-package\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\cross-package\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\cross-package\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      }
+    ]
+  },
+  {
+    "case": "bindings-events-adapter",
+    "control": "positive",
+    "exitCode": 0,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 0,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.52
+    },
+    "diagnostics": []
+  },
+  {
+    "case": "bindings-events-adapter",
+    "control": "negative",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 6,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.383
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\negative.py",
+        "severity": "error",
+        "message": "Type of \"secondOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 10
+          },
+          "end": {
+            "line": 2,
+            "character": 26
+          }
+        },
+        "rule": "reportUnknownMemberType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\negative.py",
+        "severity": "error",
+        "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"values\" in function \"print\"",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 10
+          },
+          "end": {
+            "line": 2,
+            "character": 28
+          }
+        },
+        "rule": "reportUnknownArgumentType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\negative.py",
+        "severity": "error",
+        "message": "Cannot access attribute \"secondOnly\" for class \"Record\"\n\u00a0\u00a0Attribute \"secondOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 16
+          },
+          "end": {
+            "line": 2,
+            "character": 26
+          }
+        },
+        "rule": "reportAttributeAccessIssue"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\negative.py",
+        "severity": "error",
+        "message": "Type of \"firstOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 42
+          },
+          "end": {
+            "line": 3,
+            "character": 57
+          }
+        },
+        "rule": "reportUnknownMemberType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\negative.py",
+        "severity": "error",
+        "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"values\" in function \"print\"",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 42
+          },
+          "end": {
+            "line": 3,
+            "character": 59
+          }
+        },
+        "rule": "reportUnknownArgumentType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\negative.py",
+        "severity": "error",
+        "message": "Cannot access attribute \"firstOnly\" for class \"Record\"\n\u00a0\u00a0Attribute \"firstOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 48
+          },
+          "end": {
+            "line": 3,
+            "character": 57
+          }
+        },
+        "rule": "reportAttributeAccessIssue"
+      }
+    ]
+  },
+  {
+    "case": "bindings-events-adapter",
+    "control": "whole-stubs-strict",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 16,
+      "errorCount": 13,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.388
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\generated\\nekojs\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 19
+          },
+          "end": {
+            "line": 4,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\generated\\nekojs\\_events\\server\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\generated\\nekojs\\_events\\server\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"overload\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\generated\\nekojs\\_events\\startup\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\generated\\nekojs\\_events\\startup\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"overload\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\generated\\nekojs\\_events\\test\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\generated\\nekojs\\_events\\test\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"overload\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\bindings-events-adapter\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      }
+    ]
+  },
+  {
+    "case": "renamed",
+    "control": "positive",
+    "exitCode": 0,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 0,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.322
+    },
+    "diagnostics": []
+  },
+  {
+    "case": "renamed",
+    "control": "negative",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 3,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.262
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\negative.py",
+        "severity": "error",
+        "message": "Type of \"secondOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 11
+          },
+          "end": {
+            "line": 2,
+            "character": 40
+          }
+        },
+        "rule": "reportUnknownMemberType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\negative.py",
+        "severity": "error",
+        "message": "Return type is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 11
+          },
+          "end": {
+            "line": 2,
+            "character": 42
+          }
+        },
+        "rule": "reportUnknownVariableType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\negative.py",
+        "severity": "error",
+        "message": "Cannot access attribute \"secondOnly\" for class \"Renamed\"\n\u00a0\u00a0Attribute \"secondOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 30
+          },
+          "end": {
+            "line": 2,
+            "character": 40
+          }
+        },
+        "rule": "reportAttributeAccessIssue"
+      }
+    ]
+  },
+  {
+    "case": "renamed",
+    "control": "whole-stubs-strict",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 17,
+      "errorCount": 15,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.311
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 19
+          },
+          "end": {
+            "line": 4,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_events\\server\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_events\\server\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"overload\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_events\\startup\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_events\\startup\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"overload\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_events\\test\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_events\\test\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"overload\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\consumer\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\consumer\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\renamed\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      }
+    ]
+  },
+  {
+    "case": "enum-import",
+    "control": "positive",
+    "exitCode": 0,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 0,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.27
+    },
+    "diagnostics": []
+  },
+  {
+    "case": "enum-import",
+    "control": "negative",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 3,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.248
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\enum-import\\negative.py",
+        "severity": "error",
+        "message": "Type of \"localColorOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 11
+          },
+          "end": {
+            "line": 2,
+            "character": 46
+          }
+        },
+        "rule": "reportUnknownMemberType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\enum-import\\negative.py",
+        "severity": "error",
+        "message": "Return type is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 11
+          },
+          "end": {
+            "line": 2,
+            "character": 48
+          }
+        },
+        "rule": "reportUnknownVariableType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\enum-import\\negative.py",
+        "severity": "error",
+        "message": "Cannot access attribute \"localColorOnly\" for class \"Color_\"\n\u00a0\u00a0Attribute \"localColorOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 32
+          },
+          "end": {
+            "line": 2,
+            "character": 46
+          }
+        },
+        "rule": "reportAttributeAccessIssue"
+      }
+    ]
+  },
+  {
+    "case": "enum-import",
+    "control": "whole-stubs-strict",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 13,
+      "errorCount": 10,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.267
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\enum-import\\generated\\nekojs\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 19
+          },
+          "end": {
+            "line": 4,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\enum-import\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\consumer\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\enum-import\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\consumer\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\enum-import\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\consumer\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\enum-import\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\enum-import\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\enum-import\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\enum-import\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\enum-import\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\enum-import\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      }
+    ]
+  },
+  {
+    "case": "local-adapter",
+    "control": "positive",
+    "exitCode": 0,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 0,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.244
+    },
+    "diagnostics": []
+  },
+  {
+    "case": "local-adapter",
+    "control": "negative",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 3,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.234
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\negative.py",
+        "severity": "error",
+        "message": "Type of \"firstOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 11
+          },
+          "end": {
+            "line": 2,
+            "character": 26
+          }
+        },
+        "rule": "reportUnknownMemberType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\negative.py",
+        "severity": "error",
+        "message": "Return type is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 11
+          },
+          "end": {
+            "line": 2,
+            "character": 28
+          }
+        },
+        "rule": "reportUnknownVariableType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\negative.py",
+        "severity": "error",
+        "message": "Cannot access attribute \"firstOnly\" for class \"Record_\"\n\u00a0\u00a0Attribute \"firstOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 17
+          },
+          "end": {
+            "line": 2,
+            "character": 26
+          }
+        },
+        "rule": "reportAttributeAccessIssue"
+      }
+    ]
+  },
+  {
+    "case": "local-adapter",
+    "control": "whole-stubs-strict",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 16,
+      "errorCount": 13,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.279
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\generated\\nekojs\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 19
+          },
+          "end": {
+            "line": 4,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\generated\\nekojs\\_events\\server\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\generated\\nekojs\\_events\\server\\__init__.pyi",
+        "severity": "error",
+        "message": "\"_NekoInput_Record_\" is private and used outside of the module in which it is declared",
+        "range": {
+          "start": {
+            "line": 5,
+            "character": 84
+          },
+          "end": {
+            "line": 5,
+            "character": 102
+          }
+        },
+        "rule": "reportPrivateUsage"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\generated\\nekojs\\_events\\startup\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\generated\\nekojs\\_events\\startup\\__init__.pyi",
+        "severity": "error",
+        "message": "\"_NekoInput_Record_\" is private and used outside of the module in which it is declared",
+        "range": {
+          "start": {
+            "line": 5,
+            "character": 84
+          },
+          "end": {
+            "line": 5,
+            "character": 102
+          }
+        },
+        "rule": "reportPrivateUsage"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\generated\\nekojs\\_events\\test\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\generated\\nekojs\\_events\\test\\__init__.pyi",
+        "severity": "error",
+        "message": "\"_NekoInput_Record_\" is private and used outside of the module in which it is declared",
+        "range": {
+          "start": {
+            "line": 5,
+            "character": 84
+          },
+          "end": {
+            "line": 5,
+            "character": 102
+          }
+        },
+        "rule": "reportPrivateUsage"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-adapter\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      }
+    ]
+  },
+  {
+    "case": "local-enum",
+    "control": "positive",
+    "exitCode": 0,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 0,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.272
+    },
+    "diagnostics": []
+  },
+  {
+    "case": "local-enum",
+    "control": "negative",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 3,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.24
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-enum\\negative.py",
+        "severity": "error",
+        "message": "Type of \"ordinal\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 11
+          },
+          "end": {
+            "line": 2,
+            "character": 24
+          }
+        },
+        "rule": "reportUnknownMemberType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-enum\\negative.py",
+        "severity": "error",
+        "message": "Return type is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 11
+          },
+          "end": {
+            "line": 2,
+            "character": 26
+          }
+        },
+        "rule": "reportUnknownVariableType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-enum\\negative.py",
+        "severity": "error",
+        "message": "Cannot access attribute \"ordinal\" for class \"Color_\"\n\u00a0\u00a0Attribute \"ordinal\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 17
+          },
+          "end": {
+            "line": 2,
+            "character": 24
+          }
+        },
+        "rule": "reportAttributeAccessIssue"
+      }
+    ]
+  },
+  {
+    "case": "local-enum",
+    "control": "whole-stubs-strict",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 15,
+      "errorCount": 10,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.281
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-enum\\generated\\nekojs\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 19
+          },
+          "end": {
+            "line": 4,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-enum\\generated\\nekojs\\_events\\server\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-enum\\generated\\nekojs\\_events\\server\\__init__.pyi",
+        "severity": "error",
+        "message": "\"_NekoInput_Color_\" is private and used outside of the module in which it is declared",
+        "range": {
+          "start": {
+            "line": 5,
+            "character": 87
+          },
+          "end": {
+            "line": 5,
+            "character": 104
+          }
+        },
+        "rule": "reportPrivateUsage"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-enum\\generated\\nekojs\\_events\\startup\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-enum\\generated\\nekojs\\_events\\startup\\__init__.pyi",
+        "severity": "error",
+        "message": "\"_NekoInput_Color_\" is private and used outside of the module in which it is declared",
+        "range": {
+          "start": {
+            "line": 5,
+            "character": 87
+          },
+          "end": {
+            "line": 5,
+            "character": 104
+          }
+        },
+        "rule": "reportPrivateUsage"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-enum\\generated\\nekojs\\_events\\test\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-enum\\generated\\nekojs\\_events\\test\\__init__.pyi",
+        "severity": "error",
+        "message": "\"_NekoInput_Color_\" is private and used outside of the module in which it is declared",
+        "range": {
+          "start": {
+            "line": 5,
+            "character": 87
+          },
+          "end": {
+            "line": 5,
+            "character": 104
+          }
+        },
+        "rule": "reportPrivateUsage"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-enum\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\consumer\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-enum\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\consumer\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\local-enum\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\consumer\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      }
+    ]
+  },
+  {
+    "case": "inherited-writer",
+    "control": "positive",
+    "exitCode": 0,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 0,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.219
+    },
+    "diagnostics": []
+  },
+  {
+    "case": "inherited-writer",
+    "control": "negative",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 4,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.241
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\negative.py",
+        "severity": "error",
+        "message": "Cannot assign to attribute \"payload\" for class \"Child\"\n\u00a0\u00a0\"nekojs._java.com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record\" is not assignable to \"nekojs._java.com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record\"",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 20
+          },
+          "end": {
+            "line": 3,
+            "character": 28
+          }
+        },
+        "rule": "reportAttributeAccessIssue"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\negative.py",
+        "severity": "error",
+        "message": "Type of \"secondOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 11
+          },
+          "end": {
+            "line": 4,
+            "character": 35
+          }
+        },
+        "rule": "reportUnknownMemberType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\negative.py",
+        "severity": "error",
+        "message": "Return type is unknown",
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 11
+          },
+          "end": {
+            "line": 4,
+            "character": 37
+          }
+        },
+        "rule": "reportUnknownVariableType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\negative.py",
+        "severity": "error",
+        "message": "Cannot access attribute \"secondOnly\" for class \"Record\"\n\u00a0\u00a0Attribute \"secondOnly\" is unknown",
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 25
+          },
+          "end": {
+            "line": 4,
+            "character": 35
+          }
+        },
+        "rule": "reportAttributeAccessIssue"
+      }
+    ]
+  },
+  {
+    "case": "inherited-writer",
+    "control": "whole-stubs-strict",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 13,
+      "errorCount": 11,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.259
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\generated\\nekojs\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 19
+          },
+          "end": {
+            "line": 4,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\first\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\second\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\writer\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\writer\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\writer\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-module-callers-accepted\\inherited-writer\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\names\\writer\\__init__.pyi",
+        "severity": "error",
+        "message": "\"payload\" overrides symbol of same name in class \"Record\"\n\u00a0\u00a0\"property\" is not assignable to \"Record\"",
+        "range": {
+          "start": {
+            "line": 11,
+            "character": 8
+          },
+          "end": {
+            "line": 11,
+            "character": 15
+          }
+        },
+        "rule": "reportIncompatibleVariableOverride"
+      }
+    ]
+  }
+]

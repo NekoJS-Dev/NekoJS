@@ -1,0 +1,516 @@
+{
+  "baseline": "ticket37-inherited-accessor-installed",
+  "lineNumbersIgnored": true,
+  "nodes": [
+    {
+      "node": "1.21.1",
+      "typescript": [
+        {
+          "side": "server",
+          "before": 768,
+          "after": 768,
+          "removed": 0,
+          "added": 0,
+          "removedDiagnostics": [],
+          "addedDiagnostics": []
+        },
+        {
+          "side": "startup",
+          "before": 769,
+          "after": 769,
+          "removed": 0,
+          "added": 0,
+          "removedDiagnostics": [],
+          "addedDiagnostics": []
+        }
+      ],
+      "python": {
+        "before": 21,
+        "after": 18,
+        "removed": 3,
+        "added": 0,
+        "removedDiagnostics": [
+          {
+            "file": "nekojs/_java/com/tkisor/nekojs/bindings/static_access/__init__.pyi",
+            "code": "reportAssignmentType",
+            "message": "Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS]\" is not assignable to declared type \"type[nekojs._java.com.tkisor.nekojs.bindings.static_access.FluidIngredientJS]\"\n\u00a0\u00a0\"nekojs._java.com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS\" is not assignable to \"nekojs._java.com.tkisor.nekojs.bindings.static_access.FluidIngredientJS\"\n\u00a0\u00a0Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS]\" is not assignable to type \"type[nekojs._java.com.tkisor.nekojs.bindings.static_access.FluidIngredientJS]\"",
+            "count": 1
+          },
+          {
+            "file": "nekojs/_java/com/tkisor/nekojs/wrapper/item/__init__.pyi",
+            "code": "reportAssignmentType",
+            "message": "Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS]\" is not assignable to declared type \"type[nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS]\"\n\u00a0\u00a0\"nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS\" is not assignable to \"nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS\"\n\u00a0\u00a0Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS]\" is not assignable to type \"type[nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS]\"",
+            "count": 1
+          },
+          {
+            "file": "nekojs/_java/com/tkisor/nekojs/wrapper/item/__init__.pyi",
+            "code": "reportGeneralTypeIssues",
+            "message": "Class cannot derive from itself",
+            "count": 1
+          }
+        ],
+        "addedDiagnostics": []
+      },
+      "generation": [
+        {
+          "language": "typescript",
+          "before": 336,
+          "after": 336,
+          "missing": [],
+          "added": [],
+          "changed": 7
+        },
+        {
+          "language": "python",
+          "before": 319,
+          "after": 319,
+          "missing": [],
+          "added": [],
+          "changed": 8
+        }
+      ],
+      "omissions": {
+        "before": [
+          [
+            "reflection failed",
+            "net.minecraft.network.protocol.common.ClientCommonPacketListener"
+          ],
+          [
+            "reflection failed",
+            "net.minecraft.network.protocol.game.ClientGamePacketListener"
+          ],
+          [
+            "reflection failed",
+            "net.minecraft.world.inventory.RecipeBookMenu"
+          ],
+          [
+            "reflection failed",
+            "net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions"
+          ],
+          [
+            "reflection failed",
+            "net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions"
+          ],
+          [
+            "reflection failed",
+            "net.neoforged.neoforge.client.extensions.common.IClientItemExtensions"
+          ],
+          [
+            "reflection failed",
+            "net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions"
+          ],
+          [
+            "reflection failed",
+            "net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension"
+          ],
+          [
+            "scan incomplete",
+            "net.minecraft.network.protocol.common.ClientCommonPacketListener"
+          ],
+          [
+            "scan incomplete",
+            "net.minecraft.network.protocol.game.ClientGamePacketListener"
+          ],
+          [
+            "scan incomplete",
+            "net.minecraft.world.inventory.RecipeBookMenu"
+          ],
+          [
+            "scan incomplete",
+            "net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions"
+          ],
+          [
+            "scan incomplete",
+            "net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions"
+          ],
+          [
+            "scan incomplete",
+            "net.neoforged.neoforge.client.extensions.common.IClientItemExtensions"
+          ],
+          [
+            "scan incomplete",
+            "net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions"
+          ],
+          [
+            "scan incomplete",
+            "net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension"
+          ]
+        ],
+        "after": [
+          [
+            "reflection failed",
+            "net.minecraft.network.protocol.common.ClientCommonPacketListener"
+          ],
+          [
+            "reflection failed",
+            "net.minecraft.network.protocol.game.ClientGamePacketListener"
+          ],
+          [
+            "reflection failed",
+            "net.minecraft.world.inventory.RecipeBookMenu"
+          ],
+          [
+            "reflection failed",
+            "net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions"
+          ],
+          [
+            "reflection failed",
+            "net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions"
+          ],
+          [
+            "reflection failed",
+            "net.neoforged.neoforge.client.extensions.common.IClientItemExtensions"
+          ],
+          [
+            "reflection failed",
+            "net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions"
+          ],
+          [
+            "reflection failed",
+            "net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension"
+          ],
+          [
+            "scan incomplete",
+            "net.minecraft.network.protocol.common.ClientCommonPacketListener"
+          ],
+          [
+            "scan incomplete",
+            "net.minecraft.network.protocol.game.ClientGamePacketListener"
+          ],
+          [
+            "scan incomplete",
+            "net.minecraft.world.inventory.RecipeBookMenu"
+          ],
+          [
+            "scan incomplete",
+            "net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions"
+          ],
+          [
+            "scan incomplete",
+            "net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions"
+          ],
+          [
+            "scan incomplete",
+            "net.neoforged.neoforge.client.extensions.common.IClientItemExtensions"
+          ],
+          [
+            "scan incomplete",
+            "net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions"
+          ],
+          [
+            "scan incomplete",
+            "net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension"
+          ]
+        ],
+        "removedWarnings": [
+          "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)",
+          "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+          "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)",
+          "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)"
+        ],
+        "addedWarnings": [
+          "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/multiplayer/ClientLevel for invalid dist DEDICATED_SERVER)",
+          "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class com/mojang/blaze3d/vertex/VertexConsumer for invalid dist DEDICATED_SERVER)",
+          "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/multiplayer/ClientLevel for invalid dist DEDICATED_SERVER)",
+          "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class com/mojang/blaze3d/vertex/VertexConsumer for invalid dist DEDICATED_SERVER)"
+        ]
+      }
+    },
+    {
+      "node": "26.1.2",
+      "typescript": [
+        {
+          "side": "server",
+          "before": 942,
+          "after": 942,
+          "removed": 0,
+          "added": 0,
+          "removedDiagnostics": [],
+          "addedDiagnostics": []
+        },
+        {
+          "side": "startup",
+          "before": 943,
+          "after": 943,
+          "removed": 0,
+          "added": 0,
+          "removedDiagnostics": [],
+          "addedDiagnostics": []
+        }
+      ],
+      "python": {
+        "before": 18,
+        "after": 14,
+        "removed": 4,
+        "added": 0,
+        "removedDiagnostics": [
+          {
+            "file": "nekojs/_java/com/tkisor/nekojs/bindings/static_access/__init__.pyi",
+            "code": "reportAssignmentType",
+            "message": "Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS]\" is not assignable to declared type \"type[nekojs._java.com.tkisor.nekojs.bindings.static_access.FluidIngredientJS]\"\n\u00a0\u00a0\"nekojs._java.com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS\" is not assignable to \"nekojs._java.com.tkisor.nekojs.bindings.static_access.FluidIngredientJS\"\n\u00a0\u00a0Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS]\" is not assignable to type \"type[nekojs._java.com.tkisor.nekojs.bindings.static_access.FluidIngredientJS]\"",
+            "count": 1
+          },
+          {
+            "file": "nekojs/_java/com/tkisor/nekojs/wrapper/item/__init__.pyi",
+            "code": "reportAssignmentType",
+            "message": "Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS]\" is not assignable to declared type \"type[nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS]\"\n\u00a0\u00a0\"nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS\" is not assignable to \"nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS\"\n\u00a0\u00a0Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS]\" is not assignable to type \"type[nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS]\"",
+            "count": 1
+          },
+          {
+            "file": "nekojs/_java/com/tkisor/nekojs/wrapper/item/__init__.pyi",
+            "code": "reportGeneralTypeIssues",
+            "message": "Class cannot derive from itself",
+            "count": 1
+          },
+          {
+            "file": "nekojs/_java/net/minecraft/server/players/__init__.pyi",
+            "code": "reportAssignmentType",
+            "message": "Type \"type[nekojs._java.com.mojang.authlib.yggdrasil.response.NameAndId]\" is not assignable to declared type \"type[nekojs._java.net.minecraft.server.players.NameAndId]\"\n\u00a0\u00a0\"nekojs._java.com.mojang.authlib.yggdrasil.response.NameAndId\" is not assignable to \"nekojs._java.net.minecraft.server.players.NameAndId\"\n\u00a0\u00a0Type \"type[nekojs._java.com.mojang.authlib.yggdrasil.response.NameAndId]\" is not assignable to type \"type[nekojs._java.net.minecraft.server.players.NameAndId]\"",
+            "count": 1
+          }
+        ],
+        "addedDiagnostics": []
+      },
+      "generation": [
+        {
+          "language": "typescript",
+          "before": 392,
+          "after": 392,
+          "missing": [],
+          "added": [],
+          "changed": 7
+        },
+        {
+          "language": "python",
+          "before": 378,
+          "after": 378,
+          "missing": [],
+          "added": [],
+          "changed": 9
+        }
+      ],
+      "omissions": {
+        "before": [],
+        "after": [],
+        "removedWarnings": [],
+        "addedWarnings": []
+      }
+    },
+    {
+      "node": "26.2.0",
+      "typescript": [
+        {
+          "side": "server",
+          "before": 827,
+          "after": 827,
+          "removed": 0,
+          "added": 0,
+          "removedDiagnostics": [],
+          "addedDiagnostics": []
+        },
+        {
+          "side": "startup",
+          "before": 828,
+          "after": 828,
+          "removed": 0,
+          "added": 0,
+          "removedDiagnostics": [],
+          "addedDiagnostics": []
+        }
+      ],
+      "python": {
+        "before": 18,
+        "after": 14,
+        "removed": 4,
+        "added": 0,
+        "removedDiagnostics": [
+          {
+            "file": "nekojs/_java/com/tkisor/nekojs/bindings/static_access/__init__.pyi",
+            "code": "reportAssignmentType",
+            "message": "Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS]\" is not assignable to declared type \"type[nekojs._java.com.tkisor.nekojs.bindings.static_access.FluidIngredientJS]\"\n\u00a0\u00a0\"nekojs._java.com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS\" is not assignable to \"nekojs._java.com.tkisor.nekojs.bindings.static_access.FluidIngredientJS\"\n\u00a0\u00a0Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS]\" is not assignable to type \"type[nekojs._java.com.tkisor.nekojs.bindings.static_access.FluidIngredientJS]\"",
+            "count": 1
+          },
+          {
+            "file": "nekojs/_java/com/tkisor/nekojs/wrapper/item/__init__.pyi",
+            "code": "reportAssignmentType",
+            "message": "Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS]\" is not assignable to declared type \"type[nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS]\"\n\u00a0\u00a0\"nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS\" is not assignable to \"nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS\"\n\u00a0\u00a0Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS]\" is not assignable to type \"type[nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS]\"",
+            "count": 1
+          },
+          {
+            "file": "nekojs/_java/com/tkisor/nekojs/wrapper/item/__init__.pyi",
+            "code": "reportGeneralTypeIssues",
+            "message": "Class cannot derive from itself",
+            "count": 1
+          },
+          {
+            "file": "nekojs/_java/net/minecraft/server/players/__init__.pyi",
+            "code": "reportAssignmentType",
+            "message": "Type \"type[nekojs._java.com.mojang.authlib.yggdrasil.response.NameAndId]\" is not assignable to declared type \"type[nekojs._java.net.minecraft.server.players.NameAndId]\"\n\u00a0\u00a0\"nekojs._java.com.mojang.authlib.yggdrasil.response.NameAndId\" is not assignable to \"nekojs._java.net.minecraft.server.players.NameAndId\"\n\u00a0\u00a0Type \"type[nekojs._java.com.mojang.authlib.yggdrasil.response.NameAndId]\" is not assignable to type \"type[nekojs._java.net.minecraft.server.players.NameAndId]\"",
+            "count": 1
+          }
+        ],
+        "addedDiagnostics": []
+      },
+      "generation": [
+        {
+          "language": "typescript",
+          "before": 361,
+          "after": 361,
+          "missing": [],
+          "added": [],
+          "changed": 7
+        },
+        {
+          "language": "python",
+          "before": 346,
+          "after": 346,
+          "missing": [],
+          "added": [],
+          "changed": 9
+        }
+      ],
+      "omissions": {
+        "before": [],
+        "after": [],
+        "removedWarnings": [],
+        "addedWarnings": []
+      }
+    },
+    {
+      "node": "26.1.2-fabric",
+      "typescript": [
+        {
+          "side": "server",
+          "before": 1306,
+          "after": 1306,
+          "removed": 0,
+          "added": 0,
+          "removedDiagnostics": [],
+          "addedDiagnostics": []
+        },
+        {
+          "side": "startup",
+          "before": 1307,
+          "after": 1307,
+          "removed": 0,
+          "added": 0,
+          "removedDiagnostics": [],
+          "addedDiagnostics": []
+        }
+      ],
+      "python": {
+        "before": 23,
+        "after": 21,
+        "removed": 2,
+        "added": 0,
+        "removedDiagnostics": [
+          {
+            "file": "nekojs/_java/com/tkisor/nekojs/wrapper/item/__init__.pyi",
+            "code": "reportAssignmentType",
+            "message": "Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS]\" is not assignable to declared type \"type[nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS]\"\n\u00a0\u00a0\"nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS\" is not assignable to \"nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS\"\n\u00a0\u00a0Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS]\" is not assignable to type \"type[nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS]\"",
+            "count": 1
+          },
+          {
+            "file": "nekojs/_java/com/tkisor/nekojs/wrapper/item/__init__.pyi",
+            "code": "reportGeneralTypeIssues",
+            "message": "Class cannot derive from itself",
+            "count": 1
+          }
+        ],
+        "addedDiagnostics": []
+      },
+      "generation": [
+        {
+          "language": "typescript",
+          "before": 309,
+          "after": 309,
+          "missing": [],
+          "added": [],
+          "changed": 8
+        },
+        {
+          "language": "python",
+          "before": 295,
+          "after": 295,
+          "missing": [],
+          "added": [],
+          "changed": 8
+        }
+      ],
+      "omissions": {
+        "before": [],
+        "after": [],
+        "removedWarnings": [],
+        "addedWarnings": []
+      }
+    },
+    {
+      "node": "26.2.0-fabric",
+      "typescript": [
+        {
+          "side": "server",
+          "before": 1046,
+          "after": 1046,
+          "removed": 0,
+          "added": 0,
+          "removedDiagnostics": [],
+          "addedDiagnostics": []
+        },
+        {
+          "side": "startup",
+          "before": 1047,
+          "after": 1047,
+          "removed": 0,
+          "added": 0,
+          "removedDiagnostics": [],
+          "addedDiagnostics": []
+        }
+      ],
+      "python": {
+        "before": 23,
+        "after": 21,
+        "removed": 2,
+        "added": 0,
+        "removedDiagnostics": [
+          {
+            "file": "nekojs/_java/com/tkisor/nekojs/wrapper/item/__init__.pyi",
+            "code": "reportAssignmentType",
+            "message": "Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS]\" is not assignable to declared type \"type[nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS]\"\n\u00a0\u00a0\"nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS\" is not assignable to \"nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS\"\n\u00a0\u00a0Type \"type[nekojs._java.com.tkisor.nekojs.wrapper.pdata.PersistentDataJS]\" is not assignable to type \"type[nekojs._java.com.tkisor.nekojs.wrapper.item.PersistentDataJS]\"",
+            "count": 1
+          },
+          {
+            "file": "nekojs/_java/com/tkisor/nekojs/wrapper/item/__init__.pyi",
+            "code": "reportGeneralTypeIssues",
+            "message": "Class cannot derive from itself",
+            "count": 1
+          }
+        ],
+        "addedDiagnostics": []
+      },
+      "generation": [
+        {
+          "language": "typescript",
+          "before": 277,
+          "after": 277,
+          "missing": [],
+          "added": [],
+          "changed": 8
+        },
+        {
+          "language": "python",
+          "before": 262,
+          "after": 262,
+          "missing": [],
+          "added": [],
+          "changed": 8
+        }
+      ],
+      "omissions": {
+        "before": [],
+        "after": [],
+        "removedWarnings": [],
+        "addedWarnings": []
+      }
+    }
+  ]
+}
