@@ -1,0 +1,870 @@
+{
+  "sourceBase": "e48ea68cafbde0007ac7271d99615c146199853b",
+  "typescriptVersion": "5.8.3",
+  "files": [
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/io/index.d.ts",
+      "addedTypes": [
+        "$File",
+        "$FilterOutputStream",
+        "$PrintStream",
+        "$PrintWriter",
+        "$Writer"
+      ],
+      "changed": [],
+      "aliasChanges": [
+        {
+          "name": "$Closeable_",
+          "before": "export type $Closeable_ = (() => void) | $Closeable;",
+          "after": "export type $Closeable_ = (() => void) | ($Closeable & { readonly [Symbol.hasInstance]?: never });"
+        }
+      ],
+      "importChanges": {
+        "removed": [
+          "import { $AutoCloseable, $AutoCloseable_ } from \"java:java/lang\";"
+        ],
+        "added": [
+          "import { $Appendable, $AutoCloseable, $AutoCloseable_, $CharSequence, $Comparable, $Comparable_ } from \"java:java/lang\";",
+          "import { $URI, $URL } from \"java:java/net\";",
+          "import { $Charset } from \"java:java/nio/charset\";",
+          "import { $Path } from \"java:java/nio/file\";",
+          "import { $Locale } from \"java:java/util\";"
+        ]
+      },
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/constant/index.d.ts",
+      "addedTypes": [],
+      "changed": [],
+      "aliasChanges": [
+        {
+          "name": "$Constable_",
+          "before": "export type $Constable_<CallbackResult = $Optional<$ConstantDesc_<$MethodHandles$Lookup, object>>> = (() => CallbackResult) | $Constable;",
+          "after": "export type $Constable_<CallbackResult = $Optional<$ConstantDesc>> = (() => CallbackResult) | ($Constable & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$ConstantDesc_",
+          "before": "export type $ConstantDesc_<CallbackArg0 = $MethodHandles$Lookup, CallbackResult = object> = ((arg0: CallbackArg0) => CallbackResult) | $ConstantDesc;",
+          "after": "export type $ConstantDesc_<CallbackArg0 = $MethodHandles$Lookup, CallbackResult = object> = ((arg0: CallbackArg0) => CallbackResult) | ($ConstantDesc & { readonly [Symbol.hasInstance]?: never });"
+        }
+      ],
+      "importChanges": {
+        "removed": [],
+        "added": []
+      },
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/index.d.ts",
+      "addedTypes": [
+        "$Throwable"
+      ],
+      "changed": [
+        {
+          "name": "$AbstractStringBuilder",
+          "oldHeader": "export class $AbstractStringBuilder implements $Appendable, $CharSequence",
+          "newHeader": "export class $AbstractStringBuilder implements $Appendable, $CharSequence",
+          "removed": [],
+          "added": [
+            "get empty(): boolean;",
+            "isEmpty(): boolean;",
+            "setLength(arg0: number): void;"
+          ]
+        },
+        {
+          "name": "$Class",
+          "oldHeader": "export class $Class<T> implements $Serializable, $GenericDeclaration, $Type, $AnnotatedElement, $TypeDescriptor$OfField<$Class<any>>, $Constable",
+          "newHeader": "export class $Class<T> implements $Serializable, $GenericDeclaration, $Type, $AnnotatedElement, $TypeDescriptor$OfField<$Class<any>>, $Constable",
+          "removed": [
+            "get componentType(): $Class<any>;",
+            "getAnnotationsByType<A>(arg0: $Class<A>): A[];",
+            "getAnnotation<A>(arg0: $Class<A>): A;",
+            "getDeclaredAnnotationsByType<A>(arg0: $Class<A>): A[];",
+            "getDeclaredAnnotation<A>(arg0: $Class<A>): A;"
+          ],
+          "added": [
+            "getAnnotationsByType<A extends $Annotation>(arg0: $Class<A>): A[];",
+            "getAnnotation<A extends $Annotation>(arg0: $Class<A>): A;",
+            "getDeclaredAnnotationsByType<A extends $Annotation>(arg0: $Class<A>): A[];",
+            "getDeclaredAnnotation<A extends $Annotation>(arg0: $Class<A>): A;"
+          ]
+        },
+        {
+          "name": "$ClassLoader",
+          "oldHeader": "export class $ClassLoader",
+          "newHeader": "export class $ClassLoader",
+          "removed": [],
+          "added": [
+            "setDefaultAssertionStatus(arg0: boolean): void;"
+          ]
+        },
+        {
+          "name": "$Enum",
+          "oldHeader": "export class $Enum<E extends $Enum<E>> implements $Constable, $Comparable<E>, $Serializable",
+          "newHeader": "export class $Enum<E extends $Enum<E>> implements $Constable, $Comparable<E>, $Serializable",
+          "removed": [
+            "static valueOf<T>(arg0: $Class<T>, arg1: string): T;"
+          ],
+          "added": [
+            "static valueOf<T extends $Enum<T>>(arg0: $Class<T>, arg1: string): T;"
+          ]
+        },
+        {
+          "name": "$Enum$EnumDesc",
+          "oldHeader": "export class $Enum$EnumDesc<E extends $Enum<E>> extends $DynamicConstantDesc<E>",
+          "newHeader": "export class $Enum$EnumDesc<E extends $Enum<E>> extends $DynamicConstantDesc<E>",
+          "removed": [
+            "static of<E>(arg0: $ClassDesc, arg1: string): $Enum$EnumDesc<E>;"
+          ],
+          "added": [
+            "static of<E extends $Enum<E>>(arg0: $ClassDesc, arg1: string): $Enum$EnumDesc<E>;",
+            "static of<T>(arg0: $DirectMethodHandleDesc, arg1?: $ConstantDesc_<$MethodHandles$Lookup, object>[]): $DynamicConstantDesc<T>;",
+            "static of<T>(arg0: $DirectMethodHandleDesc): $DynamicConstantDesc<T>;"
+          ]
+        },
+        {
+          "name": "$Module",
+          "oldHeader": "export class $Module implements $AnnotatedElement",
+          "newHeader": "export class $Module implements $AnnotatedElement",
+          "removed": [
+            "getAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "getDeclaredAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getDeclaredAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "isAnnotationPresent(arg0: $Class<$Annotation>): boolean;"
+          ]
+        },
+        {
+          "name": "$Package",
+          "oldHeader": "export class $Package extends $NamedPackage implements $AnnotatedElement",
+          "newHeader": "export class $Package extends $NamedPackage implements $AnnotatedElement",
+          "removed": [
+            "getAnnotationsByType<A>(arg0: $Class<A>): A[];",
+            "getAnnotation<A>(arg0: $Class<A>): A;",
+            "getDeclaredAnnotationsByType<A>(arg0: $Class<A>): A[];",
+            "getDeclaredAnnotation<A>(arg0: $Class<A>): A;"
+          ],
+          "added": [
+            "getAnnotationsByType<A extends $Annotation>(arg0: $Class<A>): A[];",
+            "getAnnotation<A extends $Annotation>(arg0: $Class<A>): A;",
+            "getDeclaredAnnotationsByType<A extends $Annotation>(arg0: $Class<A>): A[];",
+            "getDeclaredAnnotation<A extends $Annotation>(arg0: $Class<A>): A;"
+          ]
+        },
+        {
+          "name": "$StringBuffer",
+          "oldHeader": "export class $StringBuffer extends $AbstractStringBuilder implements $Appendable, $Serializable, $Comparable<$StringBuffer>, $CharSequence",
+          "newHeader": "export class $StringBuffer extends $AbstractStringBuilder implements $Appendable, $Serializable, $Comparable<$StringBuffer>, $CharSequence",
+          "removed": [],
+          "added": [
+            "get empty(): boolean;",
+            "isEmpty(): boolean;",
+            "setLength(arg0: number): void;"
+          ]
+        },
+        {
+          "name": "$StringBuilder",
+          "oldHeader": "export class $StringBuilder extends $AbstractStringBuilder implements $Appendable, $Serializable, $Comparable<$StringBuilder>, $CharSequence",
+          "newHeader": "export class $StringBuilder extends $AbstractStringBuilder implements $Appendable, $Serializable, $Comparable<$StringBuilder>, $CharSequence",
+          "removed": [],
+          "added": [
+            "get empty(): boolean;",
+            "isEmpty(): boolean;"
+          ]
+        }
+      ],
+      "aliasChanges": [
+        {
+          "name": "$AutoCloseable_",
+          "before": "export type $AutoCloseable_ = (() => void) | $AutoCloseable;",
+          "after": "export type $AutoCloseable_ = (() => void) | ($AutoCloseable & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$Comparable_",
+          "before": "export type $Comparable_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $Comparable<Host0>;",
+          "after": "export type $Comparable_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Comparable<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$Readable_",
+          "before": "export type $Readable_<CallbackArg0 = $CharBuffer, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $Readable;",
+          "after": "export type $Readable_<CallbackArg0 = $CharBuffer, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Readable & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$Runnable_",
+          "before": "export type $Runnable_ = (() => void) | $Runnable;",
+          "after": "export type $Runnable_ = (() => void) | ($Runnable & { readonly [Symbol.hasInstance]?: never });"
+        }
+      ],
+      "importChanges": {
+        "removed": [
+          "import { $InputStream, $Serializable } from \"java:java/io\";",
+          "import { $Annotation } from \"java:java/lang/annotation\";",
+          "import { $ClassDesc, $Constable, $Constable_, $ConstantDesc, $ConstantDesc_, $DynamicConstantDesc } from \"java:java/lang/constant\";"
+        ],
+        "added": [
+          "import { $InputStream, $PrintStream, $PrintWriter, $Serializable } from \"java:java/io\";",
+          "import { $Annotation, $Annotation_ } from \"java:java/lang/annotation\";",
+          "import { $ClassDesc, $Constable, $Constable_, $ConstantDesc, $ConstantDesc_, $DirectMethodHandleDesc, $DynamicConstantDesc } from \"java:java/lang/constant\";"
+        ]
+      },
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/invoke/index.d.ts",
+      "addedTypes": [],
+      "changed": [
+        {
+          "name": "$MethodHandleInfo",
+          "oldHeader": "export interface $MethodHandleInfo",
+          "newHeader": "export interface $MethodHandleInfo",
+          "removed": [
+            "reflectAs<T>(arg0: $Class<T>, arg1: $MethodHandles$Lookup): T;"
+          ],
+          "added": [
+            "reflectAs<T extends $Member>(arg0: $Class<T>, arg1: $MethodHandles$Lookup): T;"
+          ]
+        },
+        {
+          "name": "$VarHandle",
+          "oldHeader": "export class $VarHandle implements $Constable",
+          "newHeader": "export class $VarHandle implements $Constable",
+          "removed": [],
+          "added": [
+            "setOpaque(arg0?: object[]): void;",
+            "setRelease(arg0?: object[]): void;",
+            "setVolatile(arg0?: object[]): void;"
+          ]
+        }
+      ],
+      "aliasChanges": [
+        {
+          "name": "$TypeDescriptor_",
+          "before": "export type $TypeDescriptor_<CallbackResult = string> = (() => CallbackResult) | $TypeDescriptor;",
+          "after": "export type $TypeDescriptor_<CallbackResult = string> = (() => CallbackResult) | ($TypeDescriptor & { readonly [Symbol.hasInstance]?: never });"
+        }
+      ],
+      "importChanges": {
+        "removed": [
+          "import { $Constructor, $Field, $Method } from \"java:java/lang/reflect\";"
+        ],
+        "added": [
+          "import { $Constructor, $Field, $Member, $Method } from \"java:java/lang/reflect\";"
+        ]
+      },
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/reflect/index.d.ts",
+      "addedTypes": [],
+      "changed": [
+        {
+          "name": "$AccessibleObject",
+          "oldHeader": "export class $AccessibleObject implements $AnnotatedElement",
+          "newHeader": "export class $AccessibleObject implements $AnnotatedElement",
+          "removed": [
+            "getAnnotationsByType<T>(arg0: $Class<T>): T[];",
+            "getAnnotation<T>(arg0: $Class<T>): T;",
+            "getDeclaredAnnotationsByType<T>(arg0: $Class<T>): T[];",
+            "getDeclaredAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "getDeclaredAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getDeclaredAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "setAccessible(arg0: boolean): void;"
+          ]
+        },
+        {
+          "name": "$AnnotatedElement",
+          "oldHeader": "export interface $AnnotatedElement",
+          "newHeader": "export interface $AnnotatedElement",
+          "removed": [
+            "getAnnotationsByType<T>(arg0: $Class<T>): T[];",
+            "getAnnotation<T>(arg0: $Class<T>): T;",
+            "getDeclaredAnnotationsByType<T>(arg0: $Class<T>): T[];",
+            "getDeclaredAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "getDeclaredAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getDeclaredAnnotation<T extends $Annotation>(arg0: $Class<T>): T;"
+          ]
+        },
+        {
+          "name": "$AnnotatedType",
+          "oldHeader": "export interface $AnnotatedType extends $AnnotatedElement",
+          "newHeader": "export interface $AnnotatedType extends $AnnotatedElement",
+          "removed": [
+            "getAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;"
+          ]
+        },
+        {
+          "name": "$Constructor",
+          "oldHeader": "export class $Constructor<T> extends $Executable",
+          "newHeader": "export class $Constructor<T> extends $Executable",
+          "removed": [
+            "getAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "setAccessible(arg0: boolean): void;"
+          ]
+        },
+        {
+          "name": "$Executable",
+          "oldHeader": "export class $Executable extends $AccessibleObject implements $Member, $GenericDeclaration",
+          "newHeader": "export class $Executable extends $AccessibleObject implements $Member, $GenericDeclaration",
+          "removed": [
+            "getAnnotationsByType<T>(arg0: $Class<T>): T[];",
+            "getAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;"
+          ]
+        },
+        {
+          "name": "$Field",
+          "oldHeader": "export class $Field extends $AccessibleObject implements $Member",
+          "newHeader": "export class $Field extends $AccessibleObject implements $Member",
+          "removed": [
+            "getAnnotationsByType<T>(arg0: $Class<T>): T[];",
+            "getAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "setAccessible(arg0: boolean): void;"
+          ]
+        },
+        {
+          "name": "$Method",
+          "oldHeader": "export class $Method extends $Executable",
+          "newHeader": "export class $Method extends $Executable",
+          "removed": [
+            "getAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "setAccessible(arg0: boolean): void;"
+          ]
+        }
+      ],
+      "aliasChanges": [],
+      "importChanges": {
+        "removed": [
+          "import { $Annotation } from \"java:java/lang/annotation\";"
+        ],
+        "added": [
+          "import { $Annotation, $Annotation_ } from \"java:java/lang/annotation\";"
+        ]
+      },
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/net/index.d.ts",
+      "addedTypes": [],
+      "changed": [
+        {
+          "name": "$URLConnection",
+          "oldHeader": "export class $URLConnection",
+          "newHeader": "export class $URLConnection",
+          "removed": [],
+          "added": [
+            "setAllowUserInteraction(arg0: boolean): void;",
+            "setConnectTimeout(arg0: number): void;",
+            "setDefaultUseCaches(arg0: boolean): void;",
+            "setDoInput(arg0: boolean): void;",
+            "setDoOutput(arg0: boolean): void;",
+            "setIfModifiedSince(arg0: number): void;",
+            "setReadTimeout(arg0: number): void;",
+            "setUseCaches(arg0: boolean): void;"
+          ]
+        }
+      ],
+      "aliasChanges": [
+        {
+          "name": "$URLStreamHandlerFactory_",
+          "before": "export type $URLStreamHandlerFactory_<CallbackArg0 = string, CallbackResult = $URLStreamHandler> = ((arg0: CallbackArg0) => CallbackResult) | $URLStreamHandlerFactory;",
+          "after": "export type $URLStreamHandlerFactory_<CallbackArg0 = string, CallbackResult = $URLStreamHandler> = ((arg0: CallbackArg0) => CallbackResult) | ($URLStreamHandlerFactory & { readonly [Symbol.hasInstance]?: never });"
+        }
+      ],
+      "importChanges": {
+        "removed": [],
+        "added": []
+      },
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/nio/index.d.ts",
+      "addedTypes": [],
+      "changed": [
+        {
+          "name": "$ByteBuffer",
+          "oldHeader": "export class $ByteBuffer extends $Buffer implements $Comparable<$ByteBuffer>",
+          "newHeader": "export class $ByteBuffer extends $Buffer implements $Comparable<$ByteBuffer>",
+          "removed": [],
+          "added": [
+            "limit(): number;",
+            "position(): number;"
+          ]
+        },
+        {
+          "name": "$CharBuffer",
+          "oldHeader": "export class $CharBuffer extends $Buffer implements $Comparable<$CharBuffer>, $Appendable, $CharSequence, $Readable",
+          "newHeader": "export class $CharBuffer extends $Buffer implements $Comparable<$CharBuffer>, $Appendable, $CharSequence, $Readable",
+          "removed": [],
+          "added": [
+            "codePoints(): $IntStream;",
+            "limit(): number;",
+            "position(): number;"
+          ]
+        },
+        {
+          "name": "$DoubleBuffer",
+          "oldHeader": "export class $DoubleBuffer extends $Buffer implements $Comparable<$DoubleBuffer>",
+          "newHeader": "export class $DoubleBuffer extends $Buffer implements $Comparable<$DoubleBuffer>",
+          "removed": [],
+          "added": [
+            "limit(): number;",
+            "position(): number;"
+          ]
+        },
+        {
+          "name": "$FloatBuffer",
+          "oldHeader": "export class $FloatBuffer extends $Buffer implements $Comparable<$FloatBuffer>",
+          "newHeader": "export class $FloatBuffer extends $Buffer implements $Comparable<$FloatBuffer>",
+          "removed": [],
+          "added": [
+            "limit(): number;",
+            "position(): number;"
+          ]
+        },
+        {
+          "name": "$IntBuffer",
+          "oldHeader": "export class $IntBuffer extends $Buffer implements $Comparable<$IntBuffer>",
+          "newHeader": "export class $IntBuffer extends $Buffer implements $Comparable<$IntBuffer>",
+          "removed": [],
+          "added": [
+            "limit(): number;",
+            "position(): number;"
+          ]
+        },
+        {
+          "name": "$LongBuffer",
+          "oldHeader": "export class $LongBuffer extends $Buffer implements $Comparable<$LongBuffer>",
+          "newHeader": "export class $LongBuffer extends $Buffer implements $Comparable<$LongBuffer>",
+          "removed": [],
+          "added": [
+            "limit(): number;",
+            "position(): number;"
+          ]
+        },
+        {
+          "name": "$ShortBuffer",
+          "oldHeader": "export class $ShortBuffer extends $Buffer implements $Comparable<$ShortBuffer>",
+          "newHeader": "export class $ShortBuffer extends $Buffer implements $Comparable<$ShortBuffer>",
+          "removed": [],
+          "added": [
+            "limit(): number;",
+            "position(): number;"
+          ]
+        }
+      ],
+      "aliasChanges": [],
+      "importChanges": {
+        "removed": [],
+        "added": []
+      },
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/util/function/index.d.ts",
+      "addedTypes": [],
+      "changed": [],
+      "aliasChanges": [
+        {
+          "name": "$BiConsumer_",
+          "before": "export type $BiConsumer_<Host0 = any, Host1 = any, CallbackArg0 = Host0, CallbackArg1 = Host1> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | $BiConsumer<Host0, Host1>;",
+          "after": "export type $BiConsumer_<Host0 = any, Host1 = any, CallbackArg0 = Host0, CallbackArg1 = Host1> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($BiConsumer<Host0, Host1> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$BiFunction_",
+          "before": "export type $BiFunction_<Host0 = any, Host1 = any, Host2 = any, CallbackArg0 = Host0, CallbackArg1 = Host1, CallbackResult = Host2> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | $BiFunction<Host0, Host1, Host2>;",
+          "after": "export type $BiFunction_<Host0 = any, Host1 = any, Host2 = any, CallbackArg0 = Host0, CallbackArg1 = Host1, CallbackResult = Host2> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($BiFunction<Host0, Host1, Host2> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$BinaryOperator_",
+          "before": "export type $BinaryOperator_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = Host0, CallbackResult = Host0> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | $BinaryOperator<Host0>;",
+          "after": "export type $BinaryOperator_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = Host0, CallbackResult = Host0> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($BinaryOperator<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$Consumer_",
+          "before": "export type $Consumer_<Host0 = any, CallbackArg0 = Host0> = ((arg0: CallbackArg0) => void) | $Consumer<Host0>;",
+          "after": "export type $Consumer_<Host0 = any, CallbackArg0 = Host0> = ((arg0: CallbackArg0) => void) | ($Consumer<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$DoubleBinaryOperator_",
+          "before": "export type $DoubleBinaryOperator_<CallbackArg0 = number, CallbackArg1 = number, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | $DoubleBinaryOperator;",
+          "after": "export type $DoubleBinaryOperator_<CallbackArg0 = number, CallbackArg1 = number, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($DoubleBinaryOperator & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$DoubleConsumer_",
+          "before": "export type $DoubleConsumer_<CallbackArg0 = number> = ((arg0: CallbackArg0) => void) | $DoubleConsumer;",
+          "after": "export type $DoubleConsumer_<CallbackArg0 = number> = ((arg0: CallbackArg0) => void) | ($DoubleConsumer & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$DoubleFunction_",
+          "before": "export type $DoubleFunction_<Host0 = any, CallbackArg0 = number, CallbackResult = Host0> = ((arg0: CallbackArg0) => CallbackResult) | $DoubleFunction<Host0>;",
+          "after": "export type $DoubleFunction_<Host0 = any, CallbackArg0 = number, CallbackResult = Host0> = ((arg0: CallbackArg0) => CallbackResult) | ($DoubleFunction<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$DoublePredicate_",
+          "before": "export type $DoublePredicate_<CallbackArg0 = number, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | $DoublePredicate;",
+          "after": "export type $DoublePredicate_<CallbackArg0 = number, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | ($DoublePredicate & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$DoubleSupplier_",
+          "before": "export type $DoubleSupplier_<CallbackResult = number> = (() => CallbackResult) | $DoubleSupplier;",
+          "after": "export type $DoubleSupplier_<CallbackResult = number> = (() => CallbackResult) | ($DoubleSupplier & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$DoubleToIntFunction_",
+          "before": "export type $DoubleToIntFunction_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $DoubleToIntFunction;",
+          "after": "export type $DoubleToIntFunction_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($DoubleToIntFunction & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$DoubleToLongFunction_",
+          "before": "export type $DoubleToLongFunction_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $DoubleToLongFunction;",
+          "after": "export type $DoubleToLongFunction_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($DoubleToLongFunction & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$DoubleUnaryOperator_",
+          "before": "export type $DoubleUnaryOperator_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $DoubleUnaryOperator;",
+          "after": "export type $DoubleUnaryOperator_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($DoubleUnaryOperator & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$Function_",
+          "before": "export type $Function_<Host0 = any, Host1 = any, CallbackArg0 = Host0, CallbackResult = Host1> = ((arg0: CallbackArg0) => CallbackResult) | $Function<Host0, Host1>;",
+          "after": "export type $Function_<Host0 = any, Host1 = any, CallbackArg0 = Host0, CallbackResult = Host1> = ((arg0: CallbackArg0) => CallbackResult) | ($Function<Host0, Host1> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$IntBinaryOperator_",
+          "before": "export type $IntBinaryOperator_<CallbackArg0 = number, CallbackArg1 = number, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | $IntBinaryOperator;",
+          "after": "export type $IntBinaryOperator_<CallbackArg0 = number, CallbackArg1 = number, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($IntBinaryOperator & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$IntConsumer_",
+          "before": "export type $IntConsumer_<CallbackArg0 = number> = ((arg0: CallbackArg0) => void) | $IntConsumer;",
+          "after": "export type $IntConsumer_<CallbackArg0 = number> = ((arg0: CallbackArg0) => void) | ($IntConsumer & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$IntFunction_",
+          "before": "export type $IntFunction_<Host0 = any, CallbackArg0 = number, CallbackResult = Host0> = ((arg0: CallbackArg0) => CallbackResult) | $IntFunction<Host0>;",
+          "after": "export type $IntFunction_<Host0 = any, CallbackArg0 = number, CallbackResult = Host0> = ((arg0: CallbackArg0) => CallbackResult) | ($IntFunction<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$IntPredicate_",
+          "before": "export type $IntPredicate_<CallbackArg0 = number, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | $IntPredicate;",
+          "after": "export type $IntPredicate_<CallbackArg0 = number, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | ($IntPredicate & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$IntSupplier_",
+          "before": "export type $IntSupplier_<CallbackResult = number> = (() => CallbackResult) | $IntSupplier;",
+          "after": "export type $IntSupplier_<CallbackResult = number> = (() => CallbackResult) | ($IntSupplier & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$IntToDoubleFunction_",
+          "before": "export type $IntToDoubleFunction_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $IntToDoubleFunction;",
+          "after": "export type $IntToDoubleFunction_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($IntToDoubleFunction & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$IntToLongFunction_",
+          "before": "export type $IntToLongFunction_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $IntToLongFunction;",
+          "after": "export type $IntToLongFunction_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($IntToLongFunction & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$IntUnaryOperator_",
+          "before": "export type $IntUnaryOperator_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $IntUnaryOperator;",
+          "after": "export type $IntUnaryOperator_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($IntUnaryOperator & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$LongBinaryOperator_",
+          "before": "export type $LongBinaryOperator_<CallbackArg0 = number, CallbackArg1 = number, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | $LongBinaryOperator;",
+          "after": "export type $LongBinaryOperator_<CallbackArg0 = number, CallbackArg1 = number, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($LongBinaryOperator & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$LongConsumer_",
+          "before": "export type $LongConsumer_<CallbackArg0 = number> = ((arg0: CallbackArg0) => void) | $LongConsumer;",
+          "after": "export type $LongConsumer_<CallbackArg0 = number> = ((arg0: CallbackArg0) => void) | ($LongConsumer & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$LongFunction_",
+          "before": "export type $LongFunction_<Host0 = any, CallbackArg0 = number, CallbackResult = Host0> = ((arg0: CallbackArg0) => CallbackResult) | $LongFunction<Host0>;",
+          "after": "export type $LongFunction_<Host0 = any, CallbackArg0 = number, CallbackResult = Host0> = ((arg0: CallbackArg0) => CallbackResult) | ($LongFunction<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$LongPredicate_",
+          "before": "export type $LongPredicate_<CallbackArg0 = number, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | $LongPredicate;",
+          "after": "export type $LongPredicate_<CallbackArg0 = number, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | ($LongPredicate & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$LongSupplier_",
+          "before": "export type $LongSupplier_<CallbackResult = number> = (() => CallbackResult) | $LongSupplier;",
+          "after": "export type $LongSupplier_<CallbackResult = number> = (() => CallbackResult) | ($LongSupplier & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$LongToDoubleFunction_",
+          "before": "export type $LongToDoubleFunction_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $LongToDoubleFunction;",
+          "after": "export type $LongToDoubleFunction_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($LongToDoubleFunction & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$LongToIntFunction_",
+          "before": "export type $LongToIntFunction_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $LongToIntFunction;",
+          "after": "export type $LongToIntFunction_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($LongToIntFunction & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$LongUnaryOperator_",
+          "before": "export type $LongUnaryOperator_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $LongUnaryOperator;",
+          "after": "export type $LongUnaryOperator_<CallbackArg0 = number, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($LongUnaryOperator & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$ObjDoubleConsumer_",
+          "before": "export type $ObjDoubleConsumer_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | $ObjDoubleConsumer<Host0>;",
+          "after": "export type $ObjDoubleConsumer_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($ObjDoubleConsumer<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$ObjIntConsumer_",
+          "before": "export type $ObjIntConsumer_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | $ObjIntConsumer<Host0>;",
+          "after": "export type $ObjIntConsumer_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($ObjIntConsumer<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$ObjLongConsumer_",
+          "before": "export type $ObjLongConsumer_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | $ObjLongConsumer<Host0>;",
+          "after": "export type $ObjLongConsumer_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($ObjLongConsumer<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$Predicate_",
+          "before": "export type $Predicate_<Host0 = any, CallbackArg0 = Host0, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | $Predicate<Host0>;",
+          "after": "export type $Predicate_<Host0 = any, CallbackArg0 = Host0, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | ($Predicate<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$Supplier_",
+          "before": "export type $Supplier_<Host0 = any, CallbackResult = Host0> = (() => CallbackResult) | $Supplier<Host0>;",
+          "after": "export type $Supplier_<Host0 = any, CallbackResult = Host0> = (() => CallbackResult) | ($Supplier<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$ToDoubleFunction_",
+          "before": "export type $ToDoubleFunction_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $ToDoubleFunction<Host0>;",
+          "after": "export type $ToDoubleFunction_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($ToDoubleFunction<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$ToIntFunction_",
+          "before": "export type $ToIntFunction_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $ToIntFunction<Host0>;",
+          "after": "export type $ToIntFunction_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($ToIntFunction<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$ToLongFunction_",
+          "before": "export type $ToLongFunction_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $ToLongFunction<Host0>;",
+          "after": "export type $ToLongFunction_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($ToLongFunction<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$UnaryOperator_",
+          "before": "export type $UnaryOperator_<Host0 = any, CallbackArg0 = Host0, CallbackResult = Host0> = ((arg0: CallbackArg0) => CallbackResult) | $UnaryOperator<Host0>;",
+          "after": "export type $UnaryOperator_<Host0 = any, CallbackArg0 = Host0, CallbackResult = Host0> = ((arg0: CallbackArg0) => CallbackResult) | ($UnaryOperator<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        }
+      ],
+      "importChanges": {
+        "removed": [],
+        "added": []
+      },
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/util/index.d.ts",
+      "addedTypes": [],
+      "changed": [
+        {
+          "name": "$Comparator",
+          "oldHeader": "export interface $Comparator<T>",
+          "newHeader": "export interface $Comparator<T>",
+          "removed": [
+            "thenComparing<U>(arg0: $Function_<T, U, T, U>): $Comparator<T>;"
+          ],
+          "added": [
+            "thenComparing<U extends $Comparable<any>>(arg0: $Function_<T, U, T, U>): $Comparator<T>;"
+          ]
+        },
+        {
+          "name": "$DoubleSummaryStatistics",
+          "oldHeader": "export class $DoubleSummaryStatistics implements $DoubleConsumer",
+          "newHeader": "export class $DoubleSummaryStatistics implements $DoubleConsumer",
+          "removed": [],
+          "added": [
+            "andThen(arg0: $DoubleConsumer_<number>): $DoubleConsumer;"
+          ]
+        },
+        {
+          "name": "$IntSummaryStatistics",
+          "oldHeader": "export class $IntSummaryStatistics implements $IntConsumer",
+          "newHeader": "export class $IntSummaryStatistics implements $IntConsumer",
+          "removed": [],
+          "added": [
+            "andThen(arg0: $IntConsumer_<number>): $IntConsumer;"
+          ]
+        },
+        {
+          "name": "$Locale$LanguageRange",
+          "oldHeader": "export class $Locale$LanguageRange",
+          "newHeader": "export class $Locale$LanguageRange",
+          "removed": [
+            "static mapEquivalents(arg0: $Locale$LanguageRange[], arg1: { [key: string]: string[] }): $List<$Locale$LanguageRange>;",
+            "static parse(arg0: string, arg1: { [key: string]: string[] }): $List<$Locale$LanguageRange>;"
+          ],
+          "added": [
+            "static mapEquivalents(arg0: $Locale$LanguageRange[], arg1: ($Map<string, string[]> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string[]>> : never))): $List<$Locale$LanguageRange>;",
+            "static parse(arg0: string, arg1: ($Map<string, string[]> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string[]>> : never))): $List<$Locale$LanguageRange>;"
+          ]
+        },
+        {
+          "name": "$LongSummaryStatistics",
+          "oldHeader": "export class $LongSummaryStatistics implements $LongConsumer, $IntConsumer",
+          "newHeader": "export class $LongSummaryStatistics implements $LongConsumer, $IntConsumer",
+          "removed": [],
+          "added": [
+            "andThen(arg0: $IntConsumer_<number>): $IntConsumer;",
+            "andThen(arg0: $LongConsumer_<number>): $LongConsumer;"
+          ]
+        },
+        {
+          "name": "$Map",
+          "oldHeader": "export interface $Map<K, V>",
+          "newHeader": "export interface $Map<K, V>",
+          "removed": [
+            "putAll(arg0: { [key: K]: V }): void;"
+          ],
+          "added": [
+            "putAll(arg0: ($Map<K, V> | ([K] extends [PropertyKey] ? Partial<Record<Extract<K, PropertyKey>, V>> : never))): void;"
+          ]
+        },
+        {
+          "name": "$Optional",
+          "oldHeader": "export class $Optional<T>",
+          "newHeader": "export class $Optional<T>",
+          "removed": [
+            "orElseThrow<X>(arg0: $Supplier_<X, X>): T;"
+          ],
+          "added": [
+            "orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): T;"
+          ]
+        },
+        {
+          "name": "$OptionalDouble",
+          "oldHeader": "export class $OptionalDouble",
+          "newHeader": "export class $OptionalDouble",
+          "removed": [
+            "orElseThrow<X>(arg0: $Supplier_<X, X>): number;"
+          ],
+          "added": [
+            "orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): number;"
+          ]
+        },
+        {
+          "name": "$OptionalInt",
+          "oldHeader": "export class $OptionalInt",
+          "newHeader": "export class $OptionalInt",
+          "removed": [
+            "orElseThrow<X>(arg0: $Supplier_<X, X>): number;"
+          ],
+          "added": [
+            "orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): number;"
+          ]
+        },
+        {
+          "name": "$OptionalLong",
+          "oldHeader": "export class $OptionalLong",
+          "newHeader": "export class $OptionalLong",
+          "removed": [
+            "orElseThrow<X>(arg0: $Supplier_<X, X>): number;"
+          ],
+          "added": [
+            "orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): number;"
+          ]
+        }
+      ],
+      "aliasChanges": [
+        {
+          "name": "$Comparator_",
+          "before": "export type $Comparator_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = Host0, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | $Comparator<Host0>;",
+          "after": "export type $Comparator_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = Host0, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($Comparator<Host0> & { readonly [Symbol.hasInstance]?: never });"
+        }
+      ],
+      "importChanges": {
+        "removed": [
+          "import { $Character, $Cloneable, $Iterable, $Runnable, $Runnable_ } from \"java:java/lang\";"
+        ],
+        "added": [
+          "import { $Character, $Cloneable, $Comparable, $Comparable_, $Iterable, $Runnable, $Runnable_, $Throwable } from \"java:java/lang\";"
+        ]
+      },
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/util/stream/index.d.ts",
+      "addedTypes": [],
+      "changed": [],
+      "aliasChanges": [
+        {
+          "name": "$DoubleStream$DoubleMapMultiConsumer_",
+          "before": "export type $DoubleStream$DoubleMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $DoubleConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | $DoubleStream$DoubleMapMultiConsumer;",
+          "after": "export type $DoubleStream$DoubleMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $DoubleConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($DoubleStream$DoubleMapMultiConsumer & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$IntStream$IntMapMultiConsumer_",
+          "before": "export type $IntStream$IntMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $IntConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | $IntStream$IntMapMultiConsumer;",
+          "after": "export type $IntStream$IntMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $IntConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($IntStream$IntMapMultiConsumer & { readonly [Symbol.hasInstance]?: never });"
+        },
+        {
+          "name": "$LongStream$LongMapMultiConsumer_",
+          "before": "export type $LongStream$LongMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $LongConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | $LongStream$LongMapMultiConsumer;",
+          "after": "export type $LongStream$LongMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $LongConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($LongStream$LongMapMultiConsumer & { readonly [Symbol.hasInstance]?: never });"
+        }
+      ],
+      "importChanges": {
+        "removed": [],
+        "added": []
+      },
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/annotation/index.d.ts",
+      "addedTypes": [
+        "$Annotation"
+      ],
+      "changed": [],
+      "aliasChanges": [
+        {
+          "name": "$Annotation_",
+          "before": null,
+          "after": "export type $Annotation_<CallbackResult = $Class<$Annotation>> = (() => CallbackResult) | ($Annotation & { readonly [Symbol.hasInstance]?: never });"
+        }
+      ],
+      "importChanges": {
+        "removed": [],
+        "added": [
+          "import { $Class } from \"java:java/lang\";"
+        ]
+      },
+      "existingTypesPreserved": true
+    }
+  ]
+}

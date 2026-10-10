@@ -1,0 +1,323 @@
+{
+  "beforeSource": "7e98fd15175d15c8dad062bf40e2a284e04eaf51",
+  "nodes": [
+    {
+      "node": "1.21.1",
+      "languages": [
+        {
+          "language": "typescript",
+          "before": 334,
+          "after": 334,
+          "missing": [],
+          "added": [],
+          "changed": 117
+        },
+        {
+          "language": "python",
+          "before": 317,
+          "after": 317,
+          "missing": [],
+          "added": [],
+          "changed": 114
+        }
+      ],
+      "omissionIdentitiesBefore": [
+        [
+          "reflection failed",
+          "net.minecraft.network.protocol.common.ClientCommonPacketListener"
+        ],
+        [
+          "reflection failed",
+          "net.minecraft.network.protocol.game.ClientGamePacketListener"
+        ],
+        [
+          "reflection failed",
+          "net.minecraft.world.inventory.RecipeBookMenu"
+        ],
+        [
+          "reflection failed",
+          "net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions"
+        ],
+        [
+          "reflection failed",
+          "net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions"
+        ],
+        [
+          "reflection failed",
+          "net.neoforged.neoforge.client.extensions.common.IClientItemExtensions"
+        ],
+        [
+          "reflection failed",
+          "net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions"
+        ],
+        [
+          "reflection failed",
+          "net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension"
+        ],
+        [
+          "scan incomplete",
+          "net.minecraft.network.protocol.common.ClientCommonPacketListener"
+        ],
+        [
+          "scan incomplete",
+          "net.minecraft.network.protocol.game.ClientGamePacketListener"
+        ],
+        [
+          "scan incomplete",
+          "net.minecraft.world.inventory.RecipeBookMenu"
+        ],
+        [
+          "scan incomplete",
+          "net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions"
+        ],
+        [
+          "scan incomplete",
+          "net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions"
+        ],
+        [
+          "scan incomplete",
+          "net.neoforged.neoforge.client.extensions.common.IClientItemExtensions"
+        ],
+        [
+          "scan incomplete",
+          "net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions"
+        ],
+        [
+          "scan incomplete",
+          "net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension"
+        ]
+      ],
+      "omissionIdentitiesAfter": [
+        [
+          "reflection failed",
+          "net.minecraft.network.protocol.common.ClientCommonPacketListener"
+        ],
+        [
+          "reflection failed",
+          "net.minecraft.network.protocol.game.ClientGamePacketListener"
+        ],
+        [
+          "reflection failed",
+          "net.minecraft.world.inventory.RecipeBookMenu"
+        ],
+        [
+          "reflection failed",
+          "net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions"
+        ],
+        [
+          "reflection failed",
+          "net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions"
+        ],
+        [
+          "reflection failed",
+          "net.neoforged.neoforge.client.extensions.common.IClientItemExtensions"
+        ],
+        [
+          "reflection failed",
+          "net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions"
+        ],
+        [
+          "reflection failed",
+          "net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension"
+        ],
+        [
+          "scan incomplete",
+          "net.minecraft.network.protocol.common.ClientCommonPacketListener"
+        ],
+        [
+          "scan incomplete",
+          "net.minecraft.network.protocol.game.ClientGamePacketListener"
+        ],
+        [
+          "scan incomplete",
+          "net.minecraft.world.inventory.RecipeBookMenu"
+        ],
+        [
+          "scan incomplete",
+          "net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions"
+        ],
+        [
+          "scan incomplete",
+          "net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions"
+        ],
+        [
+          "scan incomplete",
+          "net.neoforged.neoforge.client.extensions.common.IClientItemExtensions"
+        ],
+        [
+          "scan incomplete",
+          "net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions"
+        ],
+        [
+          "scan incomplete",
+          "net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension"
+        ]
+      ],
+      "omissionIdentitiesPreserved": true,
+      "warningsBefore": [
+        "  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.network.protocol.common.ClientCommonPacketListener; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.network.protocol.game.ClientGamePacketListener; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.world.inventory.RecipeBookMenu; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/RecipeBookCategories for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientItemExtensions; its shared declaration was omitted (java.lang.NoClassDefFoundError: net/minecraft/client/model/Model)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/Gui for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.network.protocol.common.ClientCommonPacketListener; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.network.protocol.game.ClientGamePacketListener; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.world.inventory.RecipeBookMenu; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/RecipeBookCategories for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientItemExtensions; reachable declarations may be missing (java.lang.NoClassDefFoundError: net/minecraft/client/model/Model)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/Gui for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)"
+      ],
+      "warningsAfter": [
+        "  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.network.protocol.common.ClientCommonPacketListener; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.network.protocol.game.ClientGamePacketListener; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.minecraft.world.inventory.RecipeBookMenu; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/RecipeBookCategories for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/multiplayer/ClientLevel for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class com/mojang/blaze3d/vertex/VertexConsumer for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientItemExtensions; its shared declaration was omitted (java.lang.NoClassDefFoundError: net/minecraft/client/model/Model)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.network.protocol.common.ClientCommonPacketListener; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.network.protocol.game.ClientGamePacketListener; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.minecraft.world.inventory.RecipeBookMenu; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/RecipeBookCategories for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/multiplayer/ClientLevel for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class com/mojang/blaze3d/vertex/VertexConsumer for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientItemExtensions; reachable declarations may be missing (java.lang.NoClassDefFoundError: net/minecraft/client/model/Model)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.common.extensions.IClientCommonPacketListenerExtension; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)"
+      ],
+      "removedWarnings": [
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/Gui for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/particle/ParticleEngine for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/Gui for invalid dist DEDICATED_SERVER)"
+      ],
+      "addedWarnings": [
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/multiplayer/ClientLevel for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class com/mojang/blaze3d/vertex/VertexConsumer for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type reflection failed for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; its shared declaration was omitted (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/multiplayer/ClientLevel for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class com/mojang/blaze3d/vertex/VertexConsumer for invalid dist DEDICATED_SERVER)",
+        "  warning: [NEKO-4029] Probe type scan incomplete for net.neoforged.neoforge.client.extensions.common.IClientMobEffectExtensions; reachable declarations may be missing (java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen for invalid dist DEDICATED_SERVER)"
+      ]
+    },
+    {
+      "node": "26.1.2",
+      "languages": [
+        {
+          "language": "typescript",
+          "before": 391,
+          "after": 391,
+          "missing": [],
+          "added": [],
+          "changed": 155
+        },
+        {
+          "language": "python",
+          "before": 377,
+          "after": 377,
+          "missing": [],
+          "added": [],
+          "changed": 152
+        }
+      ],
+      "omissionIdentitiesBefore": [],
+      "omissionIdentitiesAfter": [],
+      "omissionIdentitiesPreserved": true,
+      "warningsBefore": [],
+      "warningsAfter": [],
+      "removedWarnings": [],
+      "addedWarnings": []
+    },
+    {
+      "node": "26.2.0",
+      "languages": [
+        {
+          "language": "typescript",
+          "before": 360,
+          "after": 360,
+          "missing": [],
+          "added": [],
+          "changed": 114
+        },
+        {
+          "language": "python",
+          "before": 344,
+          "after": 344,
+          "missing": [],
+          "added": [],
+          "changed": 111
+        }
+      ],
+      "omissionIdentitiesBefore": [],
+      "omissionIdentitiesAfter": [],
+      "omissionIdentitiesPreserved": true,
+      "warningsBefore": [],
+      "warningsAfter": [],
+      "removedWarnings": [],
+      "addedWarnings": []
+    },
+    {
+      "node": "26.1.2-fabric",
+      "languages": [
+        {
+          "language": "typescript",
+          "before": 307,
+          "after": 307,
+          "missing": [],
+          "added": [],
+          "changed": 127
+        },
+        {
+          "language": "python",
+          "before": 293,
+          "after": 293,
+          "missing": [],
+          "added": [],
+          "changed": 125
+        }
+      ],
+      "omissionIdentitiesBefore": [],
+      "omissionIdentitiesAfter": [],
+      "omissionIdentitiesPreserved": true,
+      "warningsBefore": [],
+      "warningsAfter": [],
+      "removedWarnings": [],
+      "addedWarnings": []
+    },
+    {
+      "node": "26.2.0-fabric",
+      "languages": [
+        {
+          "language": "typescript",
+          "before": 275,
+          "after": 275,
+          "missing": [],
+          "added": [],
+          "changed": 86
+        },
+        {
+          "language": "python",
+          "before": 259,
+          "after": 259,
+          "missing": [],
+          "added": [],
+          "changed": 84
+        }
+      ],
+      "omissionIdentitiesBefore": [],
+      "omissionIdentitiesAfter": [],
+      "omissionIdentitiesPreserved": true,
+      "warningsBefore": [],
+      "warningsAfter": [],
+      "removedWarnings": [],
+      "addedWarnings": []
+    }
+  ]
+}

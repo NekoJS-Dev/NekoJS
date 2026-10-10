@@ -1,0 +1,145 @@
+{
+  "typescriptVersion": "5.8.3",
+  "sourceBase": "e48ea68cafbde0007ac7271d99615c146199853b",
+  "files": [
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/index.d.ts",
+      "added": [
+        {
+          "class": "$AbstractStringBuilder",
+          "member": "get empty(): boolean;"
+        },
+        {
+          "class": "$AbstractStringBuilder",
+          "member": "isEmpty(): boolean;"
+        },
+        {
+          "class": "$Module",
+          "member": "getAnnotationsByType<T>(arg0: $Class<T>): T[];"
+        },
+        {
+          "class": "$Module",
+          "member": "getDeclaredAnnotationsByType<T>(arg0: $Class<T>): T[];"
+        },
+        {
+          "class": "$Module",
+          "member": "getDeclaredAnnotation<T>(arg0: $Class<T>): T;"
+        },
+        {
+          "class": "$Module",
+          "member": "isAnnotationPresent(arg0: $Class<$Annotation>): boolean;"
+        },
+        {
+          "class": "$StringBuffer",
+          "member": "get empty(): boolean;"
+        },
+        {
+          "class": "$StringBuffer",
+          "member": "isEmpty(): boolean;"
+        },
+        {
+          "class": "$StringBuilder",
+          "member": "get empty(): boolean;"
+        },
+        {
+          "class": "$StringBuilder",
+          "member": "isEmpty(): boolean;"
+        }
+      ],
+      "existingMembersAndHeadersPreserved": true,
+      "otherDeclarationsPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/nio/index.d.ts",
+      "added": [
+        {
+          "class": "$ByteBuffer",
+          "member": "limit(): number;"
+        },
+        {
+          "class": "$ByteBuffer",
+          "member": "position(): number;"
+        },
+        {
+          "class": "$CharBuffer",
+          "member": "codePoints(): $IntStream;"
+        },
+        {
+          "class": "$CharBuffer",
+          "member": "limit(): number;"
+        },
+        {
+          "class": "$CharBuffer",
+          "member": "position(): number;"
+        },
+        {
+          "class": "$DoubleBuffer",
+          "member": "limit(): number;"
+        },
+        {
+          "class": "$DoubleBuffer",
+          "member": "position(): number;"
+        },
+        {
+          "class": "$FloatBuffer",
+          "member": "limit(): number;"
+        },
+        {
+          "class": "$FloatBuffer",
+          "member": "position(): number;"
+        },
+        {
+          "class": "$IntBuffer",
+          "member": "limit(): number;"
+        },
+        {
+          "class": "$IntBuffer",
+          "member": "position(): number;"
+        },
+        {
+          "class": "$LongBuffer",
+          "member": "limit(): number;"
+        },
+        {
+          "class": "$LongBuffer",
+          "member": "position(): number;"
+        },
+        {
+          "class": "$ShortBuffer",
+          "member": "limit(): number;"
+        },
+        {
+          "class": "$ShortBuffer",
+          "member": "position(): number;"
+        }
+      ],
+      "existingMembersAndHeadersPreserved": true,
+      "otherDeclarationsPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/util/index.d.ts",
+      "added": [
+        {
+          "class": "$DoubleSummaryStatistics",
+          "member": "andThen(arg0: $DoubleConsumer_<number>): $DoubleConsumer;"
+        },
+        {
+          "class": "$IntSummaryStatistics",
+          "member": "andThen(arg0: $IntConsumer_<number>): $IntConsumer;"
+        },
+        {
+          "class": "$LongSummaryStatistics",
+          "member": "andThen(arg0: $IntConsumer_<number>): $IntConsumer;"
+        },
+        {
+          "class": "$LongSummaryStatistics",
+          "member": "andThen(arg0: $LongConsumer_<number>): $LongConsumer;"
+        }
+      ],
+      "existingMembersAndHeadersPreserved": true,
+      "otherDeclarationsPreserved": true
+    }
+  ],
+  "addedMembers": 29,
+  "allPassed": true
+}

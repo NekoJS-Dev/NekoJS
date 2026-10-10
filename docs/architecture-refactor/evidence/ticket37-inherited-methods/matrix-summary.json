@@ -1,0 +1,72 @@
+{
+  "productionPatchSha256": "6763dfdd049c2982b6b6402d634b38b25216543ad6299e3a3c746b05c716616f",
+  "sourceRevision": "e48ea68cafbde0007ac7271d99615c146199853b",
+  "projects": [
+    {
+      "project": "common",
+      "xml": 290,
+      "tests": 2159,
+      "skipped": 4,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "common-api-processor",
+      "xml": 1,
+      "tests": 13,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/1.21.1",
+      "xml": 95,
+      "tests": 426,
+      "skipped": 31,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/26.1.2",
+      "xml": 130,
+      "tests": 661,
+      "skipped": 81,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/26.2.0",
+      "xml": 130,
+      "tests": 661,
+      "skipped": 81,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/26.1.2-fabric",
+      "xml": 77,
+      "tests": 384,
+      "skipped": 37,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/26.2.0-fabric",
+      "xml": 77,
+      "tests": 384,
+      "skipped": 37,
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "total": {
+    "xml": 800,
+    "tests": 4688,
+    "skipped": 271,
+    "failures": 0,
+    "errors": 0
+  },
+  "exitCode": 0,
+  "commonAndProcessor": "common tests executed after focused checks; processor UP-TO-DATE; all five node test tasks executed",
+  "xmlArchiveSha256": "8a12742970af2c06c02e2cd2016befe408fbf5e36e016cb998aa63384d9521c7"
+}

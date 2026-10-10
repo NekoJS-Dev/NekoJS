@@ -1,0 +1,68 @@
+{
+  "projects": [
+    {
+      "project": "common",
+      "xml": 290,
+      "tests": 2190,
+      "skipped": 4,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "common-api-processor",
+      "xml": 1,
+      "tests": 13,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/1.21.1",
+      "xml": 95,
+      "tests": 426,
+      "skipped": 31,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/26.1.2",
+      "xml": 130,
+      "tests": 661,
+      "skipped": 81,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/26.2.0",
+      "xml": 130,
+      "tests": 661,
+      "skipped": 81,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/26.1.2-fabric",
+      "xml": 77,
+      "tests": 384,
+      "skipped": 37,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "project": "versions/26.2.0-fabric",
+      "xml": 77,
+      "tests": 384,
+      "skipped": 37,
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "total": {
+    "xml": 800,
+    "tests": 4719,
+    "skipped": 271,
+    "failures": 0,
+    "errors": 0
+  },
+  "xmlSha256": "d5f0c0f26b76d35c7d5ac3edaf0a0d18ec86079161b87d8c58bb6c2ebb00384a"
+}

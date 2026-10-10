@@ -1,0 +1,13 @@
+{
+  "sourceBase": "e48ea68cafbde0007ac7271d99615c146199853b",
+  "runtimeCommit": "2af81b254584ddffea99f866111b70c6fd6e888d",
+  "probeCommit": "82b749ed45e6aaed9a241f2a9b5fd74d7f9f92b6",
+  "productionPatchSha256": "d4adb0904c6900255c9e45f5e94ae3adf487b8c5eeeaa66c10fd6f842d0f677a",
+  "diffIndexAbbreviation": 9,
+  "committedProductionMatchesBuiltSource": true,
+  "archivedSourceWipAtBuild": true,
+  "wholeIdeAcceptance": false,
+  "maintainerAcceptance": "NOT RECORDED",
+  "currentFormalPerformance": "NOT RUN",
+  "releaseAuthorized": false
+}

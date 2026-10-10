@@ -1,0 +1,504 @@
+{
+  "sourceBase": "e48ea68cafbde0007ac7271d99615c146199853b",
+  "typescriptVersion": "5.8.3",
+  "files": [
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/io/index.d.ts",
+      "addedTypes": [
+        "$File",
+        "$FilterOutputStream",
+        "$PrintStream",
+        "$PrintWriter",
+        "$Writer"
+      ],
+      "changed": [],
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/constant/index.d.ts",
+      "addedTypes": [],
+      "changed": [],
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/index.d.ts",
+      "addedTypes": [
+        "$Throwable"
+      ],
+      "changed": [
+        {
+          "name": "$AbstractStringBuilder",
+          "oldHeader": "export class $AbstractStringBuilder implements $Appendable, $CharSequence",
+          "newHeader": "export class $AbstractStringBuilder implements $Appendable, $CharSequence",
+          "removed": [],
+          "added": [
+            "get empty(): boolean;",
+            "isEmpty(): boolean;",
+            "setLength(arg0: number): void;"
+          ]
+        },
+        {
+          "name": "$Class",
+          "oldHeader": "export class $Class<T> implements $Serializable, $GenericDeclaration, $Type, $AnnotatedElement, $TypeDescriptor$OfField<$Class<any>>, $Constable",
+          "newHeader": "export class $Class<T> implements $Serializable, $GenericDeclaration, $Type, $AnnotatedElement, $TypeDescriptor$OfField<$Class<any>>, $Constable",
+          "removed": [
+            "get componentType(): $Class<any>;",
+            "getAnnotationsByType<A>(arg0: $Class<A>): A[];",
+            "getAnnotation<A>(arg0: $Class<A>): A;",
+            "getDeclaredAnnotationsByType<A>(arg0: $Class<A>): A[];",
+            "getDeclaredAnnotation<A>(arg0: $Class<A>): A;"
+          ],
+          "added": [
+            "getAnnotationsByType<A extends $Annotation>(arg0: $Class<A>): A[];",
+            "getAnnotation<A extends $Annotation>(arg0: $Class<A>): A;",
+            "getDeclaredAnnotationsByType<A extends $Annotation>(arg0: $Class<A>): A[];",
+            "getDeclaredAnnotation<A extends $Annotation>(arg0: $Class<A>): A;"
+          ]
+        },
+        {
+          "name": "$ClassLoader",
+          "oldHeader": "export class $ClassLoader",
+          "newHeader": "export class $ClassLoader",
+          "removed": [],
+          "added": [
+            "setDefaultAssertionStatus(arg0: boolean): void;"
+          ]
+        },
+        {
+          "name": "$Enum",
+          "oldHeader": "export class $Enum<E extends $Enum<E>> implements $Constable, $Comparable<E>, $Serializable",
+          "newHeader": "export class $Enum<E extends $Enum<E>> implements $Constable, $Comparable<E>, $Serializable",
+          "removed": [
+            "static valueOf<T>(arg0: $Class<T>, arg1: string): T;"
+          ],
+          "added": [
+            "static valueOf<T extends $Enum<T>>(arg0: $Class<T>, arg1: string): T;"
+          ]
+        },
+        {
+          "name": "$Enum$EnumDesc",
+          "oldHeader": "export class $Enum$EnumDesc<E extends $Enum<E>> extends $DynamicConstantDesc<E>",
+          "newHeader": "export class $Enum$EnumDesc<E extends $Enum<E>> extends $DynamicConstantDesc<E>",
+          "removed": [
+            "static of<E>(arg0: $ClassDesc, arg1: string): $Enum$EnumDesc<E>;"
+          ],
+          "added": [
+            "static of<E extends $Enum<E>>(arg0: $ClassDesc, arg1: string): $Enum$EnumDesc<E>;",
+            "static of<T>(arg0: $DirectMethodHandleDesc, arg1?: $ConstantDesc_<$MethodHandles$Lookup, object>[]): $DynamicConstantDesc<T>;",
+            "static of<T>(arg0: $DirectMethodHandleDesc): $DynamicConstantDesc<T>;"
+          ]
+        },
+        {
+          "name": "$Module",
+          "oldHeader": "export class $Module implements $AnnotatedElement",
+          "newHeader": "export class $Module implements $AnnotatedElement",
+          "removed": [
+            "getAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "getDeclaredAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getDeclaredAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "isAnnotationPresent(arg0: $Class<$Annotation>): boolean;"
+          ]
+        },
+        {
+          "name": "$Package",
+          "oldHeader": "export class $Package extends $NamedPackage implements $AnnotatedElement",
+          "newHeader": "export class $Package extends $NamedPackage implements $AnnotatedElement",
+          "removed": [
+            "getAnnotationsByType<A>(arg0: $Class<A>): A[];",
+            "getAnnotation<A>(arg0: $Class<A>): A;",
+            "getDeclaredAnnotationsByType<A>(arg0: $Class<A>): A[];",
+            "getDeclaredAnnotation<A>(arg0: $Class<A>): A;"
+          ],
+          "added": [
+            "getAnnotationsByType<A extends $Annotation>(arg0: $Class<A>): A[];",
+            "getAnnotation<A extends $Annotation>(arg0: $Class<A>): A;",
+            "getDeclaredAnnotationsByType<A extends $Annotation>(arg0: $Class<A>): A[];",
+            "getDeclaredAnnotation<A extends $Annotation>(arg0: $Class<A>): A;"
+          ]
+        },
+        {
+          "name": "$StringBuffer",
+          "oldHeader": "export class $StringBuffer extends $AbstractStringBuilder implements $Appendable, $Serializable, $Comparable<$StringBuffer>, $CharSequence",
+          "newHeader": "export class $StringBuffer extends $AbstractStringBuilder implements $Appendable, $Serializable, $Comparable<$StringBuffer>, $CharSequence",
+          "removed": [],
+          "added": [
+            "get empty(): boolean;",
+            "isEmpty(): boolean;",
+            "setLength(arg0: number): void;"
+          ]
+        },
+        {
+          "name": "$StringBuilder",
+          "oldHeader": "export class $StringBuilder extends $AbstractStringBuilder implements $Appendable, $Serializable, $Comparable<$StringBuilder>, $CharSequence",
+          "newHeader": "export class $StringBuilder extends $AbstractStringBuilder implements $Appendable, $Serializable, $Comparable<$StringBuilder>, $CharSequence",
+          "removed": [],
+          "added": [
+            "get empty(): boolean;",
+            "isEmpty(): boolean;"
+          ]
+        }
+      ],
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/invoke/index.d.ts",
+      "addedTypes": [],
+      "changed": [
+        {
+          "name": "$MethodHandleInfo",
+          "oldHeader": "export interface $MethodHandleInfo",
+          "newHeader": "export interface $MethodHandleInfo",
+          "removed": [
+            "reflectAs<T>(arg0: $Class<T>, arg1: $MethodHandles$Lookup): T;"
+          ],
+          "added": [
+            "reflectAs<T extends $Member>(arg0: $Class<T>, arg1: $MethodHandles$Lookup): T;"
+          ]
+        },
+        {
+          "name": "$VarHandle",
+          "oldHeader": "export class $VarHandle implements $Constable",
+          "newHeader": "export class $VarHandle implements $Constable",
+          "removed": [],
+          "added": [
+            "setOpaque(arg0?: object[]): void;",
+            "setRelease(arg0?: object[]): void;",
+            "setVolatile(arg0?: object[]): void;"
+          ]
+        }
+      ],
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/reflect/index.d.ts",
+      "addedTypes": [],
+      "changed": [
+        {
+          "name": "$AccessibleObject",
+          "oldHeader": "export class $AccessibleObject implements $AnnotatedElement",
+          "newHeader": "export class $AccessibleObject implements $AnnotatedElement",
+          "removed": [
+            "getAnnotationsByType<T>(arg0: $Class<T>): T[];",
+            "getAnnotation<T>(arg0: $Class<T>): T;",
+            "getDeclaredAnnotationsByType<T>(arg0: $Class<T>): T[];",
+            "getDeclaredAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "getDeclaredAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getDeclaredAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "setAccessible(arg0: boolean): void;"
+          ]
+        },
+        {
+          "name": "$AnnotatedElement",
+          "oldHeader": "export interface $AnnotatedElement",
+          "newHeader": "export interface $AnnotatedElement",
+          "removed": [
+            "getAnnotationsByType<T>(arg0: $Class<T>): T[];",
+            "getAnnotation<T>(arg0: $Class<T>): T;",
+            "getDeclaredAnnotationsByType<T>(arg0: $Class<T>): T[];",
+            "getDeclaredAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "getDeclaredAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getDeclaredAnnotation<T extends $Annotation>(arg0: $Class<T>): T;"
+          ]
+        },
+        {
+          "name": "$AnnotatedType",
+          "oldHeader": "export interface $AnnotatedType extends $AnnotatedElement",
+          "newHeader": "export interface $AnnotatedType extends $AnnotatedElement",
+          "removed": [
+            "getAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;"
+          ]
+        },
+        {
+          "name": "$Constructor",
+          "oldHeader": "export class $Constructor<T> extends $Executable",
+          "newHeader": "export class $Constructor<T> extends $Executable",
+          "removed": [
+            "getAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "setAccessible(arg0: boolean): void;"
+          ]
+        },
+        {
+          "name": "$Executable",
+          "oldHeader": "export class $Executable extends $AccessibleObject implements $Member, $GenericDeclaration",
+          "newHeader": "export class $Executable extends $AccessibleObject implements $Member, $GenericDeclaration",
+          "removed": [
+            "getAnnotationsByType<T>(arg0: $Class<T>): T[];",
+            "getAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;"
+          ]
+        },
+        {
+          "name": "$Field",
+          "oldHeader": "export class $Field extends $AccessibleObject implements $Member",
+          "newHeader": "export class $Field extends $AccessibleObject implements $Member",
+          "removed": [
+            "getAnnotationsByType<T>(arg0: $Class<T>): T[];",
+            "getAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];",
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "setAccessible(arg0: boolean): void;"
+          ]
+        },
+        {
+          "name": "$Method",
+          "oldHeader": "export class $Method extends $Executable",
+          "newHeader": "export class $Method extends $Executable",
+          "removed": [
+            "getAnnotation<T>(arg0: $Class<T>): T;"
+          ],
+          "added": [
+            "getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;",
+            "setAccessible(arg0: boolean): void;"
+          ]
+        }
+      ],
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/net/index.d.ts",
+      "addedTypes": [],
+      "changed": [
+        {
+          "name": "$URLConnection",
+          "oldHeader": "export class $URLConnection",
+          "newHeader": "export class $URLConnection",
+          "removed": [],
+          "added": [
+            "setAllowUserInteraction(arg0: boolean): void;",
+            "setConnectTimeout(arg0: number): void;",
+            "setDefaultUseCaches(arg0: boolean): void;",
+            "setDoInput(arg0: boolean): void;",
+            "setDoOutput(arg0: boolean): void;",
+            "setIfModifiedSince(arg0: number): void;",
+            "setReadTimeout(arg0: number): void;",
+            "setUseCaches(arg0: boolean): void;"
+          ]
+        }
+      ],
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/nio/index.d.ts",
+      "addedTypes": [],
+      "changed": [
+        {
+          "name": "$ByteBuffer",
+          "oldHeader": "export class $ByteBuffer extends $Buffer implements $Comparable<$ByteBuffer>",
+          "newHeader": "export class $ByteBuffer extends $Buffer implements $Comparable<$ByteBuffer>",
+          "removed": [],
+          "added": [
+            "limit(): number;",
+            "position(): number;"
+          ]
+        },
+        {
+          "name": "$CharBuffer",
+          "oldHeader": "export class $CharBuffer extends $Buffer implements $Comparable<$CharBuffer>, $Appendable, $CharSequence, $Readable",
+          "newHeader": "export class $CharBuffer extends $Buffer implements $Comparable<$CharBuffer>, $Appendable, $CharSequence, $Readable",
+          "removed": [],
+          "added": [
+            "codePoints(): $IntStream;",
+            "limit(): number;",
+            "position(): number;"
+          ]
+        },
+        {
+          "name": "$DoubleBuffer",
+          "oldHeader": "export class $DoubleBuffer extends $Buffer implements $Comparable<$DoubleBuffer>",
+          "newHeader": "export class $DoubleBuffer extends $Buffer implements $Comparable<$DoubleBuffer>",
+          "removed": [],
+          "added": [
+            "limit(): number;",
+            "position(): number;"
+          ]
+        },
+        {
+          "name": "$FloatBuffer",
+          "oldHeader": "export class $FloatBuffer extends $Buffer implements $Comparable<$FloatBuffer>",
+          "newHeader": "export class $FloatBuffer extends $Buffer implements $Comparable<$FloatBuffer>",
+          "removed": [],
+          "added": [
+            "limit(): number;",
+            "position(): number;"
+          ]
+        },
+        {
+          "name": "$IntBuffer",
+          "oldHeader": "export class $IntBuffer extends $Buffer implements $Comparable<$IntBuffer>",
+          "newHeader": "export class $IntBuffer extends $Buffer implements $Comparable<$IntBuffer>",
+          "removed": [],
+          "added": [
+            "limit(): number;",
+            "position(): number;"
+          ]
+        },
+        {
+          "name": "$LongBuffer",
+          "oldHeader": "export class $LongBuffer extends $Buffer implements $Comparable<$LongBuffer>",
+          "newHeader": "export class $LongBuffer extends $Buffer implements $Comparable<$LongBuffer>",
+          "removed": [],
+          "added": [
+            "limit(): number;",
+            "position(): number;"
+          ]
+        },
+        {
+          "name": "$ShortBuffer",
+          "oldHeader": "export class $ShortBuffer extends $Buffer implements $Comparable<$ShortBuffer>",
+          "newHeader": "export class $ShortBuffer extends $Buffer implements $Comparable<$ShortBuffer>",
+          "removed": [],
+          "added": [
+            "limit(): number;",
+            "position(): number;"
+          ]
+        }
+      ],
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/util/index.d.ts",
+      "addedTypes": [],
+      "changed": [
+        {
+          "name": "$Comparator",
+          "oldHeader": "export interface $Comparator<T>",
+          "newHeader": "export interface $Comparator<T>",
+          "removed": [
+            "thenComparing<U>(arg0: $Function_<T, U, T, U>): $Comparator<T>;"
+          ],
+          "added": [
+            "thenComparing<U extends $Comparable<any>>(arg0: $Function_<T, U, T, U>): $Comparator<T>;"
+          ]
+        },
+        {
+          "name": "$DoubleSummaryStatistics",
+          "oldHeader": "export class $DoubleSummaryStatistics implements $DoubleConsumer",
+          "newHeader": "export class $DoubleSummaryStatistics implements $DoubleConsumer",
+          "removed": [],
+          "added": [
+            "andThen(arg0: $DoubleConsumer_<number>): $DoubleConsumer;"
+          ]
+        },
+        {
+          "name": "$IntSummaryStatistics",
+          "oldHeader": "export class $IntSummaryStatistics implements $IntConsumer",
+          "newHeader": "export class $IntSummaryStatistics implements $IntConsumer",
+          "removed": [],
+          "added": [
+            "andThen(arg0: $IntConsumer_<number>): $IntConsumer;"
+          ]
+        },
+        {
+          "name": "$Locale$LanguageRange",
+          "oldHeader": "export class $Locale$LanguageRange",
+          "newHeader": "export class $Locale$LanguageRange",
+          "removed": [
+            "static mapEquivalents(arg0: $Locale$LanguageRange[], arg1: { [key: string]: string[] }): $List<$Locale$LanguageRange>;",
+            "static parse(arg0: string, arg1: { [key: string]: string[] }): $List<$Locale$LanguageRange>;"
+          ],
+          "added": [
+            "static mapEquivalents(arg0: $Locale$LanguageRange[], arg1: ($Map<string, string[]> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string[]>> : never))): $List<$Locale$LanguageRange>;",
+            "static parse(arg0: string, arg1: ($Map<string, string[]> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string[]>> : never))): $List<$Locale$LanguageRange>;"
+          ]
+        },
+        {
+          "name": "$LongSummaryStatistics",
+          "oldHeader": "export class $LongSummaryStatistics implements $LongConsumer, $IntConsumer",
+          "newHeader": "export class $LongSummaryStatistics implements $LongConsumer, $IntConsumer",
+          "removed": [],
+          "added": [
+            "andThen(arg0: $IntConsumer_<number>): $IntConsumer;",
+            "andThen(arg0: $LongConsumer_<number>): $LongConsumer;"
+          ]
+        },
+        {
+          "name": "$Map",
+          "oldHeader": "export interface $Map<K, V>",
+          "newHeader": "export interface $Map<K, V>",
+          "removed": [
+            "putAll(arg0: { [key: K]: V }): void;"
+          ],
+          "added": [
+            "putAll(arg0: ($Map<K, V> | ([K] extends [PropertyKey] ? Partial<Record<Extract<K, PropertyKey>, V>> : never))): void;"
+          ]
+        },
+        {
+          "name": "$Optional",
+          "oldHeader": "export class $Optional<T>",
+          "newHeader": "export class $Optional<T>",
+          "removed": [
+            "orElseThrow<X>(arg0: $Supplier_<X, X>): T;"
+          ],
+          "added": [
+            "orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): T;"
+          ]
+        },
+        {
+          "name": "$OptionalDouble",
+          "oldHeader": "export class $OptionalDouble",
+          "newHeader": "export class $OptionalDouble",
+          "removed": [
+            "orElseThrow<X>(arg0: $Supplier_<X, X>): number;"
+          ],
+          "added": [
+            "orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): number;"
+          ]
+        },
+        {
+          "name": "$OptionalInt",
+          "oldHeader": "export class $OptionalInt",
+          "newHeader": "export class $OptionalInt",
+          "removed": [
+            "orElseThrow<X>(arg0: $Supplier_<X, X>): number;"
+          ],
+          "added": [
+            "orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): number;"
+          ]
+        },
+        {
+          "name": "$OptionalLong",
+          "oldHeader": "export class $OptionalLong",
+          "newHeader": "export class $OptionalLong",
+          "removed": [
+            "orElseThrow<X>(arg0: $Supplier_<X, X>): number;"
+          ],
+          "added": [
+            "orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): number;"
+          ]
+        }
+      ],
+      "existingTypesPreserved": true
+    },
+    {
+      "file": "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/annotation/index.d.ts",
+      "addedTypes": [
+        "$Annotation"
+      ],
+      "changed": [],
+      "existingTypesPreserved": true
+    }
+  ]
+}
