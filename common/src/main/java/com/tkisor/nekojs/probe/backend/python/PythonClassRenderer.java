@@ -23,9 +23,9 @@ import java.util.stream.Collectors;
  */
 public final class PythonClassRenderer {
     private final ApiTypeRefPyRenderer typeRenderer;
-    private final Map<String, TypeDecl> declarations = new LinkedHashMap<>();
-    private final Map<String, Set<String>> reservedNames = new HashMap<>();
-    private final Map<String, String> helperNames = new HashMap<>();
+    private final Map<String, TypeDecl> declarations;
+    private final Map<String, Set<String>> reservedNames;
+    private final Map<String, String> helperNames;
 
     public PythonClassRenderer(ApiTypeRefPyRenderer typeRenderer) {
         this(typeRenderer, List.of());
@@ -33,10 +33,35 @@ public final class PythonClassRenderer {
 
     public PythonClassRenderer(ApiTypeRefPyRenderer typeRenderer, List<TypeDecl> declarations) {
         this.typeRenderer = typeRenderer;
+        this.declarations = new LinkedHashMap<>();
+        this.reservedNames = new HashMap<>();
+        this.helperNames = new HashMap<>();
         for (TypeDecl declaration : declarations) {
             this.declarations.put(declaration.fqn, declaration);
             reservedNames.computeIfAbsent(packageName(declaration.fqn), key -> new LinkedHashSet<>())
                     .add(effectiveClassName(declaration));
+        }
+    }
+
+    private PythonClassRenderer(ApiTypeRefPyRenderer typeRenderer, PythonClassRenderer owner) {
+        this.typeRenderer = typeRenderer;
+        this.declarations = owner.declarations;
+        this.reservedNames = owner.reservedNames;
+        this.helperNames = owner.helperNames;
+    }
+
+    /** Module type references vary; collected declarations and private helper allocation stay shared. */
+    PythonClassRenderer withTypeRenderer(ApiTypeRefPyRenderer renderer) {
+        return new PythonClassRenderer(renderer, this);
+    }
+
+    /** A projected inherited writer may reference a type absent from the child's own members. */
+    void collectFieldProjectionSymbols(TypeDecl declaration, Set<String> symbols) {
+        for (VisibleField visible : beanPropertyConflicts(declaration, declarations).fields().values()) {
+            MethodDecl getter = declaration.beanGetterForField(visible.field());
+            if (getter == null) continue;
+            TypeSlot writer = declaration.beanFieldWriteType(visible.field(), getter);
+            if (writer != null) ApiTypeRefPyRenderer.collectSymbolFqns(writer.ref, symbols);
         }
     }
 

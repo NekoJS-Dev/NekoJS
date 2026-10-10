@@ -11,10 +11,10 @@ import com.tkisor.nekojs.api.surface.ApiTypeRef;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -51,7 +51,12 @@ public final class PythonEventRenderer {
                          List<RegistryBuilderSurfaceEntry> builders) {
         Map<Class<?>, EventPayload> payloads = EventPayloadDeclarations.resolve(events, builders);
         // 1. 收集 import（事件类型 + dispatch key 类型/别名）
-        Map<String, String> importByName = new TreeMap<>(); // simpleName → fqn
+        Set<String> reserved = new LinkedHashSet<>(List.of("Any", "Callable", "overload", "Protocol", "Literal"));
+        events.forEach(event -> reserved.add(groupTypeName(event.group())));
+        payloads.values().forEach(payload -> reserved.add(payload.name()));
+        List<String> builderNames = EventPayloadDeclarations.builderNames(payloads, builders);
+        reserved.addAll(builderNames);
+        PythonImports importByName = new PythonImports(reserved, typeR);
         List<EventInfo> infos = new ArrayList<>();
         for (EventCatalogEntry e : events) {
             EventPayload payload = payloads.get(e.eventType());
@@ -75,13 +80,10 @@ public final class PythonEventRenderer {
             sb.append(", Literal");
         }
         sb.append('\n');
-        List<String> builderNames = EventPayloadDeclarations.builderNames(payloads, builders);
         if (!builderNames.isEmpty()) {
             sb.append("from nekojs._registry_builders import ").append(String.join(", ", builderNames)).append("\n");
         }
-        for (var e : importByName.entrySet()) {
-            sb.append("from nekojs._java.").append(pkgOf(e.getValue())).append(" import ").append(e.getKey()).append("\n");
-        }
+        importByName.appendTo(sb);
 
         for (EventPayload payload : payloads.values()) {
             sb.append("\nclass ").append(payload.name()).append("(Protocol):\n");
@@ -150,35 +152,32 @@ public final class PythonEventRenderer {
     }
 
     /** 事件对象类型：SYMBOL 可用 → import + 简单名；否则 renderer 兜底 Any。 */
-    private String renderClass(Class<?> cls, Map<String, String> importByName) {
+    private String renderClass(Class<?> cls, PythonImports importByName) {
         if (cls == null) return "Any";
         ApiTypeRef ref = classToTypeRef(cls);
         importSymbolIfAvailable(ref, importByName);
-        return typeR.render(ref);
+        return typeR.withSymbolNames(importByName.typeNames()).render(ref);
     }
 
     /** dispatch key 类型：有适配器别名 → 别名（放宽输入）；否则普通渲染。 */
     private String renderKey(Class<?> cls, Map<String, PythonProbeBackend.PyAdapterAlias> adapterAliases,
-                             Map<String, String> importByName) {
+                             PythonImports importByName) {
         ApiTypeRef ref = classToTypeRef(cls);
         if (ref.kind() == ApiTypeRef.Kind.SYMBOL) {
             String fqn = ApiTypeRefPyRenderer.extractFqn(ref.name());
             PythonProbeBackend.PyAdapterAlias alias = adapterAliases == null ? null : adapterAliases.get(fqn);
             if (alias != null) {
-                importByName.put(alias.aliasName(), fqn);
-                return alias.aliasName();
+                return importByName.symbol(fqn, alias.aliasName());
             }
         }
         importSymbolIfAvailable(ref, importByName);
-        return typeR.render(ref);
+        return typeR.withSymbolNames(importByName.typeNames()).render(ref);
     }
 
-    private void importSymbolIfAvailable(ApiTypeRef ref, Map<String, String> importByName) {
-        if (ref == null || ref.kind() != ApiTypeRef.Kind.SYMBOL) return;
-        String fqn = ApiTypeRefPyRenderer.extractFqn(ref.name());
-        if (availableFqns.contains(fqn)) {
-            importByName.put(ApiTypeRefPyRenderer.simplePyName(fqn), fqn);
-        }
+    private void importSymbolIfAvailable(ApiTypeRef ref, PythonImports importByName) {
+        Set<String> symbols = new java.util.TreeSet<>();
+        ApiTypeRefPyRenderer.collectSymbolFqns(ref, symbols);
+        for (String fqn : symbols) if (availableFqns.contains(fqn)) importByName.type(fqn);
     }
 
     /** {@code Class<?>} → {@link ApiTypeRef}（镜像 TypeReflector.classToRef 的映射，best-effort）。 */
@@ -193,11 +192,6 @@ public final class PythonEventRenderer {
         if (cls == Object.class) return ApiTypeRef.primitive("object");
         if (cls.isArray()) return ApiTypeRef.array(classToTypeRef(cls.getComponentType()));
         return ApiTypeRef.symbol(new ApiSymbolId("java", cls.getName()));
-    }
-
-    private static String pkgOf(String fqn) {
-        int dot = fqn.lastIndexOf('.');
-        return dot >= 0 ? fqn.substring(0, dot) : "";
     }
 
     /** 单个事件的渲染信息：条目 + 已渲染的事件类型 / dispatch key 类型（null = 无 key 重载）。 */

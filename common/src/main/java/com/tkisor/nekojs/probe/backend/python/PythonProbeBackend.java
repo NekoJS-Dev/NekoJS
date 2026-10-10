@@ -8,6 +8,8 @@ import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.catalog.RegistryTypeCatalogEntry;
+import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.probe.EditorConfigContributor;
 import com.tkisor.nekojs.probe.FileEditorConfigContributor;
 import com.tkisor.nekojs.probe.events.GlobalDecl;
@@ -125,7 +127,13 @@ public final class PythonProbeBackend implements ProbeBackend {
         Set<String> allPkgs = new TreeSet<>();
         for (String pkg : byPkg.keySet()) allPkgs.addAll(ancestorsOf(pkg));
 
-        ApiTypeRefPyRenderer typeR = new ApiTypeRefPyRenderer(availableFqns);
+        Map<String, String> exportedNames = new LinkedHashMap<>();
+        for (TypeDecl declaration : ir) {
+            if (availableFqns.contains(declaration.fqn)) {
+                exportedNames.put(declaration.fqn, effectivePyName(declaration));
+            }
+        }
+        ApiTypeRefPyRenderer typeR = new ApiTypeRefPyRenderer(availableFqns, exportedNames);
         PythonClassRenderer classR = new PythonClassRenderer(typeR, ir);
 
         // 1.5 适配器输入别名：目标 FQN → <Simple>_ = <Simple> | <输入类型们>
@@ -137,9 +145,10 @@ public final class PythonProbeBackend implements ProbeBackend {
             }
         }
         Map<String, PyAdapterAlias> adapterAliases = buildAdapterAliases(snapshot.adapters(), availableFqns,
-                registries, snapshot.modIds());
+                registries, snapshot.modIds(), typeR);
         // 枚举字面量别名：Color_ = Color | Literal["RED", ...]（镜像 TS 侧 $Color_ 输入别名）
         Map<String, PyAdapterAlias> enumAliases = buildEnumAliases(ir, availableFqns);
+        reserveInputAliasNames(byPkg, adapterAliases, enumAliases);
         // dispatch key 放宽视图：适配器 + 枚举别名合并（枚举 key 经 PythonEventRenderer 放宽为 Enum_）
         Map<String, PyAdapterAlias> wideningAliases = new LinkedHashMap<>(adapterAliases);
         wideningAliases.putAll(enumAliases);
@@ -147,7 +156,7 @@ public final class PythonProbeBackend implements ProbeBackend {
         // Reserve every module's public imports and aliases before allocating cross-package helpers.
         for (var entry : byPkg.entrySet()) {
             Set<String> names = new LinkedHashSet<>(packageImports(entry.getKey(), entry.getValue(),
-                    availableFqns, adapterAliases).keySet());
+                    availableFqns, adapterAliases, enumAliases, classR, typeR).localNames());
             for (TypeDecl declaration : entry.getValue()) {
                 PyAdapterAlias adapter = adapterAliases.get(declaration.fqn);
                 PyAdapterAlias enumAlias = enumAliases.get(declaration.fqn);
@@ -166,7 +175,8 @@ public final class PythonProbeBackend implements ProbeBackend {
             List<TypeDecl> classes = byPkg.getOrDefault(pkg, List.of());
             files.put(pkgModule, classes.isEmpty()
                     ? "# Auto-generated namespace marker.\n"
-                    : renderPackageModule(pkg, classes, classR, typeR, availableFqns, adapterAliases, enumAliases));
+                    : renderPackageModule(pkg, classes, classR, typeR, availableFqns, adapterAliases, enumAliases,
+                            snapshot, registries));
         }
 
         // 3. 事件声明：nekojs/_events/<side>/__init__.pyi
@@ -204,13 +214,32 @@ public final class PythonProbeBackend implements ProbeBackend {
     private String renderPackageModule(String javaPkg, List<TypeDecl> classes,
                                        PythonClassRenderer classR, ApiTypeRefPyRenderer typeR,
                                        Set<String> availableFqns, Map<String, PyAdapterAlias> adapterAliases,
-                                       Map<String, PyAdapterAlias> enumAliases) {
+                                       Map<String, PyAdapterAlias> enumAliases,
+                                       NekoScriptCatalogSnapshot snapshot,
+                                       Map<String, RegistryTypeCatalogEntry> registries) {
+        PythonImports importByName = packageImports(javaPkg, classes, availableFqns, adapterAliases,
+                enumAliases, classR, typeR);
+        Map<String, String> symbols = new LinkedHashMap<>();
+        for (TypeDecl declaration : classes) symbols.put(declaration.fqn, effectivePyName(declaration));
+        symbols.putAll(importByName.typeNames());
+        typeR = typeR.withSymbolNames(symbols);
+        classR = classR.withTypeRenderer(typeR);
+        Set<String> localTypes = classes.stream().map(declaration -> declaration.fqn)
+                .collect(java.util.stream.Collectors.toSet());
+        Map<String, PyAdapterAlias> scopedAliases = buildAdapterAliases(snapshot.adapters() == null ? List.of() : snapshot.adapters().stream()
+                        .filter(adapter -> adapter.targetType() != null && localTypes.contains(adapter.targetType().getName())).toList(),
+                availableFqns, registries, snapshot.modIds(), typeR);
+        for (var entry : scopedAliases.entrySet()) {
+            PyAdapterAlias allocated = adapterAliases.get(entry.getKey());
+            if (allocated != null) entry.setValue(withAliasName(entry.getValue(), allocated.aliasName()));
+        }
+        adapterAliases = scopedAliases;
         // 适配器输入别名：跨包的 host 输入类型需要 import；别名行在类之后输出
         List<String> aliasLines = new ArrayList<>();
         for (TypeDecl d : classes) {
             PyAdapterAlias alias = adapterAliases.get(d.fqn);
             if (alias == null) continue;
-            String line = alias.aliasName() + " = " + ApiTypeRefPyRenderer.simplePyName(d.fqn)
+            String line = alias.aliasName() + " = " + effectivePyName(d)
                     + " | " + String.join(" | ", alias.inputTypes());
             // 大注册表（>=512 条目）的 RegistryValue 形状缩略为 str，行尾注释标注来源注册表
             if (alias.note() != null) line += "  # " + alias.note();
@@ -225,7 +254,6 @@ public final class PythonProbeBackend implements ProbeBackend {
         }
 
         // 跨包 import（仅可用的、跨包的；按简单名去重）
-        Map<String, String> importByName = packageImports(javaPkg, classes, availableFqns, adapterAliases);
 
         StringBuilder sb = new StringBuilder();
         sb.append("# Auto-generated by NekoJS probe — Python stubs for Java package ").append(javaPkg).append(".\n");
@@ -240,9 +268,7 @@ public final class PythonProbeBackend implements ProbeBackend {
           .append(usesOverload ? ", overload" : "")
           .append(usesProtocol ? ", Protocol" : "")
           .append("\n");
-        for (var e : importByName.entrySet()) {
-            sb.append("from nekojs._java.").append(pkgOf(e.getValue())).append(" import ").append(e.getKey()).append("\n");
-        }
+        importByName.appendTo(sb);
         Set<String> metaclassImports = new TreeSet<>();
         for (TypeDecl declaration : classes) {
             if (!classR.hasClassBindings(declaration)) continue;
@@ -264,22 +290,63 @@ public final class PythonProbeBackend implements ProbeBackend {
         return sb.toString();
     }
 
-    private Map<String, String> packageImports(String javaPkg, List<TypeDecl> classes,
+    private PythonImports packageImports(String javaPkg, List<TypeDecl> classes,
                                                Set<String> availableFqns,
-                                               Map<String, PyAdapterAlias> adapterAliases) {
+                                               Map<String, PyAdapterAlias> adapterAliases,
+                                               Map<String, PyAdapterAlias> enumAliases,
+                                               PythonClassRenderer classR, ApiTypeRefPyRenderer typeR) {
         Set<String> references = new LinkedHashSet<>();
         for (TypeDecl declaration : classes) {
             collectDeclSymbolFqns(declaration, references);
+            classR.collectFieldProjectionSymbols(declaration, references);
             PyAdapterAlias alias = adapterAliases.get(declaration.fqn);
             if (alias != null) references.addAll(alias.importFqns());
         }
-        Map<String, String> imports = new TreeMap<>();
-        for (String fqn : references) {
+        Set<String> reserved = new LinkedHashSet<>(List.of("Any", "Callable", "ClassVar", "Literal", "overload", "Protocol"));
+        for (TypeDecl declaration : classes) {
+            if (!declaration.hidden) reserved.add(effectivePyName(declaration));
+            PyAdapterAlias alias = adapterAliases.get(declaration.fqn);
+            if (alias != null) reserved.add(alias.aliasName());
+            PyAdapterAlias enumAlias = enumAliases.get(declaration.fqn);
+            if (enumAlias != null) reserved.add(enumAlias.aliasName());
+        }
+        PythonImports imports = new PythonImports(reserved, typeR);
+        for (String fqn : new TreeSet<>(references)) {
             if (availableFqns.contains(fqn) && !pkgOf(fqn).equals(javaPkg)) {
-                imports.put(ApiTypeRefPyRenderer.simplePyName(fqn), fqn);
+                imports.type(fqn);
             }
         }
         return imports;
+    }
+
+    /** Generated input aliases share each package's namespace with its actual public classes. */
+    private static void reserveInputAliasNames(Map<String, List<TypeDecl>> byPkg,
+                                               Map<String, PyAdapterAlias> adapters,
+                                               Map<String, PyAdapterAlias> enums) {
+        for (List<TypeDecl> declarations : byPkg.values()) {
+            Set<String> reserved = new LinkedHashSet<>(List.of("Any", "Callable", "ClassVar", "Literal", "overload", "Protocol"));
+            for (TypeDecl declaration : declarations) {
+                if (!declaration.hidden) reserved.add(effectivePyName(declaration));
+            }
+            for (Map<String, PyAdapterAlias> aliases : List.of(adapters, enums)) {
+                for (TypeDecl declaration : declarations) {
+                    PyAdapterAlias alias = aliases.get(declaration.fqn);
+                    if (alias == null) continue;
+                    String name = alias.aliasName();
+                    if (reserved.contains(name)) {
+                        String prefix = "_NekoInput_" + name;
+                        name = prefix;
+                        for (int suffix = 1; reserved.contains(name); suffix++) name = prefix + suffix;
+                    }
+                    reserved.add(name);
+                    aliases.put(declaration.fqn, withAliasName(alias, name));
+                }
+            }
+        }
+    }
+
+    private static PyAdapterAlias withAliasName(PyAdapterAlias alias, String name) {
+        return new PyAdapterAlias(name, alias.inputTypes(), alias.importFqns(), alias.note());
     }
 
     /** nekojs/__init__.pyi：全局绑定 + 事件组入口 + {@code probe.add_global} 全局声明（{@code from nekojs import *} 的目标）。 */
@@ -292,7 +359,19 @@ public final class PythonProbeBackend implements ProbeBackend {
         // 事件组名（按 side）；绑定名命中组名时，绑定类型指向 nekojs._events/<side> 的 <Group>Type 类
         Map<ScriptType, List<String>> groupsBySide = eventGroupsBySide(snapshot.events());
 
-        Map<String, String> importByName = new TreeMap<>(); // simpleName → fqn（nekojs._java 侧）
+        Set<String> reserved = new LinkedHashSet<>(List.of("Any"));
+        for (BindingCatalogEntry binding : bindings) {
+            if (binding.javaType() == null || !availableFqns.contains(binding.javaType().getName())
+                    || !binding.name().equals(typeR.symbolName(binding.javaType().getName()))) {
+                reserved.add(binding.name());
+            }
+        }
+        if (globals != null) globals.forEach(global -> reserved.add(global.name()));
+        groupsBySide.values().forEach(groups -> groups.forEach(group -> {
+            reserved.add(group);
+            reserved.add(PythonEventRenderer.groupTypeName(group));
+        }));
+        PythonImports importByName = new PythonImports(reserved, typeR);
         Set<String> eventImports = new LinkedHashSet<>();   // "from nekojs._events.<side> import <TypeName>"
         List<String[]> lines = new ArrayList<>();            // [name, typeExpr]
         List<String> allNames = new ArrayList<>();
@@ -310,17 +389,15 @@ public final class PythonProbeBackend implements ProbeBackend {
                 // 用该类的简单名作为绑定类型并 import（优先于 javaType）
                 String fqn = findFqnBySimpleName(availableFqns, b.typeOverride());
                 if (fqn != null) {
-                    type = ApiTypeRefPyRenderer.simplePyName(fqn);
-                    importByName.put(type, fqn);
+                    type = importByName.type(fqn);
                 }
             } else if (b.javaType() != null && availableFqns.contains(b.javaType().getName())) {
                 String fqn = b.javaType().getName();
-                type = ApiTypeRefPyRenderer.simplePyName(fqn);
-                importByName.put(type, fqn);
+                type = importByName.type(fqn);
             }
             // 导入名与绑定名相同时（如 `from ... import Items` + `Items` 绑定），
             // import 本身就完成了重导出；再写 `Items: Items` 会变成 pyright 的自引用报错
-            if (!(type.equals(b.name()) && importByName.containsKey(type))) {
+            if (!(type.equals(b.name()) && importByName.localNames().contains(type))) {
                 lines.add(new String[]{b.name(), type});
             }
             allNames.add(b.name());
@@ -344,10 +421,10 @@ public final class PythonProbeBackend implements ProbeBackend {
                 ApiTypeRefPyRenderer.collectSymbolFqns(g.type(), fqns);
                 for (String fqn : fqns) {
                     if (availableFqns.contains(fqn)) {
-                        importByName.put(ApiTypeRefPyRenderer.simplePyName(fqn), fqn);
+                        importByName.type(fqn);
                     }
                 }
-                lines.add(new String[]{g.name(), typeR.render(g.type())});
+                lines.add(new String[]{g.name(), typeR.withSymbolNames(importByName.typeNames()).render(g.type())});
                 allNames.add(g.name());
             }
         }
@@ -357,9 +434,7 @@ public final class PythonProbeBackend implements ProbeBackend {
         sb.append("# The transpiler strips that magic import; pyright resolves globals via this stub.\n");
         sb.append("# Do not edit; regenerate with `/nekojs probe python`.\n\n");
         sb.append("from typing import Any\n");
-        for (var e : importByName.entrySet()) {
-            sb.append("from nekojs._java.").append(pkgOf(e.getValue())).append(" import ").append(e.getKey()).append("\n");
-        }
+        importByName.appendTo(sb);
         for (String line : eventImports) sb.append(line).append("\n");
         sb.append("\n");
         for (String[] l : lines) sb.append(l[0]).append(": ").append(l[1]).append("\n");
@@ -437,7 +512,7 @@ public final class PythonProbeBackend implements ProbeBackend {
     private Map<String, PyAdapterAlias> buildAdapterAliases(List<AdapterCatalogEntry> adapters,
                                                             Set<String> availableFqns,
                                                             Map<String, RegistryTypeCatalogEntry> registries,
-                                                            List<String> modIds) {
+                                                            List<String> modIds, ApiTypeRefPyRenderer typeR) {
         Map<String, PyAdapterAlias> out = new LinkedHashMap<>();
         if (adapters == null) return out;
         for (AdapterCatalogEntry entry : adapters) {
@@ -451,11 +526,12 @@ public final class PythonProbeBackend implements ProbeBackend {
             Set<String> inputs = new LinkedHashSet<>();
             List<String> largeRegistries = new ArrayList<>();
             for (AdapterInputShape shape : entry.shapes()) {
-                String rendered = renderInputShape(shape, simple, inputFqns, availableFqns, registries,
-                        modIds, largeRegistries);
+                if (shape instanceof AdapterInputShape.SelfValue
+                        || shape instanceof AdapterInputShape.HostValue host && target.equals(host.cls())) continue;
+                String rendered = renderInputShape(shape, fqn, inputFqns, availableFqns, registries,
+                        modIds, largeRegistries, typeR);
                 if (rendered != null) inputs.add(rendered);
             }
-            inputs.remove(simple); // Self 形状 = 目标自身，已在别名左侧
             if (inputs.isEmpty()) continue;
             String note = largeRegistries.isEmpty() ? null
                     : String.join(", ", largeRegistries) + " registry ids abbreviated as str ("
@@ -563,17 +639,17 @@ public final class PythonProbeBackend implements ProbeBackend {
     }
 
     /** 单个输入形状 → Python 类型字符串；无法映射（原始 TS 片段/未收集的 host）返回 null。 */
-    private String renderInputShape(AdapterInputShape shape, String selfSimple,
+    private String renderInputShape(AdapterInputShape shape, String selfFqn,
                                     Set<String> inputFqns, Set<String> availableFqns,
                                     Map<String, RegistryTypeCatalogEntry> registries,
-                                    List<String> modIds, List<String> largeRegistries) {
+                                    List<String> modIds, List<String> largeRegistries, ApiTypeRefPyRenderer typeR) {
         return switch (shape) {
             case AdapterInputShape.StringValue v -> "str";
             case AdapterInputShape.LiteralValue v ->
                     "Literal[\"" + v.text().replace("\\", "\\\\").replace("\"", "\\\"") + "\"]";
             case AdapterInputShape.NumberValue v -> "float";
             case AdapterInputShape.BooleanValue v -> "bool";
-            case AdapterInputShape.SelfValue v -> selfSimple;
+            case AdapterInputShape.SelfValue v -> typeR.render(ApiTypeRef.symbol(new ApiSymbolId("java", selfFqn)));
             case AdapterInputShape.HostValue v -> {
                 Class<?> cls = v.cls();
                 if (cls == null) yield null;
@@ -583,19 +659,19 @@ public final class PythonProbeBackend implements ProbeBackend {
                     yield null;
                 }
                 inputFqns.add(fqn);
-                yield ApiTypeRefPyRenderer.simplePyName(fqn);
+                yield typeR.render(ApiTypeRef.symbol(new ApiSymbolId("java", fqn)));
             }
             case AdapterInputShape.ArrayOfValue v -> {
-                String elem = renderInputShape(v.element(), selfSimple, inputFqns, availableFqns, registries,
-                        modIds, largeRegistries);
+                String elem = renderInputShape(v.element(), selfFqn, inputFqns, availableFqns, registries,
+                        modIds, largeRegistries, typeR);
                 yield elem == null ? null : "list[" + elem + "]";
             }
             case AdapterInputShape.ObjectValue v -> "dict[str, Any]";
             case AdapterInputShape.UnionValue v -> {
                 List<String> members = new ArrayList<>();
                 for (AdapterInputShape member : v.members()) {
-                    String rendered = renderInputShape(member, selfSimple, inputFqns, availableFqns,
-                            registries, modIds, largeRegistries);
+                    String rendered = renderInputShape(member, selfFqn, inputFqns, availableFqns,
+                            registries, modIds, largeRegistries, typeR);
                     if (rendered != null) members.add(rendered);
                 }
                 yield members.isEmpty() ? null : "(" + String.join(" | ", members) + ")";

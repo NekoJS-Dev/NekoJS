@@ -11,6 +11,10 @@ import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.NekoSharedHostAccess;
+import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.fs.ClassFilter;
+import graal.graalvm.polyglot.Context;
 import com.tkisor.nekojs.probe.EditorConfigContributor;
 import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeConfig;
@@ -41,10 +45,214 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class PythonProbeBackendIntegrationTest {
 
+    @Test
+    void localPublicClassIsPreservedWhenEnumAliasUsesItsName(@TempDir Path temp) throws Exception {
+        Class<?> target = com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Color.class;
+        var reflector = new TypeReflector();
+        var snapshot = snapshotWith(List.of(), List.of(new EventCatalogEntry("ColorEvents", "pick",
+                ScriptType.SERVER, target, target, false, true, "")), List.of());
+        assertTrue(runGenerate(temp, snapshot, List.of(reflector.reflect(target),
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Color_.class)),
+                List.of()).success());
+        Path output = temp.resolve("probe-python");
+        retainGenerated(output, "probe-python-local-enum-alias-collision");
+        String module = Files.readString(output.resolve(
+                "nekojs/_java/com/tkisor/nekojs/probe/backend/python/fixture/names/consumer/__init__.pyi"));
+        String events = Files.readString(output.resolve("nekojs/_events/server/__init__.pyi"));
+        assertTrue(module.contains("class Color_:"), module);
+        assertFalse(module.contains("\nColor_ = Color | Literal"), module);
+        assertTrue(module.contains("_NekoInput_Color_ = Color | Literal[\"RED\"]"), module);
+        assertTrue(events.contains("import _NekoInput_Color_"), events);
+        assertEquals(5, new com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Color_().localColorOnly());
+    }
+
+    @Test
+    void localPublicClassIsPreservedWhenAdapterAliasUsesItsName(@TempDir Path temp) throws Exception {
+        Class<?> target = com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class;
+        var reflector = new TypeReflector();
+        var snapshot = snapshotWith(List.of(), List.of(new EventCatalogEntry("LocalEvents", "pick",
+                        ScriptType.SERVER, target, target, false, true, "")),
+                List.of(new AdapterCatalogEntry(target, List.of(AdapterInputShape.string()),
+                        ConversionPrecedence.HIGH, Optional.empty())));
+        assertTrue(runGenerate(temp, snapshot, List.of(reflector.reflect(target),
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record_.class),
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class)),
+                List.of()).success());
+        Path output = temp.resolve("probe-python");
+        retainGenerated(output, "probe-python-local-input-alias-collision");
+        String module = Files.readString(output.resolve(
+                "nekojs/_java/com/tkisor/nekojs/probe/backend/python/fixture/names/first/__init__.pyi"));
+        String events = Files.readString(output.resolve("nekojs/_events/server/__init__.pyi"));
+        assertTrue(module.contains("class Record_:"), module);
+        assertFalse(module.contains("\nRecord_ = Record | str"), module);
+        assertTrue(module.contains("_NekoInput_Record_ = Record | str"), module);
+        assertTrue(events.contains("import _NekoInput_Record_"), events);
+        assertEquals(4, new com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record_().aliasNameClassOnly());
+    }
+
+    @Test
+    void renamedExportsRemainConsistentAcrossModulesBindingsEventsAndAdapters(@TempDir Path temp) throws Exception {
+        Class<?> first = com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class;
+        Class<?> second = com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class;
+        var reflector = new TypeReflector();
+        TypeDecl producer = reflector.reflect(first);
+        producer.renameTo = "Renamed";
+        var snapshot = snapshotWith(List.of(new BindingCatalogEntry("Record", ScriptType.SERVER,
+                        first, false, false, true, null, null, List.of(), List.of())),
+                List.of(new EventCatalogEntry("RenamedEvents", "tick", ScriptType.SERVER,
+                        first, null, false, false, "")),
+                List.of(new AdapterCatalogEntry(second, List.of(AdapterInputShape.host(first)),
+                        ConversionPrecedence.HIGH, Optional.empty())));
+        assertTrue(runGenerate(temp, snapshot, List.of(producer, reflector.reflect(second),
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Record.class)),
+                List.of()).success());
+        Path output = temp.resolve("probe-python");
+        retainGenerated(output, "probe-python-renamed-exports");
+        String consumer = Files.readString(output.resolve(
+                "nekojs/_java/com/tkisor/nekojs/probe/backend/python/fixture/names/consumer/__init__.pyi"));
+        String bindings = Files.readString(output.resolve("nekojs/__init__.pyi"));
+        String events = Files.readString(output.resolve("nekojs/_events/server/__init__.pyi"));
+        String adapter = Files.readString(output.resolve(
+                "nekojs/_java/com/tkisor/nekojs/probe/backend/python/fixture/names/second/__init__.pyi"));
+        assertAll(
+                () -> assertTrue(consumer.contains("names.first import Renamed"), consumer),
+                () -> assertTrue(consumer.contains("class Record(Renamed):"), consumer),
+                () -> assertTrue(bindings.contains("names.first import Renamed"), bindings),
+                () -> assertTrue(bindings.contains("Record: Renamed"), bindings),
+                () -> assertTrue(events.contains("names.first import Renamed"), events),
+                () -> assertTrue(adapter.contains("Record_ = Record | Renamed"), adapter));
+    }
+
+    @Test
+    void enumInputAliasDoesNotReplaceImportedClass(@TempDir Path temp) throws Exception {
+        var reflector = new TypeReflector();
+        assertTrue(runGenerate(temp, emptySnapshot(), List.of(
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Color.class),
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Color_.class),
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Record.class),
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class),
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class)),
+                List.of()).success());
+        Path output = temp.resolve("probe-python");
+        retainGenerated(output, "probe-python-enum-import-collision");
+        String module = Files.readString(output.resolve(
+                "nekojs/_java/com/tkisor/nekojs/probe/backend/python/fixture/names/consumer/__init__.pyi"));
+        assertTrue(module.contains("names.second import Color_ as _NekoImport_Color_"), module);
+        assertTrue(module.contains("def foreignColor(self) -> _NekoImport_Color_"), module);
+        assertTrue(module.contains("Color_ = Color | Literal[\"RED\"]"), module);
+        assertEquals(3, com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Color.RED
+                .foreignValue().foreignOnly());
+    }
+
+    private static void retainGenerated(Path output, String directory) throws Exception {
+        Path retained = Path.of("build", directory);
+        try (var generatedFiles = Files.walk(output)) {
+            for (Path file : generatedFiles.filter(Files::isRegularFile).toList()) {
+                Path target = retained.resolve(output.relativize(file));
+                Files.createDirectories(target.getParent());
+                Files.write(target, Files.readAllBytes(file));
+            }
+        }
+    }
+
     /** ScriptType 静态初始化需要 Platform（NekoJSPaths.get），测试先装 TestIPlatform。 */
     @BeforeAll
     static void initPlatform() {
         TestPlatformInit.ensureInitialized();
+    }
+
+    @Test
+    void sameNamedPackageTypesKeepDistinctImportsAndHeritage(@TempDir Path temp) throws Exception {
+        var reflector = new TypeReflector();
+        List<TypeDecl> declarations = List.of(
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class),
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class),
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Record.class));
+        Path output = temp.resolve("probe-python");
+        var context = new ProbeContext.Of(emptySnapshot(), List.of(), ProbeConfig.defaultConfig(),
+                NekoJSPaths.fromGameDir(temp), "python", output, declarations);
+        assertTrue(new PythonProbeBackend().generate(context).success());
+        retainGenerated(output, "probe-python-public-name-collision");
+        String module = Files.readString(output.resolve(
+                "nekojs/_java/com/tkisor/nekojs/probe/backend/python/fixture/names/consumer/__init__.pyi"));
+        assertTrue(module.contains("names.first import Record as "), module);
+        assertTrue(module.contains("names.second import Record as "), module);
+        assertFalse(module.contains("class Record(Record):"), module);
+        var target = new com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Record();
+        assertEquals("first", target.firstValue().firstOnly());
+        assertEquals(2, target.secondValue().secondOnly());
+    }
+
+    @Test
+    void sameNamedTypesRemainDistinctInBindingsEventsAndAdapterInputs(@TempDir Path temp) throws Exception {
+        Class<?> first = com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class;
+        Class<?> second = com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class;
+        var reflector = new TypeReflector();
+        var snapshot = snapshotWith(List.of(
+                new BindingCatalogEntry("First", ScriptType.SERVER, first, false, false, true,
+                        null, null, List.of(), List.of()),
+                new BindingCatalogEntry("Second", ScriptType.SERVER, second, false, false, true,
+                        null, null, List.of(), List.of())), List.of(
+                new EventCatalogEntry("FirstEvents", "tick", ScriptType.SERVER, first, null, false, false, ""),
+                new EventCatalogEntry("SecondEvents", "tick", ScriptType.SERVER, second, null, false, false, "")),
+                List.of(new AdapterCatalogEntry(first, List.of(AdapterInputShape.host(second)),
+                        ConversionPrecedence.HIGH, Optional.empty())));
+        assertTrue(runGenerate(temp, snapshot, List.of(reflector.reflect(first), reflector.reflect(second)), List.of()).success());
+        Path output = temp.resolve("probe-python");
+        retainGenerated(output, "probe-python-binding-event-adapter-collision");
+        String bindings = Files.readString(output.resolve("nekojs/__init__.pyi"));
+        String events = Files.readString(output.resolve("nekojs/_events/server/__init__.pyi"));
+        String adapter = Files.readString(output.resolve(
+                "nekojs/_java/com/tkisor/nekojs/probe/backend/python/fixture/names/first/__init__.pyi"));
+        assertAll(
+                () -> assertTrue(bindings.contains("names.first import Record"), bindings),
+                () -> assertTrue(bindings.contains("names.second import Record as "), bindings),
+                () -> assertTrue(events.contains("names.first import Record"), events),
+                () -> assertTrue(events.contains("names.second import Record as "), events),
+                () -> assertTrue(adapter.contains("Record_ = Record | _NekoImport_Record"), adapter));
+    }
+
+    @Test
+    void nestedSelfAdapterInputsRemainPresent(@TempDir Path temp) throws Exception {
+        Class<?> type = com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class;
+        var snapshot = snapshotWith(List.of(), List.of(), List.of(new AdapterCatalogEntry(type,
+                List.of(AdapterInputShape.self(), AdapterInputShape.host(type),
+                        AdapterInputShape.arrayOf(AdapterInputShape.self()),
+                        AdapterInputShape.arrayOf(AdapterInputShape.host(type))),
+                ConversionPrecedence.HIGH, Optional.empty())));
+        assertTrue(runGenerate(temp, snapshot, List.of(new TypeReflector().reflect(type)), List.of()).success());
+        String module = Files.readString(temp.resolve(
+                "probe-python/nekojs/_java/com/tkisor/nekojs/probe/backend/python/fixture/names/first/__init__.pyi"));
+        assertTrue(module.contains("Record_ = Record | list[Record]"), module);
+    }
+
+    @Test
+    void inheritedFieldWriterImportsKeepDifferentSameNamedReadType(@TempDir Path temp) throws Exception {
+        var reflector = new TypeReflector();
+        var declarations = List.of(
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class),
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class),
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.writer.Child.class));
+        var target = new com.tkisor.nekojs.probe.backend.python.fixture.names.writer.Child();
+        var incoming = new com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record();
+        try (Context guest = Context.newBuilder("js").allowExperimentalOptions(true)
+                .allowHostAccess(new NekoSharedHostAccess(List.of()).get())
+                .allowHostClassLookup(new ClassFilter(SandboxConfig.defaultConfig()))
+                .allowCreateProcess(false).option("js.nashorn-compat", "true")
+                .option("js.ecmascript-version", "latest").build()) {
+            guest.getBindings("js").putMember("target", target);
+            guest.getBindings("js").putMember("incoming", incoming);
+            assertEquals("first", guest.eval("js", "target.payload.firstOnly()").asString());
+            guest.eval("js", "target.payload = incoming");
+            assertTrue(target.payload == incoming);
+        }
+        assertTrue(runGenerate(temp, emptySnapshot(), declarations, List.of()).success());
+        retainGenerated(temp.resolve("probe-python"), "probe-python-inherited-writer-collision");
+        String module = Files.readString(temp.resolve(
+                "probe-python/nekojs/_java/com/tkisor/nekojs/probe/backend/python/fixture/names/writer/__init__.pyi"));
+        assertTrue(module.contains("names.second import Record as _NekoImport_Record"), module);
+        assertTrue(module.contains("def payload(self) -> Record"), module);
+        assertTrue(module.contains("def payload(self, value: _NekoImport_Record) -> None"), module);
     }
 
     @Test

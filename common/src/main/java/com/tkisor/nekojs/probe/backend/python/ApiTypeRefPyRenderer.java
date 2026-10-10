@@ -3,6 +3,7 @@ package com.tkisor.nekojs.probe.backend.python;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 
 import java.util.Set;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -14,9 +15,25 @@ import java.util.stream.Collectors;
  */
 public final class ApiTypeRefPyRenderer {
     private final Set<String> availableFqns;
+    private final Map<String, String> symbolNames;
 
     public ApiTypeRefPyRenderer(Set<String> availableFqns) {
+        this(availableFqns, Map.of());
+    }
+
+    ApiTypeRefPyRenderer(Set<String> availableFqns, Map<String, String> symbolNames) {
         this.availableFqns = availableFqns;
+        this.symbolNames = Map.copyOf(symbolNames);
+    }
+
+    ApiTypeRefPyRenderer withSymbolNames(Map<String, String> names) {
+        Map<String, String> merged = new java.util.LinkedHashMap<>(symbolNames);
+        merged.putAll(names);
+        return new ApiTypeRefPyRenderer(availableFqns, merged);
+    }
+
+    String symbolName(String fqn) {
+        return symbolNames.getOrDefault(fqn, simplePyName(fqn));
     }
 
     /**
@@ -45,7 +62,7 @@ public final class ApiTypeRefPyRenderer {
                         && (COLLECTION_FQNS.contains(fqn) || fqn.startsWith("java.util.stream."))) {
                     yield "list[" + render(ref.arguments().get(0)) + "]";
                 }
-                yield simplePyName(fqn);
+                yield symbolName(fqn);
             }
             case CALLBACK -> "Callable[..., Any]";
         };
