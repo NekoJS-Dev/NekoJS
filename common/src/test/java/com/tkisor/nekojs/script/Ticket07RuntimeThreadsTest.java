@@ -31,6 +31,7 @@ import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
+import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Engine;
 import graal.graalvm.polyglot.Value;
 import org.junit.jupiter.api.BeforeAll;
@@ -82,6 +83,7 @@ class Ticket07RuntimeThreadsTest {
         final AtomicInteger executions = new AtomicInteger();
         final AtomicInteger listenerHits = new AtomicInteger();
         final AtomicInteger timerHits = new AtomicInteger();
+        final CountDownLatch firstSpin = new CountDownLatch(1);
         volatile String lastValue;
         /** 由 harness 回填：回调内请求/查询 close 状态用。 */
         volatile ScriptManager manager;
@@ -115,8 +117,9 @@ class Ticket07RuntimeThreadsTest {
             return timerHits.get();
         }
 
-        /** 宿主空操作：guest 循环内的安全点锚（interrupt 的打断点）。 */
+        /** Marks guest loop entry and provides a host-call safepoint for interruption. */
         public void spin() {
+            firstSpin.countDown();
         }
 
         /** 捕获求值所在的真实 Context（kill 上报回归测试需要旧 generation Context 引用）。 */
@@ -542,11 +545,21 @@ class Ticket07RuntimeThreadsTest {
                     }
                 });
                 // close 优先：请求标志 → 中断在途候选 → 实例锁上等 owner 退出 → teardown
+                assertTrue(h.recorder.firstSpin.await(30, TimeUnit.SECONDS),
+                        "candidate evaluation must begin before close tests in-flight interruption");
                 assertTimeoutPreemptively(Duration.ofSeconds(30), h.manager::close,
                         "close must preempt the in-flight candidate instead of hanging");
                 assertTrue(h.manager.isClosed(), "close must complete after preemption");
                 NekoReloadException failure = reload.get(30, TimeUnit.SECONDS);
                 assertNotNull(failure, "in-flight reload must fail, never commit after close");
+                Throwable interruption = failure.report().error();
+                while (interruption != null && !(interruption instanceof PolyglotException polyglot
+                        && polyglot.isInterrupted())) {
+                    interruption = interruption.getCause();
+                }
+                assertNotNull(interruption,
+                        "close must retain the actual Graal interruption in its module error cause chain");
+                assertEquals("server/loop.js", failure.report().sourceLocation());
                 assertEquals("close-preempted", failure.report().domain(),
                         "preemption must be observable: " + failure.report().describe());
                 assertEquals(base, h.manager.generationId(), "preempted candidate must not commit");
@@ -594,6 +607,8 @@ class Ticket07RuntimeThreadsTest {
                         return e;
                     }
                 });
+                assertTrue(h.recorder.firstSpin.await(30, TimeUnit.SECONDS),
+                        "candidate evaluation must begin before close tests cancellation points");
                 assertTimeoutPreemptively(Duration.ofSeconds(30), h.manager::close,
                         "close must preempt the candidate at a cancellation point");
                 assertTrue(h.manager.isClosed());
@@ -635,6 +650,23 @@ class Ticket07RuntimeThreadsTest {
     // ---- AC5：watchdog 终止 candidate，active 事件/timer/state 不变；显式 reload 可再来 ----
 
     @Test
+    void ordinaryCandidateFailureRetainsScriptExecutionDomain() throws Exception {
+        try (Harness h = new Harness(ScriptType.SERVER, quietConfig())) {
+            h.writeScript("entry.js", "TestRecorder.record('v1');\n");
+            h.loadAndRun();
+            long base = h.manager.generationId();
+            h.writeScript("entry.js", "throw new Error('candidate-failed');\n");
+            NekoReloadException failure = assertThrows(NekoReloadException.class, h.manager::reloadScripts);
+            assertEquals("script-execution", failure.report().domain());
+            assertEquals(ReloadPhase.EXECUTION, failure.report().phase());
+            assertEquals(base, h.manager.generationId());
+            assertFalse(h.manager.isCloseRequested());
+            assertFalse(h.manager.isActiveFailed());
+            assertEquals("v1", h.recorder.value());
+        }
+    }
+
+    @Test
     void candidateWatchdogRetainsActiveAndRecoversByExplicitReload() throws Exception {
         try (Harness h = new Harness(ScriptType.SERVER, wallClockWatchdogConfig(2))) {
             h.writeScript("entry.js", """
@@ -667,6 +699,8 @@ class Ticket07RuntimeThreadsTest {
                 }
             }, "wall-clock watchdog (2s) must abort the runaway candidate");
             assertNotNull(failure, "runaway candidate must fail, never commit");
+            assertEquals("candidate-killed", failure.report().domain(),
+                    "watchdog termination without close must retain its resource-failure domain");
             assertEquals(ReloadPhase.EXECUTION, failure.report().phase(),
                     "watchdog kill surfaces at execution: " + failure.report().describe());
             assertEquals(base, h.manager.generationId(), "failed candidate must retain the active generation");

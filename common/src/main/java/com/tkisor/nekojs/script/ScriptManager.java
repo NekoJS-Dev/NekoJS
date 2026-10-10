@@ -30,6 +30,7 @@ import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import graal.graalvm.polyglot.Context;
+import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Value;
 
 import java.io.IOException;
@@ -1182,9 +1183,23 @@ public final class ScriptManager implements AutoCloseable {
                 }
                 if (!this.candidateKilled && script.lastError != null) {
                     throw reloadFailure(this.generation + 1, ReloadPhase.EXECUTION,
-                            sourceOf(script), "script-execution", script.lastError);
+                            sourceOf(script), isCloseInterruption(script.lastError)
+                                    ? "close-preempted" : "script-execution", script.lastError);
                 }
             }
+        }
+
+        /** Classifies close's nonterminal Graal interrupt without marking active resources as killed. */
+        private boolean isCloseInterruption(Throwable failure) {
+            if (!lifecycleGate.isCloseRequested() && !lifecycleGate.isClosed()) {
+                return false;
+            }
+            for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+                if (cause instanceof PolyglotException interruption && interruption.isInterrupted()) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static String sourceOf (ScriptContainer script) {
