@@ -2,25 +2,22 @@ package com.tkisor.nekojs.probe.ir;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * 方法 / 构造器 / getter / setter 声明 IR（mutable）。一节点多用，用标志位区分。
- *
- * <p>渲染语义（与 {@code ClassDeclGenerator} 对齐）：
- * <ul>
- *   <li>{@code isConstructor} → 构造器段</li>
- *   <li>{@code isGetter} → getter 段，渲染为 {@code get prop(): T} + 原方法名 {@code xxx(): T} 双发射；
- *       若 {@code setterParamType != null}，附带 {@code set prop(v: T)}</li>
- *   <li>{@code isSetter}（无配对 getter 的独立 setter）→ 不发射（与旧实现一致：从实例方法段排除且无 getter 配对）</li>
- *   <li>其余 → 静态/实例方法段</li>
- * </ul>
+ * Mutable method metadata shared by declaration backends, including constructors and Bean accessors.
+ * Accessor flags retain the real method name and the optional Bean property's read/write types.
+ * Each backend decides how to represent these aliases alongside real fields and overloads.
  */
 public final class MethodDecl {
     public String name;
     public String renameTo;             // null = 用 name
     public final List<MethodParam> params = new ArrayList<>();
     public TypeSlot returnType;         // 构造器可为 null
-    public final List<String> typeParams = new ArrayList<>();   // 方法级泛型名（无上界，与旧输出一致）
+    public final List<String> typeParams = new ArrayList<>();
+    /** Bound slots retain import dependencies for method type parameter declarations. */
+    public final Map<String, List<TypeSlot>> typeParameterBounds = new LinkedHashMap<>();
     public boolean isStatic;
     public boolean isConstructor;
     public boolean isGetter;

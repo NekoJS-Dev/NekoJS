@@ -51,6 +51,33 @@ class ProbeDeclarationCollectionTest {
         assertFalse(filtered.contains(ClassDeclarationFixtures.Adapted.class), filtered.toString());
     }
 
+    @Test
+    void inheritedMethodDependenciesUseTheDeclarationDepthAndPackageFilters() {
+        var snapshot = snapshot(List.of(BindingCatalogEntry.of("Inherited", ScriptType.SERVER,
+                Inherited.class, false)), List.of());
+        var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
+                List.of("com.tkisor.nekojs.probe"), List.of(), List.of(), List.of(), 1, "SMART"));
+        Set<Class<?>> classes = ProbeCoordinator.collectClasses(snapshot, config);
+        assertTrue(classes.contains(ClassDeclarationFixtures.Imported.class), classes.toString());
+        var excluded = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
+                List.of("com.tkisor.nekojs.probe"), List.of(),
+                List.of("com.tkisor.nekojs.probe.testfixture"), List.of(), 1, "SMART"));
+        assertFalse(ProbeCoordinator.collectClasses(snapshot, excluded)
+                .contains(ClassDeclarationFixtures.Imported.class));
+    }
+
+    @Test
+    void genericBoundsEnterTheSameBoundedCollection() {
+        var snapshot = snapshot(List.of(BindingCatalogEntry.of("Bounded", ScriptType.SERVER,
+                Bounded.class, false)), List.of());
+        var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
+                List.of("com.tkisor.nekojs.probe"), List.of(), List.of(), List.of(), 1, "SMART"));
+        Set<Class<?>> classes = ProbeCoordinator.collectClasses(snapshot, config);
+        assertTrue(classes.contains(ClassBound.class), classes.toString());
+        assertTrue(classes.contains(MethodBound.class), classes.toString());
+        assertFalse(classes.contains(BeyondBound.class), classes.toString());
+    }
+
     private static ProbeConfig config(List<String> excluded) {
         return new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("com.tkisor.nekojs.probe"), List.of(), excluded, List.of(), 3, "SMART"));
@@ -65,4 +92,14 @@ class ProbeDeclarationCollectionTest {
 
     public static class Base<T> {}
     public static final class Derived extends Base<ClassDeclarationFixtures.Imported> {}
+    public interface InheritedSource {
+        default ClassDeclarationFixtures.Imported imported() { return null; }
+    }
+    public static final class Inherited implements InheritedSource {}
+    public static class BeyondBound {}
+    public static class ClassBound { public BeyondBound beyond() { return null; } }
+    public static class MethodBound {}
+    public static class Bounded<T extends ClassBound> {
+        public <R extends MethodBound> R identity(R input) { return input; }
+    }
 }

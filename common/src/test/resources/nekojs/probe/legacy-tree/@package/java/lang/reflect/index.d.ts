@@ -1,5 +1,5 @@
 import { $Class, $Runtime$Version } from "java:java/lang";
-import { $Annotation } from "java:java/lang/annotation";
+import { $Annotation, $Annotation_ } from "java:java/lang/annotation";
 import { $Set } from "java:java/util";
 
 declare module "java:java/lang/reflect" {
@@ -61,28 +61,29 @@ declare module "java:java/lang/reflect" {
         set accessible(value: boolean);
         static setAccessible(arg0: $AccessibleObject[], arg1: boolean): void;
         canAccess(arg0: object): boolean;
-        getAnnotationsByType<T>(arg0: $Class<T>): T[];
-        getAnnotation<T>(arg0: $Class<T>): T;
-        getDeclaredAnnotationsByType<T>(arg0: $Class<T>): T[];
-        getDeclaredAnnotation<T>(arg0: $Class<T>): T;
+        getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
+        getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
+        getDeclaredAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
+        getDeclaredAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
         isAnnotationPresent(arg0: $Class<$Annotation>): boolean;
+        setAccessible(arg0: boolean): void;
         trySetAccessible(): boolean;
     }
 
     export interface $AnnotatedElement {
-        getAnnotationsByType<T>(arg0: $Class<T>): T[];
+        getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
         getAnnotations(): $Annotation[];
-        getAnnotation<T>(arg0: $Class<T>): T;
-        getDeclaredAnnotationsByType<T>(arg0: $Class<T>): T[];
+        getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
+        getDeclaredAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
         getDeclaredAnnotations(): $Annotation[];
-        getDeclaredAnnotation<T>(arg0: $Class<T>): T;
+        getDeclaredAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
         isAnnotationPresent(arg0: $Class<$Annotation>): boolean;
     }
 
     export interface $AnnotatedType extends $AnnotatedElement {
         getAnnotatedOwnerType(): $AnnotatedType;
         getAnnotations(): $Annotation[];
-        getAnnotation<T>(arg0: $Class<T>): T;
+        getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
         getDeclaredAnnotations(): $Annotation[];
         getType(): $Type;
     }
@@ -149,9 +150,10 @@ declare module "java:java/lang/reflect" {
         get varArgs(): boolean;
         isVarArgs(): boolean;
         equals(arg0: object): boolean;
-        getAnnotation<T>(arg0: $Class<T>): T;
+        getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
         hashCode(): number;
         newInstance(arg0?: object[]): T;
+        setAccessible(arg0: boolean): void;
         toGenericString(): string;
         toString(): string;
     }
@@ -165,6 +167,8 @@ declare module "java:java/lang/reflect" {
         getAnnotatedReceiverType(): $AnnotatedType;
         get annotatedReturnType(): $AnnotatedType;
         getAnnotatedReturnType(): $AnnotatedType;
+        get annotations(): $Annotation[];
+        getAnnotations(): $Annotation[];
         get declaredAnnotations(): $Annotation[];
         getDeclaredAnnotations(): $Annotation[];
         get declaringClass(): $Class<any>;
@@ -194,8 +198,11 @@ declare module "java:java/lang/reflect" {
         get varArgs(): boolean;
         isVarArgs(): boolean;
         accessFlags(): $Set<$AccessFlag>;
-        getAnnotationsByType<T>(arg0: $Class<T>): T[];
-        getAnnotation<T>(arg0: $Class<T>): T;
+        getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
+        getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
+        getDeclaredAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
+        getDeclaredAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
+        isAnnotationPresent(arg0: $Class<$Annotation>): boolean;
         toGenericString(): string;
     }
 
@@ -220,8 +227,8 @@ declare module "java:java/lang/reflect" {
         isSynthetic(): boolean;
         accessFlags(): $Set<$AccessFlag>;
         equals(arg0: object): boolean;
-        getAnnotationsByType<T>(arg0: $Class<T>): T[];
-        getAnnotation<T>(arg0: $Class<T>): T;
+        getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
+        getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
         getBoolean(arg0: object): boolean;
         getByte(arg0: object): number;
         getChar(arg0: object): string;
@@ -232,6 +239,7 @@ declare module "java:java/lang/reflect" {
         getShort(arg0: object): number;
         get(arg0: object): object;
         hashCode(): number;
+        setAccessible(arg0: boolean): void;
         setBoolean(arg0: object, arg1: boolean): void;
         setByte(arg0: object, arg1: number): void;
         setChar(arg0: object, arg1: string): void;
@@ -301,9 +309,10 @@ declare module "java:java/lang/reflect" {
         get varArgs(): boolean;
         isVarArgs(): boolean;
         equals(arg0: object): boolean;
-        getAnnotation<T>(arg0: $Class<T>): T;
+        getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
         hashCode(): number;
         invoke(arg0: object, arg1?: object[]): object;
+        setAccessible(arg0: boolean): void;
         toGenericString(): string;
         toString(): string;
     }

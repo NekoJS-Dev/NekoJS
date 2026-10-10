@@ -185,7 +185,15 @@ declare module "java:java/net" {
         getHeaderField(arg0: number): string;
         getHeaderField(arg0: string): string;
         getRequestProperty(arg0: string): string;
+        setAllowUserInteraction(arg0: boolean): void;
+        setConnectTimeout(arg0: number): void;
+        setDefaultUseCaches(arg0: boolean): void;
+        setDoInput(arg0: boolean): void;
+        setDoOutput(arg0: boolean): void;
+        setIfModifiedSince(arg0: number): void;
+        setReadTimeout(arg0: number): void;
         setRequestProperty(arg0: string, arg1: string): void;
+        setUseCaches(arg0: boolean): void;
         toString(): string;
     }
 
@@ -197,5 +205,5 @@ declare module "java:java/net" {
         createURLStreamHandler(arg0: string): $URLStreamHandler;
     }
 
-    export type $URLStreamHandlerFactory_<CallbackArg0 = string, CallbackResult = $URLStreamHandler> = ((arg0: CallbackArg0) => CallbackResult) | $URLStreamHandlerFactory;
+    export type $URLStreamHandlerFactory_<CallbackArg0 = string, CallbackResult = $URLStreamHandler> = ((arg0: CallbackArg0) => CallbackResult) | ($URLStreamHandlerFactory & { readonly [Symbol.hasInstance]?: never });
 }

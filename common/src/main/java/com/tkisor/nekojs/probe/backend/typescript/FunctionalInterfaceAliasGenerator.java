@@ -92,8 +92,20 @@ public final class FunctionalInterfaceAliasGenerator {
         Map<TypeVariable<?>, ApiTypeRef> defaults = new HashMap<>();
         for (int index = 0; index < variables.length; index++) {
             String name = "Host" + index;
-            typeParameters.add(name + " = any");
             defaults.put(variables[index], ApiTypeRef.typeVariable(name));
+        }
+        Map<String, String> boundVariables = new HashMap<>();
+        for (int index = 0; index < variables.length; index++) {
+            boundVariables.put(variables[index].getName(), "Host" + index);
+        }
+        for (int index = 0; index < variables.length; index++) {
+            String hostName = "Host" + index;
+            List<String> bounds = Arrays.stream(variables[index].getBounds()).filter(bound -> bound != Object.class)
+                    .map(TypeReflector::toRef).map(bound -> renameBoundVariables(bound, boundVariables))
+                    .map(bound -> TypeScriptClassRenderer.renderTypeParameterBound(bound, hostName, registry,
+                            declarationExpansionPath(cls))).toList();
+            typeParameters.add(hostName + (bounds.isEmpty() ? "" : " extends " + String.join(" & ", bounds))
+                    + " = any");
         }
 
         for (int index = 0; index < alias.signature().parameterTypes().size(); index++) {
@@ -134,9 +146,20 @@ public final class FunctionalInterfaceAliasGenerator {
         if (!typeParameters.isEmpty()) {
             declaration.append('<').append(String.join(", ", typeParameters)).append('>');
         }
-        declaration.append(" = (").append(callback).append(") | ").append(host);
+        // Function.apply/call can structurally imitate a Java SAM method with an unconstrained result.
+        // Host instances lack Function's constructor symbol; executable inputs must satisfy the callback branch.
+        declaration.append(" = (").append(callback).append(") | (").append(host)
+                .append(" & { readonly [Symbol.hasInstance]?: never })");
         declaration.append(";\n");
         return declaration.toString();
+    }
+
+    private static ApiTypeRef renameBoundVariables(ApiTypeRef ref, Map<String, String> names) {
+        if (ref.kind() == ApiTypeRef.Kind.TYPE_VARIABLE) {
+            return ApiTypeRef.typeVariable(names.getOrDefault(ref.name(), ref.name()));
+        }
+        return new ApiTypeRef(ref.kind(), ref.name(), ref.arguments().stream()
+                .map(argument -> renameBoundVariables(argument, names)).toList(), ref.callbackSignature());
     }
 
     /** Renders a functional alias use while keeping host arguments and callback positions distinct. */
@@ -291,7 +314,12 @@ public final class FunctionalInterfaceAliasGenerator {
                         .toArray(String[]::new);
                 String collectionAlias = registry.getCollectionAlias(raw, renderedArguments);
                 if (collectionAlias != null) return collectionAlias;
-                return "$" + tsClassName(raw) + "<" + String.join(", ", renderedArguments) + ">";
+                // An ordinary host container cannot convert its invariant type arguments independently.
+                // Conversion belongs to the outer parameter or callback return, not the container's contents.
+                String[] hostArguments = Arrays.stream(arguments)
+                        .map(argument -> TypeScriptClassRenderer.renderTypeRef(TypeReflector.toRef(argument),
+                                registry, false, expanding)).toArray(String[]::new);
+                return "$" + tsClassName(raw) + "<" + String.join(", ", hostArguments) + ">";
             }
         }
         return TypeScriptClassRenderer.renderTypeRef(

@@ -3,6 +3,7 @@ package com.tkisor.nekojs.probe.ir;
 import com.tkisor.nekojs.api.JavaMemberIndex;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
 
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
@@ -20,11 +21,11 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * {@code Class<?>} → {@link TypeDecl} 反射器。镜像旧 {@code ClassDeclGenerator} 的成员枚举与 getter/setter 推断，
- * 保证 {@link TypeScriptClassRenderer} 渲染未编辑 IR 时与旧实现逐字一致。
+ * Reflects script-visible Java members into {@link TypeDecl}, retaining remapping and Bean accessor pairing.
+ * Class declarations include callable interface methods and inherited overloads with contextual generic types.
  *
- * <p>每个类型槽产出 {@link TypeSlot}：{@code sourceType} 供 TS 默认渲染（TypeConverter，零回归），
- * {@code ref}（ApiTypeRef，best-effort）供 Python（Phase 3）与 modify_type 编辑使用。
+ * <p>Each {@link TypeSlot} retains Java signature metadata for contextual input aliases and a language-neutral
+ * {@link ApiTypeRef} for rendering and type edits.
  */
 public final class TypeReflector {
 
@@ -163,20 +164,12 @@ public final class TypeReflector {
     }
 
     /**
-     * 镜像 ClassDeclGenerator.generateClass 的方法枚举：
-     * 非静态 getXxx/isXxx(0 参) → getter；其配对 setXxx(1 参) → setter（isSetter 标志）。
-     * 其余方法按原样收集，由 renderer 按标志分段。
-     *
-     * <p>同一属性可能存在多个 getter 候选（协变覆盖 vs 其 bridge 方法、getFoo()/isFoo() 并存），
-     * JVM 规范不保证 getDeclaredMethods 的返回顺序——first-seen 去重会跨 JVM 漂移，且 bridge 胜出时
-     * 渲染出错误的（超类型）返回类型，事后排序无法修复选择。故先对候选做确定性排序：
-     * 非 synthetic/bridge 优先（协变覆盖总是胜出 bridge），同优先级按签名键字典序（getFoo 先于 isFoo）。
-     * 排序只影响候选选择；输出列表在 {@link #reflect} 末尾仍按 methodKey 全量排序，
-     * bridge 方法本身保留在输出中（legacy ProbeJS parity，如 {@code append(arg0: string): $Appendable}）。
+     * Reflects declared members and callable inherited interface methods with contextual generic types.
+     * Declared accessors keep precedence; candidates are sorted before Bean pairing, and bridges are omitted.
+     * Inherited overloads remain separate from a class's same-name methods instead of being hidden by them.
      */
     private void reflectMethodsLikeClassDecl(Class<?> cls, TypeDecl decl) {
-        Method[] declared = cls.getDeclaredMethods();
-        Arrays.sort(declared, TypeReflector::compareCandidates);
+        List<Method> declared = declarationMethods(cls);
         Set<String> processedProperties = new HashSet<>();
         for (var method : declared) {
             if (!Modifier.isPublic(method.getModifiers())) continue;
@@ -189,28 +182,128 @@ public final class TypeReflector {
             String jsName = jsName(method);
             if (jsName == null) continue;
 
-            // 非静态 getXxx/isXxx(0 参) → getter（按属性名去重，首个出现者胜出；重复者整体跳过，
-            // 镜像旧实现：不双发射原方法名）。getter 判定基于 JS 名：neko$getId remap 为 getId
-            // 后与运行时 Graal getter 属性语义一致（脚本访问 .id）
+            // Select one Bean alias per exposed property, retaining the other real accessor methods.
             if (!isStatic && isGetterName(jsName) && method.getParameterCount() == 0) {
                 String propName = getPropertyName(jsName);
                 if (propName != null && processedProperties.add(propName)) {
-                    MethodDecl getter = reflectMethod(method);
+                    MethodDecl getter = reflectClassMethod(cls, method);
                     getter.isGetter = true;
                     getter.property = propName;
-                    getter.setterParamType = findSetterParamSlot(cls, propName);
+                    getter.setterParamType = findSetterParamSlot(cls, propName, declared);
                     decl.methods.add(getter);
+                } else {
+                    decl.methods.add(reflectClassMethod(cls, method));
                 }
                 continue;
             }
 
-            MethodDecl m = reflectMethod(method);
-            // 非静态 setXxx(1 参) → isSetter（renderer 实例方法段据此排除）
+            MethodDecl m = reflectClassMethod(cls, method);
+            // Mark Bean setters while retaining their real callable method signatures.
             if (!isStatic && isSetterName(jsName) && method.getParameterCount() == 1) {
                 m.isSetter = true;
             }
             decl.methods.add(m);
         }
+    }
+
+    /** Returns declaration candidates shared by reflection and bounded dependency collection. */
+    public static List<Method> declarationMethods(Class<?> cls) {
+        List<Method> methods = new ArrayList<>(Arrays.asList(cls.getDeclaredMethods()));
+        methods.sort(TypeReflector::compareCandidates);
+        if (!cls.isEnum() && !cls.isInterface()) {
+            // TypeScript implements clauses do not inherit Java's default interface methods or overloads.
+            // Keep declared accessor precedence; getMethods selects actual overrides and excludes private members.
+            Method[] visible = cls.getMethods();
+            Set<String> names = new HashSet<>();
+            // Object methods are required only when an implemented interface explicitly redeclares them.
+            Set<String> interfaceNames = new HashSet<>();
+            for (Class<?> ancestor = cls; ancestor != null; ancestor = ancestor.getSuperclass()) {
+                for (Class<?> iface : ancestor.getInterfaces()) {
+                    List<String> required = Arrays.stream(iface.getMethods())
+                            .filter(method -> !Modifier.isStatic(method.getModifiers()))
+                            .map(TypeReflector::jsName).filter(name -> name != null).toList();
+                    interfaceNames.addAll(required);
+                    if (ancestor == cls) names.addAll(required);
+                }
+            }
+            // Ordinary ancestor implementations remain inherited from the parent declaration.
+            // Object operations need explicit declarations when an inherited interface requires them.
+            Arrays.stream(Object.class.getMethods()).map(TypeReflector::jsName)
+                    .filter(name -> name != null && interfaceNames.contains(name)).forEach(names::add);
+            Set<String> staticNames = new HashSet<>();
+            Set<String> fieldNames = Arrays.stream(cls.getDeclaredFields())
+                    .filter(field -> Modifier.isPublic(field.getModifiers()) && !Modifier.isStatic(field.getModifiers()))
+                    .map(java.lang.reflect.Field::getName).collect(java.util.stream.Collectors.toSet());
+            methods.stream().filter(method -> Modifier.isPublic(method.getModifiers())
+                            && Modifier.isStatic(method.getModifiers()))
+                    .map(TypeReflector::jsName).filter(name -> name != null).forEach(staticNames::add);
+            methods.stream().filter(method -> Modifier.isPublic(method.getModifiers())
+                            && !Modifier.isStatic(method.getModifiers()))
+                    .map(TypeReflector::jsName).filter(name -> name != null).forEach(names::add);
+            Arrays.stream(visible).filter(method -> method.getDeclaringClass().isInterface()
+                            && !Modifier.isStatic(method.getModifiers()))
+                    .map(TypeReflector::jsName).filter(name -> name != null).forEach(names::add);
+            // An inherited Bean getter can own reads of a public subclass field with a different type.
+            Arrays.stream(visible).filter(method -> !Modifier.isStatic(method.getModifiers())
+                            && method.getParameterCount() == 0)
+                    .map(TypeReflector::jsName).filter(name -> name != null && isGetterName(name)
+                            && fieldNames.contains(getPropertyName(name))).forEach(names::add);
+            // Real methods own names that would otherwise become Bean aliases. A property can select
+            // another getter, so close this finite name set before pairing writes, independent of reflection order.
+            int previousNames;
+            do {
+                previousNames = names.size();
+                for (Method method : visible) {
+                    String name = jsName(method);
+                    if (!Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == 0
+                            && name != null && names.contains(name)) {
+                        String property = getPropertyName(name);
+                        if (property != null) {
+                            names.add(property);
+                            names.add(beanSetterName(property));
+                        }
+                    }
+                }
+            } while (names.size() != previousNames);
+            // Declaring one overload on a TypeScript subclass hides inherited same-name overloads.
+            // Include the actual superclass overloads for each emitted instance method name as well.
+            List<Method> inherited = Arrays.stream(visible)
+                    .filter(method -> method.getDeclaringClass() != cls
+                            && (method.getDeclaringClass() != Object.class || interfaceNames.contains(jsName(method)))
+                            && (Modifier.isStatic(method.getModifiers())
+                                ? !method.getDeclaringClass().isInterface() && staticNames.contains(jsName(method))
+                                : names.contains(jsName(method))))
+                    .sorted(TypeReflector::compareCandidates)
+                    .toList();
+            methods.addAll(inherited);
+        }
+        return methods;
+    }
+
+    private MethodDecl reflectClassMethod(Class<?> cls, Method method) {
+        MethodDecl declaration = reflectMethod(method);
+        if (method.getDeclaringClass() == cls) return declaration;
+        FunctionalInterfaceResolver.Signature signature = inheritedSignature(cls, method);
+        reflectTypeParameters(declaration, signature.typeParameters());
+        declaration.returnType = TypeSlot.of(signature.returnType(), toRef(signature.returnType()));
+        for (int index = 0; index < declaration.params.size(); index++) {
+            Type type = signature.parameterTypes().get(index);
+            if (declaration.params.get(index).varargs) {
+                type = type instanceof GenericArrayType array ? array.getGenericComponentType()
+                        : ((Class<?>) type).getComponentType();
+            }
+            declaration.params.get(index).type = TypeSlot.of(type, toRef(type));
+        }
+        return declaration;
+    }
+
+    private static FunctionalInterfaceResolver.Signature inheritedSignature(Class<?> cls, Method method) {
+        FunctionalInterfaceResolver.Signature signature = FunctionalInterfaceResolver.resolve(cls, method);
+        if (signature == null) {
+            throw new IllegalStateException("[NEKO-4029] Inherited method signature is unreachable: "
+                    + cls.getName() + " -> " + method.toGenericString());
+        }
+        return signature;
     }
 
     /**
@@ -254,13 +347,26 @@ public final class TypeReflector {
         }
         m.isStatic = Modifier.isStatic(method.getModifiers());
         m.returnType = TypeSlot.of(method.getGenericReturnType(), toRef(method.getGenericReturnType()));
-        for (TypeVariable<?> tv : method.getTypeParameters()) {
-            m.typeParams.add(tv.getName());
-        }
+        reflectTypeParameters(m, List.of(method.getTypeParameters()));
         reflectParamsInto(m, method);
         m.docs.addAll(AnnotatedDocs.executableDocs(method));
         m.overloads.addAll(AnnotatedDocs.overloads(method));
         return m;
+    }
+
+    private static void reflectTypeParameters(MethodDecl method, List<TypeVariable<?>> variables) {
+        method.typeParams.clear();
+        method.typeParameterBounds.clear();
+        for (TypeVariable<?> variable : variables) {
+            List<TypeSlot> bounds = new ArrayList<>();
+            for (Type bound : variable.getBounds()) {
+                if (bound == Object.class) continue;
+                TypeSlot slot = TypeSlot.of(bound, toRef(bound));
+                bounds.add(slot);
+            }
+            method.typeParams.add(variable.getName());
+            if (!bounds.isEmpty()) method.typeParameterBounds.put(variable.getName(), List.copyOf(bounds));
+        }
     }
 
     /**
@@ -295,26 +401,31 @@ public final class TypeReflector {
         }
     }
 
-    /**
-     * 配对 setter 的入参槽：同名 setXxx(1 参) 的公开重载里确定性取一个——非 synthetic/bridge 优先，
-     * 同优先级按泛型参数类型字典序（首个匹配胜出的旧实现依赖 getDeclaredMethods 顺序，跨 JVM 会漂移）。
-     */
-    private TypeSlot findSetterParamSlot(Class<?> cls, String propName) {
-        String setterName = "set" + propName.substring(0, 1).toUpperCase(Locale.ROOT) + propName.substring(1);
+    /** Prefers declared setters, then pairs inherited candidates deterministically in the host class. */
+    private TypeSlot findSetterParamSlot(Class<?> cls, String propName, List<Method> methods) {
+        String setterName = beanSetterName(propName);
         Method best = null;
-        for (Method method : cls.getDeclaredMethods()) {
+        for (Method method : methods) {
             String jsName = jsName(method);
             if (jsName == null || !jsName.equals(setterName) || method.getParameterCount() != 1
-                    || !Modifier.isPublic(method.getModifiers())) {
+                    || !Modifier.isPublic(method.getModifiers()) || Modifier.isStatic(method.getModifiers())) {
                 continue;
             }
-            if (best == null || compareCandidates(method, best) < 0) {
+            if (best == null || (method.getDeclaringClass() == cls && best.getDeclaringClass() != cls)
+                    || ((method.getDeclaringClass() == cls) == (best.getDeclaringClass() == cls)
+                    && compareCandidates(method, best) < 0)) {
                 best = method;
             }
         }
         if (best == null) return null;
-        Type t = best.getGenericParameterTypes()[0];
+        Type t = best.getDeclaringClass() != cls
+                ? inheritedSignature(cls, best).parameterTypes().get(0)
+                : best.getGenericParameterTypes()[0];
         return TypeSlot.of(t, toRef(t));
+    }
+
+    private static String beanSetterName(String property) {
+        return "set" + property.substring(0, 1).toUpperCase(Locale.ROOT) + property.substring(1);
     }
 
     /** getter 名判定基于 JS 名（remap 后）：neko$getId → getId 即 getter 形态。 */

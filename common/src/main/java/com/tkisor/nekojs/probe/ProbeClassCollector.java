@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
+import com.tkisor.nekojs.probe.ir.TypeReflector;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -13,6 +14,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -96,16 +98,22 @@ final class ProbeClassCollector {
             try {
                 if (cls.getGenericSuperclass() != null) collectTypeToQueue(cls.getGenericSuperclass(), queue, nextDepth);
                 for (Type iface : cls.getGenericInterfaces()) collectTypeToQueue(iface, queue, nextDepth);
+                for (TypeVariable<?> variable : cls.getTypeParameters()) {
+                    for (Type bound : variable.getBounds()) collectTypeToQueue(bound, queue, nextDepth);
+                }
 
                 for (Constructor<?> ctor : cls.getDeclaredConstructors()) {
                     if (Modifier.isPublic(ctor.getModifiers())) {
                         for (Type p : ctor.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
                     }
                 }
-                for (Method method : cls.getDeclaredMethods()) {
+                for (Method method : TypeReflector.declarationMethods(cls)) {
                     if (Modifier.isPublic(method.getModifiers())) {
                         collectTypeToQueue(method.getGenericReturnType(), queue, nextDepth);
                         for (Type p : method.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
+                        for (TypeVariable<?> variable : method.getTypeParameters()) {
+                            for (Type bound : variable.getBounds()) collectTypeToQueue(bound, queue, nextDepth);
+                        }
                     }
                 }
                 for (Field field : cls.getDeclaredFields()) {
@@ -163,7 +171,7 @@ final class ProbeClassCollector {
         } else if (type instanceof GenericArrayType gat) {
             collectTypeToQueue(gat.getGenericComponentType(), queue, depth);
         }
-        // Ordinary type-variable and wildcard bounds remain unvisited to keep the scan bounded.
-        // Functional-interface arguments above are the sole exception required by callback declarations.
+        // Declaration parameter bounds are queued explicitly at their owner's next depth.
+        // Other nested type variables and ordinary wildcard bounds do not expand the scan.
     }
 }

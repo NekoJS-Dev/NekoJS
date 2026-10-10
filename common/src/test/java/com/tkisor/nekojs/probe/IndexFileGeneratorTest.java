@@ -10,6 +10,7 @@ import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
+import com.tkisor.nekojs.probe.testfixture.ClassDeclarationFixtures;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -23,6 +24,21 @@ import static org.junit.jupiter.api.Assertions.*;
  * 惰性别名解析，input-only）、跨包 import 追加（对齐适配器别名 {@code $Foo_} 的导入机制）。
  */
 class IndexFileGeneratorTest {
+
+    public static class SignatureOnly<T extends ClassDeclarationFixtures.Imported> {
+        public SignatureOnly(ClassDeclarationFixtures.Adapted input) {}
+    }
+
+    @Test
+    void classBoundsAndConstructorInputsRetainTheirImports() {
+        var declaration = new TypeReflector().reflect(SignatureOnly.class);
+        var imports = generator(new TypeAliasRegistry()).collectImportsFromIr(declaration,
+                SignatureOnly.class.getPackageName());
+        assertTrue(imports.contains(ClassDeclarationFixtures.Imported.class.getName()),
+                imports.toString());
+        assertTrue(imports.contains(ClassDeclarationFixtures.Adapted.class.getName()),
+                imports.toString());
+    }
 
     private static IndexFileGenerator generator(TypeAliasRegistry registry) {
         return new IndexFileGenerator(new TypeScriptClassRenderer(registry),
@@ -113,7 +129,7 @@ class IndexFileGeneratorTest {
 
         assertTrue(out.contains("export type $Function_<Host0 = any, Host1 = any, CallbackArg0 = Host0, CallbackResult = Host1> ="), out);
         assertTrue(out.contains("=> CallbackResult"), out);
-        assertTrue(out.contains("| $Function<Host0, Host1>;"),
+        assertTrue(out.contains("| ($Function<Host0, Host1> & { readonly [Symbol.hasInstance]?: never });"),
                 "the callback alias must also accept the Java host interface instance: " + out);
     }
 }

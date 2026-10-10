@@ -14,18 +14,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * {@link TypeDecl} → TypeScript 类/接口/枚举声明块（不含 {@code declare module} 外壳）。
- *
- * <p>类型槽**唯一**经 {@link TypeSlot#ref}（{@link ApiTypeRef}）渲染——TS 与 Python 共用同一份
- * 类型语义（映射在 {@link TypeReflector#toRef}）；{@code sourceType} 不参与渲染（仅排序/溯源）。
- *
- * <p>参数位置（{@code input=true}）应用输入别名放宽（适配器/枚举/集合别名，查
- * {@link TypeAliasRegistry}），语义与旧 TypeConverter 逐项对齐。
- *
- * <p>getter 覆盖表（{@link #overrideGetter}）镜像 {@code ClassDeclGenerator.overrideGetter}：
- * {@code probe.modify_type}/{@code probe.assign_type} 把类标记 mutated 后改走本 renderer 重渲染，
- * 旧路径上注册的 getter 覆盖（如 RecipeEventJS.recipes → DocumentedRecipes）必须在此同样生效，
- * 否则覆盖会随重渲染丢失。
+ * Renders shared declarations as TypeScript class, interface and enum blocks.
+ * Slots use their neutral {@link ApiTypeRef}; contextual callback input aliases retain signature metadata.
+ * Input aliases apply at conversion boundaries while ordinary host containers keep their type arguments.
+ * Bean aliases supplement real accessors, yielding to existing instance fields or methods.
+ * Getter overrides remain available when Probe edits trigger rendering again.
  */
 public final class TypeScriptClassRenderer {
     private final TypeAliasRegistry aliases;
@@ -42,8 +35,9 @@ public final class TypeScriptClassRenderer {
     public record GetterOverride(String returnType, String importStatement) {}
 
     /**
-     * 覆盖某类 getter 的返回类型（键为 getter 属性名，镜像 {@code ClassDeclGenerator#overrideGetter}）。
-     * 命中覆盖时 getter 段只发射 {@code get prop(): T}（跳过原方法名双发射与 setter），与旧实现逐字一致。
+     * Overrides a Bean property's read type, keyed by the exposed property name.
+     * An ordinary Bean alias emits only the overridden getter. A field-backed projection retains
+     * its actual getter method and write type while overriding the property's read type.
      */
     public void overrideGetter(Class<?> cls, String getterName, String returnType, String importStatement) {
         getterOverrides.computeIfAbsent(cls.getName(), k -> new LinkedHashMap<>())
@@ -105,17 +99,31 @@ public final class TypeScriptClassRenderer {
             if (!f.hidden && f.isStatic) sb.append(formatField(f, true));
         }
         for (FieldDecl f : d.fields) {
-            if (!f.hidden && !f.isStatic) sb.append(formatField(f, false));
+            if (f.hidden || f.isStatic) continue;
+            MethodDecl getter = d.beanGetterForField(f);
+            if (getter == null) {
+                sb.append(formatField(f, false));
+            } else {
+                appendDoc(sb, "        ", f.docs);
+                GetterOverride override = getterOverrides.getOrDefault(d.fqn, Map.of()).get(getter.property);
+                sb.append("        get ").append(tsMemberName(f.effectiveName())).append("(): ")
+                        .append(override == null ? renderSlot(getter.returnType, false) : override.returnType())
+                        .append(";\n");
+                TypeSlot writeType = d.beanFieldWriteType(f, getter);
+                if (writeType != null) {
+                    sb.append("        set ").append(tsMemberName(f.effectiveName())).append("(value: ")
+                            .append(renderSlot(writeType, true)).append(");\n");
+                }
+            }
         }
-        // getter 段：get prop() + 原方法名() 双发射 + setter
+        Set<String> propertyConflicts = beanPropertyConflicts(d);
+        // Bean aliases supplement the real accessor methods unless an instance member owns the name.
         for (MethodDecl m : d.methods) {
             if (m.hidden || !m.isGetter) continue;
             // 属性名非合法 TS 标识符（数字开头，如 get2DigitYearStart → 2DigitYearStart）：
             // 只渲染原方法名（getter 标记使方法段排除它，这里降级补发），脚本仍可调用
-            if (!isValidTsIdentifier(m.property)) {
-                appendDoc(sb, "        ", m.docs);
-                sb.append("        ").append(tsMemberName(m.effectiveName())).append("(): ")
-                  .append(renderSlot(m.returnType, false)).append(";\n");
+            if (!isValidTsIdentifier(m.property) || propertyConflicts.contains(m.property)) {
+                sb.append(formatMethod(m, false));
                 continue;
             }
             appendDoc(sb, "        ", m.docs);
@@ -139,13 +147,24 @@ public final class TypeScriptClassRenderer {
             if (m.hidden || m.isConstructor || !m.isStatic) continue;
             sb.append(formatMethod(m, true));
         }
-        // 实例方法（排除 getter/setter/构造器/静态）
+        // Explicit setters remain callable even when their Bean alias conflicts or no getter exists.
         for (MethodDecl m : d.methods) {
-            if (m.hidden || m.isConstructor || m.isStatic || m.isGetter || m.isSetter) continue;
+            if (m.hidden || m.isConstructor || m.isStatic || m.isGetter) continue;
             sb.append(formatMethod(m, false));
         }
         sb.append("    }\n");
         return sb.toString();
+    }
+
+    private static Set<String> beanPropertyConflicts(TypeDecl declaration) {
+        Set<String> names = new LinkedHashSet<>();
+        for (FieldDecl field : declaration.fields) {
+            if (!field.hidden && !field.isStatic) names.add(field.effectiveName());
+        }
+        for (MethodDecl method : declaration.methods) {
+            if (!method.hidden && !method.isConstructor && !method.isStatic) names.add(method.effectiveName());
+        }
+        return names;
     }
 
     private String renderInterface(TypeDecl d) {
@@ -213,7 +232,8 @@ public final class TypeScriptClassRenderer {
         sb.append("<");
         sb.append(d.typeParams.stream().map(tp -> {
             String s = tp.name;
-            if (tp.bound != null) s += " extends " + renderSlot(tp.bound, false);
+            if (tp.bound != null) s += " extends " + renderTypeParameterBound(tp.bound.ref, tp.name, aliases,
+                    new LinkedHashSet<>());
             return s;
         }).collect(Collectors.joining(", ")));
         sb.append(">");
@@ -245,7 +265,12 @@ public final class TypeScriptClassRenderer {
         if (isStatic) sb.append("static ");
         sb.append(tsMemberName(m.effectiveName()));
         if (!m.typeParams.isEmpty()) {
-            sb.append("<").append(String.join(", ", m.typeParams)).append(">");
+            sb.append("<").append(m.typeParams.stream().map(name -> {
+                List<TypeSlot> bounds = m.typeParameterBounds.getOrDefault(name, List.of());
+                return name + (bounds.isEmpty() ? "" : " extends " + bounds.stream()
+                        .map(bound -> renderTypeParameterBound(bound.ref, name, aliases, new LinkedHashSet<>()))
+                        .collect(Collectors.joining(" & ")));
+            }).collect(Collectors.joining(", "))).append(">");
         }
         sb.append("(");
         appendParameters(sb, m.params);
@@ -380,6 +405,22 @@ public final class TypeScriptClassRenderer {
         return renderTypeRef(ref, null, false);
     }
 
+    /** Retains self-comparable Java bounds after boxed values project to JavaScript primitives. */
+    public static String renderTypeParameterBound(ApiTypeRef ref, String variableName,
+                                                  TypeAliasRegistry aliases, Set<String> expanding) {
+        String hostType = renderTypeRef(ref, aliases, false, expanding);
+        if (ref != null && ref.kind() == ApiTypeRef.Kind.SYMBOL
+                && "java:java.lang.Comparable".equals(ref.name()) && ref.arguments().size() == 1) {
+            ApiTypeRef argument = ref.arguments().get(0);
+            if (argument.kind() == ApiTypeRef.Kind.TYPE_VARIABLE && variableName.equals(argument.name())) {
+                // String, numeric and boolean wrappers all implement Comparable of their own Java type.
+                // Other Comparable bounds retain their exact host constraint.
+                return "(" + hostType + " | string | number | boolean)";
+            }
+        }
+        return hostType;
+    }
+
     /**
      * ApiTypeRef → TS。{@code input=true} 且提供别名表时应用输入别名放宽——语义与旧
      * TypeConverter 逐项对齐：参数化符号先查集合别名（结构化实参数组，防嵌套泛型被
@@ -406,7 +447,7 @@ public final class TypeScriptClassRenderer {
         };
     }
 
-    /** SYMBOL 渲染：input 别名（集合/类）优先，否则 {@code $Name<实参...>}（实参递归、input 传播）。 */
+    /** Applies conversion at the outer symbol while ordinary host type arguments retain their identity. */
     private static String renderSymbol(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input,
                                        Set<String> expandingFunctionalAliases) {
         String fqn = fqnOfSymbol(ref.name());
@@ -433,7 +474,7 @@ public final class TypeScriptClassRenderer {
         if (!ref.arguments().isEmpty()) {
             sb.append('<');
             sb.append(ref.arguments().stream()
-                    .map(a -> renderTypeRef(a, aliases, input, expandingFunctionalAliases))
+                    .map(a -> renderTypeRef(a, aliases, false, expandingFunctionalAliases))
                     .collect(Collectors.joining(", ")));
             sb.append('>');
         }

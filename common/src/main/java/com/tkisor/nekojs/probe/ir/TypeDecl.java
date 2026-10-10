@@ -47,6 +47,18 @@ public final class TypeDecl {
         return renameTo;
     }
 
+    /** Graal reads a same-name Bean getter before the public instance field. */
+    public MethodDecl beanGetterForField(FieldDecl field) {
+        if (field.hidden || field.isStatic) return null;
+        return methods.stream().filter(method -> !method.hidden && method.isGetter
+                && field.effectiveName().equals(method.property)).findFirst().orElse(null);
+    }
+
+    /** A Bean setter owns writes when present; otherwise a non-final field remains writable. */
+    public TypeSlot beanFieldWriteType(FieldDecl field, MethodDecl getter) {
+        return getter.setterParamType != null ? getter.setterParamType : field.isFinal ? null : field.type;
+    }
+
     /** 类级泛型参数（名字 + 可选上界 TypeSlot）。 */
     public static final class TypeParam {
         public final String name;

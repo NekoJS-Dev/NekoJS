@@ -344,11 +344,7 @@ public final class IndexFileGenerator {
     //  IR 唯一路径（Phase 2.7）：单次反射 → TypeDecl → 声明 + import 集合
     // ------------------------------------------------------------------
 
-    /**
-     * 从已反射的 {@link TypeDecl} 计算 import 集合，镜像旧基于 {@code Class<?>} 直接反射的
-     * 逐项语义（父类/接口/公开字段/公开方法的参数与返回类型——TypeReflector 的 IR 枚举
-     * 与旧实现逐项对齐），保证切换 IR 唯一路径后包级 import 块字节不变。
-     */
+    /** Collects imports from reflected heritage, generic bounds, fields and executable signatures. */
     public Set<String> collectImportsFromIr(TypeDecl decl, String currentPackage) {
         Set<String> imports = new LinkedHashSet<>();
 
@@ -361,14 +357,25 @@ public final class IndexFileGenerator {
         for (TypeSlot iface : decl.interfaces) {
             collectTypeImports(iface.sourceType, imports, currentPackage);
         }
+        for (TypeDecl.TypeParam parameter : decl.typeParams) {
+            if (parameter.bound != null) collectTypeImports(parameter.bound.sourceType, imports, currentPackage);
+        }
+        for (MethodDecl constructor : decl.constructors) {
+            for (MethodDecl.MethodParam parameter : constructor.params) {
+                collectTypeImports(parameter.type.sourceType, imports, currentPackage);
+            }
+        }
 
         // 公开字段（IR 字段集 = 旧实现的公开字段集，含枚举常量）
         for (FieldDecl field : decl.fields) {
             collectTypeImports(field.type.sourceType, imports, currentPackage);
         }
 
-        // 公开方法（IR 方法集 = 旧实现的公开方法集；构造器与旧实现一致不收集）
+        // Bounds and parameters share the same signature metadata as declaration rendering.
         for (MethodDecl method : decl.methods) {
+            for (List<TypeSlot> bounds : method.typeParameterBounds.values()) {
+                for (TypeSlot bound : bounds) collectTypeImports(bound.sourceType, imports, currentPackage);
+            }
             collectTypeImports(method.returnType != null ? method.returnType.sourceType : null, imports, currentPackage);
             for (MethodDecl.MethodParam p : method.params) {
                 collectTypeImports(p.type.sourceType, imports, currentPackage);

@@ -1,6 +1,9 @@
 package com.tkisor.nekojs.core.reflect;
 
 import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.GenericDeclaration;
+import java.lang.reflect.AnnotatedType;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -17,14 +20,20 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
 
-/** Resolves a functional interface's single abstract method and its inherited generic signature. */
+/** Resolves functional methods and contextual generic signatures through class and interface hierarchies. */
 public final class FunctionalInterfaceResolver {
     private FunctionalInterfaceResolver() {}
 
-    /** The SAM declaration with type variables substituted from the declared interface path. */
-    public record Signature(Method method, List<Type> parameterTypes, Type returnType) {
+    /** A method signature with type variables substituted from the declared hierarchy. */
+    public record Signature(Method method, List<Type> parameterTypes, Type returnType,
+                            List<TypeVariable<?>> typeParameters) {
         public Signature {
             parameterTypes = List.copyOf(parameterTypes);
+            typeParameters = List.copyOf(typeParameters);
+        }
+
+        public Signature(Method method, List<Type> parameterTypes, Type returnType) {
+            this(method, parameterTypes, returnType, List.of(method.getTypeParameters()));
         }
     }
 
@@ -34,15 +43,43 @@ public final class FunctionalInterfaceResolver {
         Method sam = singleAbstractMethod(raw);
         if (sam == null) return null;
 
-        Map<TypeVariable<?>, Type> arguments = interfaceArguments(declared, sam.getDeclaringClass(), Map.of(),
+        return resolve(declared, sam);
+    }
+
+    /** Resolves an inherited method against a class or interface's actual generic hierarchy. */
+    public static Signature resolve(Type declared, Method method) {
+        Map<TypeVariable<?>, Type> arguments = interfaceArguments(declared, method.getDeclaringClass(), Map.of(),
                 new HashSet<>());
         if (arguments == null) return null;
 
-        List<Type> parameters = Arrays.stream(sam.getGenericParameterTypes())
+        Set<String> classNames = new HashSet<>();
+        Class<?> host = rawClass(declared);
+        if (host != null) {
+            for (TypeVariable<?> variable : host.getTypeParameters()) classNames.add(variable.getName());
+        }
+        Set<String> usedNames = new HashSet<>(classNames);
+        for (TypeVariable<?> variable : method.getTypeParameters()) usedNames.add(variable.getName());
+        List<TypeVariable<?>> variables = new java.util.ArrayList<>();
+        for (TypeVariable<?> variable : method.getTypeParameters()) {
+            String name = variable.getName();
+            if (classNames.contains(name)) {
+                int suffix = 1;
+                while (usedNames.contains(name + suffix)) suffix++;
+                name += suffix;
+                usedNames.add(name);
+            }
+            // Context substitution can introduce a class variable with the same spelling as a method variable.
+            // Preserve their distinct identities in both the signature and its method bounds.
+            TypeVariable<?> resolved = new ResolvedTypeVariable(variable, name, arguments);
+            arguments.put(variable, resolved);
+            variables.add(resolved);
+        }
+
+        List<Type> parameters = Arrays.stream(method.getGenericParameterTypes())
                 .map(type -> substitute(type, arguments, new HashSet<>()))
                 .toList();
-        Type result = substitute(sam.getGenericReturnType(), arguments, new HashSet<>());
-        return new Signature(sam, parameters, result);
+        Type result = substitute(method.getGenericReturnType(), arguments, new HashSet<>());
+        return new Signature(method, parameters, result, variables);
     }
 
     /** Returns the raw class for class and parameterized reflection types. */
@@ -112,7 +149,8 @@ public final class FunctionalInterfaceResolver {
                 Map<TypeVariable<?>, Type> resolved = interfaceArguments(parent, target, arguments, path);
                 if (resolved != null) return resolved;
             }
-            return null;
+            Type superclass = raw.getGenericSuperclass();
+            return superclass == null ? null : interfaceArguments(superclass, target, arguments, path);
         } finally {
             path.remove(raw);
         }
@@ -123,7 +161,7 @@ public final class FunctionalInterfaceResolver {
         if (declared instanceof TypeVariable<?> variable) {
             if (!visited.add(variable)) return variable;
             Type replacement = arguments.get(variable);
-            // Actual arguments have already been resolved as each inherited interface edge is visited.
+            // Actual arguments have already been resolved as each inherited hierarchy edge is visited.
             // Do not substitute inside a replacement again: a nested type can mention the same class
             // TypeVariable as the raw interface (Function<R, V> inside Function<T, R>), where that
             // occurrence belongs to the enclosing declaration, not the nested raw type's argument map.
@@ -193,6 +231,67 @@ public final class FunctionalInterfaceResolver {
         public String getTypeName() {
             return genericComponentType.getTypeName() + "[]";
         }
+    }
+
+    private record ResolvedTypeVariable(TypeVariable<?> source, String name, Map<TypeVariable<?>, Type> arguments)
+            implements TypeVariable<GenericDeclaration> {
+        @Override
+        public int hashCode() { return name.hashCode() ^ source.getGenericDeclaration().hashCode(); }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof TypeVariable<?> variable && name.equals(variable.getName())
+                    && source.getGenericDeclaration().equals(variable.getGenericDeclaration());
+        }
+
+        @Override
+        public String toString() { return name; }
+
+        @Override
+        public Type[] getBounds() {
+            return Arrays.stream(source.getBounds())
+                    .map(bound -> substitute(bound, arguments, new HashSet<>())).toArray(Type[]::new);
+        }
+
+        @Override
+        public GenericDeclaration getGenericDeclaration() { return source.getGenericDeclaration(); }
+
+        @Override
+        public String getName() { return name; }
+
+        @Override
+        public String getTypeName() { return name; }
+
+        @Override
+        public AnnotatedType[] getAnnotatedBounds() {
+            return Arrays.stream(source.getAnnotatedBounds())
+                    .map(bound -> new ResolvedAnnotatedType(bound,
+                            substitute(bound.getType(), arguments, new HashSet<>())))
+                    .toArray(AnnotatedType[]::new);
+        }
+
+        @Override
+        public <T extends Annotation> T getAnnotation(Class<T> annotationClass) { return source.getAnnotation(annotationClass); }
+
+        @Override
+        public Annotation[] getAnnotations() { return source.getAnnotations(); }
+
+        @Override
+        public Annotation[] getDeclaredAnnotations() { return source.getDeclaredAnnotations(); }
+    }
+
+    private record ResolvedAnnotatedType(AnnotatedType source, Type type) implements AnnotatedType {
+        @Override
+        public Type getType() { return type; }
+
+        @Override
+        public <T extends Annotation> T getAnnotation(Class<T> annotationClass) { return source.getAnnotation(annotationClass); }
+
+        @Override
+        public Annotation[] getAnnotations() { return source.getAnnotations(); }
+
+        @Override
+        public Annotation[] getDeclaredAnnotations() { return source.getDeclaredAnnotations(); }
     }
 
     private record ResolvedWildcardType(Type[] upperBounds, Type[] lowerBounds) implements WildcardType {

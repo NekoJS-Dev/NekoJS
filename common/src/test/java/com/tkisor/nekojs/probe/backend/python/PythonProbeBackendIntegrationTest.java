@@ -48,6 +48,64 @@ class PythonProbeBackendIntegrationTest {
     }
 
     @Test
+    void mixedClassBindingsImportTheirAncestorMetaclassWithoutPublicNameCollisions(@TempDir Path temp) throws Exception {
+        TypeDecl parent = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.parent.Mixed");
+        TypeDecl reserved = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.parent._NekoMeta_Mixed");
+        TypeDecl child = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.child.Child");
+        child.superType = new TypeSlot(null, ApiTypeRef.symbol(new ApiSymbolId("java", parent.fqn)));
+        addMixedMethods(parent, "matches");
+        addMixedMethods(child, "combine");
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(temp);
+        Path output = temp.resolve("probe-python");
+        var context = new ProbeContext.Of(emptySnapshot(), List.of(), ProbeConfig.defaultConfig(), paths,
+                "python", output, List.of(parent, reserved, child));
+        assertTrue(new PythonProbeBackend().generate(context).success());
+        String parentOutput = Files.readString(output.resolve("nekojs/_java/pkg/parent/__init__.pyi"));
+        String childOutput = Files.readString(output.resolve("nekojs/_java/pkg/child/__init__.pyi"));
+        assertTrue(parentOutput.contains("class _NekoMeta_Mixed1(type):"), parentOutput);
+        assertTrue(parentOutput.contains("class _NekoMeta_Mixed:"), parentOutput);
+        assertTrue(childOutput.contains("from nekojs._java.pkg.parent import _NekoMeta_Mixed1"), childOutput);
+        assertTrue(childOutput.contains("class _NekoMeta_Child(_NekoMeta_Mixed1):"), childOutput);
+        assertTrue(childOutput.contains("Protocol"), childOutput);
+    }
+
+    private static void addMixedMethods(TypeDecl declaration, String name) {
+        MethodDecl instance = new MethodDecl(name);
+        instance.returnType = TypeSlot.of(boolean.class, ApiTypeRef.primitive("boolean"));
+        MethodDecl staticMethod = new MethodDecl(name);
+        staticMethod.isStatic = true;
+        staticMethod.returnType = TypeSlot.of(int.class, ApiTypeRef.primitive("int"));
+        declaration.methods.add(instance);
+        declaration.methods.add(staticMethod);
+    }
+
+    @Test
+    void importedMetaclassAvoidsPublicNamesInTheConsumerPackage(@TempDir Path temp) throws Exception {
+        TypeDecl parent = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.parent.Mixed");
+        TypeDecl child = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.child.Child");
+        TypeDecl reserved = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.child._NekoMeta_Mixed");
+        child.superType = new TypeSlot(null, ApiTypeRef.symbol(new ApiSymbolId("java", parent.fqn)));
+        addMixedMethods(parent, "matches");
+        addMixedMethods(child, "combine");
+        Path output = temp.resolve("probe-python");
+        var context = new ProbeContext.Of(emptySnapshot(), List.of(), ProbeConfig.defaultConfig(),
+                NekoJSPaths.fromGameDir(temp), "python", output, List.of(parent, child, reserved));
+        assertTrue(new PythonProbeBackend().generate(context).success());
+        String module = Files.readString(output.resolve("nekojs/_java/pkg/child/__init__.pyi"));
+        assertTrue(module.contains("from nekojs._java.pkg.parent import _NekoMeta_Mixed as _NekoMeta_Mixed1"), module);
+        assertTrue(module.contains("class _NekoMeta_Child(_NekoMeta_Mixed1):"), module);
+        assertTrue(module.contains("class _NekoMeta_Mixed:"), module);
+        Path callerOutput = Path.of("build", "probe-python-cross-package-binding");
+        try (var generatedFiles = Files.walk(output)) {
+            for (Path file : generatedFiles.filter(Files::isRegularFile).toList()) {
+                Path target = callerOutput.resolve(output.relativize(file));
+                Files.createDirectories(target.getParent());
+                Files.writeString(target, Files.readString(file));
+            }
+        }
+    }
+
+    @Test
     void generate_producesStubsAndCrossPackageImports(@TempDir Path temp) throws Exception {
         // IR：pkg.a.Foo.getBar() 返回 pkg.b.Bar（跨包引用）
         TypeDecl foo = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.a.Foo");

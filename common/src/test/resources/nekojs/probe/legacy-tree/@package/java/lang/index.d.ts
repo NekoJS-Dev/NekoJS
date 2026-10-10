@@ -1,6 +1,6 @@
-import { $InputStream, $Serializable } from "java:java/io";
-import { $Annotation } from "java:java/lang/annotation";
-import { $ClassDesc, $Constable, $Constable_, $ConstantDesc, $ConstantDesc_, $DynamicConstantDesc } from "java:java/lang/constant";
+import { $InputStream, $PrintStream, $PrintWriter, $Serializable } from "java:java/io";
+import { $Annotation, $Annotation_ } from "java:java/lang/annotation";
+import { $ClassDesc, $Constable, $Constable_, $ConstantDesc, $ConstantDesc_, $DirectMethodHandleDesc, $DynamicConstantDesc } from "java:java/lang/constant";
 import { $MethodHandles$Lookup, $TypeDescriptor$OfField } from "java:java/lang/invoke";
 import { $Configuration, $ModuleDescriptor } from "java:java/lang/module";
 import { $AccessFlag, $AccessFlag_, $AnnotatedElement, $AnnotatedType, $Constructor, $Field, $GenericDeclaration, $Method, $RecordComponent, $Type, $TypeVariable } from "java:java/lang/reflect";
@@ -12,6 +12,7 @@ import { $Comparator, $Comparator_, $Enumeration, $Iterator, $List, $Locale, $Op
 import { $Consumer, $Consumer_, $Function, $Function_ } from "java:java/util/function";
 import { $IntStream, $Stream } from "java:java/util/stream";
 
+export * as annotation from "java:java/lang/annotation";
 export * as constant from "java:java/lang/constant";
 export * as invoke from "java:java/lang/invoke";
 export * as module from "java:java/lang/module";
@@ -19,6 +20,8 @@ export * as reflect from "java:java/lang/reflect";
 
 declare module "java:java/lang" {
     export class $AbstractStringBuilder implements $Appendable, $CharSequence {
+        get empty(): boolean;
+        isEmpty(): boolean;
         appendCodePoint(arg0: number): $AbstractStringBuilder;
         append(arg0: boolean): $AbstractStringBuilder;
         append(arg0: string[], arg1: number, arg2: number): $AbstractStringBuilder;
@@ -67,6 +70,7 @@ declare module "java:java/lang" {
         replace(arg0: number, arg1: number, arg2: string): $AbstractStringBuilder;
         reverse(): $AbstractStringBuilder;
         setCharAt(arg0: number, arg1: string): void;
+        setLength(arg0: number): void;
         subSequence(arg0: number, arg1: number): $CharSequence;
         substring(arg0: number, arg1: number): string;
         substring(arg0: number): string;
@@ -279,7 +283,6 @@ declare module "java:java/lang" {
         getClassLoader(): $ClassLoader;
         get classes(): $Class<any>[];
         getClasses(): $Class<any>[];
-        get componentType(): $Class<any>;
         getComponentType(): $Class<any>;
         get constructors(): $Constructor<any>[];
         getConstructors(): $Constructor<any>[];
@@ -380,11 +383,11 @@ declare module "java:java/lang" {
         describeConstable(): $Optional<$ClassDesc>;
         descriptorString(): string;
         desiredAssertionStatus(): boolean;
-        getAnnotationsByType<A>(arg0: $Class<A>): A[];
-        getAnnotation<A>(arg0: $Class<A>): A;
+        getAnnotationsByType<A extends $Annotation>(arg0: $Class<A>): A[];
+        getAnnotation<A extends $Annotation>(arg0: $Class<A>): A;
         getConstructor(arg0?: $Class<any>[]): $Constructor<T>;
-        getDeclaredAnnotationsByType<A>(arg0: $Class<A>): A[];
-        getDeclaredAnnotation<A>(arg0: $Class<A>): A;
+        getDeclaredAnnotationsByType<A extends $Annotation>(arg0: $Class<A>): A[];
+        getDeclaredAnnotation<A extends $Annotation>(arg0: $Class<A>): A;
         getDeclaredConstructor(arg0?: $Class<any>[]): $Constructor<T>;
         getDeclaredField(arg0: string): $Field;
         getDeclaredMethod(arg0: string, arg1?: $Class<any>[]): $Method;
@@ -425,6 +428,7 @@ declare module "java:java/lang" {
         loadClass(arg0: string): $Class<any>;
         resources(arg0: string): $Stream<$URL>;
         setClassAssertionStatus(arg0: string, arg1: boolean): void;
+        setDefaultAssertionStatus(arg0: boolean): void;
         setPackageAssertionStatus(arg0: string, arg1: boolean): void;
     }
 
@@ -487,7 +491,7 @@ declare module "java:java/lang" {
     export class $Enum<E extends $Enum<E>> implements $Constable, $Comparable<E>, $Serializable {
         get declaringClass(): $Class<E>;
         getDeclaringClass(): $Class<E>;
-        static valueOf<T>(arg0: $Class<T>, arg1: string): T;
+        static valueOf<T extends $Enum<T>>(arg0: $Class<T>, arg1: string): T;
         compareTo(arg0: E): number;
         describeConstable(): $Optional<$Enum$EnumDesc<E>>;
         equals(arg0: object): boolean;
@@ -498,7 +502,9 @@ declare module "java:java/lang" {
     }
 
     export class $Enum$EnumDesc<E extends $Enum<E>> extends $DynamicConstantDesc<E> {
-        static of<E>(arg0: $ClassDesc, arg1: string): $Enum$EnumDesc<E>;
+        static of<E extends $Enum<E>>(arg0: $ClassDesc, arg1: string): $Enum$EnumDesc<E>;
+        static of<T>(arg0: $DirectMethodHandleDesc, arg1?: $ConstantDesc_<$MethodHandles$Lookup, object>[]): $DynamicConstantDesc<T>;
+        static of<T>(arg0: $DirectMethodHandleDesc): $DynamicConstantDesc<T>;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): E;
         toString(): string;
     }
@@ -659,8 +665,12 @@ declare module "java:java/lang" {
         addUses(arg0: $Class<any>): $Module;
         canRead(arg0: $Module): boolean;
         canUse(arg0: $Class<any>): boolean;
-        getAnnotation<T>(arg0: $Class<T>): T;
+        getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
+        getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
+        getDeclaredAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
+        getDeclaredAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
         getResourceAsStream(arg0: string): $InputStream;
+        isAnnotationPresent(arg0: $Class<$Annotation>): boolean;
         isExported(arg0: string, arg1: $Module): boolean;
         isExported(arg0: string): boolean;
         isOpen(arg0: string, arg1: $Module): boolean;
@@ -721,10 +731,10 @@ declare module "java:java/lang" {
         isSealed(): boolean;
         static getPackages(): $Package[];
         static getPackage(arg0: string): $Package;
-        getAnnotationsByType<A>(arg0: $Class<A>): A[];
-        getAnnotation<A>(arg0: $Class<A>): A;
-        getDeclaredAnnotationsByType<A>(arg0: $Class<A>): A[];
-        getDeclaredAnnotation<A>(arg0: $Class<A>): A;
+        getAnnotationsByType<A extends $Annotation>(arg0: $Class<A>): A[];
+        getAnnotation<A extends $Annotation>(arg0: $Class<A>): A;
+        getDeclaredAnnotationsByType<A extends $Annotation>(arg0: $Class<A>): A[];
+        getDeclaredAnnotation<A extends $Annotation>(arg0: $Class<A>): A;
         hashCode(): number;
         isAnnotationPresent(arg0: $Class<$Annotation>): boolean;
         isCompatibleWith(arg0: string): boolean;
@@ -852,6 +862,8 @@ declare module "java:java/lang" {
         constructor(arg0: number);
         constructor(arg0: $CharSequence);
         constructor(arg0: string);
+        get empty(): boolean;
+        isEmpty(): boolean;
         appendCodePoint(arg0: number): $StringBuffer;
         append(arg0: boolean): $StringBuffer;
         append(arg0: string[], arg1: number, arg2: number): $StringBuffer;
@@ -899,6 +911,7 @@ declare module "java:java/lang" {
         replace(arg0: number, arg1: number, arg2: string): $StringBuffer;
         reverse(): $StringBuffer;
         setCharAt(arg0: number, arg1: string): void;
+        setLength(arg0: number): void;
         subSequence(arg0: number, arg1: number): $CharSequence;
         substring(arg0: number, arg1: number): string;
         substring(arg0: number): string;
@@ -911,6 +924,8 @@ declare module "java:java/lang" {
         constructor(arg0: number);
         constructor(arg0: $CharSequence);
         constructor(arg0: string);
+        get empty(): boolean;
+        isEmpty(): boolean;
         appendCodePoint(arg0: number): $StringBuilder;
         append(arg0: boolean): $StringBuilder;
         append(arg0: string[], arg1: number, arg2: number): $StringBuilder;
@@ -951,9 +966,35 @@ declare module "java:java/lang" {
         toString(): string;
     }
 
-    export type $AutoCloseable_ = (() => void) | $AutoCloseable;
-    export type $Comparable_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $Comparable<Host0>;
+    export class $Throwable implements $Serializable {
+        constructor();
+        constructor(arg0: string);
+        constructor(arg0: string, arg1: $Throwable);
+        constructor(arg0: $Throwable);
+        get cause(): $Throwable;
+        getCause(): $Throwable;
+        get localizedMessage(): string;
+        getLocalizedMessage(): string;
+        get message(): string;
+        getMessage(): string;
+        get stackTrace(): $StackTraceElement[];
+        getStackTrace(): $StackTraceElement[];
+        set stackTrace(value: $StackTraceElement[]);
+        get suppressed(): $Throwable[];
+        getSuppressed(): $Throwable[];
+        addSuppressed(arg0: $Throwable): void;
+        fillInStackTrace(): $Throwable;
+        initCause(arg0: $Throwable): $Throwable;
+        printStackTrace(arg0: $PrintStream): void;
+        printStackTrace(arg0: $PrintWriter): void;
+        printStackTrace(): void;
+        setStackTrace(arg0: $StackTraceElement[]): void;
+        toString(): string;
+    }
+
+    export type $AutoCloseable_ = (() => void) | ($AutoCloseable & { readonly [Symbol.hasInstance]?: never });
+    export type $Comparable_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Comparable<Host0> & { readonly [Symbol.hasInstance]?: never });
     export type $Iterable_<T> = T[];
-    export type $Readable_<CallbackArg0 = $CharBuffer, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | $Readable;
-    export type $Runnable_ = (() => void) | $Runnable;
+    export type $Readable_<CallbackArg0 = $CharBuffer, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Readable & { readonly [Symbol.hasInstance]?: never });
+    export type $Runnable_ = (() => void) | ($Runnable & { readonly [Symbol.hasInstance]?: never });
 }

@@ -1,7 +1,7 @@
 import { $Serializable } from "java:java/io";
 import { $Class, $ClassLoader } from "java:java/lang";
 import { $ClassDesc, $Constable, $Constable_, $DynamicConstantDesc, $MethodHandleDesc, $MethodTypeDesc } from "java:java/lang/constant";
-import { $Constructor, $Field, $Method } from "java:java/lang/reflect";
+import { $Constructor, $Field, $Member, $Method } from "java:java/lang/reflect";
 import { $List, $Optional } from "java:java/util";
 
 declare module "java:java/lang/invoke" {
@@ -33,7 +33,7 @@ declare module "java:java/lang/invoke" {
         getName(): string;
         getReferenceKind(): number;
         isVarArgs(): boolean;
-        reflectAs<T>(arg0: $Class<T>, arg1: $MethodHandles$Lookup): T;
+        reflectAs<T extends $Member>(arg0: $Class<T>, arg1: $MethodHandles$Lookup): T;
     }
     export const $MethodHandleInfo: {
         referenceKindToString(arg0: number): string;
@@ -185,6 +185,9 @@ declare module "java:java/lang/invoke" {
         get(arg0?: object[]): object;
         hasInvokeExactBehavior(): boolean;
         isAccessModeSupported(arg0: $VarHandle$AccessMode_): boolean;
+        setOpaque(arg0?: object[]): void;
+        setRelease(arg0?: object[]): void;
+        setVolatile(arg0?: object[]): void;
         set(arg0?: object[]): void;
         toMethodHandle(arg0: $VarHandle$AccessMode_): $MethodHandle;
         toString(): string;
@@ -245,6 +248,6 @@ declare module "java:java/lang/invoke" {
         varType(): $ClassDesc;
     }
 
-    export type $TypeDescriptor_<CallbackResult = string> = (() => CallbackResult) | $TypeDescriptor;
+    export type $TypeDescriptor_<CallbackResult = string> = (() => CallbackResult) | ($TypeDescriptor & { readonly [Symbol.hasInstance]?: never });
     export type $VarHandle$AccessMode_ = $VarHandle$AccessMode | "COMPARE_AND_EXCHANGE" | "COMPARE_AND_EXCHANGE_ACQUIRE" | "COMPARE_AND_EXCHANGE_RELEASE" | "COMPARE_AND_SET" | "GET" | "GET_ACQUIRE" | "GET_AND_ADD" | "GET_AND_ADD_ACQUIRE" | "GET_AND_ADD_RELEASE" | "GET_AND_BITWISE_AND" | "GET_AND_BITWISE_AND_ACQUIRE" | "GET_AND_BITWISE_AND_RELEASE" | "GET_AND_BITWISE_OR" | "GET_AND_BITWISE_OR_ACQUIRE" | "GET_AND_BITWISE_OR_RELEASE" | "GET_AND_BITWISE_XOR" | "GET_AND_BITWISE_XOR_ACQUIRE" | "GET_AND_BITWISE_XOR_RELEASE" | "GET_AND_SET" | "GET_AND_SET_ACQUIRE" | "GET_AND_SET_RELEASE" | "GET_OPAQUE" | "GET_VOLATILE" | "SET" | "SET_OPAQUE" | "SET_RELEASE" | "SET_VOLATILE" | "WEAK_COMPARE_AND_SET" | "WEAK_COMPARE_AND_SET_ACQUIRE" | "WEAK_COMPARE_AND_SET_PLAIN" | "WEAK_COMPARE_AND_SET_RELEASE";
 }

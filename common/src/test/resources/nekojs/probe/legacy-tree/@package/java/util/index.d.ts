@@ -1,5 +1,5 @@
 import { $Serializable } from "java:java/io";
-import { $Character, $Cloneable, $Iterable, $Runnable, $Runnable_ } from "java:java/lang";
+import { $Character, $Cloneable, $Comparable, $Comparable_, $Iterable, $Runnable, $Runnable_, $Throwable } from "java:java/lang";
 import { $BiConsumer, $BiConsumer_, $BiFunction, $BiFunction_, $Consumer, $Consumer_, $DoubleConsumer, $DoubleConsumer_, $DoubleSupplier, $DoubleSupplier_, $Function, $Function_, $IntConsumer, $IntConsumer_, $IntFunction, $IntFunction_, $IntSupplier, $IntSupplier_, $LongConsumer, $LongConsumer_, $LongSupplier, $LongSupplier_, $Predicate, $Predicate_, $Supplier, $Supplier_, $ToDoubleFunction, $ToDoubleFunction_, $ToIntFunction, $ToIntFunction_, $ToLongFunction, $ToLongFunction_, $UnaryOperator, $UnaryOperator_ } from "java:java/util/function";
 import { $DoubleStream, $IntStream, $LongStream, $Stream } from "java:java/util/stream";
 
@@ -39,18 +39,18 @@ declare module "java:java/util" {
         thenComparingLong(arg0: $ToLongFunction_<T, T, number>): $Comparator<T>;
         thenComparing(arg0: $Comparator_<T, T, T, number>): $Comparator<T>;
         thenComparing<U>(arg0: $Function_<T, U, T, U>, arg1: $Comparator_<U, U, U, number>): $Comparator<T>;
-        thenComparing<U>(arg0: $Function_<T, U, T, U>): $Comparator<T>;
+        thenComparing<U extends $Comparable<any>>(arg0: $Function_<T, U, T, U>): $Comparator<T>;
     }
     export const $Comparator: {
         comparingDouble<T>(arg0: $ToDoubleFunction_<T, T, number>): $Comparator<T>;
         comparingInt<T>(arg0: $ToIntFunction_<T, T, number>): $Comparator<T>;
         comparingLong<T>(arg0: $ToLongFunction_<T, T, number>): $Comparator<T>;
         comparing<T, U>(arg0: $Function_<T, U, T, U>, arg1: $Comparator_<U, U, U, number>): $Comparator<T>;
-        comparing<T, U>(arg0: $Function_<T, U, T, U>): $Comparator<T>;
-        naturalOrder<T>(): $Comparator<T>;
+        comparing<T, U extends $Comparable<any>>(arg0: $Function_<T, U, T, U>): $Comparator<T>;
+        naturalOrder<T extends $Comparable<any>>(): $Comparator<T>;
         nullsFirst<T>(arg0: $Comparator_<T, T, T, number>): $Comparator<T>;
         nullsLast<T>(arg0: $Comparator_<T, T, T, number>): $Comparator<T>;
-        reverseOrder<T>(): $Comparator<T>;
+        reverseOrder<T extends $Comparable<any>>(): $Comparator<T>;
     };
 
     export class $DoubleSummaryStatistics implements $DoubleConsumer {
@@ -67,6 +67,7 @@ declare module "java:java/util" {
         get sum(): number;
         getSum(): number;
         accept(arg0: number): void;
+        andThen(arg0: $DoubleConsumer_<number>): $DoubleConsumer;
         combine(arg0: $DoubleSummaryStatistics): void;
         toString(): string;
     }
@@ -91,6 +92,7 @@ declare module "java:java/util" {
         get sum(): number;
         getSum(): number;
         accept(arg0: number): void;
+        andThen(arg0: $IntConsumer_<number>): $IntConsumer;
         combine(arg0: $IntSummaryStatistics): void;
         toString(): string;
     }
@@ -302,8 +304,8 @@ declare module "java:java/util" {
         getRange(): string;
         get weight(): number;
         getWeight(): number;
-        static mapEquivalents(arg0: $Locale$LanguageRange[], arg1: { [key: string]: string[] }): $List<$Locale$LanguageRange>;
-        static parse(arg0: string, arg1: { [key: string]: string[] }): $List<$Locale$LanguageRange>;
+        static mapEquivalents(arg0: $Locale$LanguageRange[], arg1: ($Map<string, string[]> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string[]>> : never))): $List<$Locale$LanguageRange>;
+        static parse(arg0: string, arg1: ($Map<string, string[]> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string[]>> : never))): $List<$Locale$LanguageRange>;
         static parse(arg0: string): $List<$Locale$LanguageRange>;
         equals(arg0: object): boolean;
         hashCode(): number;
@@ -325,6 +327,8 @@ declare module "java:java/util" {
         getSum(): number;
         accept(arg0: number): void;
         accept(arg0: number): void;
+        andThen(arg0: $IntConsumer_<number>): $IntConsumer;
+        andThen(arg0: $LongConsumer_<number>): $LongConsumer;
         combine(arg0: $LongSummaryStatistics): void;
         toString(): string;
     }
@@ -345,7 +349,7 @@ declare module "java:java/util" {
         isEmpty(): boolean;
         keySet(): $Set<K>;
         merge(arg0: K, arg1: V, arg2: $BiFunction_<V, V, V, V, V, V>): V;
-        putAll(arg0: { [key: K]: V }): void;
+        putAll(arg0: ($Map<K, V> | ([K] extends [PropertyKey] ? Partial<Record<Extract<K, PropertyKey>, V>> : never))): void;
         putIfAbsent(arg0: K, arg1: V): V;
         put(arg0: K, arg1: V): V;
         remove(arg0: object, arg1: object): boolean;
@@ -357,7 +361,7 @@ declare module "java:java/util" {
         values(): $Collection<V>;
     }
     export const $Map: {
-        copyOf<K, V>(arg0: { [key: K]: V }): $Map<K, V>;
+        copyOf<K, V>(arg0: ($Map<K, V> | ([K] extends [PropertyKey] ? Partial<Record<Extract<K, PropertyKey>, V>> : never))): $Map<K, V>;
         entry<K, V>(arg0: K, arg1: V): $Map$Entry<K, V>;
         ofEntries<K, V>(arg0?: $Map$Entry<K, V>[]): $Map<K, V>;
         of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V, arg16: K, arg17: V, arg18: K, arg19: V): $Map<K, V>;
@@ -382,9 +386,9 @@ declare module "java:java/util" {
     }
     export const $Map$Entry: {
         comparingByKey<K, V>(arg0: $Comparator_<K, K, K, number>): $Comparator<$Map$Entry<K, V>>;
-        comparingByKey<K, V>(): $Comparator<$Map$Entry<K, V>>;
+        comparingByKey<K extends $Comparable<any>, V>(): $Comparator<$Map$Entry<K, V>>;
         comparingByValue<K, V>(arg0: $Comparator_<V, V, V, number>): $Comparator<$Map$Entry<K, V>>;
-        comparingByValue<K, V>(): $Comparator<$Map$Entry<K, V>>;
+        comparingByValue<K, V extends $Comparable<any>>(): $Comparator<$Map$Entry<K, V>>;
         copyOf<K, V>(arg0: $Map$Entry<K, V>): $Map$Entry<K, V>;
     };
 
@@ -405,7 +409,7 @@ declare module "java:java/util" {
         ifPresent(arg0: $Consumer_<T, T>): void;
         map<U>(arg0: $Function_<T, U, T, U>): $Optional<U>;
         orElseGet(arg0: $Supplier_<T, T>): T;
-        orElseThrow<X>(arg0: $Supplier_<X, X>): T;
+        orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): T;
         orElseThrow(): T;
         orElse(arg0: T): T;
         or(arg0: $Supplier_<$Optional<T>, $Optional<T>>): $Optional<T>;
@@ -427,7 +431,7 @@ declare module "java:java/util" {
         ifPresentOrElse(arg0: $DoubleConsumer_<number>, arg1: $Runnable_): void;
         ifPresent(arg0: $DoubleConsumer_<number>): void;
         orElseGet(arg0: $DoubleSupplier_<number>): number;
-        orElseThrow<X>(arg0: $Supplier_<X, X>): number;
+        orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): number;
         orElseThrow(): number;
         orElse(arg0: number): number;
         stream(): $DoubleStream;
@@ -448,7 +452,7 @@ declare module "java:java/util" {
         ifPresentOrElse(arg0: $IntConsumer_<number>, arg1: $Runnable_): void;
         ifPresent(arg0: $IntConsumer_<number>): void;
         orElseGet(arg0: $IntSupplier_<number>): number;
-        orElseThrow<X>(arg0: $Supplier_<X, X>): number;
+        orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): number;
         orElseThrow(): number;
         orElse(arg0: number): number;
         stream(): $IntStream;
@@ -469,7 +473,7 @@ declare module "java:java/util" {
         ifPresentOrElse(arg0: $LongConsumer_<number>, arg1: $Runnable_): void;
         ifPresent(arg0: $LongConsumer_<number>): void;
         orElseGet(arg0: $LongSupplier_<number>): number;
-        orElseThrow<X>(arg0: $Supplier_<X, X>): number;
+        orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): number;
         orElseThrow(): number;
         orElse(arg0: number): number;
         stream(): $LongStream;
@@ -629,7 +633,7 @@ declare module "java:java/util" {
     }
 
     export type $Collection_<E> = E[];
-    export type $Comparator_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = Host0, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | $Comparator<Host0>;
+    export type $Comparator_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = Host0, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($Comparator<Host0> & { readonly [Symbol.hasInstance]?: never });
     export type $Iterator_<E> = E[];
     export type $List_<E> = E[];
     export type $Locale$Category_ = $Locale$Category | "DISPLAY" | "FORMAT";

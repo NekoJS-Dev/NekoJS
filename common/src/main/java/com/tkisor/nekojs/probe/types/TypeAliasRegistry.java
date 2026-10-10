@@ -40,12 +40,14 @@ public final class TypeAliasRegistry {
         collectionAliases.put("java.util.Iterable", new CollectionAlias("$Iterable", "[]"));
         collectionAliases.put("java.util.Iterator", new CollectionAlias("$Iterator", ""));
 
-        // Map 特殊处理
+        // Host maps accept arbitrary keys; object inputs are limited to TypeScript property keys.
         collectionAliases.put("java.util.Map", new CollectionAlias("$Map", "") {
             @Override
             public String getInputType(String[] typeArgs) {
                 if (typeArgs.length == 2) {
-                    return "{ [key: " + typeArgs[0] + "]: " + typeArgs[1] + " }";
+                    String host = "$Map<" + typeArgs[0] + ", " + typeArgs[1] + ">";
+                    return "(" + host + " | ([" + typeArgs[0] + "] extends [PropertyKey] ? Partial<Record<Extract<"
+                            + typeArgs[0] + ", PropertyKey>, " + typeArgs[1] + ">> : never))";
                 }
                 return "{ [key: string]: any }";
             }

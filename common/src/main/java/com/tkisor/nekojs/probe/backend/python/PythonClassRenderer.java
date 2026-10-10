@@ -4,8 +4,10 @@ import com.tkisor.nekojs.probe.ir.FieldDecl;
 import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
+import com.tkisor.nekojs.api.surface.ApiTypeRef;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -14,16 +16,28 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * {@link TypeDecl} IR → Python {@code .pyi} 类/接口/枚举声明块。
- *
- * <p>对齐 TS renderer 的成员分段语义（getter→property、setter 无独立 getter→跳过、构造器→{@code __init__}），
- * 但类型一律走 {@link ApiTypeRefPyRenderer}（best-effort，泛型变量→Any）。方法体用 {@code ...}（stub）。
+ * Renders shared declarations as Python stub classes, interfaces and enums.
+ * Bean aliases yield to real member names. Mixed static and instance overloads use a private
+ * metaclass property for class access, leaving bound instance methods and their inheritance intact.
+ * Types use {@link ApiTypeRefPyRenderer}; generic variables retain its existing best-effort mapping.
  */
 public final class PythonClassRenderer {
     private final ApiTypeRefPyRenderer typeRenderer;
+    private final Map<String, TypeDecl> declarations = new LinkedHashMap<>();
+    private final Map<String, Set<String>> reservedNames = new HashMap<>();
+    private final Map<String, String> helperNames = new HashMap<>();
 
     public PythonClassRenderer(ApiTypeRefPyRenderer typeRenderer) {
+        this(typeRenderer, List.of());
+    }
+
+    public PythonClassRenderer(ApiTypeRefPyRenderer typeRenderer, List<TypeDecl> declarations) {
         this.typeRenderer = typeRenderer;
+        for (TypeDecl declaration : declarations) {
+            this.declarations.put(declaration.fqn, declaration);
+            reservedNames.computeIfAbsent(packageName(declaration.fqn), key -> new LinkedHashSet<>())
+                    .add(effectiveClassName(declaration));
+        }
     }
 
     public String render(TypeDecl d) {
@@ -40,18 +54,49 @@ public final class PythonClassRenderer {
     private String renderClass(TypeDecl d) {
         String name = effectiveClassName(d);
         StringBuilder sb = new StringBuilder();
-        sb.append("class ").append(name).append(bases(d, true)).append(":\n");
+        Set<String> mixedNames = mixedBindingNames(d, declarations);
+        if (!mixedNames.isEmpty()) appendClassBindings(sb, d, mixedNames);
+        String bases = bases(d, true);
+        if (!mixedNames.isEmpty()) {
+            bases = bases.isEmpty() ? "(metaclass=" + metaclassName(d) + ")"
+                    : bases.substring(0, bases.length() - 1) + ", metaclass=" + metaclassName(d) + ")";
+        }
+        sb.append("class ").append(name).append(bases).append(":\n");
         appendDoc(sb, d.docs);
         boolean hasMember = false;
-        Set<String> propertyConflicts = beanPropertyConflicts(d);
+        BeanPropertyConflicts propertyConflicts = beanPropertyConflicts(d, declarations);
 
         // 字段：静态（ClassVar）+ 实例
         for (FieldDecl f : d.fields) {
             if (f.hidden || !isPythonIdentifier(f.effectiveName())) continue;
+            MethodDecl getter = d.beanGetterForField(f);
+            if (getter != null) {
+                appendBeanField(sb, d, f, getter);
+                hasMember = true;
+                continue;
+            }
             sb.append("    ").append(pyIdent(f.effectiveName())).append(": ").append(fieldType(f));
             appendFieldDoc(sb, f.docs, "    ");
             sb.append("\n");
             hasMember = true;
+        }
+        // A selected child getter also owns reads of a collected ancestor's instance field.
+        for (VisibleField visible : propertyConflicts.fields().values()) {
+            FieldDecl field = visible.field();
+            if (d.fields.contains(field)) continue;
+            MethodDecl getter = d.beanGetterForField(field);
+            if (getter != null) {
+                MethodDecl inheritedGetter = inheritedBeanGetter(d, visible);
+                TypeSlot inheritedRead = inheritedGetter == null ? field.type : inheritedGetter.returnType;
+                TypeSlot inheritedWrite = inheritedGetter == null ? field.type
+                        : d.beanFieldWriteType(field, inheritedGetter);
+                // Compare the nearest inherited projection, including intermediate getter overrides.
+                if (!field.isFinal && inheritedWrite != null
+                        && renderSlot(inheritedRead).equals(renderSlot(getter.returnType))
+                        && renderSlot(inheritedWrite).equals(renderSlot(d.beanFieldWriteType(field, getter)))) continue;
+                appendBeanField(sb, d, field, getter);
+                hasMember = true;
+            }
         }
         // 构造器 → __init__（多个构造器 = 重载，每个 __init__ 都需 @overload）
         boolean ctorOverloaded = d.constructors.stream().filter(c -> !c.hidden).count() > 1;
@@ -65,7 +110,7 @@ public final class PythonClassRenderer {
         // getter → @property（+ setter）
         for (MethodDecl m : d.methods) {
             if (m.hidden || !m.isGetter || !isPythonIdentifier(m.property)
-                    || propertyConflicts.contains(pyIdent(m.property))) continue;
+                    || propertyConflicts.properties().contains(pyIdent(m.property))) continue;
             String ret = renderSlot(m.returnType);
             sb.append("    @property\n");
             sb.append("    def ").append(pyIdent(m.property)).append("(self) -> ").append(ret);
@@ -84,10 +129,12 @@ public final class PythonClassRenderer {
         Map<String, Integer> methodNameCount = new HashMap<>();
         for (MethodDecl m : d.methods) {
             if (!isOrdinaryPythonMethod(m, propertyConflicts)) continue;
+            if (m.isStatic && mixedNames.contains(pyIdent(m.effectiveName()))) continue;
             methodNameCount.merge(pyIdent(m.effectiveName()), 1, Integer::sum);
         }
         for (MethodDecl m : d.methods) {
             if (!isOrdinaryPythonMethod(m, propertyConflicts)) continue;
+            if (m.isStatic && mixedNames.contains(pyIdent(m.effectiveName()))) continue;
             boolean overloaded = methodNameCount.getOrDefault(pyIdent(m.effectiveName()), 0) > 1;
             if (m.isStatic) sb.append("    @staticmethod\n");
             if (overloaded) sb.append("    @overload\n");
@@ -99,6 +146,142 @@ public final class PythonClassRenderer {
         }
         if (!hasMember) sb.append("    ...\n");
         return sb.toString();
+    }
+
+    private void appendBeanField(StringBuilder sb, TypeDecl declaration, FieldDecl field, MethodDecl getter) {
+        String name = pyIdent(field.effectiveName());
+        sb.append("    @property\n    def ").append(name)
+                .append("(self) -> ").append(renderSlot(getter.returnType));
+        appendMethodBody(sb, field.docs);
+        TypeSlot writeType = declaration.beanFieldWriteType(field, getter);
+        if (writeType != null) {
+            sb.append("    @").append(name).append(".setter\n    def ").append(name)
+                    .append("(self, value: ").append(renderSlot(writeType)).append(") -> None");
+            appendMethodBody(sb, field.docs);
+        }
+    }
+
+    private MethodDecl inheritedBeanGetter(TypeDecl declaration, VisibleField visible) {
+        Set<String> visited = new LinkedHashSet<>();
+        TypeSlot parent = declaration.superType;
+        while (parent != null && parent.ref != null && parent.ref.kind() == ApiTypeRef.Kind.SYMBOL) {
+            String fqn = ApiTypeRefPyRenderer.extractFqn(parent.ref.name());
+            if (!visited.add(fqn)) return null;
+            TypeDecl ancestor = declarations.get(fqn);
+            if (ancestor == null || ancestor.hidden) return null;
+            MethodDecl getter = ancestor.beanGetterForField(visible.field());
+            if (getter != null) return getter;
+            if (ancestor == visible.owner()) return null;
+            parent = ancestor.superType;
+        }
+        return null;
+    }
+
+    /** Class access uses the static overloads; instance access retains the real bound methods. */
+    private void appendClassBindings(StringBuilder sb, TypeDecl declaration, Set<String> mixedNames) {
+        for (String methodName : mixedNames) {
+            List<MethodDecl> methods = declaration.methods.stream()
+                    .filter(method -> !method.hidden && method.isStatic
+                            && methodName.equals(pyIdent(method.effectiveName()))).toList();
+            sb.append("class ").append(staticCallableName(declaration, methodName)).append("(Protocol):\n");
+            for (MethodDecl method : methods) {
+                if (methods.size() > 1) sb.append("    @overload\n");
+                sb.append("    def __call__(").append(params(method, true)).append(") -> ")
+                        .append(renderSlot(method.returnType));
+                appendMethodBody(sb, method.docs);
+            }
+            sb.append("\n");
+        }
+        TypeDecl ancestor = metaclassAncestor(declaration);
+        sb.append("class ").append(metaclassName(declaration)).append("(")
+                .append(ancestor == null ? "type" : metaclassReference(ancestor, packageName(declaration.fqn)))
+                .append("):\n");
+        for (String methodName : mixedNames) {
+            sb.append("    @property\n    def ").append(methodName).append("(self) -> ")
+                    .append(staticCallableName(declaration, methodName)).append(": ...\n");
+        }
+        sb.append("\n");
+    }
+
+    public static boolean hasMixedBindings(TypeDecl declaration) {
+        return !mixedBindingNames(declaration, Map.of()).isEmpty();
+    }
+
+    /** Includes collected ancestors when deciding which class bindings this renderer emits. */
+    public boolean hasClassBindings(TypeDecl declaration) {
+        return !mixedBindingNames(declaration, declarations).isEmpty();
+    }
+
+    private static Set<String> mixedBindingNames(TypeDecl declaration, Map<String, TypeDecl> declarations) {
+        if (declaration.hidden || declaration.kind != TypeDecl.Kind.CLASS) return Set.of();
+        Set<String> staticNames = new LinkedHashSet<>();
+        Set<String> instanceNames = new LinkedHashSet<>();
+        BeanPropertyConflicts conflicts = beanPropertyConflicts(declaration, declarations);
+        for (MethodDecl method : declaration.methods) {
+            if (!isOrdinaryPythonMethod(method, conflicts)) continue;
+            (method.isStatic ? staticNames : instanceNames).add(pyIdent(method.effectiveName()));
+        }
+        for (FieldDecl field : declaration.fields) {
+            if (!field.hidden && !field.isStatic && isPythonIdentifier(field.effectiveName())) {
+                instanceNames.add(pyIdent(field.effectiveName()));
+            }
+        }
+        staticNames.retainAll(instanceNames);
+        return staticNames;
+    }
+
+    /** The closest class ancestor's metaclass preserves inherited class operations. */
+    public TypeDecl metaclassAncestor(TypeDecl declaration) {
+        Set<String> visited = new LinkedHashSet<>();
+        TypeSlot parent = declaration.superType;
+        while (parent != null && parent.ref != null
+                && parent.ref.kind() == ApiTypeRef.Kind.SYMBOL) {
+            String fqn = ApiTypeRefPyRenderer.extractFqn(parent.ref.name());
+            if (!visited.add(fqn)) return null;
+            TypeDecl ancestor = declarations.get(fqn);
+            if (ancestor == null || ancestor.hidden) return null;
+            if (hasClassBindings(ancestor)) return ancestor;
+            parent = ancestor.superType;
+        }
+        return null;
+    }
+
+    public String metaclassName(TypeDecl declaration) {
+        return helperName(declaration, "meta", "_NekoMeta_" + effectiveClassName(declaration));
+    }
+
+    /** Reserves imports and aliases before any local or imported helper name is allocated. */
+    void reservePackageNames(String javaPackage, Set<String> names) {
+        reservedNames.computeIfAbsent(javaPackage, ignored -> new LinkedHashSet<>()).addAll(names);
+    }
+
+    String metaclassReference(TypeDecl ancestor, String javaPackage) {
+        String original = metaclassName(ancestor);
+        if (packageName(ancestor.fqn).equals(javaPackage)) return original;
+        return helperName(javaPackage, "import:" + ancestor.fqn, original);
+    }
+
+    private String staticCallableName(TypeDecl declaration, String methodName) {
+        return helperName(declaration, "static:" + methodName,
+                "_NekoStatic_" + effectiveClassName(declaration) + "_" + methodName);
+    }
+
+    private String helperName(TypeDecl declaration, String role, String base) {
+        return helperName(packageName(declaration.fqn), declaration.fqn + "#" + role, base);
+    }
+
+    private String helperName(String javaPackage, String role, String base) {
+        return helperNames.computeIfAbsent(javaPackage + "#" + role, key -> {
+            Set<String> used = reservedNames.computeIfAbsent(javaPackage, ignored -> new LinkedHashSet<>());
+            String name = base;
+            for (int suffix = 1; !used.add(name); suffix++) name = base + suffix;
+            return name;
+        });
+    }
+
+    private static String packageName(String fqn) {
+        int dot = fqn.lastIndexOf('.');
+        return dot < 0 ? "" : fqn.substring(0, dot);
     }
 
     // ---------------- interface ----------------
@@ -160,9 +343,18 @@ public final class PythonClassRenderer {
 
     /** 渲染出的该类型是否需要 {@code typing.overload} 导入（存在同名 def：重载方法/重载构造器）。 */
     public static boolean hasOverloads(TypeDecl d) {
+        return hasOverloads(d, Map.of());
+    }
+
+    /** Counts the methods rendered with this instance's collected ancestor declarations. */
+    public boolean hasRenderedOverloads(TypeDecl declaration) {
+        return hasOverloads(declaration, declarations);
+    }
+
+    private static boolean hasOverloads(TypeDecl d, Map<String, TypeDecl> declarations) {
         if (d == null) return false;
         if (d.constructors.stream().filter(c -> !c.hidden).count() > 1) return true;
-        Set<String> propertyConflicts = beanPropertyConflicts(d);
+        BeanPropertyConflicts propertyConflicts = beanPropertyConflicts(d, declarations);
         Map<String, Integer> nameCount = new HashMap<>();
         for (MethodDecl m : d.methods) {
             if (!isOrdinaryPythonMethod(m, propertyConflicts)) continue;
@@ -285,27 +477,61 @@ public final class PythonClassRenderer {
                 .replace("\"\"\"", "'''");
     }
 
-    private static Set<String> beanPropertyConflicts(TypeDecl declaration) {
-        Set<String> names = new LinkedHashSet<>();
-        for (FieldDecl field : declaration.fields) {
-            if (!field.hidden && isPythonIdentifier(field.effectiveName())) names.add(pyIdent(field.effectiveName()));
-        }
-        for (MethodDecl method : declaration.methods) {
-            if (isOrdinaryPythonMethod(method, Set.of())) names.add(pyIdent(method.effectiveName()));
-        }
-        return names;
+    private record VisibleField(TypeDecl owner, FieldDecl field) {}
+
+    private record BeanPropertyConflicts(Set<String> properties, Set<String> accessorCalls,
+                                         Map<String, VisibleField> fields) {
+        private static final BeanPropertyConflicts NONE = new BeanPropertyConflicts(Set.of(), Set.of(), Map.of());
     }
 
-    private static boolean isOrdinaryPythonMethod(MethodDecl method, Set<String> propertyConflicts) {
+    private static BeanPropertyConflicts beanPropertyConflicts(TypeDecl declaration,
+                                                              Map<String, TypeDecl> declarations) {
+        Map<String, VisibleField> fields = new LinkedHashMap<>();
+        Set<String> visited = new LinkedHashSet<>();
+        for (TypeDecl ancestor = declaration; ancestor != null && !ancestor.hidden
+                && visited.add(ancestor.fqn);) {
+            for (FieldDecl field : ancestor.fields) {
+                if (!field.hidden && isPythonIdentifier(field.effectiveName())
+                        && (ancestor == declaration || !field.isStatic)) {
+                    fields.putIfAbsent(pyIdent(field.effectiveName()), new VisibleField(ancestor, field));
+                }
+            }
+            TypeSlot parent = ancestor.superType;
+            ancestor = parent != null && parent.ref != null && parent.ref.kind() == ApiTypeRef.Kind.SYMBOL
+                    ? declarations.get(ApiTypeRefPyRenderer.extractFqn(parent.ref.name())) : null;
+        }
+        Set<String> names = new LinkedHashSet<>(fields.keySet());
+        for (MethodDecl method : declaration.methods) {
+            if (isOrdinaryPythonMethod(method, BeanPropertyConflicts.NONE)) names.add(pyIdent(method.effectiveName()));
+        }
+        Set<String> callTargets = new LinkedHashSet<>();
+        for (MethodDecl method : declaration.methods) {
+            if (!method.hidden && !method.isConstructor && isPythonIdentifier(method.effectiveName())) {
+                callTargets.add(pyIdent(method.effectiveName()));
+            }
+        }
+        Set<String> accessorCalls = new LinkedHashSet<>();
+        // Alias collisions retain actual accessor calls. A same-name field alone keeps its existing projection.
+        for (MethodDecl method : declaration.methods) {
+            if (!method.hidden && method.isGetter && isPythonIdentifier(method.property)
+                    && callTargets.contains(pyIdent(method.property))
+                    && !fields.containsKey(pyIdent(method.property))) accessorCalls.add(pyIdent(method.property));
+        }
+        names.addAll(accessorCalls);
+        return new BeanPropertyConflicts(Set.copyOf(names), Set.copyOf(accessorCalls), fields);
+    }
+
+    private static boolean isOrdinaryPythonMethod(MethodDecl method, BeanPropertyConflicts propertyConflicts) {
         if (method.hidden || method.isConstructor || !isPythonIdentifier(method.effectiveName())) return false;
+        if (propertyConflicts.accessorCalls().contains(pyIdent(method.effectiveName()))) return true;
         // A stub cannot declare a property and a method/field under the same name.
         // Preserve the real accessor call targets when the Bean alias would collide.
         if (method.isGetter) return !isPythonIdentifier(method.property)
-                || propertyConflicts.contains(pyIdent(method.property));
+                || propertyConflicts.properties().contains(pyIdent(method.property));
         if (method.isSetter && method.effectiveName().length() > 3) {
             String suffix = method.effectiveName().substring(3);
             String property = suffix.substring(0, 1).toLowerCase(Locale.ROOT) + suffix.substring(1);
-            return !isPythonIdentifier(property) || propertyConflicts.contains(pyIdent(property));
+            return !isPythonIdentifier(property) || propertyConflicts.properties().contains(pyIdent(property));
         }
         if (method.isSetter) return false;
         return true;
