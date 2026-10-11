@@ -1,0 +1,15 @@
+{
+  "sourceRevision": "93f4b259ffafb6466918582fcfa950c2c2480d77",
+  "groups": [
+    "reload-confirmed-1",
+    "reload-confirmed-2",
+    "startup-confirmed"
+  ],
+  "samplesPerGroup": 5,
+  "unchangedSampler": true,
+  "startupThreshold": 41173,
+  "reloadThreshold": 285.3,
+  "noDiscardedValues": true,
+  "ownedServersAndCompilersDirectlySettled": true,
+  "unchangedOldJarControlDirectlySettled": true
+}

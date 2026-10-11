@@ -24,4 +24,4 @@
 
 不可变 ZIP：4375 entries、9684489 bytes、SHA256 `97f85611c00de21bef8d30326673c10ed7e9692f8088d9572192181506ed5a8f`。全 hash/读回和实际凭据扫描通过；不含 properties/world/JAR/raw JFR。独立复核见 [验证脚本](verify.py) 与 [结果](archive-verification.json)。
 
-新源码正式性能 NOT RUN，既有 7b PASS 不可沿用。完整 IDE、字段/方法与名称/重载确定性、文件系统、native crash、fireResistant、剩余领域、多人独立下载窗口、首帧像素/跨节点视觉、维护者、发布及回滚仍未完成。维护者 NOT RECORDED、总体 NOT COMPLETE、自动续跑 PAUSED、工具权限字段 UNRESOLVED，无发布授权。
+冻结此修复包时新源码正式性能 NOT RUN，既有 7b PASS 不可沿用。后续源码提交 `93f4b259ffafb6466918582fcfa950c2c2480d77` 已推送且核验远端一致；[精确新源码性能](../ticket37-same-name-performance/README.md) 启动22134.8ms PASS，两组重载383.8/330.4ms FAIL，原包状态保持历史检查点。完整 IDE、重载性能、字段/方法与名称/重载确定性、文件系统、native crash、fireResistant、剩余领域、多人独立下载窗口、首帧像素/跨节点视觉、维护者、发布及回滚仍未完成。维护者 NOT RECORDED、总体 NOT COMPLETE、自动续跑 PAUSED、工具权限字段 UNRESOLVED，无发布授权。
