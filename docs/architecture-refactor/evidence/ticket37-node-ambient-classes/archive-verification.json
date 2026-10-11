@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "archive": {
+    "file": "node-ambient-candidate.zip",
+    "entries": 3558,
+    "bytes": 7697324,
+    "sha256": "847999ce70d4fe624695aab6ee4c9c32a540049aa8fe42b7075cf66a1d69aec5"
+  },
+  "fullEntryHashes": true,
+  "committedSourceAndCurrentPatchMatch": true,
+  "actualFiveArtifactClassBytes": {
+    "com/tkisor/nekojs/core/compiler/NodeModuleTypeDocs.class": "d55465d772ba22b453bdb9a581e1156e3e05a8dd1f9ac8a5aa2ee95a7867b88e",
+    "com/tkisor/nekojs/core/compiler/NodeModuleTypeDocs$TSExtractor.class": "3e6376a1bb9cda1152e575cba4156a6215767bd7553a35bbfc75e0c012f69aa3"
+  },
+  "fullMatrixAndCompletedComparisons": true,
+  "supplementalRuntimeRetained": true,
+  "scopedDeclarationOrderChangesRecorded": true,
+  "unchangedDiagnosticIdentitiesPreserved": true,
+  "completedConsoleSha256": "840b61b6ef1569b0fd2bf7fb2f514002a75362c6711eb1e34a21e55ecbd94412",
+  "fullIDE": "FAIL",
+  "currentSourcePerformance": "PASS: separately archived exact f84",
+  "maintainerAcceptance": "NOT RECORDED",
+  "overall": "NOT COMPLETE"
+}
