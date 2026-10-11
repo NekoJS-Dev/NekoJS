@@ -1,0 +1,17 @@
+{
+  "archiveSha256": "dc926f26979b341be6186df5142bc55336023aa13568b5a90bdc20cbb1e6753f",
+  "fullHashReadback": true,
+  "rawAllFiveSamplesAndFirstsRetained": true,
+  "samplerDirectExits": [
+    0,
+    0,
+    0
+  ],
+  "thresholdsAndDiagnosticOnlyProfileVerified": true,
+  "current14CompiledHashesVerified": true,
+  "rawJfrAndEventPayloadsExcluded": true,
+  "currentFormalPerformance": "FAIL retained",
+  "rootCause": "NOT ESTABLISHED",
+  "overallTickets": "NOT COMPLETE",
+  "maintainer": "NOT RECORDED"
+}

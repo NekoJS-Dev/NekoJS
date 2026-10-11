@@ -1,0 +1,900 @@
+{
+  "groups": [
+    {
+      "group": "old-environment-control",
+      "sourceRevision": "7b724a50f51367ad43f5903b1e7240e8e69bad10",
+      "folder": "20261011T123114Z-reload-26.1.2",
+      "markerMs": [
+        407,
+        224,
+        342,
+        207,
+        219
+      ],
+      "markerMeanMs": 279.8,
+      "rconRttMs": [
+        290,
+        223,
+        227,
+        206,
+        218
+      ],
+      "rconRttMeanMs": 232.8,
+      "markerTailMs": [
+        117,
+        1,
+        115,
+        1,
+        1
+      ],
+      "markerTailMeanMs": 47.0,
+      "thresholdMs": 285.3,
+      "diagnosticGate": "PASS",
+      "samplerExit": 0,
+      "samples": [
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 44708,
+          "ts_utc": "2026-10-11T12:32:01.1969570Z",
+          "rcon_response": "NekoJS server reload committed: generation=2 phase=COMMIT - no errors. ",
+          "pid": 30044,
+          "mode": "reload",
+          "rev": "7b724a50",
+          "rcon_rtt_ms": 290,
+          "index": 1,
+          "kind": "formal",
+          "marker_ms": 407,
+          "marker_line": "[20:31:47] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791721876430-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.466",
+          "wall_done_ms": 27182,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 44708,
+          "ts_utc": "2026-10-11T12:32:01.2241598Z",
+          "rcon_response": "NekoJS server reload committed: generation=3 phase=COMMIT - no errors. ",
+          "pid": 30044,
+          "mode": "reload",
+          "rev": "7b724a50",
+          "rcon_rtt_ms": 223,
+          "index": 2,
+          "kind": "formal",
+          "marker_ms": 224,
+          "marker_line": "[20:31:50] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791721876430-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.466",
+          "wall_done_ms": 27182,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 44708,
+          "ts_utc": "2026-10-11T12:32:01.2274754Z",
+          "rcon_response": "NekoJS server reload committed: generation=4 phase=COMMIT - no errors. ",
+          "pid": 30044,
+          "mode": "reload",
+          "rev": "7b724a50",
+          "rcon_rtt_ms": 227,
+          "index": 3,
+          "kind": "formal",
+          "marker_ms": 342,
+          "marker_line": "[20:31:53] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791721876430-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.466",
+          "wall_done_ms": 27182,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 44708,
+          "ts_utc": "2026-10-11T12:32:01.2294801Z",
+          "rcon_response": "NekoJS server reload committed: generation=5 phase=COMMIT - no errors. ",
+          "pid": 30044,
+          "mode": "reload",
+          "rev": "7b724a50",
+          "rcon_rtt_ms": 206,
+          "index": 4,
+          "kind": "formal",
+          "marker_ms": 207,
+          "marker_line": "[20:31:56] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791721876430-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.466",
+          "wall_done_ms": 27182,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 44708,
+          "ts_utc": "2026-10-11T12:32:01.2337150Z",
+          "rcon_response": "NekoJS server reload committed: generation=6 phase=COMMIT - no errors. ",
+          "pid": 30044,
+          "mode": "reload",
+          "rev": "7b724a50",
+          "rcon_rtt_ms": 218,
+          "index": 5,
+          "kind": "formal",
+          "marker_ms": 219,
+          "marker_line": "[20:32:00] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791721876430-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.466",
+          "wall_done_ms": 27182,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        }
+      ],
+      "instrumented": false
+    },
+    {
+      "group": "adjacent-current-control",
+      "sourceRevision": "93f4b259ffafb6466918582fcfa950c2c2480d77",
+      "folder": "20261011T123303Z-reload-26.1.2",
+      "markerMs": [
+        378,
+        201,
+        344,
+        310,
+        234
+      ],
+      "markerMeanMs": 293.4,
+      "rconRttMs": [
+        264,
+        200,
+        231,
+        194,
+        116
+      ],
+      "rconRttMeanMs": 201.0,
+      "markerTailMs": [
+        114,
+        1,
+        113,
+        116,
+        118
+      ],
+      "markerTailMeanMs": 92.4,
+      "thresholdMs": 285.3,
+      "diagnosticGate": "FAIL",
+      "samplerExit": 0,
+      "samples": [
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 38998,
+          "ts_utc": "2026-10-11T12:33:44.0978931Z",
+          "rcon_response": "NekoJS server reload committed: generation=2 phase=COMMIT - no errors. ",
+          "pid": 30700,
+          "mode": "reload",
+          "rev": "93f4b259",
+          "rcon_rtt_ms": 264,
+          "index": 1,
+          "kind": "formal",
+          "marker_ms": 378,
+          "marker_line": "[20:33:29] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791721985041-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.435",
+          "wall_done_ms": 21435,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 38998,
+          "ts_utc": "2026-10-11T12:33:44.1181025Z",
+          "rcon_response": "NekoJS server reload committed: generation=3 phase=COMMIT - no errors. ",
+          "pid": 30700,
+          "mode": "reload",
+          "rev": "93f4b259",
+          "rcon_rtt_ms": 200,
+          "index": 2,
+          "kind": "formal",
+          "marker_ms": 201,
+          "marker_line": "[20:33:33] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791721985041-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.435",
+          "wall_done_ms": 21435,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 38998,
+          "ts_utc": "2026-10-11T12:33:44.1201510Z",
+          "rcon_response": "NekoJS server reload committed: generation=4 phase=COMMIT - no errors. ",
+          "pid": 30700,
+          "mode": "reload",
+          "rev": "93f4b259",
+          "rcon_rtt_ms": 231,
+          "index": 3,
+          "kind": "formal",
+          "marker_ms": 344,
+          "marker_line": "[20:33:36] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791721985041-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.435",
+          "wall_done_ms": 21435,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 38998,
+          "ts_utc": "2026-10-11T12:33:44.1226555Z",
+          "rcon_response": "NekoJS server reload committed: generation=5 phase=COMMIT - no errors. ",
+          "pid": 30700,
+          "mode": "reload",
+          "rev": "93f4b259",
+          "rcon_rtt_ms": 194,
+          "index": 4,
+          "kind": "formal",
+          "marker_ms": 310,
+          "marker_line": "[20:33:39] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791721985041-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.435",
+          "wall_done_ms": 21435,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 38998,
+          "ts_utc": "2026-10-11T12:33:44.1236587Z",
+          "rcon_response": "NekoJS server reload committed: generation=6 phase=COMMIT - no errors. ",
+          "pid": 30700,
+          "mode": "reload",
+          "rev": "93f4b259",
+          "rcon_rtt_ms": 116,
+          "index": 5,
+          "kind": "formal",
+          "marker_ms": 234,
+          "marker_line": "[20:33:43] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791721985041-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.435",
+          "wall_done_ms": 21435,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        }
+      ],
+      "instrumented": false
+    },
+    {
+      "group": "owned-current-profile",
+      "sourceRevision": "93f4b259ffafb6466918582fcfa950c2c2480d77",
+      "folder": "20261011T123548Z-reload-26.1.2",
+      "markerMs": [
+        355,
+        218,
+        209,
+        175,
+        233
+      ],
+      "markerMeanMs": 238.0,
+      "rconRttMs": [
+        239,
+        216,
+        208,
+        174,
+        128
+      ],
+      "rconRttMeanMs": 193.0,
+      "markerTailMs": [
+        116,
+        2,
+        1,
+        1,
+        105
+      ],
+      "markerTailMeanMs": 45.0,
+      "thresholdMs": 285.3,
+      "diagnosticGate": "INSTRUMENTED: not acceptance",
+      "samplerExit": 0,
+      "samples": [
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 39056,
+          "ts_utc": "2026-10-11T12:36:29.6166630Z",
+          "rcon_response": "NekoJS server reload committed: generation=2 phase=COMMIT - no errors. ",
+          "pid": 24048,
+          "mode": "reload",
+          "rev": "93f4b259",
+          "rcon_rtt_ms": 239,
+          "index": 1,
+          "kind": "formal",
+          "marker_ms": 355,
+          "marker_line": "[20:36:15] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791722150507-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.434",
+          "wall_done_ms": 21833,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 39056,
+          "ts_utc": "2026-10-11T12:36:29.6361842Z",
+          "rcon_response": "NekoJS server reload committed: generation=3 phase=COMMIT - no errors. ",
+          "pid": 24048,
+          "mode": "reload",
+          "rev": "93f4b259",
+          "rcon_rtt_ms": 216,
+          "index": 2,
+          "kind": "formal",
+          "marker_ms": 218,
+          "marker_line": "[20:36:19] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791722150507-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.434",
+          "wall_done_ms": 21833,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 39056,
+          "ts_utc": "2026-10-11T12:36:29.6486155Z",
+          "rcon_response": "NekoJS server reload committed: generation=4 phase=COMMIT - no errors. ",
+          "pid": 24048,
+          "mode": "reload",
+          "rev": "93f4b259",
+          "rcon_rtt_ms": 208,
+          "index": 3,
+          "kind": "formal",
+          "marker_ms": 209,
+          "marker_line": "[20:36:22] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791722150507-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.434",
+          "wall_done_ms": 21833,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 39056,
+          "ts_utc": "2026-10-11T12:36:29.6506185Z",
+          "rcon_response": "NekoJS server reload committed: generation=5 phase=COMMIT - no errors. ",
+          "pid": 24048,
+          "mode": "reload",
+          "rev": "93f4b259",
+          "rcon_rtt_ms": 174,
+          "index": 4,
+          "kind": "formal",
+          "marker_ms": 175,
+          "marker_line": "[20:36:25] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791722150507-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.434",
+          "wall_done_ms": 21833,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 39056,
+          "ts_utc": "2026-10-11T12:36:29.6526150Z",
+          "rcon_response": "NekoJS server reload committed: generation=6 phase=COMMIT - no errors. ",
+          "pid": 24048,
+          "mode": "reload",
+          "rev": "93f4b259",
+          "rcon_rtt_ms": 128,
+          "index": 5,
+          "kind": "formal",
+          "marker_ms": 233,
+          "marker_line": "[20:36:28] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791722150507-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.434",
+          "wall_done_ms": 21833,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        }
+      ],
+      "instrumented": true
+    }
+  ],
+  "samplerSha256": "1f9c5d14a1a586da4b3f1ca8e71b2407ce089ee8bee185418963e1b5745df0b4",
+  "originalFormalGroups": [
+    {
+      "group": "reload-confirmed-1",
+      "values": [
+        536,
+        269,
+        358,
+        363,
+        393
+      ],
+      "mean": 383.8,
+      "verdict": "FAIL"
+    },
+    {
+      "group": "reload-confirmed-2",
+      "values": [
+        324,
+        270,
+        360,
+        369,
+        329
+      ],
+      "mean": 330.4,
+      "verdict": "FAIL"
+    },
+    {
+      "group": "startup-confirmed",
+      "values": [
+        36090,
+        31451,
+        17442,
+        11886,
+        13805
+      ],
+      "mean": 22134.8,
+      "verdict": "PASS"
+    }
+  ],
+  "currentFormalPerformance": "FAIL retained",
+  "normalRconSessions": 3,
+  "toolObservedOuterExits": [
+    {
+      "sessionId": 71025,
+      "exitCode": 0
+    },
+    {
+      "sessionId": 12267,
+      "exitCode": 0
+    },
+    {
+      "sessionId": 75839,
+      "exitCode": 0
+    }
+  ],
+  "currentCompiledClasses": [
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/backend/typescript/AdapterAliasGenerator.class",
+      "sha256": "496c3d9c12b5012fbc025fcca8f2198b7940e0bc92e4d5b062f4b7b5b52d0201"
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/backend/typescript/AdapterAliasGenerator$AdapterAlias.class",
+      "sha256": "172577f07323ccc69761ac75777059000092113042a5bab4fb023d5bb5ad43ad"
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/backend/typescript/FunctionalInterfaceAliasGenerator.class",
+      "sha256": "09baae433514554528cfbb1d7eacd5f4e834ae8285f7fcd5adb20f555f8fdf2b"
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/backend/typescript/IndexFileGenerator.class",
+      "sha256": "031c25420e2983b676310139149feec678d0cab6af3e13ec6521b55229520e6b"
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/backend/typescript/IndexFileGenerator$EnumAlias.class",
+      "sha256": "e69d470ffb4de699b0dcce7e67408b2763b5370719d31a95678dcd6af14b2e42"
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/backend/typescript/TypeScriptImportNames.class",
+      "sha256": "c4ecca0eeb7a7d5db3af599189cb220684c7db57b14329cea0ec65d963818955"
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/backend/typescript/TypeScriptImportNames$Symbol.class",
+      "sha256": "b4f935bfdc51f04710a3355325edd4e7d2c0fe19adfa893d2af54294d7b94028"
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer.class",
+      "sha256": "18af0b470bf525d0e757b4a8c79e94dbda8ac76973de2a65563cf73d7e6d65af"
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer$1.class",
+      "sha256": "0fda8fc95307e32a05516be97077350e0251ec784d19ad23845f859efe5b921f"
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer$GetterOverride.class",
+      "sha256": "8eaf7d3325842c994e8b24883be540962c98c787c3eaeed38a1fc7f3af50d6ac"
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/types/TypeAliasRegistry.class",
+      "sha256": "1bb10a2fc4994b0bd579fc8bb9821d494c25446a12970df8558c7a7b7d50d49e"
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/types/TypeAliasRegistry$1.class",
+      "sha256": "525efbdd10d55913c4471db0c0b9c94b3be98af291695f2026b5f42701f88b70"
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/types/TypeAliasRegistry$CollectionAlias.class",
+      "sha256": "4ebba83b738ca008ef48a74783b99ea0fe4d85cbc661c28c45659b02e000512a"
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/types/TypeAliasRegistry$FunctionalInterfaceAlias.class",
+      "sha256": "bcc6f24a05e2e34923ef8f30319d23ef79d7a93204b56880e1b34fbd756a1813"
+    }
+  ],
+  "productionDiffPaths": [
+    "common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/AdapterAliasGenerator.java",
+    "common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/FunctionalInterfaceAliasGenerator.java",
+    "common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/IndexFileGenerator.java",
+    "common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/TypeScriptImportNames.java",
+    "common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer.java",
+    "common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java"
+  ],
+  "profile": {
+    "transactionSamples": 19,
+    "overlappingPhaseSampleCounts": {
+      "pathSafety": 2,
+      "memberValidation": 2,
+      "candidateContext": 5,
+      "bindingInstall": 2,
+      "scriptExecution": 9,
+      "commit": 3
+    },
+    "probeObservations": [
+      {
+        "time": "2026-10-11T20:36:04.775542400+08:00",
+        "thread": "modloading-worker-0",
+        "methods": [
+          "com.tkisor.nekojs.probe.backend.typescript.TypeScriptProbeBackend.<init>",
+          "com.tkisor.nekojs.probe.NekoProbeBuiltinPlugin.registerProbeBackends"
+        ]
+      }
+    ],
+    "limits": "Overlapping sampled presence, not percentages or precise phase durations; absent frames do not prove non-execution"
+  },
+  "desktop": "Hidden console/background servers only; no GUI client/input/window activation/desktop switch. No independent desktop or CPU/memory isolation established.",
+  "cause": "NOT ESTABLISHED. Adjacent marker difference contains a larger observation tail while current RTT is lower. RTT is not reload body duration.",
+  "errata": "Adjacent runner inherited the phrase old-source control in one summary string. Its actual source guard/raw samples are exact93; retained original text is not an old-source run.",
+  "limitations": [
+    "Temporal controls do not hold external workload constant",
+    "Old-control compiled class bytes were not separately frozen before switching back; source/guards/build logs retained",
+    "JFR is sampled, instrumented and includes startup",
+    "Full IDE/other tickets/maintainer acceptance remain incomplete",
+    "Automation PAUSED; tool permission-field UNRESOLVED"
+  ],
+  "archive": {
+    "file": "reload-environment-evidence.zip",
+    "entries": 66,
+    "bytes": 440401,
+    "sha256": "dc926f26979b341be6186df5142bc55336023aa13568b5a90bdc20cbb1e6753f"
+  },
+  "entries": [
+    {
+      "path": "runner/archive-environment-diagnosis.py",
+      "bytes": 10141,
+      "sha256": "1dd45c271b1e31b40379d95be09df4a2b413b186df28a6f8341d09ba53e37161"
+    },
+    {
+      "path": "runner/prepare-adjacent-current-control.py",
+      "bytes": 1972,
+      "sha256": "59ac8bb60de7c18f5de3e4004c7e272a68ef07ec6c75e54dd6d84e95a7629e10"
+    },
+    {
+      "path": "runner/read-owned-reload-profile.py",
+      "bytes": 3131,
+      "sha256": "27e3db813514f6fc1cd6fd756e17cd13b5cab190aa4f6d5633f27085ed605476"
+    },
+    {
+      "path": "runner/run-adjacent-current-control.py",
+      "bytes": 5707,
+      "sha256": "d55c0e3e1c651cea06b465f0cdc97872e8fa7b4cceac75454d0a369977332687"
+    },
+    {
+      "path": "runner/run-old-environment-control.py",
+      "bytes": 5706,
+      "sha256": "79ab0d31f2b4673a20be15d56221ffa57cc3d5022cd0f04eb2cc2192f49783f9"
+    },
+    {
+      "path": "runner/run-owned-reload-profile.py",
+      "bytes": 6425,
+      "sha256": "c95e496ff1a1d77fb1500a817d7e4076c0457dda8dcb122e93e2aeeb4574d9aa"
+    },
+    {
+      "path": "runner/ticket37-perf-adjacent-current-runners/PLAN.md",
+      "bytes": 1080,
+      "sha256": "f18b9be633d7c508acc921473cd9094df389e0ea62f717608ff20b13e7605756"
+    },
+    {
+      "path": "runner/ticket37-perf-adjacent-current-runners/guard-same-name-performance.ps1",
+      "bytes": 2147,
+      "sha256": "6185f36149651c11bfd732fdce2a00a859118af543a7042b227609159fe66f10"
+    },
+    {
+      "path": "runner/ticket37-perf-adjacent-current-runners/preparation.txt",
+      "bytes": 188,
+      "sha256": "c7a8ee4456be85ad9766a6d63fdb19539698ab4bc690b14514a50c041dd150cf"
+    },
+    {
+      "path": "runner/ticket37-perf-adjacent-current-runners/preparation.txt.exit.json",
+      "bytes": 166,
+      "sha256": "59f90f16c1d4a74b22ca6b489911632585691faec84c11a56ed4711a1ad83cb4"
+    },
+    {
+      "path": "runner/ticket37-perf-adjacent-current-runners/prepare-same-name-performance.ps1",
+      "bytes": 2941,
+      "sha256": "90bbc7c03ac6db947bede7f67b1010917b66dd381e8d5cd0f7178472a4322723"
+    },
+    {
+      "path": "runner/ticket37-perf-environment-control-runners/PLAN.md",
+      "bytes": 1166,
+      "sha256": "204192500686f519e84bbd2819538a054673edcbe8949a86b94de4c2bdd3a1b7"
+    },
+    {
+      "path": "runner/ticket37-perf-environment-control-runners/guard-same-name-performance.ps1",
+      "bytes": 2150,
+      "sha256": "aab6fe965b3537a9c0fc350f1e8afe2cb3bc00de38f4f579b0b1189fe01d7b21"
+    },
+    {
+      "path": "runner/ticket37-perf-environment-control-runners/preparation.txt",
+      "bytes": 188,
+      "sha256": "fddbf92f8d98906ca71a40a295d14ad5ea224d83544b75ff270e3bdbd17dcdbb"
+    },
+    {
+      "path": "runner/ticket37-perf-environment-control-runners/preparation.txt.exit.json",
+      "bytes": 166,
+      "sha256": "74eba40a9e34db438ee3dcadbb4631ee2dd877fabce374e8b16e07550c41f684"
+    },
+    {
+      "path": "runner/ticket37-perf-environment-control-runners/prepare-same-name-performance.ps1",
+      "bytes": 2944,
+      "sha256": "50dfbeee56a96d9f75d16133e055a0586d541df53a8f0204c12d35f0f9fee3e0"
+    },
+    {
+      "path": "runner/ticket37-perf-owned-profile-runners/PLAN.md",
+      "bytes": 1338,
+      "sha256": "f42ef740f7ab1afaa12681c5964c21320c4d4f4f9d39d42ec666da698cfb0f56"
+    },
+    {
+      "path": "runner/ticket37-perf-owned-profile-runners/guard.ps1",
+      "bytes": 2136,
+      "sha256": "00054d8370c029a1dce08bc60d422c9f6c586989e8463d1c9685e09cfd696101"
+    },
+    {
+      "path": "samples/20261011T123114Z-reload-26.1.2/env-snapshot.txt",
+      "bytes": 201,
+      "sha256": "3261d943581923f52d0212a33585380e384ead0f2ada9030c8200383aae614b4"
+    },
+    {
+      "path": "samples/20261011T123114Z-reload-26.1.2/reload-session-stderr.log",
+      "bytes": 1180,
+      "sha256": "322b1de4721cc86ac9e48eee9a9654cf98fc8e2ca3365971e5bef8c50e43ec1f"
+    },
+    {
+      "path": "samples/20261011T123114Z-reload-26.1.2/reload-session-stdout.log",
+      "bytes": 4425273,
+      "sha256": "3e7334a2c716595b53f782f4e46554d6c684eebfc7976c338a609c792054b50a"
+    },
+    {
+      "path": "samples/20261011T123114Z-reload-26.1.2/samples.jsonl",
+      "bytes": 2580,
+      "sha256": "d15eea555f5a35452d6401582c6a369783eba208f0f2dcdbd039dc4f5347825f"
+    },
+    {
+      "path": "samples/20261011T123303Z-reload-26.1.2/env-snapshot.txt",
+      "bytes": 201,
+      "sha256": "5efddb5c23f0000583b991f00cfe5fda82d71b600159f11796b467aec4276751"
+    },
+    {
+      "path": "samples/20261011T123303Z-reload-26.1.2/reload-session-stderr.log",
+      "bytes": 1180,
+      "sha256": "d81a36c7d682d75c439b19429b24f44d5ec344055007ddd4d36168924eef0a96"
+    },
+    {
+      "path": "samples/20261011T123303Z-reload-26.1.2/reload-session-stdout.log",
+      "bytes": 4435745,
+      "sha256": "9f501aa63a294de9f6639b25de3a8add8d06c9f4a473d3e382143b3e9d1876cf"
+    },
+    {
+      "path": "samples/20261011T123303Z-reload-26.1.2/samples.jsonl",
+      "bytes": 2580,
+      "sha256": "0c1b0e3eef863b2f5f7d9af00450e77608338f71db9c1fa5a717873a74eda767"
+    },
+    {
+      "path": "samples/20261011T123548Z-reload-26.1.2/env-snapshot.txt",
+      "bytes": 201,
+      "sha256": "682d3b35ab511f3b4ff0796c9b40f29867892cf26bc478552056d97ec2e58a94"
+    },
+    {
+      "path": "samples/20261011T123548Z-reload-26.1.2/reload-session-stderr.log",
+      "bytes": 1180,
+      "sha256": "e175d7efd34a19a61401f7214346e453423c4974bffb1de13d7820550f513109"
+    },
+    {
+      "path": "samples/20261011T123548Z-reload-26.1.2/reload-session-stdout.log",
+      "bytes": 4425348,
+      "sha256": "5fbaa99575a492f49ad532d19bbfee2cf4b020fe5205e32aaf867988f6397897"
+    },
+    {
+      "path": "samples/20261011T123548Z-reload-26.1.2/samples.jsonl",
+      "bytes": 2580,
+      "sha256": "0f62d3748832d586fc0a6745947079225816a32b8c08cd6a304930aa7c0a54ea"
+    },
+    {
+      "path": "wrapper/adjacent-current-control/after-guard.txt",
+      "bytes": 23,
+      "sha256": "bdb25f1c0b0974bda8a2e0cc14e2b28fddb10059472de15d0f6171d9a9a75a0f"
+    },
+    {
+      "path": "wrapper/adjacent-current-control/after-guard.txt.exit.json",
+      "bytes": 166,
+      "sha256": "59f90f16c1d4a74b22ca6b489911632585691faec84c11a56ed4711a1ad83cb4"
+    },
+    {
+      "path": "wrapper/adjacent-current-control/before-guard.txt",
+      "bytes": 23,
+      "sha256": "bdb25f1c0b0974bda8a2e0cc14e2b28fddb10059472de15d0f6171d9a9a75a0f"
+    },
+    {
+      "path": "wrapper/adjacent-current-control/before-guard.txt.exit.json",
+      "bytes": 166,
+      "sha256": "59f90f16c1d4a74b22ca6b489911632585691faec84c11a56ed4711a1ad83cb4"
+    },
+    {
+      "path": "wrapper/adjacent-current-control/control-summary.json",
+      "bytes": 608,
+      "sha256": "c23084a1111632b5e4120c805da5a57dc91e4b0d987ddf2c86cfb5f610f0b970"
+    },
+    {
+      "path": "wrapper/adjacent-current-control/fixture-hashes.json",
+      "bytes": 3376,
+      "sha256": "51432fd39f446457739fc582c6b681e35f90ce38ba3ee3da9c0fea87a8a97099"
+    },
+    {
+      "path": "wrapper/adjacent-current-control/output-inventory-after.json",
+      "bytes": 1886,
+      "sha256": "ce760b1ee91311cf4a4bdb60d4248a9c58d57392aaa890abbebe3c98379eab68"
+    },
+    {
+      "path": "wrapper/adjacent-current-control/output-inventory-before.json",
+      "bytes": 1684,
+      "sha256": "e771f6328ca64b1315aa2e7bef35b17b202362ebef42c45d697d3466944de96e"
+    },
+    {
+      "path": "wrapper/adjacent-current-control/reload-control.txt",
+      "bytes": 3528,
+      "sha256": "d4c4083c5c680f67217f916b4fd06dfaea10d7284c483ca0ff530f770edad2a9"
+    },
+    {
+      "path": "wrapper/adjacent-current-control/reload-control.txt.exit.json",
+      "bytes": 166,
+      "sha256": "59f90f16c1d4a74b22ca6b489911632585691faec84c11a56ed4711a1ad83cb4"
+    },
+    {
+      "path": "wrapper/adjacent-current-control/source-revision.txt",
+      "bytes": 42,
+      "sha256": "e1e11f651b2bcf65ffa491adf0e1a1ccfd2995a57192ebd25adcba0c4371bfe0"
+    },
+    {
+      "path": "wrapper/old-environment-control/after-guard.txt",
+      "bytes": 23,
+      "sha256": "bdb25f1c0b0974bda8a2e0cc14e2b28fddb10059472de15d0f6171d9a9a75a0f"
+    },
+    {
+      "path": "wrapper/old-environment-control/after-guard.txt.exit.json",
+      "bytes": 166,
+      "sha256": "74eba40a9e34db438ee3dcadbb4631ee2dd877fabce374e8b16e07550c41f684"
+    },
+    {
+      "path": "wrapper/old-environment-control/before-guard.txt",
+      "bytes": 23,
+      "sha256": "bdb25f1c0b0974bda8a2e0cc14e2b28fddb10059472de15d0f6171d9a9a75a0f"
+    },
+    {
+      "path": "wrapper/old-environment-control/before-guard.txt.exit.json",
+      "bytes": 166,
+      "sha256": "74eba40a9e34db438ee3dcadbb4631ee2dd877fabce374e8b16e07550c41f684"
+    },
+    {
+      "path": "wrapper/old-environment-control/control-summary.json",
+      "bytes": 604,
+      "sha256": "33d1339acf59b8ba070c37607779067c581320f3c87a05c44ffcd03ed5e0c883"
+    },
+    {
+      "path": "wrapper/old-environment-control/fixture-hashes.json",
+      "bytes": 3376,
+      "sha256": "51432fd39f446457739fc582c6b681e35f90ce38ba3ee3da9c0fea87a8a97099"
+    },
+    {
+      "path": "wrapper/old-environment-control/output-inventory-after.json",
+      "bytes": 1847,
+      "sha256": "0d4f183218851772bb4e7f075a6f0e7cfe5f3561dabe3d11981e374ef2638915"
+    },
+    {
+      "path": "wrapper/old-environment-control/output-inventory-before.json",
+      "bytes": 1647,
+      "sha256": "6cb053aed7ff9d51d61c9231c6b18ad9716dbe9f4b101ce28c72d16974677f95"
+    },
+    {
+      "path": "wrapper/old-environment-control/reload-control.txt",
+      "bytes": 3528,
+      "sha256": "554137c1f6fa97e99f380e5cbcb461b234e2261b65fc38dd20296b45d5822937"
+    },
+    {
+      "path": "wrapper/old-environment-control/reload-control.txt.exit.json",
+      "bytes": 166,
+      "sha256": "74eba40a9e34db438ee3dcadbb4631ee2dd877fabce374e8b16e07550c41f684"
+    },
+    {
+      "path": "wrapper/old-environment-control/source-revision.txt",
+      "bytes": 42,
+      "sha256": "8823cda099e6070769959baa5390574caab71ed6d14a9145eedb757d75442253"
+    },
+    {
+      "path": "wrapper/owned-current-profile/after-guard-exit.json",
+      "bytes": 17,
+      "sha256": "d45db54bba0c56e2691a52869729c0a3eade7f5d50545e7832a20e3262a9d422"
+    },
+    {
+      "path": "wrapper/owned-current-profile/after-guard.txt",
+      "bytes": 23,
+      "sha256": "bdb25f1c0b0974bda8a2e0cc14e2b28fddb10059472de15d0f6171d9a9a75a0f"
+    },
+    {
+      "path": "wrapper/owned-current-profile/before-guard-exit.json",
+      "bytes": 17,
+      "sha256": "d45db54bba0c56e2691a52869729c0a3eade7f5d50545e7832a20e3262a9d422"
+    },
+    {
+      "path": "wrapper/owned-current-profile/before-guard.txt",
+      "bytes": 23,
+      "sha256": "bdb25f1c0b0974bda8a2e0cc14e2b28fddb10059472de15d0f6171d9a9a75a0f"
+    },
+    {
+      "path": "wrapper/owned-current-profile/events-print-exit.json",
+      "bytes": 17,
+      "sha256": "d45db54bba0c56e2691a52869729c0a3eade7f5d50545e7832a20e3262a9d422"
+    },
+    {
+      "path": "wrapper/owned-current-profile/jfr-start-exit.json",
+      "bytes": 17,
+      "sha256": "d45db54bba0c56e2691a52869729c0a3eade7f5d50545e7832a20e3262a9d422"
+    },
+    {
+      "path": "wrapper/owned-current-profile/jfr-start.txt",
+      "bytes": 144,
+      "sha256": "e4da052938b222268ca9d594025ef13bef0ea40f0a47269a2aa65224a11d111f"
+    },
+    {
+      "path": "wrapper/owned-current-profile/output-inventory-after.json",
+      "bytes": 1925,
+      "sha256": "da8351cfa44b96325f3d6371573e409146b84ec36e73e8588cd7faad93a86336"
+    },
+    {
+      "path": "wrapper/owned-current-profile/output-inventory-before.json",
+      "bytes": 1721,
+      "sha256": "1dd37632ae0feae2ebbccd4bf751783b248e0778b15393b5e650a802771ab9be"
+    },
+    {
+      "path": "wrapper/owned-current-profile/profile-aggregate.json",
+      "bytes": 78311,
+      "sha256": "8ee2637edb62dedbdcce449d648d2fdc5d0bbaa9f7f233ddb26403606197176b"
+    },
+    {
+      "path": "wrapper/owned-current-profile/profile-owner.json",
+      "bytes": 232,
+      "sha256": "2004affc39624e6e7c6595ffb9d854265b710ffe8874cf3815f62748b216c35b"
+    },
+    {
+      "path": "wrapper/owned-current-profile/profile-phase-counts.json",
+      "bytes": 690,
+      "sha256": "14eb92b0126facecffe210c10b908672f1c79102c804d2bc44244f1305b01189"
+    },
+    {
+      "path": "wrapper/owned-current-profile/sampler-exit.json",
+      "bytes": 146,
+      "sha256": "5d88688a3fc704c64102ac5ab944e3dbc16e6a62c6f123c09b2c6d24b3037f22"
+    },
+    {
+      "path": "wrapper/owned-current-profile/sampler.txt",
+      "bytes": 3528,
+      "sha256": "d7620877100bcfc79da9dc52942bbe1d9fd044cc528e13de75453f670743d2eb"
+    }
+  ]
+}
