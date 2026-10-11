@@ -1,0 +1,392 @@
+{
+  "sourceRevision": "93f4b259ffafb6466918582fcfa950c2c2480d77",
+  "checkoutRevision": "045c8d15d373313d9ad641b7df08bb684ebf7570",
+  "artifactBindings": [
+    {
+      "run": "initial",
+      "node": "server",
+      "sha256": "59d97eb34b670639e278f9a0558cd03e813e5b556061c209346837d6d1c24447",
+      "classEntriesMatched": 14
+    },
+    {
+      "run": "initial",
+      "node": "clientA",
+      "sha256": "59d97eb34b670639e278f9a0558cd03e813e5b556061c209346837d6d1c24447",
+      "classEntriesMatched": 14
+    },
+    {
+      "run": "initial",
+      "node": "clientB",
+      "sha256": "59d97eb34b670639e278f9a0558cd03e813e5b556061c209346837d6d1c24447",
+      "classEntriesMatched": 14
+    },
+    {
+      "run": "resumed",
+      "node": "server",
+      "sha256": "59d97eb34b670639e278f9a0558cd03e813e5b556061c209346837d6d1c24447",
+      "classEntriesMatched": 14
+    },
+    {
+      "run": "resumed",
+      "node": "clientA",
+      "sha256": "59d97eb34b670639e278f9a0558cd03e813e5b556061c209346837d6d1c24447",
+      "classEntriesMatched": 14
+    },
+    {
+      "run": "resumed",
+      "node": "clientB",
+      "sha256": "59d97eb34b670639e278f9a0558cd03e813e5b556061c209346837d6d1c24447",
+      "classEntriesMatched": 14
+    }
+  ],
+  "initialTwoActualAcksAndActivatedReports": "PASS",
+  "twoPlayerTransaction": {
+    "status": "COMMITTED",
+    "activatedGeneration": 3,
+    "participants": "[2a427923-8960-37e4-80f5-833589c281ee, 35a22e7f-6696-3920-9c7e-8183dfc22c18]",
+    "outcomes": [
+      {
+        "participant": "2a427923-8960-37e4-80f5-833589c281ee",
+        "generation": 2,
+        "outcome": "state-sync-sent",
+        "reason": null
+      },
+      {
+        "participant": "2a427923-8960-37e4-80f5-833589c281ee",
+        "generation": 2,
+        "outcome": "state-sync-completed",
+        "reason": null
+      },
+      {
+        "participant": "35a22e7f-6696-3920-9c7e-8183dfc22c18",
+        "generation": 2,
+        "outcome": "state-sync-sent",
+        "reason": null
+      },
+      {
+        "participant": "35a22e7f-6696-3920-9c7e-8183dfc22c18",
+        "generation": 2,
+        "outcome": "state-sync-completed",
+        "reason": null
+      },
+      {
+        "participant": "35a22e7f-6696-3920-9c7e-8183dfc22c18",
+        "generation": 3,
+        "outcome": "ack",
+        "reason": null
+      },
+      {
+        "participant": "2a427923-8960-37e4-80f5-833589c281ee",
+        "generation": 3,
+        "outcome": "ack",
+        "reason": null
+      },
+      {
+        "participant": "35a22e7f-6696-3920-9c7e-8183dfc22c18",
+        "generation": 3,
+        "outcome": "activation-report",
+        "reason": "activated"
+      },
+      {
+        "participant": "2a427923-8960-37e4-80f5-833589c281ee",
+        "generation": 3,
+        "outcome": "activation-report",
+        "reason": "activated"
+      }
+    ],
+    "phases": [
+      {
+        "phase": "PREFLIGHT",
+        "generation": 1,
+        "passed": true,
+        "errorSource": null,
+        "detail": "4 request(s) passed preflight"
+      },
+      {
+        "phase": "SERVER_PREPARE",
+        "generation": 1,
+        "passed": true,
+        "errorSource": null,
+        "detail": "adapter accepted 4 request(s)"
+      },
+      {
+        "phase": "CLIENT_PREPARE",
+        "generation": 1,
+        "passed": true,
+        "errorSource": null,
+        "detail": "no remote participants; commit proceeds without acks"
+      },
+      {
+        "phase": "ACK",
+        "generation": 1,
+        "passed": true,
+        "errorSource": null,
+        "detail": "no acks required (single-node)"
+      },
+      {
+        "phase": "COMMIT",
+        "generation": 1,
+        "passed": true,
+        "errorSource": null,
+        "detail": "activated on the server; commit broadcast sent"
+      },
+      {
+        "phase": "PREFLIGHT",
+        "generation": 2,
+        "passed": true,
+        "errorSource": null,
+        "detail": "4 request(s) passed preflight"
+      },
+      {
+        "phase": "SERVER_PREPARE",
+        "generation": 2,
+        "passed": true,
+        "errorSource": null,
+        "detail": "adapter accepted 4 request(s)"
+      },
+      {
+        "phase": "CLIENT_PREPARE",
+        "generation": 2,
+        "passed": true,
+        "errorSource": null,
+        "detail": "no remote participants; commit proceeds without acks"
+      },
+      {
+        "phase": "ACK",
+        "generation": 2,
+        "passed": true,
+        "errorSource": null,
+        "detail": "no acks required (single-node)"
+      },
+      {
+        "phase": "COMMIT",
+        "generation": 2,
+        "passed": true,
+        "errorSource": null,
+        "detail": "activated on the server; commit broadcast sent"
+      },
+      {
+        "phase": "PREFLIGHT",
+        "generation": 3,
+        "passed": true,
+        "errorSource": null,
+        "detail": "4 request(s) passed preflight"
+      },
+      {
+        "phase": "SERVER_PREPARE",
+        "generation": 3,
+        "passed": true,
+        "errorSource": null,
+        "detail": "adapter accepted 4 request(s)"
+      },
+      {
+        "phase": "CLIENT_PREPARE",
+        "generation": 3,
+        "passed": true,
+        "errorSource": null,
+        "detail": "prepare sent to [2a427923-8960-37e4-80f5-833589c281ee, 35a22e7f-6696-3920-9c7e-8183dfc22c18]"
+      },
+      {
+        "phase": "ACK",
+        "generation": 3,
+        "passed": true,
+        "errorSource": null,
+        "detail": "all participants acked"
+      },
+      {
+        "phase": "COMMIT",
+        "generation": 3,
+        "passed": true,
+        "errorSource": null,
+        "detail": "activated on the server; commit broadcast sent"
+      }
+    ]
+  },
+  "declarationFirstHudState": "PASS",
+  "initialHud": [
+    {
+      "generation": 1,
+      "declared": true,
+      "current": null,
+      "active": false
+    },
+    {
+      "generation": 2,
+      "declared": true,
+      "current": "minecraft:invert",
+      "active": true
+    },
+    {
+      "generation": 3,
+      "declared": true,
+      "current": "minecraft:invert",
+      "active": true
+    }
+  ],
+  "resumedAHud": [
+    {
+      "generation": 1,
+      "declared": true,
+      "current": null,
+      "active": false
+    },
+    {
+      "generation": 2,
+      "declared": true,
+      "current": "minecraft:invert",
+      "active": true
+    }
+  ],
+  "initialAEffectClearAndEnablePixels": "PASS",
+  "candidateRejectionAndRecoveryState": "PASS",
+  "postReloadAndBPixelTransitions": "NOT_VERIFIED",
+  "identicalCaptureGroups": [
+    {
+      "run": "initial",
+      "files": [
+        "clear_after_reload.png",
+        "inline_rejected.png"
+      ]
+    },
+    {
+      "run": "initial",
+      "files": [
+        "recovered_blur.png",
+        "recovered_clear.png"
+      ]
+    },
+    {
+      "run": "resumed",
+      "files": [
+        "resumed_a_reload_blur.png",
+        "resumed_a_reload_clear.png"
+      ]
+    },
+    {
+      "run": "resumed",
+      "files": [
+        "resumed_b_blur.png",
+        "resumed_b_clear.png"
+      ]
+    }
+  ],
+  "captures": [
+    {
+      "run": "initial",
+      "file": "clear-before.png",
+      "bytes": 262591,
+      "sha256": "29f66ca6f7b2dac79b2fb8f3a14ec407d0394fef1b4bda810f5c4c620e560895"
+    },
+    {
+      "run": "initial",
+      "file": "clear_after_reload.png",
+      "bytes": 243867,
+      "sha256": "5ce32c613def55265551904fe0f11dba960adf24044b44b9c4ce5c8b940070f8"
+    },
+    {
+      "run": "initial",
+      "file": "initial-world.png",
+      "bytes": 306411,
+      "sha256": "5ca20687d241256f5b7a440437dfdc72ca971b3185ed2cd858af875cd9306297"
+    },
+    {
+      "run": "initial",
+      "file": "inline_rejected.png",
+      "bytes": 243867,
+      "sha256": "5ce32c613def55265551904fe0f11dba960adf24044b44b9c4ce5c8b940070f8"
+    },
+    {
+      "run": "initial",
+      "file": "recovered_blur.png",
+      "bytes": 250754,
+      "sha256": "ea45430e6f3d3502854363c47524e43c118a20e1b08ceaa158b462b5031e0f8a"
+    },
+    {
+      "run": "initial",
+      "file": "recovered_clear.png",
+      "bytes": 250754,
+      "sha256": "ea45430e6f3d3502854363c47524e43c118a20e1b08ceaa158b462b5031e0f8a"
+    },
+    {
+      "run": "initial",
+      "file": "retained_after_rejection.png",
+      "bytes": 223249,
+      "sha256": "3fc666dc622b7adb837e38c1e35c7e0a251d868ebea304964d79d154ed06dde7"
+    },
+    {
+      "run": "initial",
+      "file": "vanilla-blur.png",
+      "bytes": 242965,
+      "sha256": "ea4cee3d20cc34b485f56b2833fb9bc6f8ea8a601a9fb039a43b62f7e037377f"
+    },
+    {
+      "run": "resumed",
+      "file": "resumed_a_blur.png",
+      "bytes": 180224,
+      "sha256": "330f9976290564f546149b9f750844b17b1f4a0556504af0b921276b4464f1f2"
+    },
+    {
+      "run": "resumed",
+      "file": "resumed_a_clear.png",
+      "bytes": 183194,
+      "sha256": "208fd7bf0dd11d39e01aa7c52c6990ccdfcd443940067729b8dc6ca647bb89d5"
+    },
+    {
+      "run": "resumed",
+      "file": "resumed_a_reload_blur.png",
+      "bytes": 175305,
+      "sha256": "80eb2463818dbb3484030a3981067ec35f5ab17c5463549ac3392c9e999571fd"
+    },
+    {
+      "run": "resumed",
+      "file": "resumed_a_reload_clear.png",
+      "bytes": 175305,
+      "sha256": "80eb2463818dbb3484030a3981067ec35f5ab17c5463549ac3392c9e999571fd"
+    },
+    {
+      "run": "resumed",
+      "file": "resumed_b_blur.png",
+      "bytes": 39133,
+      "sha256": "077648c0bbdd640253a0684def92d6da1e7d126b993ee74e6b5de0f9fd867fa5"
+    },
+    {
+      "run": "resumed",
+      "file": "resumed_b_clear.png",
+      "bytes": 39133,
+      "sha256": "077648c0bbdd640253a0684def92d6da1e7d126b993ee74e6b5de0f9fd867fa5"
+    }
+  ],
+  "inlineIdActivation": "REJECTED_BY_RESOURCE_BACKED_SET_CONTRACT",
+  "firstPixelFrame": "NOT_VERIFIED",
+  "allNodeVisual": "NOT_RUN",
+  "nativeClientOverall": "FAIL",
+  "exits": {
+    "initial": {
+      "server": null,
+      "clientA": null,
+      "clientB": 0
+    },
+    "resumed": {
+      "server": 0,
+      "clientA": 4294967295,
+      "clientB": 1
+    }
+  },
+  "resumedBCrash": {
+    "frame": "glfw.dll+0x10fa1",
+    "thread": "Render thread",
+    "cause": "NOT_ESTABLISHED"
+  },
+  "resumedAShutdown": {
+    "nonDaemonPoolThreads": 8,
+    "owner": "NOT_ESTABLISHED",
+    "forced": true,
+    "normalExit": false
+  },
+  "initialMissingDirectExits": "NOT_RECORDED; no inferred shutdown cause",
+  "ownedPortsFree": true,
+  "productionSourceChanged": false,
+  "securityChanged": false,
+  "humanAcceptance": "NOT_RECORDED",
+  "overall": "NOT_COMPLETE"
+}

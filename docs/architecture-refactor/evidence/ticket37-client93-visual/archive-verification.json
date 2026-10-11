@@ -1,0 +1,11 @@
+{
+  "archiveHashAndAllEntries": "PASS",
+  "actualLocalCredentials": "PASS",
+  "sixLocalJarBindings": "PASS",
+  "twoRealAcks": "PASS",
+  "fourIdenticalCaptureGroupsRetained": true,
+  "normalClientExit": "FAIL",
+  "nativeClientOverall": "FAIL",
+  "firstPixelFrame": "NOT_VERIFIED",
+  "overall": "NOT_COMPLETE"
+}
