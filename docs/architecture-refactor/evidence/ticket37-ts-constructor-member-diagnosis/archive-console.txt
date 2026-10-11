@@ -1,0 +1,1 @@
+{"archive": {"file": "constructor-member-diagnosis.zip", "entries": 54, "bytes": 64336, "sha256": "0d1f02056e90934427a10f692cac8b9a93dea517d0fe0a0ed9e9563928bbfaf1"}, "productionChange": "NONE", "computedCandidate": "caller0/three negative rejects", "overall": "NOT COMPLETE"}

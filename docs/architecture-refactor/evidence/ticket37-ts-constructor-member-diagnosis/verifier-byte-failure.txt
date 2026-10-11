@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "D:\mcmodDemo\NekoJS-mult\docs\architecture-refactor\evidence\ticket37-ts-constructor-member-diagnosis\verify.py", line 28, in <module>
+    assert actual == expected
+           ^^^^^^^^^^^^^^^^^^
+AssertionError

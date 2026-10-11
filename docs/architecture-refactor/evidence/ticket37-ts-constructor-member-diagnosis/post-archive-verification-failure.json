@@ -1,0 +1,8 @@
+{
+  "verifierDirectExit": 1,
+  "reason": "Candidate writes CRLF while original generator file retains LF",
+  "files": {
+    "verifier-byte-failure.txt": "64d55f5ecd515bad328eda7d9a113a893f1168b8817ff699fd56a85d516c1f43",
+    "verifier-byte-failure.py": "d758a19bf9a5e75cc456da8241d99bc4bc7da96b356789422f7225fab86fa9fe"
+  }
+}

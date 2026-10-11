@@ -1,0 +1,361 @@
+{
+  "sourceRevision": "60139fffffa6e54b2248797c2a32d4fd75025a54",
+  "evidenceBase": "50ef24b012713e74d522e1210d5dadadc68e43ee",
+  "generatedSurfaceSha256": "831096469a30faedbf344912b1150c5c02919456131a99722e470274c35678b9",
+  "red": {
+    "exitCode": 2,
+    "diagnostics": [
+      "build/ticket37-ts-constructor-member-resolved-red/surface.d.ts(18,13): error TS1341: Class constructor may not be an accessor.",
+      "build/ticket37-ts-constructor-member-resolved-red/surface.d.ts(20,9): error TS1089: 'static' modifier cannot appear on a constructor declaration.",
+      "build/ticket37-ts-constructor-member-resolved-red/surface.d.ts(20,83): error TS1093: Type annotation cannot appear on a constructor declaration."
+    ],
+    "wholeGeneratedBytesEqual": true,
+    "correction": "Only isolated caller module mapping corrected; original failed caller and model assertion retained",
+    "limitations": [
+      "Two external leaf dependency fixtures",
+      "No production or runtime change"
+    ]
+  },
+  "models": {
+    "models": [
+      {
+        "model": "quoted",
+        "checks": [
+          {
+            "caller": "caller",
+            "exitCode": 2,
+            "diagnostics": [
+              "build/ticket37-ts-constructor-member-resolved-models/quoted/surface.d.ts(20,9): error TS1089: 'static' modifier cannot appear on a constructor declaration.",
+              "build/ticket37-ts-constructor-member-resolved-models/quoted/surface.d.ts(20,85): error TS1093: Type annotation cannot appear on a constructor declaration."
+            ]
+          },
+          {
+            "caller": "invalid",
+            "exitCode": 2,
+            "diagnostics": [
+              "build/ticket37-ts-constructor-member-resolved-models/quoted/invalid.ts(4,7): error TS2322: Type 'boolean' is not assignable to type 'string'.",
+              "build/ticket37-ts-constructor-member-resolved-models/quoted/surface.d.ts(20,9): error TS1089: 'static' modifier cannot appear on a constructor declaration.",
+              "build/ticket37-ts-constructor-member-resolved-models/quoted/surface.d.ts(20,85): error TS1093: Type annotation cannot appear on a constructor declaration."
+            ]
+          }
+        ],
+        "actualConstructorSignatureRetained": true
+      },
+      {
+        "model": "computed",
+        "checks": [
+          {
+            "caller": "caller",
+            "exitCode": 0,
+            "diagnostics": []
+          },
+          {
+            "caller": "invalid",
+            "exitCode": 2,
+            "diagnostics": [
+              "build/ticket37-ts-constructor-member-resolved-models/computed/invalid.ts(4,7): error TS2322: Type 'boolean' is not assignable to type 'string'.",
+              "build/ticket37-ts-constructor-member-resolved-models/computed/invalid.ts(5,7): error TS2322: Type '$ApiSignature' is not assignable to type 'number'.",
+              "build/ticket37-ts-constructor-member-resolved-models/computed/invalid.ts(6,27): error TS2345: Argument of type 'number' is not assignable to parameter of type '$ApiParameter[]'."
+            ]
+          }
+        ],
+        "actualConstructorSignatureRetained": true
+      }
+    ],
+    "canonicalGeneratedFileUnchanged": true,
+    "limitations": [
+      "Separate candidate copies only, not production generation",
+      "No Java host runtime/property access proof",
+      "No regression or installed new-JAR proof",
+      "Not a completed repair"
+    ]
+  },
+  "archive": {
+    "file": "constructor-member-diagnosis.zip",
+    "entries": 54,
+    "bytes": 64336,
+    "sha256": "0d1f02056e90934427a10f692cac8b9a93dea517d0fe0a0ed9e9563928bbfaf1"
+  },
+  "entries": [
+    {
+      "path": "actual/saveddata.d.ts",
+      "bytes": 3037,
+      "sha256": "c5bb810ea7228fafb929b172afcfd6246d18779e45cc6acd9b98338b56b4e34c"
+    },
+    {
+      "path": "actual/surface.d.ts",
+      "bytes": 3041,
+      "sha256": "831096469a30faedbf344912b1150c5c02919456131a99722e470274c35678b9"
+    },
+    {
+      "path": "actual/whole-26.1.2-server-tsc.txt",
+      "bytes": 435695,
+      "sha256": "4eeda0786864ef7529556edb30709d76a4e2a4f5ec731566952af590df800781"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-models/quoted/caller-tsc.txt",
+      "bytes": 541,
+      "sha256": "364eb73c3a67ca58cdb7eb13e33e5dd8ad14bc8222f1b4c97f062f427fe18e73"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-models/quoted/caller-tsconfig.json",
+      "bytes": 231,
+      "sha256": "b9a79519789e37108fd69422b06fae7c20c7e1092ad87534a61f0f475f0480af"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-models/quoted/caller.ts",
+      "bytes": 325,
+      "sha256": "a3f8ec63a200d79c0c31225256a6e2556aca190cd60ce7cef7fa42356afcebba"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-models/quoted/dependencies.d.ts",
+      "bytes": 127,
+      "sha256": "62ac749e38ff72e208af423b4f74663bf80332ba978f3287ebe6265d349550ef"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-models/quoted/invalid-tsc.txt",
+      "bytes": 542,
+      "sha256": "0ee8613a394962e11d59e731ed5972cac55e2b57bfbda23405285beba1cd2a6c"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-models/quoted/invalid-tsconfig.json",
+      "bytes": 232,
+      "sha256": "a42253178ee2581352a94b4e2ad375265e6259aa4ac9ca54a53c1d96e34e8116"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-models/quoted/invalid.ts",
+      "bytes": 356,
+      "sha256": "bc74c3dfba4918a025ebabdf5accc61aa95ac8c04ab75a2bbe13692afaae70a4"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-models/quoted/surface.d.ts",
+      "bytes": 3123,
+      "sha256": "487fb90ba2b25c50a3bdecab6326d6a85357caf94e3f0e45ae4f3b8acf21930b"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-models/quoted/tsconfig.json",
+      "bytes": 231,
+      "sha256": "b9a79519789e37108fd69422b06fae7c20c7e1092ad87534a61f0f475f0480af"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-red/caller.ts",
+      "bytes": 325,
+      "sha256": "a3f8ec63a200d79c0c31225256a6e2556aca190cd60ce7cef7fa42356afcebba"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-red/dependencies.d.ts",
+      "bytes": 127,
+      "sha256": "62ac749e38ff72e208af423b4f74663bf80332ba978f3287ebe6265d349550ef"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-red/summary.json",
+      "bytes": 1144,
+      "sha256": "730ed09b15e9b7b57d438fff3c904080d6479310ae0dcfaa986557771fe3c194"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-red/surface.d.ts",
+      "bytes": 3041,
+      "sha256": "831096469a30faedbf344912b1150c5c02919456131a99722e470274c35678b9"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-red/tsc.txt",
+      "bytes": 630,
+      "sha256": "5077926937795d118104e6125945002e473af7e04b137ff4f3d868eb043a5fff"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-red/tsconfig.json",
+      "bytes": 231,
+      "sha256": "b9a79519789e37108fd69422b06fae7c20c7e1092ad87534a61f0f475f0480af"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/computed/caller-tsc.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/computed/caller-tsconfig.json",
+      "bytes": 398,
+      "sha256": "6dd74d0ee68204186b9c13ab97b279262d91335187bade3658fa247f12b84d8e"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/computed/caller.ts",
+      "bytes": 325,
+      "sha256": "a3f8ec63a200d79c0c31225256a6e2556aca190cd60ce7cef7fa42356afcebba"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/computed/dependencies.d.ts",
+      "bytes": 127,
+      "sha256": "62ac749e38ff72e208af423b4f74663bf80332ba978f3287ebe6265d349550ef"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/computed/invalid-tsc.txt",
+      "bytes": 475,
+      "sha256": "6836e13155801f469dee1770886f5c2db15c4d8d42ce7ffaf885cb64279cfd3b"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/computed/invalid-tsconfig.json",
+      "bytes": 399,
+      "sha256": "7eaab7796b4592059b9bb5c7fe64697b8a881efcde4ceb395c53f30396fb7bff"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/computed/invalid.ts",
+      "bytes": 356,
+      "sha256": "bc74c3dfba4918a025ebabdf5accc61aa95ac8c04ab75a2bbe13692afaae70a4"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/computed/surface.d.ts",
+      "bytes": 3127,
+      "sha256": "e81b02f64e5a39b50efbe659fcc1cc207a154363a69bb6af3a6ffcfee00e0285"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/computed/tsconfig.json",
+      "bytes": 398,
+      "sha256": "6dd74d0ee68204186b9c13ab97b279262d91335187bade3658fa247f12b84d8e"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/quoted/caller-tsc.txt",
+      "bytes": 313,
+      "sha256": "b762f3b43ce031d40fc61bc6ed12523b912d589a9a827bbe3befdba99db54c00"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/quoted/caller-tsconfig.json",
+      "bytes": 398,
+      "sha256": "6dd74d0ee68204186b9c13ab97b279262d91335187bade3658fa247f12b84d8e"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/quoted/caller.ts",
+      "bytes": 325,
+      "sha256": "a3f8ec63a200d79c0c31225256a6e2556aca190cd60ce7cef7fa42356afcebba"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/quoted/dependencies.d.ts",
+      "bytes": 127,
+      "sha256": "62ac749e38ff72e208af423b4f74663bf80332ba978f3287ebe6265d349550ef"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/quoted/invalid-tsc.txt",
+      "bytes": 456,
+      "sha256": "15b0090bb06a49ba3ef2b3e27c17695f67a02a8bf3486f9ce8f1c6f070de1bc8"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/quoted/invalid-tsconfig.json",
+      "bytes": 399,
+      "sha256": "7eaab7796b4592059b9bb5c7fe64697b8a881efcde4ceb395c53f30396fb7bff"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/quoted/invalid.ts",
+      "bytes": 356,
+      "sha256": "bc74c3dfba4918a025ebabdf5accc61aa95ac8c04ab75a2bbe13692afaae70a4"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/quoted/surface.d.ts",
+      "bytes": 3123,
+      "sha256": "487fb90ba2b25c50a3bdecab6326d6a85357caf94e3f0e45ae4f3b8acf21930b"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/quoted/tsconfig.json",
+      "bytes": 398,
+      "sha256": "6dd74d0ee68204186b9c13ab97b279262d91335187bade3658fa247f12b84d8e"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-models/summary.json",
+      "bytes": 2366,
+      "sha256": "357d0ceaaf496a8cb0513b0fcbefb82578059adec44e52ef01c772c0565da69e"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-red/caller.ts",
+      "bytes": 325,
+      "sha256": "a3f8ec63a200d79c0c31225256a6e2556aca190cd60ce7cef7fa42356afcebba"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-red/dependencies.d.ts",
+      "bytes": 127,
+      "sha256": "62ac749e38ff72e208af423b4f74663bf80332ba978f3287ebe6265d349550ef"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-red/summary.json",
+      "bytes": 757,
+      "sha256": "017758ee543a719562e3e91e21bde2492a2bba34141b5a7554fc9595614c587f"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-red/surface.d.ts",
+      "bytes": 3041,
+      "sha256": "831096469a30faedbf344912b1150c5c02919456131a99722e470274c35678b9"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-red/tsc.txt",
+      "bytes": 421,
+      "sha256": "b43e621c9ad4a56226328e8420318b18172ced0caf0ed4fccc648fc6ace614ff"
+    },
+    {
+      "path": "controls/ticket37-ts-constructor-member-resolved-red/tsconfig.json",
+      "bytes": 398,
+      "sha256": "6dd74d0ee68204186b9c13ab97b279262d91335187bade3658fa247f12b84d8e"
+    },
+    {
+      "path": "runner/archive-constructor-member-diagnosis.py",
+      "bytes": 3879,
+      "sha256": "4cd59dc95b427971f13635678d590e61612f3b85366d1219f5c1285f6a34122a"
+    },
+    {
+      "path": "runner/capture-constructor-member-red.py",
+      "bytes": 2128,
+      "sha256": "77671c9574050f48813537f6517f8ab13267ede1067d841bde86fca7cecae817"
+    },
+    {
+      "path": "runner/capture-constructor-member-resolved.py",
+      "bytes": 1611,
+      "sha256": "92af67b9b00fcb53519824aeb72410fc395771c4316ca209cc3382f84fa90667"
+    },
+    {
+      "path": "runner/check-constructor-member-models.py",
+      "bytes": 2895,
+      "sha256": "f7bb8ecbed115918d5b5f3478fac0098b9ef99737c1bfaa97975b4583a8bde44"
+    },
+    {
+      "path": "runner/check-constructor-member-resolved-models.py",
+      "bytes": 2959,
+      "sha256": "6e030ed0f686d3af06b23bca1359234fb075b43654bf0c66815b5331e5cc31f9"
+    },
+    {
+      "path": "runner/constructor-member-models.txt",
+      "bytes": 386,
+      "sha256": "77694e91e3c0c2e8d5281bd7841d264ff4c883b659e6b002986acde3980e623e"
+    },
+    {
+      "path": "runner/constructor-member-red.txt",
+      "bytes": 1078,
+      "sha256": "bd2e969043809ab1c2aba4dc82121ed4f918973e7025263846f4d53ad5c2026e"
+    },
+    {
+      "path": "runner/constructor-member-resolved-models.txt",
+      "bytes": 1885,
+      "sha256": "a25c34629cb6ed21e732f2497dd0f1b2e589ff9f4eba0b121374d3e35bacb9ff"
+    },
+    {
+      "path": "runner/constructor-member-resolved-red.txt",
+      "bytes": 704,
+      "sha256": "8b4ade6f0b5e9b4af4d7ba5e7a5d834adf5140797130413964cadee9bb2e5efb"
+    },
+    {
+      "path": "source/common/src/main/java/com/tkisor/nekojs/api/surface/ApiSignature.java",
+      "bytes": 2349,
+      "sha256": "6c00bfb7905d4afb1fb9923b8c595112f6b2ed32abf09c012238afc44d506a6e"
+    },
+    {
+      "path": "source/common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer.java",
+      "bytes": 27071,
+      "sha256": "cec36185d5f932a32cc65957585a85ca04189192bac11cb61e0b3b299dd8faa8"
+    }
+  ],
+  "productionChange": "NONE",
+  "generatedSourceModified": false,
+  "initialHarnessFailures": "Original missing-module diagnostic and incorrect quoted-getter expectation retained",
+  "limitations": [
+    "Only two external dependency leaf declarations isolated",
+    "Computed names only tested on candidate copies",
+    "Runtime host access and real generator regression NOT RUN",
+    "Whole default IDE FAIL",
+    "NOT A COMPLETED REPAIR"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "fullEntryHashesAndReadback": true,
+  "originalGeneratedBytesRetained": true,
+  "candidatesExactlyTwoContextualNamesAndCRLFOnly": true,
+  "initialHarnessFailuresRetained": true,
+  "validCallerAndThreeNegativeRejects": true,
+  "productionChange": "NONE",
+  "runtimeAndRealBackendRegression": "NOT RUN",
+  "repair": "NOT COMPLETE",
+  "overall": "NOT COMPLETE"
+}
