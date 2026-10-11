@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "fullEntryHashReadback": true,
+  "committedSourcePatchMatch": true,
+  "actualFiveArtifactClassBytes": "d4f2ae48dadd54cc6570d50741a8b969285928c9eecb1d914bcc252d96c628eb",
+  "redRuntimeAndNegativeControlsRetained": true,
+  "completedComparisonsAndExits": true,
+  "collectorMistakesRetained": true,
+  "wholeIDE": "FAIL",
+  "sourcePerformance": "NOT RUN in this archive",
+  "maintainerAcceptance": "NOT RECORDED",
+  "overall": "NOT COMPLETE"
+}

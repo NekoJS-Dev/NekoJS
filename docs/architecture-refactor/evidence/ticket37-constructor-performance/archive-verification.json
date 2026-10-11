@@ -1,0 +1,14 @@
+{
+  "archiveSha256": "e2af5853872a0077885f0f49379397474ae8b3049dbe4b236e75fcc3ecad45bb",
+  "fullHashReadback": true,
+  "completedConsoleAndRawSampleEquality": true,
+  "allThreeDirectExitsRetained": true,
+  "allFirstSamplesAndWarmupsRetained": true,
+  "fixedThresholdsAndComputedVerdictsMatch": true,
+  "compiledClassesMatchFiveInstalledArtifacts": true,
+  "normalRconSessions": 9,
+  "postGuardExit": 0,
+  "performance": "PASS: primary startup/reload only",
+  "overallTickets": "NOT COMPLETE",
+  "maintainerAcceptance": "NOT RECORDED"
+}
