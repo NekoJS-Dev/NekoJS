@@ -69,6 +69,13 @@ public final class TypeScriptClassRenderer {
         };
     }
 
+    /** Renders with module-local symbol names without changing shared getter overrides or aliases. */
+    public String render(TypeDecl decl, TypeAliasRegistry moduleAliases) {
+        TypeScriptClassRenderer scoped = new TypeScriptClassRenderer(moduleAliases);
+        scoped.getterOverrides.putAll(getterOverrides);
+        return scoped.render(decl);
+    }
+
     private String renderClass(TypeDecl d) {
         StringBuilder sb = new StringBuilder();
         appendDoc(sb, "    ", d.docs);
@@ -472,7 +479,8 @@ public final class TypeScriptClassRenderer {
                 return aliases.getAlias(fqn);
             }
         }
-        StringBuilder sb = new StringBuilder("$").append(simpleSymbolName(ref.name()));
+        String name = "$" + simpleSymbolName(ref.name());
+        StringBuilder sb = new StringBuilder(aliases == null ? name : aliases.reference(fqn, name));
         if (!ref.arguments().isEmpty()) {
             sb.append('<');
             sb.append(ref.arguments().stream()

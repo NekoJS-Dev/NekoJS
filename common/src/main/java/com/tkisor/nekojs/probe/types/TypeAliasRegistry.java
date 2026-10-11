@@ -15,6 +15,7 @@ public final class TypeAliasRegistry {
     private final Map<String, String> classAliases = new LinkedHashMap<>();
     private final Map<String, CollectionAlias> collectionAliases = new LinkedHashMap<>();
     private final Map<String, FunctionalInterfaceAlias> functionalAliases = new LinkedHashMap<>();
+    private java.util.function.BiFunction<String, String, String> references = (fqn, name) -> name;
     /**
      * 枚举输入别名的惰性解析缓存：FQN → {@code $<SimpleName>_}；空串 = 已确认非枚举/不可加载。
      *
@@ -28,6 +29,24 @@ public final class TypeAliasRegistry {
 
     public TypeAliasRegistry() {
         registerDefaults();
+    }
+
+    /** Creates an independent rendering view; module-local names never mutate the shared alias registry. */
+    public TypeAliasRegistry withReferences(java.util.function.BiFunction<String, String, String> references) {
+        TypeAliasRegistry view = new TypeAliasRegistry();
+        view.classAliases.clear();
+        view.classAliases.putAll(classAliases);
+        view.collectionAliases.clear();
+        view.collectionAliases.putAll(collectionAliases);
+        view.functionalAliases.putAll(functionalAliases);
+        view.enumAliasCache.putAll(enumAliasCache);
+        view.references = references;
+        return view;
+    }
+
+    /** Resolves one exported symbol by its Java identity within the current module. */
+    public String reference(String fqn, String exportedName) {
+        return references.apply(fqn, exportedName);
     }
 
     private void registerDefaults() {
@@ -44,8 +63,13 @@ public final class TypeAliasRegistry {
         collectionAliases.put("java.util.Map", new CollectionAlias("$Map", "") {
             @Override
             public String getInputType(String[] typeArgs) {
+                return getInputType(typeArgs, "$Map");
+            }
+
+            @Override
+            public String getInputType(String[] typeArgs, String hostName) {
                 if (typeArgs.length == 2) {
-                    String host = "$Map<" + typeArgs[0] + ", " + typeArgs[1] + ">";
+                    String host = hostName + "<" + typeArgs[0] + ", " + typeArgs[1] + ">";
                     return "(" + host + " | ([" + typeArgs[0] + "] extends [PropertyKey] ? Partial<Record<Extract<"
                             + typeArgs[0] + ", PropertyKey>, " + typeArgs[1] + ">> : never))";
                 }
@@ -100,8 +124,8 @@ public final class TypeAliasRegistry {
      */
     public String getAlias(String className) {
         String explicit = classAliases.get(className);
-        if (explicit != null) return explicit;
-        return enumInputAlias(className);
+        String alias = explicit != null ? explicit : enumInputAlias(className);
+        return alias == null ? null : reference(className, alias);
     }
 
     /**
@@ -154,7 +178,7 @@ public final class TypeAliasRegistry {
     public String getCollectionAlias(String rawFqn, String[] tsArgs) {
         CollectionAlias alias = collectionAliases.get(rawFqn);
         if (alias == null) return null;
-        return alias.getInputType(tsArgs);
+        return alias.getInputType(tsArgs, reference(rawFqn, alias.baseType));
     }
 
     /**
@@ -166,7 +190,8 @@ public final class TypeAliasRegistry {
 
     /** Returns an explicitly registered class alias without resolving the lazy enum aliases. */
     public String getRegisteredAlias(String className) {
-        return classAliases.get(className);
+        String alias = classAliases.get(className);
+        return alias == null ? null : reference(className, alias);
     }
 
     public FunctionalInterfaceAlias getFunctionalInterfaceAlias(String className) {
@@ -202,6 +227,11 @@ public final class TypeAliasRegistry {
         public String getInputType(String[] typeArgs) {
             if (typeArgs.length == 0) return "any" + suffix;
             return typeArgs[0] + suffix;
+        }
+
+        /** Retains custom conversion implementations while allowing host names to be scoped. */
+        public String getInputType(String[] typeArgs, String hostName) {
+            return getInputType(typeArgs);
         }
     }
 

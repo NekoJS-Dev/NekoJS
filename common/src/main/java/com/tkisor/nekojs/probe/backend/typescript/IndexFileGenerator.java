@@ -32,6 +32,8 @@ public final class IndexFileGenerator {
     private final java.util.concurrent.ConcurrentHashMap<String, Class<?>> classCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<String, String> declCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<String, Set<String>> importCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<String, TypeDecl> irCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Set<String> authoredClasses = java.util.concurrent.ConcurrentHashMap.newKeySet();
     /**
      * 枚举输入别名缓存（FQN → 别名名 + 就近发射的声明行）。predeclareClass 时从 {@link TypeDecl}
      * 计算，generate() 在枚举所在包模块内发射（{@code $Color_ = $Color | "RED" | ...}）。
@@ -103,32 +105,44 @@ public final class IndexFileGenerator {
             importsNeeded.removeIf(hiddenClasses::contains);
         }
 
+        Set<TypeScriptImportNames.Symbol> importedSymbols = new LinkedHashSet<>();
+        for (String fqn : importsNeeded) {
+            for (String name : exportedSymbols(fqn)) importedSymbols.add(new TypeScriptImportNames.Symbol(fqn, name));
+        }
+        Set<String> declaredNames = new LinkedHashSet<>();
+        Set<String> authoredImports = new LinkedHashSet<>();
+        for (String simpleName : classNames) {
+            String fqn = packageName + "." + simpleName;
+            if (!hasDeclaration(fqn)) continue;
+            declaredNames.addAll(exportedSymbols(fqn));
+            TypeDecl decl = irCache.get(fqn);
+            if (decl != null && decl.effectiveTypeName() != null) declaredNames.add("$" + decl.effectiveTypeName());
+            if (authoredClasses.contains(fqn)) authoredImports.addAll(importCache.getOrDefault(fqn, Set.of()));
+        }
+        Set<String> extraImports = new LinkedHashSet<>();
+        for (String simpleName : classNames) {
+            extraImports.addAll(irRenderer.getExtraImports(packageName + "." + simpleName));
+        }
+        TypeScriptImportNames importNames = new TypeScriptImportNames(importedSymbols, declaredNames, extraImports);
+        TypeAliasRegistry moduleAliases = importNames.hasAliases()
+                ? adapterAliasGenerator.aliasRegistry().withReferences(importNames::reference)
+                : adapterAliasGenerator.aliasRegistry();
+
         // 生成 import 语句（按包分组；包内符号名按字典序排序，保证跨 JVM 运行输出确定——
         // 反射的 getInterfaces/getDeclaredMethods 顺序无规范保证，直接沿用首插序会导致产物抖动）
         if (!importsNeeded.isEmpty()) {
             Map<String, List<String>> importsByPackage = new TreeMap<>();
-            for (String fqn : importsNeeded) {
+            for (var binding : importNames.bindings().entrySet()) {
+                String fqn = binding.getKey().fqn();
                 int dot = fqn.lastIndexOf('.');
                 if (dot < 0) continue; // 默认包的类无法通过模块路径导入，跳过
                 String pkg = fqn.substring(0, dot);
-                String simple = fqn.substring(dot + 1);
                 List<String> names = importsByPackage.computeIfAbsent(pkg, k -> new ArrayList<>());
-                names.add("$" + simple);
-                // 若该类有适配器输入别名，方法参数放宽后会引用 $Foo_，需一并导入
-                AdapterAliasGenerator.AdapterAlias alias = adapterAliasGenerator.getAlias(fqn);
-                if (alias != null) {
-                    names.add(alias.aliasName());
-                }
-                TypeAliasRegistry.FunctionalInterfaceAlias functionalAlias =
-                        functionalInterfaceAliasGenerator.getAlias(fqn);
-                if (functionalAlias != null) {
-                    names.add(functionalAlias.aliasName());
-                }
-                // 枚举同理：参数放宽为 $Enum_ 后需导入枚举所在模块的别名声明
-                EnumAlias enumAlias = enumAliasCache.get(fqn);
-                if (enumAlias != null) {
-                    names.add(enumAlias.aliasName());
-                }
+                String exported = binding.getKey().exportedName();
+                String local = binding.getValue();
+                names.add(exported.equals(local) ? exported : exported + " as " + local);
+                // Authored text has its own import convention; preserve it rather than rewriting opaque TypeScript.
+                if (authoredImports.contains(fqn) && !exported.equals(local)) names.add(exported);
             }
 
             for (var entry : importsByPackage.entrySet()) {
@@ -142,11 +156,6 @@ public final class IndexFileGenerator {
         }
 
         // 额外的 import 语句（来自 TypeScriptClassRenderer.overrideGetter）
-        Set<String> extraImports = new LinkedHashSet<>();
-        for (String simpleName : classNames) {
-            String fullName = packageName + "." + simpleName;
-            extraImports.addAll(irRenderer.getExtraImports(fullName));
-        }
         for (String stmt : extraImports) {
             sb.append(stmt).append("\n");
         }
@@ -171,6 +180,9 @@ public final class IndexFileGenerator {
                 String fullName = packageName + "." + simpleName;
                 String cached = declCache.get(fullName);
                 if (cached != null) {
+                    if (importNames.hasAliases() && irCache.containsKey(fullName)) {
+                        cached = irRenderer.render(irCache.get(fullName), moduleAliases);
+                    }
                     sb.append(cached);
                     sb.append("\n");
                 }
@@ -181,7 +193,8 @@ public final class IndexFileGenerator {
             for (String simpleName : classNames) {
                 String fullName = packageName + "." + simpleName;
                 if (hiddenClasses.contains(fullName)) continue;
-                AdapterAliasGenerator.AdapterAlias adapterAlias = adapterAliasGenerator.getAlias(fullName);
+                AdapterAliasGenerator.AdapterAlias adapterAlias = importNames.hasAliases()
+                        ? adapterAliasGenerator.getAlias(fullName, moduleAliases) : adapterAliasGenerator.getAlias(fullName);
                 if (adapterAlias != null) {
                     adapterAlias.doc().ifPresent(doc ->
                         sb.append("    /** ").append(doc.replace("\n", "\n     * ")).append(" */\n"));
@@ -194,7 +207,7 @@ public final class IndexFileGenerator {
                     sb.append(enumAlias.declaration());
                     continue;
                 }
-                String functionalAlias = functionalInterfaceAliasGenerator.declaration(fullName);
+                String functionalAlias = functionalInterfaceAliasGenerator.declaration(fullName, moduleAliases);
                 if (functionalAlias != null) {
                     sb.append(functionalAlias);
                     continue;
@@ -208,6 +221,18 @@ public final class IndexFileGenerator {
             sb.append("}\n");
         }
         return sb.toString();
+    }
+
+    private Set<String> exportedSymbols(String fqn) {
+        Set<String> names = new LinkedHashSet<>();
+        names.add("$" + fqn.substring(fqn.lastIndexOf('.') + 1));
+        AdapterAliasGenerator.AdapterAlias adapter = adapterAliasGenerator.getAlias(fqn);
+        if (adapter != null) names.add(adapter.aliasName());
+        TypeAliasRegistry.FunctionalInterfaceAlias functional = functionalInterfaceAliasGenerator.getAlias(fqn);
+        if (functional != null) names.add(functional.aliasName());
+        EnumAlias enumeration = enumAliasCache.get(fqn);
+        if (enumeration != null) names.add(enumeration.aliasName());
+        return names;
     }
 
     /**
@@ -390,6 +415,8 @@ public final class IndexFileGenerator {
      * 编辑引入的额外 SYMBOL 全限定名（可为空）。
      */
     public void predeclareClass(String fqn, TypeDecl decl, Set<String> extraImportFqns) {
+        irCache.put(fqn, decl);
+        authoredClasses.remove(fqn);
         registerEnumAlias(fqn, decl);
         declCache.put(fqn, irRenderer.render(decl));
         String packageName = packageOf(fqn);
@@ -453,6 +480,8 @@ public final class IndexFileGenerator {
     /** Replaces one class body while retaining the package generator and explicit dependency imports. */
     public void predeclareClassDeclaration(String fqn, String declaration, Set<String> importFqns,
                                           TypeDecl reflected) {
+        irCache.remove(fqn);
+        authoredClasses.add(fqn);
         if (reflected != null) registerEnumAlias(fqn, reflected);
         StringBuilder body = new StringBuilder();
         for (String line : declaration.split("\n", -1)) {
@@ -479,5 +508,7 @@ public final class IndexFileGenerator {
         declCache.clear();
         importCache.clear();
         enumAliasCache.clear();
+        irCache.clear();
+        authoredClasses.clear();
     }
 }

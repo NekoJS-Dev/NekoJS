@@ -84,6 +84,11 @@ public final class FunctionalInterfaceAliasGenerator {
     }
 
     public String declaration(String fqn) {
+        return declaration(fqn, registry);
+    }
+
+    /** Keeps alias signatures in the same module-local naming view as their host declarations. */
+    public String declaration(String fqn, TypeAliasRegistry registry) {
         TypeAliasRegistry.FunctionalInterfaceAlias alias = aliases.get(fqn);
         if (alias == null) return null;
         Class<?> cls = alias.interfaceClass();
@@ -132,7 +137,7 @@ public final class FunctionalInterfaceAliasGenerator {
         }
         callback.append(") => ").append(returnsVoid ? "void" : "CallbackResult");
 
-        StringBuilder host = new StringBuilder("$").append(tsClassName(cls));
+        StringBuilder host = new StringBuilder(registry.reference(fqn, "$" + tsClassName(cls)));
         if (variables.length > 0) {
             host.append('<');
             for (int index = 0; index < variables.length; index++) {
@@ -203,7 +208,7 @@ public final class FunctionalInterfaceAliasGenerator {
                 arguments.add(renderCallbackResult(callbackResult, registry, expanding));
             }
 
-            return alias.aliasName() + (arguments.isEmpty() ? "" : "<" + String.join(", ", arguments) + ">");
+            return registry.reference(fqn, alias.aliasName()) + (arguments.isEmpty() ? "" : "<" + String.join(", ", arguments) + ">");
         } finally {
             expanding.remove(expansionKey);
         }
@@ -237,7 +242,7 @@ public final class FunctionalInterfaceAliasGenerator {
                         substitutions, alias.generatedTypes(), signature.method());
                 arguments.add(renderCallbackResult(callbackResult, registry, expanding));
             }
-            return alias.aliasName() + (arguments.isEmpty() ? "" : "<" + String.join(", ", arguments) + ">");
+            return registry.reference(fqn, alias.aliasName()) + (arguments.isEmpty() ? "" : "<" + String.join(", ", arguments) + ">");
         } finally {
             expanding.remove(expansionKey);
         }
@@ -319,7 +324,8 @@ public final class FunctionalInterfaceAliasGenerator {
                 String[] hostArguments = Arrays.stream(arguments)
                         .map(argument -> TypeScriptClassRenderer.renderTypeRef(TypeReflector.toRef(argument),
                                 registry, false, expanding)).toArray(String[]::new);
-                return "$" + tsClassName(raw) + "<" + String.join(", ", hostArguments) + ">";
+                return registry.reference(raw.getName(), "$" + tsClassName(raw))
+                        + "<" + String.join(", ", hostArguments) + ">";
             }
         }
         return TypeScriptClassRenderer.renderTypeRef(
@@ -336,7 +342,7 @@ public final class FunctionalInterfaceAliasGenerator {
 
     private static String renderHostType(Type declared, Class<?> raw, TypeAliasRegistry registry,
                                          Set<String> generatedTypes) {
-        StringBuilder host = new StringBuilder("$").append(tsClassName(raw));
+        StringBuilder host = new StringBuilder(registry.reference(raw.getName(), "$" + tsClassName(raw)));
         Type[] arguments = declared instanceof ParameterizedType parameterized
                 ? parameterized.getActualTypeArguments() : new Type[0];
         if (raw.getTypeParameters().length > 0) {
@@ -354,7 +360,7 @@ public final class FunctionalInterfaceAliasGenerator {
     }
 
     private static String renderHostType(ApiTypeRef declared, Class<?> raw, TypeAliasRegistry registry) {
-        StringBuilder host = new StringBuilder("$").append(tsClassName(raw));
+        StringBuilder host = new StringBuilder(registry.reference(raw.getName(), "$" + tsClassName(raw)));
         if (raw.getTypeParameters().length > 0) {
             host.append('<');
             for (int index = 0; index < raw.getTypeParameters().length; index++) {

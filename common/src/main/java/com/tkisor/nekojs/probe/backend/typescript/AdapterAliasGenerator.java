@@ -30,6 +30,7 @@ import java.util.Set;
 public final class AdapterAliasGenerator {
     private final TypeAliasRegistry aliasRegistry;
     private final Map<String, AdapterAlias> aliases = new LinkedHashMap<>();
+    private final Map<String, AdapterCatalogEntry> entries = new LinkedHashMap<>();
     private final Set<String> hostImports = new LinkedHashSet<>();
 
     public AdapterAliasGenerator(TypeAliasRegistry aliasRegistry) {
@@ -52,6 +53,7 @@ public final class AdapterAliasGenerator {
      */
     public void prepare(List<AdapterCatalogEntry> adapters, Set<String> generatedClasses) {
         aliases.clear();
+        entries.clear();
         hostImports.clear();
 
         List<AdapterCatalogEntry> eligible = new ArrayList<>();
@@ -64,25 +66,12 @@ public final class AdapterAliasGenerator {
         }
 
         for (AdapterCatalogEntry entry : eligible) {
-            Class<?> target = entry.targetType();
-            String fqn = target.getName();
-            String selfSimple = tsClassName(target);
-            String selfPackage = target.getPackage() != null ? target.getPackage().getName() : "";
-
-            Set<String> imports = new LinkedHashSet<>();
-            Set<String> usedRegistries = new LinkedHashSet<>();
-            Set<String> rendered = new LinkedHashSet<>();
-            for (AdapterInputShape shape : entry.shapes()) {
-                // 顶层 self() 必须渲染成 $Foo（渲染成 $Foo_ 会让别名自引用成环）
-                rendered.add(render(shape, selfSimple, selfPackage, imports, usedRegistries, false));
-            }
-            if (rendered.isEmpty()) continue;
-
-            String union = String.join(" | ", rendered);
-            String aliasName = "$" + selfSimple + "_";
-            aliases.put(fqn, new AdapterAlias(aliasName, union, imports, !usedRegistries.isEmpty(), entry.syntaxDoc()));
+            String fqn = entry.targetType().getName();
+            entries.put(fqn, entry);
+            AdapterAlias alias = renderAlias(entry);
+            aliases.put(fqn, alias);
             // 收集别名引用的跨包 host 类型，供 orchestrator 确保它们也被生成，避免悬空 import
-            for (String imp : imports) {
+            for (String imp : alias.importFqns()) {
                 if (!imp.equals(fqn)) hostImports.add(imp);
             }
         }
@@ -104,6 +93,26 @@ public final class AdapterAliasGenerator {
 
     public AdapterAlias getAlias(String fqn) {
         return aliases.get(fqn);
+    }
+
+    /** Re-renders canonical shapes when an imported host or input alias needs a local name. */
+    public AdapterAlias getAlias(String fqn, TypeAliasRegistry moduleAliases) {
+        AdapterCatalogEntry entry = entries.get(fqn);
+        return entry == null ? null : new AdapterAliasGenerator(moduleAliases).renderAlias(entry);
+    }
+
+    private AdapterAlias renderAlias(AdapterCatalogEntry entry) {
+        Class<?> target = entry.targetType();
+        String selfSimple = tsClassName(target);
+        String selfPackage = target.getPackageName();
+        Set<String> imports = new LinkedHashSet<>();
+        Set<String> usedRegistries = new LinkedHashSet<>();
+        Set<String> rendered = new LinkedHashSet<>();
+        for (AdapterInputShape shape : entry.shapes()) {
+            rendered.add(render(shape, selfSimple, selfPackage, imports, usedRegistries, false));
+        }
+        return new AdapterAlias("$" + selfSimple + "_", String.join(" | ", rendered), imports,
+                !usedRegistries.isEmpty(), entry.syntaxDoc());
     }
 
     /**
@@ -148,7 +157,7 @@ public final class AdapterAliasGenerator {
                     imports.add(hostCls.getName());
                 }
                 String hostAlias = nested ? aliasRegistry.getAlias(hostCls.getName()) : null;
-                yield hostAlias != null ? hostAlias : "$" + tsClassName(hostCls);
+                yield hostAlias != null ? hostAlias : aliasRegistry.reference(hostCls.getName(), "$" + tsClassName(hostCls));
             }
             case AdapterInputShape.ArrayOfValue v ->
                     render(v.element(), selfSimple, selfPackage, imports, usedRegistries, true) + "[]";

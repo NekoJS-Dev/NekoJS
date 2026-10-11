@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "purpose": "Archive integrity and recorded scoped verdicts; full IDE/order/performance/overall remain open",
+  "entries": 4375,
+  "sha256": "97f85611c00de21bef8d30326673c10ed7e9692f8088d9572192181506ed5a8f",
+  "orderFailuresRetained": [
+    [
+      "1.21.1",
+      "@nekojs/managed/client/index.d.ts"
+    ],
+    [
+      "1.21.1",
+      "@nekojs/managed/server/index.d.ts"
+    ],
+    [
+      "1.21.1",
+      "@nekojs/managed/startup/index.d.ts"
+    ],
+    [
+      "1.21.1",
+      "@nekojs/managed/test/index.d.ts"
+    ]
+  ]
+}
