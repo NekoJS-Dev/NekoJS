@@ -16,20 +16,34 @@ import java.util.stream.Collectors;
 public final class ApiTypeRefPyRenderer {
     private final Set<String> availableFqns;
     private final Map<String, String> symbolNames;
+    private final String callableName;
 
     public ApiTypeRefPyRenderer(Set<String> availableFqns) {
         this(availableFqns, Map.of());
     }
 
     ApiTypeRefPyRenderer(Set<String> availableFqns, Map<String, String> symbolNames) {
+        this(availableFqns, symbolNames, "Callable");
+    }
+
+    private ApiTypeRefPyRenderer(Set<String> availableFqns, Map<String, String> symbolNames, String callableName) {
         this.availableFqns = availableFqns;
         this.symbolNames = Map.copyOf(symbolNames);
+        this.callableName = callableName;
     }
 
     ApiTypeRefPyRenderer withSymbolNames(Map<String, String> names) {
         Map<String, String> merged = new java.util.LinkedHashMap<>(symbolNames);
         merged.putAll(names);
-        return new ApiTypeRefPyRenderer(availableFqns, merged);
+        return new ApiTypeRefPyRenderer(availableFqns, merged, callableName);
+    }
+
+    ApiTypeRefPyRenderer withCallableName(String name) {
+        return new ApiTypeRefPyRenderer(availableFqns, symbolNames, name);
+    }
+
+    String callableName() {
+        return callableName;
     }
 
     String symbolName(String fqn) {
@@ -64,7 +78,7 @@ public final class ApiTypeRefPyRenderer {
                 }
                 yield symbolName(fqn);
             }
-            case CALLBACK -> "Callable[..., Any]";
+            case CALLBACK -> callableName + "[..., Any]";
         };
     }
 

@@ -223,6 +223,10 @@ public final class PythonProbeBackend implements ProbeBackend {
         for (TypeDecl declaration : classes) symbols.put(declaration.fqn, effectivePyName(declaration));
         symbols.putAll(importByName.typeNames());
         typeR = typeR.withSymbolNames(symbols);
+        if (classes.stream().anyMatch(declaration -> !declaration.hidden
+                && effectivePyName(declaration).equals("Callable"))) {
+            typeR = typeR.withCallableName(classR.typingCallableName(javaPkg));
+        }
         classR = classR.withTypeRenderer(typeR);
         Set<String> localTypes = classes.stream().map(declaration -> declaration.fqn)
                 .collect(java.util.stream.Collectors.toSet());
@@ -263,7 +267,9 @@ public final class PythonProbeBackend implements ProbeBackend {
         boolean usesLiteral = aliasLines.stream().anyMatch(l -> l.contains("Literal["));
         boolean usesOverload = classes.stream().anyMatch(classR::hasRenderedOverloads);
         boolean usesProtocol = classes.stream().anyMatch(classR::hasClassBindings);
-        sb.append("from typing import Any, Callable, ClassVar")
+        sb.append("from typing import Any, Callable")
+          .append(typeR.callableName().equals("Callable") ? "" : " as " + typeR.callableName())
+          .append(", ClassVar")
           .append(usesLiteral ? ", Literal" : "")
           .append(usesOverload ? ", overload" : "")
           .append(usesProtocol ? ", Protocol" : "")

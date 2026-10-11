@@ -46,6 +46,72 @@ import static org.junit.jupiter.api.Assertions.*;
 class PythonProbeBackendIntegrationTest {
 
     @Test
+    void actualJavaCallableDoesNotReplaceTypingCallable(@TempDir Path temp) throws Exception {
+        assertTrue(runGenerate(temp, emptySnapshot(), List.of(
+                new TypeReflector().reflect(java.util.concurrent.Callable.class)), List.of()).success());
+        Path output = temp.resolve("probe-python");
+        retainGenerated(output, "probe-python-jdk-callable-identity");
+        String module = Files.readString(output.resolve("nekojs/_java/java/util/concurrent/__init__.pyi"));
+        assertTrue(module.contains("Callable as _NekoTyping_Callable"), module);
+        assertTrue(module.contains("class Callable:"), module);
+        assertTrue(module.contains("def call(self) -> Any"), module);
+    }
+
+    @Test
+    void localCallableBaseAndEditedCallbackUseDifferentIdentities(@TempDir Path temp) throws Exception {
+        var target = new com.tkisor.nekojs.probe.backend.python.fixture.typing.CallableChild();
+        assertEquals("value!", target.apply(value -> value + "!"));
+        try (Context context = Context.newBuilder("js")
+                .allowExperimentalOptions(true)
+                .allowHostAccess(new NekoSharedHostAccess(List.of()).get())
+                .allowHostClassLookup(new ClassFilter(SandboxConfig.defaultConfig()))
+                .allowCreateProcess(false)
+                .option("js.nashorn-compat", "true")
+                .build()) {
+            context.getBindings("js").putMember("target", target);
+            assertEquals("value!", context.eval("js", "target.apply(function(value) { return value + '!'; })").asString());
+        }
+        var reflector = new TypeReflector();
+        TypeDecl child = reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing.CallableChild.class);
+        MethodDecl apply = child.methods.stream().filter(method -> method.name.equals("apply")).findFirst().orElseThrow();
+        apply.params.getFirst().type.ref = ApiTypeRef.callback(
+                com.tkisor.nekojs.api.surface.ApiSignature.function(List.of(
+                        new com.tkisor.nekojs.api.surface.ApiParameter("value", ApiTypeRef.primitive("object"), false, false)),
+                        ApiTypeRef.primitive("object")));
+        assertTrue(runGenerate(temp, emptySnapshot(), List.of(child,
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing.Callable.class),
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing._NekoTyping_Callable.class)),
+                List.of()).success());
+        Path output = temp.resolve("probe-python");
+        retainGenerated(output, "probe-python-local-callable-identity");
+        String module = Files.readString(output.resolve(
+                "nekojs/_java/com/tkisor/nekojs/probe/backend/python/fixture/typing/__init__.pyi"));
+        assertAll(
+                () -> assertTrue(module.contains("Callable as _NekoTyping_Callable1"), module),
+                () -> assertTrue(module.contains("class CallableChild(Callable):"), module),
+                () -> assertTrue(module.contains("class _NekoTyping_Callable:"), module),
+                () -> assertTrue(module.contains("callback: _NekoTyping_Callable1[..., Any]"), module));
+    }
+
+    @Test
+    void editedCallbackAndUnionBasesRemainExcludedWithPrivateTypingName(@TempDir Path temp) throws Exception {
+        var reflector = new TypeReflector();
+        TypeDecl child = reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing.CallableChild.class);
+        ApiTypeRef callback = ApiTypeRef.callback(com.tkisor.nekojs.api.surface.ApiSignature.function(
+                List.of(), ApiTypeRef.primitive("object")));
+        child.interfaces.clear();
+        child.interfaces.add(new TypeSlot(null, callback));
+        child.interfaces.add(new TypeSlot(null, ApiTypeRef.union(List.of(ApiTypeRef.symbol(
+                new ApiSymbolId("java", com.tkisor.nekojs.probe.backend.python.fixture.typing.Callable.class.getName())),
+                ApiTypeRef.primitive("string")))));
+        assertTrue(runGenerate(temp, emptySnapshot(), List.of(child,
+                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing.Callable.class)),
+                List.of()).success());
+        String module = Files.readString(temp.resolve("probe-python/nekojs/_java/com/tkisor/nekojs/probe/backend/python/fixture/typing/__init__.pyi"));
+        assertTrue(module.contains("class CallableChild:\n"), module);
+    }
+
+    @Test
     void actualRedundantChannelBasesKeepEveryContractInConsistentOrder(@TempDir Path temp) throws Exception {
         var reflector = new TypeReflector();
         List<TypeDecl> declarations = List.of(
