@@ -5,10 +5,15 @@ import {
     $CommunityProbeTypes$StringMapper_ as StringMapperInput,
     $CommunityProbeTypes$Payload as Payload,
     $CommunityProbeTypes$RpcBuilder as RpcBuilder,
+    $CommunityProbeTypes$Mode as Mode,
 } from 'java:com/tkisor/nekojs/probe/testfixture';
 
 declare const api: Api;
 declare const hostMapper: Mapper<Payload, string>;
+api.mode(Mode.A);
+api.mode('B');
+// @ts-expect-error Canonical enum input aliases survive a renamed declaration.
+api.mode(42);
 api.consume(value => value.getName().toUpperCase());
 api.consume(hostMapper);
 api.produce(() => 'converted input');
@@ -23,6 +28,14 @@ api.infer(() => 123).toUpperCase();
 api.nested(() => () => 123);
 api.inherited(value => value.toUpperCase());
 api.wildcard(value => value.getLabel().toUpperCase());
+api.containerWildcard(value => {
+    const hostValue = value.get();
+    // Nested lower-bounded wildcards use the existing host erasure, not a claimed Payload result.
+    type IsAny<T> = 0 extends (1 & T) ? true : false;
+    const erased: IsAny<typeof hostValue> = true;
+    void erased;
+    return String(hostValue);
+});
 api.raw(value => String(value));
 const standalone: MapperInput<Payload, string> = value => value.getName();
 const standaloneInherited: StringMapperInput = value => value.toUpperCase();
@@ -44,6 +57,8 @@ api.produce(() => 123);
 api.inherited(value => value.toFixed());
 
 declare const rpc: RpcBuilder;
+rpc.base().baseValue().toUpperCase();
+rpc.other().otherValue().toFixed();
 rpc.schema({ msg: 'string', count: 'int' }).returns('string').fn(({ msg, count }) => {
     const text: string = msg;
     const value: number = count;

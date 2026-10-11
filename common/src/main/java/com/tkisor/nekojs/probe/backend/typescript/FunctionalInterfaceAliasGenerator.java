@@ -401,7 +401,9 @@ public final class FunctionalInterfaceAliasGenerator {
             if (!(parameterized.getRawType() instanceof Class<?> raw)) return ApiTypeRef.primitive("any");
             if (!generatedTypes.contains(raw.getName())) return ApiTypeRef.primitive("any");
             List<ApiTypeRef> arguments = Arrays.stream(parameterized.getActualTypeArguments())
-                    .map(argument -> toRef(argument, interfaceClass, callbackArgument, callbackReturn,
+                    // A container's wildcard describes its contents, not the value passed to the SAM.
+                    // Preserve ordinary host wildcard mapping rather than claiming every read is the lower bound.
+                    .map(argument -> toRef(argument, interfaceClass, false, false,
                             substitutions, generatedTypes, samMethod))
                     .toList();
             return ApiTypeRef.symbol(new com.tkisor.nekojs.api.surface.ApiSymbolId("java", raw.getName()), arguments);

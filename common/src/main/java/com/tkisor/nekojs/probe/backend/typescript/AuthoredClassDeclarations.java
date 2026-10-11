@@ -4,6 +4,9 @@ import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
 import com.tkisor.nekojs.probe.ProbeContext;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
+import com.tkisor.nekojs.probe.ir.FieldDecl;
+import com.tkisor.nekojs.probe.ir.TypeReflector;
+import com.tkisor.nekojs.probe.ir.TypeSlot;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -56,6 +59,19 @@ final class AuthoredClassDeclarations {
 
     ClassDeclarationCatalogEntry get(String fqn) {
         return entries.get(fqn);
+    }
+
+    /** Reads only constant names for generator-owned aliases, without loading unrelated member signatures. */
+    static TypeDecl enumAliasType(Class<?> target) {
+        TypeDecl declaration = new TypeDecl(TypeDecl.Kind.ENUM, target, target.getName());
+        for (var field : target.getDeclaredFields()) {
+            if (!field.isEnumConstant()) continue;
+            FieldDecl constant = new FieldDecl(field.getName(), TypeSlot.of(target, TypeReflector.toRef(target)));
+            constant.isEnumConstant = true;
+            declaration.fields.add(constant);
+        }
+        declaration.fields.sort(Comparator.comparing(field -> field.name));
+        return declaration;
     }
 
     void validateGeneratedImports(IndexFileGenerator generator) {

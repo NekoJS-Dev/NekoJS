@@ -262,7 +262,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                         // Authored bodies bypass member reflection; shared hide decisions already won during selection.
                         // Auxiliary enum aliases use canonical runtime names, independently of replaced IR edits.
                         if (replacement.targetType().isEnum()) {
-                            decl = new TypeReflector().reflect(replacement.targetType());
+                            decl = AuthoredClassDeclarations.enumAliasType(replacement.targetType());
                         }
                         Set<String> imports = new LinkedHashSet<>();
                         for (Class<?> imported : replacement.imports()) imports.add(imported.getName());

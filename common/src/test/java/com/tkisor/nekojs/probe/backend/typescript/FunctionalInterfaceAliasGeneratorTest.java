@@ -80,6 +80,20 @@ class FunctionalInterfaceAliasGeneratorTest {
 
     public interface IteratorSupplier { java.util.Iterator<String> get(); }
 
+    public interface ContainerVisitor {
+        void visit(List<? super NestedInputApi.Payload> values);
+    }
+
+    @Test
+    void nestedContainerWildcardsRetainTheOrdinaryHostMapping() {
+        TypeAliasRegistry registry = new TypeAliasRegistry();
+        FunctionalInterfaceAliasGenerator generator = new FunctionalInterfaceAliasGenerator(registry);
+        generator.prepare(Set.of(ContainerVisitor.class.getName(), List.class.getName(),
+                NestedInputApi.Payload.class.getName()), Set.of());
+        String declaration = generator.declaration(ContainerVisitor.class.getName());
+        assertTrue(declaration.contains("CallbackArg0 = $List<any>"), declaration);
+    }
+
     @Test
     void iteratorCallbackResultsRetainTheHostIteratorContract() {
         TypeAliasRegistry registry = new TypeAliasRegistry();

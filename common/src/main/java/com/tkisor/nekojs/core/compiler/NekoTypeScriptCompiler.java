@@ -36,7 +36,7 @@ public final class NekoTypeScriptCompiler {
     record TypeScriptTransformResult(String code, String sourceMap) {}
 
     private static final class Eraser {
-        private record ClassBodyRange(int open, int close) {}
+        private record ClassBodyRange(int headerStart, int open, int close) {}
         private record BraceRange(int open, int close) {}
 
         private final Path file;
@@ -45,6 +45,7 @@ public final class NekoTypeScriptCompiler {
         private final int length;
         private final List<ClassBodyRange> classBodies = new ArrayList<>();
         private final List<BraceRange> braceRanges = new ArrayList<>();
+        private final java.util.Map<Integer, Integer> parenOpens = new java.util.HashMap<>();
         /** 预扫描：该偏移的 ':' 是 switch case/default 或 label 冒号（typeAnnotationAt 必须拒判）。*/
         private final boolean[] caseOrLabelColon;
         /** 预扫描：该偏移处于 import/export 的值别名子句（named {...} 或 * as X）——其中的 as 是 JS 原生别名。*/
@@ -525,7 +526,7 @@ public final class NekoTypeScriptCompiler {
             while (i < n) {
                 char c = body.charAt(i);
                 if (c == '\'' || c == '"') { i = skipIn(body, i, c); continue; }
-                if (c == '`') { while (i < n && body.charAt(i) != '`') i++; if (i < n) i++; continue; }
+                if (c == '`') { i = skipTemplateIn(body, i); continue; }
                 if (c == '/' && i + 1 < n && body.charAt(i + 1) == '/') { while (i < n && body.charAt(i) != '\n') i++; continue; }
                 if (c == '/' && i + 1 < n && body.charAt(i + 1) == '*') { i += 2; while (i + 1 < n && !(body.charAt(i) == '*' && body.charAt(i + 1) == '/')) i++; i += 2; continue; }
                 if (c == '(') { int d = 0; while (i < n) { char ch = body.charAt(i); if (ch == '\'') { i = skipIn(body, i, '\''); continue; } if (ch == '"') { i = skipIn(body, i, '"'); continue; } if (ch == '(') d++; else if (ch == ')') { d--; if (d == 0) { i++; break; } } i++; } continue; }
@@ -777,7 +778,7 @@ public final class NekoTypeScriptCompiler {
             while (i < n) {
                 char c = body.charAt(i);
                 if (c == '\'' || c == '"') { i = skipIn(body, i, c); continue; }
-                if (c == '`') { while (i < n && body.charAt(i) != '`') i++; if (i < n) i++; continue; }
+                if (c == '`') { i = skipTemplateIn(body, i); continue; }
                 if (c == '/' && i + 1 < n && body.charAt(i + 1) == '/') { while (i < n && body.charAt(i) != '\n') i++; continue; }
                 if (c == '/' && i + 1 < n && body.charAt(i + 1) == '*') { i += 2; while (i + 1 < n && !(body.charAt(i) == '*' && body.charAt(i + 1) == '/')) i++; i += 2; continue; }
                 if (c == '/') {
@@ -820,7 +821,7 @@ public final class NekoTypeScriptCompiler {
             return sb.toString();
         }
 
-        private int skipBodyRegex(String body, int slash) {
+        private int skipBodyRegex(CharSequence body, int slash) {
             if (!bodyRegexStartsAt(body, slash)) return slash;
             int i = slash + 1;
             boolean inClass = false;
@@ -844,7 +845,7 @@ public final class NekoTypeScriptCompiler {
             while (i < body.length()) {
                 char c = body.charAt(i);
                 if (c == '\'' || c == '"') { i = skipIn(body, i, c); continue; }
-                if (c == '`') { i++; while (i < body.length() && body.charAt(i) != '`') i++; if (i < body.length()) i++; continue; }
+                if (c == '`') { i = skipTemplateIn(body, i); continue; }
                 if (c == '/' && i + 1 < body.length() && body.charAt(i + 1) == '/') { while (i < body.length() && body.charAt(i) != '\n') i++; continue; }
                 if (c == '/' && i + 1 < body.length() && body.charAt(i + 1) == '*') { i += 2; while (i + 1 < body.length() && !(body.charAt(i) == '*' && body.charAt(i + 1) == '/')) i++; i += 2; continue; }
                 if (c == '/') { int regexEnd = skipBodyRegex(body, i); if (regexEnd > i) { i = regexEnd; continue; } }
@@ -858,13 +859,13 @@ public final class NekoTypeScriptCompiler {
             return -1;
         }
 
-        private int matchingBodyBrace(String body, int open) {
+        private int matchingBodyBrace(CharSequence body, int open) {
             int depth = 0;
             int i = open;
             while (i < body.length()) {
                 char c = body.charAt(i);
                 if (c == '\'' || c == '"') { i = skipIn(body, i, c); continue; }
-                if (c == '`') { i++; while (i < body.length() && body.charAt(i) != '`') i++; if (i < body.length()) i++; continue; }
+                if (c == '`') { i = skipTemplateIn(body, i); continue; }
                 if (c == '/' && i + 1 < body.length() && body.charAt(i + 1) == '/') { while (i < body.length() && body.charAt(i) != '\n') i++; continue; }
                 if (c == '/' && i + 1 < body.length() && body.charAt(i + 1) == '*') { i += 2; while (i + 1 < body.length() && !(body.charAt(i) == '*' && body.charAt(i + 1) == '/')) i++; i += 2; continue; }
                 if (c == '/') { int regexEnd = skipBodyRegex(body, i); if (regexEnd > i) { i = regexEnd; continue; } }
@@ -875,7 +876,7 @@ public final class NekoTypeScriptCompiler {
             return -1;
         }
 
-        private boolean bodyRegexStartsAt(String body, int slash) {
+        private boolean bodyRegexStartsAt(CharSequence body, int slash) {
             int previous = slash - 1;
             while (previous >= 0 && Character.isWhitespace(body.charAt(previous))) previous--;
             if (previous < 0) return true;
@@ -884,7 +885,7 @@ public final class NekoTypeScriptCompiler {
             if (!isIdentifierPart(c)) return false;
             int start = previous;
             while (start > 0 && isIdentifierPart(body.charAt(start - 1))) start--;
-            String word = body.substring(start, previous + 1);
+            String word = body.subSequence(start, previous + 1).toString();
             return word.equals("return") || word.equals("throw") || word.equals("case")
                 || word.equals("delete") || word.equals("void") || word.equals("typeof")
                 || word.equals("instanceof") || word.equals("in") || word.equals("of");
@@ -1199,9 +1200,25 @@ public final class NekoTypeScriptCompiler {
             return out.length();
         }
         private int skipOutTemplate(int start) {
+            return skipTemplateIn(out, start);
+        }
+
+        /** Skips a complete template, including escapes and nested templates inside substitutions. */
+        private int skipTemplateIn(CharSequence text, int start) {
             int i = start + 1;
-            while (i < out.length()) { char c = out.charAt(i); if (c == '\\') { i += 2; continue; } if (c == '`') return i + 1; i++; }
-            return out.length();
+            while (i < text.length()) {
+                char c = text.charAt(i);
+                if (c == '\\') { i += 2; continue; }
+                if (c == '`') return i + 1;
+                if (c == '$' && i + 1 < text.length() && text.charAt(i + 1) == '{') {
+                    int close = matchingBodyBrace(text, i + 1);
+                    if (close < 0) return text.length();
+                    i = close + 1;
+                    continue;
+                }
+                i++;
+            }
+            return text.length();
         }
         private int skipOutLine(int start) { while (start < out.length() && out.charAt(start) != '\n') start++; return start; }
         private int skipOutBlock(int start) {
@@ -1293,7 +1310,7 @@ public final class NekoTypeScriptCompiler {
             }
             return -1;
         }
-        private int skipIn(String s, int i, char quote) {
+        private int skipIn(CharSequence s, int i, char quote) {
             i++;
             int n = s.length();
             while (i < n) { char c = s.charAt(i); if (c == '\\') { i += 2; continue; } if (c == quote) return i + 1; i++; }
@@ -1540,6 +1557,11 @@ public final class NekoTypeScriptCompiler {
             int next = nextNonWhitespace(close + 1);
             if (next >= length) return false;
             char nextChar = source.charAt(next);
+            if (startsWithKeyword(next, "extends") || startsWithKeyword(next, "implements")) {
+                for (ClassBodyRange range : classBodies) {
+                    if (range.headerStart() < start && start < range.open()) return true;
+                }
+            }
             // <T>(  或  <T> =>  —— 泛型箭头/泛型调用
             if (nextChar == '(' || nextChar == '{') return true;
             if (nextChar == '=' && next + 1 < length && source.charAt(next + 1) == '>') return true;
@@ -1605,10 +1627,13 @@ public final class NekoTypeScriptCompiler {
             if (!isIdentifierPart(bc)) return true; // = ( , ; { [ + - 等 → arrow/方法
             int start = before;
             while (start > 0 && isIdentifierPart(source.charAt(start - 1))) start--;
+            if (source.substring(start, before + 1).equals("function")) return true;
             int beforeName = previousNonWhitespace(start - 1);
             if (beforeName >= 0) {
                 char bic = source.charAt(beforeName);
                 if (bic == '.') return false; // a.b() 调用
+                // Named calls in initializers and conditional branches cannot declare a return type.
+                if (bic == '=' || bic == '?') return false;
                 if (isIdentifierPart(bic)) {
                     int bs = beforeName;
                     while (bs > 0 && isIdentifierPart(source.charAt(bs - 1))) bs--;
@@ -1621,17 +1646,9 @@ public final class NekoTypeScriptCompiler {
             return false;
         }
 
-        /** 从 closeParen 向前找匹配的 (（简化，不跳字符串）。*/
+        /** Uses lexical pairs so literal and comment parentheses cannot change return-type detection. */
         private int backwardMatchParen(int closeParen) {
-            int depth = 0;
-            int i = closeParen;
-            while (i >= 0) {
-                char c = source.charAt(i);
-                if (c == ')') depth++;
-                else if (c == '(') { depth--; if (depth == 0) return i; }
-                i--;
-            }
-            return -1;
+            return parenOpens.getOrDefault(closeParen, -1);
         }
 
         /** : 是否处于三元表达式（前面同层有配对的 ? 三元，排除 ?: 可选参数与 ?. 可选链）。*/
@@ -1799,6 +1816,10 @@ public final class NekoTypeScriptCompiler {
                     i = skipTemplate(i);
                     continue;
                 }
+                if (c == '/' && i + 1 < length) {
+                    if (source.charAt(i + 1) == '/') { i = NekoSourceLexerBase.skipLineComment(source, length, i + 2); continue; }
+                    if (source.charAt(i + 1) == '*') { i = NekoSourceLexerBase.skipBlockComment(source, length, i + 2); continue; }
+                }
                 if (c == '<') angle++;
                 else if (c == '>' && angle > 0) angle--;
                 else if (c == '(') paren++;
@@ -1820,7 +1841,7 @@ public final class NekoTypeScriptCompiler {
                 if (angle == 0 && paren == 0 && bracket == 0 && brace == 0) {
                     if (startsWithKeyword(i, "extends")) conditionalType = true;
                     if (c == ')' && closedTypeParen) {
-                        int afterClose = nextNonWhitespace(i + 1);
+                        int afterClose = nextSourceTrivia(i + 1);
                         if (afterClose + 1 < length && source.charAt(afterClose) == '=' && source.charAt(afterClose + 1) == '>') {
                             i = afterClose + 2;
                             continue;
@@ -1853,7 +1874,7 @@ public final class NekoTypeScriptCompiler {
         }
 
         private boolean typeObjectBraceAt(int braceStart, int typeStart, boolean conditionalType) {
-            if (braceStart == nextNonWhitespace(typeStart)) return true;
+            if (braceStart == nextSourceTrivia(typeStart)) return true;
             int previous = previousNonWhitespace(braceStart - 1);
             if (previous < 0) return false;
             char c = source.charAt(previous);
@@ -2076,7 +2097,7 @@ public final class NekoTypeScriptCompiler {
             return -1;
         }
 
-        /** 判断 `function` 声明是否为重载签名（无函数体、以 `;` 结尾）。返回整体结束位置（`;` 后），否则 -1。 */
+        /** Returns the end of a bodyless function signature, including newline-terminated overloads. */
         private int functionOverloadEnd(int wordEnd) {
             int i = nextNonWhitespace(wordEnd);
             if (i < length && source.charAt(i) == '*') i = nextNonWhitespace(i + 1); // generator
@@ -2093,14 +2114,13 @@ public final class NekoTypeScriptCompiler {
             int after = nextNonWhitespace(close + 1);
             if (after < length && source.charAt(after) == ':') { // 返回类型注解
                 after = typeExpressionEnd(after + 1);
-                after = nextNonWhitespace(after);
-            }
-            if (after < length && source.charAt(after) == ';') return after + 1; // 重载签名（无函数体）
-            return -1; // 有 { 或 =，是函数实现，保留
+            } else after = close + 1;
+            return bodylessSignatureEnd(after);
         }
 
         /** Returns the end of a bodyless method signature without consuming ordinary calls in class fields or methods. */
         private int methodOverloadEnd(int nameStart, int nameEnd) {
+            if (!insideClassBody(nameStart) || !methodMemberPrefix(nameStart)) return -1;
             int i = nextNonWhitespace(nameEnd);
             if (i < length && source.charAt(i) == '?') i = nextNonWhitespace(i + 1);
             if (i < length && source.charAt(i) == '<') {
@@ -2113,16 +2133,47 @@ public final class NekoTypeScriptCompiler {
             if (close < 0) return -1;
             int after = nextNonWhitespace(close + 1);
             boolean hasReturnType = after < length && source.charAt(after) == ':';
+            if (hasReturnType && isTernaryColon(after)) return -1;
             if (hasReturnType) {
-                after = nextNonWhitespace(typeExpressionEnd(after + 1));
+                after = typeExpressionEnd(after + 1);
+            } else after = close + 1;
+            return bodylessSignatureEnd(after);
+        }
+
+        /** A body on the next line remains an implementation; trivia alone can terminate an overload. */
+        private int bodylessSignatureEnd(int afterSignature) {
+            int next = afterSignature;
+            boolean lineBreak = false;
+            while (next < length) {
+                char c = source.charAt(next);
+                if (Character.isWhitespace(c)) {
+                    lineBreak |= c == '\n' || c == '\r';
+                    next++;
+                } else if (c == '/' && next + 1 < length && source.charAt(next + 1) == '/') {
+                    next = NekoSourceLexerBase.skipLineComment(source, length, next + 2);
+                } else if (c == '/' && next + 1 < length && source.charAt(next + 1) == '*') {
+                    int end = NekoSourceLexerBase.skipBlockComment(source, length, next + 2);
+                    for (int i = next; i < end; i++) {
+                        lineBreak |= source.charAt(i) == '\n' || source.charAt(i) == '\r';
+                    }
+                    next = end;
+                } else break;
             }
-            if (after < length && source.charAt(after) == ';'
-                    && (hasReturnType || (insideClassBody(nameEnd) && methodMemberPrefix(nameStart)))) return after + 1;
-            return -1;
+            if (next < length && source.charAt(next) == ';') return next + 1;
+            if (next < length && "{=|&[.?:".indexOf(source.charAt(next)) >= 0) return -1;
+            return lineBreak ? next : -1;
         }
 
         private boolean methodMemberPrefix(int nameStart) {
             int previous = previousNonWhitespace(nameStart - 1);
+            // A previous overload can end with a type rather than a semicolon. An expression operator
+            // before the new line still belongs to a field initializer and cannot introduce a method.
+            if (previous >= 0 && (isIdentifierPart(source.charAt(previous))
+                    || "]>)".indexOf(source.charAt(previous)) >= 0)) {
+                for (int i = previous + 1; i < nameStart; i++) {
+                    if (source.charAt(i) == '\n' || source.charAt(i) == '\r') return true;
+                }
+            }
             while (previous >= 0 && isIdentifierPart(source.charAt(previous))) {
                 int wordEnd = previous + 1;
                 int wordStart = previous;
@@ -2167,7 +2218,7 @@ public final class NekoTypeScriptCompiler {
                     int bodyOpen = classBodyOpenAfter(i + "class".length());
                     if (bodyOpen >= 0) {
                         int bodyClose = matchingClassBodyClose(bodyOpen);
-                        if (bodyClose >= 0) classBodies.add(new ClassBodyRange(bodyOpen, bodyClose));
+                        if (bodyClose >= 0) classBodies.add(new ClassBodyRange(i, bodyOpen, bodyClose));
                     }
                     i += "class".length();
                     continue;
@@ -2180,6 +2231,7 @@ public final class NekoTypeScriptCompiler {
         private void scanBraceRanges() {
             int[] opens = new int[16];
             int size = 0;
+            java.util.ArrayDeque<Integer> parentheses = new java.util.ArrayDeque<>();
             int i = 0;
             while (i < length) {
                 char c = source.charAt(i);
@@ -2198,6 +2250,10 @@ public final class NekoTypeScriptCompiler {
                     opens[size++] = i;
                 } else if (c == '}' && size > 0) {
                     braceRanges.add(new BraceRange(opens[--size], i));
+                } else if (c == '(') {
+                    parentheses.push(i);
+                } else if (c == ')' && !parentheses.isEmpty()) {
+                    parenOpens.put(i, parentheses.pop());
                 }
                 i++;
             }
@@ -2282,6 +2338,10 @@ public final class NekoTypeScriptCompiler {
                 char c = source.charAt(i);
                 if (c == '\'' || c == '"') { i = skipString(i, c); continue; }
                 if (c == '`') { i = skipTemplate(i); continue; }
+                if (c == '/') {
+                    int skipped = skipSlash(i);
+                    if (skipped != i) { i = skipped; continue; }
+                }
                 if (c == '(') depth++;
                 else if (c == ')') { depth--; if (depth == 0) return i; }
                 i++;
@@ -2298,11 +2358,23 @@ public final class NekoTypeScriptCompiler {
         }
 
         private int skipTemplate(int start) {
-            return NekoSourceLexerBase.skipTemplate(source, length, start);
+            return skipTemplateIn(source, start);
         }
 
         private int nextNonWhitespace(int index) {
             return NekoSourceLexerBase.nextNonWhitespace(source, length, index);
+        }
+
+        private int nextSourceTrivia(int index) {
+            int i = nextNonWhitespace(index);
+            while (i + 1 < length && source.charAt(i) == '/') {
+                char next = source.charAt(i + 1);
+                if (next == '/') i = NekoSourceLexerBase.skipLineComment(source, length, i + 2);
+                else if (next == '*') i = NekoSourceLexerBase.skipBlockComment(source, length, i + 2);
+                else break;
+                i = nextNonWhitespace(i);
+            }
+            return i;
         }
 
         private int previousNonWhitespace(int index) {

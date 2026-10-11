@@ -274,6 +274,8 @@ The body replaces the generated class in its `java:` package module; omit the `d
 
 Replacements apply to every Script Type because Java package declarations are shared. Both `registerTypeDocs` and `registerNodeTypeDocs` contribute through the existing type-docs Points. The highest `priority` wins for a class; conflicting definitions at an equal priority fail with `NEKO-4032`. Identical definitions are idempotent. `ProbeEvents.modifyType` hiding takes precedence; other reflected member edits are replaced by the authored body. This only changes TypeScript declarations, so keep the body consistent with the Java runtime implementation.
 
+If dependencies share an exported name, or a dependency shares the target's name, use an inline type such as `import("java:example/package").$Foo` in the authored body. Keep those dependencies in the explicit import set. The generator gives conflicting imports private names without rewriting authored text; an unambiguous authored import keeps its canonical name when only reflected imports compete with it. A reflected dependency renamed by `modifyType` also retains its canonical Java type/value export, including the canonical enum input alias. Enum replacements read constant names without reflecting unrelated member signatures or initializing the enum.
+
 <a id="wiki-section-18"></a>
 ## Cross-platform plugins
 

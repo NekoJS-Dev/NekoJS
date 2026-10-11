@@ -17,7 +17,18 @@ final class TypeScriptImportNames {
     private boolean aliases;
 
     TypeScriptImportNames(Set<Symbol> imports, Set<String> declarations, Set<String> extraImports) {
+        this(imports, declarations, extraImports, Set.of());
+    }
+
+    TypeScriptImportNames(Set<Symbol> imports, Set<String> declarations, Set<String> extraImports,
+                          Set<Symbol> authoredImports) {
         Map<String, Integer> counts = new HashMap<>();
+        Map<String, Integer> authoredCounts = new HashMap<>();
+        for (Symbol symbol : authoredImports) authoredCounts.merge(symbol.exportedName(), 1, Integer::sum);
+        Set<Symbol> preferred = new HashSet<>();
+        for (Symbol symbol : authoredImports) {
+            if (authoredCounts.get(symbol.exportedName()) == 1) preferred.add(symbol);
+        }
         Set<String> reserved = new HashSet<>(declarations);
         for (String statement : extraImports) reserveImportNames(statement, reserved);
         Set<String> occupied = new HashSet<>(reserved);
@@ -25,10 +36,13 @@ final class TypeScriptImportNames {
             counts.merge(symbol.exportedName(), 1, Integer::sum);
             reserved.add(symbol.exportedName());
         }
-        for (Symbol symbol : imports.stream().sorted(Comparator.comparing(Symbol::fqn)
+        // Authored text keeps its canonical imports when unambiguous. Reflected references can be renamed.
+        // Ambiguous authored names require inline import types; never emit duplicate local bindings.
+        for (Symbol symbol : imports.stream().sorted(Comparator.comparing((Symbol symbol) -> !preferred.contains(symbol))
+                .thenComparing(Symbol::fqn)
                 .thenComparing(Symbol::exportedName)).toList()) {
             String name = symbol.exportedName();
-            if (occupied.contains(name) || counts.get(name) > 1) {
+            if (occupied.contains(name) || (counts.get(name) > 1 && !preferred.contains(symbol))) {
                 String base = "$NekoImport" + name;
                 name = base;
                 for (int suffix = 1; reserved.contains(name); suffix++) name = base + suffix;
@@ -36,6 +50,7 @@ final class TypeScriptImportNames {
                 aliases = true;
             }
             names.put(symbol, name);
+            occupied.add(name);
         }
     }
 

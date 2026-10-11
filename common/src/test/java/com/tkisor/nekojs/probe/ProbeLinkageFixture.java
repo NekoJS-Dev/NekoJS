@@ -20,6 +20,16 @@ public final class ProbeLinkageFixture {
         }
     }
 
+    public enum AuthoredEnum {
+        B, A;
+
+        static { rejectInitialization(); }
+        private static void rejectInitialization() {
+            throw new AssertionError("Probe must not initialize the authored enum");
+        }
+        public List<Missing> optionalValues() { return List.of(); }
+    }
+
     public static class GenericHost extends Host {
         public GenericExtension genericExtension() {
             return null;

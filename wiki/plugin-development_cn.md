@@ -273,6 +273,8 @@ docs.registerClassDeclaration(ClassDeclarationCatalogEntry.of(
 
 Java 包声明在所有 Script Type 间共享，因此替换全局生效。`registerTypeDocs` 和 `registerNodeTypeDocs` 均通过现有类型文档 Point 收集。同一类取最高 `priority`；相同优先级的冲突定义以 `NEKO-4032` 拒绝，完全相同的定义可重复注册。`ProbeEvents.modifyType` 的隐藏操作优先于替换；其他反射成员编辑会被手写声明体覆盖。该功能只改变 TypeScript 声明，需要插件保证声明与 Java 运行时实现一致。
 
+当依赖具有相同导出名，或与目标类同名时，在手写声明中用 `import("java:example/package").$Foo` 这样的内联类型消除歧义，同时保留显式依赖集合。生成器为冲突的 import 分配私有名称，不改写手写文本；仅与反射 import 冲突且自身无歧义的手写依赖保留标准名称。被 `modifyType` 重命名的反射依赖也保留标准 Java 类型和值导出，包括标准枚举输入别名。枚举替换只读取常量名，不反射无关成员签名，也不初始化枚举。
+
 <a id="wiki-section-18"></a>
 ## 跨平台插件
 

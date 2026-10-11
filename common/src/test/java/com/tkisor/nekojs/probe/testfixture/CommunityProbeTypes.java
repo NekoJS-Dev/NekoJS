@@ -19,13 +19,25 @@ public final class CommunityProbeTypes {
         public String getName() { return "payload"; }
     }
 
+    public static final class Container<T> {
+        private final T value;
+        public Container(T value) { this.value = value; }
+        public T get() { return value; }
+    }
+
+    public enum Mode { A, B }
+
     public static final class Api {
         public void consume(Mapper<Payload, String> callback) {}
         public void produce(Supplier<Payload> callback) {}
         public void nested(Supplier<Supplier<Payload>> callback) {}
         public <T> T infer(Supplier<T> callback) { return callback.get(); }
         public void inherited(StringMapper callback) {}
+        public void mode(Mode mode) {}
         public void wildcard(Mapper<? super com.tkisor.nekojs.probe.testfixture.callback.CallbackValue, String> callback) {}
+        public String containerWildcard(Mapper<Container<? super Payload>, String> callback) {
+            return callback.apply(new Container<Object>("host text"));
+        }
         @SuppressWarnings("rawtypes")
         public void raw(Mapper callback) {}
     }

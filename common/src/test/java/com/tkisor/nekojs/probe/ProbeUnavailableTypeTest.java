@@ -55,6 +55,31 @@ class ProbeUnavailableTypeTest {
     }
 
     @Test
+    void authoredEnumBypassesUnavailableMemberMetadataWithoutInitialization(@TempDir Path directory) throws Exception {
+        ClassLoader loader = fixtureLoader(MissingType.ABSENT);
+        Class<?> target = loader.loadClass(ProbeLinkageFixture.AuthoredEnum.class.getName());
+        assertThrows(TypeNotPresentException.class, () -> new com.tkisor.nekojs.probe.ir.TypeReflector().reflect(target));
+        var replacement = com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry.of(target,
+                "export class $ProbeLinkageFixture$AuthoredEnum { authored(): string; }");
+        var snapshot = new NekoScriptCatalogSnapshot(List.of(), List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(replacement),
+                List.of(), List.of(), List.of(), null, Map.of(), List.of());
+        Thread thread = Thread.currentThread();
+        ClassLoader previous = thread.getContextClassLoader();
+        try {
+            thread.setContextClassLoader(loader);
+            var context = new ProbeContext.Of(snapshot, List.of(target), ProbeConfig.defaultConfig(),
+                    NekoJSPaths.fromGameDir(directory), "typescript", directory.resolve("types"), null);
+            String module = new TypeScriptProbeBackend().render(context)
+                    .get("@package/com/tkisor/nekojs/probe/index.d.ts");
+            assertTrue(module.contains("authored(): string;"), module);
+            assertTrue(module.contains("$ProbeLinkageFixture$AuthoredEnum_ = $ProbeLinkageFixture$AuthoredEnum | \"A\" | \"B\""), module);
+        } finally {
+            thread.setContextClassLoader(previous);
+        }
+    }
+
+    @Test
     void missingSamSignatureKeepsAvailableOutputAndReportsBothBackendWarnings(@TempDir Path directory) throws Exception {
         assertAvailableOutputWithWarning(directory, MissingType.ABSENT, false, true);
     }

@@ -123,7 +123,12 @@ public final class IndexFileGenerator {
         for (String simpleName : classNames) {
             extraImports.addAll(irRenderer.getExtraImports(packageName + "." + simpleName));
         }
-        TypeScriptImportNames importNames = new TypeScriptImportNames(importedSymbols, declaredNames, extraImports);
+        Set<TypeScriptImportNames.Symbol> authoredSymbols = new LinkedHashSet<>();
+        for (TypeScriptImportNames.Symbol symbol : importedSymbols) {
+            if (authoredImports.contains(symbol.fqn())) authoredSymbols.add(symbol);
+        }
+        TypeScriptImportNames importNames = new TypeScriptImportNames(
+                importedSymbols, declaredNames, extraImports, authoredSymbols);
         TypeAliasRegistry moduleAliases = importNames.hasAliases()
                 ? adapterAliasGenerator.aliasRegistry().withReferences(importNames::reference)
                 : adapterAliasGenerator.aliasRegistry();
@@ -141,8 +146,6 @@ public final class IndexFileGenerator {
                 String exported = binding.getKey().exportedName();
                 String local = binding.getValue();
                 names.add(exported.equals(local) ? exported : exported + " as " + local);
-                // Authored text has its own import convention; preserve it rather than rewriting opaque TypeScript.
-                if (authoredImports.contains(fqn) && !exported.equals(local)) names.add(exported);
             }
 
             for (var entry : importsByPackage.entrySet()) {
@@ -184,6 +187,7 @@ public final class IndexFileGenerator {
                         cached = irRenderer.render(irCache.get(fullName), moduleAliases);
                     }
                     sb.append(cached);
+                    appendCanonicalExports(sb, fullName, irCache.get(fullName), moduleAliases);
                     sb.append("\n");
                 }
             }
@@ -205,6 +209,11 @@ public final class IndexFileGenerator {
                 EnumAlias enumAlias = enumAliasCache.get(fullName);
                 if (enumAlias != null) {
                     sb.append(enumAlias.declaration());
+                    String canonicalAlias = "$" + simpleName + "_";
+                    if (!enumAlias.aliasName().equals(canonicalAlias)) {
+                        sb.append("    export type ").append(canonicalAlias).append(" = ")
+                                .append(enumAlias.aliasName()).append(";\n");
+                    }
                     continue;
                 }
                 String functionalAlias = functionalInterfaceAliasGenerator.declaration(fullName, moduleAliases);
@@ -223,6 +232,32 @@ public final class IndexFileGenerator {
         return sb.toString();
     }
 
+    /** Retains Java identity after an IR rename; declaration statements also work in module augmentations. */
+    private void appendCanonicalExports(StringBuilder output, String fqn, TypeDecl declaration,
+                                        TypeAliasRegistry aliases) {
+        if (declaration == null || declaration.hidden || declaration.effectiveTypeName() == null) return;
+        String canonical = "$" + fqn.substring(fqn.lastIndexOf('.') + 1);
+        String renamed = "$" + declaration.effectiveTypeName();
+        if (canonical.equals(renamed)) return;
+        StringJoiner parameters = new StringJoiner(", ", "<", ">");
+        StringJoiner arguments = new StringJoiner(", ", "<", ">");
+        for (TypeDecl.TypeParam parameter : declaration.typeParams) {
+            String bound = parameter.bound == null ? "" : " extends "
+                    + TypeScriptClassRenderer.renderTypeParameterBound(parameter.bound.ref, parameter.name,
+                            aliases, new LinkedHashSet<>());
+            parameters.add(parameter.name + bound);
+            arguments.add(parameter.name);
+        }
+        output.append("    export type ").append(canonical)
+                .append(declaration.typeParams.isEmpty() ? "" : parameters)
+                .append(" = ").append(renamed)
+                .append(declaration.typeParams.isEmpty() ? "" : arguments).append(";\n");
+        boolean hasValue = declaration.kind != TypeDecl.Kind.INTERFACE
+                || declaration.methods.stream().anyMatch(method -> !method.hidden && method.isStatic)
+                || declaration.fields.stream().anyMatch(field -> !field.hidden && field.isStatic && field.isFinal);
+        if (hasValue) output.append("    export const ").append(canonical).append(": typeof ").append(renamed).append(";\n");
+    }
+
     private Set<String> exportedSymbols(String fqn) {
         Set<String> names = new LinkedHashSet<>();
         names.add("$" + fqn.substring(fqn.lastIndexOf('.') + 1));
@@ -231,7 +266,10 @@ public final class IndexFileGenerator {
         TypeAliasRegistry.FunctionalInterfaceAlias functional = functionalInterfaceAliasGenerator.getAlias(fqn);
         if (functional != null) names.add(functional.aliasName());
         EnumAlias enumeration = enumAliasCache.get(fqn);
-        if (enumeration != null) names.add(enumeration.aliasName());
+        if (enumeration != null) {
+            names.add(enumeration.aliasName());
+            names.add("$" + fqn.substring(fqn.lastIndexOf('.') + 1) + "_");
+        }
         return names;
     }
 

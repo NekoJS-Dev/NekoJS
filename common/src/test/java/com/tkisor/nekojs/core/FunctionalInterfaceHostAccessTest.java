@@ -29,6 +29,10 @@ class FunctionalInterfaceHostAccessTest {
             assertEquals("nested", context.eval("js", "calls.nested(() => () => 'nested')").asString());
             assertEquals("iterator", context.eval("js", "calls.iteratorSupplier(() => calls.hostIterator())").asString());
             assertEquals("array", context.eval("js", "calls.iterable(['array'])").asString());
+            context.getBindings("js").putMember("api", new CommunityProbeTypes.Api());
+            assertEquals("host text", context.eval("js", "api.containerWildcard(value => String(value.get()))").asString());
+            assertThrows(graal.graalvm.polyglot.PolyglotException.class,
+                    () -> context.eval("js", "api.containerWildcard(value => value.get().getName())"));
             assertThrows(graal.graalvm.polyglot.PolyglotException.class,
                     () -> context.eval("js", "calls.iterable(() => calls.hostIterator())"));
         }

@@ -120,7 +120,8 @@ class TypeScriptSameNameHeritageTest {
         String first = generator.generate(CHILD.getPackageName(), List.of("PersistentData", "Usage"), List.of(), all);
         String reversed = generator.generate(CHILD.getPackageName(), List.of("Usage", "PersistentData"), List.of(), all);
         assertTrue(first.contains(authored), first);
-        assertTrue(first.contains("import { $PersistentData, $PersistentData as "), first);
+        assertTrue(first.contains("import { $PersistentData as "), first);
+        assertFalse(first.contains("import { $PersistentData, "), first);
         assertEquals(first.substring(0, first.indexOf("declare module")), reversed.substring(0, reversed.indexOf("declare module")));
         generator.clearCaches();
         generator.predeclareClass(CHILD.getName(), new TypeReflector().reflect(CHILD), Set.of());

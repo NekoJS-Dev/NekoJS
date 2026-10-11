@@ -37,8 +37,11 @@ class CommunityProbeTypeScriptFixtureTest {
                     returns<V extends 'string' | 'int'>(value: V): $CommunityProbeTypes$RpcBuilder<T, V>;
                     fn(callback: (args: { [K in keyof T]: T[K] extends 'string' ? string : number }) =>
                         (R extends 'string' ? string : R extends 'int' ? number : void)): void;
+                    base(): import("java:com/tkisor/nekojs/probe/testfixture/samebase").$PersistentData<string>;
+                    other(): import("java:com/tkisor/nekojs/probe/testfixture/sameother").$PersistentData;
                 }
-                """);
+                """, Set.of(com.tkisor.nekojs.probe.testfixture.samebase.PersistentData.class,
+                com.tkisor.nekojs.probe.testfixture.sameother.PersistentData.class));
         var adapter = new AdapterCatalogEntry(CommunityProbeTypes.Payload.class,
                 List.of(AdapterInputShape.self(), AdapterInputShape.string()),
                 ConversionPrecedence.LOWEST, Optional.empty());
@@ -48,11 +51,17 @@ class CommunityProbeTypeScriptFixtureTest {
         List<Class<?>> classes = List.of(CommunityProbeTypes.Api.class, CommunityProbeTypes.Payload.class,
                 CommunityProbeTypes.Mapper.class, CommunityProbeTypes.StringMapper.class,
                 CommunityProbeTypes.Supplier.class, CommunityProbeTypes.RpcBuilder.class,
+                CommunityProbeTypes.Container.class,
+                CommunityProbeTypes.Mode.class,
+                com.tkisor.nekojs.probe.testfixture.samebase.PersistentData.class,
+                com.tkisor.nekojs.probe.testfixture.sameother.PersistentData.class,
                 com.tkisor.nekojs.probe.testfixture.callback.CallbackValue.class);
         var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("com.tkisor.nekojs.probe.testfixture"), List.of(), List.of(), List.of(), 3, "SMART"));
         var context = new ProbeContext.Of(snapshot, classes, config, NekoJSPaths.fromGameDir(gameDir),
-                "typescript", gameDir.resolve("types"), null);
+                "typescript", gameDir.resolve("types"), List.of(
+                        renamed(com.tkisor.nekojs.probe.testfixture.samebase.PersistentData.class, "AuthoredBase"),
+                        renamed(CommunityProbeTypes.Mode.class, "AuthoredMode")));
         Map<String, String> files = new TypeScriptProbeBackend().render(context);
         Path output = Path.of("build", "community-probe-types");
         for (var file : files.entrySet()) {
@@ -63,5 +72,12 @@ class CommunityProbeTypeScriptFixtureTest {
         String module = files.get("@package/com/tkisor/nekojs/probe/testfixture/index.d.ts");
         assertTrue(module.contains("schema<const S"), module);
         assertTrue(module.contains("$CommunityProbeTypes$Mapper_"), module);
+    }
+
+    private static com.tkisor.nekojs.probe.ir.TypeDecl renamed(Class<?> type, String name) {
+        var declaration = new com.tkisor.nekojs.probe.ir.TypeReflector().reflect(type);
+        declaration.renameTo = name;
+        declaration.mutated = true;
+        return declaration;
     }
 }

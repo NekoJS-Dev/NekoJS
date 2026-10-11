@@ -450,6 +450,108 @@ class TypeScriptErasureParseCorpusTest {
     }
 
     @Test
+    void genericClassHeritagePreservesFieldsAndInheritance() {
+        String source = """
+            interface Named<T> { value: T }
+            class Base<T> { base: T; }
+            class Box<T> extends Base<T> implements Named<T> {
+              value: T;
+              constructor(value: T) { super(); this.value = value; this.base = value; }
+            }
+            const box = new Box<string>('stone');
+            box instanceof Base && box.base === box.value && box.value === 'stone'
+            """;
+        String erased = NekoTypeScriptCompiler.eraseTypescript(Path.of("generic-class-heritage.ts"), source);
+        assertEquals(lineCount(source), lineCount(erased), erased);
+        try (CompilerExecutionAssertions.Evaluation eval = CompilerExecutionAssertions.eval(erased)) {
+            assertTrue(eval.value().asBoolean(), erased);
+        }
+    }
+
+    @Test
+    void commentsInsideCallbackTypesDoNotEndTheAnnotation() {
+        String source = """
+            function use(callback: /* ) } ; */ (value: { text: string /* } */ })
+                => /* ; ) */ string): string { return callback({ text: 'stone' }); }
+            const config: /* } ) */ { text: string } = { text: 'stone' };
+            const read: (value: string) /* ) ; */ => string = value => value;
+            read(use(value => value.text)) + ':' + config.text
+            """;
+        String erased = NekoTypeScriptCompiler.eraseTypescript(Path.of("callback-type-comments.ts"), source);
+        assertEquals(lineCount(source), lineCount(erased), erased);
+        try (CompilerExecutionAssertions.Evaluation eval = CompilerExecutionAssertions.eval(erased)) {
+            assertEquals("stone:stone", eval.value().asString(), erased);
+        }
+    }
+
+    @Test
+    void semicolonFreeOverloadsPreserveTheirImplementations() {
+        String source = """
+            function echo(value: string): string
+            function echo(value: number): number
+            function echo(value: string | number): string | number
+            { return value; }
+            function identity(value: string)
+            function identity(value: any) { return value; }
+            class Parser {
+              parse(value: string): string
+              parse(value: number): number
+              parse(value: string | number): string | number { return echo(value as string); }
+              pick(value: string)
+              pick(value: any) { return value; }
+            }
+            identity(new Parser().pick(new Parser().parse('stone'))) + ':' + new Parser().parse(4)
+            """;
+        String erased = NekoTypeScriptCompiler.eraseTypescript(Path.of("semicolon-free-overloads.ts"), source);
+        assertEquals(lineCount(source), lineCount(erased), erased);
+        try (CompilerExecutionAssertions.Evaluation eval = CompilerExecutionAssertions.eval(erased)) {
+            assertEquals("stone:4", eval.value().asString(), erased);
+        }
+    }
+
+    @Test
+    void newlineAfterTernaryCallDoesNotTurnItIntoAnOverload() {
+        String source = """
+            function index(from: number): number {
+              const start = from < 0 ? Math.max(4 + from, 0) : from
+              const minimum = from < 0
+                ? Math.min(1, start)
+                : 0
+              return start + minimum;
+            }
+            class Value {
+              value = true
+                ? Number(2)
+                : 0
+            }
+            index(-2) + index(3) + new Value().value
+            """;
+        String erased = NekoTypeScriptCompiler.eraseTypescript(Path.of("ternary-call-newline.ts"), source);
+        try (CompilerExecutionAssertions.Evaluation eval = CompilerExecutionAssertions.eval(erased)) {
+            assertEquals(8, eval.value().asInt(), erased);
+        }
+    }
+
+    @Test
+    void namespaceTemplateTextIsNotTreatedAsAnExport() {
+        String source = """
+            namespace Text {
+              export const plain = `export const ghost = 1;`;
+              export const escaped = `\\`export const escapedGhost = 1;`;
+              export const nested = `${`export const nestedGhost = 1;`}`;
+              export const real = 2;
+            }
+            Text.real + ':' + Text.plain + ':' + Text.escaped + ':' + Text.nested
+            """;
+        String erased = NekoTypeScriptCompiler.eraseTypescript(Path.of("namespace-template.ts"), source);
+        assertTrue(!erased.contains("Text.ghost = ghost"), erased);
+        try (CompilerExecutionAssertions.Evaluation eval = CompilerExecutionAssertions.eval(erased)) {
+            assertEquals("2:export const ghost = 1;:`export const escapedGhost = 1;:export const nestedGhost = 1;",
+                    eval.value().asString(), erased);
+        }
+    }
+
+    @Test
     void typedForOfIterablePreservesIteration() {
         String erased = NekoTypeScriptCompiler.eraseTypescript(Path.of("typed-for-of.ts"), """
             let total = 0;

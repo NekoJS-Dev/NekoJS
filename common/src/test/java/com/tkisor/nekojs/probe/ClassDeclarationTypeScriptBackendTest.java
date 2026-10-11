@@ -76,6 +76,40 @@ class ClassDeclarationTypeScriptBackendTest {
     }
 
     @Test
+    void authoredImportsWithTheSameExportNameHaveDistinctBindings(@TempDir Path tempDir) {
+        Class<?> base = com.tkisor.nekojs.probe.testfixture.samebase.PersistentData.class;
+        Class<?> other = com.tkisor.nekojs.probe.testfixture.sameother.PersistentData.class;
+        String body = "export class " + TARGET_NAME + " { "
+                + "base(): import(\"java:com/tkisor/nekojs/probe/testfixture/samebase\").$PersistentData<string>; "
+                + "other(): import(\"java:com/tkisor/nekojs/probe/testfixture/sameother\").$PersistentData; }";
+        var entry = ClassDeclarationCatalogEntry.of(Builder.class, body, Set.of(base, other));
+
+        Map<String, String> files = render(snapshot(List.of(entry), List.of()),
+                List.of(Builder.class, base, other), null, tempDir);
+        String module = files.get("@package/com/tkisor/nekojs/probe/index.d.ts");
+        assertTrue(module.contains(body), module);
+        assertFalse(module.contains("import { $PersistentData, "), module);
+        assertEquals(2, occurrences(module, "$PersistentData as "), module);
+    }
+
+    @Test
+    void unambiguousAuthoredImportKeepsItsCanonicalNameBesideReflectedHomonyms(@TempDir Path tempDir) {
+        Class<?> base = com.tkisor.nekojs.probe.testfixture.samebase.PersistentData.class;
+        Class<?> other = com.tkisor.nekojs.probe.testfixture.sameother.PersistentData.class;
+        String body = "export class " + TARGET_NAME + " { base(): $PersistentData<string>; }";
+        var entry = ClassDeclarationCatalogEntry.of(Builder.class, body, Set.of(base));
+
+        Map<String, String> files = render(snapshot(List.of(entry), List.of()),
+                List.of(Builder.class, base, other, ReflectedHomonym.class), null, tempDir);
+        String module = files.get("@package/com/tkisor/nekojs/probe/index.d.ts");
+        assertTrue(module.contains(body), module);
+        assertTrue(module.contains("import { $PersistentData } from "
+                + "\"java:com/tkisor/nekojs/probe/testfixture/samebase\";"), module);
+        assertTrue(module.contains("$PersistentData as $NekoImport$PersistentData"), module);
+        assertTrue(module.contains("other(): $NekoImport$PersistentData;"), module);
+    }
+
+    @Test
     void enumReplacementRetainsOneCanonicalInputAliasDespiteIrRenaming(@TempDir Path tempDir) {
         String name = "$ClassDeclarationTypeScriptBackendTest$Color";
         var entry = ClassDeclarationCatalogEntry.of(Color.class,
@@ -89,6 +123,23 @@ class ClassDeclarationTypeScriptBackendTest {
         assertEquals(1, occurrences(module, "export type " + name + "_"), module);
         assertTrue(module.contains(name + "_ = " + name + " | \"RED\""), module);
         assertFalse(module.contains("EditedColor"), module);
+    }
+
+    @Test
+    void renamedDependencyRetainsTheCanonicalExportUsedByAuthoredText(@TempDir Path tempDir) {
+        Class<?> imported = ClassDeclarationFixtures.Imported.class;
+        TypeDecl edited = new com.tkisor.nekojs.probe.ir.TypeReflector().reflect(imported);
+        edited.renameTo = "EditedImport";
+        edited.mutated = true;
+        var entry = ClassDeclarationCatalogEntry.of(Builder.class,
+                "export class " + TARGET_NAME + " { value(): $ClassDeclarationFixtures$Imported; }",
+                Set.of(imported));
+        Map<String, String> files = render(snapshot(List.of(entry), List.of()),
+                List.of(Builder.class, imported), List.of(edited), tempDir);
+        String dependency = files.get("@package/com/tkisor/nekojs/probe/testfixture/index.d.ts");
+        assertTrue(dependency.contains("export class $EditedImport"), dependency);
+        assertTrue(dependency.contains("export type $ClassDeclarationFixtures$Imported = $EditedImport;"), dependency);
+        assertTrue(dependency.contains("export const $ClassDeclarationFixtures$Imported: typeof $EditedImport;"), dependency);
     }
 
     @Test
@@ -198,4 +249,8 @@ class ClassDeclarationTypeScriptBackendTest {
     }
 
     public enum Color { RED }
+
+    public static final class ReflectedHomonym {
+        public com.tkisor.nekojs.probe.testfixture.sameother.PersistentData other() { return null; }
+    }
 }
