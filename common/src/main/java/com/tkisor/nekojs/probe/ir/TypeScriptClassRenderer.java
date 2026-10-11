@@ -131,14 +131,14 @@ public final class TypeScriptClassRenderer {
             // 命中时只发射 get 行，跳过双发射与 setter
             GetterOverride ov = getterOverrides.getOrDefault(d.fqn, Map.of()).get(m.property);
             if (ov != null) {
-                sb.append("        get ").append(m.property).append("(): ").append(ov.returnType()).append(";\n");
+                sb.append("        get ").append(tsMemberName(m.property)).append("(): ").append(ov.returnType()).append(";\n");
                 continue;
             }
             String type = renderSlot(m.returnType, false);
-            sb.append("        get ").append(m.property).append("(): ").append(type).append(";\n");
+            sb.append("        get ").append(tsMemberName(m.property)).append("(): ").append(type).append(";\n");
             sb.append("        ").append(tsMemberName(m.effectiveName())).append("(): ").append(type).append(";\n");
             if (m.setterParamType != null) {
-                sb.append("        set ").append(m.property).append("(value: ")
+                sb.append("        set ").append(tsMemberName(m.property)).append("(value: ")
                   .append(renderSlot(m.setterParamType, true)).append(");\n");
             }
         }
@@ -315,8 +315,10 @@ public final class TypeScriptClassRenderer {
         }
     }
 
-    /** Preserve non-identifier member names as escaped string literals for bracket access. */
+    /** Preserve member names, separating ordinary constructor members from class constructor syntax. */
     private static String tsMemberName(String name) {
+        // Quoted constructor methods still parse as constructors; computed names retain ordinary members.
+        if ("constructor".equals(name)) return "[\"constructor\"]";
         return isValidTsIdentifier(name) ? name : new JsonPrimitive(name).toString();
     }
 
