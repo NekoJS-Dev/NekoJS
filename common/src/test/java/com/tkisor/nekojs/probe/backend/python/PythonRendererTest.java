@@ -27,6 +27,51 @@ import static org.junit.jupiter.api.Assertions.*;
 class PythonRendererTest {
 
     @Test
+    void heritageOrderingUsesEditedTransitiveSymbolsAndKeepsUnrelatedOrder() {
+        TypeDecl root = new TypeDecl(TypeDecl.Kind.INTERFACE, null, "pkg.Root");
+        TypeDecl middle = new TypeDecl(TypeDecl.Kind.INTERFACE, null, "pkg.Middle");
+        TypeDecl leaf = new TypeDecl(TypeDecl.Kind.INTERFACE, null, "pkg.Leaf");
+        TypeDecl independent = new TypeDecl(TypeDecl.Kind.INTERFACE, null, "pkg.Independent");
+        TypeDecl child = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.Child");
+        middle.interfaces.add(symbolSlot(root.fqn));
+        leaf.interfaces.add(symbolSlot(middle.fqn));
+        child.interfaces.addAll(List.of(symbolSlot(root.fqn), symbolSlot(independent.fqn), symbolSlot(leaf.fqn)));
+        var declarations = List.of(root, middle, leaf, independent, child);
+        var available = Set.of(root.fqn, middle.fqn, leaf.fqn, independent.fqn, child.fqn);
+        var renderer = new PythonClassRenderer(new ApiTypeRefPyRenderer(available), declarations);
+        assertTrue(renderer.render(child).contains("class Child(Independent, Leaf, Root):"));
+        assertEquals(List.of("java:pkg.Root", "java:pkg.Independent", "java:pkg.Leaf"),
+                child.interfaces.stream().map(slot -> slot.ref.name()).toList());
+        middle.interfaces.clear();
+        assertTrue(renderer.render(child).contains("class Child(Root, Independent, Leaf):"));
+    }
+
+    @Test
+    void heritageOrderingDoesNotInferThroughMissingHiddenOrCyclicDeclarations() {
+        TypeDecl root = new TypeDecl(TypeDecl.Kind.INTERFACE, null, "pkg.Root");
+        TypeDecl middle = new TypeDecl(TypeDecl.Kind.INTERFACE, null, "pkg.Middle");
+        TypeDecl leaf = new TypeDecl(TypeDecl.Kind.INTERFACE, null, "pkg.Leaf");
+        TypeDecl child = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.Child");
+        middle.interfaces.add(symbolSlot(root.fqn));
+        leaf.interfaces.add(symbolSlot(middle.fqn));
+        child.interfaces.addAll(List.of(symbolSlot(root.fqn), symbolSlot(leaf.fqn)));
+        var types = new ApiTypeRefPyRenderer(Set.of(root.fqn, middle.fqn, leaf.fqn, child.fqn));
+        assertTrue(new PythonClassRenderer(types, List.of(root, leaf, child)).render(child)
+                .contains("class Child(Root, Leaf):"));
+        middle.hidden = true;
+        assertTrue(new PythonClassRenderer(types, List.of(root, middle, leaf, child)).render(child)
+                .contains("class Child(Root, Leaf):"));
+        middle.hidden = false;
+        root.interfaces.add(symbolSlot(leaf.fqn));
+        assertTrue(new PythonClassRenderer(types, List.of(root, middle, leaf, child)).render(child)
+                .contains("class Child(Root, Leaf):"));
+    }
+
+    private static TypeSlot symbolSlot(String fqn) {
+        return new TypeSlot(null, ApiTypeRef.symbol(new ApiSymbolId("java", fqn)));
+    }
+
+    @Test
     void associatedPayloadMethodsPreserveEveryOverloadAndLeaveSingleMethodsUndecorated() {
         TestPlatformInit.ensureInitialized();
         var members = List.of(

@@ -7,6 +7,8 @@ import com.tkisor.nekojs.probe.ir.TypeSlot;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 
 import java.util.HashMap;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -395,18 +397,64 @@ public final class PythonClassRenderer {
 
     /** 基类列表：class 含 superType+interfaces；interface 仅 interfaces。 */
     private String bases(TypeDecl d, boolean includeSuper) {
-        // LinkedHashSet：superType 在前、interfaces 按声明序在后，迭代序即插入序——Set 接口不保证
-        // 迭代序（旧 HashSet 在跨 JVM/平台间可能乱序），违反本仓库的产物确定性标准。
-        Set<String> bases = new LinkedHashSet<>();
+        Map<String, TypeSlot> bases = new LinkedHashMap<>();
         if (includeSuper && d.superType != null) {
             String s = renderSlot(d.superType);
-            if (isBaseSafe(s)) bases.add(s);
+            if (isBaseSafe(s)) bases.putIfAbsent(s, d.superType);
         }
         for (TypeSlot i : d.interfaces) {
             String s = renderSlot(i);
-            if (isBaseSafe(s)) bases.add(s);
+            if (isBaseSafe(s)) bases.putIfAbsent(s, i);
         }
-        return bases.isEmpty() ? "" : "(" + String.join(", ", bases) + ")";
+        List<TypeSlot> pending = new ArrayList<>(bases.values());
+        List<String> ordered = new ArrayList<>();
+        while (!pending.isEmpty()) {
+            TypeSlot selected = pending.getFirst();
+            for (TypeSlot candidate : pending) {
+                boolean ancestorBeforeDescendant = false;
+                for (TypeSlot other : pending) {
+                    if (candidate != other && hasCollectedAncestor(other, candidate)
+                            && !hasCollectedAncestor(candidate, other)) {
+                        ancestorBeforeDescendant = true;
+                        break;
+                    }
+                }
+                if (!ancestorBeforeDescendant) {
+                    selected = candidate;
+                    break;
+                }
+            }
+            ordered.add(renderSlot(selected));
+            pending.remove(selected);
+        }
+        return ordered.isEmpty() ? "" : "(" + String.join(", ", ordered) + ")";
+    }
+
+    /** Python requires a direct subclass before its ancestor; eligible bases use declaration priority. */
+    private boolean hasCollectedAncestor(TypeSlot child, TypeSlot parent) {
+        if (child.ref == null || parent.ref == null || child.ref.kind() != ApiTypeRef.Kind.SYMBOL
+                || parent.ref.kind() != ApiTypeRef.Kind.SYMBOL) return false;
+        String target = ApiTypeRefPyRenderer.extractFqn(parent.ref.name());
+        String start = ApiTypeRefPyRenderer.extractFqn(child.ref.name());
+        if (start.equals(target)) return false;
+        Set<String> visited = new LinkedHashSet<>();
+        ArrayDeque<String> pending = new ArrayDeque<>();
+        pending.add(start);
+        while (!pending.isEmpty()) {
+            String fqn = pending.removeFirst();
+            if (!visited.add(fqn)) continue;
+            TypeDecl declaration = declarations.get(fqn);
+            if (declaration == null || declaration.hidden) continue;
+            List<TypeSlot> parents = new ArrayList<>(declaration.interfaces);
+            if (declaration.superType != null) parents.add(declaration.superType);
+            for (TypeSlot reference : parents) {
+                if (reference.ref == null || reference.ref.kind() != ApiTypeRef.Kind.SYMBOL) continue;
+                String ancestor = ApiTypeRefPyRenderer.extractFqn(reference.ref.name());
+                if (ancestor.equals(target)) return true;
+                pending.addLast(ancestor);
+            }
+        }
+        return false;
     }
 
     /**

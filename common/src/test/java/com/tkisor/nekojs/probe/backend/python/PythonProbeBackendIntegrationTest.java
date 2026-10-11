@@ -46,6 +46,25 @@ import static org.junit.jupiter.api.Assertions.*;
 class PythonProbeBackendIntegrationTest {
 
     @Test
+    void actualRedundantChannelBasesKeepEveryContractInConsistentOrder(@TempDir Path temp) throws Exception {
+        var reflector = new TypeReflector();
+        List<TypeDecl> declarations = List.of(
+                reflector.reflect(java.nio.channels.spi.AbstractInterruptibleChannel.class),
+                reflector.reflect(java.nio.channels.Channel.class),
+                reflector.reflect(java.nio.channels.InterruptibleChannel.class),
+                reflector.reflect(java.io.Closeable.class),
+                reflector.reflect(AutoCloseable.class));
+        assertTrue(runGenerate(temp, emptySnapshot(), declarations, List.of()).success());
+        Path output = temp.resolve("probe-python");
+        retainGenerated(output, "probe-python-channel-heritage-order");
+        String module = Files.readString(output.resolve("nekojs/_java/java/nio/channels/spi/__init__.pyi"));
+        assertTrue(module.contains("class AbstractInterruptibleChannel(InterruptibleChannel, Channel):"), module);
+        assertTrue(java.nio.channels.Channel.class.isAssignableFrom(java.nio.channels.InterruptibleChannel.class));
+        assertTrue(java.nio.channels.InterruptibleChannel.class.isAssignableFrom(
+                java.nio.channels.spi.AbstractInterruptibleChannel.class));
+    }
+
+    @Test
     void localPublicClassIsPreservedWhenEnumAliasUsesItsName(@TempDir Path temp) throws Exception {
         Class<?> target = com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Color.class;
         var reflector = new TypeReflector();
