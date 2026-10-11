@@ -1,0 +1,1 @@
+{"archive": {"file": "python-heritage-candidate.zip", "entries": 3632, "bytes": 8086190, "sha256": "d9df75c1f5b5f71c0b04c193c6bc0d0023d4dd09c2a0f95a85c0f4a46e5b03a1"}, "matrix": {"xml": 800, "tests": 4736, "skipped": 271, "failures": 0, "errors": 0}, "productionPatchSha256": "9a6cdb1efa97235dca6888a21e7b5c84801631d7da9e5dd8e15260fa3e395f97"}

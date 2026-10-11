@@ -1,0 +1,308 @@
+[
+  {
+    "check": "whole-basic",
+    "exitCode": 0,
+    "summary": {
+      "filesAnalyzed": 9,
+      "errorCount": 0,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.186
+    },
+    "diagnostics": []
+  },
+  {
+    "check": "whole-strict",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 9,
+      "errorCount": 13,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.193
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\generated\\nekojs\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 19
+          },
+          "end": {
+            "line": 4,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\generated\\nekojs\\_java\\java\\io\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\generated\\nekojs\\_java\\java\\io\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\generated\\nekojs\\_java\\java\\io\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\generated\\nekojs\\_java\\java\\lang\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\generated\\nekojs\\_java\\java\\lang\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\generated\\nekojs\\_java\\java\\lang\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\generated\\nekojs\\_java\\java\\nio\\channels\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\generated\\nekojs\\_java\\java\\nio\\channels\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\generated\\nekojs\\_java\\java\\nio\\channels\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\generated\\nekojs\\_java\\java\\nio\\channels\\spi\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 19
+          },
+          "end": {
+            "line": 3,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\generated\\nekojs\\_java\\java\\nio\\channels\\spi\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 24
+          },
+          "end": {
+            "line": 3,
+            "character": 32
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\generated\\nekojs\\_java\\java\\nio\\channels\\spi\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 34
+          },
+          "end": {
+            "line": 3,
+            "character": 42
+          }
+        },
+        "rule": "reportUnusedImport"
+      }
+    ]
+  },
+  {
+    "check": "positive-strict",
+    "exitCode": 0,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 0,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.176
+    },
+    "diagnostics": []
+  },
+  {
+    "check": "negative-strict",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 3,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.162
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\negative.py",
+        "severity": "error",
+        "message": "Type of \"notAnExposedMember\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 11
+          },
+          "end": {
+            "line": 2,
+            "character": 35
+          }
+        },
+        "rule": "reportUnknownMemberType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\negative.py",
+        "severity": "error",
+        "message": "Return type is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 11
+          },
+          "end": {
+            "line": 2,
+            "character": 37
+          }
+        },
+        "rule": "reportUnknownVariableType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-heritage-order-green-compiler\\negative.py",
+        "severity": "error",
+        "message": "Cannot access attribute \"notAnExposedMember\" for class \"AbstractInterruptibleChannel\"\n\u00a0\u00a0Attribute \"notAnExposedMember\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 17
+          },
+          "end": {
+            "line": 2,
+            "character": 35
+          }
+        },
+        "rule": "reportAttributeAccessIssue"
+      }
+    ]
+  }
+]
