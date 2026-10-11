@@ -46,6 +46,18 @@ import static org.junit.jupiter.api.Assertions.*;
 class PythonProbeBackendIntegrationTest {
 
     @Test
+    void actualSameNameFieldsAndMethodsKeepTheirSharedFacts(@TempDir Path temp) throws Exception {
+        TypeDecl declaration = new TypeReflector().reflect(PythonFieldMethodCollisionTest.HostFixture.class);
+        assertEquals(2, declaration.fields.size());
+        assertEquals(2, declaration.methods.size());
+        assertTrue(declaration.methods.stream().noneMatch(method -> method.isStatic));
+        assertTrue(runGenerate(temp, emptySnapshot(), List.of(declaration), List.of()).success());
+        retainGenerated(temp.resolve("probe-python"), "probe-python-field-method-collision");
+        assertEquals(2, declaration.fields.size());
+        assertEquals(2, declaration.methods.size());
+    }
+
+    @Test
     void actualJavaCallableDoesNotReplaceTypingCallable(@TempDir Path temp) throws Exception {
         assertTrue(runGenerate(temp, emptySnapshot(), List.of(
                 new TypeReflector().reflect(java.util.concurrent.Callable.class)), List.of()).success());

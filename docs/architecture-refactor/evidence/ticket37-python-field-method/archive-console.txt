@@ -1,0 +1,1 @@
+{"archive": {"file": "field-method-diagnosis.zip", "entries": 73, "bytes": 284476, "sha256": "35f2a535884cb3d106abe94baa4953ceaf39ca19740fa0364add2ff1df7607fe"}, "commonCheck": {"xml": 291, "tests": 2212, "skipped": 4, "failures": 0, "errors": 0}, "testPatchSha256": "6bb0a933010df76ed8ae42883e9acd9dd41790938b839139f879f2c41be454bb", "compilerErrors": [2, 6, 7, 3]}

@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "archive": {
+    "file": "field-method-diagnosis.zip",
+    "entries": 73,
+    "bytes": 284476,
+    "sha256": "35f2a535884cb3d106abe94baa4953ceaf39ca19740fa0364add2ff1df7607fe"
+  },
+  "fullEntryHashes": true,
+  "currentTestPatchMatches": true,
+  "productionUnchanged": true,
+  "originalRedRetained": true,
+  "modelCounterexamplesAndWarningsRetained": true,
+  "completedArchiveConsoleSha256": "c1c888e83d81e001c9c0f2166f557c9d7cf46df2f1b847de3ed03cc50ba45460",
+  "compilerStatus": "FAIL",
+  "nodeMatrix": "NOT RUN",
+  "maintainerAcceptance": "NOT RECORDED"
+}

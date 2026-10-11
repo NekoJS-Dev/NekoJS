@@ -1,0 +1,1112 @@
+{
+  "status": "DIAGNOSIS ONLY: declarations and full IDE remain FAIL",
+  "sourceBase": "0a212fbb26d22d7337c25d1e7e1ebe84bd0392c2",
+  "productionUnchanged": true,
+  "testPatchSha256": "6bb0a933010df76ed8ae42883e9acd9dd41790938b839139f879f2c41be454bb",
+  "testSourceFiles": {
+    "common/src/test/java/com/tkisor/nekojs/probe/backend/python/PythonFieldMethodCollisionTest.java": "b1f9745e45e3a3217a2e621a7c9d906209253bb410c96b7adbe9c97238d966be",
+    "common/src/test/java/com/tkisor/nekojs/probe/backend/python/PythonProbeBackendIntegrationTest.java": "0fc6bfe040e2978f9cfa2ac626033b4496227e05caf15ddbb3fa858743ba524c"
+  },
+  "commonCheck": {
+    "projects": [
+      {
+        "project": "common",
+        "xml": 291,
+        "tests": 2212,
+        "skipped": 4,
+        "failures": 0,
+        "errors": 0
+      }
+    ],
+    "total": {
+      "xml": 291,
+      "tests": 2212,
+      "skipped": 4,
+      "failures": 0,
+      "errors": 0
+    },
+    "xmlSha256": "c0ca21468b1676ee9492bd6334caf6c730872215253d67b5b7181af33058f22a"
+  },
+  "commonCheckDirectExit": 0,
+  "nodeMatrix": "NOT RUN for these new test-only changes; prior 4739 matrix separate",
+  "realHostFacts": {
+    "lockedType": "boolean",
+    "lockedRead": false,
+    "lockedCall": true,
+    "xType": "number",
+    "xRead": 3,
+    "xCall": 4
+  },
+  "originalCompiler": [
+    {
+      "check": "whole-basic",
+      "exitCode": 1,
+      "summary": {
+        "filesAnalyzed": 8,
+        "errorCount": 2,
+        "warningCount": 0,
+        "informationCount": 0,
+        "timeInSec": 0.21
+      },
+      "diagnostics": [
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\__init__.pyi",
+          "severity": "error",
+          "message": "Declaration \"locked\" is obscured by a declaration of the same name",
+          "range": {
+            "start": {
+              "line": 6,
+              "character": 4
+            },
+            "end": {
+              "line": 6,
+              "character": 10
+            }
+          },
+          "rule": "reportRedeclaration"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\__init__.pyi",
+          "severity": "error",
+          "message": "Declaration \"x\" is obscured by a declaration of the same name",
+          "range": {
+            "start": {
+              "line": 7,
+              "character": 4
+            },
+            "end": {
+              "line": 7,
+              "character": 5
+            }
+          },
+          "rule": "reportRedeclaration"
+        }
+      ]
+    },
+    {
+      "check": "whole-strict",
+      "exitCode": 1,
+      "summary": {
+        "filesAnalyzed": 8,
+        "errorCount": 6,
+        "warningCount": 0,
+        "informationCount": 0,
+        "timeInSec": 0.208
+      },
+      "diagnostics": [
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\generated\\nekojs\\__init__.pyi",
+          "severity": "error",
+          "message": "Import \"Any\" is not accessed",
+          "range": {
+            "start": {
+              "line": 4,
+              "character": 19
+            },
+            "end": {
+              "line": 4,
+              "character": 22
+            }
+          },
+          "rule": "reportUnusedImport"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\__init__.pyi",
+          "severity": "error",
+          "message": "Import \"Any\" is not accessed",
+          "range": {
+            "start": {
+              "line": 3,
+              "character": 19
+            },
+            "end": {
+              "line": 3,
+              "character": 22
+            }
+          },
+          "rule": "reportUnusedImport"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\__init__.pyi",
+          "severity": "error",
+          "message": "Import \"Callable\" is not accessed",
+          "range": {
+            "start": {
+              "line": 3,
+              "character": 24
+            },
+            "end": {
+              "line": 3,
+              "character": 32
+            }
+          },
+          "rule": "reportUnusedImport"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\__init__.pyi",
+          "severity": "error",
+          "message": "Import \"ClassVar\" is not accessed",
+          "range": {
+            "start": {
+              "line": 3,
+              "character": 34
+            },
+            "end": {
+              "line": 3,
+              "character": 42
+            }
+          },
+          "rule": "reportUnusedImport"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\__init__.pyi",
+          "severity": "error",
+          "message": "Declaration \"locked\" is obscured by a declaration of the same name",
+          "range": {
+            "start": {
+              "line": 6,
+              "character": 4
+            },
+            "end": {
+              "line": 6,
+              "character": 10
+            }
+          },
+          "rule": "reportRedeclaration"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\__init__.pyi",
+          "severity": "error",
+          "message": "Declaration \"x\" is obscured by a declaration of the same name",
+          "range": {
+            "start": {
+              "line": 7,
+              "character": 4
+            },
+            "end": {
+              "line": 7,
+              "character": 5
+            }
+          },
+          "rule": "reportRedeclaration"
+        }
+      ]
+    },
+    {
+      "check": "positive-strict",
+      "exitCode": 1,
+      "summary": {
+        "filesAnalyzed": 1,
+        "errorCount": 7,
+        "warningCount": 0,
+        "informationCount": 0,
+        "timeInSec": 0.197
+      },
+      "diagnostics": [
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\positive.py",
+          "severity": "error",
+          "message": "Type \"(self: PythonFieldMethodCollisionTest_HostFixture) -> bool\" is not assignable to return type \"bool\"\n\u00a0\u00a0\"FunctionType\" is not assignable to \"bool\"",
+          "range": {
+            "start": {
+              "line": 2,
+              "character": 11
+            },
+            "end": {
+              "line": 2,
+              "character": 23
+            }
+          },
+          "rule": "reportReturnType"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\positive.py",
+          "severity": "error",
+          "message": "Argument missing for parameter \"self\"",
+          "range": {
+            "start": {
+              "line": 4,
+              "character": 11
+            },
+            "end": {
+              "line": 4,
+              "character": 25
+            }
+          },
+          "rule": "reportCallIssue"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\positive.py",
+          "severity": "error",
+          "message": "Return type is unknown",
+          "range": {
+            "start": {
+              "line": 4,
+              "character": 11
+            },
+            "end": {
+              "line": 4,
+              "character": 25
+            }
+          },
+          "rule": "reportUnknownVariableType"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\positive.py",
+          "severity": "error",
+          "message": "Cannot assign to attribute \"locked\" for class \"PythonFieldMethodCollisionTest_HostFixture\"\n\u00a0\u00a0Type \"Literal[True]\" is not assignable to type \"(self: Self@PythonFieldMethodCollisionTest_HostFixture) -> bool\"",
+          "range": {
+            "start": {
+              "line": 6,
+              "character": 19
+            },
+            "end": {
+              "line": 6,
+              "character": 23
+            }
+          },
+          "rule": "reportAttributeAccessIssue"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\positive.py",
+          "severity": "error",
+          "message": "Type \"(self: PythonFieldMethodCollisionTest_HostFixture) -> float\" is not assignable to return type \"float\"\n\u00a0\u00a0\"FunctionType\" is not assignable to \"float\"",
+          "range": {
+            "start": {
+              "line": 8,
+              "character": 11
+            },
+            "end": {
+              "line": 8,
+              "character": 18
+            }
+          },
+          "rule": "reportReturnType"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\positive.py",
+          "severity": "error",
+          "message": "Argument missing for parameter \"self\"",
+          "range": {
+            "start": {
+              "line": 10,
+              "character": 11
+            },
+            "end": {
+              "line": 10,
+              "character": 20
+            }
+          },
+          "rule": "reportCallIssue"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\positive.py",
+          "severity": "error",
+          "message": "Return type is unknown",
+          "range": {
+            "start": {
+              "line": 10,
+              "character": 11
+            },
+            "end": {
+              "line": 10,
+              "character": 20
+            }
+          },
+          "rule": "reportUnknownVariableType"
+        }
+      ]
+    },
+    {
+      "check": "negative-strict",
+      "exitCode": 1,
+      "summary": {
+        "filesAnalyzed": 1,
+        "errorCount": 3,
+        "warningCount": 0,
+        "informationCount": 0,
+        "timeInSec": 0.198
+      },
+      "diagnostics": [
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\negative.py",
+          "severity": "error",
+          "message": "Argument of type \"Literal[17]\" cannot be assigned to parameter \"self\" of type \"PythonFieldMethodCollisionTest_HostFixture\" in function \"locked\"\n\u00a0\u00a0\"Literal[17]\" is not assignable to \"PythonFieldMethodCollisionTest_HostFixture\"",
+          "range": {
+            "start": {
+              "line": 2,
+              "character": 17
+            },
+            "end": {
+              "line": 2,
+              "character": 19
+            }
+          },
+          "rule": "reportArgumentType"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\negative.py",
+          "severity": "error",
+          "message": "Cannot assign to attribute \"locked\" for class \"PythonFieldMethodCollisionTest_HostFixture\"\n\u00a0\u00a0Type \"Literal['wrong']\" is not assignable to type \"(self: Self@PythonFieldMethodCollisionTest_HostFixture) -> bool\"",
+          "range": {
+            "start": {
+              "line": 3,
+              "character": 19
+            },
+            "end": {
+              "line": 3,
+              "character": 26
+            }
+          },
+          "rule": "reportAttributeAccessIssue"
+        },
+        {
+          "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-red-compiler\\negative.py",
+          "severity": "error",
+          "message": "Argument of type \"Literal[17]\" cannot be assigned to parameter \"self\" of type \"PythonFieldMethodCollisionTest_HostFixture\" in function \"x\"\n\u00a0\u00a0\"Literal[17]\" is not assignable to \"PythonFieldMethodCollisionTest_HostFixture\"",
+          "range": {
+            "start": {
+              "line": 4,
+              "character": 12
+            },
+            "end": {
+              "line": 4,
+              "character": 14
+            }
+          },
+          "rule": "reportArgumentType"
+        }
+      ]
+    }
+  ],
+  "standaloneModels": {
+    "purpose": "Standalone counterexample models; generated backend output is never modified",
+    "rows": [
+      {
+        "model": "methods_only",
+        "caller": "positive",
+        "exitCode": 1,
+        "summary": {
+          "filesAnalyzed": 1,
+          "errorCount": 3,
+          "warningCount": 1,
+          "informationCount": 0,
+          "timeInSec": 0.339
+        },
+        "diagnostics": [
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\methods_only\\positive.py",
+            "severity": "warning",
+            "message": "Import \"model\" could not be resolved from source",
+            "range": {
+              "start": {
+                "line": 0,
+                "character": 5
+              },
+              "end": {
+                "line": 0,
+                "character": 10
+              }
+            },
+            "rule": "reportMissingModuleSource"
+          },
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\methods_only\\positive.py",
+            "severity": "error",
+            "message": "Type \"() -> bool\" is not assignable to return type \"bool\"\n\u00a0\u00a0\"MethodType\" is not assignable to \"bool\"",
+            "range": {
+              "start": {
+                "line": 2,
+                "character": 11
+              },
+              "end": {
+                "line": 2,
+                "character": 23
+              }
+            },
+            "rule": "reportReturnType"
+          },
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\methods_only\\positive.py",
+            "severity": "error",
+            "message": "Cannot assign to attribute \"locked\" for class \"Host\"\n\u00a0\u00a0Type \"Literal[True]\" is not assignable to type \"() -> bool\"",
+            "range": {
+              "start": {
+                "line": 6,
+                "character": 19
+              },
+              "end": {
+                "line": 6,
+                "character": 23
+              }
+            },
+            "rule": "reportAttributeAccessIssue"
+          },
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\methods_only\\positive.py",
+            "severity": "error",
+            "message": "Type \"() -> float\" is not assignable to return type \"float\"\n\u00a0\u00a0\"MethodType\" is not assignable to \"float\"",
+            "range": {
+              "start": {
+                "line": 8,
+                "character": 11
+              },
+              "end": {
+                "line": 8,
+                "character": 18
+              }
+            },
+            "rule": "reportReturnType"
+          }
+        ]
+      },
+      {
+        "model": "methods_only",
+        "caller": "detached",
+        "exitCode": 0,
+        "summary": {
+          "filesAnalyzed": 1,
+          "errorCount": 0,
+          "warningCount": 1,
+          "informationCount": 0,
+          "timeInSec": 0.302
+        },
+        "diagnostics": [
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\methods_only\\detached.py",
+            "severity": "warning",
+            "message": "Import \"model\" could not be resolved from source",
+            "range": {
+              "start": {
+                "line": 0,
+                "character": 5
+              },
+              "end": {
+                "line": 0,
+                "character": 10
+              }
+            },
+            "rule": "reportMissingModuleSource"
+          }
+        ]
+      },
+      {
+        "model": "fields_only",
+        "caller": "positive",
+        "exitCode": 1,
+        "summary": {
+          "filesAnalyzed": 1,
+          "errorCount": 4,
+          "warningCount": 1,
+          "informationCount": 0,
+          "timeInSec": 0.37
+        },
+        "diagnostics": [
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\fields_only\\positive.py",
+            "severity": "warning",
+            "message": "Import \"model\" could not be resolved from source",
+            "range": {
+              "start": {
+                "line": 0,
+                "character": 5
+              },
+              "end": {
+                "line": 0,
+                "character": 10
+              }
+            },
+            "rule": "reportMissingModuleSource"
+          },
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\fields_only\\positive.py",
+            "severity": "error",
+            "message": "Object of type \"bool\" is not callable\n\u00a0\u00a0Attribute \"__call__\" is unknown",
+            "range": {
+              "start": {
+                "line": 4,
+                "character": 11
+              },
+              "end": {
+                "line": 4,
+                "character": 25
+              }
+            },
+            "rule": "reportCallIssue"
+          },
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\fields_only\\positive.py",
+            "severity": "error",
+            "message": "Return type is unknown",
+            "range": {
+              "start": {
+                "line": 4,
+                "character": 11
+              },
+              "end": {
+                "line": 4,
+                "character": 25
+              }
+            },
+            "rule": "reportUnknownVariableType"
+          },
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\fields_only\\positive.py",
+            "severity": "error",
+            "message": "Object of type \"float\" is not callable\n\u00a0\u00a0Attribute \"__call__\" is unknown",
+            "range": {
+              "start": {
+                "line": 10,
+                "character": 11
+              },
+              "end": {
+                "line": 10,
+                "character": 20
+              }
+            },
+            "rule": "reportCallIssue"
+          },
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\fields_only\\positive.py",
+            "severity": "error",
+            "message": "Return type is unknown",
+            "range": {
+              "start": {
+                "line": 10,
+                "character": 11
+              },
+              "end": {
+                "line": 10,
+                "character": 20
+              }
+            },
+            "rule": "reportUnknownVariableType"
+          }
+        ]
+      },
+      {
+        "model": "fields_only",
+        "caller": "detached",
+        "exitCode": 1,
+        "summary": {
+          "filesAnalyzed": 1,
+          "errorCount": 2,
+          "warningCount": 1,
+          "informationCount": 0,
+          "timeInSec": 0.475
+        },
+        "diagnostics": [
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\fields_only\\detached.py",
+            "severity": "warning",
+            "message": "Import \"model\" could not be resolved from source",
+            "range": {
+              "start": {
+                "line": 0,
+                "character": 5
+              },
+              "end": {
+                "line": 0,
+                "character": 10
+              }
+            },
+            "rule": "reportMissingModuleSource"
+          },
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\fields_only\\detached.py",
+            "severity": "error",
+            "message": "Object of type \"float\" is not callable\n\u00a0\u00a0Attribute \"__call__\" is unknown",
+            "range": {
+              "start": {
+                "line": 3,
+                "character": 11
+              },
+              "end": {
+                "line": 3,
+                "character": 19
+              }
+            },
+            "rule": "reportCallIssue"
+          },
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\fields_only\\detached.py",
+            "severity": "error",
+            "message": "Return type is unknown",
+            "range": {
+              "start": {
+                "line": 3,
+                "character": 11
+              },
+              "end": {
+                "line": 3,
+                "character": 19
+              }
+            },
+            "rule": "reportUnknownVariableType"
+          }
+        ]
+      },
+      {
+        "model": "callable_values",
+        "caller": "positive",
+        "exitCode": 1,
+        "summary": {
+          "filesAnalyzed": 1,
+          "errorCount": 1,
+          "warningCount": 1,
+          "informationCount": 0,
+          "timeInSec": 0.388
+        },
+        "diagnostics": [
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\callable_values\\positive.py",
+            "severity": "warning",
+            "message": "Import \"model\" could not be resolved from source",
+            "range": {
+              "start": {
+                "line": 0,
+                "character": 5
+              },
+              "end": {
+                "line": 0,
+                "character": 10
+              }
+            },
+            "rule": "reportMissingModuleSource"
+          },
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\callable_values\\positive.py",
+            "severity": "error",
+            "message": "Type \"BoolCall\" is not assignable to return type \"bool\"\n\u00a0\u00a0\"BoolCall\" is not assignable to \"bool\"",
+            "range": {
+              "start": {
+                "line": 2,
+                "character": 11
+              },
+              "end": {
+                "line": 2,
+                "character": 23
+              }
+            },
+            "rule": "reportReturnType"
+          }
+        ]
+      },
+      {
+        "model": "callable_values",
+        "caller": "detached",
+        "exitCode": 0,
+        "summary": {
+          "filesAnalyzed": 1,
+          "errorCount": 0,
+          "warningCount": 1,
+          "informationCount": 0,
+          "timeInSec": 0.384
+        },
+        "diagnostics": [
+          {
+            "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-field-method-model-controls\\callable_values\\detached.py",
+            "severity": "warning",
+            "message": "Import \"model\" could not be resolved from source",
+            "range": {
+              "start": {
+                "line": 0,
+                "character": 5
+              },
+              "end": {
+                "line": 0,
+                "character": 10
+              }
+            },
+            "rule": "reportMissingModuleSource"
+          }
+        ]
+      }
+    ]
+  },
+  "independentReviews": {
+    "Standards": "0 hard findings/0 heuristics; read-only",
+    "Spec": "0 findings; read-only"
+  },
+  "archive": {
+    "file": "field-method-diagnosis.zip",
+    "entries": 73,
+    "bytes": 284476,
+    "sha256": "35f2a535884cb3d106abe94baa4953ceaf39ca19740fa0364add2ff1df7607fe"
+  },
+  "entries": [
+    {
+      "path": "control/ticket37-python-field-method-common-check/summary.json",
+      "bytes": 370,
+      "sha256": "cbfdd45c210f23b747acc9ef82c8b7a257b46e4a12aa1a46aaadfe3fcb3a1b06"
+    },
+    {
+      "path": "control/ticket37-python-field-method-common-check/xml.zip",
+      "bytes": 290111,
+      "sha256": "c0ca21468b1676ee9492bd6334caf6c730872215253d67b5b7181af33058f22a"
+    },
+    {
+      "path": "control/ticket37-python-field-method-host-and-backend/summary.json",
+      "bytes": 360,
+      "sha256": "41c638d7ecc79a6f00df6aafc6ec979451e9acb3fb12f2d88e96dd3aca755f32"
+    },
+    {
+      "path": "control/ticket37-python-field-method-host-and-backend/xml.zip",
+      "bytes": 1916,
+      "sha256": "862e9d74537d426a42ca3d314b4686a6e0e6bc19045ea2017e69718d0e32f00a"
+    },
+    {
+      "path": "control/ticket37-python-field-method-host-first/summary.json",
+      "bytes": 360,
+      "sha256": "c6c980377fe0627db290a5c30103855f2f5cb03d84c7fe0b630fc07c3bc9807b"
+    },
+    {
+      "path": "control/ticket37-python-field-method-host-first/xml.zip",
+      "bytes": 1303,
+      "sha256": "2b535267a89701901eef6536479a2a48526267a94b4cc7b3ee4e3fbc1482f73b"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/callable_values/detached-config.json",
+      "bytes": 79,
+      "sha256": "7c0f45fe8a3681865582d3466c65e4976c0893e9c056ab3cc6530a599a7ef247"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/callable_values/detached-pyright.json",
+      "bytes": 828,
+      "sha256": "a0bec8bc6817f81e457554e7f260927fcd43604b4ed11e645ea91d2fef2fd31d"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/callable_values/detached.py",
+      "bytes": 112,
+      "sha256": "895bbd9ab80403f2a08843d370c71cc3adc81eeb5124e96a64517d54780a5618"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/callable_values/model.pyi",
+      "bytes": 378,
+      "sha256": "27b159026dce6bfce092f4a937a5c979922b64fdf9936deb293611c13ff74af1"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/callable_values/positive-config.json",
+      "bytes": 79,
+      "sha256": "d2ab02601dc2f0763204de1cc9ca412eabd97ddbf3153b996bc677a6ab51b441"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/callable_values/positive-pyright.json",
+      "bytes": 1448,
+      "sha256": "c2ed69ad197f30a937423d69b03c15b334f83c3d54e3380296ded012634523c5"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/callable_values/positive.py",
+      "bytes": 335,
+      "sha256": "da5fbbe218b6c492ecf41c1e9ba68c6fc6b85d9e3886cb9ba1bc8369521ea77e"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/fields_only/detached-config.json",
+      "bytes": 79,
+      "sha256": "7c0f45fe8a3681865582d3466c65e4976c0893e9c056ab3cc6530a599a7ef247"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/fields_only/detached-pyright.json",
+      "bytes": 1951,
+      "sha256": "1beba46bb8ce290057704cc7877fadf09e039fe7a7636cf1c19ada4a69211e5d"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/fields_only/detached.py",
+      "bytes": 112,
+      "sha256": "895bbd9ab80403f2a08843d370c71cc3adc81eeb5124e96a64517d54780a5618"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/fields_only/model.pyi",
+      "bytes": 45,
+      "sha256": "e5605effb03710ef7cb4726107bbb4a9af3aff7b483f58348c86a96a4b189a69"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/fields_only/positive-config.json",
+      "bytes": 79,
+      "sha256": "d2ab02601dc2f0763204de1cc9ca412eabd97ddbf3153b996bc677a6ab51b441"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/fields_only/positive-pyright.json",
+      "bytes": 3080,
+      "sha256": "614a6b84ee23b347099f2d0e7be519f52f97827685b19a34be609c25b7293fcb"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/fields_only/positive.py",
+      "bytes": 335,
+      "sha256": "da5fbbe218b6c492ecf41c1e9ba68c6fc6b85d9e3886cb9ba1bc8369521ea77e"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/methods_only/detached-config.json",
+      "bytes": 79,
+      "sha256": "7c0f45fe8a3681865582d3466c65e4976c0893e9c056ab3cc6530a599a7ef247"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/methods_only/detached-pyright.json",
+      "bytes": 825,
+      "sha256": "0227a4dc2c978fb7fc552faa944e24c2fe8ebcadac8c54aa2a9a7086a14ce41c"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/methods_only/detached.py",
+      "bytes": 112,
+      "sha256": "895bbd9ab80403f2a08843d370c71cc3adc81eeb5124e96a64517d54780a5618"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/methods_only/model.pyi",
+      "bytes": 79,
+      "sha256": "35010df33d8d3baa793c786eeb0bf080af12ef5ff56bd08564c63c42c7168306"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/methods_only/positive-config.json",
+      "bytes": 79,
+      "sha256": "d2ab02601dc2f0763204de1cc9ca412eabd97ddbf3153b996bc677a6ab51b441"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/methods_only/positive-pyright.json",
+      "bytes": 2715,
+      "sha256": "162a343f83c2403b11d2078dbd0f49412693d0612ee9af65409a86f2b80db61e"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/methods_only/positive.py",
+      "bytes": 335,
+      "sha256": "da5fbbe218b6c492ecf41c1e9ba68c6fc6b85d9e3886cb9ba1bc8369521ea77e"
+    },
+    {
+      "path": "control/ticket37-python-field-method-model-controls/summary.json",
+      "bytes": 10736,
+      "sha256": "80857bc530c156781447e6845600fec89cc78ddd29e9c1c6b1cd94d4fb75704a"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/generated/nekojs/README.md",
+      "bytes": 1317,
+      "sha256": "bb576ffa318a04523a734a2ca33e98da4a6345fe0536b3018b5f02097770c8b2"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/generated/nekojs/__init__.pyi",
+      "bytes": 255,
+      "sha256": "3f6ef1fe697bcb3412932dea853a833a65d8cd47500c1978ffa87a9a7b14de16"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/generated/nekojs/_java/__init__.pyi",
+      "bytes": 35,
+      "sha256": "e531377deb5b694c6b623977ae5725d50a9d168e58dafa785b956b532e63bd4e"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/generated/nekojs/_java/com/__init__.pyi",
+      "bytes": 35,
+      "sha256": "e531377deb5b694c6b623977ae5725d50a9d168e58dafa785b956b532e63bd4e"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/generated/nekojs/_java/com/tkisor/__init__.pyi",
+      "bytes": 35,
+      "sha256": "e531377deb5b694c6b623977ae5725d50a9d168e58dafa785b956b532e63bd4e"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/generated/nekojs/_java/com/tkisor/nekojs/__init__.pyi",
+      "bytes": 35,
+      "sha256": "e531377deb5b694c6b623977ae5725d50a9d168e58dafa785b956b532e63bd4e"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/generated/nekojs/_java/com/tkisor/nekojs/probe/__init__.pyi",
+      "bytes": 35,
+      "sha256": "e531377deb5b694c6b623977ae5725d50a9d168e58dafa785b956b532e63bd4e"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/generated/nekojs/_java/com/tkisor/nekojs/probe/backend/__init__.pyi",
+      "bytes": 35,
+      "sha256": "e531377deb5b694c6b623977ae5725d50a9d168e58dafa785b956b532e63bd4e"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/generated/nekojs/_java/com/tkisor/nekojs/probe/backend/python/__init__.pyi",
+      "bytes": 388,
+      "sha256": "473d51ee7ec9bea129994ca8bdafe66b7cf046501d57fe4abdeb402ba552dc60"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/generated/nekojs/py.typed",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/negative-strict-config.json",
+      "bytes": 121,
+      "sha256": "43698041213b953b19ef08ec295543ece5c8c1d7b9218a57b420e46819359536"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/negative-strict-pyright.json",
+      "bytes": 2445,
+      "sha256": "0e39c6d9f146867b62e14fe036554f4bd10c7e678f8b22963ba6deab798fefcb"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/negative.py",
+      "bytes": 248,
+      "sha256": "f99846807660ea48be1d99ab451f8370386d88ad35b70eade94a1912b3c9f67b"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/positive-strict-config.json",
+      "bytes": 121,
+      "sha256": "8c0417859477fa20ce3c3601411694498d882ca04ae8ff829bbedd308176aaf5"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/positive-strict-pyright.json",
+      "bytes": 4406,
+      "sha256": "b518b45ab84edad21457e15c1631efd1085ef05efd6c65c661eb4ea259d7ea74"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/positive.py",
+      "bytes": 609,
+      "sha256": "8ffdafaa146a51b3ef3a19467c40bae1d425850a63613a0f2fd2b371f450fc2a"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/summary.json",
+      "bytes": 11048,
+      "sha256": "f8211c10edc1031c7263a4630cb8a48d4b74db5f86a8fe0ec9a79e8934bd2af1"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/whole-basic-config.json",
+      "bytes": 127,
+      "sha256": "703871d20ca9544b24bf1265c44135a13ae14ab05f0963eeadd3dd8846e01108"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/whole-basic-pyright.json",
+      "bytes": 1520,
+      "sha256": "63f459cafd93fd8abd60f4f3829feb8659a34ea28814490be4a9b36bea49d870"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/whole-strict-config.json",
+      "bytes": 128,
+      "sha256": "a389b506637cad8686087f06fa9bc09d306dc26867ece0a1d7f7a4d69e7c70e1"
+    },
+    {
+      "path": "control/ticket37-python-field-method-red-compiler/whole-strict-pyright.json",
+      "bytes": 3871,
+      "sha256": "b0a43b8d795a352a0e45b48ccd80569dec3fa379900dc8125a882a48e002eb42"
+    },
+    {
+      "path": "generated/probe-python-field-method-collision/nekojs/README.md",
+      "bytes": 1317,
+      "sha256": "bb576ffa318a04523a734a2ca33e98da4a6345fe0536b3018b5f02097770c8b2"
+    },
+    {
+      "path": "generated/probe-python-field-method-collision/nekojs/__init__.pyi",
+      "bytes": 255,
+      "sha256": "3f6ef1fe697bcb3412932dea853a833a65d8cd47500c1978ffa87a9a7b14de16"
+    },
+    {
+      "path": "generated/probe-python-field-method-collision/nekojs/_java/__init__.pyi",
+      "bytes": 35,
+      "sha256": "e531377deb5b694c6b623977ae5725d50a9d168e58dafa785b956b532e63bd4e"
+    },
+    {
+      "path": "generated/probe-python-field-method-collision/nekojs/_java/com/__init__.pyi",
+      "bytes": 35,
+      "sha256": "e531377deb5b694c6b623977ae5725d50a9d168e58dafa785b956b532e63bd4e"
+    },
+    {
+      "path": "generated/probe-python-field-method-collision/nekojs/_java/com/tkisor/__init__.pyi",
+      "bytes": 35,
+      "sha256": "e531377deb5b694c6b623977ae5725d50a9d168e58dafa785b956b532e63bd4e"
+    },
+    {
+      "path": "generated/probe-python-field-method-collision/nekojs/_java/com/tkisor/nekojs/__init__.pyi",
+      "bytes": 35,
+      "sha256": "e531377deb5b694c6b623977ae5725d50a9d168e58dafa785b956b532e63bd4e"
+    },
+    {
+      "path": "generated/probe-python-field-method-collision/nekojs/_java/com/tkisor/nekojs/probe/__init__.pyi",
+      "bytes": 35,
+      "sha256": "e531377deb5b694c6b623977ae5725d50a9d168e58dafa785b956b532e63bd4e"
+    },
+    {
+      "path": "generated/probe-python-field-method-collision/nekojs/_java/com/tkisor/nekojs/probe/backend/__init__.pyi",
+      "bytes": 35,
+      "sha256": "e531377deb5b694c6b623977ae5725d50a9d168e58dafa785b956b532e63bd4e"
+    },
+    {
+      "path": "generated/probe-python-field-method-collision/nekojs/_java/com/tkisor/nekojs/probe/backend/python/__init__.pyi",
+      "bytes": 388,
+      "sha256": "473d51ee7ec9bea129994ca8bdafe66b7cf046501d57fe4abdeb402ba552dc60"
+    },
+    {
+      "path": "generated/probe-python-field-method-collision/nekojs/py.typed",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "generated/probe-python-field-method-host-facts/host-facts.json",
+      "bytes": 99,
+      "sha256": "8a2abeee81839e6cc8786199ef56af3d4c24fb3d561d3d874b4848c926050191"
+    },
+    {
+      "path": "runner/archive-python-field-method.py",
+      "bytes": 4975,
+      "sha256": "2b6def96e4bee9caec780ee7619fd4e3de57d65dea68adadc0ac08a006104ebe"
+    },
+    {
+      "path": "runner/check-python-field-method-red.py",
+      "bytes": 2453,
+      "sha256": "6ef75b46931c5a10de8ccf80283a7357960859dd1279f2ed37ca6c1c95813081"
+    },
+    {
+      "path": "runner/probe-python-field-method-models.py",
+      "bytes": 2839,
+      "sha256": "be6f6b598a71fe6da3d789e38e32b894a6deaefeea50930bc61bef60eec2593f"
+    },
+    {
+      "path": "runner/python-field-method-common-check.txt",
+      "bytes": 2905,
+      "sha256": "b89846c54e9de4365603536659e2eb169721015d446ccaa715f7b643edb07399"
+    },
+    {
+      "path": "runner/python-field-method-host-and-backend.txt",
+      "bytes": 2790,
+      "sha256": "6e4777cdfc5bf6a8e0923eca82cc191ec0df3c984c2b1640755718e66f4d6c01"
+    },
+    {
+      "path": "runner/python-field-method-host-first.txt",
+      "bytes": 2790,
+      "sha256": "7d691cd49c5cf575b8d6fe0eddf28b36c9906c42a9dbca66c3192b6e69ac549f"
+    },
+    {
+      "path": "runner/python-field-method-model-controls.txt",
+      "bytes": 1061,
+      "sha256": "77c1967673a9ea2630cce3439095034fa086f0f6ef451861dbcbdd5c2c53c919"
+    },
+    {
+      "path": "runner/python-field-method-red-compiler.txt",
+      "bytes": 622,
+      "sha256": "adfa27bd4eee0e70356c0f4cc2669a9eedd75e7f580b61a99964deed013643c7"
+    },
+    {
+      "path": "runner/snapshot-current-tests.py",
+      "bytes": 1202,
+      "sha256": "6da50a1bf1a2cc1fcddea57af67822b65505d14cc9edbad0a4d309c6e219b5bd"
+    },
+    {
+      "path": "source/repair/common/src/test/java/com/tkisor/nekojs/probe/backend/python/PythonFieldMethodCollisionTest.java",
+      "bytes": 2792,
+      "sha256": "b1f9745e45e3a3217a2e621a7c9d906209253bb410c96b7adbe9c97238d966be"
+    },
+    {
+      "path": "source/repair/common/src/test/java/com/tkisor/nekojs/probe/backend/python/PythonProbeBackendIntegrationTest.java",
+      "bytes": 58223,
+      "sha256": "0fc6bfe040e2978f9cfa2ac626033b4496227e05caf15ddbb3fa858743ba524c"
+    },
+    {
+      "path": "source/test.patch",
+      "bytes": 4713,
+      "sha256": "6bb0a933010df76ed8ae42883e9acd9dd41790938b839139f879f2c41be454bb"
+    },
+    {
+      "path": "source/baseline/common/src/test/java/com/tkisor/nekojs/probe/backend/python/PythonProbeBackendIntegrationTest.java",
+      "bytes": 57507,
+      "sha256": "32fe176ab29ef53fded1e15fd3ae14b3eab46018fe442b79bd15089d130c3de4"
+    }
+  ],
+  "maintainerAcceptance": "NOT RECORDED",
+  "automation": "PAUSED",
+  "limitations": [
+    "Only tested model candidates rejected; no universal impossibility claimed",
+    "No production fix",
+    "Full IDE still FAIL",
+    "Exact prior production performance PASS remains separately pinned"
+  ]
+}
