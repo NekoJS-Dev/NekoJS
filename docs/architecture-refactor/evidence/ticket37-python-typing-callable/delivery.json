@@ -1,0 +1,13 @@
+{
+  "sourceCommit": "2a421c18bd36dc59d0006db8e68d515f0122ce8e",
+  "sourceBase": "d5f4e2709feea2bdd34ec1d5ca0697fb153548e8",
+  "productionPatchSha256": "07ecf23cc86853ee6ef4ef0c1020fb62c4f0028bf45e848ad0cde8a9fab56486",
+  "committedProductionMatchesInstalledBuild": true,
+  "archiveSha256": "6c2314ef59d38d9cdc989bd67c77ad86528c69463c33e3387d36989a24f650d7",
+  "fullIde": "FAIL",
+  "currentSourceFormalPerformance": "NOT RUN at this checkpoint",
+  "maintainerAcceptance": "NOT RECORDED",
+  "automation": "PAUSED",
+  "toolPermissionFieldProblem": "UNRESOLVED",
+  "delivery": "Local source commit; remote verification must be separately observed"
+}

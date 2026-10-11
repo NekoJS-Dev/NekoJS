@@ -1,0 +1,10 @@
+{
+  "archiveSha256": "6c2314ef59d38d9cdc989bd67c77ad86528c69463c33e3387d36989a24f650d7",
+  "entryHashReadback": true,
+  "completedConsoleByteEquality": true,
+  "allTenFinalComparisonsIncluded": true,
+  "exactProductionPatchEqual": true,
+  "actualPasswordNestedScan": true,
+  "wholeCompilerAndTypedCallerRedGreenStrictFailuresRetained": true,
+  "packagingConsole": "Excluded while archiving; full completed console retained separately."
+}

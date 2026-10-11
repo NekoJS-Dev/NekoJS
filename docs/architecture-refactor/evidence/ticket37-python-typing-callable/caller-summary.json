@@ -1,0 +1,228 @@
+[
+  {
+    "case": "jdk",
+    "check": "whole-basic",
+    "exitCode": 0,
+    "summary": {
+      "filesAnalyzed": 5,
+      "errorCount": 0,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.175
+    },
+    "diagnostics": []
+  },
+  {
+    "case": "jdk",
+    "check": "whole-strict",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 5,
+      "errorCount": 3,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.16
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-typing-callable-green-compiler\\jdk\\generated\\nekojs\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 19
+          },
+          "end": {
+            "line": 4,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-typing-callable-green-compiler\\jdk\\generated\\nekojs\\_java\\java\\util\\concurrent\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"_NekoTyping_Callable\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 36
+          },
+          "end": {
+            "line": 3,
+            "character": 56
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-typing-callable-green-compiler\\jdk\\generated\\nekojs\\_java\\java\\util\\concurrent\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 58
+          },
+          "end": {
+            "line": 3,
+            "character": 66
+          }
+        },
+        "rule": "reportUnusedImport"
+      }
+    ]
+  },
+  {
+    "case": "local",
+    "check": "whole-basic",
+    "exitCode": 0,
+    "summary": {
+      "filesAnalyzed": 10,
+      "errorCount": 0,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.168
+    },
+    "diagnostics": []
+  },
+  {
+    "case": "local",
+    "check": "whole-strict",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 10,
+      "errorCount": 2,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.18
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-typing-callable-green-compiler\\local\\generated\\nekojs\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"Any\" is not accessed",
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 19
+          },
+          "end": {
+            "line": 4,
+            "character": 22
+          }
+        },
+        "rule": "reportUnusedImport"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-typing-callable-green-compiler\\local\\generated\\nekojs\\_java\\com\\tkisor\\nekojs\\probe\\backend\\python\\fixture\\typing\\__init__.pyi",
+        "severity": "error",
+        "message": "Import \"ClassVar\" is not accessed",
+        "range": {
+          "start": {
+            "line": 3,
+            "character": 59
+          },
+          "end": {
+            "line": 3,
+            "character": 67
+          }
+        },
+        "rule": "reportUnusedImport"
+      }
+    ]
+  },
+  {
+    "case": "local",
+    "check": "positive-strict",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 3,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.165
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-typing-callable-green-compiler\\local\\positive.py",
+        "severity": "error",
+        "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"callback\" in function \"apply\"\n\u00a0\u00a0Argument type is \"(incoming: Unknown) -> Unknown\"",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 16
+          },
+          "end": {
+            "line": 2,
+            "character": 41
+          }
+        },
+        "rule": "reportUnknownArgumentType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-typing-callable-green-compiler\\local\\positive.py",
+        "severity": "error",
+        "message": "Type of parameter \"incoming\" is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 23
+          },
+          "end": {
+            "line": 2,
+            "character": 31
+          }
+        },
+        "rule": "reportUnknownLambdaType"
+      },
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-typing-callable-green-compiler\\local\\positive.py",
+        "severity": "error",
+        "message": "Return type of lambda is unknown",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 33
+          },
+          "end": {
+            "line": 2,
+            "character": 41
+          }
+        },
+        "rule": "reportUnknownLambdaType"
+      }
+    ]
+  },
+  {
+    "case": "local",
+    "check": "negative-strict",
+    "exitCode": 1,
+    "summary": {
+      "filesAnalyzed": 1,
+      "errorCount": 1,
+      "warningCount": 0,
+      "informationCount": 0,
+      "timeInSec": 0.17
+    },
+    "diagnostics": [
+      {
+        "file": "d:\\mcmodDemo\\NekoJS-mult\\build\\ticket37-python-typing-callable-green-compiler\\local\\negative.py",
+        "severity": "error",
+        "message": "Argument of type \"Literal[17]\" cannot be assigned to parameter \"callback\" of type \"(...) -> Any\" in function \"apply\"\n\u00a0\u00a0Type \"Literal[17]\" is not assignable to type \"(...) -> Any\"",
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 16
+          },
+          "end": {
+            "line": 2,
+            "character": 18
+          }
+        },
+        "rule": "reportArgumentType"
+      }
+    ]
+  }
+]

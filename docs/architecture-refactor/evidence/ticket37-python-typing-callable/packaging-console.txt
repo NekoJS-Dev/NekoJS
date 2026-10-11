@@ -1,0 +1,1 @@
+{"archive": {"file": "python-typing-callable-candidate.zip", "entries": 3706, "bytes": 8144540, "sha256": "6c2314ef59d38d9cdc989bd67c77ad86528c69463c33e3387d36989a24f650d7"}, "matrix": {"xml": 800, "tests": 4739, "skipped": 271, "failures": 0, "errors": 0}, "productionPatchSha256": "07ecf23cc86853ee6ef4ef0c1020fb62c4f0028bf45e848ad0cde8a9fab56486"}

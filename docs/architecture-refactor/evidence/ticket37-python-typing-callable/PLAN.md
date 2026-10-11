@@ -1,0 +1,15 @@
+# Python typing Callable identity
+
+Base d5f4e2709feea2bdd34ec1d5ca0697fb153548e8 is committed/pushed with remote equality. Source752b99be/five new heritage JARs and their complete acceptance remain immutable. Full IDE is still FAIL with8/8/8/14/14 Python errors and unchanged full TS failures. Automation stays paused; current formalperformance NOTRUN and FS/native/domain/visual/download/human/release gaps remain open.
+
+Next actual backend feedback loop reflects java.util.concurrent.Callable and a real local Callable interface/implementing class, plus a real class reserving the preferred private typing name. Edited callback IR must retain supported callback shape and actual public names. Imports and references must agree without deleting Java Callable or weakening typing. Main owns all code/builds. RED controls and strict whole compiler results precede any source repair; no production edit yet.
+
+## Diagnosis and controlled repair
+
+Ranked predictions shared before production edits: (1) typing import shadows a real Java declaration, so a private typing name fixes assignment/type-argument errors; (2) string-prefix heritage filtering removes a real Callable interface and misclassifies an aliased callback, so type-kind filtering fixes both; (3) collector omission would leave no interface declaration, falsified by actual generated output. Initial two tests fail deterministically. Import-only control passes the JDK test and leaves the actual heritage assertion red. Valid private-callback/union guard and local inheritance controls then produce three tests/two assertion failures. Production callback invocation passes with existing HostAccess/ClassFilter and no security changes.
+
+Preserve unsuccessful test authoring separately: TypeSlot constructor arity and nonexistent ApiSymbolId factory caused compile failures (tests NOT RUN); an invalid one-member union and Nashorn arrow syntax caused fixture failures. Corrected to existing constructors, a valid two-member union and a function expression before the real guard RED. No failure is deleted or counted as a successful regression.
+
+Final focused integration/render checks: 43 tests, zero failures. Whole basic compiler: JDK 1→0 and local 2→0 errors; strict whole still FAIL with 3/2 unused-import errors. Original unannotated lambda caller remains FAIL with three Unknown diagnostics; keep this precision limitation, no production callback broadening. Same explicitly typed named callback on frozen RED/GREEN outputs: strict positive 4→0 and negative rejects the wrong argument in both. These caller changes do not substitute for whole-stub acceptance.
+
+Independent code-review axes use the fixed authorized base above and working diff/new fixtures, because no source commit exists yet: Standards 0 hard findings/0 heuristics; Spec 0. Both are read-only and main owns edits/builds. Full matrix and exact newly installed JAR acceptance are pending; later results must be recorded separately. Source patch SHA256 07ecf23cc86853ee6ef4ef0c1020fb62c4f0028bf45e848ad0cde8a9fab56486 pins three production files. No golden/manual/collector/security/runtime changes.
