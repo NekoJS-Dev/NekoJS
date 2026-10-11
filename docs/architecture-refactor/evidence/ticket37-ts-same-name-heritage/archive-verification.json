@@ -1,0 +1,17 @@
+{
+  "archiveSha256": "db71d2e81fffc7c6b38d97c494a69486fe2c17a9e7a35e193f0f492c1739c571",
+  "fullHashReadback": true,
+  "sourcePatchMatches": true,
+  "repeatedActualRed": true,
+  "exactThreeNameSubstitutionsOnly": true,
+  "originalCallerModulesAndConfigPreserved": true,
+  "minimalRedAndThreeNegativeTypeRejects": true,
+  "productionHostAccessRuntimeFact": true,
+  "fiveActualInstalledSelfHeritageErrorsRetained": true,
+  "matrixTests": 4749,
+  "matrixFailures": 0,
+  "productionRepair": "NOT IMPLEMENTED",
+  "fullIde": "FAIL",
+  "overallTickets": "NOT COMPLETE",
+  "maintainerAcceptance": "NOT RECORDED"
+}

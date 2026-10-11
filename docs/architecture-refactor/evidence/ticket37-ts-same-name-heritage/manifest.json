@@ -1,0 +1,554 @@
+{
+  "sourceRevision": "6fdf3c734408a65ef4534ed7343b050ace3e8078",
+  "baselineRevision": "a2f7f9facf71fb4b82bd29e0a9ad848f6faad35e",
+  "productionRevision": "7b724a50f51367ad43f5903b1e7240e8e69bad10",
+  "productionChanges": false,
+  "productionRepair": "NOT IMPLEMENTED",
+  "fullIde": "FAIL; existing reports retained",
+  "nodes": [
+    {
+      "node": "1.21.1",
+      "installedJarSha256": "6fd0a4f20cf9b13322904255fab3e8d2402ecf315e21249dbf74dddcdf968e12",
+      "rendererClassSha256": "d4f2ae48dadd54cc6570d50741a8b969285928c9eecb1d914bcc252d96c628eb",
+      "existingSelfHeritageErrorsPerProject": 1
+    },
+    {
+      "node": "26.1.2",
+      "installedJarSha256": "2020a465f4a34edbdbc091e507248aa88322f40e0ae28341809d21e8e52b854e",
+      "rendererClassSha256": "d4f2ae48dadd54cc6570d50741a8b969285928c9eecb1d914bcc252d96c628eb",
+      "existingSelfHeritageErrorsPerProject": 1
+    },
+    {
+      "node": "26.2.0",
+      "installedJarSha256": "da493a206d0bd326cd206afbead26c676827e8719fdbd12ddcd1094a4fc70172",
+      "rendererClassSha256": "d4f2ae48dadd54cc6570d50741a8b969285928c9eecb1d914bcc252d96c628eb",
+      "existingSelfHeritageErrorsPerProject": 1
+    },
+    {
+      "node": "26.1.2-fabric",
+      "installedJarSha256": "7707a5a144c0846e85db116a0694dd5ff8c8ce5d2396fca20c0e38ea711976b4",
+      "rendererClassSha256": "d4f2ae48dadd54cc6570d50741a8b969285928c9eecb1d914bcc252d96c628eb",
+      "existingSelfHeritageErrorsPerProject": 1
+    },
+    {
+      "node": "26.2.0-fabric",
+      "installedJarSha256": "35418c40f6bab338ead12a2c7c7aeec144b9af926bdc0e5f73bb1a0f753a309f",
+      "rendererClassSha256": "d4f2ae48dadd54cc6570d50741a8b969285928c9eecb1d914bcc252d96c628eb",
+      "existingSelfHeritageErrorsPerProject": 1
+    }
+  ],
+  "matrix": {
+    "projects": [
+      {
+        "project": "common",
+        "xml": 293,
+        "tests": 2220,
+        "skipped": 4,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "common-api-processor",
+        "xml": 1,
+        "tests": 13,
+        "skipped": 0,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/1.21.1",
+        "xml": 95,
+        "tests": 426,
+        "skipped": 31,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/26.1.2",
+        "xml": 130,
+        "tests": 661,
+        "skipped": 81,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/26.2.0",
+        "xml": 130,
+        "tests": 661,
+        "skipped": 81,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/26.1.2-fabric",
+        "xml": 77,
+        "tests": 384,
+        "skipped": 37,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "project": "versions/26.2.0-fabric",
+        "xml": 77,
+        "tests": 384,
+        "skipped": 37,
+        "failures": 0,
+        "errors": 0
+      }
+    ],
+    "total": {
+      "xml": 803,
+      "tests": 4749,
+      "skipped": 271,
+      "failures": 0,
+      "errors": 0
+    },
+    "xmlSha256": "ea09927bbb7fd0bc486f2a5350f5de044e29808f60a36e68372144454cbf4b30"
+  },
+  "archive": {
+    "file": "same-name-heritage.zip",
+    "bytes": 1095916,
+    "entries": 86,
+    "sha256": "db71d2e81fffc7c6b38d97c494a69486fe2c17a9e7a35e193f0f492c1739c571"
+  },
+  "entries": [
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/alias-and-all-base-references/base.d.ts",
+      "bytes": 171,
+      "sha256": "0722f576b99f4abf84f4f273e3f694f285776400b1d35484ac18ef2c005e3cc2"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/alias-and-all-base-references/caller.ts",
+      "bytes": 413,
+      "sha256": "bded2d08996c8ab35e21169dc7d8a9a70f95e99c3be73e85d9557ecda7797a74"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/alias-and-all-base-references/child.d.ts",
+      "bytes": 359,
+      "sha256": "4f21b8e6467c0445187239b64ff48fc4029ec70f00d5ffd1e965cbe1fff467d8"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/alias-and-all-base-references/tsc.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/alias-and-all-base-references/tsconfig.json",
+      "bytes": 514,
+      "sha256": "be8d003134e3deb4d1d7fce5d6c033159ab48af9645fe234e3aab2f602468e7e"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/heritage-without-generic/base.d.ts",
+      "bytes": 171,
+      "sha256": "0722f576b99f4abf84f4f273e3f694f285776400b1d35484ac18ef2c005e3cc2"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/heritage-without-generic/caller.ts",
+      "bytes": 413,
+      "sha256": "bded2d08996c8ab35e21169dc7d8a9a70f95e99c3be73e85d9557ecda7797a74"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/heritage-without-generic/child.d.ts",
+      "bytes": 320,
+      "sha256": "5902f4985300dd6186cdcbeacb5ee8864b6194b7f20f453d94a35d5e5d800292"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/heritage-without-generic/tsc.txt",
+      "bytes": 692,
+      "sha256": "04aea0ed295a8acbbbc4c7aa453c14f6f1739806236059266b5e5d7508362885"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/heritage-without-generic/tsconfig.json",
+      "bytes": 514,
+      "sha256": "be8d003134e3deb4d1d7fce5d6c033159ab48af9645fe234e3aab2f602468e7e"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/import-alias-only/base.d.ts",
+      "bytes": 171,
+      "sha256": "0722f576b99f4abf84f4f273e3f694f285776400b1d35484ac18ef2c005e3cc2"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/import-alias-only/caller.ts",
+      "bytes": 413,
+      "sha256": "bded2d08996c8ab35e21169dc7d8a9a70f95e99c3be73e85d9557ecda7797a74"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/import-alias-only/child.d.ts",
+      "bytes": 351,
+      "sha256": "fb86f7d02f9365eb15ec81d38cf5ac34c6e2013471be03640a20856c7e94af10"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/import-alias-only/tsc.txt",
+      "bytes": 664,
+      "sha256": "0d187aa367eef77143db7d90f7ac6bb0be39b9caf2d344ef2516c11535b69ea9"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/import-alias-only/tsconfig.json",
+      "bytes": 514,
+      "sha256": "be8d003134e3deb4d1d7fce5d6c033159ab48af9645fe234e3aab2f602468e7e"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-controls/summary.json",
+      "bytes": 1735,
+      "sha256": "1d686e1ca4c3f3e0a5c81b4fbee95dfd81879ee46946bb62a9a8d6a1ceb12fe1"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-extra-controls/minimal/base.d.ts",
+      "bytes": 171,
+      "sha256": "0722f576b99f4abf84f4f273e3f694f285776400b1d35484ac18ef2c005e3cc2"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-extra-controls/minimal/child.d.ts",
+      "bytes": 225,
+      "sha256": "315ce33cdd9173fa3f99c3cfc9dc2ca84c7361cc061f6f80d6f6d2d99c49dca8"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-extra-controls/minimal/tsc.txt",
+      "bytes": 173,
+      "sha256": "83666bead9e563f2ec4428c2ded45c9bf6192f0ec20c5230920bc51a04e98f75"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-extra-controls/minimal/tsconfig.json",
+      "bytes": 496,
+      "sha256": "8368e31bb5682154e1e664e74c2ad410ff2b639a9fc4a513d56fabd8f1566538"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-extra-controls/negative/base.d.ts",
+      "bytes": 171,
+      "sha256": "0722f576b99f4abf84f4f273e3f694f285776400b1d35484ac18ef2c005e3cc2"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-extra-controls/negative/child.d.ts",
+      "bytes": 359,
+      "sha256": "4f21b8e6467c0445187239b64ff48fc4029ec70f00d5ffd1e965cbe1fff467d8"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-extra-controls/negative/invalid.ts",
+      "bytes": 318,
+      "sha256": "ab4c7f31d94225866f5cfc0c77841b04e0b5fa204472ee295f8d287b7eebc9f5"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-extra-controls/negative/tsc.txt",
+      "bytes": 559,
+      "sha256": "14fb6e8976be3a85964dd558b21cb9988dbd3df9134278090eee097a2f8538a8"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-extra-controls/negative/tsconfig.json",
+      "bytes": 515,
+      "sha256": "e24d56ef5d6a50726925a5bdae1f019da615592df088741a8530fc9c85168b44"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-extra-controls/summary.json",
+      "bytes": 970,
+      "sha256": "79dd72e588c67e54feee7e2e297d4caf29617732e651e649d116489263641818"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-focused/summary.json",
+      "bytes": 360,
+      "sha256": "f0fdeef85f9bf4e570d4cc9f53fe97c4ae499d08e5be8a080ce781606e9d0e2b"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-focused/xml.zip",
+      "bytes": 1316,
+      "sha256": "d4be4eb9aadf35c1ae5346b82706ee674b11d5da0cc8f64fabcedd818001ccb0"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-matrix/summary.json",
+      "bytes": 1314,
+      "sha256": "a9451cbe70f8e971296bdda684950548064f8c85482686c2b51903b461a2523c"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-matrix/xml.zip",
+      "bytes": 835388,
+      "sha256": "ea09927bbb7fd0bc486f2a5350f5de044e29808f60a36e68372144454cbf4b30"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-red/base.d.ts",
+      "bytes": 171,
+      "sha256": "0722f576b99f4abf84f4f273e3f694f285776400b1d35484ac18ef2c005e3cc2"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-red/caller.ts",
+      "bytes": 413,
+      "sha256": "bded2d08996c8ab35e21169dc7d8a9a70f95e99c3be73e85d9557ecda7797a74"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-red/child.d.ts",
+      "bytes": 328,
+      "sha256": "5853ee2cc8a8eb88adbcba4b6739fa097cf4a6ce18e5c13e4ad7c54713b3b279"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-red/run-1.txt",
+      "bytes": 572,
+      "sha256": "4b768c0e72dbc13b7b9d1a9948cd5b7bff817a892d630ce91c2ba863d92ba380"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-red/run-2.txt",
+      "bytes": 572,
+      "sha256": "4b768c0e72dbc13b7b9d1a9948cd5b7bff817a892d630ce91c2ba863d92ba380"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-red/summary.json",
+      "bytes": 1339,
+      "sha256": "9263d9e2664d97a97b586ddef6db9bfe9fe1aa9be883b49ec6863bb8e208f9e8"
+    },
+    {
+      "path": "diagnosis/ticket37-same-name-heritage-red/tsconfig.json",
+      "bytes": 514,
+      "sha256": "be8d003134e3deb4d1d7fce5d6c033159ab48af9645fe234e3aab2f602468e7e"
+    },
+    {
+      "path": "direct-exits.json",
+      "bytes": 377,
+      "sha256": "8f6a67d2e4e2688b4c3831c173c2bffeab07a8443f498665a2c2eb86dd2c39ec"
+    },
+    {
+      "path": "installed/1.21.1/item.d.ts",
+      "bytes": 2854,
+      "sha256": "b865ce3ac58cebe345de40fd332cfc7a1582904eed2a43446722a1bb80f7b33c"
+    },
+    {
+      "path": "installed/1.21.1/pdata.d.ts",
+      "bytes": 2454,
+      "sha256": "03158865712e03fef8bad23b5c367b926e842d7f52c0cf6df13f83c97e97de62"
+    },
+    {
+      "path": "installed/1.21.1/server-tsc.txt",
+      "bytes": 264006,
+      "sha256": "abd316b93c384836dc29fa1025dcb54c40adb86fd9720b8aec9006f624953d7d"
+    },
+    {
+      "path": "installed/1.21.1/server-tsconfig.json",
+      "bytes": 220,
+      "sha256": "5d2a706b329179d3a3d8b32a8151bc346ea6a3c90ba7f6776ff0b67777ec0e61"
+    },
+    {
+      "path": "installed/1.21.1/startup-tsc.txt",
+      "bytes": 264259,
+      "sha256": "8932249ad893db755642c546a46802a2dfdd94f9ef106813e2e161cb9621646b"
+    },
+    {
+      "path": "installed/1.21.1/startup-tsconfig.json",
+      "bytes": 221,
+      "sha256": "9695cc5e70cd34f086ec08ccaddcae39f3e71a43541e783de5eaf2aa83861089"
+    },
+    {
+      "path": "installed/26.1.2-fabric/item.d.ts",
+      "bytes": 1427,
+      "sha256": "b448d765bb6bf5f8f02050dd7874c8ecdeee2873fb8251ee5cf35be3c00173b8"
+    },
+    {
+      "path": "installed/26.1.2-fabric/pdata.d.ts",
+      "bytes": 2454,
+      "sha256": "03158865712e03fef8bad23b5c367b926e842d7f52c0cf6df13f83c97e97de62"
+    },
+    {
+      "path": "installed/26.1.2-fabric/server-tsc.txt",
+      "bytes": 364769,
+      "sha256": "575e8e72c6102b772c0c545aca4527a94860de34958562a64ec03c761554898a"
+    },
+    {
+      "path": "installed/26.1.2-fabric/server-tsconfig.json",
+      "bytes": 227,
+      "sha256": "b90300993bb6fa005a76624163bbbd033f63a054306adb4aec6e9e708a4dd0e8"
+    },
+    {
+      "path": "installed/26.1.2-fabric/startup-tsc.txt",
+      "bytes": 365031,
+      "sha256": "98be6bd4297586dcbff730e0959d0ecf3ea175eced891f97c50570c0a2383597"
+    },
+    {
+      "path": "installed/26.1.2-fabric/startup-tsconfig.json",
+      "bytes": 228,
+      "sha256": "aaafcb259f4caf1c28861181b34c32fc40b745dd91874cf70a20a81a92de42a3"
+    },
+    {
+      "path": "installed/26.1.2/item.d.ts",
+      "bytes": 2785,
+      "sha256": "6331fed7deb683e2b1bd1592d66b00ffedb8df36e6b75bd0764f8807701fc8b3"
+    },
+    {
+      "path": "installed/26.1.2/pdata.d.ts",
+      "bytes": 2454,
+      "sha256": "03158865712e03fef8bad23b5c367b926e842d7f52c0cf6df13f83c97e97de62"
+    },
+    {
+      "path": "installed/26.1.2/server-tsc.txt",
+      "bytes": 433942,
+      "sha256": "cba85f6a6c65307d85b888bfc638940a53e050a966841687db37d4474ddee15d"
+    },
+    {
+      "path": "installed/26.1.2/server-tsconfig.json",
+      "bytes": 220,
+      "sha256": "637531cf58f57ec0908d4edeea729f86dd68ecc25d68d56fc4803aa2048bf24e"
+    },
+    {
+      "path": "installed/26.1.2/startup-tsc.txt",
+      "bytes": 434195,
+      "sha256": "c67854f10fcda96c3a8a9bbd2114d1b78c9e87f4cadd5e9d7cd4014e759aa0e6"
+    },
+    {
+      "path": "installed/26.1.2/startup-tsconfig.json",
+      "bytes": 221,
+      "sha256": "b1863936488fce595c2352f914773bd0388df3c18719596900fdada8e628a157"
+    },
+    {
+      "path": "installed/26.2.0-fabric/item.d.ts",
+      "bytes": 1427,
+      "sha256": "b448d765bb6bf5f8f02050dd7874c8ecdeee2873fb8251ee5cf35be3c00173b8"
+    },
+    {
+      "path": "installed/26.2.0-fabric/pdata.d.ts",
+      "bytes": 2454,
+      "sha256": "03158865712e03fef8bad23b5c367b926e842d7f52c0cf6df13f83c97e97de62"
+    },
+    {
+      "path": "installed/26.2.0-fabric/server-tsc.txt",
+      "bytes": 286860,
+      "sha256": "18b61982e13e466155c0d70cb9b266841024d0d41794e0b565910799181604de"
+    },
+    {
+      "path": "installed/26.2.0-fabric/server-tsconfig.json",
+      "bytes": 227,
+      "sha256": "cc9b24ef8759740a5341de8c573d909c6565c546e1817f02438fac5fac34a6ce"
+    },
+    {
+      "path": "installed/26.2.0-fabric/startup-tsc.txt",
+      "bytes": 287124,
+      "sha256": "1eb45e7fe304698c6e982972c11485432411e0548b729192a4d1365422dbd2d1"
+    },
+    {
+      "path": "installed/26.2.0-fabric/startup-tsconfig.json",
+      "bytes": 228,
+      "sha256": "9c6fb6ace27cb19c244525dfbfc0ab3ed84d12e46ab2e0642b58d84a5c3a112b"
+    },
+    {
+      "path": "installed/26.2.0/item.d.ts",
+      "bytes": 2785,
+      "sha256": "6331fed7deb683e2b1bd1592d66b00ffedb8df36e6b75bd0764f8807701fc8b3"
+    },
+    {
+      "path": "installed/26.2.0/pdata.d.ts",
+      "bytes": 2454,
+      "sha256": "03158865712e03fef8bad23b5c367b926e842d7f52c0cf6df13f83c97e97de62"
+    },
+    {
+      "path": "installed/26.2.0/server-tsc.txt",
+      "bytes": 390245,
+      "sha256": "738aceece21bfd417ec97d8506dfcf0cc046c2e926a8c732549931d8e2658df7"
+    },
+    {
+      "path": "installed/26.2.0/server-tsconfig.json",
+      "bytes": 220,
+      "sha256": "3240cffba23d47ee8e977e9f4d710e55adcc487c5f0b4eb2acdcf99250d4e5de"
+    },
+    {
+      "path": "installed/26.2.0/startup-tsc.txt",
+      "bytes": 390498,
+      "sha256": "977eb78b7f19a18d258668c583aa5b3ea6edecdcc1fb9cc875b98f1faacb558b"
+    },
+    {
+      "path": "installed/26.2.0/startup-tsconfig.json",
+      "bytes": 221,
+      "sha256": "ffa295f38f1d428dc28065e81f20770c240380591b869ed3131ef929e7446fd3"
+    },
+    {
+      "path": "installed/preparation-manifest.json",
+      "bytes": 9602,
+      "sha256": "3ce61e72a3c78173192440ddc86b21a02e089b1a257e466db2d4ed6482524635"
+    },
+    {
+      "path": "installed/prior-repair-manifest.json",
+      "bytes": 939013,
+      "sha256": "b31fa2f19fe7447733834e842703ef41d666708abd9c7535148aa5c614fa54d7"
+    },
+    {
+      "path": "review.json",
+      "bytes": 189,
+      "sha256": "b59302271545247b3a3de2faaa89b2282d1804d6ab828e9b7918da513f9d1709"
+    },
+    {
+      "path": "runner/archive-same-name-heritage.py",
+      "bytes": 6349,
+      "sha256": "2485c6fcc84d1a2f460b676ac0146e4c6674bef7008770d3142292372673e15f"
+    },
+    {
+      "path": "runner/check-same-name-heritage.py",
+      "bytes": 1803,
+      "sha256": "bc767f2791c58845093860dc302821ac0389f166535c75e4ccb02c35a531abab"
+    },
+    {
+      "path": "runner/control-same-name-heritage.py",
+      "bytes": 1780,
+      "sha256": "937253ecc3c48ec8db93e1bae21309754fdc573d9169abf53e3d277c8f7fa658"
+    },
+    {
+      "path": "runner/extend-same-name-heritage-controls.py",
+      "bytes": 2546,
+      "sha256": "d0ca23257f8810cbb963f45ffb1d47c24ee65e4c563dbcc5fa64f0e33b8dde9b"
+    },
+    {
+      "path": "runner/same-name-heritage-matrix.txt",
+      "bytes": 8203,
+      "sha256": "9a50bee5632c71ad4b54ff9397d1844c351865da807735f3ecf8bced09e5b1d9"
+    },
+    {
+      "path": "runner/same-name-heritage-npm.txt",
+      "bytes": 150,
+      "sha256": "1508da24b09b3355482e2ad5604085d31adab4de0f597091fef3d6b41b3ecd3e"
+    },
+    {
+      "path": "runner/same-name-heritage-platform.txt",
+      "bytes": 5955,
+      "sha256": "86d21d9c9f2bd16f8196b0babfae99de2dcec069a3ca8c005b54229329ee1f87"
+    },
+    {
+      "path": "runner/same-name-heritage-reflection.txt",
+      "bytes": 2790,
+      "sha256": "6e4777cdfc5bf6a8e0923eca82cc191ec0df3c984c2b1640755718e66f4d6c01"
+    },
+    {
+      "path": "source/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/IndexFileGenerator.java",
+      "bytes": 23115,
+      "sha256": "446ded619be23e03948bec73c41c41291b69220ec840b00bb09d89aec41f68ad"
+    },
+    {
+      "path": "source/common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer.java",
+      "bytes": 27298,
+      "sha256": "ab9856b89e084b2287c487b7508aae8cf979e4441aa11bc601c1d5c2f2b4d4ac"
+    },
+    {
+      "path": "source/common/src/test/java/com/tkisor/nekojs/probe/TypeScriptSameNameHeritageTest.java",
+      "bytes": 3287,
+      "sha256": "65a52238ba1cec93285d8cfe737ac9d6500c38929445f0d055ca8b79a39241b1"
+    },
+    {
+      "path": "source/common/src/test/java/com/tkisor/nekojs/probe/testfixture/samebase/PersistentData.java",
+      "bytes": 221,
+      "sha256": "aeb04cf11945cb3c8ef8528a2767ea066e32d2c32639dd0932352fd363384781"
+    },
+    {
+      "path": "source/common/src/test/java/com/tkisor/nekojs/probe/testfixture/samechild/PersistentData.java",
+      "bytes": 369,
+      "sha256": "35f0d3e30f69087473c875351948902a2efcae34547002a2057cf43d3b1924d4"
+    },
+    {
+      "path": "source/src/main/java/com/tkisor/nekojs/wrapper/item/PersistentDataJS.java",
+      "bytes": 833,
+      "sha256": "29226f5577faafe9547c5ebaae8f2505629904aa4fc6ed46cf2e9a6949964eec"
+    },
+    {
+      "path": "source/test.patch",
+      "bytes": 5013,
+      "sha256": "4bec68605f561d31e6dbd3d17831d95a2ec54a478fcfd1e98a894b8f0a3e5391"
+    }
+  ],
+  "exclusions": [
+    "properties/RCON credentials",
+    "worlds",
+    "JARs",
+    "raw JFR",
+    "active packaging console",
+    "unrelated data"
+  ]
+}
