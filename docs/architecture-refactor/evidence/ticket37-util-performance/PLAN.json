@@ -1,0 +1,14 @@
+{
+  "sourceRevision": "60139fffffa6e54b2248797c2a32d4fd75025a54",
+  "groups": [
+    "reload-confirmed-1",
+    "reload-confirmed-2",
+    "startup-confirmed"
+  ],
+  "unchangedSampler": true,
+  "samplesPerGroup": 5,
+  "startupThreshold": 41173,
+  "reloadThreshold": 285.3,
+  "noDiscardedValues": true,
+  "startAfterOwnedServersAndCompilersSettle": true
+}

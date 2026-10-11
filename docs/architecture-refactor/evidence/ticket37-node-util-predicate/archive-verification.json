@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "archive": {
+    "file": "node-util-predicate.zip",
+    "entries": 3534,
+    "bytes": 8271876,
+    "sha256": "2d74e2bca40e8b8db5bc39adc8daffe7b9938e94b29bcf9f7037b8a17b6d9a9c"
+  },
+  "completeEntryHashes": true,
+  "committedSourcePatchMatch": true,
+  "actualFiveArtifactResourceBytes": true,
+  "firstFailureAndCompletedConfirmationRetained": true,
+  "allFiveDirectRuntimeExitsAndCompleteComparisons": true,
+  "wholeIde": "FAIL",
+  "filesystemRootCause": "UNRESOLVED",
+  "erasureRawBytesEqual": false,
+  "erasureAstEqual": true,
+  "currentSourcePerformance": "NOT RUN in this archive",
+  "maintainerAcceptance": "NOT RECORDED",
+  "overall": "NOT COMPLETE"
+}
