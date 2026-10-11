@@ -1,0 +1,769 @@
+{
+  "sourceRevision": "2a421c18bd36dc59d0006db8e68d515f0122ce8e",
+  "samplerSha256": "1f9c5d14a1a586da4b3f1ca8e71b2407ce089ee8bee185418963e1b5745df0b4",
+  "fixtureHashes": [
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\client_scripts\\src\\main.js",
+      "sha256": "F6761879F26B6307F738AFFA36FAA6298800B9E8EDB857D6723918EAA7A4D08F"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\server_scripts\\adapter-bench.js",
+      "sha256": "0940215D42A0FA143FF796607CB219167E39E0F684DE62EC91601FB59E950C7A"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\server_scripts\\arith-bench.js",
+      "sha256": "0910E7BE74A4E7C98B4DDA37A95B49C5EBBCB6307729017EF6BED6130068A26B"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\server_scripts\\main.js",
+      "sha256": "2ED0821FA466811AAD6D42AAEC8DF8B22D8AB099D3769BCFA2F4C9D7805D29FE"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\server_scripts\\mem-bench.js",
+      "sha256": "A53D683EC08050DCD0B5F195CD91833E9505DF62E9009037155E972B474C9DBE"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\server_scripts\\tick-bench.js",
+      "sha256": "E2959ED32909D5C534DB8D34998380DEFA481144A8BE4C2AD5614479EADD87AC"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\server_scripts\\src\\main.js",
+      "sha256": "512D5B04384A2F9B4CD8BF033A2B68DD2DB768D1C2A4841CCEBEAAD7FB18A625"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s01-items-basic.js",
+      "sha256": "7A862FA65087ED414689BCD080BF93225E3DB172AFA93A23B0DAB73D331EF08C"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s02-items-tagged.js",
+      "sha256": "3EEA534154A96922BE25F986A1F541B017E0E37989C96A97984F8265C359A1CA"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s03-blocks-basic.js",
+      "sha256": "0F0CC04570ADC2FE9E20B14127875D9C28A1C27041B96B3E399C2B72F9670848"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s04-blocks-tagged.js",
+      "sha256": "A55D194E38ADDA6B59C72A2D452FEDC142613ECEB390D29ECD963E1C45E28C34"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s05-entitytypes.js",
+      "sha256": "2F6C656B0F7BEAE76E49654B2A858CADEEA8A5611E57BD064C64A2D5827B2466"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s06-fluids-tabs.js",
+      "sha256": "75589AA6504718DB31B03C3419A03FE8145A3F82F2E2333425B2430D14FB0B7C"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s07-script-events.js",
+      "sha256": "36601D10F2131700FDC0B7DB1230E5C636C57CD6CC5CF3E383ABDAA795EBDD52"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s08-data-setup.js",
+      "sha256": "E8B480609A48C296426AF3B01BA5D8B3FF2367A401BDB09757B71C4A873C8544"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s09-interop-refs.js",
+      "sha256": "C3189069593DB09076CB1FA29AE1FA788EF079DCED1BECB59F91A469D2CC7A03"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\startup_scripts\\s10-marker.js",
+      "sha256": "C743247C414B97A2BD2B38C12F3608FA393A50424F5F7D42A0A501D9CC85814A"
+    },
+    {
+      "path": "bench\\perf\\fixtures\\nekojs\\startup_scripts\\src\\main.js",
+      "sha256": "3D8DB2102AB2A6D275B76B914AE96A38BC3B8E2531C71B38769FBE1E89A70D8A"
+    }
+  ],
+  "fixturesEqualHistoricalCb5": true,
+  "compiledClasses": [
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/backend/python/ApiTypeRefPyRenderer.class",
+      "sha256": "41e2777acfb6347c87ddcbc0029c0fec92e5a6aa5a0fb35c05a15d6fbecdd1d5",
+      "installedTrialBuildByteEqual": true
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/backend/python/PythonClassRenderer.class",
+      "sha256": "d3abc44aeea068868af5934ce515765fbe5dfb3dbdab036b8525d4980bd0914f",
+      "installedTrialBuildByteEqual": true
+    },
+    {
+      "path": "common/build/classes/java/main/com/tkisor/nekojs/probe/backend/python/PythonProbeBackend.class",
+      "sha256": "18f575f15def8d10036ce4e6fc77531cd1c5a790d71c739a829887969fc96bf0",
+      "installedTrialBuildByteEqual": true
+    }
+  ],
+  "groups": [
+    {
+      "group": "reload-confirmed-1",
+      "folder": "20261011T051124Z-reload-26.1.2",
+      "mode": "reload",
+      "formalValuesMs": [
+        185,
+        254,
+        120,
+        218,
+        218
+      ],
+      "meanMs": 199.0,
+      "thresholdMs": 285.3,
+      "acceptanceVerdict": "PASS",
+      "samplerExit": 0,
+      "warmupValuesMs": [],
+      "samples": [
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 69592,
+          "ts_utc": "2026-10-11T05:12:35.6528661Z",
+          "rcon_response": "NekoJS server reload committed: generation=2 phase=COMMIT - no errors. ",
+          "pid": 4008,
+          "mode": "reload",
+          "rev": "2a421c18",
+          "rcon_rtt_ms": 177,
+          "index": 1,
+          "kind": "formal",
+          "marker_ms": 185,
+          "marker_line": "[13:12:21] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791695486009-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.474",
+          "wall_done_ms": 52463,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 69592,
+          "ts_utc": "2026-10-11T05:12:35.6798884Z",
+          "rcon_response": "NekoJS server reload committed: generation=3 phase=COMMIT - no errors. ",
+          "pid": 4008,
+          "mode": "reload",
+          "rev": "2a421c18",
+          "rcon_rtt_ms": 136,
+          "index": 2,
+          "kind": "formal",
+          "marker_ms": 254,
+          "marker_line": "[13:12:25] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791695486009-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.474",
+          "wall_done_ms": 52463,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 69592,
+          "ts_utc": "2026-10-11T05:12:35.6935945Z",
+          "rcon_response": "NekoJS server reload committed: generation=4 phase=COMMIT - no errors. ",
+          "pid": 4008,
+          "mode": "reload",
+          "rev": "2a421c18",
+          "rcon_rtt_ms": 119,
+          "index": 3,
+          "kind": "formal",
+          "marker_ms": 120,
+          "marker_line": "[13:12:28] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791695486009-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.474",
+          "wall_done_ms": 52463,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 69592,
+          "ts_utc": "2026-10-11T05:12:35.6955693Z",
+          "rcon_response": "NekoJS server reload committed: generation=5 phase=COMMIT - no errors. ",
+          "pid": 4008,
+          "mode": "reload",
+          "rev": "2a421c18",
+          "rcon_rtt_ms": 114,
+          "index": 4,
+          "kind": "formal",
+          "marker_ms": 218,
+          "marker_line": "[13:12:31] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791695486009-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.474",
+          "wall_done_ms": 52463,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 69592,
+          "ts_utc": "2026-10-11T05:12:35.7035699Z",
+          "rcon_response": "NekoJS server reload committed: generation=6 phase=COMMIT - no errors. ",
+          "pid": 4008,
+          "mode": "reload",
+          "rev": "2a421c18",
+          "rcon_rtt_ms": 103,
+          "index": 5,
+          "kind": "formal",
+          "marker_ms": 218,
+          "marker_line": "[13:12:34] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791695486009-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.474",
+          "wall_done_ms": 52463,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        }
+      ]
+    },
+    {
+      "group": "reload-confirmed-2",
+      "folder": "20261011T051237Z-reload-26.1.2",
+      "mode": "reload",
+      "formalValuesMs": [
+        202,
+        221,
+        223,
+        236,
+        220
+      ],
+      "meanMs": 220.4,
+      "thresholdMs": 285.3,
+      "acceptanceVerdict": "PASS",
+      "samplerExit": 0,
+      "warmupValuesMs": [],
+      "samples": [
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 37200,
+          "ts_utc": "2026-10-11T05:13:16.3083371Z",
+          "rcon_response": "NekoJS server reload committed: generation=2 phase=COMMIT - no errors. ",
+          "pid": 24224,
+          "mode": "reload",
+          "rev": "2a421c18",
+          "rcon_rtt_ms": 175,
+          "index": 1,
+          "kind": "formal",
+          "marker_ms": 202,
+          "marker_line": "[13:13:02] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791695559061-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.430",
+          "wall_done_ms": 20149,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 37200,
+          "ts_utc": "2026-10-11T05:13:16.3253300Z",
+          "rcon_response": "NekoJS server reload committed: generation=3 phase=COMMIT - no errors. ",
+          "pid": 24224,
+          "mode": "reload",
+          "rev": "2a421c18",
+          "rcon_rtt_ms": 110,
+          "index": 2,
+          "kind": "formal",
+          "marker_ms": 221,
+          "marker_line": "[13:13:05] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791695559061-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.430",
+          "wall_done_ms": 20149,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 37200,
+          "ts_utc": "2026-10-11T05:13:16.3378556Z",
+          "rcon_response": "NekoJS server reload committed: generation=4 phase=COMMIT - no errors. ",
+          "pid": 24224,
+          "mode": "reload",
+          "rev": "2a421c18",
+          "rcon_rtt_ms": 108,
+          "index": 3,
+          "kind": "formal",
+          "marker_ms": 223,
+          "marker_line": "[13:13:08] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791695559061-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.430",
+          "wall_done_ms": 20149,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 37200,
+          "ts_utc": "2026-10-11T05:13:16.3388552Z",
+          "rcon_response": "NekoJS server reload committed: generation=5 phase=COMMIT - no errors. ",
+          "pid": 24224,
+          "mode": "reload",
+          "rev": "2a421c18",
+          "rcon_rtt_ms": 132,
+          "index": 4,
+          "kind": "formal",
+          "marker_ms": 236,
+          "marker_line": "[13:13:12] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791695559061-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.430",
+          "wall_done_ms": 20149,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 37200,
+          "ts_utc": "2026-10-11T05:13:16.3398562Z",
+          "rcon_response": "NekoJS server reload committed: generation=6 phase=COMMIT - no errors. ",
+          "pid": 24224,
+          "mode": "reload",
+          "rev": "2a421c18",
+          "rcon_rtt_ms": 100,
+          "index": 5,
+          "kind": "formal",
+          "marker_ms": 220,
+          "marker_line": "[13:13:15] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1791695559061-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.430",
+          "wall_done_ms": 20149,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        }
+      ]
+    },
+    {
+      "group": "startup-confirmed",
+      "folder": "20261011T051318Z-startup-26.1.2",
+      "mode": "startup",
+      "formalValuesMs": [
+        23644,
+        23500,
+        22814,
+        22770,
+        22979
+      ],
+      "meanMs": 23141.4,
+      "thresholdMs": 41173,
+      "acceptanceVerdict": "PASS",
+      "samplerExit": 0,
+      "warmupValuesMs": [
+        19443,
+        23276
+      ],
+      "samples": [
+        {
+          "pid": 28396,
+          "ts_utc": "2026-10-11T05:13:40.7073398Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "2a421c18",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 21042,
+          "wall_done_ms": 19443,
+          "kind": "warmup",
+          "index": 1,
+          "killed": false,
+          "done_s": "0.379",
+          "tag": "startup-1-warmup",
+          "mode": "startup"
+        },
+        {
+          "pid": 27328,
+          "ts_utc": "2026-10-11T05:14:05.7976779Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "2a421c18",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 25029,
+          "wall_done_ms": 23276,
+          "kind": "warmup",
+          "index": 2,
+          "killed": false,
+          "done_s": "0.502",
+          "tag": "startup-2-warmup",
+          "mode": "startup"
+        },
+        {
+          "pid": 11040,
+          "ts_utc": "2026-10-11T05:14:31.1456906Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "2a421c18",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 25283,
+          "wall_done_ms": 23644,
+          "kind": "formal",
+          "index": 3,
+          "killed": false,
+          "done_s": "0.538",
+          "tag": "startup-3-formal",
+          "mode": "startup"
+        },
+        {
+          "pid": 9264,
+          "ts_utc": "2026-10-11T05:14:56.4167698Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "2a421c18",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 25216,
+          "wall_done_ms": 23500,
+          "kind": "formal",
+          "index": 4,
+          "killed": false,
+          "done_s": "0.412",
+          "tag": "startup-4-formal",
+          "mode": "startup"
+        },
+        {
+          "pid": 7464,
+          "ts_utc": "2026-10-11T05:15:21.0616125Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "2a421c18",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 24591,
+          "wall_done_ms": 22814,
+          "kind": "formal",
+          "index": 5,
+          "killed": false,
+          "done_s": "0.464",
+          "tag": "startup-5-formal",
+          "mode": "startup"
+        },
+        {
+          "pid": 28360,
+          "ts_utc": "2026-10-11T05:15:45.6767730Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "2a421c18",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 24557,
+          "wall_done_ms": 22770,
+          "kind": "formal",
+          "index": 6,
+          "killed": false,
+          "done_s": "0.458",
+          "tag": "startup-6-formal",
+          "mode": "startup"
+        },
+        {
+          "pid": 17812,
+          "ts_utc": "2026-10-11T05:16:10.3169183Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "2a421c18",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 24581,
+          "wall_done_ms": 22979,
+          "kind": "formal",
+          "index": 7,
+          "killed": false,
+          "done_s": "0.424",
+          "tag": "startup-7-formal",
+          "mode": "startup"
+        }
+      ]
+    }
+  ],
+  "overall": "PASS",
+  "normalRconSessions": 9,
+  "sessionLauncherPids": [
+    4008,
+    7464,
+    9264,
+    11040,
+    17812,
+    24224,
+    27328,
+    28360,
+    28396
+  ],
+  "sessionLauncherMeaning": "Sampler records cmd.exe Gradle launcher PID, not actual server JVM PID",
+  "directSamplerExits": [
+    0,
+    0,
+    0
+  ],
+  "directOuterRunnerExit": 0,
+  "formalPortsFree": [
+    25871,
+    25872
+  ],
+  "archive": {
+    "file": "2a421-performance-evidence.zip",
+    "entries": 49,
+    "bytes": 1192500,
+    "sha256": "b49a4fedf7ac8daf694ff56dba1e35bfc56415e781d1a65b5aa7421760fa87cf"
+  },
+  "entries": [
+    {
+      "path": "runner/2a421-performance-console.txt",
+      "bytes": 235,
+      "sha256": "9373fe1a9a4a14a12e4cfce726e4e49a2fdf20add54f1ad06710efc7dcdbb02f"
+    },
+    {
+      "path": "runner/2a421-performance-groups-exits.json",
+      "bytes": 725,
+      "sha256": "b5f289d373f7af8f3357d0aeb24264d753fcd69c385c5170ae712c52743c8f01"
+    },
+    {
+      "path": "runner/2a421-performance-preparation-exit.json",
+      "bytes": 88,
+      "sha256": "fdb67c32964e99b84bef0ba4ac3753e88fafbaee14fed2d68c2394c011ead061"
+    },
+    {
+      "path": "runner/2a421-performance-preparation.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "runner/2a421-performance-runner-exit.json",
+      "bytes": 146,
+      "sha256": "17709a6dae5f39c4be8217c19a7ab1376fbfcfb75e27491d5e55904b9541fdc0"
+    },
+    {
+      "path": "runner/archive-2a421-performance.py",
+      "bytes": 7269,
+      "sha256": "a9f79daf068bbcd1af4f19f1e4b31f602d4e6156713ccf2929520ba13a0386e3"
+    },
+    {
+      "path": "runner/finish-2a421-performance.py",
+      "bytes": 1439,
+      "sha256": "225d18eca8ddc7061cfb32419db481de195403ce3af5e86c61a8d8aa2e0e9d6b"
+    },
+    {
+      "path": "runner/guard-2a421-performance.ps1",
+      "bytes": 2139,
+      "sha256": "6620d99867c9a8404c6918dfed465b19087b3f5975629b60f12a8f9c53e616a5"
+    },
+    {
+      "path": "runner/prepare-2a421-performance.ps1",
+      "bytes": 2933,
+      "sha256": "b8367435c8e53113327fb6d1e22a60b96e682a96604efb18e69c9906e96bf139"
+    },
+    {
+      "path": "runner/prepare-2a421-performance.py",
+      "bytes": 1316,
+      "sha256": "aa06e6bfe7ad63be6aac2a4550815d70eb789ad9e2511f61a291a7576ab6bd2b"
+    },
+    {
+      "path": "runner/run-2a421-performance.py",
+      "bytes": 2213,
+      "sha256": "e3093641ef8a557c3a8eff051099c1d85aea9bdca5e82a683d0435961b9aa3ec"
+    },
+    {
+      "path": "samples/20261011T051124Z-reload-26.1.2/env-snapshot.txt",
+      "bytes": 199,
+      "sha256": "1a1561dd07fba739ddc1b71fc1354cee8703a317806de51d00b54df0bb40928a"
+    },
+    {
+      "path": "samples/20261011T051124Z-reload-26.1.2/reload-session-stderr.log",
+      "bytes": 2861,
+      "sha256": "65c3c0c9c01119e86f552f3545d3b6c1441245d009cc056858701162cd6a01df"
+    },
+    {
+      "path": "samples/20261011T051124Z-reload-26.1.2/reload-session-stdout.log",
+      "bytes": 4425315,
+      "sha256": "7caf64b874c8602631442e92ee87be5872ffbaa1c88880c2f17155c70375a581"
+    },
+    {
+      "path": "samples/20261011T051124Z-reload-26.1.2/samples.jsonl",
+      "bytes": 2575,
+      "sha256": "7dba4455e81246c4e0af1e4fe0e5065b10139c06e1936f93b3212fc147ee5b7e"
+    },
+    {
+      "path": "samples/20261011T051237Z-reload-26.1.2/env-snapshot.txt",
+      "bytes": 199,
+      "sha256": "d6751807ab82fedd5fab08a63d53ac574384375f0a1a16ea0f2852709df793e9"
+    },
+    {
+      "path": "samples/20261011T051237Z-reload-26.1.2/reload-session-stderr.log",
+      "bytes": 1180,
+      "sha256": "b40591f50304564855f28be705270ade5af36c1be830ea873c81bcfdfe3a66ca"
+    },
+    {
+      "path": "samples/20261011T051237Z-reload-26.1.2/reload-session-stdout.log",
+      "bytes": 4435717,
+      "sha256": "6fdab6948fb3fc34ef5afd334b7b1fd85363bd1b9f757bd54f64dfe7b7ade0d1"
+    },
+    {
+      "path": "samples/20261011T051237Z-reload-26.1.2/samples.jsonl",
+      "bytes": 2580,
+      "sha256": "723a531a8a3e5717a990e528859511af304bf1ff5c037f07d5703f7524c26613"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/channel-test.txt",
+      "bytes": 29,
+      "sha256": "fac56165db8e5adecf84b26812552c82a3b1253f1abd0f511528e2b277cdf4a9"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/env-snapshot.txt",
+      "bytes": 201,
+      "sha256": "7532949dab8461ba1fb686002dd28a4170362b99480f6b3bb3ccb0b19301d276"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/samples.jsonl",
+      "bytes": 2014,
+      "sha256": "f174dbeba3a10cc03b05ad0fa72c9c5d5a9e99c8b18fe68235cd548b42d5ab4f"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-1-warmup-stderr.log",
+      "bytes": 1180,
+      "sha256": "8c966344d98255c714d06c18fe83123e39f787430f2329ea1e706718acf5fa57"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-1-warmup-stdout.log",
+      "bytes": 4429221,
+      "sha256": "a126ef8fe7d7123a5df2b1d9fffa6342dbff307afa0008783c701133f39418d9"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-2-warmup-stderr.log",
+      "bytes": 1180,
+      "sha256": "f45173b0e466d497b5425b581bf3dbece2516bb7578e1940dde61e743c1e27eb"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-2-warmup-stdout.log",
+      "bytes": 4429238,
+      "sha256": "7527b1a3780b4f5f09a00c864514e6de49af7f49a7b32faa957017dea5cdc1c7"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-3-formal-stderr.log",
+      "bytes": 1180,
+      "sha256": "9f9ba2f6783a9bfdb89b0dfee70fd0825ecb5050fbd6a6930795da9c2fc44470"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-3-formal-stdout.log",
+      "bytes": 4418770,
+      "sha256": "27015ad5f0c4551ce4a42b67a17d4216db3a2ff5f42a610005d12ec448b13ece"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-4-formal-stderr.log",
+      "bytes": 1180,
+      "sha256": "a95dba760c227d89463600f40d22ee596e8662d4d83df591cec4e35be0179946"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-4-formal-stdout.log",
+      "bytes": 4418781,
+      "sha256": "acde8694d4ed7ddabff8aa34a29d39e25dba7cac981a606a7a7467617dd16ac7"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-5-formal-stderr.log",
+      "bytes": 1180,
+      "sha256": "52002e76898d1a3aa8389351fb9a5d15447cdca4cc3745c72e2561e3041e857e"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-5-formal-stdout.log",
+      "bytes": 4418762,
+      "sha256": "4bda276f19eea10281c4f0a5535e6c2f612fd3faf44f741970a028668ced80ad"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-6-formal-stderr.log",
+      "bytes": 1180,
+      "sha256": "786c15bc9fd4c10e288d6c388103f00cc7a03b849dfa8394ae595885c55d6798"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-6-formal-stdout.log",
+      "bytes": 4418780,
+      "sha256": "0308a3e60359d006eb2b31f2a3441957500822f2c2362eb6b5cb1013173cb3a3"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-7-formal-stderr.log",
+      "bytes": 1180,
+      "sha256": "c4e561d3e0d7279b74bc542faec6ed21ff56ee77d254113602e101ae0483e934"
+    },
+    {
+      "path": "samples/20261011T051318Z-startup-26.1.2/startup-7-formal-stdout.log",
+      "bytes": 4429229,
+      "sha256": "29ef4d501a922afd8e3c320b6df2f3f86c786c795a01326d203aa0f466a2bd41"
+    },
+    {
+      "path": "wrapper/final-owned-guard-exit.json",
+      "bytes": 23,
+      "sha256": "ea61d7736f0b7ecb9b35158f03de77013db6b100cf1d36c957e78e6c8817c5b6"
+    },
+    {
+      "path": "wrapper/final-owned-guard.txt",
+      "bytes": 23,
+      "sha256": "bdb25f1c0b0974bda8a2e0cc14e2b28fddb10059472de15d0f6171d9a9a75a0f"
+    },
+    {
+      "path": "wrapper/fixture-hashes.json",
+      "bytes": 3376,
+      "sha256": "51432fd39f446457739fc582c6b681e35f90ce38ba3ee3da9c0fea87a8a97099"
+    },
+    {
+      "path": "wrapper/reload-confirmed-1-exit.json",
+      "bytes": 225,
+      "sha256": "01439ce54aa94e607169017ca64c9e8d27c4c9dd2d7efd185d714470d71c12c8"
+    },
+    {
+      "path": "wrapper/reload-confirmed-1-guard.txt",
+      "bytes": 23,
+      "sha256": "bdb25f1c0b0974bda8a2e0cc14e2b28fddb10059472de15d0f6171d9a9a75a0f"
+    },
+    {
+      "path": "wrapper/reload-confirmed-1.txt",
+      "bytes": 3522,
+      "sha256": "3abe366c20fb9ba92d62eeaa95612ffff7eead13e9349379610b98a1fd43d534"
+    },
+    {
+      "path": "wrapper/reload-confirmed-2-exit.json",
+      "bytes": 225,
+      "sha256": "43928ec459e75bff9db00b0ad302ddb204a6b2f155b67c3fd5fa944f6a718b83"
+    },
+    {
+      "path": "wrapper/reload-confirmed-2-guard.txt",
+      "bytes": 23,
+      "sha256": "bdb25f1c0b0974bda8a2e0cc14e2b28fddb10059472de15d0f6171d9a9a75a0f"
+    },
+    {
+      "path": "wrapper/reload-confirmed-2.txt",
+      "bytes": 3528,
+      "sha256": "d4099959c3387012ccc7d0c8b0e82a827c0ef0bb25141bb03ac77012a0f8ab23"
+    },
+    {
+      "path": "wrapper/source-revision.txt",
+      "bytes": 42,
+      "sha256": "0a868c136176407412f7f5936aad91c20c3a9e4a2b6b1af7d62e77c9995cc021"
+    },
+    {
+      "path": "wrapper/startup-confirmed-exit.json",
+      "bytes": 225,
+      "sha256": "cf32e298aef05f21f708f275ec3571398fcf476959e1646a8f66380a6641a7d8"
+    },
+    {
+      "path": "wrapper/startup-confirmed-guard.txt",
+      "bytes": 23,
+      "sha256": "bdb25f1c0b0974bda8a2e0cc14e2b28fddb10059472de15d0f6171d9a9a75a0f"
+    },
+    {
+      "path": "wrapper/startup-confirmed.txt",
+      "bytes": 3686,
+      "sha256": "933c76b387c016fb4001424bd718d7b8b35f027fad01eb0b7e1edaa1289b3586"
+    }
+  ],
+  "exclusions": [
+    "server.properties/RCON credentials",
+    "worlds",
+    "binary artifacts",
+    "raw JFR",
+    "unrelated processes/data"
+  ],
+  "limitations": [
+    "Primary dedicated-server startup/reload only",
+    "No causal claim about Python change",
+    "Full IDE and broader tickets remain incomplete",
+    "Maintainer acceptance NOT RECORDED",
+    "Automation PAUSED",
+    "Tool permission-field issue UNRESOLVED"
+  ]
+}
