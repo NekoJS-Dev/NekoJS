@@ -504,7 +504,7 @@ public final class NodeModuleTypeDocs {
 
         // ---- class 成员提取（constructor/方法/static/字段/get-set）----
 
-        /** 查找 {@code class name<Gen> extends Base implements I { ... }}，生成 export declare class 签名；不存在返回 null。 */
+        /** Emits an exported class within its enclosing ambient module; returns null if no class is found. */
         private String classDeclSig(String name) {
             int i = findKeywordThenIdent("class", name);
             if (i < 0) return null;
@@ -528,12 +528,12 @@ public final class NodeModuleTypeDocs {
             }
             String headStr = head.toString().trim();
             if (braceOpen < 0) {
-                return withLeadingDoc(i, "export declare class " + name + generics + (headStr.isEmpty() ? "" : " " + headStr) + " {}");
+                return withLeadingDoc(i, "export class " + name + generics + (headStr.isEmpty() ? "" : " " + headStr) + " {}");
             }
             int braceClose = matchBrace(braceOpen);
             if (braceClose < 0) return null;
             List<String> members = parseClassMembers(braceOpen + 1, braceClose);
-            StringBuilder sb = new StringBuilder("export declare class ").append(name).append(generics);
+            StringBuilder sb = new StringBuilder("export class ").append(name).append(generics);
             if (!headStr.isEmpty()) sb.append(' ').append(headStr);
             sb.append(" {\n");
             for (String m : members) sb.append(m).append('\n');

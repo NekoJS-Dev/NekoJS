@@ -26,6 +26,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class NodeModuleTypeDocsTest {
 
+    @Test
+    void exportedClassUsesItsEnclosingAmbientModule() throws Exception {
+        String source = """
+                ;(function () {
+                  interface Base { label: string }
+                  class Container<T> implements Base {
+                    label: string = 'container';
+                    value: T;
+                    static count: number = 0;
+                    constructor(value: T) { this.value = value }
+                    getValue(): T { return this.value }
+                    static create(value: number): Container<number> { return new Container(value) }
+                  }
+                  globalThis.__nekoNodeDefine(['container', 'node:container'], { Container })
+                })()
+                """;
+        String declaration = NodeModuleTypeDocs.extractTS(source);
+        Path output = Path.of("build/probe-ts-node-ambient-classes");
+        Files.createDirectories(output);
+        Files.writeString(output.resolve("classes.d.ts"), declaration, StandardCharsets.UTF_8);
+        assertFalse(declaration.contains("export declare class"), declaration);
+        assertTrue(declaration.contains("export class Container<T> implements Base"), declaration);
+        assertTrue(declaration.contains("constructor(value: T);"), declaration);
+        assertTrue(declaration.contains("static create(value: number): Container<number>;"), declaration);
+        assertTrue(declaration.contains("static count: number;"), declaration);
+        assertTrue(declaration.contains("getValue(): T;"), declaration);
+        assertTrue(declaration.contains("value: T;"), declaration);
+        assertTrue(declaration.contains("declare module 'node:container'"), declaration);
+    }
+
     // ============ extractTS ============
 
     @Test
@@ -128,7 +158,7 @@ class NodeModuleTypeDocsTest {
     // ============ registerBuiltin 端到端 ============
 
     @Test
-    void registerBuiltinAllNodeModulesAutoExtracted() {
+    void registerBuiltinAllNodeModulesAutoExtracted() throws IOException {
         List<ManualDeclarationCatalogEntry> entries = new ArrayList<>();
         TypeDocsRegister registry = new TypeDocsRegister() {
             @Override
@@ -142,6 +172,10 @@ class NodeModuleTypeDocsTest {
         String all = entries.stream()
             .map(ManualDeclarationCatalogEntry::declaration)
             .reduce("", String::concat);
+        Path generated = Path.of("build/probe-ts-node-ambient-classes/builtin.d.ts");
+        Files.createDirectories(generated.getParent());
+        Files.writeString(generated, all, StandardCharsets.UTF_8);
+        assertFalse(all.contains("export declare class"), all);
         // 自动提取的 example.ts 模块声明
         assertTrue(all.contains("declare module 'node:example' {"), all);
         assertTrue(all.contains("declare module 'example' {"), all);
@@ -243,7 +277,7 @@ class NodeModuleTypeDocsTest {
 """;
         String out = NodeModuleTypeDocs.extractTS(src);
         assertTrue(out.contains("declare module 'node:events' {"), out);
-        assertTrue(out.contains("export declare class EventEmitter"), out);
+        assertTrue(out.contains("export class EventEmitter"), out);
         assertTrue(out.contains("constructor();"), out);
         assertTrue(out.contains("on(name: string, fn: () => void): this;"), out);
         assertTrue(out.contains("static defaultMaxListeners: number;"), out);
