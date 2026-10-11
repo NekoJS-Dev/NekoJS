@@ -211,7 +211,7 @@
     debuglog,
     types: {
       isPromise: (value: unknown): value is Promise<unknown> => !!(value && typeof (value as any).then === 'function'),
-      isProxy: (_value: unknown): value is object => false,
+      isProxy: (_value: unknown): _value is object => false,
       isNativeError: (value: unknown): value is Error => value instanceof Error,
       isDate: (value: unknown): value is Date => value instanceof Date,
       isRegExp: (value: unknown): value is RegExp => value instanceof RegExp,

@@ -122,6 +122,21 @@ class NodeModulesJsRegressionTest {
     }
 
     @Test
+    void utilProxyPredicateKeepsItsExistingFalseResult() {
+        try (Installed installed = new Installed()) {
+            assertTrue(installed.context.eval("js", """
+                    (() => {
+                      const util = globalThis.__nekoNodeResolve('node:util');
+                      const alias = globalThis.__nekoNodeResolve('util');
+                      const values = [null, 1, {}, new Proxy({}, {})];
+                      return values.every(value => util.types.isProxy(value) === false
+                        && alias.types.isProxy(value) === false);
+                    })()
+                    """).asBoolean());
+        }
+    }
+
+    @Test
     void asyncAssertRejectsInvokesFunctionAndReports() throws InterruptedException {
         try (Installed installed = new Installed()) {
             installed.eval(ASYNC_CHECKS_JS);

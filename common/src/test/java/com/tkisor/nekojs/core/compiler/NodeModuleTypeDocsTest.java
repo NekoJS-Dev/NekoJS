@@ -27,6 +27,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class NodeModuleTypeDocsTest {
 
     @Test
+    void builtinUtilPredicateRefersToItsActualParameter() throws Exception {
+        String source = readResource("nekojs/node/modules/util.ts");
+        String declaration = NodeModuleTypeDocs.extractTS(source);
+        Path output = Path.of("build/probe-ts-node-util-predicate");
+        Files.createDirectories(output);
+        Files.writeString(output.resolve("util.d.ts"), declaration, StandardCharsets.UTF_8);
+        Files.writeString(output.resolve("util-erased.js"),
+                NekoTypeScriptCompiler.eraseTypescript(Path.of("util.ts"), source), StandardCharsets.UTF_8);
+        assertTrue(declaration.contains("isProxy(_value: unknown): _value is object"), declaration);
+    }
+
+    @Test
     void exportedClassUsesItsEnclosingAmbientModule() throws Exception {
         String source = """
                 ;(function () {
