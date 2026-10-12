@@ -1,0 +1,64 @@
+{
+  "checkoutRevision": "e5ec1e4c0a4fc405ead0c1f80c46d198e692536e",
+  "productionRevision": "d10912ebbf24d9d5df75a908dc7a5529da09979a",
+  "artifactCopies": {
+    "server": "fde6c16ba1b6fbca43dfc87aff4bf9709c1925bcb2d72c307f2e73346922f092",
+    "clientA": "fde6c16ba1b6fbca43dfc87aff4bf9709c1925bcb2d72c307f2e73346922f092",
+    "clientB": "fde6c16ba1b6fbca43dfc87aff4bf9709c1925bcb2d72c307f2e73346922f092"
+  },
+  "concurrentMinecraft": "FAIL: A crashed during Sky activation before bounded cycles, screenshots or reload",
+  "configurationCatchUp": "PASS: two real clients synchronized generation2 and joined",
+  "minimalOpenGl": "RED: exact DLL +0x10fa1 without Minecraft/Graal/NekoJS/bridge",
+  "minimalNoApiNoCallbacks": "RED: exact DLL +0x10fa1 without OpenGL or callbacks",
+  "pointerControl": {
+    "ownWindow": "0x2bffe44e160",
+    "otherProcessWindow": "0x1e9691506b0",
+    "crashRbx": "0x1e9691506b0",
+    "faultAddress": "0x1e9691508a0",
+    "foreignPointerEqualsRbx": true,
+    "readOffset": "0x1f0",
+    "directExit": {
+      "mode": "A",
+      "exitCode": 1
+    }
+  },
+  "singleProcess": "PASS: three observed Sky activations and direct exit0",
+  "retainedRawCrashHashes": [
+    {
+      "file": "clientA/hs_err_pid27128.log",
+      "bytes": 193616,
+      "sha256": "4c3847e83ad6dc148c934b96288c417bc7c46980692e1f9382788c5b2f6c4f01",
+      "problematicFrame": "C  [glfw.dll+0x10fa1]"
+    },
+    {
+      "file": "minimal-glfw/A/hs_err_pid27232.log",
+      "bytes": 73144,
+      "sha256": "1102f39d3c898e6806e4c7c0a0da8cf471851ec726c47f412633855c0d295731",
+      "problematicFrame": "C  [glfw.dll+0x10fa1]"
+    },
+    {
+      "file": "minimal-no-api/A/hs_err_pid18836.log",
+      "bytes": 172029,
+      "sha256": "185be3679af958c22ff2ae7d8f6e5af82f8947def46404c27155a0323721d569",
+      "problematicFrame": "C  [glfw.dll+0x10fa1]"
+    },
+    {
+      "file": "minimal-pointer-pair/A/hs_err_pid15344.log",
+      "bytes": 172708,
+      "sha256": "02d455018af6f65ed8cef0b8eccdd22dc679be9a9f29bb79d5062a88f13917d6",
+      "problematicFrame": "C  [glfw.dll+0x10fa1]"
+    }
+  ],
+  "glfwVersion": "3.5.0 Win32 WGL Null EGL OSMesa VisualC DLL",
+  "nativeRepair": "NOT_APPLIED: third-party DLL and Sky helper unchanged",
+  "currentMultiplayerReload": "NOT_RUN",
+  "firstPixel": "NOT_VERIFIED",
+  "allNodeVisual": "NOT_RUN",
+  "ownedProcesses": "ALL_ENDED",
+  "portsFree": [
+    25983,
+    25984
+  ],
+  "humanAcceptance": "NOT_RECORDED",
+  "overall": "NOT_COMPLETE"
+}
