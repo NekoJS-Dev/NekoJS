@@ -39,6 +39,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
 
     /** 预创建的 BlockItem 子 builder：{@code b.item.maxStackSize = 16} 直接定制；{@link #noItem()} 置 null。 */
     private ItemBuilder item;
+    private boolean itemDefinitionFrozen;
 
     public BlockBuilder(ResourceLocation id) {
         super(id);
@@ -119,6 +120,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
      * 走本 setter。脚本侧只接受 null（抑制）；定制走 {@code b.item.xxx} 或 {@link #item(Consumer)}。
      */
     public void setItem(ItemBuilder item) {
+        if (itemDefinitionFrozen) throw new IllegalStateException("[NEKO-4035] Block item definition is frozen after collection");
         if (item == this.item) {
             return;
         }
@@ -151,6 +153,12 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
     }
 
     @Override
+    void freezeDefinition() {
+        itemDefinitionFrozen = true;
+        if (item != null) item.freezeDefinition();
+    }
+
+    @Override
     public Block build() {
 
         BlockBehaviour.Properties props = BlockBehaviour.Properties.of()
@@ -180,7 +188,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
             return;
         }
         registry.additional(Registries.ITEM, id,
-                () -> new BlockItem(BlockBuilder.this.get(), itemBuilder.buildProperties()));
+                itemBuilder.blockItemSupplier(() -> new BlockItem(BlockBuilder.this.get(), itemBuilder.buildProperties())));
     }
 
     private static SoundType resolveSound(String name) {

@@ -43,6 +43,7 @@ public final class BuilderSurface implements ProxyObject {
 
     /** 若 value 是被本面包裹的 builder，解出裸对象；否则原样返回（参数解包用）。 */
     public static Object unwrap(Object value) {
+        if (value instanceof CallableBuilderProperty property) return property.nested.builder;
         return value instanceof BuilderSurface surface ? surface.builder : value;
     }
 
@@ -108,7 +109,20 @@ public final class BuilderSurface implements ProxyObject {
 
     private Object readProperty(RegistryBuilderContract.Member member) {
         // getter 或 final identity 字段（契约的 readMember 统一承载，异常带成员名）
-        return wrapResult(contract.readMember(builder, member));
+        Object result = wrapResult(contract.readMember(builder, member));
+        return result instanceof BuilderSurface nested && !member.overloads().isEmpty()
+                ? new CallableBuilderProperty(nested, new MethodMember(member)) : result;
+    }
+
+    /** A nested builder can expose both property access and its parent's configuration callback. */
+    private record CallableBuilderProperty(BuilderSurface nested, ProxyExecutable configure)
+            implements ProxyObject, ProxyExecutable {
+        @Override public Object execute(Value... arguments) { return configure.execute(arguments); }
+        @Override public Object getMember(String name) { return nested.getMember(name); }
+        @Override public Object getMemberKeys() { return nested.getMemberKeys(); }
+        @Override public boolean hasMember(String name) { return nested.hasMember(name); }
+        @Override public void putMember(String name, Value value) { nested.putMember(name, value); }
+        @Override public boolean removeMember(String name) { return false; }
     }
 
     private void invokeSetter(RegistryBuilderContract.Member member, Value value) {
@@ -280,6 +294,7 @@ public final class BuilderSurface implements ProxyObject {
     }
 
     private static Object unwrapHost(Value value) {
+        if (value.isProxyObject()) return unwrap(value.asProxyObject());
         return value.isHostObject() ? value.asHostObject() : null;
     }
 

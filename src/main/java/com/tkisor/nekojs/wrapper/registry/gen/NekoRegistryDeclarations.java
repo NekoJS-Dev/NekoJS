@@ -47,6 +47,12 @@ public final class NekoRegistryDeclarations {
                         + "interface ItemBuilder { maxStackSize: number; maxDamage: number; "
                         + "fireResistant: boolean; rarity: string; glowing: boolean; burnTime: number; "
                         + "groupTab: string | null; "
+                        + "component(id: string, value: unknown): void; components: Record<string, unknown>; "
+                        + "jukeboxPlayable: string | null; "
+                        + (RegistryBuilderContract.of(ItemBuilder.class).member("trimMaterial") == null
+                                ? "" : "trimMaterial: string | null; ")
+                        + "parentModel: string | null; textures: Record<string, string>; "
+                        + "texture(textureId: string): void; texture(slot: string, textureId: string): void; "
                         + "food(cb: (f: FoodBuilder) => void): void; "
                         + "tag(...tags: string[]): void; } "
                         + "interface FoodBuilder { nutrition(v: number): FoodBuilder; "

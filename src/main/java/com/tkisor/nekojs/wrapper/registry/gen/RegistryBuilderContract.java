@@ -59,11 +59,19 @@ public final class RegistryBuilderContract {
 
         /** TS 声明类型（确定性映射；未知类型 any）。 */
         public String tsType() {
+            if (getter != null && Map.class.isAssignableFrom(valueType)) return tsTypeOf(getter.getGenericReturnType());
+            if (valueType != null && !overloads.isEmpty() && RegistryObjectBuilder.class.isAssignableFrom(valueType)) {
+                return valueType.getSimpleName() + " & ((consumer: (b: " + valueType.getSimpleName() + ") => void) => void)";
+            }
             return tsTypeOf(valueType);
         }
 
         /** Python 声明类型（与 TS 同一输入派生，成员语义一致）。 */
         public String pyType() {
+            if (getter != null && Map.class.isAssignableFrom(valueType)) return pyTypeOf(getter.getGenericReturnType());
+            if (valueType != null && !overloads.isEmpty() && RegistryObjectBuilder.class.isAssignableFrom(valueType)) {
+                return valueType.getSimpleName() + " | Callable[..., None]";
+            }
             return pyTypeOf(valueType);
         }
     }
@@ -128,7 +136,13 @@ public final class RegistryBuilderContract {
                     .sorted(Comparator.comparingInt((Method m) -> -m.getParameterCount())
                             .thenComparing(m -> m.getParameterTypes().length == 0 ? "" : m.toGenericString()))
                     .toList();
-            result.putIfAbsent(name, new Member(name, MemberKind.METHOD, null, null, null, stable));
+            Member property = result.get(name);
+            if (property != null && property.getter() != null
+                    && RegistryObjectBuilder.class.isAssignableFrom(property.getter().getReturnType())) {
+                result.put(name, new Member(name, property.kind(), property.valueType(), property.getter(), property.setter(), stable));
+            } else {
+                result.putIfAbsent(name, new Member(name, MemberKind.METHOD, null, null, null, stable));
+            }
         });
         Map<String, Member> sorted = new LinkedHashMap<>();
         result.values().stream()
@@ -210,6 +224,9 @@ public final class RegistryBuilderContract {
         if (value == null) {
             return "null";
         }
+        if (value instanceof Map<?, ?> || value instanceof List<?>) {
+            return new com.google.gson.Gson().toJson(value);
+        }
         if (value instanceof RegistryObjectBuilder<?> nested) {
             if (!seen.add(nested)) {
                 return "cycle";
@@ -258,6 +275,21 @@ public final class RegistryBuilderContract {
             return "string";
         }
         return "any";
+    }
+
+    /** Preserves JSON and texture map value types in reflected builder declarations. */
+    public static String tsTypeOf(java.lang.reflect.Type type) {
+        if (type instanceof java.lang.reflect.ParameterizedType map && map.getRawType() == Map.class) {
+            return "Record<string, " + tsTypeOf(map.getActualTypeArguments()[1]) + ">";
+        }
+        return type instanceof Class<?> value ? tsTypeOf(value) : "any";
+    }
+
+    public static String pyTypeOf(java.lang.reflect.Type type) {
+        if (type instanceof java.lang.reflect.ParameterizedType map && map.getRawType() == Map.class) {
+            return "dict[str, " + pyTypeOf(map.getActualTypeArguments()[1]) + "]";
+        }
+        return type instanceof Class<?> value ? pyTypeOf(value) : "Any";
     }
 
     /** Maps the same Java types to Python, preserving nullable boxed Float independently of primitive float. */

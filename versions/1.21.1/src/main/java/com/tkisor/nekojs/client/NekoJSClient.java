@@ -88,6 +88,7 @@ public class NekoJSClient {
         try {
             Path assets = NekoJSPaths.get().assets();
             DataGeneratorJS generator = new DataGeneratorJS(assets, "after_mods");
+            com.tkisor.nekojs.resource.NekoJSPackLoader.prepareItemAssets(net.minecraft.server.packs.PackType.CLIENT_RESOURCES);
             PluginGenerationHooks.fireGenerateAssets(generator);
             ClientEvents.GENERATE_ASSETS.post(generator, "after_mods");
             // 脚本模型文件已落盘后，为声明过 renderType 且未自写模型的方块补默认模型

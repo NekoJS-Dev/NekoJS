@@ -1,0 +1,12 @@
+gradle.projectsEvaluated {
+    def node = gradle.rootProject.findProperty('issue36Node') ?: '26.1.2'
+    def game = gradle.rootProject.findProperty('issue36Game') ?: 'build/issue36-server-261'
+    def project = gradle.rootProject.findProject(':' + node)
+    if (project == null) return
+    project.extensions.getByName('neoForge').runs.named(gradle.rootProject.findProperty('issue36Run') ?: 'server') {
+        gameDirectory.set(gradle.rootProject.file(game))
+        if ((gradle.rootProject.findProperty('issue36Run') ?: 'server') == 'client') {
+            programArguments.addAll(['--quickPlaySingleplayer', 'issue36'])
+        }
+    }
+}

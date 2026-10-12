@@ -29,6 +29,9 @@ public abstract class RegistryObjectBuilder<T> implements Supplier<T> {
 
     private T built;
 
+    /** Freezes definition state before the repository accepts it. */
+    void freezeDefinition() {}
+
     protected RegistryObjectBuilder(Identifier id) {
         this.id = id;
     }

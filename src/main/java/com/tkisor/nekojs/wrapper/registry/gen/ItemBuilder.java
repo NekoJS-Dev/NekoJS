@@ -45,6 +45,8 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
     private String groupTab = null;
 
     private FoodBuilderJS foodBuilder = null;
+    private final com.tkisor.nekojs.core.registry.ItemDefinitionConfig definition =
+            new com.tkisor.nekojs.core.registry.ItemDefinitionConfig();
 
     public ItemBuilder(Identifier id) {
         super(id);
@@ -69,6 +71,7 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
 
     /** 最大堆叠（1-99；MC 在注册冻结期对越界值报错，这里在写入期给出带成员名的错误）。 */
     public void setMaxStackSize(int maxStackSize) {
+        definition.writable();
         if (maxStackSize < 1 || maxStackSize > 99) {
             throw new IllegalArgumentException("maxStackSize must be in [1, 99] but got " + maxStackSize);
         }
@@ -80,6 +83,7 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
     }
 
     public void setMaxDamage(int maxDamage) {
+        definition.writable();
         if (maxDamage < 0) {
             throw new IllegalArgumentException("maxDamage must be >= 0 but got " + maxDamage);
         }
@@ -91,6 +95,7 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
     }
 
     public void setFireResistant(boolean fireResistant) {
+        definition.writable();
         this.fireResistant = fireResistant;
     }
 
@@ -100,6 +105,7 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
     }
 
     public void setRarity(String rarity) {
+        definition.writable();
         this.rarity = rarity == null ? null : rarity.toLowerCase();
     }
 
@@ -108,6 +114,7 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
     }
 
     public void setGlowing(boolean glowing) {
+        definition.writable();
         this.glowing = glowing;
     }
 
@@ -116,6 +123,7 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
     }
 
     public void setBurnTime(int burnTime) {
+        definition.writable();
         if (burnTime < 0) {
             throw new IllegalArgumentException("burnTime must be >= 0 but got " + burnTime);
         }
@@ -128,6 +136,7 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
     }
 
     public void setGroupTab(String groupTab) {
+        definition.writable();
         this.groupTab = groupTab == null || groupTab.isBlank() ? null : groupTab;
     }
 
@@ -135,8 +144,39 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
 
     /** 配置食物属性（nutrition/saturation/效果等），复合配置保留方法面。 */
     public void food(Consumer<FoodBuilderJS> consumer) {
+        definition.writable();
         this.foodBuilder = new FoodBuilderJS();
         consumer.accept(this.foodBuilder);
+    }
+
+    /** Adds one JSON component; repeated identifiers replace the explicit value. */
+    public void component(String id, Object value) { definition.component(id, value); }
+    public Map<String, Object> getComponents() { return definition.components(); }
+    public void setComponents(Map<String, Object> components) { definition.components(components); }
+    public String getJukeboxPlayable() { return definition.jukeboxPlayable(); }
+    public void setJukeboxPlayable(String song) { definition.jukeboxPlayable(song); }
+    public String getTrimMaterial() { return definition.trimMaterial(); }
+    public void setTrimMaterial(String material) { definition.trimMaterial(material); }
+    public String getParentModel() { return definition.parentModel(); }
+    public void setParentModel(String parentModel) { definition.parentModel(parentModel); }
+    public Map<String, String> getTextures() { return definition.textures(); }
+    public void setTextures(Map<String, String> textures) { definition.textures(textures); }
+    public void texture(String textureId) { texture("layer0", textureId); }
+    public void texture(String slot, String textureId) { definition.texture(slot, textureId); }
+
+    @Override
+    void freezeDefinition() {
+        if (foodBuilder != null) foodBuilder = foodBuilder.snapshot();
+        definition.freeze();
+    }
+
+    com.tkisor.nekojs.core.registry.ItemAssetDefinition assetDefinition() {
+        return definition.assets(id.toString());
+    }
+
+    java.util.function.Supplier<Item> blockItemSupplier(java.util.function.Supplier<Item> factory) {
+        freezeDefinition();
+        return new ItemRegistrationSupplier(factory, assetDefinition());
     }
 
     @Override
@@ -180,6 +220,7 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
      * rarity / 食物组件）。供 BlockBuilder 等需要复用属性的场景调用。
      */
     public Item.Properties buildProperties() {
+        freezeDefinition();
         net.minecraft.resources.ResourceKey<Item> key =
                 net.minecraft.resources.ResourceKey.create(Registries.ITEM, id);
         Item.Properties props = new Item.Properties().setId(key);
@@ -199,6 +240,7 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
             props.component(net.minecraft.core.component.DataComponents.CONSUMABLE, foodBuilder.buildConsumable());
         }
 
+        ItemComponentSupport.apply(props, id, definition);
         return props;
     }
 

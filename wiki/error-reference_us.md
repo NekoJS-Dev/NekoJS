@@ -93,6 +93,10 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-4031` | Authored class declaration registration rejected | 手写类声明注册被拒绝 |
 | `NEKO-4032` | Conflicting authored class declarations rejected at the same priority | 同优先级的手写类声明冲突，注册被拒绝 |
 | `NEKO-4033` | Authored class declaration dependency is unavailable, excluded, or hidden | 手写类声明依赖不可用、被排除或被隐藏 |
+| `NEKO-4034` | item component, model, texture or identifier configuration rejected | 物品组件、模型、纹理或标识符配置被拒绝 |
+| `NEKO-4035` | item definition modification rejected after startup collection | STARTUP 收集后物品定义已冻结，修改被拒绝 |
+| `NEKO-4036` | item component type or codec value rejected with item, component and node context | 物品组件类型或 codec 值被拒绝，消息包含物品、组件与节点上下文 |
+| `NEKO-4037` | automatic item assets are unavailable on Fabric; registration rejected before supplier execution | Fabric 不支持自动物品资源，supplier 执行前拒绝注册 |
 
 <a id="wiki-section-6"></a>
 ## Recipes and data
@@ -108,6 +112,10 @@ Codes from #58 that have no call site on this branch are not used:
 
 | Code | Meaning |
 |---|---|
+| `NEKO-6008` | Automatic item resource group skipped because an existing file is externally owned or modified. |
+| `NEKO-6009` | Automatic item asset generation failed; publication failures attempt rollback and attach restoration failures as suppressed causes. |
+| `NEKO-6010` | Item asset ownership index cannot be read or validated; generation rejected without replacing it. |
+
 | NEKO-6001 | A UI color prop is not a controlled color form (ARGB/RGB int, `#RGB`/`#RRGGBB`/`#AARRGGBB`, CSS basic named color). |
 | NEKO-6002 | A UI visual prop value is out of range or has the wrong type (`opacity`, `fontSize`, `borderWidth`, `radius`, `fit`, `crop`). |
 | NEKO-6003 | A UI resource identifier violates the controlled id grammar (lowercase `namespace:path`, no `..`). |

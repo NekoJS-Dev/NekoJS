@@ -1,0 +1,112 @@
+[matrix-delivery.log]
+guardLint: 守卫块 384，扫描 551 个文件；超限豁免 0 个；警告 0 条
+BUILD SUCCESSFUL in 3m 41s
+
+[typescript-final.log]
+
+[gametest-final.log]
+[18:49:45] [Server thread/INFO] [minecraft/GameTestServer]: All 1 required tests passed :)
+BUILD SUCCESSFUL in 18s
+
+[client-121-clean-start.log]
+[19:02:18] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] ISSUE36_NATIVE_PASS
+[19:02:23] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_CLIENT_INVENTORY_READY
+[19:02:26] [Render thread/INFO] [NekoJS/]: [client] ISSUE36_SCREENSHOT_FIRST_INVENTORY: Saved screenshot as 2026-10-12_19.02.26.png
+原因: Multi threaded access requested by thread Thread[#1,Render thread,10,main] but is not allowed for language(s) js.
+script-diagnostic id=nekojs:rt/CLIENT/event mode=normal bus=net.neoforged.neoforge.client.event.ClientTickEvent$Post event=net.neoforged.neoforge.client.event.ClientTickEvent$Post script=unknown thread=Render thread/1c0048b2 type=client phase=EXECUTION owner=Script Execution Environment generation=2 candidate=false cause=IllegalStateException: Multi threaded access requested by thread Thread[#1,Render thread,10,main] but is not allowed for language(s) js.
+[19:02:32] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_SCREENSHOT_FIRST_HAND: Saved screenshot as 2026-10-12_19.02.32.png
+[19:02:35] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_RESOURCE_RELOAD_REQUESTED
+[19:02:39] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_CLIENT_INVENTORY_READY
+[19:02:43] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_SCREENSHOT_AFTER_RELOAD: Saved screenshot as 2026-10-12_19.02.42.png
+BUILD SUCCESSFUL in 1m 35s
+
+[client-261-clean-start.log]
+[19:00:04] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] ISSUE36_NATIVE_PASS
+[19:00:07] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_CLIENT_INVENTORY_READY
+[19:00:09] [Render thread/INFO] [NekoJS/]: [client] ISSUE36_SCREENSHOT_FIRST_INVENTORY: Saved screenshot as 2026-10-12_19.00.09.png
+原因: Multi threaded access requested by thread Thread[#3,Render thread,10,main] but is not allowed for language(s) js.
+script-diagnostic id=nekojs:rt/CLIENT/event mode=normal bus=net.neoforged.neoforge.client.event.ClientTickEvent$Post event=net.neoforged.neoforge.client.event.ClientTickEvent$Post script=unknown thread=Render thread/31f5134 type=client phase=EXECUTION owner=Script Execution Environment generation=2 candidate=false cause=IllegalStateException: Multi threaded access requested by thread Thread[#3,Render thread,10,main] but is not allowed for language(s) js.
+[19:00:16] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_SCREENSHOT_FIRST_HAND: Saved screenshot as 2026-10-12_19.00.15.png
+[19:00:19] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_RESOURCE_RELOAD_REQUESTED
+[19:00:30] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_CLIENT_INVENTORY_READY
+[19:00:33] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_SCREENSHOT_AFTER_RELOAD: Saved screenshot as 2026-10-12_19.00.32.png
+BUILD SUCCESSFUL in 53s
+
+[client-261-camera-final.log]
+[19:09:50] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] ISSUE36_NATIVE_PASS
+[19:09:54] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_CLIENT_INVENTORY_READY
+[19:09:57] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_SCREENSHOT_FIRST_INVENTORY: Saved screenshot as 2026-10-12_19.09.56.png
+[19:10:02] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_SCREENSHOT_FIRST_HAND: Saved screenshot as 2026-10-12_19.10.02.png
+[19:10:05] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_RESOURCE_RELOAD_REQUESTED
+[19:10:09] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_CLIENT_INVENTORY_READY
+[19:10:11] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_SCREENSHOT_AFTER_RELOAD: Saved screenshot as 2026-10-12_19.10.11.png
+BUILD SUCCESSFUL in 52s
+
+[client-262-clean-start.log]
+[19:05:15] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] ISSUE36_NATIVE_PASS
+[19:05:22] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_CLIENT_INVENTORY_READY
+[19:05:24] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_SCREENSHOT_REQUESTED_FIRST_INVENTORY
+[19:05:30] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_SCREENSHOT_REQUESTED_FIRST_HAND
+[19:05:33] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_RESOURCE_RELOAD_REQUESTED
+[19:05:43] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_CLIENT_INVENTORY_READY
+[19:05:45] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ISSUE36_SCREENSHOT_REQUESTED_AFTER_RELOAD
+BUILD SUCCESSFUL in 1m 49s
+
+[server-121.log]
+[02:34:32] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] ISSUE36_NATIVE_PASS
+BUILD SUCCESSFUL in 38s
+
+[server-261-final.log]
+[02:27:50] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] ISSUE36_NATIVE_PASS
+BUILD SUCCESSFUL in 17s
+
+[server-262-final.log]
+[18:44:00] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] ISSUE36_NATIVE_PASS
+BUILD SUCCESSFUL in 49s
+
+[server-invalid-codec-261.log]
+java.util.concurrent.ExecutionException: java.lang.IllegalArgumentException: [NEKO-4036] Item 'issue36:invalid_codec' component 'minecraft:rarity' rejected on 26.1.2: component codec rejected its JSON value
+Caused by: java.lang.IllegalArgumentException: [NEKO-4036] Item 'issue36:invalid_codec' component 'minecraft:rarity' rejected on 26.1.2: component codec rejected its JSON value
+FAILURE: Build failed with an exception.
+BUILD FAILED in 14s
+
+[server-invalid-codec-121.log]
+[18:56:09] [modloading-sync-worker/ERROR] [NekoJS/]: [registry-startup] issue36:invalid_codec in registry 'minecraft:item' (node neoforge:1.21.1, source platform-register): [NEKO-4036] Item 'issue36:invalid_codec' component 'minecraft:rarity' rejected on 1.21.1: component codec rejected its JSON value: Unknown element name:not_a_rarity
+[18:56:22] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] ISSUE36_INVALID_ITEM_REJECTED
+BUILD SUCCESSFUL in 38s
+
+[server-missing-song-261.log]
+java.util.concurrent.ExecutionException: java.lang.IllegalArgumentException: [NEKO-4036] Item 'issue36:missing_song' component 'minecraft:jukebox_playable' rejected on 26.1.2: component codec rejected its JSON value: Failed to get element issue36:missing_song
+Caused by: java.lang.IllegalArgumentException: [NEKO-4036] Item 'issue36:missing_song' component 'minecraft:jukebox_playable' rejected on 26.1.2: component codec rejected its JSON value: Failed to get element issue36:missing_song
+FAILURE: Build failed with an exception.
+BUILD FAILED in 53s
+
+[server-missing-trim-262.log]
+java.util.concurrent.ExecutionException: java.lang.IllegalArgumentException: [NEKO-4036] Item 'issue36:missing_trim' component 'minecraft:provides_trim_material' rejected on 26.2: component codec rejected its JSON value: Failed to get element ResourceKey[minecraft:trim_material / issue36:missing_trim]
+Caused by: java.lang.IllegalArgumentException: [NEKO-4036] Item 'issue36:missing_trim' component 'minecraft:provides_trim_material' rejected on 26.2: component codec rejected its JSON value: Failed to get element ResourceKey[minecraft:trim_material / issue36:missing_trim]
+FAILURE: Build failed with an exception.
+BUILD FAILED in 1m 49s
+
+[server-legacy-components-final.log]
+[19:09:31] [modloading-sync-worker/ERROR] [NekoJS/]: [registry-startup] issue36:registry_trim in registry 'minecraft:item' (node neoforge:1.21.1, source platform-register): [NEKO-4036] Item 'issue36:registry_trim' component 'minecraft:trim' rejected on 1.21.1: component codec rejected its JSON value: Not a JSON object: "minecraft:sentry"; Not a JSON object: "minecraft:diamond"
+[19:09:31] [modloading-sync-worker/ERROR] [NekoJS/]: [registry-startup] issue36:unknown_component in registry 'minecraft:item' (node neoforge:1.21.1, source platform-register): [NEKO-4036] Item 'issue36:unknown_component' component 'issue36:unknown_component' rejected on 1.21.1: unknown or non-serializable component
+[19:09:41] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] ISSUE36_UNSUPPORTED_COMPONENTS_REJECTED
+BUILD SUCCESSFUL in 30s
+
+[wiki-final.log]
+25 bilingual topics; 16 problem(s).
+
+[wiki-baseline.log]
+25 bilingual topics; 16 problem(s).
+
+[gametest-delivery.log]
+[19:15:11] [Server thread/INFO] [minecraft/GameTestServer]: All 1 required tests passed :)
+BUILD SUCCESSFUL in 14s
+
+[Final auxiliary checks]
+npm run test:probe-types: exit 0
+Strict ItemBuilder TypeScript fixtures, 26.x and 1.21.1: exit 0
+python tools/nekojs-ci-gates.py all --json: exit 0; see ci-gates-final.json
+Wiki structure-only strict check: exit 0
+Wiki full strict check: exit 1, same 16 problems in HEAD baseline
+git diff --check: exit 0

@@ -133,7 +133,7 @@ public final class RegistryBuilderSurfaces {
         if (type.isArray()) {
             return ": " + RegistryBuilderContract.tsTypeOf(type.getComponentType()) + "[]";
         }
-        return ": " + RegistryBuilderContract.tsTypeOf(type);
+        return ": " + RegistryBuilderContract.tsTypeOf(param.getParameterizedType());
     }
 
     /** Renders the Python signature from the same reflected overload as TypeScript. */
@@ -164,7 +164,7 @@ public final class RegistryBuilderSurfaces {
         if (type.isArray()) {
             return ": list[" + RegistryBuilderContract.pyTypeOf(type.getComponentType()) + "]";
         }
-        return ": " + RegistryBuilderContract.pyTypeOf(type);
+        return ": " + RegistryBuilderContract.pyTypeOf(param.getParameterizedType());
     }
 
     private static String paramName(Parameter param, int index) {

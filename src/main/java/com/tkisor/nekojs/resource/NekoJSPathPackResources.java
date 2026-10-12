@@ -17,6 +17,9 @@ import java.util.Optional;
 
 public class NekoJSPathPackResources extends PathPackResources {
 
+    /** Resource layout selected by this node implementation. */
+    static boolean usesClientItemDefinitions() { return true; }
+
     private final byte[] meta;
 
     public NekoJSPathPackResources(String name, Path root, PackType type) {

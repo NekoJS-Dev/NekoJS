@@ -5,7 +5,7 @@
 interface BlockBuilder {
     hardness: number;
     readonly id: any;
-    item: any;
+    item: ItemBuilder & ((consumer: (b: ItemBuilder) => void) => void);
     lightLevel: number;
     mapColor: string;
     noItem(): void;
@@ -98,21 +98,32 @@ interface EntityTypeBuilder {
 /** ItemBuilder — registry 'minecraft:item', type 'basic', sugar 'item'. */
 interface ItemBuilder {
     burnTime: number;
+    component(id: string, value: any): void;
+    components: Record<string, any>;
     fireResistant: boolean;
     food(consumer: (b: any) => void): void;
     glowing: boolean;
     groupTab: string;
     readonly id: any;
+    jukeboxPlayable: string;
     maxDamage: number;
     maxStackSize: number;
+    parentModel: string;
     rarity: string;
     setBurnTime(burnTime: number): void;
+    setComponents(components: Record<string, any>): void;
     setFireResistant(fireResistant: boolean): void;
     setGlowing(glowing: boolean): void;
     setGroupTab(groupTab: string): void;
+    setJukeboxPlayable(song: string): void;
     setMaxDamage(maxDamage: number): void;
     setMaxStackSize(maxStackSize: number): void;
+    setParentModel(parentModel: string): void;
     setRarity(rarity: string): void;
+    setTextures(textures: Record<string, string>): void;
+    texture(textureId: string): void;
+    texture(slot: string, textureId: string): void;
+    textures: Record<string, string>;
 }
 
 /** MobEffectBuilder — registry 'minecraft:mob_effect', type 'basic', sugar 'mobEffect'. */

@@ -50,11 +50,13 @@ public final class RegistryRepository {
             ResourceKey<? extends Registry<?>> registry, RegistryObjectBuilder<?> builder, String typeName, String origin) {
         LinkedHashMap<Identifier, Entry> builders =
                 byRegistry.computeIfAbsent(registry, key -> new LinkedHashMap<>());
-        Entry previous = builders.putIfAbsent(builder.id, new Entry(builder, typeName, origin));
+        Entry previous = builders.get(builder.id);
         if (previous != null) {
             throw new IllegalStateException("Duplicate registration '" + builder.id + "' in registry '" + name(registry)
                     + "' (first from " + previous.origin() + ", second from " + origin + ")");
         }
+        builder.freezeDefinition();
+        builders.put(builder.id, new Entry(builder, typeName, origin));
     }
 
     /** 抽干某注册表的全部主对象条目（移除并返回冻结快照，保持收集序；每 pass 只 drain 一次的攒侧保证）。 */

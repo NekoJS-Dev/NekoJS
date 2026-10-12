@@ -82,6 +82,14 @@ public final class StartupRegistryRuntime {
     private final Set<ResourceKey<? extends Registry<?>>> passed = new HashSet<>();
     private final String node;
     private boolean collected;
+    private final Map<String, com.tkisor.nekojs.core.registry.ItemAssetDefinition> itemAssets = new java.util.TreeMap<>();
+
+    /** Boot-owned immutable resource declarations survive ordinary script generations. */
+    public List<com.tkisor.nekojs.core.registry.ItemAssetDefinition> itemAssetDefinitions() {
+        return List.copyOf(itemAssets.values());
+    }
+
+    public boolean itemRegistrationComplete() { return passed.contains(Registries.ITEM); }
 
     /** @param node 节点标签（如 {@code neoforge:26.1.2} / {@code fabric:26.1.2}），进入观察记录与错误信息。 */
     public StartupRegistryRuntime(String node) {
@@ -147,9 +155,11 @@ public final class StartupRegistryRuntime {
             registered.add(new RegistrationRecord(
                     builder.id, registry, node, entry.origin(), definitionFingerprint(builder)));
             try {
-                sink.register(registry, builder.id, validatedSupplier(builder.id, registry, builder));
+                var assets = builder instanceof ItemBuilder item ? item.assetDefinition() : null;
+                registerWithAssets(sink, registry, builder.id, builder, assets);
             } catch (RuntimeException e) {
                 errors.add(new ErrorRecord(builder.id, registry, node, "platform-register", e.getMessage()));
+                continue;
             }
             collectAdditionalOf(builder, errors);
         }
@@ -158,7 +168,8 @@ public final class StartupRegistryRuntime {
                     additional.id(), registry, node, "additional:" + additional.source(),
                     "additional:" + additional.source()));
             try {
-                sink.register(registry, additional.id(), validatedSupplier(additional.id(), registry, additional.supplier()));
+                var assets = additional.supplier() instanceof ItemRegistrationSupplier item ? item.assets() : null;
+                registerWithAssets(sink, registry, additional.id(), additional.supplier(), assets);
             } catch (RuntimeException e) {
                 errors.add(new ErrorRecord(additional.id(), registry, node, "platform-register", e.getMessage()));
             }
@@ -166,6 +177,40 @@ public final class StartupRegistryRuntime {
         // 本 pass 结束后才计入 passed：builder 派生条目指向本注册表时仍是合法的当轮注册
         passed.add(registry);
         return new DrainResult(registered, errors);
+    }
+
+    private void registerWithAssets(RegistrySink sink, ResourceKey<? extends Registry<?>> registry,
+                                    Identifier id, Supplier<?> supplier,
+                                    com.tkisor.nekojs.core.registry.ItemAssetDefinition assets) {
+        if (assets != null && node.startsWith("fabric:")) {
+            throw new IllegalArgumentException("[NEKO-4037] Item '" + id
+                    + "' resource generation is unavailable on " + node);
+        }
+        Supplier<?> validated = validatedSupplier(id, registry, supplier);
+        // A delayed supplier may run after the sink returns. Both boundaries must succeed.
+        class Receipt implements Supplier<Object> {
+            boolean accepted;
+            boolean produced;
+            boolean failed;
+            void publish() {
+                if (accepted && produced && !failed && assets != null) itemAssets.put(id.toString(), assets);
+            }
+            @Override public Object get() {
+                Object value = validated.get();
+                produced = true;
+                publish();
+                return value;
+            }
+        }
+        Receipt receipt = new Receipt();
+        try {
+            sink.register(registry, id, receipt);
+            receipt.accepted = true;
+            receipt.publish();
+        } catch (RuntimeException error) {
+            receipt.failed = true;
+            throw error;
+        }
     }
 
     /** 抽干期回调：builder 的连带派生条目入仓库，等目标注册表自己的 pass 投递。 */

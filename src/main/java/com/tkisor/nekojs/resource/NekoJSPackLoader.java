@@ -23,6 +23,16 @@ import java.util.Optional;
 )
 public class NekoJSPackLoader {
 
+    /** Runs before resource enumeration and model parsing, including the initial load. */
+    public static void prepareItemAssets(PackType type) {
+        if (type != PackType.CLIENT_RESOURCES) return;
+        var runtime = com.tkisor.nekojs.listener.RegistryEventAdapter.runtime();
+        if (!runtime.itemRegistrationComplete()) return;
+        new com.tkisor.nekojs.wrapper.RegisteredItemAssets().generate(
+                NekoJSPaths.get().assets(), runtime.itemAssetDefinitions(),
+                NekoJSPathPackResources.usesClientItemDefinitions(), NekoJS.LOGGER::warn);
+    }
+
     @SubscribeEvent
     public static void onAddPackFinders(AddPackFindersEvent event) {
         if (event.getPackType() == PackType.CLIENT_RESOURCES
@@ -45,6 +55,7 @@ public class NekoJSPackLoader {
 
                             @Override
                             public @NonNull PackResources openFull(@NonNull PackLocationInfo location, Pack.@NonNull Metadata metadata) {
+                                prepareItemAssets(event.getPackType());
                                 return openPrimary(location);
                             }
                         },

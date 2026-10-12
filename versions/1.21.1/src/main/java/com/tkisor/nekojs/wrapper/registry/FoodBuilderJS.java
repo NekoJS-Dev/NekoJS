@@ -20,6 +20,18 @@ public class FoodBuilderJS {
 
     public FoodBuilderJS() {}
 
+    /** Detaches collected food configuration from a callback-retained builder. */
+    @com.tkisor.nekojs.api.annotation.HideFromJS
+    public FoodBuilderJS snapshot() {
+        FoodBuilderJS copy = new FoodBuilderJS();
+        copy.nutrition = nutrition;
+        copy.saturation = saturation;
+        copy.alwaysEat = alwaysEat;
+        copy.fastEat = fastEat;
+        copy.effects.addAll(effects);
+        return copy;
+    }
+
     public FoodBuilderJS nutrition(int nutrition) { this.nutrition = nutrition; return this; }
     public FoodBuilderJS saturation(float saturation) { this.saturation = saturation; return this; }
     public FoodBuilderJS alwaysEat() { this.alwaysEat = true; return this; }

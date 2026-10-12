@@ -41,7 +41,7 @@ RegistryEvents.register(event => {
 
 > `fluid`、`enchantment` 等入口不是跨平台能力：FluidBuilder 当前仅 NeoForge 可用；附魔 builder 仅适用于 NeoForge 1.21.1，26.x 应使用数据包，Fabric 当前不提供对应注册面。
 
-**builder 是 public field 风格**：数据属性直接赋值（`b.maxStackSize = 16`），只有"动作"和复合配置保留方法（`b.noItem()`、`b.food(cb)`、`b.tag(...)`）。
+**builder 暴露 Bean 属性**：数据属性直接赋值（`b.maxStackSize = 16`），只有"动作"和复合配置保留方法（`b.noItem()`、`b.food(cb)`、`b.tag(...)`）。
 
 写错什么会当场炸（全是脚本执行期抛异常，日志里是这条 startup 脚本的报错）：
 
@@ -65,12 +65,39 @@ RegistryEvents.register(event => {
 | `glowing` | 发光（默认 false） |
 | `burnTime` | 燃料燃烧时间 tick（>0 时物品可作熔炉/高炉/烟熏炉燃料） |
 | `groupTab` | 分配到创造标签页（如 `'minecraft:building_blocks'` 或自定义 tab id；null=不分配） |
+| `component(id, value)` / `components` | JSON 组件配置；属性替换显式组件全集，方法替换单个条目。先应用普通默认属性，再应用显式组件。null 不表示删除。 |
+| `jukeboxPlayable` | 唱片歌曲资源键，例如 `'minecraft:cat'`；五节点均可用。 |
+| `trimMaterial` | 锻造纹饰材料资源键，例如 `'minecraft:diamond'`；仅 26.x。提供材料，而非给物品应用盔甲纹饰。 |
+| `parentModel` | 父模型 id；设置它或纹理配置才启用自动资源生成。 |
+| `texture(id)` / `texture(slot, id)` / `textures` | 设置 layer0、指定纹理槽，或替换整个槽映射；引用已有 PNG 资源。 |
 | `food(cb)` | 设为食物（接 `FoodBuilder` 回调，见下） |
 | `tag(tags...)` | 给物品打 tag（见[下方 tag 说明](#wiki-section-11)） |
 
 > 物品 tooltip 不在 builder 上设置——用客户端事件 [`ItemEvents.tooltip`](event-reference_cn#wiki-section-11) 按物品 id 添加。
 
 > 注册后物品的默认材质/模型按 `assets/mymod/textures/item/cool_gem.png` / `assets/mymod/models/item/cool_gem.json` 解析（标准原版资源路径）。可在 `nekojs/assets/` 下放资源。
+
+这些配置也适用于 `build.item(item => { ... })` 内的 BlockItem。回调成功后配置会复制并冻结，后续不能继续修改保留的 builder。批量赋值先整体校验再替换。原始 `minecraft:jukebox_playable` / `minecraft:provides_trim_material` 与同名便捷属性不能同时配置。
+
+```javascript
+RegistryEvents.register(event => {
+  event.item('mymod:gem', build => {
+    build.component('minecraft:rarity', 'epic')
+    build.components = { 'minecraft:max_stack_size': 16, 'minecraft:rarity': 'epic' }
+    build.parentModel = 'minecraft:item/generated'
+    build.texture('minecraft:item/diamond')
+  })
+  event.item('mymod:record', build => { build.jukeboxPlayable = 'minecraft:cat' })
+})
+```
+
+组件值必须符合当前节点 Minecraft codec 的 JSON 格式，仅接受普通对象、数组、基本值；拒绝函数和任意 Java 对象。26.x 在原版组件初始化阶段使用注册表上下文解码，错误值或引用使该阶段失败；禁止覆盖原版 `item_name`、`item_model` 身份组件。1.21.1 在构建物品时使用普通 JsonOps 解码，依赖注册表上下文的 codec 不受通用 JSON 入口支持，会明确报错；歌曲便捷属性使用原版 ResourceKey 实现。未知/不可序列化组件及非法耐久与堆叠组合均失败；此 API 不注册新组件类型。
+
+自动资源目前仅支持 **NeoForge**。Fabric 对带自动资源配置的条目报 `NEKO-4037` 并拒绝注册，组件及歌曲/材料能力仍可用。未配置模型或纹理的物品不生成文件。省略父模型时采用 `minecraft:item/generated`，省略纹理时采用 `layer0: '<命名空间>:item/<路径>'`；PNG 由作者提供。资源值使用不带扩展名的 id，省略命名空间表示 minecraft。
+
+NeoForge 1.21.1 写入 `assets/<命名空间>/models/item/<路径>.json`；26.x 额外写入 `assets/<命名空间>/items/<路径>.json` 并引用前者。首次加载和重载均在资源枚举前生成。现有 `Assets.itemModel` 仍只写模型文件，1.21.1 仍不提供 Assets Binding。
+
+所有权索引持久化在 `nekojs/.nekojs-item-assets/ownership.json`。已有无所有权文件、用户编辑和插件/脚本显式输出优先；模型/物品定义之一被修改时整组跳过并报 `NEKO-6008`，不覆盖。删除声明时只删除仍归自动生成所有且内容未变的文件，永不删除纹理。发布前暂存整组，I/O 失败时恢复旧文件；不承诺进程中途崩溃的恢复。索引应与资源一起保留，读取失败会拒绝生成而非重置所有权。
 
 <a id="wiki-section-4"></a>
 ### FoodBuilder（`food(cb)` 回调）

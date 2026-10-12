@@ -42,6 +42,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
 
     /** 预创建的 BlockItem 子 builder：{@code b.item.maxStackSize = 16} 直接定制；{@link #noItem()} 抑制。 */
     private ItemBuilder item;
+    private boolean itemDefinitionFrozen;
 
     public BlockBuilder(Identifier id) {
         super(id);
@@ -134,6 +135,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
      * （脚本的定制走 {@code b.item.xxx} 或 {@link #item(Consumer)}）。
      */
     public void setItem(ItemBuilder item) {
+        if (itemDefinitionFrozen) throw new IllegalStateException("[NEKO-4035] Block item definition is frozen after collection");
         if (item == this.item) {
             return;
         }
@@ -168,6 +170,12 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
     }
 
     @Override
+    void freezeDefinition() {
+        itemDefinitionFrozen = true;
+        if (item != null) item.freezeDefinition();
+    }
+
+    @Override
     public Block build() {
         net.minecraft.resources.ResourceKey<Block> key =
                 net.minecraft.resources.ResourceKey.create(Registries.BLOCK, id);
@@ -199,7 +207,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
             return;
         }
         registry.additional(Registries.ITEM, id,
-                () -> new BlockItem(BlockBuilder.this.get(), itemBuilder.buildProperties()));
+                itemBuilder.blockItemSupplier(() -> new BlockItem(BlockBuilder.this.get(), itemBuilder.buildProperties())));
     }
 
     private static SoundType resolveSound(String name) {

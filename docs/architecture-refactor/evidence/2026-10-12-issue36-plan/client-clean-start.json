@@ -1,0 +1,20 @@
+[
+  {
+    "Node": "1.21.1",
+    "Game": "build/issue36-client-121-final",
+    "ExistingItemAssetFiles": 0,
+    "OwnershipIndexExists": false
+  },
+  {
+    "Node": "26.1.2",
+    "Game": "build/issue36-client-261-final",
+    "ExistingItemAssetFiles": 0,
+    "OwnershipIndexExists": false
+  },
+  {
+    "Node": "26.2.0",
+    "Game": "build/issue36-client-262-verified",
+    "ExistingItemAssetFiles": 0,
+    "OwnershipIndexExists": false
+  }
+]

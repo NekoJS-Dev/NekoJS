@@ -93,6 +93,10 @@
 | `NEKO-4031` | Authored class declaration registration rejected | 手写类声明注册被拒绝 |
 | `NEKO-4032` | Conflicting authored class declarations rejected at the same priority | 同优先级的手写类声明冲突，注册被拒绝 |
 | `NEKO-4033` | Authored class declaration dependency is unavailable, excluded, or hidden | 手写类声明依赖不可用、被排除或被隐藏 |
+| `NEKO-4034` | item component, model, texture or identifier configuration rejected | 物品组件、模型、纹理或标识符配置被拒绝 |
+| `NEKO-4035` | item definition modification rejected after startup collection | STARTUP 收集后物品定义已冻结，修改被拒绝 |
+| `NEKO-4036` | item component type or codec value rejected with item, component and node context | 物品组件类型或 codec 值被拒绝，消息包含物品、组件与节点上下文 |
+| `NEKO-4037` | automatic item assets are unavailable on Fabric; registration rejected before supplier execution | Fabric 不支持自动物品资源，supplier 执行前拒绝注册 |
 
 <a id="wiki-section-6"></a>
 ## 配方与数据
@@ -108,6 +112,10 @@
 
 | 错误码 | 含义 |
 |---|---|
+| `NEKO-6008` | 自动资源组因已有文件属于外部或被修改而跳过。 |
+| `NEKO-6009` | 自动物品资源生成失败；发布阶段失败会尝试回滚，还原失败作为 suppressed cause 保留。 |
+| `NEKO-6010` | 物品资源所有权索引读取或校验失败；拒绝生成且不替换索引。 |
+
 | NEKO-6001 | UI 颜色属性不是受控颜色格式（ARGB/RGB 整数、`#RGB`/`#RRGGBB`/`#AARRGGBB`、CSS 基础命名色）。 |
 | NEKO-6002 | UI 视觉属性值超出范围或类型错误（`opacity`、`fontSize`、`borderWidth`、`radius`、`fit`、`crop`）。 |
 | NEKO-6003 | UI 资源标识不符合受控 id 语法（小写 `namespace:path`，不能含 `..`）。 |

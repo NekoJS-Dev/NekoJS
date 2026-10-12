@@ -41,7 +41,7 @@ RegistryEvents.register(event => {
 
 > Entries such as `fluid` and `enchantment` are not cross-platform capabilities: FluidBuilder is currently available only on NeoForge; the enchantment builder applies only to NeoForge 1.21.1. Use datapacks on 26.x; Fabric currently does not provide the corresponding registration surface.
 
-**Builders use public fields**: assign data properties directly (`b.maxStackSize = 16`). Only actions and compound configuration retain methods (`b.noItem()`, `b.food(cb)`, `b.tag(...)`).
+**Builders expose Bean properties**: assign data properties directly (`b.maxStackSize = 16`). Only actions and compound configuration retain methods (`b.noItem()`, `b.food(cb)`, `b.tag(...)`).
 
 Invalid input fails immediately (all of these throw while the script executes and are logged as errors in that startup script):
 
@@ -65,12 +65,38 @@ Conversely, **leaving every builder setting unset is valid**: `event.item('mymod
 | `glowing` | Glint (default false) |
 | `burnTime` | Fuel burn time in ticks (>0 lets the item fuel furnaces/blast furnaces/smokers) |
 | `groupTab` | Assign to a creative tab (for example `'minecraft:building_blocks'` or a custom tab id; null = no assignment) |
+| `component(id, value)` / `components` | Explicit JSON component values; the map property replaces the explicit set, the method replaces one entry. Defaults are applied first, then explicit components. Null does not remove a component. |
+| `jukeboxPlayable` | Song resource key, e.g. `'minecraft:cat'`; available on all five nodes. |
+| `trimMaterial` | Material resource key, e.g. `'minecraft:diamond'`; 26.x only. This supplies a trim material, rather than applying armor trim to this item. |
+| `parentModel` | Model parent id; setting this or textures opts into automatic resource generation. |
+| `texture(id)` / `texture(slot, id)` / `textures` | Set `layer0`, a named slot, or replace all slots. Values are resource ids referencing existing PNG files. |
 | `food(cb)` | Make it food (a `FoodBuilder` callback; see below) |
 | `tag(tags...)` | Add item tags (see [tag details below](#wiki-section-11)) |
 
 > Item tooltips are not configured on the builder. Add them by item id through the client event [`ItemEvents.tooltip`](event-reference_us#wiki-section-11).
 
-> After registration, default item textures/models are resolved from `assets/mymod/textures/item/cool_gem.png` / `assets/mymod/models/item/cool_gem.json` (standard vanilla resource paths). You can place resources under `nekojs/assets/`.
+The new configuration also works in `build.item(item => { ... })` for a BlockItem. Configuration is copied and frozen after the callback succeeds; retain no mutable builder to modify it later. Bulk writes validate before replacing previous values. Raw `minecraft:jukebox_playable` / `minecraft:provides_trim_material` values conflict with the corresponding named property, so use one form per component.
+
+```javascript
+RegistryEvents.register(event => {
+  event.item('mymod:gem', build => {
+    build.component('minecraft:rarity', 'epic')
+    build.components = { 'minecraft:max_stack_size': 16, 'minecraft:rarity': 'epic' }
+    build.parentModel = 'minecraft:item/generated'
+    build.texture('minecraft:item/diamond')
+  })
+  event.item('mymod:record', build => { build.jukeboxPlayable = 'minecraft:cat' })
+})
+```
+
+Component values must match the current node's Minecraft codec JSON, using plain objects, arrays and primitives. Functions and arbitrary Java objects are rejected. On 26.x, decoding uses the native registry lookup during component initialization, and invalid values/references fail that loading phase. Native `item_name` and `item_model` identity components cannot be overridden on 26.x. On 1.21.1, codecs run during item construction with plain JSON operations; codecs requiring a registry provider are unavailable through the generic JSON entry and fail explicitly. The song convenience property uses the native key implementation. Unknown/non-serializable types and invalid durability/stack combinations fail; this API does not register new component types.
+
+Automatic resources are currently available on **NeoForge only**. Fabric rejects configured automatic item assets with `NEKO-4037`; component and song/material configuration remain available there. Items with no model or texture settings generate no files. An omitted parent becomes `minecraft:item/generated`, and omitted textures become `layer0: '<namespace>:item/<path>'`. Supply the PNG yourself. All resource values use full ids (an omitted namespace means `minecraft`), without filename extensions.
+
+NeoForge 1.21.1 writes `assets/<namespace>/models/item/<path>.json`. NeoForge 26.x also writes `assets/<namespace>/items/<path>.json`, referencing that model. Generation runs before resource enumeration on initial load and reload. Existing `Assets.itemModel` still writes only the model file; the `Assets` binding remains absent on 1.21.1.
+
+Automatic files have a persisted ownership index at `nekojs/.nekojs-item-assets/ownership.json`. Existing unowned files, user edits and explicit plugin/script output take precedence. A changed model/definition causes its group to be skipped with `NEKO-6008`; automatic generation never overwrites it. Removed declarations delete only unchanged files still owned by automatic generation. Textures are never deleted. Publication stages the group and restores prior files on an I/O failure; it does not promise recovery from a process crash midway through publication. Keep the index with these resources; an unreadable index rejects generation rather than resetting ownership.
+
 
 <a id="wiki-section-4"></a>
 ### FoodBuilder (the `food(cb)` callback)
