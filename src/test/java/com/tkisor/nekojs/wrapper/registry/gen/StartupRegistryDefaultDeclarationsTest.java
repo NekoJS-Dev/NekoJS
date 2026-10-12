@@ -37,6 +37,49 @@ class StartupRegistryDefaultDeclarationsTest {
         }
     }
 
+//? if neoforge {
+    @Test
+    void manualNestedItemDeclarationKeepsOneNullableCallableProperty() throws Exception {
+        initializePlatform();
+        var runtime = NekoPluginBootstrap.bootstrap(List.of(new NekoRegistryPointsPlugin()), new ScriptPropertyRegistry.Impl());
+        var snapshot = NekoScriptCatalog.snapshot(runtime);
+        String manual = snapshot.manualDeclarations().stream()
+                .filter(entry -> entry.id().equals("nekojs.registry"))
+                .findFirst().orElseThrow().declaration();
+        String capture = System.getenv("NEKO_REGISTRY_MANUAL_CAPTURE");
+        if (capture != null) {
+            Path nodeRoot = Path.of(capture).resolve(Path.of("").toAbsolutePath().getFileName());
+            Files.createDirectories(nodeRoot);
+            Files.writeString(nodeRoot.resolve("registry.d.ts"), manual, StandardCharsets.UTF_8);
+        }
+        String block = manual.substring(manual.indexOf("interface BlockBuilder"), manual.indexOf("interface FluidBuilder"));
+        assertFalse(block.contains("item(cb:"), "A callable property must not also emit a duplicate method declaration");
+        assertTrue(block.contains("item: ItemBuilder & ((consumer: (b: ItemBuilder) => void) => void) | null;"), block);
+    }
+//?}
+
+    @Test
+    void nestedItemCallbackPropertyAndNullWritesUseTheRestrictedRuntimeSurface() {
+        initializePlatform();
+        var block = new BlockBuilder(net.minecraft.resources.Identifier.parse("test:manual_item"));
+        try (var context = graal.graalvm.polyglot.Context.newBuilder("js")
+                .allowHostAccess(new com.tkisor.nekojs.core.NekoSharedHostAccess(List.of()).get())
+                .allowHostClassLookup(name -> false).build()) {
+            context.getBindings("js").putMember("block", BuilderSurface.of(block));
+            assertTrue(context.eval("js", """
+                    const nested = block.item;
+                    nested.maxStackSize = 16;
+                    nested(build => { build.maxStackSize = 8; });
+                    block.setItem(nested);
+                    const configured = nested.maxStackSize;
+                    block.item = null;
+                    configured === 8 && block.item === null
+                    """).asBoolean());
+            assertNull(block.getItem());
+            assertThrows(RuntimeException.class, () -> context.eval("js", "block.item(build => {})"));
+        }
+    }
+
     @Test
     void contributedFactoriesSelectTheirOwnBuilderTypesAndRetainUntypedRoutes() {
         initializePlatform();
