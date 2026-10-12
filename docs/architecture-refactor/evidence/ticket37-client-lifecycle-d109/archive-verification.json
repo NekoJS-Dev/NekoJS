@@ -1,0 +1,12 @@
+{
+  "archiveAndAllEntries": "PASS",
+  "actualCredentials": "PASS",
+  "threeJar1592ClassBindings": "PASS",
+  "eightDistinctNativeFramesRetained": true,
+  "originalBridgeShutdown": "FAIL",
+  "isolatedExecutorDisposal": "PASS",
+  "noBridgeClientExit": "PASS",
+  "bridgeProductFixed": false,
+  "nativeCrashRootCause": "NOT_ESTABLISHED",
+  "overall": "NOT_COMPLETE"
+}
