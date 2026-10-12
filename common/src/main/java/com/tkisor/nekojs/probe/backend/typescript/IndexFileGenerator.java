@@ -456,9 +456,16 @@ public final class IndexFileGenerator {
         irCache.put(fqn, decl);
         authoredClasses.remove(fqn);
         registerEnumAlias(fqn, decl);
-        declCache.put(fqn, irRenderer.render(decl));
         String packageName = packageOf(fqn);
         Set<String> imports = new LinkedHashSet<>(collectImportsFromIr(decl, packageName));
+        // Contextual callback arguments can introduce host types absent from the Java parameter.
+        // Observe the same rendering references used for module-local names instead of expanding a second signature.
+        TypeAliasRegistry references = adapterAliasGenerator.aliasRegistry().withReferences((host, name) -> {
+            if (name.startsWith("$") && !packageOf(host).equals(packageName)) imports.add(host);
+            return name;
+        });
+        declCache.put(fqn, irRenderer.render(decl, references));
+        functionalInterfaceAliasGenerator.declaration(fqn, references);
         if (extraImportFqns != null) {
             imports.addAll(extraImportFqns);
         }

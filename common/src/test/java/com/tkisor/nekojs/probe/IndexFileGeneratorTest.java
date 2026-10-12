@@ -25,6 +25,53 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class IndexFileGeneratorTest {
 
+    public static class ExecutorUser {
+        public void schedule(java.util.concurrent.Executor executor) {}
+    }
+
+    public static class ScalarUser {
+        public void accept(String label, Integer count) {}
+    }
+
+    @Test
+    void scalarInputsDoNotImportJavaWrappers() {
+        IndexFileGenerator gen = generator(new TypeAliasRegistry());
+        gen.predeclareClass(ScalarUser.class.getName(), new TypeReflector().reflect(ScalarUser.class), Set.of());
+        String output = gen.generate(ScalarUser.class.getPackageName(),
+                List.of("IndexFileGeneratorTest$ScalarUser"), List.of(), Set.of(ScalarUser.class.getName()));
+        assertTrue(output.contains("accept(label: string, count: number)"), output);
+        assertFalse(output.contains("java:java/lang"), output);
+    }
+
+    @Test
+    void contextualCallbackArgumentsImportTheirHostTypes() throws java.io.IOException {
+        TypeAliasRegistry registry = new TypeAliasRegistry();
+        IndexFileGenerator gen = generator(registry);
+        Set<String> classes = Set.of(ExecutorUser.class.getName(),
+                java.util.concurrent.Executor.class.getName(), Runnable.class.getName());
+        gen.prepareFunctionalInterfaceAliases(classes, Set.of());
+        for (Class<?> type : List.of(ExecutorUser.class, java.util.concurrent.Executor.class, Runnable.class)) {
+            gen.predeclareClass(type.getName(), new TypeReflector().reflect(type), Set.of());
+        }
+        String output = gen.generate(ExecutorUser.class.getPackageName(),
+                List.of("IndexFileGeneratorTest$ExecutorUser"), List.of(), classes);
+        assertTrue(output.contains("schedule(executor: $Executor_<$Runnable>)"), output);
+        assertTrue(output.contains("from \"java:java/lang\";"), output);
+        assertTrue(output.contains("import { $Runnable"), output);
+        String capture = System.getenv("NEKO_SAM_MODULE_CAPTURE");
+        if (capture != null) {
+            for (Class<?> type : List.of(ExecutorUser.class, java.util.concurrent.Executor.class, Runnable.class)) {
+                String packageName = type.getPackageName();
+                String className = type.getName().substring(packageName.length() + 1);
+                java.nio.file.Path path = java.nio.file.Path.of(capture, "@package",
+                        packageName.replace('.', '/'), "index.d.ts");
+                java.nio.file.Files.createDirectories(path.getParent());
+                java.nio.file.Files.writeString(path,
+                        gen.generate(packageName, List.of(className), List.of(), classes));
+            }
+        }
+    }
+
     public static class SignatureOnly<T extends ClassDeclarationFixtures.Imported> {
         public SignatureOnly(ClassDeclarationFixtures.Adapted input) {}
     }
