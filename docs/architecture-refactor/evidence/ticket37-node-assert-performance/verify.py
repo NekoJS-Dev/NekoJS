@@ -37,4 +37,3 @@ with ZipFile(archive) as source:
     assert summary['overall']=='FAIL' and [row['acceptanceVerdict'] for row in summary['groups']]==['FAIL','FAIL','PASS']
 print(json.dumps(dict(result='PASS',entries=summary['archive']['entries'],performance=summary['overall'],
     compiledClasses=len(summary['compiledClasses']),sha256=summary['archive']['sha256'],overallTickets='NOT_COMPLETE')))
-

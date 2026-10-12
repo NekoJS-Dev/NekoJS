@@ -1,0 +1,1616 @@
+{
+  "sourceRevision": "7d77308bfa400721304b20940ada91092180a1ed",
+  "instrumentationPatchSha256": "c1c743a3b7bb72f752446066af788c033d8966c33b3b1788956e99af11e81bb6",
+  "diagnosticOnly": true,
+  "formalReplacement": false,
+  "folder": "20261012T162906Z-reload-26.1.2",
+  "reloads": [
+    {
+      "index": 1,
+      "rootThroughManagerMs": 183.8512,
+      "rconRttMs": 351,
+      "markerMs": 363,
+      "rttMinusObservedRootMs": 167.1488,
+      "markerMinusRttMs": 12,
+      "phases": [
+        {
+          "phase": "begin",
+          "message": "",
+          "elapsedFromRootMs": 0.0805,
+          "intervalFromPriorEventMs": 0.0805
+        },
+        {
+          "phase": "step",
+          "message": "candidate environment created",
+          "elapsedFromRootMs": 28.002,
+          "intervalFromPriorEventMs": 27.9215
+        },
+        {
+          "phase": "step",
+          "message": "candidate bindings installed",
+          "elapsedFromRootMs": 41.2612,
+          "intervalFromPriorEventMs": 13.2592
+        },
+        {
+          "phase": "step",
+          "message": "discovered 6 scripts",
+          "elapsedFromRootMs": 42.8492,
+          "intervalFromPriorEventMs": 1.588
+        },
+        {
+          "phase": "step",
+          "message": "candidate scripts executed",
+          "elapsedFromRootMs": 168.1574,
+          "intervalFromPriorEventMs": 125.3082
+        },
+        {
+          "phase": "step",
+          "message": "candidate event plan prepared",
+          "elapsedFromRootMs": 168.2705,
+          "intervalFromPriorEventMs": 0.1131
+        },
+        {
+          "phase": "step",
+          "message": "candidate domain plans collected",
+          "elapsedFromRootMs": 168.3828,
+          "intervalFromPriorEventMs": 0.1123
+        },
+        {
+          "phase": "step",
+          "message": "candidate state plan validated",
+          "elapsedFromRootMs": 168.4173,
+          "intervalFromPriorEventMs": 0.0345
+        },
+        {
+          "phase": "step",
+          "message": "committed",
+          "elapsedFromRootMs": 182.77,
+          "intervalFromPriorEventMs": 14.3527
+        },
+        {
+          "phase": "finish",
+          "message": "server scripts ready",
+          "elapsedFromRootMs": 183.5541,
+          "intervalFromPriorEventMs": 0.7841
+        },
+        {
+          "phase": "root-after-manager",
+          "message": "",
+          "elapsedFromRootMs": 183.8512,
+          "intervalFromPriorEventMs": 0.2971
+        }
+      ],
+      "events": [
+        {
+          "phase": "root-begin",
+          "scriptType": "server",
+          "nano": 22018321047100,
+          "epochMs": 1791822594102,
+          "message": ""
+        },
+        {
+          "phase": "begin",
+          "scriptType": "server",
+          "nano": 22018321127600,
+          "epochMs": 1791822594103,
+          "message": ""
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22018349049100,
+          "epochMs": 1791822594130,
+          "message": "candidate environment created"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22018362308300,
+          "epochMs": 1791822594144,
+          "message": "candidate bindings installed"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22018363896300,
+          "epochMs": 1791822594145,
+          "message": "discovered 6 scripts"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22018489204500,
+          "epochMs": 1791822594271,
+          "message": "candidate scripts executed"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22018489317600,
+          "epochMs": 1791822594271,
+          "message": "candidate event plan prepared"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22018489429900,
+          "epochMs": 1791822594271,
+          "message": "candidate domain plans collected"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22018489464400,
+          "epochMs": 1791822594271,
+          "message": "candidate state plan validated"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22018503817100,
+          "epochMs": 1791822594286,
+          "message": "committed"
+        },
+        {
+          "phase": "finish",
+          "scriptType": "server",
+          "nano": 22018504601200,
+          "epochMs": 1791822594286,
+          "message": "server scripts ready"
+        },
+        {
+          "phase": "root-after-manager",
+          "scriptType": "server",
+          "nano": 22018504898300,
+          "epochMs": 1791822594287,
+          "message": ""
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "rootThroughManagerMs": 159.3041,
+      "rconRttMs": 281,
+      "markerMs": 393,
+      "rttMinusObservedRootMs": 121.6959,
+      "markerMinusRttMs": 112,
+      "phases": [
+        {
+          "phase": "begin",
+          "message": "",
+          "elapsedFromRootMs": 0.0857,
+          "intervalFromPriorEventMs": 0.0857
+        },
+        {
+          "phase": "step",
+          "message": "candidate environment created",
+          "elapsedFromRootMs": 21.8589,
+          "intervalFromPriorEventMs": 21.7732
+        },
+        {
+          "phase": "step",
+          "message": "candidate bindings installed",
+          "elapsedFromRootMs": 33.0394,
+          "intervalFromPriorEventMs": 11.1805
+        },
+        {
+          "phase": "step",
+          "message": "discovered 6 scripts",
+          "elapsedFromRootMs": 36.2817,
+          "intervalFromPriorEventMs": 3.2423
+        },
+        {
+          "phase": "step",
+          "message": "candidate scripts executed",
+          "elapsedFromRootMs": 157.3272,
+          "intervalFromPriorEventMs": 121.0455
+        },
+        {
+          "phase": "step",
+          "message": "candidate event plan prepared",
+          "elapsedFromRootMs": 157.3945,
+          "intervalFromPriorEventMs": 0.0673
+        },
+        {
+          "phase": "step",
+          "message": "candidate domain plans collected",
+          "elapsedFromRootMs": 157.4785,
+          "intervalFromPriorEventMs": 0.084
+        },
+        {
+          "phase": "step",
+          "message": "candidate state plan validated",
+          "elapsedFromRootMs": 157.5239,
+          "intervalFromPriorEventMs": 0.0454
+        },
+        {
+          "phase": "step",
+          "message": "committed",
+          "elapsedFromRootMs": 158.5683,
+          "intervalFromPriorEventMs": 1.0444
+        },
+        {
+          "phase": "finish",
+          "message": "server scripts ready",
+          "elapsedFromRootMs": 159.1366,
+          "intervalFromPriorEventMs": 0.5683
+        },
+        {
+          "phase": "root-after-manager",
+          "message": "",
+          "elapsedFromRootMs": 159.3041,
+          "intervalFromPriorEventMs": 0.1675
+        }
+      ],
+      "events": [
+        {
+          "phase": "root-begin",
+          "scriptType": "server",
+          "nano": 22021671154500,
+          "epochMs": 1791822597453,
+          "message": ""
+        },
+        {
+          "phase": "begin",
+          "scriptType": "server",
+          "nano": 22021671240200,
+          "epochMs": 1791822597453,
+          "message": ""
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22021693013400,
+          "epochMs": 1791822597475,
+          "message": "candidate environment created"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22021704193900,
+          "epochMs": 1791822597486,
+          "message": "candidate bindings installed"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22021707436200,
+          "epochMs": 1791822597489,
+          "message": "discovered 6 scripts"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22021828481700,
+          "epochMs": 1791822597610,
+          "message": "candidate scripts executed"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22021828549000,
+          "epochMs": 1791822597611,
+          "message": "candidate event plan prepared"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22021828633000,
+          "epochMs": 1791822597611,
+          "message": "candidate domain plans collected"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22021828678400,
+          "epochMs": 1791822597611,
+          "message": "candidate state plan validated"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22021829722800,
+          "epochMs": 1791822597612,
+          "message": "committed"
+        },
+        {
+          "phase": "finish",
+          "scriptType": "server",
+          "nano": 22021830291100,
+          "epochMs": 1791822597612,
+          "message": "server scripts ready"
+        },
+        {
+          "phase": "root-after-manager",
+          "scriptType": "server",
+          "nano": 22021830458600,
+          "epochMs": 1791822597612,
+          "message": ""
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "rootThroughManagerMs": 136.2929,
+      "rconRttMs": 246,
+      "markerMs": 248,
+      "rttMinusObservedRootMs": 109.7071,
+      "markerMinusRttMs": 2,
+      "phases": [
+        {
+          "phase": "begin",
+          "message": "",
+          "elapsedFromRootMs": 0.1399,
+          "intervalFromPriorEventMs": 0.1399
+        },
+        {
+          "phase": "step",
+          "message": "candidate environment created",
+          "elapsedFromRootMs": 19.1539,
+          "intervalFromPriorEventMs": 19.014
+        },
+        {
+          "phase": "step",
+          "message": "candidate bindings installed",
+          "elapsedFromRootMs": 25.8603,
+          "intervalFromPriorEventMs": 6.7064
+        },
+        {
+          "phase": "step",
+          "message": "discovered 6 scripts",
+          "elapsedFromRootMs": 27.0087,
+          "intervalFromPriorEventMs": 1.1484
+        },
+        {
+          "phase": "step",
+          "message": "candidate scripts executed",
+          "elapsedFromRootMs": 134.215,
+          "intervalFromPriorEventMs": 107.2063
+        },
+        {
+          "phase": "step",
+          "message": "candidate event plan prepared",
+          "elapsedFromRootMs": 134.2913,
+          "intervalFromPriorEventMs": 0.0763
+        },
+        {
+          "phase": "step",
+          "message": "candidate domain plans collected",
+          "elapsedFromRootMs": 134.3616,
+          "intervalFromPriorEventMs": 0.0703
+        },
+        {
+          "phase": "step",
+          "message": "candidate state plan validated",
+          "elapsedFromRootMs": 134.4055,
+          "intervalFromPriorEventMs": 0.0439
+        },
+        {
+          "phase": "step",
+          "message": "committed",
+          "elapsedFromRootMs": 135.6465,
+          "intervalFromPriorEventMs": 1.241
+        },
+        {
+          "phase": "finish",
+          "message": "server scripts ready",
+          "elapsedFromRootMs": 136.1616,
+          "intervalFromPriorEventMs": 0.5151
+        },
+        {
+          "phase": "root-after-manager",
+          "message": "",
+          "elapsedFromRootMs": 136.2929,
+          "intervalFromPriorEventMs": 0.1313
+        }
+      ],
+      "events": [
+        {
+          "phase": "root-begin",
+          "scriptType": "server",
+          "nano": 22025070670900,
+          "epochMs": 1791822600853,
+          "message": ""
+        },
+        {
+          "phase": "begin",
+          "scriptType": "server",
+          "nano": 22025070810800,
+          "epochMs": 1791822600853,
+          "message": ""
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22025089824800,
+          "epochMs": 1791822600872,
+          "message": "candidate environment created"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22025096531200,
+          "epochMs": 1791822600878,
+          "message": "candidate bindings installed"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22025097679600,
+          "epochMs": 1791822600880,
+          "message": "discovered 6 scripts"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22025204885900,
+          "epochMs": 1791822600987,
+          "message": "candidate scripts executed"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22025204962200,
+          "epochMs": 1791822600987,
+          "message": "candidate event plan prepared"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22025205032500,
+          "epochMs": 1791822600987,
+          "message": "candidate domain plans collected"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22025205076400,
+          "epochMs": 1791822600987,
+          "message": "candidate state plan validated"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22025206317400,
+          "epochMs": 1791822600988,
+          "message": "committed"
+        },
+        {
+          "phase": "finish",
+          "scriptType": "server",
+          "nano": 22025206832500,
+          "epochMs": 1791822600989,
+          "message": "server scripts ready"
+        },
+        {
+          "phase": "root-after-manager",
+          "scriptType": "server",
+          "nano": 22025206963800,
+          "epochMs": 1791822600989,
+          "message": ""
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "rootThroughManagerMs": 144.4994,
+      "rconRttMs": 240,
+      "markerMs": 346,
+      "rttMinusObservedRootMs": 95.50059999999999,
+      "markerMinusRttMs": 106,
+      "phases": [
+        {
+          "phase": "begin",
+          "message": "",
+          "elapsedFromRootMs": 0.1101,
+          "intervalFromPriorEventMs": 0.1101
+        },
+        {
+          "phase": "step",
+          "message": "candidate environment created",
+          "elapsedFromRootMs": 19.1073,
+          "intervalFromPriorEventMs": 18.9972
+        },
+        {
+          "phase": "step",
+          "message": "candidate bindings installed",
+          "elapsedFromRootMs": 30.9854,
+          "intervalFromPriorEventMs": 11.8781
+        },
+        {
+          "phase": "step",
+          "message": "discovered 6 scripts",
+          "elapsedFromRootMs": 33.746,
+          "intervalFromPriorEventMs": 2.7606
+        },
+        {
+          "phase": "step",
+          "message": "candidate scripts executed",
+          "elapsedFromRootMs": 142.0101,
+          "intervalFromPriorEventMs": 108.2641
+        },
+        {
+          "phase": "step",
+          "message": "candidate event plan prepared",
+          "elapsedFromRootMs": 142.1762,
+          "intervalFromPriorEventMs": 0.1661
+        },
+        {
+          "phase": "step",
+          "message": "candidate domain plans collected",
+          "elapsedFromRootMs": 142.3574,
+          "intervalFromPriorEventMs": 0.1812
+        },
+        {
+          "phase": "step",
+          "message": "candidate state plan validated",
+          "elapsedFromRootMs": 142.4464,
+          "intervalFromPriorEventMs": 0.089
+        },
+        {
+          "phase": "step",
+          "message": "committed",
+          "elapsedFromRootMs": 143.6725,
+          "intervalFromPriorEventMs": 1.2261
+        },
+        {
+          "phase": "finish",
+          "message": "server scripts ready",
+          "elapsedFromRootMs": 144.3838,
+          "intervalFromPriorEventMs": 0.7113
+        },
+        {
+          "phase": "root-after-manager",
+          "message": "",
+          "elapsedFromRootMs": 144.4994,
+          "intervalFromPriorEventMs": 0.1156
+        }
+      ],
+      "events": [
+        {
+          "phase": "root-begin",
+          "scriptType": "server",
+          "nano": 22028321353800,
+          "epochMs": 1791822604103,
+          "message": ""
+        },
+        {
+          "phase": "begin",
+          "scriptType": "server",
+          "nano": 22028321463900,
+          "epochMs": 1791822604103,
+          "message": ""
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22028340461100,
+          "epochMs": 1791822604122,
+          "message": "candidate environment created"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22028352339200,
+          "epochMs": 1791822604133,
+          "message": "candidate bindings installed"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22028355099800,
+          "epochMs": 1791822604136,
+          "message": "discovered 6 scripts"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22028463363900,
+          "epochMs": 1791822604245,
+          "message": "candidate scripts executed"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22028463530000,
+          "epochMs": 1791822604245,
+          "message": "candidate event plan prepared"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22028463711200,
+          "epochMs": 1791822604245,
+          "message": "candidate domain plans collected"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22028463800200,
+          "epochMs": 1791822604245,
+          "message": "candidate state plan validated"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22028465026300,
+          "epochMs": 1791822604247,
+          "message": "committed"
+        },
+        {
+          "phase": "finish",
+          "scriptType": "server",
+          "nano": 22028465737600,
+          "epochMs": 1791822604247,
+          "message": "server scripts ready"
+        },
+        {
+          "phase": "root-after-manager",
+          "scriptType": "server",
+          "nano": 22028465853200,
+          "epochMs": 1791822604247,
+          "message": ""
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "rootThroughManagerMs": 120.5687,
+      "rconRttMs": 214,
+      "markerMs": 215,
+      "rttMinusObservedRootMs": 93.4313,
+      "markerMinusRttMs": 1,
+      "phases": [
+        {
+          "phase": "begin",
+          "message": "",
+          "elapsedFromRootMs": 0.0688,
+          "intervalFromPriorEventMs": 0.0688
+        },
+        {
+          "phase": "step",
+          "message": "candidate environment created",
+          "elapsedFromRootMs": 18.0055,
+          "intervalFromPriorEventMs": 17.9367
+        },
+        {
+          "phase": "step",
+          "message": "candidate bindings installed",
+          "elapsedFromRootMs": 27.038,
+          "intervalFromPriorEventMs": 9.0325
+        },
+        {
+          "phase": "step",
+          "message": "discovered 6 scripts",
+          "elapsedFromRootMs": 28.8686,
+          "intervalFromPriorEventMs": 1.8306
+        },
+        {
+          "phase": "step",
+          "message": "candidate scripts executed",
+          "elapsedFromRootMs": 118.0085,
+          "intervalFromPriorEventMs": 89.1399
+        },
+        {
+          "phase": "step",
+          "message": "candidate event plan prepared",
+          "elapsedFromRootMs": 118.0781,
+          "intervalFromPriorEventMs": 0.0696
+        },
+        {
+          "phase": "step",
+          "message": "candidate domain plans collected",
+          "elapsedFromRootMs": 118.1432,
+          "intervalFromPriorEventMs": 0.0651
+        },
+        {
+          "phase": "step",
+          "message": "candidate state plan validated",
+          "elapsedFromRootMs": 118.2827,
+          "intervalFromPriorEventMs": 0.1395
+        },
+        {
+          "phase": "step",
+          "message": "committed",
+          "elapsedFromRootMs": 119.9571,
+          "intervalFromPriorEventMs": 1.6744
+        },
+        {
+          "phase": "finish",
+          "message": "server scripts ready",
+          "elapsedFromRootMs": 120.4673,
+          "intervalFromPriorEventMs": 0.5102
+        },
+        {
+          "phase": "root-after-manager",
+          "message": "",
+          "elapsedFromRootMs": 120.5687,
+          "intervalFromPriorEventMs": 0.1014
+        }
+      ],
+      "events": [
+        {
+          "phase": "root-begin",
+          "scriptType": "server",
+          "nano": 22031683932500,
+          "epochMs": 1791822607466,
+          "message": ""
+        },
+        {
+          "phase": "begin",
+          "scriptType": "server",
+          "nano": 22031684001300,
+          "epochMs": 1791822607466,
+          "message": ""
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22031701938000,
+          "epochMs": 1791822607484,
+          "message": "candidate environment created"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22031710970500,
+          "epochMs": 1791822607493,
+          "message": "candidate bindings installed"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22031712801100,
+          "epochMs": 1791822607494,
+          "message": "discovered 6 scripts"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22031801941000,
+          "epochMs": 1791822607584,
+          "message": "candidate scripts executed"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22031802010600,
+          "epochMs": 1791822607584,
+          "message": "candidate event plan prepared"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22031802075700,
+          "epochMs": 1791822607584,
+          "message": "candidate domain plans collected"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22031802215200,
+          "epochMs": 1791822607584,
+          "message": "candidate state plan validated"
+        },
+        {
+          "phase": "step",
+          "scriptType": "server",
+          "nano": 22031803889600,
+          "epochMs": 1791822607585,
+          "message": "committed"
+        },
+        {
+          "phase": "finish",
+          "scriptType": "server",
+          "nano": 22031804399800,
+          "epochMs": 1791822607586,
+          "message": "server scripts ready"
+        },
+        {
+          "phase": "root-after-manager",
+          "scriptType": "server",
+          "nano": 22031804501200,
+          "epochMs": 1791822607586,
+          "message": ""
+        }
+      ]
+    }
+  ],
+  "initialPreReadinessRoot": {
+    "start": {
+      "phase": "root-begin",
+      "scriptType": "server",
+      "nano": 22012565833900,
+      "epochMs": 1791822588348,
+      "message": ""
+    },
+    "end": {
+      "phase": "root-after-manager",
+      "scriptType": "server",
+      "nano": 22012845532300,
+      "epochMs": 1791822588627,
+      "message": ""
+    },
+    "observedRootMs": 279.6984
+  },
+  "readinessClock": "00:29:50",
+  "readinessEpochMsFloor": 1791822590000,
+  "allEvents": [
+    {
+      "phase": "begin",
+      "scriptType": "startup",
+      "nano": 22005904517300,
+      "epochMs": 1791822581686,
+      "message": ""
+    },
+    {
+      "phase": "step",
+      "scriptType": "startup",
+      "nano": 22009609605900,
+      "epochMs": 1791822585391,
+      "message": "scripts executed"
+    },
+    {
+      "phase": "finish",
+      "scriptType": "startup",
+      "nano": 22009612144700,
+      "epochMs": 1791822585393,
+      "message": "startup scripts ready"
+    },
+    {
+      "phase": "root-begin",
+      "scriptType": "server",
+      "nano": 22012565833900,
+      "epochMs": 1791822588348,
+      "message": ""
+    },
+    {
+      "phase": "begin",
+      "scriptType": "server",
+      "nano": 22012566324200,
+      "epochMs": 1791822588348,
+      "message": ""
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22012619350500,
+      "epochMs": 1791822588401,
+      "message": "candidate environment created"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22012659608400,
+      "epochMs": 1791822588441,
+      "message": "candidate bindings installed"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22012662524500,
+      "epochMs": 1791822588444,
+      "message": "discovered 6 scripts"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22012834090600,
+      "epochMs": 1791822588616,
+      "message": "candidate scripts executed"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22012834263200,
+      "epochMs": 1791822588616,
+      "message": "candidate event plan prepared"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22012838798900,
+      "epochMs": 1791822588620,
+      "message": "candidate domain plans collected"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22012838916600,
+      "epochMs": 1791822588620,
+      "message": "candidate state plan validated"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22012844438900,
+      "epochMs": 1791822588626,
+      "message": "committed"
+    },
+    {
+      "phase": "finish",
+      "scriptType": "server",
+      "nano": 22012845338800,
+      "epochMs": 1791822588627,
+      "message": "server scripts ready"
+    },
+    {
+      "phase": "root-after-manager",
+      "scriptType": "server",
+      "nano": 22012845532300,
+      "epochMs": 1791822588627,
+      "message": ""
+    },
+    {
+      "phase": "root-begin",
+      "scriptType": "server",
+      "nano": 22018321047100,
+      "epochMs": 1791822594102,
+      "message": ""
+    },
+    {
+      "phase": "begin",
+      "scriptType": "server",
+      "nano": 22018321127600,
+      "epochMs": 1791822594103,
+      "message": ""
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22018349049100,
+      "epochMs": 1791822594130,
+      "message": "candidate environment created"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22018362308300,
+      "epochMs": 1791822594144,
+      "message": "candidate bindings installed"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22018363896300,
+      "epochMs": 1791822594145,
+      "message": "discovered 6 scripts"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22018489204500,
+      "epochMs": 1791822594271,
+      "message": "candidate scripts executed"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22018489317600,
+      "epochMs": 1791822594271,
+      "message": "candidate event plan prepared"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22018489429900,
+      "epochMs": 1791822594271,
+      "message": "candidate domain plans collected"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22018489464400,
+      "epochMs": 1791822594271,
+      "message": "candidate state plan validated"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22018503817100,
+      "epochMs": 1791822594286,
+      "message": "committed"
+    },
+    {
+      "phase": "finish",
+      "scriptType": "server",
+      "nano": 22018504601200,
+      "epochMs": 1791822594286,
+      "message": "server scripts ready"
+    },
+    {
+      "phase": "root-after-manager",
+      "scriptType": "server",
+      "nano": 22018504898300,
+      "epochMs": 1791822594287,
+      "message": ""
+    },
+    {
+      "phase": "root-begin",
+      "scriptType": "server",
+      "nano": 22021671154500,
+      "epochMs": 1791822597453,
+      "message": ""
+    },
+    {
+      "phase": "begin",
+      "scriptType": "server",
+      "nano": 22021671240200,
+      "epochMs": 1791822597453,
+      "message": ""
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22021693013400,
+      "epochMs": 1791822597475,
+      "message": "candidate environment created"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22021704193900,
+      "epochMs": 1791822597486,
+      "message": "candidate bindings installed"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22021707436200,
+      "epochMs": 1791822597489,
+      "message": "discovered 6 scripts"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22021828481700,
+      "epochMs": 1791822597610,
+      "message": "candidate scripts executed"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22021828549000,
+      "epochMs": 1791822597611,
+      "message": "candidate event plan prepared"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22021828633000,
+      "epochMs": 1791822597611,
+      "message": "candidate domain plans collected"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22021828678400,
+      "epochMs": 1791822597611,
+      "message": "candidate state plan validated"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22021829722800,
+      "epochMs": 1791822597612,
+      "message": "committed"
+    },
+    {
+      "phase": "finish",
+      "scriptType": "server",
+      "nano": 22021830291100,
+      "epochMs": 1791822597612,
+      "message": "server scripts ready"
+    },
+    {
+      "phase": "root-after-manager",
+      "scriptType": "server",
+      "nano": 22021830458600,
+      "epochMs": 1791822597612,
+      "message": ""
+    },
+    {
+      "phase": "root-begin",
+      "scriptType": "server",
+      "nano": 22025070670900,
+      "epochMs": 1791822600853,
+      "message": ""
+    },
+    {
+      "phase": "begin",
+      "scriptType": "server",
+      "nano": 22025070810800,
+      "epochMs": 1791822600853,
+      "message": ""
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22025089824800,
+      "epochMs": 1791822600872,
+      "message": "candidate environment created"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22025096531200,
+      "epochMs": 1791822600878,
+      "message": "candidate bindings installed"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22025097679600,
+      "epochMs": 1791822600880,
+      "message": "discovered 6 scripts"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22025204885900,
+      "epochMs": 1791822600987,
+      "message": "candidate scripts executed"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22025204962200,
+      "epochMs": 1791822600987,
+      "message": "candidate event plan prepared"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22025205032500,
+      "epochMs": 1791822600987,
+      "message": "candidate domain plans collected"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22025205076400,
+      "epochMs": 1791822600987,
+      "message": "candidate state plan validated"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22025206317400,
+      "epochMs": 1791822600988,
+      "message": "committed"
+    },
+    {
+      "phase": "finish",
+      "scriptType": "server",
+      "nano": 22025206832500,
+      "epochMs": 1791822600989,
+      "message": "server scripts ready"
+    },
+    {
+      "phase": "root-after-manager",
+      "scriptType": "server",
+      "nano": 22025206963800,
+      "epochMs": 1791822600989,
+      "message": ""
+    },
+    {
+      "phase": "root-begin",
+      "scriptType": "server",
+      "nano": 22028321353800,
+      "epochMs": 1791822604103,
+      "message": ""
+    },
+    {
+      "phase": "begin",
+      "scriptType": "server",
+      "nano": 22028321463900,
+      "epochMs": 1791822604103,
+      "message": ""
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22028340461100,
+      "epochMs": 1791822604122,
+      "message": "candidate environment created"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22028352339200,
+      "epochMs": 1791822604133,
+      "message": "candidate bindings installed"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22028355099800,
+      "epochMs": 1791822604136,
+      "message": "discovered 6 scripts"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22028463363900,
+      "epochMs": 1791822604245,
+      "message": "candidate scripts executed"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22028463530000,
+      "epochMs": 1791822604245,
+      "message": "candidate event plan prepared"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22028463711200,
+      "epochMs": 1791822604245,
+      "message": "candidate domain plans collected"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22028463800200,
+      "epochMs": 1791822604245,
+      "message": "candidate state plan validated"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22028465026300,
+      "epochMs": 1791822604247,
+      "message": "committed"
+    },
+    {
+      "phase": "finish",
+      "scriptType": "server",
+      "nano": 22028465737600,
+      "epochMs": 1791822604247,
+      "message": "server scripts ready"
+    },
+    {
+      "phase": "root-after-manager",
+      "scriptType": "server",
+      "nano": 22028465853200,
+      "epochMs": 1791822604247,
+      "message": ""
+    },
+    {
+      "phase": "root-begin",
+      "scriptType": "server",
+      "nano": 22031683932500,
+      "epochMs": 1791822607466,
+      "message": ""
+    },
+    {
+      "phase": "begin",
+      "scriptType": "server",
+      "nano": 22031684001300,
+      "epochMs": 1791822607466,
+      "message": ""
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22031701938000,
+      "epochMs": 1791822607484,
+      "message": "candidate environment created"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22031710970500,
+      "epochMs": 1791822607493,
+      "message": "candidate bindings installed"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22031712801100,
+      "epochMs": 1791822607494,
+      "message": "discovered 6 scripts"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22031801941000,
+      "epochMs": 1791822607584,
+      "message": "candidate scripts executed"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22031802010600,
+      "epochMs": 1791822607584,
+      "message": "candidate event plan prepared"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22031802075700,
+      "epochMs": 1791822607584,
+      "message": "candidate domain plans collected"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22031802215200,
+      "epochMs": 1791822607584,
+      "message": "candidate state plan validated"
+    },
+    {
+      "phase": "step",
+      "scriptType": "server",
+      "nano": 22031803889600,
+      "epochMs": 1791822607585,
+      "message": "committed"
+    },
+    {
+      "phase": "finish",
+      "scriptType": "server",
+      "nano": 22031804399800,
+      "epochMs": 1791822607586,
+      "message": "server scripts ready"
+    },
+    {
+      "phase": "root-after-manager",
+      "scriptType": "server",
+      "nano": 22031804501200,
+      "epochMs": 1791822607586,
+      "message": ""
+    }
+  ],
+  "means": {
+    "rootThroughManagerMs": 148.90326,
+    "rconRttMs": 266.4,
+    "markerMs": 313.0,
+    "rttMinusObservedRootMs": 117.49674,
+    "markerMinusRttMs": 46.6
+  },
+  "synchronousObserverOverhead": "NOT_QUANTIFIED",
+  "rootReturnProxy": "After manager returns, before success result construction",
+  "queueAuthNetworkSplit": "NOT_MEASURED",
+  "originalFormalPerformance": "FAIL_RETAINED",
+  "compiledBinding": {
+    "officialJarSha256": "eea76f127890dd86f0fc29a4a0376a27a765805206a4d145c887ec696f545886",
+    "matchedClasses": 1586,
+    "changedInstrumentedFamilyClasses": [
+      {
+        "name": "com/tkisor/nekojs/core/lifecycle/NekoRuntimeRoot$ErrorSnapshot.class",
+        "officialSha256": "03b6deda9b61ba212704003c4ee6862f77a2ad9b645435219842697df3ea46b1",
+        "diagnosticSha256": "ffc46c2b439208d293a196b5b0105c2bfdcd63265a1c1e57ed2dbc2dc230b9ba"
+      },
+      {
+        "name": "com/tkisor/nekojs/core/lifecycle/NekoRuntimeRoot$ReloadResult.class",
+        "officialSha256": "a0a6b20db9da6711c9adf16ace75a534562c9ad1ed7c00355c584dbd3e15af12",
+        "diagnosticSha256": "047eda1ca83967a3f8ae296187d4590b898a7b82bac986b8075704d0fc822897"
+      },
+      {
+        "name": "com/tkisor/nekojs/core/lifecycle/NekoRuntimeRoot$TestRunResult.class",
+        "officialSha256": "fe09a026173f22e4d85468b1c1d4ab9da242d971215a55495458cd2107ea6978",
+        "diagnosticSha256": "e4e71f10be2dff7c18114c5e113c3d22c31213f800f261949f2d63eed469b4b6"
+      },
+      {
+        "name": "com/tkisor/nekojs/core/lifecycle/NekoRuntimeRoot.class",
+        "officialSha256": "8bdb08731cb22ebb0403fbe7ce9d3cfccd0959afc047ea8e8a6577dcfd6d28df",
+        "diagnosticSha256": "53cc09f39884904fc3e0bd6d7384150aceb504a5e0cb56b93eb355fdcdfbf65c"
+      },
+      {
+        "name": "com/tkisor/nekojs/core/lifecycle/ReloadProgressTracker$Snapshot.class",
+        "officialSha256": "71c65c581cade039ad23b34eaf394e048b0dbe0b949f2763dd982cf2988c2b7c",
+        "diagnosticSha256": "09b6cb7c0763d9f1818c8eeb28a659b4d6063555cc687bee2842a7d87c66fc84"
+      },
+      {
+        "name": "com/tkisor/nekojs/core/lifecycle/ReloadProgressTracker.class",
+        "officialSha256": "6ed833a6285a4923ea2623892cd28fde56ff79ed7cadd86c25edf3a0f5215e70",
+        "diagnosticSha256": "ec36a83ac15a819c14c70b632b743a68c4d7b6200449bffa476d1c382e882a7c"
+      }
+    ],
+    "officialCertification": false
+  },
+  "sourceRestored": {
+    "result": "PASS",
+    "sourceRevision": "7d77308bfa400721304b20940ada91092180a1ed",
+    "sourceRestoredByteEqual": true,
+    "compiledDiagnosticCache": "Retained locally; no official class binding inheritance until rebuilding"
+  },
+  "archive": {
+    "file": "reload-phase-evidence.zip",
+    "entries": 35,
+    "bytes": 176682,
+    "sha256": "2d539989ab59566632d53eebd7f636aad938b4062fcfbe8f5e31d991a48eb405"
+  },
+  "entries": [
+    {
+      "name": "diagnostic/PLAN.md",
+      "bytes": 1148,
+      "sha256": "5059301cdbe35c1a58cbc99226d638a8d285843baaeec4040b6ca494e633b24e"
+    },
+    {
+      "name": "diagnostic/after-guard-exit.json",
+      "bytes": 15,
+      "sha256": "47b8b6b49d4695fe6e036bd916538aff4f46773e212ca0d429db80f3963e2cfe"
+    },
+    {
+      "name": "diagnostic/after-guard.txt",
+      "bytes": 54,
+      "sha256": "74a621575eb987eb1a6c926f7ec7670281a9163ffd4a2867ed000aff27380061"
+    },
+    {
+      "name": "diagnostic/before-guard-exit.json",
+      "bytes": 15,
+      "sha256": "47b8b6b49d4695fe6e036bd916538aff4f46773e212ca0d429db80f3963e2cfe"
+    },
+    {
+      "name": "diagnostic/before-guard.txt",
+      "bytes": 54,
+      "sha256": "74a621575eb987eb1a6c926f7ec7670281a9163ffd4a2867ed000aff27380061"
+    },
+    {
+      "name": "diagnostic/guard.ps1",
+      "bytes": 2595,
+      "sha256": "2f0fb22d66f4b0968214ea4246116ef121c0b9bfba9b01eeaff3fa7ff859a0c2"
+    },
+    {
+      "name": "diagnostic/helper-failures.txt",
+      "bytes": 508,
+      "sha256": "2b7647758acfbdf10de51c1353aeb73031db665cebfd0d6d949a88cb69314a68"
+    },
+    {
+      "name": "diagnostic/instrumentation.patch",
+      "bytes": 3319,
+      "sha256": "c1c743a3b7bb72f752446066af788c033d8966c33b3b1788956e99af11e81bb6"
+    },
+    {
+      "name": "diagnostic/instrumented/common/src/main/java/com/tkisor/nekojs/core/lifecycle/NekoRuntimeRoot.java",
+      "bytes": 21907,
+      "sha256": "23abf1e4f8f17e9159b4890741fd83bbeebb085c0aea3fc9c07044e46101fa61"
+    },
+    {
+      "name": "diagnostic/instrumented/common/src/main/java/com/tkisor/nekojs/core/lifecycle/ReloadProgressTracker.java",
+      "bytes": 8392,
+      "sha256": "a667c3f266690a08fd4eba908703fabe8b4781d9dc63cacd4317ed300f221986"
+    },
+    {
+      "name": "diagnostic/manifest.json",
+      "bytes": 956,
+      "sha256": "443e308335445e89b30916f1fc839197c704bb57f479f67b019267f04c45893f"
+    },
+    {
+      "name": "diagnostic/original/common/src/main/java/com/tkisor/nekojs/core/lifecycle/NekoRuntimeRoot.java",
+      "bytes": 21077,
+      "sha256": "1b06f1d13bd263bc15ea2c0bd51e92e64f0f757eb763f7b46ffa6d2f8006d347"
+    },
+    {
+      "name": "diagnostic/original/common/src/main/java/com/tkisor/nekojs/core/lifecycle/ReloadProgressTracker.java",
+      "bytes": 7696,
+      "sha256": "b9d2ca44e5155b02c4a3c38a118745ea27ea86083772da7f01b7d9dacbfd53d1"
+    },
+    {
+      "name": "diagnostic/output-inventory-after.json",
+      "bytes": 2316,
+      "sha256": "7a4feae9f85fec39015f651733ad82a3372ad0b0c969c509c5abf2dba519f296"
+    },
+    {
+      "name": "diagnostic/output-inventory-before.json",
+      "bytes": 2092,
+      "sha256": "5d290e2e283d8ab01704922cff7d11702afa3465641d256c32f6a73763697d39"
+    },
+    {
+      "name": "diagnostic/phase-summary.json",
+      "bytes": 38103,
+      "sha256": "4ed20c98b04736f2a791831b35b66dd52a546ad48a707f313e65312e21fd2210"
+    },
+    {
+      "name": "diagnostic/preparation-failure.txt",
+      "bytes": 317,
+      "sha256": "c1343a902a301d41e0c0a3084df46a0d40282ff14e56b5125ca0441cfaf997b1"
+    },
+    {
+      "name": "diagnostic/prepare-before-utf8.py",
+      "bytes": 5322,
+      "sha256": "637af85df00fc3a24a4cdc5ba660a13fd92811568f24c6e339e76000de8d3b7f"
+    },
+    {
+      "name": "diagnostic/reader-before-readiness-binding.py",
+      "bytes": 3633,
+      "sha256": "f6b5b779b7d31a3797c41c3787c0df9307b57ca6562d57d00a21622c18378a61"
+    },
+    {
+      "name": "diagnostic/restore-before-guard.txt",
+      "bytes": 54,
+      "sha256": "74a621575eb987eb1a6c926f7ec7670281a9163ffd4a2867ed000aff27380061"
+    },
+    {
+      "name": "diagnostic/restored-source.json",
+      "bytes": 216,
+      "sha256": "7581cfa3c0b0e25a6fc783acdae2c7657380c1e3c987b56bf8400ec447b4f8e4"
+    },
+    {
+      "name": "diagnostic/runner-exit.json",
+      "bytes": 23,
+      "sha256": "ea61d7736f0b7ecb9b35158f03de77013db6b100cf1d36c957e78e6c8817c5b6"
+    },
+    {
+      "name": "diagnostic/runner.txt",
+      "bytes": 1429,
+      "sha256": "7007908f22ce1d5ea7a69a4aeade71d6a26b88a1aff68d597721a5ff9b9932cc"
+    },
+    {
+      "name": "diagnostic/sampler-exit.json",
+      "bytes": 199,
+      "sha256": "a3e8ac9928b35d46007e7e8bbe6da0c3100692aa461f77b4e6dddcab92dc179e"
+    },
+    {
+      "name": "diagnostic/sampler.txt",
+      "bytes": 3528,
+      "sha256": "6a277030f7087192e073155c11ae434268ec38cc4b6751338150737fec396147"
+    },
+    {
+      "name": "helpers/archive-reload-phase-7d.py",
+      "bytes": 4725,
+      "sha256": "12b04f3aea22127a237c680eb94cb629744ce56860bbc850046197ed4929841a"
+    },
+    {
+      "name": "helpers/prepare-reload-phase-7d.py",
+      "bytes": 5599,
+      "sha256": "c9526f3ec365ef5e522c887e5b9f6c90f08897ad3187704034c809a986427c5b"
+    },
+    {
+      "name": "helpers/read-reload-phase-7d.py",
+      "bytes": 4651,
+      "sha256": "387ece8eb24d100b45f3d03aed350d5635eee1a8b0a5c4f31bcf0e806c4ce64a"
+    },
+    {
+      "name": "helpers/restore-reload-phase-7d.py",
+      "bytes": 1797,
+      "sha256": "b426046907ae9e7ecd6c5ac23b0fa4b000c93fd00dfb29db7bfcbb919fb5deb0"
+    },
+    {
+      "name": "helpers/run-reload-phase-7d.py",
+      "bytes": 3830,
+      "sha256": "29a10d2a609d187ba77a01c928c7f8ea62e6832efa3f73b82b2e52f6e41dca00"
+    },
+    {
+      "name": "sampler/binding.json",
+      "bytes": 195,
+      "sha256": "09e85e764123af9835a4ee8bd2f9e7fdc0a33e97a6ce70e9c73da8e8fb5f7f9a"
+    },
+    {
+      "name": "samples/env-snapshot.txt",
+      "bytes": 199,
+      "sha256": "776d6b99a2692fe185b93bf2395403f62066863ad4ea9d0868f9c1b07ebbdaaf"
+    },
+    {
+      "name": "samples/reload-session-stderr.log",
+      "bytes": 9925,
+      "sha256": "82f12334db31e63b404b2295ec5aac987937092b266173c263998baeda97d99d"
+    },
+    {
+      "name": "samples/reload-session-stdout.log",
+      "bytes": 4425206,
+      "sha256": "3d8361cc4f59360a76aaf57db9043a54b6373259037ae6b5534ec7a217bd6d64"
+    },
+    {
+      "name": "samples/samples.jsonl",
+      "bytes": 2580,
+      "sha256": "5ac21c87682f5c64db6a52807c6201ed88f8b7a7ddfe27d2cd434c5fcc45c2fb"
+    }
+  ],
+  "actualCredentialsScan": "PASS",
+  "formalPortsFree": [
+    25871,
+    25872
+  ],
+  "overallTickets": "NOT_COMPLETE",
+  "exclusions": [
+    "Actual credentials/properties",
+    "Original sampler source with credential default",
+    "Worlds",
+    "Binary artifacts",
+    "Raw JFR",
+    "Unrelated processes/data"
+  ]
+}
