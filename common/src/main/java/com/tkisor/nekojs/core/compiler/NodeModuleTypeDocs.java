@@ -245,8 +245,46 @@ public final class NodeModuleTypeDocs {
                     int close = matchBrace(defOpen);
                     if (close >= 0) return parseObjectMembers(defOpen + 1, close);
                 }
+                if (funcSigOf(name) != null) return assignedFunctionMembers(name);
             }
             return List.of();
+        }
+
+        /** Resolves the literal members attached to a callable module by Object.assign. */
+        private List<String> assignedFunctionMembers(String name) {
+            List<String> members = new ArrayList<>();
+            int i = 0;
+            while (i < n) {
+                i = skipWsAndComments(i);
+                if (i >= n) break;
+                char c = s.charAt(i);
+                if (c == '\'' || c == '"') { i = skipString(i, c); continue; }
+                if (c == '`') { i = skipTemplate(i); continue; }
+                if (!isIdentStart(c)) { i++; continue; }
+                int end = readIdent(i);
+                String token = s.substring(i, end);
+                i = end;
+                if (!token.equals("Object")) continue;
+                int dot = skipWsAndComments(end);
+                if (dot >= n || s.charAt(dot) != '.') continue;
+                int method = skipWsAndComments(dot + 1);
+                int methodEnd = readIdent(method);
+                if (!s.substring(method, methodEnd).equals("assign")) continue;
+                int open = skipWsAndComments(methodEnd);
+                if (open >= n || s.charAt(open) != '(') continue;
+                int close = matchParen(open);
+                if (close < 0) continue;
+                int[] args = splitTopLevelArgs(open, close);
+                if (args == null || !s.substring(args[0], args[1]).trim().equals(name)) continue;
+                int object = skipWsAndComments(args[2]);
+                if (object >= n || s.charAt(object) != '{') continue;
+                int objectEnd = matchBrace(object);
+                // Only one literal source is resolved; arbitrary assign expressions remain unsupported.
+                if (objectEnd < 0 || skipWsAndComments(objectEnd + 1) != close) continue;
+                members.addAll(parseObjectMembers(object + 1, objectEnd));
+                i = close + 1;
+            }
+            return members;
         }
 
         /** 查找 {@code (const|let|var) <name> = { ... }} 的对象字面量 `{` 位置。 */
@@ -613,7 +651,7 @@ public final class NodeModuleTypeDocs {
                 if (afterKey < n && s.charAt(afterKey) == '(') {
                     int parenClose = matchParen(afterKey);
                     if (parenClose < 0) return null;
-                    String params = s.substring(afterKey, parenClose + 1);
+                    String params = ambientClassParameters(afterKey, parenClose);
                     int j = skipWsAndComments(parenClose + 1);
                     String ret = "";
                     if (j < n && s.charAt(j) == ':') {
@@ -647,6 +685,60 @@ public final class NodeModuleTypeDocs {
         private static boolean isClassMod(String w) {
             return w.equals("public") || w.equals("private") || w.equals("protected")
                 || w.equals("readonly") || w.equals("abstract") || w.equals("override") || w.equals("declare");
+        }
+
+        /** Removes class parameter initializers while retaining whether callers may omit each argument. */
+        private String ambientClassParameters(int open, int close) {
+            List<String> parameters = new ArrayList<>();
+            List<Boolean> initialized = new ArrayList<>();
+            int start = open + 1, initializer = -1, depth = 0, angle = 0;
+            for (int i = start; i <= close; i++) {
+                char c = s.charAt(i);
+                if (i == close || (c == ',' && depth == 0 && angle == 0)) {
+                    String parameter = s.substring(start, initializer < 0 ? i : initializer).trim();
+                    if (!parameter.isEmpty()) {
+                        if (initializer >= 0 && parameter.indexOf(':') < 0) {
+                            parameter += ": " + inferValueType(skipWsAndComments(initializer + 1), i);
+                        }
+                        parameters.add(parameter);
+                        initialized.add(initializer >= 0);
+                    }
+                    start = i + 1;
+                    initializer = -1;
+                    continue;
+                }
+                if (c == '\'' || c == '"') { i = skipString(i, c) - 1; continue; }
+                if (c == '`') { i = skipTemplate(i) - 1; continue; }
+                if (c == '/' && i + 1 < close) {
+                    if (s.charAt(i + 1) == '/') { i = skipLineComment(i + 2) - 1; continue; }
+                    if (s.charAt(i + 1) == '*') { i = skipBlockComment(i + 2) - 1; continue; }
+                }
+                if (c == '(' || c == '[' || c == '{') depth++;
+                else if (c == ')' || c == ']' || c == '}') depth--;
+                else if (initializer < 0 && c == '<') angle++;
+                else if (initializer < 0 && c == '>' && angle > 0) angle--;
+                else if (c == '=' && i + 1 < close && s.charAt(i + 1) != '>'
+                        && depth == 0 && angle == 0 && initializer < 0) {
+                    initializer = i;
+                    i = Math.min(close, valueEnd(skipWsAndComments(i + 1))) - 1;
+                }
+            }
+            if (!initialized.contains(true)) return s.substring(open, close + 1);
+            boolean trailingOptional = true;
+            for (int index = parameters.size() - 1; index >= 0; index--) {
+                String parameter = parameters.get(index);
+                int colon = parameter.indexOf(':');
+                String name = colon < 0 ? parameter : parameter.substring(0, colon).trim();
+                boolean optional = name.endsWith("?") || name.startsWith("...");
+                if (initialized.get(index) && !optional) {
+                    String type = parameter.substring(colon + 1).trim();
+                    parameter = trailingOptional ? name + "?: " + type : name + ": (" + type + ") | undefined";
+                    parameters.set(index, parameter);
+                    optional = trailingOptional;
+                }
+                trailingOptional &= optional;
+            }
+            return "(" + String.join(", ", parameters) + ")";
         }
 
         private int skipMemberBody(int j, int limit) {

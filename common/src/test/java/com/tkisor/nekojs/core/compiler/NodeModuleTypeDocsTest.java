@@ -27,6 +27,50 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class NodeModuleTypeDocsTest {
 
     @Test
+    void builtinAssertDeclaresItsCallbackAliasOncePerModule() throws Exception {
+        String declaration = NodeModuleTypeDocs.extractTS(readResource("nekojs/node/modules/assert.ts"));
+        Path output = Path.of("build/probe-ts-node-assert");
+        Files.createDirectories(output);
+        Files.writeString(output.resolve("assert.d.ts"), declaration, StandardCharsets.UTF_8);
+        assertEquals(4, declaration.split("type NekoSyncFn =", -1).length - 1, declaration);
+        assertTrue(declaration.contains("export class AssertionError extends Error"), declaration);
+        assertTrue(declaration.contains("constructor(options?: NekoAssertErrorOptions);"), declaration);
+    }
+
+    @Test
+    void callableExportsResolveOnlyTheirAssignedLiteralMembers() throws Exception {
+        String source = """
+                ;(function () {
+                  function callable(value: boolean): void {}
+                  function other(): void {}
+                  class Options {
+                    constructor(first: number = 1, required: string,
+                                tail: { label: string } = { label: 'a,b' }) {}
+                  }
+                  class GenericOptions {
+                    constructor(counts: Map<string, number> = new Map<string, number>(), label: string = 'value') {}
+                  }
+                  function run(value: string): void {}
+                  const text = 'Object.assign(callable, { imaginary })';
+                  // Object.assign(callable, { commented })
+                  Object.assign(other, { unrelated: 1 });
+                  Object.assign(callable, { run, Options, GenericOptions });
+                  globalThis.__nekoNodeDefine(['callable'], callable)
+                })()
+                """;
+        String declaration = NodeModuleTypeDocs.extractTS(source);
+        assertTrue(declaration.contains("export function run(value: string): void;"), declaration);
+        assertTrue(declaration.contains("constructor(first: (number) | undefined, required: string, tail?: { label: string });"), declaration);
+        assertTrue(declaration.contains("constructor(counts?: Map<string, number>, label?: string);"), declaration);
+        assertFalse(declaration.contains("imaginary"), declaration);
+        assertFalse(declaration.contains("commented"), declaration);
+        assertFalse(declaration.contains("unrelated"), declaration);
+        Path output = Path.of("build/probe-ts-node-assert/callable.d.ts");
+        Files.createDirectories(output.getParent());
+        Files.writeString(output, declaration, StandardCharsets.UTF_8);
+    }
+
+    @Test
     void builtinUtilPredicateRefersToItsActualParameter() throws Exception {
         String source = readResource("nekojs/node/modules/util.ts");
         String declaration = NodeModuleTypeDocs.extractTS(source);

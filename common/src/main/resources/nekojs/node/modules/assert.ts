@@ -200,8 +200,6 @@
     }
   }
 
-  type NekoSyncFn = () => unknown
-
   /** fn 同步抛错按 rejection 处理（Node 语义），而非同步抛给调用方。 */
   function toMaybePromise(fn: NekoMaybeAsyncFn): unknown {
     try {
