@@ -1,0 +1,660 @@
+{
+  "archive": "current-window-evidence.zip",
+  "bytes": 321556,
+  "sha256": "a5b279e763b9240b63db6e1900749b270ebec4d1f3321f983b700288bbfa4a45",
+  "entries": [
+    {
+      "name": "attempt1/C-prepare-held-3.json",
+      "bytes": 1493,
+      "sha256": "6284844a73facc7a090cf1ddbecdc29722665a73efdf623b128381ff8627093b"
+    },
+    {
+      "name": "attempt1/PLAN.md",
+      "bytes": 1037,
+      "sha256": "522dd308092282bb3bbb0c94e727dbadcee8020403c43055beeb16623b57fd7a"
+    },
+    {
+      "name": "attempt1/abort-proof-exit.json",
+      "bytes": 23,
+      "sha256": "c34bc644b4dfc96082e294ccb49ac40bdf34a3c659c956ffef43981ed30b2234"
+    },
+    {
+      "name": "attempt1/abort-proof-runner.txt",
+      "bytes": 498,
+      "sha256": "4286f16e705227484f276dc2954d18c780b9e065291ed9f3dd4c45083ecd57f0"
+    },
+    {
+      "name": "attempt1/clientC/client_scripts/owned-close.js",
+      "bytes": 446,
+      "sha256": "06619a136f8b989bada66f8c0a6069a49d44332d0a16bea9435e10c680f5dd98"
+    },
+    {
+      "name": "attempt1/clientC/client_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    {
+      "name": "attempt1/clientC/exit.json",
+      "bytes": 28,
+      "sha256": "fec66b1ce435dbf45497659f5ed6c4a4efdfbf31db96b7f02058f22866e45537"
+    },
+    {
+      "name": "attempt1/clientC/logs/latest.log",
+      "bytes": 34706,
+      "sha256": "bde535f6712fc5c28748e74513f5387fcb5995bff7dba66fabb0078e0b22cefc"
+    },
+    {
+      "name": "attempt1/clientC/options.txt",
+      "bytes": 5218,
+      "sha256": "0ab3f99df6924f871c980439585353169b6d1c9b11861478ee92be6650b2cc7d"
+    },
+    {
+      "name": "attempt1/clientC/owned-process.json",
+      "bytes": 196,
+      "sha256": "76d6a186c0920d3232ac1c5ddb605e5339e05e7714a3453766d13d5344752d34"
+    },
+    {
+      "name": "attempt1/clientC/server_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    {
+      "name": "attempt1/clientC/startup_scripts/proof-startup.js",
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    {
+      "name": "attempt1/clientC/startup_scripts/src/main.js",
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    {
+      "name": "attempt1/clientC/stderr.log",
+      "bytes": 9953,
+      "sha256": "33dbf391293050d7db5b0416dfa972f695ee0f9d6d7e125c3e7d3d35889f2df9"
+    },
+    {
+      "name": "attempt1/clientC/stdout.log",
+      "bytes": 30323,
+      "sha256": "f9c3906e515b827aa9fbd750681e88ec823e1266c33c3a5d27fee1c8bd26b2ce"
+    },
+    {
+      "name": "attempt1/clientD/client_scripts/owned-close.js",
+      "bytes": 446,
+      "sha256": "1f6217b044d163cdc8716f04898d392f707acf39086f8a672a8dd1bc63151eb0"
+    },
+    {
+      "name": "attempt1/clientD/client_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    {
+      "name": "attempt1/clientD/exit.json",
+      "bytes": 28,
+      "sha256": "950a1170e7eea30130f0fff75c427331824e512375d974e37b5ac1d604d11d54"
+    },
+    {
+      "name": "attempt1/clientD/logs/latest.log",
+      "bytes": 31685,
+      "sha256": "06d1f084fca7729b74d40f117bad856c2ec1ebe7245c675d09962c1fcf41724d"
+    },
+    {
+      "name": "attempt1/clientD/options.txt",
+      "bytes": 5219,
+      "sha256": "88518d790199daf974b3cd8d73dc7289f35016f37038a565f41ab0371068d8f3"
+    },
+    {
+      "name": "attempt1/clientD/owned-process.json",
+      "bytes": 196,
+      "sha256": "ce9bc0122737311b6ceae6abed36d673f9890607d2633d834550471ef0175ba7"
+    },
+    {
+      "name": "attempt1/clientD/server_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    {
+      "name": "attempt1/clientD/startup_scripts/proof-startup.js",
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    {
+      "name": "attempt1/clientD/startup_scripts/src/main.js",
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    {
+      "name": "attempt1/clientD/stderr.log",
+      "bytes": 9950,
+      "sha256": "5970cf41fc38dab8e31ff5e793112824b75247ab0e6baf19919bfb977e42fc8c"
+    },
+    {
+      "name": "attempt1/clientD/stdout.log",
+      "bytes": 27924,
+      "sha256": "5c2c58d853ab0ff492727d3911f426a78b11bdf977e35fff2287e45012a365cd"
+    },
+    {
+      "name": "attempt1/clientE/client_scripts/owned-close.js",
+      "bytes": 446,
+      "sha256": "c2a6ffbd70ce4bf8ba35b3868bd124ae75d7107bf7f5beb013ef135c979b005f"
+    },
+    {
+      "name": "attempt1/clientE/options.txt",
+      "bytes": 168,
+      "sha256": "8e88299c21b216f65452b6c1e93ca456c2395223bbef3a1747ad27b82670d9ca"
+    },
+    {
+      "name": "attempt1/clientE/startup_scripts/proof-startup.js",
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    {
+      "name": "attempt1/clientE/startup_scripts/src/main.js",
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    {
+      "name": "attempt1/dynamic-before-window.js",
+      "bytes": 660,
+      "sha256": "2aad4f71b2494d13eb27bcb049ed15f4cc0095bde1842d284ec843ed0c29a4ae"
+    },
+    {
+      "name": "attempt1/preparation.json",
+      "bytes": 217589,
+      "sha256": "034cc8fbe9dc10ed36292ecc340354c6c4a993f772e2c6f9f1090ce3874d0316"
+    },
+    {
+      "name": "attempt1/proxyC.jsonl",
+      "bytes": 1110,
+      "sha256": "dcd34b3d323ee197b29178551032b9a5a82042a66f2dddd1be8da890eb2cafb2"
+    },
+    {
+      "name": "attempt1/proxyD.jsonl",
+      "bytes": 366,
+      "sha256": "3bf1bc836f68bc77b0eac90039c9c3fb733f914a0471be9342ef2c45af58de7b"
+    },
+    {
+      "name": "attempt1/rcon.jsonl",
+      "bytes": 183,
+      "sha256": "f4972ce942fe7cb25f52c05313a35617b17939ce840aabd850de63123c5b7fee"
+    },
+    {
+      "name": "attempt1/server/client_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    {
+      "name": "attempt1/server/exit.json",
+      "bytes": 33,
+      "sha256": "2ebc2dfad61a873144337b3b8e293e6e8ec2537c0e2c99f887238872a63da3af"
+    },
+    {
+      "name": "attempt1/server/logs/latest.log",
+      "bytes": 44035,
+      "sha256": "81d1ded558f450a714c24816051577ea9466fed3b1466b80a926a427acd1b9dc"
+    },
+    {
+      "name": "attempt1/server/owned-process.json",
+      "bytes": 201,
+      "sha256": "89a23dde1c80ad595766c4cf47ad76f0fbc2a687e95dc68c0362529a4c4a9415"
+    },
+    {
+      "name": "attempt1/server/server_scripts/live-window-observer.js",
+      "bytes": 1336,
+      "sha256": "124d61fe988f25d9c4de0b1ff94157f81959793a64c6f49bb6741578287051aa"
+    },
+    {
+      "name": "attempt1/server/server_scripts/proof-dynamic.js",
+      "bytes": 756,
+      "sha256": "c8b35e70f1f7d9755adab0a9634951fa32287124721e16260b33c1a812de1a5f"
+    },
+    {
+      "name": "attempt1/server/server_scripts/proof-sync-observer.js",
+      "bytes": 2093,
+      "sha256": "9f3c15678dd6717988545c8aa68ec7a21624db32403f69775486d47099f09e60"
+    },
+    {
+      "name": "attempt1/server/server_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    {
+      "name": "attempt1/server/startup_scripts/proof-startup.js",
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    {
+      "name": "attempt1/server/startup_scripts/src/main.js",
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    {
+      "name": "attempt1/server/stderr.log",
+      "bytes": 11685,
+      "sha256": "7d58ed903b143c1598d036d6de668a8458646dbbf75eedd190dcdc7b50d9b531"
+    },
+    {
+      "name": "attempt1/server/stdout.log",
+      "bytes": 40775,
+      "sha256": "f83b46af3835ce6643372471a5a892b2c9ae80ee3116608313a3d13354bb34f6"
+    },
+    {
+      "name": "attempt2/C-prepare-held-3.json",
+      "bytes": 1493,
+      "sha256": "6284844a73facc7a090cf1ddbecdc29722665a73efdf623b128381ff8627093b"
+    },
+    {
+      "name": "attempt2/C-prepare-held-5.json",
+      "bytes": 1493,
+      "sha256": "9a271dfc883c54282fa4b5b6064c1e1daba0128d6ceb52a8b26c46bbb549d054"
+    },
+    {
+      "name": "attempt2/D-prepare-held-3.json",
+      "bytes": 1493,
+      "sha256": "6284844a73facc7a090cf1ddbecdc29722665a73efdf623b128381ff8627093b"
+    },
+    {
+      "name": "attempt2/PLAN.md",
+      "bytes": 1037,
+      "sha256": "522dd308092282bb3bbb0c94e727dbadcee8020403c43055beeb16623b57fd7a"
+    },
+    {
+      "name": "attempt2/abort-proof-exit.json",
+      "bytes": 15,
+      "sha256": "47b8b6b49d4695fe6e036bd916538aff4f46773e212ca0d429db80f3963e2cfe"
+    },
+    {
+      "name": "attempt2/abort-proof-runner.txt",
+      "bytes": 118,
+      "sha256": "5620d6325dc85945e590f42b4d199a4742aabf07f6640c927bfdcaecd55f0a19"
+    },
+    {
+      "name": "attempt2/clientC/client_scripts/owned-close.js",
+      "bytes": 455,
+      "sha256": "48ee47f387a9dbad1174527ecff83d0bffd1a67b7f5e077341e2f4f50da856f1"
+    },
+    {
+      "name": "attempt2/clientC/client_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    {
+      "name": "attempt2/clientC/exit.json",
+      "bytes": 28,
+      "sha256": "fec66b1ce435dbf45497659f5ed6c4a4efdfbf31db96b7f02058f22866e45537"
+    },
+    {
+      "name": "attempt2/clientC/logs/latest.log",
+      "bytes": 34662,
+      "sha256": "5e6c3d726a92a7f3f42df5a3ce60e75e6f1853e5e57173523740253106d84d2b"
+    },
+    {
+      "name": "attempt2/clientC/options.txt",
+      "bytes": 5218,
+      "sha256": "0ab3f99df6924f871c980439585353169b6d1c9b11861478ee92be6650b2cc7d"
+    },
+    {
+      "name": "attempt2/clientC/owned-process.json",
+      "bytes": 206,
+      "sha256": "62520cd2d13126f5efe5d968d1469c1567250fcaefa840bbf5cca30047a60ab0"
+    },
+    {
+      "name": "attempt2/clientC/server_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    {
+      "name": "attempt2/clientC/startup_scripts/proof-startup.js",
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    {
+      "name": "attempt2/clientC/startup_scripts/src/main.js",
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    {
+      "name": "attempt2/clientC/stderr.log",
+      "bytes": 10460,
+      "sha256": "81d18f7e6d94f1e8f22de1efdeeff18cb82511d8335f0628b03e8260ddf3b3b6"
+    },
+    {
+      "name": "attempt2/clientC/stdout.log",
+      "bytes": 30290,
+      "sha256": "804a5ec4eb9ea91f348cb0188b93e18ef6fa9a02d65fcab1b6eae7efc44981f5"
+    },
+    {
+      "name": "attempt2/clientD-runner.txt",
+      "bytes": 55,
+      "sha256": "9ffc90d6eaf84d8469a79505fd29130fe208d2137bc92bb7e38d8b0d05b1a183"
+    },
+    {
+      "name": "attempt2/clientD/client_scripts/owned-close.js",
+      "bytes": 455,
+      "sha256": "27b42ccd1b84c4f02849df859eb12a0a1c48083c5c69b5a52809876bf7ba5e2f"
+    },
+    {
+      "name": "attempt2/clientD/client_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    {
+      "name": "attempt2/clientD/exit.json",
+      "bytes": 28,
+      "sha256": "950a1170e7eea30130f0fff75c427331824e512375d974e37b5ac1d604d11d54"
+    },
+    {
+      "name": "attempt2/clientD/logs/latest.log",
+      "bytes": 31904,
+      "sha256": "ca59b9c3dc517ac754c6295d27a0a4eea814d05d6adeb0eccda49d774c466228"
+    },
+    {
+      "name": "attempt2/clientD/options.txt",
+      "bytes": 5219,
+      "sha256": "88518d790199daf974b3cd8d73dc7289f35016f37038a565f41ab0371068d8f3"
+    },
+    {
+      "name": "attempt2/clientD/owned-process.json",
+      "bytes": 206,
+      "sha256": "cdbd3992afff47a77a3d18f7fdd933f70522694af9e275ce340a54c62b7d2a50"
+    },
+    {
+      "name": "attempt2/clientD/server_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    {
+      "name": "attempt2/clientD/startup_scripts/proof-startup.js",
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    {
+      "name": "attempt2/clientD/startup_scripts/src/main.js",
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    {
+      "name": "attempt2/clientD/stderr.log",
+      "bytes": 9962,
+      "sha256": "76aa96a807c3516dcff4a8005ebe94c402ed4c6bf8ccfb133ea29d397fd43586"
+    },
+    {
+      "name": "attempt2/clientD/stdout.log",
+      "bytes": 28103,
+      "sha256": "bf416e31b8955242b012aab430d23ea6dc36467318e60408dee7b1acead02001"
+    },
+    {
+      "name": "attempt2/clientE-runner.txt",
+      "bytes": 55,
+      "sha256": "19a105af7f27577bc7205c137f6c7a92ad3e31494fb1594ee79049ea4c45a92e"
+    },
+    {
+      "name": "attempt2/clientE/client_scripts/owned-close.js",
+      "bytes": 455,
+      "sha256": "3edf67ba34846b73d43f71128ff736d77e739b719868f280341d2a110f33dba6"
+    },
+    {
+      "name": "attempt2/clientE/client_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    {
+      "name": "attempt2/clientE/exit.json",
+      "bytes": 28,
+      "sha256": "4842c88aa23e0df54c9288fb590b04560fb336977c3c56e8baca3f12fe5e7ed6"
+    },
+    {
+      "name": "attempt2/clientE/logs/latest.log",
+      "bytes": 34045,
+      "sha256": "8aac8a73b6a0292a4725fa00448828bf89dac3e247e5fea071104e4b7c835fdf"
+    },
+    {
+      "name": "attempt2/clientE/options.txt",
+      "bytes": 5218,
+      "sha256": "0ab3f99df6924f871c980439585353169b6d1c9b11861478ee92be6650b2cc7d"
+    },
+    {
+      "name": "attempt2/clientE/owned-process.json",
+      "bytes": 206,
+      "sha256": "8e3d28c360e1889969e0bafbaca8fd03704bfbbdf6436caab2d9f06db309e7fd"
+    },
+    {
+      "name": "attempt2/clientE/server_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    {
+      "name": "attempt2/clientE/startup_scripts/proof-startup.js",
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    {
+      "name": "attempt2/clientE/startup_scripts/src/main.js",
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    {
+      "name": "attempt2/clientE/stderr.log",
+      "bytes": 9962,
+      "sha256": "150b514d3f0565165b8f12fbe12721fd0072e4c87203842753e3e9dc9268a623"
+    },
+    {
+      "name": "attempt2/clientE/stdout.log",
+      "bytes": 29758,
+      "sha256": "f180917578c346ecb8dab5a48bbf961bb7ab2d52ad3de59fd35c609301937e4f"
+    },
+    {
+      "name": "attempt2/commit-proof-exit.json",
+      "bytes": 15,
+      "sha256": "47b8b6b49d4695fe6e036bd916538aff4f46773e212ca0d429db80f3963e2cfe"
+    },
+    {
+      "name": "attempt2/commit-proof-runner.txt",
+      "bytes": 88,
+      "sha256": "0be45f4de956327f592a7d6a08aa66d95c26c9c26cecb1a6bdcbeb0fbaec5111"
+    },
+    {
+      "name": "attempt2/configuration-commit-verdict.json",
+      "bytes": 7297,
+      "sha256": "cbb67dbe24fe0bf084221edd2d82357101b08f8d2447ba5bbe39bbe3645b935a"
+    },
+    {
+      "name": "attempt2/dynamic-before-window.js",
+      "bytes": 660,
+      "sha256": "2aad4f71b2494d13eb27bcb049ed15f4cc0095bde1842d284ec843ed0c29a4ae"
+    },
+    {
+      "name": "attempt2/orchestrator-exit.json",
+      "bytes": 202,
+      "sha256": "d9ef166eba9df07ef7f558c12c359217462f8d2ef09793c591aa9335dabe538d"
+    },
+    {
+      "name": "attempt2/orchestrator-runner.txt",
+      "bytes": 365,
+      "sha256": "c9a477d9485c8754c566f396a33d503eec392f266c13f0163842a019eb1775b4"
+    },
+    {
+      "name": "attempt2/preparation.json",
+      "bytes": 217589,
+      "sha256": "034cc8fbe9dc10ed36292ecc340354c6c4a993f772e2c6f9f1090ce3874d0316"
+    },
+    {
+      "name": "attempt2/proxyC.jsonl",
+      "bytes": 3706,
+      "sha256": "4648ffb90790901bfc9c57f44a336b31c537e3f0f7b462991e03d8e63b44b7bd"
+    },
+    {
+      "name": "attempt2/proxyD-runner.txt",
+      "bytes": 51,
+      "sha256": "d538301831cd029c178a0d05ce3f25b15f66c8207f27467a7192b4721ebf2cc2"
+    },
+    {
+      "name": "attempt2/proxyD.jsonl",
+      "bytes": 844,
+      "sha256": "6d3139ce37579f8015755064d34c7dec9e53632905db66a78543de674bd1f1e7"
+    },
+    {
+      "name": "attempt2/proxyE-runner.txt",
+      "bytes": 51,
+      "sha256": "2274379f1d529fe3ace3a11cc1b54203c6ecfcc72b513db74d0c274bf39e3b4f"
+    },
+    {
+      "name": "attempt2/proxyE.jsonl",
+      "bytes": 1415,
+      "sha256": "73d91dd608918a9a6961167c57e1ca3f7b98cdb02e27be45c33f79abc2959cd6"
+    },
+    {
+      "name": "attempt2/rcon.jsonl",
+      "bytes": 850,
+      "sha256": "fc4ec3dea012df30bdabc849d7eea3882dbc5ce3b30316497c705d03a688099a"
+    },
+    {
+      "name": "attempt2/server/client_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    {
+      "name": "attempt2/server/exit.json",
+      "bytes": 33,
+      "sha256": "2ebc2dfad61a873144337b3b8e293e6e8ec2537c0e2c99f887238872a63da3af"
+    },
+    {
+      "name": "attempt2/server/logs/latest.log",
+      "bytes": 100339,
+      "sha256": "f1869e90aae32f15e0124720731d9cf7e1c90b3bfad88677d18cac01fecd3617"
+    },
+    {
+      "name": "attempt2/server/owned-process.json",
+      "bytes": 210,
+      "sha256": "4f1e40a8d71b9741b16868ff030b3b247e1660ce70d8ea094375722c96b42cf4"
+    },
+    {
+      "name": "attempt2/server/server_scripts/live-window-observer.js",
+      "bytes": 1336,
+      "sha256": "124d61fe988f25d9c4de0b1ff94157f81959793a64c6f49bb6741578287051aa"
+    },
+    {
+      "name": "attempt2/server/server_scripts/proof-dynamic.js",
+      "bytes": 756,
+      "sha256": "c8b35e70f1f7d9755adab0a9634951fa32287124721e16260b33c1a812de1a5f"
+    },
+    {
+      "name": "attempt2/server/server_scripts/proof-sync-observer.js",
+      "bytes": 2093,
+      "sha256": "9f3c15678dd6717988545c8aa68ec7a21624db32403f69775486d47099f09e60"
+    },
+    {
+      "name": "attempt2/server/server_scripts/src/main.js",
+      "bytes": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    {
+      "name": "attempt2/server/startup_scripts/proof-startup.js",
+      "bytes": 696,
+      "sha256": "ee76e7bf2322e1b77b8c4753558dcdbb01bb9a31fdcd621dd2ee3305f5706b76"
+    },
+    {
+      "name": "attempt2/server/startup_scripts/src/main.js",
+      "bytes": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    {
+      "name": "attempt2/server/stderr.log",
+      "bytes": 11694,
+      "sha256": "59ab94a2fb3976ebd34d76d5d86d3d5f73ab35184f207d19723bac416dd19a8e"
+    },
+    {
+      "name": "attempt2/server/stdout.log",
+      "bytes": 95880,
+      "sha256": "0a164995c459e1fefc495bbb0849175ac1eb9f5abf1d5b5952f5da1f367b6615"
+    },
+    {
+      "name": "attempt2/window-verdict.json",
+      "bytes": 9612,
+      "sha256": "a6071a0d492055aca2f6e72968625fb4cbd5ad1ac3689dc18ea924d5e9ec49df"
+    },
+    {
+      "name": "helpers/archive-current-window-7d.py",
+      "bytes": 5273,
+      "sha256": "17456a2f55c92ec1ae5db2eb6e19feeb1ad72b8f837db54f31d324326dc4a40e"
+    },
+    {
+      "name": "helpers/orchestrate-current-window-attempt2.py",
+      "bytes": 3506,
+      "sha256": "d57cc2081e892c05dc033d55a56426a88c54634f5d54e3e0eee6de122b48303c"
+    },
+    {
+      "name": "helpers/prepare-current-window-7d-attempt2.py",
+      "bytes": 7170,
+      "sha256": "9a0a19ddb274e671a9207164ad4fe15ffdbee233b4888412aa5db8972528af58"
+    },
+    {
+      "name": "helpers/prepare-current-window-7d.py",
+      "bytes": 7028,
+      "sha256": "3f6814b4c06eff0a37a6c73197401046581dffe90eec5b383ee04826e9c2354a"
+    },
+    {
+      "name": "helpers/prepare-current-window-proofs.py",
+      "bytes": 2357,
+      "sha256": "641ebc9c2383b403e1df708f0cd2414306fdf3b87f897503d49218ca004d9aa3"
+    },
+    {
+      "name": "helpers/prove-current-abort-window-7d-attempt2.py",
+      "bytes": 4155,
+      "sha256": "b280e3407d775f226da0cdf0d3958896ae799687b25aa37acf848ff2c5dba79e"
+    },
+    {
+      "name": "helpers/prove-current-abort-window-7d.py",
+      "bytes": 4137,
+      "sha256": "a2847822700d8ce62bf961da15480e8a9d181fb3060c197566b0f5b03c1d5daa"
+    },
+    {
+      "name": "helpers/prove-current-commit-window-7d-attempt2.py",
+      "bytes": 2549,
+      "sha256": "e8498bae27620c522c5dfa2ed6e9a72d987d46b45285bad9dfb1ebda04cc193d"
+    },
+    {
+      "name": "helpers/prove-current-commit-window-7d.py",
+      "bytes": 2531,
+      "sha256": "ab7a05601d9fefacb2ee4d6ad11879b94b41eed1a38e55aca7f1ea5ef66e868c"
+    },
+    {
+      "name": "helpers/proxy-current-window-7d-attempt2.py",
+      "bytes": 5308,
+      "sha256": "57166152688f4d843393eb35763a16433e3338607c4a4ce70e26298666a3d388"
+    },
+    {
+      "name": "helpers/proxy-current-window-7d.py",
+      "bytes": 5308,
+      "sha256": "57166152688f4d843393eb35763a16433e3338607c4a4ce70e26298666a3d388"
+    },
+    {
+      "name": "helpers/rcon-current-window-7d-attempt2.py",
+      "bytes": 1089,
+      "sha256": "0f150d0cdcedae3790c44a51a0fd785ce182439cb09a5c535bfc4cfebd780b8d"
+    },
+    {
+      "name": "helpers/rcon-current-window-7d.py",
+      "bytes": 1080,
+      "sha256": "f68bbd1c84dfde725e55a3c6f25b9eab3892aae03b029ea664829510e5bcdd56"
+    },
+    {
+      "name": "helpers/run-current-window-7d-attempt2.py",
+      "bytes": 4640,
+      "sha256": "2ddb17910f8e8ab8b446a0c5c824884b17a0b18c0f7321eb903cf9ea8e50b941"
+    },
+    {
+      "name": "helpers/run-current-window-7d.py",
+      "bytes": 4640,
+      "sha256": "2ddb17910f8e8ab8b446a0c5c824884b17a0b18c0f7321eb903cf9ea8e50b941"
+    }
+  ],
+  "exclusions": [
+    "server.properties and RCON credentials",
+    "worlds",
+    "launcher argument files",
+    "JARs and native binaries",
+    "raw JFR and hs_err",
+    "unrelated user files"
+  ]
+}
