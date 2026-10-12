@@ -1,0 +1,82 @@
+{
+  "sourceBase": "da6bad60385d8685b34e58af02c92d3da8d293b5",
+  "initialFullMatrix": "FAIL",
+  "focusedMethod": "PASS",
+  "focusedClass": "PASS",
+  "finalFullMatrix": "PASS",
+  "failureRootCause": "NOT_ESTABLISHED",
+  "productionTrustChange": "NONE",
+  "testGuard": "STRICTER_REJECTION_STAGE",
+  "archive": {
+    "file": "pack-stage-evidence.zip",
+    "bytes": 21788,
+    "sha256": "1d5cbd01beede80c418614b1ede9f816de327d33610bdc8b0d4098588be4b082"
+  },
+  "entries": [
+    {
+      "name": "checks/archive-pack-stage-guard.py",
+      "bytes": 2620,
+      "sha256": "9395423486dcb22d1789fd0cca45e5620ae2c3a2c12143e2efccabf53d3fc17f"
+    },
+    {
+      "name": "checks/pack-reload-class-check-exit.json",
+      "bytes": 23,
+      "sha256": "ea61d7736f0b7ecb9b35158f03de77013db6b100cf1d36c957e78e6c8817c5b6"
+    },
+    {
+      "name": "checks/pack-reload-class-check.txt",
+      "bytes": 2812,
+      "sha256": "b17a846836093837c05ebfadd86df9717b73e1274d614d33a700a1c343a6cef4"
+    },
+    {
+      "name": "checks/pack-reload-failure-focused-exit.json",
+      "bytes": 23,
+      "sha256": "ea61d7736f0b7ecb9b35158f03de77013db6b100cf1d36c957e78e6c8817c5b6"
+    },
+    {
+      "name": "checks/pack-reload-failure-focused.txt",
+      "bytes": 2790,
+      "sha256": "ed7573d40f98081135a8e177744f571b04f1475b9b4e341758ae213172836790"
+    },
+    {
+      "name": "checks/sam-module-import-matrix-final-exit.json",
+      "bytes": 23,
+      "sha256": "ea61d7736f0b7ecb9b35158f03de77013db6b100cf1d36c957e78e6c8817c5b6"
+    },
+    {
+      "name": "checks/sam-module-import-matrix-final.txt",
+      "bytes": 8203,
+      "sha256": "f6de032b94e52ff6cc964897fdb992238b8f45022315977f86ce4b0f26f297ef"
+    },
+    {
+      "name": "checks/sam-module-import-matrix-green-exit.json",
+      "bytes": 23,
+      "sha256": "c34bc644b4dfc96082e294ccb49ac40bdf34a3c659c956ffef43981ed30b2234"
+    },
+    {
+      "name": "checks/sam-module-import-matrix-green.txt",
+      "bytes": 24413,
+      "sha256": "edbe12df7cd031c12fff032cc5b5f056c4260856220f29e3a5e1be8235c70775"
+    },
+    {
+      "name": "failed/PackSyncClientTest.xml",
+      "bytes": 5523,
+      "sha256": "5b33ff42455c8364d5482a3a3dd43bbcffd2402960fd99d986d0756e20333ecf"
+    },
+    {
+      "name": "final-matrix/PackSyncClientTest.xml",
+      "bytes": 4071,
+      "sha256": "6901b65afce0a6fdfc4c60fcf0ce5edbc11f5268b5692c22fbac03c31347d161"
+    },
+    {
+      "name": "source/common/src/test/java/com/tkisor/nekojs/core/pack/sync/PackSyncClientTest.java",
+      "bytes": 43594,
+      "sha256": "2022621dcc70b4bff75db7d9e04d59dc56ff9783c82103d80523cf578a8c330f"
+    },
+    {
+      "name": "source/test.patch",
+      "bytes": 1062,
+      "sha256": "0e1dbce7e271b27b14eddc275a3984d68130f059a22a527dd91b2d6516f8554d"
+    }
+  ]
+}

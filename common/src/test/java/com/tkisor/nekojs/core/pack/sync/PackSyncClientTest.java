@@ -204,7 +204,7 @@ class PackSyncClientTest {
         PackSyncClient.Outcome outcome = PackSyncClient.handleBundle(runtimeRoot, List.of(pack));
 
         assertTrue(outcome.shouldDisconnect(), "a failed client reload must reject the bundle");
-        assertTrue(outcome.disconnect().contains("reload"));
+        assertTrue(outcome.disconnect().contains("CLIENT script reload failed"), outcome.disconnect());
         assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty(),
                 "the selected server cache must not remain active after reload failure");
         Path remoteFile = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor("srv-reload-failure.test"))
