@@ -33,3 +33,5 @@ python tools/nekojs-ci-gates.py all --out build/ticket37-manual-item-repair/plat
 [证据 ZIP](manual-item-evidence.zip)：4286 entries、7808262 bytes，SHA256 `996eacfc663e8e29e9b0fc06d30bc8e2d6cd50a4d11a6ac9f07bc3fb8972f84c`。[逐项清单](manifest.json)、[独立验证器](verify.py)检查完整 hash、矩阵 XML、RED/GREEN caller、受限运行时回归、实际退出和剩余失败。
 
 新补丁正式性能 NOT RUN；[d109 正式性能 PASS](../ticket37-current-d109-performance/README.md)属于旧精确 revision，不能继承为本补丁验收。完整 IDE、Python 同名 field/method、其他多人/下载/首像素/客户端节点/领域/磁盘及真实维护者和发布回滚验收仍未完成。自动续跑暂停，工具权限字段问题未解决；A22/A28 和发布授权边界不变，整体 NOT COMPLETE。
+
+后续精确提交63d538dc的[正式性能](../ticket37-manual-item-performance/README.md)已执行：重载372.2/366.8ms FAIL285.3，启动11941.2ms PASS41173。上面的 NOT RUN 和冻结结果描述本修复归档时状态；新失败单独保留，不改写历史 ZIP，不继承旧PASS。
