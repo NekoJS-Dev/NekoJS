@@ -40,6 +40,35 @@ public final class NodeModuleTypeDocs {
     public static void registerBuiltin(TypeDocsRegister registry) {
         scanBuiltinTypeScriptModules(registry);
         registerCommonJsGlobals(registry);
+        registerConsoleGlobal(registry);
+    }
+
+    /** Declares the GraalJS console supplied by every context; Neko's warn/debug wrappers retain these calls. */
+    private static void registerConsoleGlobal(TypeDocsRegister registry) {
+        String declaration = """
+                interface Console {
+                    log(...values: unknown[]): void;
+                    info(...values: unknown[]): void;
+                    debug(...values: unknown[]): void;
+                    dir(...values: unknown[]): void;
+                    error(...values: unknown[]): void;
+                    warn(...values: unknown[]): void;
+                    assert(condition?: unknown, ...values: unknown[]): void;
+                    clear(): void;
+                    count(label?: unknown): void;
+                    countReset(label?: unknown): void;
+                    group(...values: unknown[]): void;
+                    groupCollapsed(...values: unknown[]): void;
+                    groupEnd(): void;
+                    time(label?: unknown): void;
+                    timeEnd(label?: unknown): void;
+                    timeLog(label?: unknown, ...values: unknown[]): void;
+                }
+                declare var console: Console;
+                """;
+        registry.registerManualDeclaration(ManualDeclarationCatalogEntry.of(
+                "nekojs.node-auto.console-global", declaration,
+                "GraalJS console methods available in script contexts.", List.of("console.info('ready')")));
     }
 
     /**

@@ -27,6 +27,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class NodeModuleTypeDocsTest {
 
     @Test
+    void declaredConsoleMethodsExistOnTheRealGraalContext() {
+        try (graal.graalvm.polyglot.Context context = graal.graalvm.polyglot.Context.newBuilder("js")
+                .allowHostClassLookup(name -> false).allowCreateProcess(false).allowCreateThread(false).build()) {
+            assertTrue(context.eval("js", "['log','info','debug','dir','error','warn','assert','clear',"
+                    + "'count','countReset','group','groupCollapsed','groupEnd','time','timeEnd','timeLog']"
+                    + ".every(name => typeof console[name] === 'function')").asBoolean());
+        }
+    }
+
+    @Test
     void erasedAssertExportsItsActualCallableAndBooleanHelper() throws Exception {
         String source = readResource("nekojs/node/modules/assert.ts");
         String erased = NekoTypeScriptCompiler.eraseTypescript(Path.of("assert.ts"), source);
@@ -291,6 +301,9 @@ class NodeModuleTypeDocsTest {
         Files.createDirectories(generated.getParent());
         Files.writeString(generated, all, StandardCharsets.UTF_8);
         assertFalse(all.contains("export declare class"), all);
+        assertTrue(all.contains("interface Console {"), all);
+        assertTrue(all.contains("declare var console: Console;"), all);
+        assertEquals(1, entries.stream().filter(entry -> entry.id().equals("nekojs.node-auto.console-global")).count());
         // 自动提取的 example.ts 模块声明
         assertTrue(all.contains("declare module 'node:example' {"), all);
         assertTrue(all.contains("declare module 'example' {"), all);

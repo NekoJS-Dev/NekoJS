@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
  */
 public final class TypeScriptClassRenderer {
     private final TypeAliasRegistry aliases;
+    private Set<String> interfaceClassBindings = Set.of();
 
     // 覆盖 getter 的返回类型 (fqn -> getter 属性名 -> { returnType, importStatement })
     // 键是 getter 的**属性名**（如 "recipes"），与 ClassDeclGenerator 的 lookup 口径一致
@@ -29,6 +30,19 @@ public final class TypeScriptClassRenderer {
 
     public TypeScriptClassRenderer(TypeAliasRegistry aliases) {
         this.aliases = aliases;
+    }
+
+    /** Requires interface class values referenced by direct or delegated Bindings, even without static members. */
+    public void setInterfaceClassBindings(Set<String> names) {
+        interfaceClassBindings = Set.copyOf(names);
+    }
+
+    /** Shares value presence with canonical exports so renamed Bindings reference the same actual class value. */
+    public boolean hasClassValue(TypeDecl declaration) {
+        return !declaration.hidden && (declaration.kind != TypeDecl.Kind.INTERFACE
+                || interfaceClassBindings.contains(declaration.fqn)
+                || declaration.methods.stream().anyMatch(method -> !method.hidden && method.isStatic)
+                || declaration.fields.stream().anyMatch(field -> !field.hidden && field.isStatic && field.isFinal));
     }
 
     /** getter 覆盖条目：返回类型字符串 + 附带 import 语句（import 由 IndexFileGenerator 合并，本类不消费）。 */
@@ -73,6 +87,7 @@ public final class TypeScriptClassRenderer {
     public String render(TypeDecl decl, TypeAliasRegistry moduleAliases) {
         TypeScriptClassRenderer scoped = new TypeScriptClassRenderer(moduleAliases);
         scoped.getterOverrides.putAll(getterOverrides);
+        scoped.interfaceClassBindings = interfaceClassBindings;
         return scoped.render(decl);
     }
 
@@ -193,9 +208,7 @@ public final class TypeScriptClassRenderer {
         }
         sb.append("    }\n");
 
-        boolean hasStaticMembers = d.methods.stream().anyMatch(m -> !m.hidden && m.isStatic)
-                || d.fields.stream().anyMatch(f -> !f.hidden && f.isStatic && f.isFinal);
-        if (!hasStaticMembers) return sb.toString();
+        if (!hasClassValue(d)) return sb.toString();
 
         // TypeScript interfaces describe instances; Java.type exposes static members on a separate value.
         // A merged object declaration retains quoted names and overloads without inheriting interface factories.

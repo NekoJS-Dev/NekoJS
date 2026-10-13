@@ -32,6 +32,24 @@ class TypeScriptInterfaceStaticSurfaceTest {
     public interface ChildApi extends ValueApi<String> {}
 
     @Test
+    void emptyInterfaceClassValueIsRequiredOnlyForAnActualBinding() {
+        var declaration = new TypeReflector().reflect(ChildApi.class);
+        var renderer = new TypeScriptClassRenderer(new TypeAliasRegistry());
+        assertFalse(renderer.render(declaration).contains("export const"));
+        renderer.setInterfaceClassBindings(java.util.Set.of(ChildApi.class.getName()));
+        String output = renderer.render(declaration);
+        assertTrue(output.contains("export const $TypeScriptInterfaceStaticSurfaceTest$ChildApi: {\n    };"), output);
+        assertFalse(output.contains("of<R>"), output);
+        assertFalse(output.contains("LEVEL"), output);
+        assertTrue(renderer.render(declaration, new TypeAliasRegistry()).contains("export const"));
+        declaration.hidden = true;
+        assertEquals("", renderer.render(declaration));
+        declaration.hidden = false;
+        renderer.setInterfaceClassBindings(java.util.Set.of());
+        assertFalse(renderer.render(declaration).contains("export const"));
+    }
+
+    @Test
     void editedStaticMembersRetainQuotedNamesAndHiddenMembersLeaveNoValueSurface() {
         var declaration = new TypeReflector().reflect(ValueApi.class);
         declaration.renameTo = "EditedApi";

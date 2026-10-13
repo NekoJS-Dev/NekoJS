@@ -1,0 +1,9 @@
+{
+  "archive": "caller-inputs.zip",
+  "sha256": "ba66f319b8f1db898c686f8cb0add34d3037ea34b09202d5d7bd94e1dad63571",
+  "entries": {
+    "common/build/probe-ts-node-ambient-classes/builtin.d.ts": "a9689a51fe5482d1e51a7075d84c6781d8b8387641b8a195eebeed21bc61c9a1",
+    "common/build/probe-ts-interface-binding/types.d.ts": "088102d4511b596c3833beddbcdbae41d980f4e53b3f3d7e9cb1cb70cd1b5360",
+    "common/build/probe-ts-interface-binding/bindings.d.ts": "3eb7f0e34f31dce484ced6acd5a12312641f3297d58b6aeb5c9552ba8df88180"
+  }
+}

@@ -34,6 +34,12 @@ class HostIdentityInputTest {
                 assertThrows(PolyglotException.class,
                         () -> context.eval("js", "identity." + member + "().compareTo('unadapted')"));
             }
+            assertThrows(PolyglotException.class,
+                    () -> context.eval("js", "identity.uuid().compareTo('00000000-0000-0000-0000-000000000001')"));
+            assertThrows(PolyglotException.class,
+                    () -> context.eval("js", "identity.path().compareTo('identity-fixture')"));
+            assertThrows(PolyglotException.class,
+                    () -> context.eval("js", "identity.file().compareTo('identity-fixture')"));
         }
     }
 

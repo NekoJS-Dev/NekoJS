@@ -318,3 +318,15 @@ Diagnostic-only progress (not final acceptance): compile-only common/classes+NF2
 真实默认server/startup includes、仅skipLibCheck=false的TSC仍FAIL：588/588、746/746、640/640、1164/1164、919/919；此前632/633、789/790、684/685、1195/1196、951/952原始错误仍归档。NeoForge移除49条/新增4–6，Fabric移除37/新增4–6，新增是真实深度边界符号与测试脚本console缺声明；不是所有问题同一根因。Pyright1.1.414仍7/7/7/13/13重声明FAIL。ZIP4618条目/8850020字节 SHA fb9d4795b5087ec7e479b055744df44ba71cda6b66e2f85f5de4b6a785337700 独立复核PASS。无安全/深度放宽、假别名、删manual、world/密码/私钥/JAR/rawJFR/进程args归档；五实际RCON密码扫描通过。自审完成，没有本轮并行代理审查。
 
 后续先处理实机暴露的console缺声明、接口类Binding仅类型值（ParticleOptions）及真实依赖闭包，再补Python字段/调用双行为与精确源码性能、剩余客户端/第一帧/领域/磁盘验收。当前源码性能NOT_RUN，历史7d reload FAIL保留；人类维护者NOT_RECORDED，整体NOT_COMPLETE，自动续跑PAUSED，工具权限字段UNRESOLVED，A22/A28及发布边界不变。
+
+已提交并推送0881f29bfe9c4137f58adae7c2003a588dfdd12a，远端一致。继续的未提交批次位于NodeModuleTypeDocs、TypeScriptProbeBackend、TypeScriptClassRenderer及相应回归：声明真实Graal console16方法；只为emit且没有typeOverride的实际interface class Binding补class值，普通unbound/instance/suppressed/hidden接口及静态隐藏行为保持原状，scoped渲染共享绑定事实，复用backend每次重设以防泄漏。预备TypeScriptInterfaceBindingTest、Console真实方法/默认声明检查及有效UUID/path/file字符串的宿主转换负例；当前均NOT_RUN，不能继承0881的4818矩阵/五JAR/1605AST验收。计划在build/ticket37-interface-console-batch/PLAN.md，仍在源码收敛阶段，当前没有运行中构建、测试或游戏进程。后续集中验证该批次，再继续真实依赖闭包/其他完整验收，不把这两个声明缺口修复当整体完成。
+
+### 2026-10-13 Console / 接口类值批次最终集中验收
+
+[完整包](../ticket37-interface-console-repair/README.md) 绑定0881基点及最终生产补丁752c26d164b52e97fb3f5a1a151ad0b7ef634d49d5fa871dcfd995d585b9fbc2。首个负例harness误带DOM，仅1/3诊断，原配置/输出保留，改成真实editor的ESNext lib后3/2负例与正例PASS；首个实机仅处理direct class Binding，console消失而ParticleOptions委托错误仍在，数据和3m24s矩阵保留为中间结果。最终从实际Binding.extraDocTypes补齐委托类值，并在TypeScriptClassRenderer.hasClassValue统一重命名canonical export事实；没有推测任意typeOverride文本或伪造静态工厂。普通未绑定/实例/emit抑制/隐藏/主override、模块局部渲染、委托override、rename/hide/reset与真实MetaObject/console16方法/有效宿主字符串负例PASS。无需golden变更。
+
+最终普通矩阵4822测试/271跳过/813XML/零失败，109任务2m38s；common隔离、APIprocessor、guardLint、三NBT、五build、Probe TSC、四CIgate均PASS，未累计三组测试或混源码。最终五官方JAR/全1512/1592/1592/1518/1518编译类绑定、freshworld注册/放置/普通重载/NFfluid/26.1effect、原生ESM assert及UUID首轮/重载后PASS。三独立实机环境共15JVM全部正常RCON/direct0、30端口空闲、无hs_err/强杀/HTTPbridge/桌面激活；最终1605Python AST PASS，三环境4815只表示重复验收数据，不作为更多平台覆盖。原始bytes读取避免重演已知legacy日志编码错误。
+
+最终真实默认server/startup includes仅skipLibCheck=false/noEmit仍FAIL：586/587、744/745、638/639、1162/1163、917/918；相对0881每server移除console及ParticleOptions2条、每startup移除ParticleOptions1条，新增0。Pyright1.1.414仍7/7/7/13/13重声明FAIL。主要ZIP12837条目25591916字节 SHA3ea1a9ede8265ffa4e763d6913a0a0ac868ba0b6b36ed9f638e4bf80920db367，严格caller原始输入补包SHAba66f319b8f1db898c686f8cb0add34d3037ea34b09202d5d7bd94e1dad63571；独立校验矩阵、hash、全部AST/15退出/真实目标错误消失/保留失败PASS。writer自身规则私钥标记触发过滤，正文排除且SHA绑定，未关闭扫描；15实际专属配置密码扫描PASS。无world/密码/私钥/JAR/rawJFR/进程args归档。自审完成，无本轮并行代理审查。
+
+继续真实依赖闭包、Python双行为与精确新源码性能，以及剩余第一帧/其他客户端节点/领域/磁盘窗口和交接材料。旧7d reload FAIL保留；新源码正式性能NOT_RUN；人类maintainer NOT_RECORDED，整体NOT_COMPLETE，自动续跑PAUSED，工具权限字段UNRESOLVED，A22/A28与发布边界保持。当前无运行中构建、测试或专属游戏进程。

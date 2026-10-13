@@ -252,10 +252,9 @@ public final class IndexFileGenerator {
                 .append(declaration.typeParams.isEmpty() ? "" : parameters)
                 .append(" = ").append(renamed)
                 .append(declaration.typeParams.isEmpty() ? "" : arguments).append(";\n");
-        boolean hasValue = declaration.kind != TypeDecl.Kind.INTERFACE
-                || declaration.methods.stream().anyMatch(method -> !method.hidden && method.isStatic)
-                || declaration.fields.stream().anyMatch(field -> !field.hidden && field.isStatic && field.isFinal);
-        if (hasValue) output.append("    export const ").append(canonical).append(": typeof ").append(renamed).append(";\n");
+        if (irRenderer.hasClassValue(declaration)) {
+            output.append("    export const ").append(canonical).append(": typeof ").append(renamed).append(";\n");
+        }
     }
 
     private Set<String> exportedSymbols(String fqn) {

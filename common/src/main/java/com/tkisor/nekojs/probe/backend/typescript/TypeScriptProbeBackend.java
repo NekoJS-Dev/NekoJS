@@ -98,6 +98,19 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     public Map<String, String> render(ProbeContext ctx) {
         applyBuiltinGetterOverrides();
         NekoScriptCatalogSnapshot snapshot = ctx.snapshot();
+        Set<String> interfaceClassBindings = new LinkedHashSet<>();
+        for (BindingCatalogEntry binding : snapshot.bindings()) {
+            if (!binding.emit()) continue;
+            if (binding.staticClass() && binding.javaType() != null && binding.javaType().isInterface()
+                    && (binding.typeOverride() == null || binding.typeOverride().isEmpty())) {
+                interfaceClassBindings.add(binding.javaType().getName());
+            }
+            // Delegating Bindings always intersect their helper with each target's static class value.
+            for (Class<?> extra : binding.extraDocTypes()) {
+                if (extra.isInterface()) interfaceClassBindings.add(extra.getName());
+            }
+        }
+        tsClassRenderer.setInterfaceClassBindings(interfaceClassBindings);
         List<String> platformPkgs = ProbeConfigLoader.platformDefaultPackages();
         Map<String, String> files = new LinkedHashMap<>();
         try {
