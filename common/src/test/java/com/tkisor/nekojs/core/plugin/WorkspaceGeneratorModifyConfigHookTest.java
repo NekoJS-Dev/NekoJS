@@ -8,6 +8,9 @@ import com.tkisor.nekojs.api.catalog.TypeOutputLayout;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
 import com.tkisor.nekojs.core.fs.JSConfigModel;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.pack.ScriptPackRegistry;
+import com.tkisor.nekojs.core.pack.sync.PackHasher;
+import com.tkisor.nekojs.core.pack.sync.SyncedPack;
 import com.tkisor.nekojs.script.WorkspaceGenerator;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.AfterEach;
@@ -24,6 +27,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -129,6 +133,56 @@ class WorkspaceGeneratorModifyConfigHookTest {
             String json = Files.readString(config);
             assertTrue(json.contains(RecordingWorkspacePlugin.MARKER_INCLUDE),
                     "插件追加的 include 应写入 " + config + "，实际内容: " + json);
+        }
+    }
+
+    @Test
+    void workspaceGenerationPreservesSignedAndServerCacheContent() throws Exception {
+        ScriptPackRegistry registry = ScriptPackRegistry.get();
+        List<Field> fields = List.of(field(ScriptPackRegistry.class, "globalPacks"),
+                field(ScriptPackRegistry.class, "worldPacks"),
+                field(ScriptPackRegistry.class, "serverCachePacks"),
+                field(ScriptPackRegistry.class, "globalScanned"));
+        List<Object> previous = new ArrayList<>();
+        for (Field entry : fields) previous.add(entry.get(registry));
+        try {
+            Path packs = NekoJSPaths.get().root().resolve("packs");
+            Path signed = packs.resolve("signed");
+            Path local = packs.resolve("local");
+            Path cached = gameDir.resolve("owned-cache").resolve(SyncedPack.encodeSyncId("packs:cached"));
+            for (Path pack : List.of(signed, local, cached)) {
+                Files.createDirectories(pack.resolve("client_scripts"));
+                Files.writeString(pack.resolve("client_scripts/proof.js"), "console.info('PACK-FIXTURE');\n");
+                Files.writeString(pack.resolve("manifest.json"),
+                        pack.equals(signed)
+                                ? "{\"id\":\"signed\",\"signature\":{\"algorithm\":\"Ed25519\"}}"
+                                : "{\"id\":\"local\"}");
+            }
+            Files.createDirectories(signed.resolve("server_scripts"));
+            Path existing = signed.resolve("server_scripts/jsconfig.json");
+            String edited = "{\"user\":\"preserve signed bytes\"}\n";
+            Files.writeString(existing, edited);
+            String signedHash = PackHasher.hashPackDir(signed);
+            String cachedHash = PackHasher.hashPackDir(cached);
+            registry.refreshGlobalPacks(packs);
+            registry.activateServerCachePacks(cached.getParent());
+
+            WorkspaceGenerator.createWorkspaceConfigs();
+            WorkspaceGenerator.createWorkspaceConfigs();
+
+            assertEquals(signedHash, PackHasher.hashPackDir(signed),
+                    "workspace generation must not invalidate a signed content hash");
+            assertEquals(cachedHash, PackHasher.hashPackDir(cached),
+                    "workspace generation must preserve received server-cache bytes");
+            assertFalse(Files.exists(signed.resolve("client_scripts/jsconfig.json")));
+            assertFalse(Files.exists(cached.resolve("client_scripts/jsconfig.json")));
+            assertEquals(edited, Files.readString(existing));
+            assertTrue(Files.isRegularFile(local.resolve("client_scripts/jsconfig.json")),
+                    "unsigned local packs still receive their workspace configuration");
+            assertTrue(Files.isRegularFile(NekoJSPaths.get().clientScripts().resolve("jsconfig.json")),
+                    "the root-owned workspace is still generated");
+        } finally {
+            for (int i = 0; i < fields.size(); i++) fields.get(i).set(registry, previous.get(i));
         }
     }
 

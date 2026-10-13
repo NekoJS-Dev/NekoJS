@@ -48,6 +48,7 @@ public final class WorkspaceGenerator {
                     - client_scripts: Runs on the client only. Used for GUI, key bindings, etc.
                     - test_scripts: Explicit smoke/regression scripts. Run with /nekojs test; they are not loaded by normal startup or reload.
                     - packs: Optional script packs. Each pack is a folder with a manifest.json plus its own startup/server/client/test_scripts subfolders; load order is packs first, then the flat folders above.
+                    - Signed and server-cache packs are not modified by workspace generation. Include any pack-local IDE configuration before signing the pack.
                     - Note: Automatically generated type declaration files (.d.ts) are located in the %s folder. Do not modify them manually.
                     - Tip: Write .ts (or add // @ts-check at the top of a .js file) to enable editor type-checking; run /nekojs view_all_errors in-game to inspect script errors.
                     """.formatted(NekoJSPaths.get().probeDir().getFileName()).trim();
@@ -69,13 +70,17 @@ public final class WorkspaceGenerator {
     }
 
     /**
-     * 为每个启用脚本包的 {@code <type>_scripts/} 目录生成同样的 jsconfig.json（缺失才写，
-     * 幂等）。tsserver 就近发现 jsconfig，包内脚本由此获得与平铺目录一致的 probe 类型支持。
-     * 包被删除后残留的 jsconfig 无害（只是不再被引用）。
+     * Generates missing pack-local IDE configs for unsigned local packs. Signed content and
+     * received server-cache bytes remain unchanged; pack-local configs must be included before signing.
      */
     private static void createPackConfigs() {
         for (com.tkisor.nekojs.core.pack.ScriptPack pack :
                 com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().enabledPacks()) {
+            // Pack-local configs are hashed content: preserve signed inputs and received cache bytes.
+            if (pack.manifest().signature() != null
+                    || pack.scope() == com.tkisor.nekojs.core.pack.ScriptPackScope.SERVER_CACHE) {
+                continue;
+            }
             for (ScriptType type : ScriptType.all()) {
                 Path dir = pack.scriptsDirFor(type);
                 if (java.nio.file.Files.isDirectory(dir)) {
