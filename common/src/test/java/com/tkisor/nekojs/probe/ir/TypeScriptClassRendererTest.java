@@ -37,6 +37,24 @@ class TypeScriptClassRendererTest {
     );
 
     @Test
+    void identityInputsRetainHostTypesAndExplicitAdaptersStillOverrideThem() {
+        TypeAliasRegistry aliases = new TypeAliasRegistry();
+        for (String fqn : List.of("java.io.File", "java.nio.file.Path", "java.util.UUID")) {
+            String name = "$" + fqn.substring(fqn.lastIndexOf('.') + 1);
+            assertEquals(name, TypeScriptClassRenderer.renderTypeRef(symbol(fqn), aliases, true));
+            assertEquals(name, TypeScriptClassRenderer.renderTypeRef(symbol(fqn), aliases, false));
+            aliases.registerClassAlias(fqn, "string | " + name);
+            assertEquals("string | " + name, TypeScriptClassRenderer.renderTypeRef(symbol(fqn), aliases, true));
+            aliases.clear();
+            assertEquals(name, TypeScriptClassRenderer.renderTypeRef(symbol(fqn), aliases, true));
+        }
+        String file = new TypeScriptClassRenderer(aliases).render(new TypeReflector().reflect(java.io.File.class));
+        assertTrue(file.contains("implements $Serializable, $Comparable<$File>"), file);
+        assertTrue(file.contains("compareTo(arg0: $File): number;"), file);
+        assertFalse(file.contains("compareTo(arg0: string)"), file);
+    }
+
+    @Test
     void rendererOutputIsStableForAllSamples() {
         for (Class<?> cls : SAMPLES) {
             TypeReflector reflector = new TypeReflector();

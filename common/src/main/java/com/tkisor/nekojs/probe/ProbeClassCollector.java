@@ -154,7 +154,12 @@ final class ProbeClassCollector {
 
     private static void collectTypeToQueue(Type type, Queue<Object[]> queue, int depth) {
         if (type instanceof Class<?> cls) {
-            queue.add(new Object[]{cls, depth});
+            if (cls.isArray()) {
+                // Array dimensions do not add signature edges; scan the actual component at this depth.
+                collectTypeToQueue(cls.getComponentType(), queue, depth);
+            } else {
+                queue.add(new Object[]{cls, depth});
+            }
         } else if (type instanceof ParameterizedType pt) {
             if (pt.getRawType() instanceof Class<?> rawCls) queue.add(new Object[]{rawCls, depth});
             boolean functional = FunctionalInterfaceResolver.resolve(pt) != null;

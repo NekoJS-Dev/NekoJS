@@ -279,12 +279,10 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                             : Set.of();
                     indexFileGenerator.predeclareClass(fqn, decl, extraImports);
                 } catch (Throwable t) {
-                    // 单个类失败不影响整体（旧行为一致）。自家平台类失败意味着 API 缺失于
-                    // index.d.ts——必须可见，第三方类保持静默跳过（数量大、价值低）
-                    if (fqn.startsWith("com.tkisor.nekojs.")) {
-                        com.tkisor.nekojs.core.error.Diagnostics.report("probe-typescript", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
-                                "平台类 " + fqn + " 预声明失败（该类不会进入 index.d.ts）", t);
-                    }
+                    // Selected foreign types can be required by public signatures; omission must remain observable.
+                    com.tkisor.nekojs.core.error.Diagnostics.report("probe-typescript", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                            "[NEKO-4038] Probe declaration skipped: class=" + fqn
+                                    + "; declaration omitted from generated TypeScript", t);
                 }
             }));
         }
@@ -296,7 +294,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 break;
             } catch (ExecutionException e) {
                 com.tkisor.nekojs.core.error.Diagnostics.report("probe-typescript", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
-                        "类型预声明任务失败（部分类可能缺失于 index.d.ts）", e.getCause());
+                        "[NEKO-4039] Probe declaration task failed: some declarations may be absent from generated TypeScript", e.getCause());
             }
         }
 

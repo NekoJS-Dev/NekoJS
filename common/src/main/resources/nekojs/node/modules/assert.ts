@@ -21,7 +21,7 @@
     notEqual(actual: unknown, expected: unknown, message?: string): void
     strictEqual(actual: unknown, expected: unknown, message?: string): void
     notStrictEqual(actual: unknown, expected: unknown, message?: string): void
-    deepEqual(actual: unknown, expected: unknown, message?: string): void
+    deepEqual(actual: unknown, expected: unknown): boolean
     deepStrictEqual(actual: unknown, expected: unknown, message?: string): void
     notDeepEqual(actual: unknown, expected: unknown, message?: string): void
     notDeepStrictEqual(actual: unknown, expected: unknown, message?: string): void
@@ -71,7 +71,7 @@
     }
   }
 
-  function fail(actual: unknown, expected: unknown, message: string | undefined, operator: string | undefined): void {
+  function fail(actual?: unknown, expected?: unknown, message?: string, operator?: string): void {
     throw new AssertionError({ actual, expected, message, operator })
   }
 
@@ -294,5 +294,5 @@
   })
   ;(assert as NekoAssert).default = assert
 
-  globalThis.__nekoNodeDefine(['assert', 'node:assert', 'assert/strict', 'node:assert/strict'], assert)
+  globalThis.__nekoNodeDefine(['assert', 'node:assert', 'assert/strict', 'node:assert/strict'], assert as NekoAssert)
 })()

@@ -4,6 +4,7 @@ import { $URL } from "java:java/net";
 import { $Certificate } from "java:java/security/cert";
 import { $Enumeration } from "java:java/util";
 import { $Stream } from "java:java/util/stream";
+import { $Subject } from "java:javax/security/auth";
 
 declare module "java:java/security" {
     export class $CodeSource implements $Serializable {
@@ -47,9 +48,17 @@ declare module "java:java/security" {
         toString(): string;
     }
 
+    export interface $Principal {
+        equals(arg0: object): boolean;
+        getName(): string;
+        hashCode(): number;
+        implies(arg0: $Subject): boolean;
+        toString(): string;
+    }
+
     export class $ProtectionDomain {
         constructor(arg0: $CodeSource, arg1: $PermissionCollection);
-        constructor(arg0: $CodeSource, arg1: $PermissionCollection, arg2: $ClassLoader, arg3: $Principal[]);
+        constructor(arg0: $CodeSource, arg1: $PermissionCollection, arg2: $ClassLoader, arg3: $Principal_<string>[]);
         get classLoader(): $ClassLoader;
         getClassLoader(): $ClassLoader;
         get codeSource(): $CodeSource;
@@ -63,4 +72,5 @@ declare module "java:java/security" {
         toString(): string;
     }
 
+    export type $Principal_<CallbackResult = string> = (() => CallbackResult) | ($Principal & { readonly [Symbol.hasInstance]?: never });
 }

@@ -88,9 +88,7 @@ public final class TypeAliasRegistry {
         classAliases.put("java.lang.Double", "number");
         classAliases.put("java.lang.Character", "string");
         classAliases.put("java.lang.Object", "object");
-        classAliases.put("java.util.UUID", "string");
-        classAliases.put("java.nio.file.Path", "string");
-        classAliases.put("java.io.File", "string");
+        // UUID, Path and File retain their host identity unless a real adapter supplies an input alias.
     }
 
     /**

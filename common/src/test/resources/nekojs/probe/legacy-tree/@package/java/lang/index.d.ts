@@ -750,6 +750,30 @@ declare module "java:java/lang" {
         run(): void;
     }
 
+    export class $StackTraceElement implements $Serializable {
+        constructor(arg0: string, arg1: string, arg2: string, arg3: number);
+        constructor(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: string, arg6: number);
+        get classLoaderName(): string;
+        getClassLoaderName(): string;
+        get className(): string;
+        getClassName(): string;
+        get fileName(): string;
+        getFileName(): string;
+        get lineNumber(): number;
+        getLineNumber(): number;
+        get methodName(): string;
+        getMethodName(): string;
+        get moduleName(): string;
+        getModuleName(): string;
+        get moduleVersion(): string;
+        getModuleVersion(): string;
+        get nativeMethod(): boolean;
+        isNativeMethod(): boolean;
+        equals(arg0: object): boolean;
+        hashCode(): number;
+        toString(): string;
+    }
+
     export class $String implements $Serializable, $Comparable<string>, $CharSequence, $Constable, $ConstantDesc {
         constructor();
         constructor(arg0: number[]);

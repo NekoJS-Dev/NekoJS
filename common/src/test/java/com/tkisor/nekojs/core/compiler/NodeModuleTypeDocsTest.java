@@ -27,6 +27,62 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class NodeModuleTypeDocsTest {
 
     @Test
+    void erasedAssertExportsItsActualCallableAndBooleanHelper() throws Exception {
+        String source = readResource("nekojs/node/modules/assert.ts");
+        String erased = NekoTypeScriptCompiler.eraseTypescript(Path.of("assert.ts"), source);
+        try (graal.graalvm.polyglot.Context context = graal.graalvm.polyglot.Context.newBuilder("js")
+                .allowHostClassLookup(name -> false).allowCreateProcess(false).allowCreateThread(false).build()) {
+            context.eval("js", "globalThis.modules = {}; globalThis.__nekoNodeDefine = "
+                    + "(ids, value) => ids.forEach(id => modules[id] = value);");
+            context.eval("js", erased);
+            assertTrue(context.eval("js", "['assert','node:assert','assert/strict','node:assert/strict']"
+                    + ".every(id => typeof modules[id] === 'function' && modules[id].default === modules[id])").asBoolean());
+            assertTrue(context.eval("js", "modules['node:assert'].deepEqual({x:1}, {x:1})").asBoolean());
+            assertFalse(context.eval("js", "modules['node:assert'].deepEqual({x:1}, {x:2})").asBoolean());
+            assertTrue(context.eval("js", "modules['node:assert'](true); modules['node:assert'].default(true); "
+                    + "[[], [1], [1,2], [1,2,'message'], [1,2,'message','operator']].every(args => { "
+                    + "try { modules['node:assert'].fail(...args); return false; } "
+                    + "catch (error) { return error instanceof modules['node:assert'].AssertionError; } });").asBoolean());
+        }
+    }
+
+    @Test
+    void callableDefaultUsesTheExplicitExportTypeAndKeepsNamedMembers() throws Exception {
+        String source = """
+                ;(function () {
+                  interface CallableApi {
+                    (value: boolean): void;
+                    run: typeof run;
+                    default: CallableApi;
+                  }
+                  function callable(value: boolean): void {}
+                  function run(value: string): void {}
+                  Object.assign(callable, { run });
+                  (callable as CallableApi).default = callable;
+                  globalThis.__nekoNodeDefine(['typed-callable'], callable as CallableApi);
+                  globalThis.__nekoNodeDefine(['untyped-callable'], callable);
+                  globalThis.__nekoNodeDefine(['unknown-cast'], callable as MissingApi);
+                })()
+                """;
+        String declaration = NodeModuleTypeDocs.extractTS(source);
+        String typed = declaration.substring(declaration.indexOf("declare module 'typed-callable'"),
+                declaration.indexOf("declare module 'untyped-callable'"));
+        assertTrue(typed.contains("const __nekoNodeDefaultExport: CallableApi;"), typed);
+        assertTrue(typed.contains("export default __nekoNodeDefaultExport;"), typed);
+        assertTrue(typed.contains("export function run(value: string): void;"), typed);
+        assertFalse(typed.contains("export function callable"), typed);
+        assertFalse(declaration.substring(declaration.indexOf("declare module 'untyped-callable'"))
+                .contains("export default"), declaration);
+        String collision = NodeModuleTypeDocs.extractTS(source.replace("function callable",
+                "const __nekoNodeDefaultExport = 1; function callable"));
+        assertTrue(collision.contains("const __nekoNodeDefaultExport_: CallableApi;"), collision);
+        assertTrue(collision.contains("export default __nekoNodeDefaultExport_;"), collision);
+        Path output = Path.of("build/probe-ts-node-callable-default/typed-callable.d.ts");
+        Files.createDirectories(output.getParent());
+        Files.writeString(output, declaration, StandardCharsets.UTF_8);
+    }
+
+    @Test
     void builtinAssertDeclaresItsCallbackAliasOncePerModule() throws Exception {
         String declaration = NodeModuleTypeDocs.extractTS(readResource("nekojs/node/modules/assert.ts"));
         Path output = Path.of("build/probe-ts-node-assert");
@@ -35,6 +91,9 @@ class NodeModuleTypeDocsTest {
         assertEquals(4, declaration.split("type NekoSyncFn =", -1).length - 1, declaration);
         assertTrue(declaration.contains("export class AssertionError extends Error"), declaration);
         assertTrue(declaration.contains("constructor(options?: NekoAssertErrorOptions);"), declaration);
+        assertTrue(declaration.contains("const __nekoNodeDefaultExport: NekoAssert;"), declaration);
+        assertEquals(4, declaration.split("export default __nekoNodeDefaultExport;", -1).length - 1, declaration);
+        assertTrue(declaration.contains("export function fail(actual?: unknown, expected?: unknown, message?: string, operator?: string): void;"), declaration);
     }
 
     @Test

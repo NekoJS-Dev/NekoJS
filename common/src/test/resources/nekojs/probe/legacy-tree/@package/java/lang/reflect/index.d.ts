@@ -317,6 +317,69 @@ declare module "java:java/lang/reflect" {
         toString(): string;
     }
 
+    export class $Parameter implements $AnnotatedElement {
+        get annotatedType(): $AnnotatedType;
+        getAnnotatedType(): $AnnotatedType;
+        get annotations(): $Annotation[];
+        getAnnotations(): $Annotation[];
+        get declaredAnnotations(): $Annotation[];
+        getDeclaredAnnotations(): $Annotation[];
+        get declaringExecutable(): $Executable;
+        getDeclaringExecutable(): $Executable;
+        get modifiers(): number;
+        getModifiers(): number;
+        get name(): string;
+        getName(): string;
+        get parameterizedType(): $Type;
+        getParameterizedType(): $Type;
+        get type(): $Class<any>;
+        getType(): $Class<any>;
+        get implicit(): boolean;
+        isImplicit(): boolean;
+        get namePresent(): boolean;
+        isNamePresent(): boolean;
+        get synthetic(): boolean;
+        isSynthetic(): boolean;
+        get varArgs(): boolean;
+        isVarArgs(): boolean;
+        accessFlags(): $Set<$AccessFlag>;
+        equals(arg0: object): boolean;
+        getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
+        getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
+        getDeclaredAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
+        getDeclaredAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
+        hashCode(): number;
+        isAnnotationPresent(arg0: $Class<$Annotation>): boolean;
+        toString(): string;
+    }
+
+    export class $RecordComponent implements $AnnotatedElement {
+        get accessor(): $Method;
+        getAccessor(): $Method;
+        get annotatedType(): $AnnotatedType;
+        getAnnotatedType(): $AnnotatedType;
+        get annotations(): $Annotation[];
+        getAnnotations(): $Annotation[];
+        get declaredAnnotations(): $Annotation[];
+        getDeclaredAnnotations(): $Annotation[];
+        get declaringRecord(): $Class<any>;
+        getDeclaringRecord(): $Class<any>;
+        get genericSignature(): string;
+        getGenericSignature(): string;
+        get genericType(): $Type;
+        getGenericType(): $Type;
+        get name(): string;
+        getName(): string;
+        get type(): $Class<any>;
+        getType(): $Class<any>;
+        getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
+        getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
+        getDeclaredAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
+        getDeclaredAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
+        isAnnotationPresent(arg0: $Class<$Annotation>): boolean;
+        toString(): string;
+    }
+
     export interface $Type {
         getTypeName(): string;
     }

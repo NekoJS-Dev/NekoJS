@@ -97,6 +97,8 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-4035` | item definition modification rejected after startup collection | STARTUP 收集后物品定义已冻结，修改被拒绝 |
 | `NEKO-4036` | item component type or codec value rejected with item, component and node context | 物品组件类型或 codec 值被拒绝，消息包含物品、组件与节点上下文 |
 | `NEKO-4037` | automatic item assets are unavailable on Fabric; registration rejected before supplier execution | Fabric 不支持自动物品资源，supplier 执行前拒绝注册 |
+| `NEKO-4038` | Probe predeclaration failed; the selected class is omitted from generated TypeScript | Probe 预声明失败，选定类未进入生成的 TypeScript |
+| `NEKO-4039` | Probe declaration task failed; some generated TypeScript declarations may be absent | Probe 声明任务失败，生成的 TypeScript 可能缺少部分声明 |
 
 <a id="wiki-section-6"></a>
 ## Recipes and data

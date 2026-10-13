@@ -245,9 +245,35 @@ public final class NodeModuleTypeDocs {
                     int close = matchBrace(defOpen);
                     if (close >= 0) return parseObjectMembers(defOpen + 1, close);
                 }
-                if (funcSigOf(name) != null) return assignedFunctionMembers(name);
+                if (funcSigOf(name) != null) {
+                    List<String> members = new ArrayList<>(assignedFunctionMembers(name));
+                    String defaultType = namedExportCast(nameEnd, end);
+                    if (defaultType != null) {
+                        String local = "__nekoNodeDefaultExport";
+                        while (s.contains(local)) local += "_";
+                        members.add("const " + local + ": " + defaultType + ";");
+                        members.add("export default " + local + ";");
+                    }
+                    return members;
+                }
             }
             return List.of();
+        }
+
+        /** Uses an explicit named type on the actual callable export, without inferring arbitrary expressions. */
+        private String namedExportCast(int start, int end) {
+            int cast = skipWsAndComments(start);
+            if (cast >= end || !isIdentStart(s.charAt(cast))) return null;
+            int castEnd = readIdent(cast);
+            if (!s.substring(cast, castEnd).equals("as")) return null;
+            int type = skipWsAndComments(castEnd);
+            if (type >= end || !isIdentStart(s.charAt(type))) return null;
+            int typeEnd = readIdent(type);
+            if (skipWsAndComments(typeEnd) != end) return null;
+            String name = s.substring(type, typeEnd);
+            if (findKeywordThenIdent("interface", name) < 0 && findKeywordThenIdent("type", name) < 0
+                    && findKeywordThenIdent("class", name) < 0) return null;
+            return name;
         }
 
         /** Resolves the literal members attached to a callable module by Object.assign. */

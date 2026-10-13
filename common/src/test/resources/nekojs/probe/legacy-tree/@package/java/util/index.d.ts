@@ -139,6 +139,7 @@ declare module "java:java/util" {
         spliterator(): $Spliterator<E>;
         subList(arg0: number, arg1: number): $List<E>;
         toArray<T>(arg0: T[]): T[];
+        toArray<T>(arg0: $IntFunction_<T[], number, T[]>): T[];
         toArray(): object[];
     }
     export const $List: {
@@ -482,6 +483,7 @@ declare module "java:java/util" {
 
     export interface $PrimitiveIterator<T, T_CONS> extends $Iterator<T> {
         forEachRemaining(arg0: T_CONS): void;
+        forEachRemaining(arg0: $Consumer_<T, T>): void;
     }
 
     export interface $PrimitiveIterator$OfDouble extends $PrimitiveIterator<number, $DoubleConsumer> {
@@ -548,6 +550,7 @@ declare module "java:java/util" {
         size(): number;
         spliterator(): $Spliterator<E>;
         toArray<T>(arg0: T[]): T[];
+        toArray<T>(arg0: $IntFunction_<T[], number, T[]>): T[];
         toArray(): object[];
     }
     export const $Set: {
@@ -628,7 +631,9 @@ declare module "java:java/util" {
 
     export interface $Spliterator$OfPrimitive<T, T_CONS, T_SPLITR extends $Spliterator$OfPrimitive<T, T_CONS, T_SPLITR>> extends $Spliterator<T> {
         forEachRemaining(arg0: T_CONS): void;
+        forEachRemaining(arg0: $Consumer_<T, T>): void;
         tryAdvance(arg0: T_CONS): boolean;
+        tryAdvance(arg0: $Consumer_<T, T>): boolean;
         trySplit(): T_SPLITR;
     }
 

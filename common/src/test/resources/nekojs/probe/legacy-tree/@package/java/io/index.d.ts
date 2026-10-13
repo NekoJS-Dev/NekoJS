@@ -10,7 +10,7 @@ declare module "java:java/io" {
     }
 
     export class $File implements $Serializable, $Comparable<$File> {
-        constructor(arg0: string, arg1: string);
+        constructor(arg0: $File, arg1: string);
         constructor(arg0: string);
         constructor(arg0: string, arg1: string);
         constructor(arg0: $URI);
@@ -48,13 +48,13 @@ declare module "java:java/io" {
         isFile(): boolean;
         get hidden(): boolean;
         isHidden(): boolean;
-        static createTempFile(arg0: string, arg1: string, arg2: string): $File;
+        static createTempFile(arg0: string, arg1: string, arg2: $File): $File;
         static createTempFile(arg0: string, arg1: string): $File;
         static listRoots(): $File[];
         canExecute(): boolean;
         canRead(): boolean;
         canWrite(): boolean;
-        compareTo(arg0: string): number;
+        compareTo(arg0: $File): number;
         createNewFile(): boolean;
         deleteOnExit(): void;
         delete(): boolean;
@@ -70,7 +70,7 @@ declare module "java:java/io" {
         list(): string[];
         mkdirs(): boolean;
         mkdir(): boolean;
-        renameTo(arg0: string): boolean;
+        renameTo(arg0: $File): boolean;
         setExecutable(arg0: boolean, arg1: boolean): boolean;
         setExecutable(arg0: boolean): boolean;
         setLastModified(arg0: number): boolean;
@@ -124,9 +124,9 @@ declare module "java:java/io" {
     }
 
     export class $PrintStream extends $FilterOutputStream implements $Appendable, $Closeable {
-        constructor(arg0: string);
-        constructor(arg0: string, arg1: string);
-        constructor(arg0: string, arg1: $Charset);
+        constructor(arg0: $File);
+        constructor(arg0: $File, arg1: string);
+        constructor(arg0: $File, arg1: $Charset);
         constructor(arg0: $OutputStream);
         constructor(arg0: $OutputStream, arg1: boolean);
         constructor(arg0: $OutputStream, arg1: boolean, arg2: string);
@@ -171,9 +171,9 @@ declare module "java:java/io" {
     }
 
     export class $PrintWriter extends $Writer {
-        constructor(arg0: string);
-        constructor(arg0: string, arg1: string);
-        constructor(arg0: string, arg1: $Charset);
+        constructor(arg0: $File);
+        constructor(arg0: $File, arg1: string);
+        constructor(arg0: $File, arg1: $Charset);
         constructor(arg0: $OutputStream);
         constructor(arg0: $OutputStream, arg1: boolean);
         constructor(arg0: $OutputStream, arg1: boolean, arg2: $Charset);

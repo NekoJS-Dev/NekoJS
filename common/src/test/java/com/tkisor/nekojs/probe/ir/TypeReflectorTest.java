@@ -18,6 +18,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TypeReflectorTest {
 
+    public interface OverloadParent<T> {
+        T decode(T value);
+        static String factory() { return "parent"; }
+        @HideFromJS
+        default T decode(T value, boolean hidden) { return value; }
+    }
+
+    public interface OverloadChild<U> extends OverloadParent<U> {
+        U decode(String value, int marker);
+    }
+
+    @Test
+    void childInterfaceRetainsActualInheritedOverloadsWithItsOwnTypeVariables() throws Exception {
+        TypeDecl child = new TypeReflector().reflect(OverloadChild.class);
+        List<MethodDecl> overloads = child.methods.stream().filter(method -> method.name.equals("decode")).toList();
+        assertEquals(2, overloads.size());
+        MethodDecl inherited = overloads.stream().filter(method -> method.params.size() == 1).findFirst().orElseThrow();
+        assertEquals("U", inherited.params.getFirst().type.ref.name());
+        assertEquals("U", inherited.returnType.ref.name());
+        assertTrue(child.methods.stream().noneMatch(method -> method.name.equals("factory")));
+        TypeScriptClassRenderer renderer = new TypeScriptClassRenderer(new TypeAliasRegistry());
+        String output = renderer.render(child);
+        assertTrue(output.contains("decode(value: U): U;"), output);
+        assertTrue(output.contains("decode(value: string, marker: number): U;"), output);
+        java.nio.file.Path generated = java.nio.file.Path.of("build/probe-ts-interface-overloads/types.d.ts");
+        java.nio.file.Files.createDirectories(generated.getParent());
+        java.nio.file.Files.writeString(generated, "declare module 'probe-overload-fixture' {\n"
+                + renderer.render(new TypeReflector().reflect(OverloadParent.class)) + output + "}\n");
+    }
+
     @RemapByPrefix("neko$")
     public static class RemapSample {
         public String neko$data() { return "x"; }

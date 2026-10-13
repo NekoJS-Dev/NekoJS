@@ -82,6 +82,42 @@ class ProbeScanModeTest {
     /* ================= forceScanMods ================= */
 
     @Test
+    void arrayComponentsKeepTheSignatureDepthAndScanFilters() {
+        ProbeConfig config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
+                List.of("com.tkisor.nekojs.probe", "java.nio.file", "java.awt"), List.of(),
+                List.of("java.awt"), List.of(), 1, "SMART"));
+        Set<Class<?>> collected = ProbeCoordinator.collectClasses(snapshotWithEvent(ArrayRoot.class), config);
+        assertTrue(collected.contains(ArrayRoot.class));
+        assertTrue(collected.contains(ArrayComponent.class));
+        assertTrue(collected.contains(GenericArrayComponent.class));
+        assertTrue(collected.contains(java.nio.file.LinkOption.class));
+        assertFalse(collected.contains(ArrayComponent[][].class));
+        assertFalse(collected.contains(ArrayBeyondDepth.class), "component members still obey maxDepth");
+        assertFalse(collected.contains(java.awt.Color.class), "array components still obey excludes");
+        assertFalse(collected.contains(java.net.URI.class), "array components still obey includes");
+        assertFalse(collected.contains(int.class));
+    }
+
+    public static class ArrayRoot {
+        public ArrayComponent[][] components;
+        public java.awt.Color[] excluded;
+        public java.net.URI[] outsideIncludes;
+        public int[] primitives;
+        public GenericArrayComponent<String>[] genericComponents;
+
+        public ArrayComponent[] values(ArrayComponent... values) { return values; }
+        public void links(java.nio.file.LinkOption... options) {}
+    }
+
+    public static class ArrayComponent {
+        public ArrayBeyondDepth next;
+    }
+
+    public static class ArrayBeyondDepth {}
+
+    public static class GenericArrayComponent<T> {}
+
+    @Test
     void forceScanModsForcesPrefixIntoClosure() {
         NekoScriptCatalogSnapshot snapshot = snapshotWithEvent(ProbeCoordinator.class);
         // include 白名单覆盖为无关前缀；forceScanMods 字面前缀把 probe 包强制纳入

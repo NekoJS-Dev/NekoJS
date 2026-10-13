@@ -22,7 +22,7 @@ import java.util.Set;
 
 /**
  * Reflects script-visible Java members into {@link TypeDecl}, retaining remapping and Bean accessor pairing.
- * Class declarations include callable interface methods and inherited overloads with contextual generic types.
+ * Class and interface declarations retain callable inherited overloads with contextual generic types.
  *
  * <p>Each {@link TypeSlot} retains Java signature metadata for contextual input aliases and a language-neutral
  * {@link ApiTypeRef} for rendering and type edits.
@@ -122,13 +122,13 @@ public final class TypeReflector {
     }
 
     private void reflectInterfaceMembers(Class<?> cls, TypeDecl decl) {
-        for (var method : cls.getDeclaredMethods()) {
+        for (var method : declarationMethods(cls)) {
             if (!Modifier.isPublic(method.getModifiers())) continue;
             // bridge/synthetic 是 JVM 协变覆盖的实现细节（如 LevelExtension.neko$data()
             // 覆盖 LevelSpec 的 Object 哨兵时 javac 生成 Object bridge），对 JS/Python 侧
             // 无意义且会产生「同参不同返回」的非法重载，过滤掉
             if (method.isSynthetic() || method.isBridge()) continue;
-            decl.methods.add(reflectMethod(method));
+            decl.methods.add(reflectClassMethod(cls, method));
         }
         for (var field : cls.getDeclaredFields()) {
             if (Modifier.isStatic(field.getModifiers()) && Modifier.isPublic(field.getModifiers())
@@ -210,7 +210,17 @@ public final class TypeReflector {
     public static List<Method> declarationMethods(Class<?> cls) {
         List<Method> methods = new ArrayList<>(Arrays.asList(cls.getDeclaredMethods()));
         methods.sort(TypeReflector::compareCandidates);
-        if (!cls.isEnum() && !cls.isInterface()) {
+        if (cls.isInterface()) {
+            // A child interface's own overload hides the parent's overload set in TypeScript.
+            // Re-emit only actual inherited instance overloads of declared names, with contextual types.
+            Set<String> names = methods.stream()
+                    .filter(method -> Modifier.isPublic(method.getModifiers()) && !Modifier.isStatic(method.getModifiers()))
+                    .map(TypeReflector::jsName).filter(name -> name != null).collect(java.util.stream.Collectors.toSet());
+            Arrays.stream(cls.getMethods())
+                    .filter(method -> method.getDeclaringClass() != cls && !Modifier.isStatic(method.getModifiers())
+                            && names.contains(jsName(method)))
+                    .sorted(TypeReflector::compareCandidates).forEach(methods::add);
+        } else if (!cls.isEnum()) {
             // TypeScript implements clauses do not inherit Java's default interface methods or overloads.
             // Keep declared accessor precedence; getMethods selects actual overrides and excludes private members.
             Method[] visible = cls.getMethods();

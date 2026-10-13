@@ -91,6 +91,16 @@ declare module "java:java/lang/invoke" {
         unreflect(arg0: $Method): $MethodHandle;
     }
 
+    export class $MethodHandles$Lookup$ClassOption {
+        static NESTMATE: $MethodHandles$Lookup$ClassOption;
+        static STRONG: $MethodHandles$Lookup$ClassOption;
+        name(): string;
+        ordinal(): number;
+        toString(): string;
+        static values(): $MethodHandles$Lookup$ClassOption[];
+        static valueOf(name: string): $MethodHandles$Lookup$ClassOption;
+    }
+
     export class $MethodType implements $Constable, $TypeDescriptor$OfMethod<$Class<any>, $MethodType>, $Serializable {
         static fromMethodDescriptorString(arg0: string, arg1: $ClassLoader): $MethodType;
         static genericMethodType(arg0: number, arg1: boolean): $MethodType;
@@ -248,6 +258,7 @@ declare module "java:java/lang/invoke" {
         varType(): $ClassDesc;
     }
 
+    export type $MethodHandles$Lookup$ClassOption_ = $MethodHandles$Lookup$ClassOption | "NESTMATE" | "STRONG";
     export type $TypeDescriptor_<CallbackResult = string> = (() => CallbackResult) | ($TypeDescriptor & { readonly [Symbol.hasInstance]?: never });
     export type $VarHandle$AccessMode_ = $VarHandle$AccessMode | "COMPARE_AND_EXCHANGE" | "COMPARE_AND_EXCHANGE_ACQUIRE" | "COMPARE_AND_EXCHANGE_RELEASE" | "COMPARE_AND_SET" | "GET" | "GET_ACQUIRE" | "GET_AND_ADD" | "GET_AND_ADD_ACQUIRE" | "GET_AND_ADD_RELEASE" | "GET_AND_BITWISE_AND" | "GET_AND_BITWISE_AND_ACQUIRE" | "GET_AND_BITWISE_AND_RELEASE" | "GET_AND_BITWISE_OR" | "GET_AND_BITWISE_OR_ACQUIRE" | "GET_AND_BITWISE_OR_RELEASE" | "GET_AND_BITWISE_XOR" | "GET_AND_BITWISE_XOR_ACQUIRE" | "GET_AND_BITWISE_XOR_RELEASE" | "GET_AND_SET" | "GET_AND_SET_ACQUIRE" | "GET_AND_SET_RELEASE" | "GET_OPAQUE" | "GET_VOLATILE" | "SET" | "SET_OPAQUE" | "SET_RELEASE" | "SET_VOLATILE" | "WEAK_COMPARE_AND_SET" | "WEAK_COMPARE_AND_SET_ACQUIRE" | "WEAK_COMPARE_AND_SET_PLAIN" | "WEAK_COMPARE_AND_SET_RELEASE";
 }
