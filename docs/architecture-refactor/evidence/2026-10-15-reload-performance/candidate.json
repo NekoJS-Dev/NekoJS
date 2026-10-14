@@ -1,0 +1,1868 @@
+{
+  "sourceRevision": "e473479af6dcb0f9483b36a0d93207721904025f",
+  "baseRevision": "8ed398dd2a4877bf1382000e1b811eb2d667c381",
+  "samplerSha256": "1f9c5d14a1a586da4b3f1ca8e71b2407ce089ee8bee185418963e1b5745df0b4",
+  "groups": [
+    {
+      "name": "reload-1",
+      "mode": "reload",
+      "samplesEntry": "formal/reload-1/samples.jsonl",
+      "exitEntry": "formal/reload-1/exit.json",
+      "samples": [
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 30246,
+          "ts_utc": "2026-10-14T18:56:06.3396076Z",
+          "rcon_response": "NekoJS server reload committed: generation=2 phase=COMMIT - no errors. ",
+          "pid": 22340,
+          "mode": "reload",
+          "rev": "e473479a",
+          "rcon_rtt_ms": 144,
+          "index": 1,
+          "kind": "formal",
+          "marker_ms": 252,
+          "marker_line": "[02:55:52] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1792004136035-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.297",
+          "wall_done_ms": 13066,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 30246,
+          "ts_utc": "2026-10-14T18:56:06.3565145Z",
+          "rcon_response": "NekoJS server reload committed: generation=3 phase=COMMIT - no errors. ",
+          "pid": 22340,
+          "mode": "reload",
+          "rev": "e473479a",
+          "rcon_rtt_ms": 145,
+          "index": 2,
+          "kind": "formal",
+          "marker_ms": 268,
+          "marker_line": "[02:55:55] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1792004136035-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.297",
+          "wall_done_ms": 13066,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 30246,
+          "ts_utc": "2026-10-14T18:56:06.3693372Z",
+          "rcon_response": "NekoJS server reload committed: generation=4 phase=COMMIT - no errors. ",
+          "pid": 22340,
+          "mode": "reload",
+          "rev": "e473479a",
+          "rcon_rtt_ms": 115,
+          "index": 3,
+          "kind": "formal",
+          "marker_ms": 219,
+          "marker_line": "[02:55:59] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1792004136035-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.297",
+          "wall_done_ms": 13066,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 30246,
+          "ts_utc": "2026-10-14T18:56:06.3713419Z",
+          "rcon_response": "NekoJS server reload committed: generation=5 phase=COMMIT - no errors. ",
+          "pid": 22340,
+          "mode": "reload",
+          "rev": "e473479a",
+          "rcon_rtt_ms": 110,
+          "index": 4,
+          "kind": "formal",
+          "marker_ms": 219,
+          "marker_line": "[02:56:02] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1792004136035-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.297",
+          "wall_done_ms": 13066,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 30246,
+          "ts_utc": "2026-10-14T18:56:06.3723413Z",
+          "rcon_response": "NekoJS server reload committed: generation=6 phase=COMMIT - no errors. ",
+          "pid": 22340,
+          "mode": "reload",
+          "rev": "e473479a",
+          "rcon_rtt_ms": 113,
+          "index": 5,
+          "kind": "formal",
+          "marker_ms": 114,
+          "marker_line": "[02:56:05] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1792004136035-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.297",
+          "wall_done_ms": 13066,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        }
+      ],
+      "formalValuesMs": [
+        252,
+        268,
+        219,
+        219,
+        114
+      ],
+      "meanMs": 214.4,
+      "thresholdMs": 285.3,
+      "acceptanceVerdict": "PASS"
+    },
+    {
+      "name": "reload-2",
+      "mode": "reload",
+      "samplesEntry": "formal/reload-2/samples.jsonl",
+      "exitEntry": "formal/reload-2/exit.json",
+      "samples": [
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 30226,
+          "ts_utc": "2026-10-14T18:56:39.9503938Z",
+          "rcon_response": "NekoJS server reload committed: generation=2 phase=COMMIT - no errors. ",
+          "pid": 31512,
+          "mode": "reload",
+          "rev": "e473479a",
+          "rcon_rtt_ms": 175,
+          "index": 1,
+          "kind": "formal",
+          "marker_ms": 295,
+          "marker_line": "[02:56:26] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1792004169671-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.254",
+          "wall_done_ms": 13056,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 30226,
+          "ts_utc": "2026-10-14T18:56:39.9733189Z",
+          "rcon_response": "NekoJS server reload committed: generation=3 phase=COMMIT - no errors. ",
+          "pid": 31512,
+          "mode": "reload",
+          "rev": "e473479a",
+          "rcon_rtt_ms": 124,
+          "index": 2,
+          "kind": "formal",
+          "marker_ms": 126,
+          "marker_line": "[02:56:29] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1792004169671-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.254",
+          "wall_done_ms": 13056,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 30226,
+          "ts_utc": "2026-10-14T18:56:39.9753254Z",
+          "rcon_response": "NekoJS server reload committed: generation=4 phase=COMMIT - no errors. ",
+          "pid": 31512,
+          "mode": "reload",
+          "rev": "e473479a",
+          "rcon_rtt_ms": 146,
+          "index": 3,
+          "kind": "formal",
+          "marker_ms": 265,
+          "marker_line": "[02:56:32] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1792004169671-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.254",
+          "wall_done_ms": 13056,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 30226,
+          "ts_utc": "2026-10-14T18:56:39.9774930Z",
+          "rcon_response": "NekoJS server reload committed: generation=5 phase=COMMIT - no errors. ",
+          "pid": 31512,
+          "mode": "reload",
+          "rev": "e473479a",
+          "rcon_rtt_ms": 118,
+          "index": 4,
+          "kind": "formal",
+          "marker_ms": 220,
+          "marker_line": "[02:56:35] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1792004169671-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.254",
+          "wall_done_ms": 13056,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        },
+        {
+          "tag": "reload-session",
+          "wall_total_ms": 30226,
+          "ts_utc": "2026-10-14T18:56:39.9784999Z",
+          "rcon_response": "NekoJS server reload committed: generation=6 phase=COMMIT - no errors. ",
+          "pid": 31512,
+          "mode": "reload",
+          "rev": "e473479a",
+          "rcon_rtt_ms": 126,
+          "index": 5,
+          "kind": "formal",
+          "marker_ms": 236,
+          "marker_line": "[02:56:39] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1792004169671-tick ",
+          "stop_channel": "rcon",
+          "done_s": "0.254",
+          "wall_done_ms": 13056,
+          "node": "26.1.2",
+          "forced_kill": false,
+          "killed": false
+        }
+      ],
+      "formalValuesMs": [
+        295,
+        126,
+        265,
+        220,
+        236
+      ],
+      "meanMs": 228.4,
+      "thresholdMs": 285.3,
+      "acceptanceVerdict": "PASS"
+    },
+    {
+      "name": "startup",
+      "mode": "startup",
+      "samplesEntry": "formal/startup/samples.jsonl",
+      "exitEntry": "formal/startup/exit.json",
+      "samples": [
+        {
+          "pid": 33468,
+          "ts_utc": "2026-10-14T18:56:57.3657495Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "e473479a",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 14139,
+          "wall_done_ms": 13096,
+          "kind": "warmup",
+          "index": 1,
+          "killed": false,
+          "done_s": "0.272",
+          "tag": "startup-1-warmup",
+          "mode": "startup"
+        },
+        {
+          "pid": 27724,
+          "ts_utc": "2026-10-14T18:57:11.6701855Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "e473479a",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 14239,
+          "wall_done_ms": 13066,
+          "kind": "warmup",
+          "index": 2,
+          "killed": false,
+          "done_s": "0.277",
+          "tag": "startup-2-warmup",
+          "mode": "startup"
+        },
+        {
+          "pid": 9212,
+          "ts_utc": "2026-10-14T18:57:25.8846392Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "e473479a",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 14165,
+          "wall_done_ms": 13057,
+          "kind": "formal",
+          "index": 3,
+          "killed": false,
+          "done_s": "0.305",
+          "tag": "startup-3-formal",
+          "mode": "startup"
+        },
+        {
+          "pid": 19476,
+          "ts_utc": "2026-10-14T18:57:46.6538041Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "e473479a",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 20706,
+          "wall_done_ms": 19060,
+          "kind": "formal",
+          "index": 4,
+          "killed": false,
+          "done_s": "0.366",
+          "tag": "startup-4-formal",
+          "mode": "startup"
+        },
+        {
+          "pid": 32096,
+          "ts_utc": "2026-10-14T18:58:07.2120730Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "e473479a",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 20479,
+          "wall_done_ms": 18936,
+          "kind": "formal",
+          "index": 5,
+          "killed": false,
+          "done_s": "0.359",
+          "tag": "startup-5-formal",
+          "mode": "startup"
+        },
+        {
+          "pid": 36764,
+          "ts_utc": "2026-10-14T18:58:27.7996226Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "e473479a",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 20504,
+          "wall_done_ms": 19029,
+          "kind": "formal",
+          "index": 6,
+          "killed": false,
+          "done_s": "0.345",
+          "tag": "startup-6-formal",
+          "mode": "startup"
+        },
+        {
+          "pid": 12384,
+          "ts_utc": "2026-10-14T18:58:47.9359469Z",
+          "forced_kill": false,
+          "timeout": null,
+          "rev": "e473479a",
+          "node": "26.1.2",
+          "stop_channel": "rcon",
+          "wall_total_ms": 20087,
+          "wall_done_ms": 18509,
+          "kind": "formal",
+          "index": 7,
+          "killed": false,
+          "done_s": "0.379",
+          "tag": "startup-7-formal",
+          "mode": "startup"
+        }
+      ],
+      "formalValuesMs": [
+        13057,
+        19060,
+        18936,
+        19029,
+        18509
+      ],
+      "meanMs": 17718.2,
+      "thresholdMs": 41173,
+      "acceptanceVerdict": "PASS"
+    }
+  ],
+  "overall": "PASS",
+  "compiledClassCount": 1626,
+  "sourceFiles": {
+    "common/src/main/java/com/tkisor/nekojs/core/module/BuiltinModuleTransformCache.java": "cb1c0a347676c2c747620dac5ccf22e5b0e6332e73d9258c84267ba06937e1e5",
+    "common/src/main/java/com/tkisor/nekojs/core/module/NekoModulePipeline.java": "b005a697860d967908950b636abf8a7e2a1091e26a39345c580599838161e8c3",
+    "common/src/main/java/com/tkisor/nekojs/core/module/NekoModulePipelineCache.java": "24f1d081bad46ab2ed4eebdcf352193538dd40d621814ff22303f28f294b89dd",
+    "common/src/test/java/com/tkisor/nekojs/core/module/BuiltinModuleReuseTest.java": "77efd2325304cb2b60ce2a7ccf1d391e6d25e920252a87261b19965c4cc233b9",
+    "common/src/test/java/com/tkisor/nekojs/core/module/BuiltinModuleTransformCacheTest.java": "fbd2553a45bcde705e3ad6fa8f5bdbe81f5f7fa8178da759b106316fd9edb206"
+  },
+  "tests": {
+    "common/build/test-results/test": {
+      "suites": 304,
+      "tests": 2314,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 4,
+      "skips": [
+        {
+          "suite": "com.tkisor.nekojs.core.error.LocalErrorSourceTest",
+          "test": "vscodeUriEncodesSpacesUnicodeHashPercentAndQuestionMark()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: question mark is not a legal Windows filename character"
+        },
+        {
+          "suite": "com.tkisor.nekojs.core.error.LocalErrorSourceTest",
+          "test": "colonInPosixFilenameDisablesGotoButStillOpensVerifiedFile()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: colon is not a legal Windows filename character"
+        },
+        {
+          "suite": "com.tkisor.nekojs.probe.TypeScriptNoopIrGoldenTest",
+          "test": "getterOverrideSurvivesFullGenerateWithMutatedIr()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: RecipeEventJS not on test classpath"
+        },
+        {
+          "suite": "com.tkisor.nekojs.probe.TypeScriptNoopIrGoldenTest",
+          "test": "getterOverrideSurvivesIrRerender()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: RecipeEventJS not on test classpath"
+        }
+      ]
+    },
+    "common-api-processor/build/test-results/test": {
+      "suites": 1,
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skips": []
+    },
+    "versions/1.21.1/build/test-results/test": {
+      "suites": 97,
+      "tests": 434,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 31,
+      "skips": [
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest",
+          "test": "idBasedFiltersMatchTheirOwnSemantics()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest",
+          "test": "combinatorsComposeIdFilters()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest",
+          "test": "versionNeutralHolderIdAccessorKeepsBothErasOnOneShape()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest",
+          "test": "byIdBareNameResolvesIntoTheMinecraftNamespace()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.command.NekoJSCommandsEditorRemovalTest",
+          "test": "editorCommandIsRemovedWithoutAliasAndViewErrorsRemain()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native command permissions require bootstrapped registry metadata"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest",
+          "test": "nativeEntityRegistrationInstallsOnlyForTheSelectedType()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native registry bootstrap requires a loader runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest",
+          "test": "nativeBlockRegistrationPassesDirectionAndDeclinesSides()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native registry bootstrap requires a loader runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest",
+          "test": "plainBlockNativeProviderDoesNotRequireABlockEntity()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native registry bootstrap requires a loader runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest",
+          "test": "nativeItemRegistrationQueriesTheExactStackRatherThanSharedFreshStorage()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native registry bootstrap requires a loader runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest",
+          "test": "sameTargetMultipleDeclarationsLastOneEntirelyReplacesEarlierOnes()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest",
+          "test": "removedItemDeclarationNowRestoresBaselineInsteadOfStayingStale()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest",
+          "test": "adapterWithoutARunningServerReportsUnavailableInsteadOfClaimingSuccess()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: needs vanilla registry class initialization to touch the trade pools"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest",
+          "test": "nodeWithoutAnAdapterAnswersExplicitUnavailableInsteadOfSilentSuccess()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: VillagerTradeUnavailableDomainOwner only exists on fabric; the facade path covers this node"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest",
+          "test": "candidateCollectionBeforeServerBindingStaysInert()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: needs vanilla registry class initialization for the version adapter"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest",
+          "test": "guestFailureAfterAnItemDeclarationKeepsThePreviouslyAppliedValue()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "removedDeclarationRestoresNekoJsBaselineInsteadOfStayingStale()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "rejectedBatchKeepsOldActivePlanWithoutPartialApply()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "propertyWriteAndExplicitSetterScriptsProduceTheSameAppliedResult()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "startupCollectionPointAppliesScriptDeclarationOnceForTheInitialGeneration()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "collectionErrorFailsWholeBatchAndNextGoodReloadStillCommits()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "candidateStaysInertUntilCommitAndReloadAppliesTheNewPlan()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "laterItemDeclarationReplacesTheEarlierPropertiesFromBaseline()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.ItemStackPersistentDataTest",
+          "test": "itemStackPdataRoundTripsAndClearsItsCustomDataComponent()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries require the ModDev runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "flushIsBoundedAndDoesNotLoseWritesDuringPacketDispatch()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "newlyTrackingPlayerGetsPersistedDataWithoutADirtyWrite()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "stopTrackingRemovalAndIdReuseKeepMonotonicRevisions()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "cloneCopiesOnlyNekoDataAndQueuesTheReplacementForSynchronization()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest",
+          "test": "missingRequiredAttributesFailBeforeAnEntityTypeIsPublished()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native attribute registry requires Minecraft bootstrap"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest",
+          "test": "nonFiniteConfiguredAttributesFailBeforeAnEntityTypeIsPublished()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native attribute registry requires Minecraft bootstrap"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest",
+          "test": "incompleteMobBaselinesAreRejectedForDefaultAndOpaqueFactories()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native attribute registry requires Minecraft bootstrap"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest",
+          "test": "nativeSpecialAndCommonBaseAttributesSurviveExplicitOverrides()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native attribute registry requires Minecraft bootstrap"
+        }
+      ]
+    },
+    "versions/26.1.2/build/test-results/test": {
+      "suites": 132,
+      "tests": 670,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 81,
+      "skips": [
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest",
+          "test": "replaceActionSwapsMatchedSlotOnly()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest",
+          "test": "clearDropsAllActionsForNextScriptRun()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest",
+          "test": "unmatchedPlainSlotStaysEmpty()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest",
+          "test": "keepActionReturnsFreshCopyAndUnmatchedSlotsKeepVanillaRemainder()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest",
+          "test": "unbreakableMatchedItemIsKeptIntactByDamageAction()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest",
+          "test": "damageActionWearsItemAndConsumesAtBreakPoint()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest",
+          "test": "idBasedFiltersMatchTheirOwnSemantics()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest",
+          "test": "combinatorsComposeIdFilters()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest",
+          "test": "versionNeutralHolderIdAccessorKeepsBothErasOnOneShape()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest",
+          "test": "byIdBareNameResolvesIntoTheMinecraftNamespace()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.bindings.static_access.BindingHelpersTest",
+          "test": "particleOptionsWithoutArgumentsReturnsTheParticleTypeItself()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.bindings.static_access.BindingHelpersTest",
+          "test": "unknownParticleIdIsRejected()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.command.NekoJSCommandsEditorRemovalTest",
+          "test": "editorCommandIsRemovedWithoutAliasAndViewErrorsRemain()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native command permissions require bootstrapped registry metadata"
+        },
+        {
+          "suite": "com.tkisor.nekojs.command.NekoJSCommandsTrustArgumentAndUsageTest",
+          "test": "trustAddressArgumentAcceptsHostPortAndRootExecutesUsage()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: net.minecraft.commands.Commands not initializable in this JVM; tree-shape assertions skipped"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "resourceKeyFieldsResolveAndDedupAgainstRegistryHolders()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "dynamicAdaptersUseLowestPrecedence()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "manuallyCoveredTargetsAreNotDuplicated()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "uncoveredVanillaRegistryTypeGainsStringIdAdapter()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest",
+          "test": "nativeEntityRegistrationInstallsOnlyForTheSelectedType()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native registry bootstrap requires a loader runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest",
+          "test": "nativeBlockRegistrationPassesDirectionAndDeclinesSides()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native registry bootstrap requires a loader runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest",
+          "test": "plainBlockNativeProviderDoesNotRequireABlockEntity()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native registry bootstrap requires a loader runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest",
+          "test": "nativeItemRegistrationQueriesTheExactStackRatherThanSharedFreshStorage()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native registry bootstrap requires a loader runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "unknownBlockIdThrowsAtCollection()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "allSixPropertiesRoundTrip()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "viewGettersReadCurrentValueUntilSet()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "multiStateWritesHitEveryStateAndRestoreLightFunction()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "modifyStoneHardnessThenEmptyPlanRestoresOriginal()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "candidateCollectionBeforeServerBindingStaysInert()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "invalidValuesRejectedAtPreflightNotApplied()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "foodWithoutEatSecondsKeepsExistingConsumable()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "nullFoodKeepsDrinkOnlyConsumable()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "foodEatSecondsReplacesConsumableDuration()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "invalidFoodValuesRejectedWithActionableErrors()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "toolWritesCatchAllRule()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "foodWritesFoodAndDefaultConsumable()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "nullFoodRemovesFoodAndConsumableOfFormerFood()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "foodDefaultsMatchDocumentedValues()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "nullToolRemovesComponent()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "invalidToolValuesRejectedWithActionableErrors()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "attackSpeedAloneKeepsDamageEntry()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "attributesWorkOnItemWithoutComponent()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "replacedEntryKeepsTooltipDisplay()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "attackDamageReplacesOnlyDamageEntry()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "modificationsComposeOnPristineSnapshotNotOnPatchedMap()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest",
+          "test": "sameTargetMultipleDeclarationsLastOneEntirelyReplacesEarlierOnes()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest",
+          "test": "removedItemDeclarationNowRestoresBaselineInsteadOfStayingStale()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest",
+          "test": "adapterWithoutARunningServerReportsUnavailableInsteadOfClaimingSuccess()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: needs vanilla registry class initialization to touch the trade pools"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest",
+          "test": "nodeWithoutAnAdapterAnswersExplicitUnavailableInsteadOfSilentSuccess()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: VillagerTradeUnavailableDomainOwner only exists on fabric; the facade path covers this node"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest",
+          "test": "candidateCollectionBeforeServerBindingStaysInert()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: needs vanilla registry class initialization for the version adapter"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "scriptDeclarationAppliesToLiveBlockAndItsStates()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "candidateStaysInertForBlocksAndEmptyPlanRestoresBaseline()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "multipleBlocksInOneScriptCommitTogetherOrNotAtAll()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "rejectedBlockBatchKeepsOldActivePlan()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest",
+          "test": "blockCallbackFailureRejectsTheAlreadyCollectedItemAndBlockBatch()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest",
+          "test": "guestFailureAfterAnItemDeclarationKeepsThePreviouslyAppliedValue()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "declarationRemovalExampleRestoresTheBaseline()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "setterPropertyParityExampleProducesTheSameAppliedResult()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "itemModificationExampleCommitsThroughTheAdapter()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "blockModificationExampleCommitsThroughTheAdapter()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "removedDeclarationRestoresNekoJsBaselineInsteadOfStayingStale()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "rejectedBatchKeepsOldActivePlanWithoutPartialApply()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "propertyWriteAndExplicitSetterScriptsProduceTheSameAppliedResult()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "startupCollectionPointAppliesScriptDeclarationOnceForTheInitialGeneration()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "collectionErrorFailsWholeBatchAndNextGoodReloadStillCommits()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "candidateStaysInertUntilCommitAndReloadAppliesTheNewPlan()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "laterBlockDeclarationRestoresTheOriginalPerStateLightFunction()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "laterBlockDeclarationReplacesAllEarlierPropertiesInAMixedBatch()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "laterItemDeclarationReplacesTheEarlierPropertiesFromBaseline()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "rejectedMixedBatchLeavesBothPreviouslyAppliedTargetsUnchanged()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.ItemStackPersistentDataTest",
+          "test": "itemStackPdataRoundTripsAndClearsItsCustomDataComponent()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries require the ModDev runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "flushIsBoundedAndDoesNotLoseWritesDuringPacketDispatch()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "newlyTrackingPlayerGetsPersistedDataWithoutADirtyWrite()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "stopTrackingRemovalAndIdReuseKeepMonotonicRevisions()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "cloneCopiesOnlyNekoDataAndQueuesTheReplacementForSynchronization()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.BuilderSetterPropertyParityTest",
+          "test": "nestedSubBuilderConfigGoesThroughTheSameSurface()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: block builder class init needs vanilla registries (no FML loader in bare JUnit)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.BuilderSetterPropertyParityTest",
+          "test": "nullItemPropertyAndNoItemMethodAreTheSameWrite()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: block builder class init needs vanilla registries (no FML loader in bare JUnit)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.BuilderTagTest",
+          "test": "blockBuilderTagRecordsBlockRegistryEntry()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: block properties need vanilla registries (no FML loader in bare JUnit)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest",
+          "test": "missingRequiredAttributesFailBeforeAnEntityTypeIsPublished()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native attribute registry requires Minecraft bootstrap"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest",
+          "test": "nonFiniteConfiguredAttributesFailBeforeAnEntityTypeIsPublished()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native attribute registry requires Minecraft bootstrap"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest",
+          "test": "incompleteMobBaselinesAreRejectedForDefaultAndOpaqueFactories()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native attribute registry requires Minecraft bootstrap"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest",
+          "test": "nativeSpecialAndCommonBaseAttributesSurviveExplicitOverrides()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native attribute registry requires Minecraft bootstrap"
+        }
+      ]
+    },
+    "versions/26.2.0/build/test-results/test": {
+      "suites": 132,
+      "tests": 670,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 81,
+      "skips": [
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest",
+          "test": "replaceActionSwapsMatchedSlotOnly()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest",
+          "test": "clearDropsAllActionsForNextScriptRun()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest",
+          "test": "unmatchedPlainSlotStaysEmpty()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest",
+          "test": "keepActionReturnsFreshCopyAndUnmatchedSlotsKeepVanillaRemainder()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest",
+          "test": "unbreakableMatchedItemIsKeptIntactByDamageAction()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest",
+          "test": "damageActionWearsItemAndConsumesAtBreakPoint()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest",
+          "test": "idBasedFiltersMatchTheirOwnSemantics()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest",
+          "test": "combinatorsComposeIdFilters()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest",
+          "test": "versionNeutralHolderIdAccessorKeepsBothErasOnOneShape()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest",
+          "test": "byIdBareNameResolvesIntoTheMinecraftNamespace()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.bindings.static_access.BindingHelpersTest",
+          "test": "particleOptionsWithoutArgumentsReturnsTheParticleTypeItself()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.bindings.static_access.BindingHelpersTest",
+          "test": "unknownParticleIdIsRejected()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.command.NekoJSCommandsEditorRemovalTest",
+          "test": "editorCommandIsRemovedWithoutAliasAndViewErrorsRemain()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native command permissions require bootstrapped registry metadata"
+        },
+        {
+          "suite": "com.tkisor.nekojs.command.NekoJSCommandsTrustArgumentAndUsageTest",
+          "test": "trustAddressArgumentAcceptsHostPortAndRootExecutesUsage()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: net.minecraft.commands.Commands not initializable in this JVM; tree-shape assertions skipped"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "resourceKeyFieldsResolveAndDedupAgainstRegistryHolders()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "dynamicAdaptersUseLowestPrecedence()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "manuallyCoveredTargetsAreNotDuplicated()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "uncoveredVanillaRegistryTypeGainsStringIdAdapter()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest",
+          "test": "nativeEntityRegistrationInstallsOnlyForTheSelectedType()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native registry bootstrap requires a loader runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest",
+          "test": "nativeBlockRegistrationPassesDirectionAndDeclinesSides()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native registry bootstrap requires a loader runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest",
+          "test": "plainBlockNativeProviderDoesNotRequireABlockEntity()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native registry bootstrap requires a loader runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest",
+          "test": "nativeItemRegistrationQueriesTheExactStackRatherThanSharedFreshStorage()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native registry bootstrap requires a loader runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "unknownBlockIdThrowsAtCollection()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "allSixPropertiesRoundTrip()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "viewGettersReadCurrentValueUntilSet()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "multiStateWritesHitEveryStateAndRestoreLightFunction()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "modifyStoneHardnessThenEmptyPlanRestoresOriginal()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "candidateCollectionBeforeServerBindingStaysInert()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest",
+          "test": "invalidValuesRejectedAtPreflightNotApplied()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "foodWithoutEatSecondsKeepsExistingConsumable()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "nullFoodKeepsDrinkOnlyConsumable()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "foodEatSecondsReplacesConsumableDuration()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "invalidFoodValuesRejectedWithActionableErrors()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "toolWritesCatchAllRule()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "foodWritesFoodAndDefaultConsumable()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "nullFoodRemovesFoodAndConsumableOfFormerFood()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "foodDefaultsMatchDocumentedValues()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "nullToolRemovesComponent()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "invalidToolValuesRejectedWithActionableErrors()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "attackSpeedAloneKeepsDamageEntry()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "attributesWorkOnItemWithoutComponent()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "replacedEntryKeepsTooltipDisplay()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "attackDamageReplacesOnlyDamageEntry()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest",
+          "test": "modificationsComposeOnPristineSnapshotNotOnPatchedMap()",
+          "reason": null
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest",
+          "test": "sameTargetMultipleDeclarationsLastOneEntirelyReplacesEarlierOnes()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest",
+          "test": "removedItemDeclarationNowRestoresBaselineInsteadOfStayingStale()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest",
+          "test": "adapterWithoutARunningServerReportsUnavailableInsteadOfClaimingSuccess()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: needs vanilla registry class initialization to touch the trade pools"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest",
+          "test": "nodeWithoutAnAdapterAnswersExplicitUnavailableInsteadOfSilentSuccess()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: VillagerTradeUnavailableDomainOwner only exists on fabric; the facade path covers this node"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest",
+          "test": "candidateCollectionBeforeServerBindingStaysInert()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: needs vanilla registry class initialization for the version adapter"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "scriptDeclarationAppliesToLiveBlockAndItsStates()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "candidateStaysInertForBlocksAndEmptyPlanRestoresBaseline()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "multipleBlocksInOneScriptCommitTogetherOrNotAtAll()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "rejectedBlockBatchKeepsOldActivePlan()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest",
+          "test": "blockCallbackFailureRejectsTheAlreadyCollectedItemAndBlockBatch()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest",
+          "test": "guestFailureAfterAnItemDeclarationKeepsThePreviouslyAppliedValue()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "declarationRemovalExampleRestoresTheBaseline()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "setterPropertyParityExampleProducesTheSameAppliedResult()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "itemModificationExampleCommitsThroughTheAdapter()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "blockModificationExampleCommitsThroughTheAdapter()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "removedDeclarationRestoresNekoJsBaselineInsteadOfStayingStale()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "rejectedBatchKeepsOldActivePlanWithoutPartialApply()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "propertyWriteAndExplicitSetterScriptsProduceTheSameAppliedResult()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "startupCollectionPointAppliesScriptDeclarationOnceForTheInitialGeneration()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "collectionErrorFailsWholeBatchAndNextGoodReloadStillCommits()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "candidateStaysInertUntilCommitAndReloadAppliesTheNewPlan()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "laterBlockDeclarationRestoresTheOriginalPerStateLightFunction()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "laterBlockDeclarationReplacesAllEarlierPropertiesInAMixedBatch()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "laterItemDeclarationReplacesTheEarlierPropertiesFromBaseline()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "rejectedMixedBatchLeavesBothPreviouslyAppliedTargetsUnchanged()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.ItemStackPersistentDataTest",
+          "test": "itemStackPdataRoundTripsAndClearsItsCustomDataComponent()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries require the ModDev runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "flushIsBoundedAndDoesNotLoseWritesDuringPacketDispatch()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "newlyTrackingPlayerGetsPersistedDataWithoutADirtyWrite()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "stopTrackingRemovalAndIdReuseKeepMonotonicRevisions()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "cloneCopiesOnlyNekoDataAndQueuesTheReplacementForSynchronization()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.BuilderSetterPropertyParityTest",
+          "test": "nestedSubBuilderConfigGoesThroughTheSameSurface()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: block builder class init needs vanilla registries (no FML loader in bare JUnit)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.BuilderSetterPropertyParityTest",
+          "test": "nullItemPropertyAndNoItemMethodAreTheSameWrite()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: block builder class init needs vanilla registries (no FML loader in bare JUnit)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.BuilderTagTest",
+          "test": "blockBuilderTagRecordsBlockRegistryEntry()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: block properties need vanilla registries (no FML loader in bare JUnit)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest",
+          "test": "missingRequiredAttributesFailBeforeAnEntityTypeIsPublished()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native attribute registry requires Minecraft bootstrap"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest",
+          "test": "nonFiniteConfiguredAttributesFailBeforeAnEntityTypeIsPublished()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native attribute registry requires Minecraft bootstrap"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest",
+          "test": "incompleteMobBaselinesAreRejectedForDefaultAndOpaqueFactories()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native attribute registry requires Minecraft bootstrap"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest",
+          "test": "nativeSpecialAndCommonBaseAttributesSurviveExplicitOverrides()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native attribute registry requires Minecraft bootstrap"
+        }
+      ]
+    },
+    "versions/26.1.2-fabric/build/test-results/test": {
+      "suites": 79,
+      "tests": 391,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 37,
+      "skips": [
+        {
+          "suite": "com.tkisor.nekojs.bindings.static_access.BindingHelpersTest",
+          "test": "particleOptionsWithoutArgumentsReturnsTheParticleTypeItself()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.bindings.static_access.BindingHelpersTest",
+          "test": "unknownParticleIdIsRejected()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "resourceKeyFieldsResolveAndDedupAgainstRegistryHolders()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "dynamicAdaptersUseLowestPrecedence()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "manuallyCoveredTargetsAreNotDuplicated()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "uncoveredVanillaRegistryTypeGainsStringIdAdapter()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest",
+          "test": "sameTargetMultipleDeclarationsLastOneEntirelyReplacesEarlierOnes()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest",
+          "test": "removedItemDeclarationNowRestoresBaselineInsteadOfStayingStale()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest",
+          "test": "adapterWithoutARunningServerReportsUnavailableInsteadOfClaimingSuccess()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: needs vanilla registry class initialization to touch the trade pools"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest",
+          "test": "candidateCollectionBeforeServerBindingStaysInert()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: needs vanilla registry class initialization for the version adapter"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "scriptDeclarationAppliesToLiveBlockAndItsStates()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "candidateStaysInertForBlocksAndEmptyPlanRestoresBaseline()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "multipleBlocksInOneScriptCommitTogetherOrNotAtAll()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "rejectedBlockBatchKeepsOldActivePlan()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest",
+          "test": "blockCallbackFailureRejectsTheAlreadyCollectedItemAndBlockBatch()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest",
+          "test": "guestFailureAfterAnItemDeclarationKeepsThePreviouslyAppliedValue()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "declarationRemovalExampleRestoresTheBaseline()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "setterPropertyParityExampleProducesTheSameAppliedResult()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "itemModificationExampleCommitsThroughTheAdapter()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "blockModificationExampleCommitsThroughTheAdapter()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "removedDeclarationRestoresNekoJsBaselineInsteadOfStayingStale()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "rejectedBatchKeepsOldActivePlanWithoutPartialApply()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "propertyWriteAndExplicitSetterScriptsProduceTheSameAppliedResult()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "startupCollectionPointAppliesScriptDeclarationOnceForTheInitialGeneration()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "collectionErrorFailsWholeBatchAndNextGoodReloadStillCommits()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "candidateStaysInertUntilCommitAndReloadAppliesTheNewPlan()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "laterBlockDeclarationRestoresTheOriginalPerStateLightFunction()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "laterBlockDeclarationReplacesAllEarlierPropertiesInAMixedBatch()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "laterItemDeclarationReplacesTheEarlierPropertiesFromBaseline()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "rejectedMixedBatchLeavesBothPreviouslyAppliedTargetsUnchanged()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.ItemStackPersistentDataTest",
+          "test": "itemStackPdataRoundTripsAndClearsItsCustomDataComponent()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries require the ModDev runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "flushIsBoundedAndDoesNotLoseWritesDuringPacketDispatch()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "newlyTrackingPlayerGetsPersistedDataWithoutADirtyWrite()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "stopTrackingRemovalAndIdReuseKeepMonotonicRevisions()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "cloneCopiesOnlyNekoDataAndQueuesTheReplacementForSynchronization()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.BuilderSetterPropertyParityTest",
+          "test": "nestedSubBuilderConfigGoesThroughTheSameSurface()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: block builder class init needs vanilla registries (no FML loader in bare JUnit)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.BuilderSetterPropertyParityTest",
+          "test": "nullItemPropertyAndNoItemMethodAreTheSameWrite()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: block builder class init needs vanilla registries (no FML loader in bare JUnit)"
+        }
+      ]
+    },
+    "versions/26.2.0-fabric/build/test-results/test": {
+      "suites": 79,
+      "tests": 391,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 37,
+      "skips": [
+        {
+          "suite": "com.tkisor.nekojs.bindings.static_access.BindingHelpersTest",
+          "test": "particleOptionsWithoutArgumentsReturnsTheParticleTypeItself()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.bindings.static_access.BindingHelpersTest",
+          "test": "unknownParticleIdIsRejected()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "resourceKeyFieldsResolveAndDedupAgainstRegistryHolders()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "dynamicAdaptersUseLowestPrecedence()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "manuallyCoveredTargetsAreNotDuplicated()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest",
+          "test": "uncoveredVanillaRegistryTypeGainsStringIdAdapter()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: assumption is not true"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest",
+          "test": "sameTargetMultipleDeclarationsLastOneEntirelyReplacesEarlierOnes()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest",
+          "test": "removedItemDeclarationNowRestoresBaselineInsteadOfStayingStale()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest",
+          "test": "adapterWithoutARunningServerReportsUnavailableInsteadOfClaimingSuccess()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: needs vanilla registry class initialization to touch the trade pools"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest",
+          "test": "candidateCollectionBeforeServerBindingStaysInert()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: needs vanilla registry class initialization for the version adapter"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "scriptDeclarationAppliesToLiveBlockAndItsStates()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "candidateStaysInertForBlocksAndEmptyPlanRestoresBaseline()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "multipleBlocksInOneScriptCommitTogetherOrNotAtAll()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest",
+          "test": "rejectedBlockBatchKeepsOldActivePlan()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest",
+          "test": "blockCallbackFailureRejectsTheAlreadyCollectedItemAndBlockBatch()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest",
+          "test": "guestFailureAfterAnItemDeclarationKeepsThePreviouslyAppliedValue()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "declarationRemovalExampleRestoresTheBaseline()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "setterPropertyParityExampleProducesTheSameAppliedResult()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "itemModificationExampleCommitsThroughTheAdapter()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest",
+          "test": "blockModificationExampleCommitsThroughTheAdapter()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "removedDeclarationRestoresNekoJsBaselineInsteadOfStayingStale()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "rejectedBatchKeepsOldActivePlanWithoutPartialApply()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "propertyWriteAndExplicitSetterScriptsProduceTheSameAppliedResult()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "startupCollectionPointAppliesScriptDeclarationOnceForTheInitialGeneration()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "collectionErrorFailsWholeBatchAndNextGoodReloadStillCommits()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest",
+          "test": "candidateStaysInertUntilCommitAndReloadAppliesTheNewPlan()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM (no FML loader?)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "laterBlockDeclarationRestoresTheOriginalPerStateLightFunction()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "laterBlockDeclarationReplacesAllEarlierPropertiesInAMixedBatch()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "laterItemDeclarationReplacesTheEarlierPropertiesFromBaseline()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest",
+          "test": "rejectedMixedBatchLeavesBothPreviouslyAppliedTargetsUnchanged()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries unavailable in this JVM"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.ItemStackPersistentDataTest",
+          "test": "itemStackPdataRoundTripsAndClearsItsCustomDataComponent()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: vanilla registries require the ModDev runtime"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "flushIsBoundedAndDoesNotLoseWritesDuringPacketDispatch()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "newlyTrackingPlayerGetsPersistedDataWithoutADirtyWrite()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "stopTrackingRemovalAndIdReuseKeepMonotonicRevisions()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest",
+          "test": "cloneCopiesOnlyNekoDataAndQueuesTheReplacementForSynchronization()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: native entity fixtures require bootstrapped registries"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.BuilderSetterPropertyParityTest",
+          "test": "nestedSubBuilderConfigGoesThroughTheSameSurface()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: block builder class init needs vanilla registries (no FML loader in bare JUnit)"
+        },
+        {
+          "suite": "com.tkisor.nekojs.wrapper.registry.BuilderSetterPropertyParityTest",
+          "test": "nullItemPropertyAndNoItemMethodAreTheSameWrite()",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: block builder class init needs vanilla registries (no FML loader in bare JUnit)"
+        }
+      ]
+    }
+  },
+  "archive": {
+    "file": "candidate-evidence.zip",
+    "sha256": "0bd1ac10ea41d8059c5d151765744f9408edf26a94c99875192ca26bbb6a0c07",
+    "bytes": 1458890
+  },
+  "entries": {
+    "checks/ci-gates-report.json": "57372a455e9210a90602d0f1ce3ec862be428fc47aae8eba7ba52108da8649d9",
+    "checks/ci-gates.log": "ceb696bfc7e6c8b4e4b78f3bb9f4e9dd14ccae4d9becf95699ce3919cef4beea",
+    "checks/frozen-build.log": "0cd9b7885cf33b5a241e925423f49a8282199f523f54f9e1526e52e703aa063e",
+    "checks/full-checks.log": "15c382945c8c995ccfcbab72594adaa24a7dc9e64295cfb51782e1aff03b8853",
+    "checks/gametest.log": "7079daf8179f146d0a358baadc606ad039f29fb0d033aefb72343df18ff272a7",
+    "checks/probe-types.log": "1508da24b09b3355482e2ad5604085d31adab4de0f597091fef3d6b41b3ecd3e",
+    "checks/tests.json": "dd714722ce0ef8355c2a3ecc6a966ecb4b08bc35cb71ac20365e95d059e68d58",
+    "formal/reload-1/env-snapshot.txt": "8162c2a3b84316ff3884cfd857c0c3c1f02e0b23868bbf8518f62d4c3d85c8f6",
+    "formal/reload-1/exit.json": "fe8c7b9d4bc52e1b7530cb39528fd78a39ca0a4c978b4198e038708a42ad6f48",
+    "formal/reload-1/reload-session-stderr.log": "ece9fa846e665afb9ec0a92515a6d1796dc8624c488d12cc289cd4742ee8e5b1",
+    "formal/reload-1/reload-session-stdout.log": "bfd9215c56ffa046f0dcd290a883e1b32a705a6d3866897ca6956df52cc1ddb6",
+    "formal/reload-1/sampler.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "formal/reload-1/sampler.stdout.log": "c2b62ba4b6bfa78b276ef8bfdb3be30d71e030975866e1a28e49e7b481d97ac4",
+    "formal/reload-1/samples.jsonl": "d2c937c47cd9d67597d6c1fa2ee051ad6d1663f09c48fab411a2a3b3e7c75c61",
+    "formal/reload-2/env-snapshot.txt": "02bda26930a9e6dbfa240779a584133c9cdd34bf99bf49c84e61ca457d4f0a6b",
+    "formal/reload-2/exit.json": "2ac819dff54e8d5b028d1695e21b3b608ba1bd9c5da913943d70fc0ece4f6010",
+    "formal/reload-2/reload-session-stderr.log": "f037d834174a9ac46139c3a740a11f2cc2ad361eafbab1d0c68776f79ab24ddf",
+    "formal/reload-2/reload-session-stdout.log": "a0df437b8344a246363ae5970a6ccb532a028b014386b8b0813f31c821e8d5b4",
+    "formal/reload-2/sampler.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "formal/reload-2/sampler.stdout.log": "4f148efe54ab8eda8e2ec7fb3c98d484730f918958a545fe13ee5a474ca44038",
+    "formal/reload-2/samples.jsonl": "2c65047d1fc3ea9c6913e1758b067a58b87bec135c7ded72606f639039241501",
+    "formal/startup/channel-test.txt": "fac56165db8e5adecf84b26812552c82a3b1253f1abd0f511528e2b277cdf4a9",
+    "formal/startup/env-snapshot.txt": "348ae77b9bc0a252ede0b07e22107fa3129118e57555222361873af945e4997f",
+    "formal/startup/exit.json": "27acdbbcf43f83880a2209a6a6d78d0ad08935cc99131f25d913fa6807508769",
+    "formal/startup/sampler.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "formal/startup/sampler.stdout.log": "fceba3832c4b8c4d44f31236862102fb215e8a2438811579ca33c48a50bcc1f1",
+    "formal/startup/samples.jsonl": "56a7fc208443931949fe6d1c41649f7d71a5ef113a8a0114fb518569de78da5b",
+    "formal/startup/startup-1-warmup-stderr.log": "975ce499ab947762a0db833e686badabc5f585f5e99ff9d13a08a1ae4acf00c6",
+    "formal/startup/startup-1-warmup-stdout.log": "881ca517646890ede5d9b97de16eb7e625eee16bf528ef22a43f134d7c897d1d",
+    "formal/startup/startup-2-warmup-stderr.log": "0bc31f110effd60bf94f8c1132a5b8748029072f2eba7f7cce87d95879a5c79c",
+    "formal/startup/startup-2-warmup-stdout.log": "fb3bcec9a6fdcb65f132c3734819fe4119e348b0bdc2d7fa5401ea6e51a4d9f5",
+    "formal/startup/startup-3-formal-stderr.log": "25c53b7c237dc02147e5d83e6aa7a5141929afaa131df6b668d1ae4b90770145",
+    "formal/startup/startup-3-formal-stdout.log": "f0affb4dd625f6ac625baaeb18105ca91f1345ed367fd074544ab18937f3f0b6",
+    "formal/startup/startup-4-formal-stderr.log": "cd5c856d3de020858f5e4820d6fb87a9e25596e0cce8f84cccacf949527e468f",
+    "formal/startup/startup-4-formal-stdout.log": "58cb385172b5d6b097763f1332bff0c57a99ebb49a59ea8e2ce5327ad32e8bd4",
+    "formal/startup/startup-5-formal-stderr.log": "c0c0ee5dc9dafa3725e7be73d8f75ff7c579b7687d6da7954a961d4e60be23ff",
+    "formal/startup/startup-5-formal-stdout.log": "c345d7b4f1a3fbc88e60aea33479883a39921304e623de8457df605d5771f575",
+    "formal/startup/startup-6-formal-stderr.log": "fbf4ecd014efef640f5c964015fb0ff0d20ac33f7aa858572aec5fa20bec3889",
+    "formal/startup/startup-6-formal-stdout.log": "b7dcb154999a3214c30a8a1cd480df95eb8b57e4effab861de43a144753e9d58",
+    "formal/startup/startup-7-formal-stderr.log": "130f697290850b36858fc5eea5e5c7370f69d5f18561ce2fa35deebacef9a520",
+    "formal/startup/startup-7-formal-stdout.log": "84179afa48c5e30038b072be02a625ecd1110303971196defc8eb9c20d86b9e1",
+    "runner/artifacts.json": "fe16aac0eb782ac0055d5dea6695741a73baa00244ec07ac2992b4cc71e28b53",
+    "runner/binding.json": "d1de231b421b01b727ef187a9e7c9e781d447dda0aff8c2d32939d88ec03e2bb",
+    "runner/candidate-runner.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "runner/candidate-runner.stdout.log": "9ddb135167b6f8fa1d2ac587155861de23fd9cdac0e4d401dd4bf471d8fceb6e",
+    "runner/compiled-classes-after.json": "6620cc45ef6e768b2b6e38bdbe326d36002d4668a272e8df9fc9471d97bc4849",
+    "runner/compiled-classes-before.json": "e65eb9864622aa1403f55daf1f658752402aab844a45c22520949b3f06c1fb51",
+    "runner/formal-candidate.ps1": "315a2d0b92885a9de348ef367c3b92e2b398cdb7141728b60a141e291d3d5da6",
+    "source/common/src/main/java/com/tkisor/nekojs/core/module/BuiltinModuleTransformCache.java": "cb1c0a347676c2c747620dac5ccf22e5b0e6332e73d9258c84267ba06937e1e5",
+    "source/common/src/main/java/com/tkisor/nekojs/core/module/NekoModulePipeline.java": "b005a697860d967908950b636abf8a7e2a1091e26a39345c580599838161e8c3",
+    "source/common/src/main/java/com/tkisor/nekojs/core/module/NekoModulePipelineCache.java": "24f1d081bad46ab2ed4eebdcf352193538dd40d621814ff22303f28f294b89dd",
+    "source/common/src/test/java/com/tkisor/nekojs/core/module/BuiltinModuleReuseTest.java": "77efd2325304cb2b60ce2a7ccf1d391e6d25e920252a87261b19965c4cc233b9",
+    "source/common/src/test/java/com/tkisor/nekojs/core/module/BuiltinModuleTransformCacheTest.java": "fbd2553a45bcde705e3ad6fa8f5bdbe81f5f7fa8178da759b106316fd9edb206"
+  }
+}

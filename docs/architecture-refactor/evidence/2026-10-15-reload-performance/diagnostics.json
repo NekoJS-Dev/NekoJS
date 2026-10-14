@@ -1,0 +1,492 @@
+{
+  "baseRevision": "8ed398dd2a4877bf1382000e1b811eb2d667c381",
+  "observations": {
+    "profile": {
+      "count": 20,
+      "meanMs": 284.70304,
+      "medianMs": 283.6109,
+      "minimumMs": 246.4102,
+      "maximumMs": 392.7935,
+      "diagnosticOnly": true
+    },
+    "profile-deep": {
+      "count": 20,
+      "meanMs": 299.43987,
+      "medianMs": 293.65405,
+      "minimumMs": 258.8635,
+      "maximumMs": 428.3219,
+      "diagnosticOnly": true
+    },
+    "profile-recipe-ops": {
+      "count": 20,
+      "meanMs": 322.85025,
+      "medianMs": 321.36805000000004,
+      "minimumMs": 278.88300000000004,
+      "maximumMs": 426.6574,
+      "diagnosticOnly": true
+    },
+    "profile-phase": {
+      "count": 20,
+      "meanMs": 325.147575,
+      "medianMs": 313.879,
+      "minimumMs": 287.14160000000004,
+      "maximumMs": 472.98080000000004,
+      "diagnosticOnly": true
+    },
+    "profile-builtin-reuse": {
+      "count": 20,
+      "meanMs": 158.199265,
+      "medianMs": 151.65985,
+      "minimumMs": 124.29870000000001,
+      "maximumMs": 251.5945,
+      "diagnosticOnly": true
+    }
+  },
+  "phaseDiagnostic": {
+    "initialCandidate": {
+      "totalMs": 317.4605,
+      "stepsMs": {
+        "candidate environment created": 50.3974,
+        "candidate bindings installed": 27.3362,
+        "discovered 6 scripts": 4.0062,
+        "candidate scripts executed": 221.3795,
+        "candidate event plan prepared": 0.0497,
+        "candidate domain plans collected": 3.8068,
+        "candidate state plan validated": 0.1625,
+        "committed": 9.5393
+      }
+    },
+    "commandedCandidates": [
+      {
+        "totalMs": 287.637,
+        "stepsMs": {
+          "candidate environment created": 58.1115,
+          "candidate bindings installed": 18.9496,
+          "discovered 6 scripts": 4.7097,
+          "candidate scripts executed": 188.0537,
+          "candidate event plan prepared": 0.03,
+          "candidate domain plans collected": 0.0898,
+          "candidate state plan validated": 0.0204,
+          "committed": 17.0007
+        }
+      },
+      {
+        "totalMs": 228.811,
+        "stepsMs": {
+          "candidate environment created": 32.6681,
+          "candidate bindings installed": 12.9352,
+          "discovered 6 scripts": 2.9011,
+          "candidate scripts executed": 178.4137,
+          "candidate event plan prepared": 0.0266,
+          "candidate domain plans collected": 0.0497,
+          "candidate state plan validated": 0.0187,
+          "committed": 1.2723
+        }
+      },
+      {
+        "totalMs": 227.8422,
+        "stepsMs": {
+          "candidate environment created": 21.4568,
+          "candidate bindings installed": 6.9128,
+          "discovered 6 scripts": 2.688,
+          "candidate scripts executed": 194.8861,
+          "candidate event plan prepared": 0.0232,
+          "candidate domain plans collected": 0.0409,
+          "candidate state plan validated": 0.014,
+          "committed": 1.2365
+        }
+      },
+      {
+        "totalMs": 214.8519,
+        "stepsMs": {
+          "candidate environment created": 27.1943,
+          "candidate bindings installed": 9.7946,
+          "discovered 6 scripts": 3.9048,
+          "candidate scripts executed": 170.9076,
+          "candidate event plan prepared": 0.051,
+          "candidate domain plans collected": 0.0727,
+          "candidate state plan validated": 0.0239,
+          "committed": 1.8454
+        }
+      },
+      {
+        "totalMs": 205.5001,
+        "stepsMs": {
+          "candidate environment created": 26.7137,
+          "candidate bindings installed": 9.7695,
+          "discovered 6 scripts": 4.6214,
+          "candidate scripts executed": 162.8312,
+          "candidate event plan prepared": 0.0276,
+          "candidate domain plans collected": 0.0515,
+          "candidate state plan validated": 0.0189,
+          "committed": 1.0009
+        }
+      },
+      {
+        "totalMs": 198.8562,
+        "stepsMs": {
+          "candidate environment created": 27.5189,
+          "candidate bindings installed": 6.6633,
+          "discovered 6 scripts": 4.0166,
+          "candidate scripts executed": 159.3988,
+          "candidate event plan prepared": 0.0201,
+          "candidate domain plans collected": 0.036,
+          "candidate state plan validated": 0.0125,
+          "committed": 0.7479
+        }
+      },
+      {
+        "totalMs": 243.8018,
+        "stepsMs": {
+          "candidate environment created": 38.2717,
+          "candidate bindings installed": 14.1566,
+          "discovered 6 scripts": 7.209,
+          "candidate scripts executed": 181.7379,
+          "candidate event plan prepared": 0.0305,
+          "candidate domain plans collected": 0.057,
+          "candidate state plan validated": 0.022,
+          "committed": 1.2932
+        }
+      },
+      {
+        "totalMs": 197.1456,
+        "stepsMs": {
+          "candidate environment created": 22.8227,
+          "candidate bindings installed": 9.3765,
+          "discovered 6 scripts": 5.2385,
+          "candidate scripts executed": 157.816,
+          "candidate event plan prepared": 0.0219,
+          "candidate domain plans collected": 0.0383,
+          "candidate state plan validated": 0.0138,
+          "committed": 1.0502
+        }
+      },
+      {
+        "totalMs": 214.9758,
+        "stepsMs": {
+          "candidate environment created": 25.2725,
+          "candidate bindings installed": 9.0463,
+          "discovered 6 scripts": 4.7216,
+          "candidate scripts executed": 173.6703,
+          "candidate event plan prepared": 0.0324,
+          "candidate domain plans collected": 0.0459,
+          "candidate state plan validated": 0.0183,
+          "committed": 1.4447
+        }
+      },
+      {
+        "totalMs": 193.947,
+        "stepsMs": {
+          "candidate environment created": 23.4034,
+          "candidate bindings installed": 7.5598,
+          "discovered 6 scripts": 3.4642,
+          "candidate scripts executed": 158.1353,
+          "candidate event plan prepared": 0.0235,
+          "candidate domain plans collected": 0.0429,
+          "candidate state plan validated": 0.0149,
+          "committed": 0.8435
+        }
+      },
+      {
+        "totalMs": 218.3016,
+        "stepsMs": {
+          "candidate environment created": 27.4589,
+          "candidate bindings installed": 6.146,
+          "discovered 6 scripts": 3.3849,
+          "candidate scripts executed": 179.1888,
+          "candidate event plan prepared": 0.0305,
+          "candidate domain plans collected": 0.0536,
+          "candidate state plan validated": 0.0179,
+          "committed": 1.2478
+        }
+      },
+      {
+        "totalMs": 194.2792,
+        "stepsMs": {
+          "candidate environment created": 17.7068,
+          "candidate bindings installed": 5.9048,
+          "discovered 6 scripts": 2.5854,
+          "candidate scripts executed": 166.5536,
+          "candidate event plan prepared": 0.0288,
+          "candidate domain plans collected": 0.0397,
+          "candidate state plan validated": 0.0341,
+          "committed": 1.0016
+        }
+      },
+      {
+        "totalMs": 202.5208,
+        "stepsMs": {
+          "candidate environment created": 18.124,
+          "candidate bindings installed": 7.9897,
+          "discovered 6 scripts": 2.6338,
+          "candidate scripts executed": 172.5035,
+          "candidate event plan prepared": 0.0265,
+          "candidate domain plans collected": 0.0422,
+          "candidate state plan validated": 0.0142,
+          "committed": 0.7549
+        }
+      },
+      {
+        "totalMs": 181.3187,
+        "stepsMs": {
+          "candidate environment created": 24.8872,
+          "candidate bindings installed": 5.8503,
+          "discovered 6 scripts": 2.2731,
+          "candidate scripts executed": 146.5939,
+          "candidate event plan prepared": 0.0279,
+          "candidate domain plans collected": 0.1072,
+          "candidate state plan validated": 0.0245,
+          "committed": 1.069
+        }
+      },
+      {
+        "totalMs": 245.5196,
+        "stepsMs": {
+          "candidate environment created": 25.0803,
+          "candidate bindings installed": 5.4776,
+          "discovered 6 scripts": 5.4468,
+          "candidate scripts executed": 207.0522,
+          "candidate event plan prepared": 0.0556,
+          "candidate domain plans collected": 0.092,
+          "candidate state plan validated": 0.0402,
+          "committed": 1.4959
+        }
+      },
+      {
+        "totalMs": 195.6587,
+        "stepsMs": {
+          "candidate environment created": 21.9456,
+          "candidate bindings installed": 4.5176,
+          "discovered 6 scripts": 3.011,
+          "candidate scripts executed": 163.5551,
+          "candidate event plan prepared": 0.0289,
+          "candidate domain plans collected": 0.0502,
+          "candidate state plan validated": 0.0179,
+          "committed": 1.9438
+        }
+      },
+      {
+        "totalMs": 249.3273,
+        "stepsMs": {
+          "candidate environment created": 19.8515,
+          "candidate bindings installed": 5.236,
+          "discovered 6 scripts": 5.7742,
+          "candidate scripts executed": 215.482,
+          "candidate event plan prepared": 0.0388,
+          "candidate domain plans collected": 0.075,
+          "candidate state plan validated": 0.0285,
+          "committed": 1.8227
+        }
+      },
+      {
+        "totalMs": 208.6117,
+        "stepsMs": {
+          "candidate environment created": 32.8441,
+          "candidate bindings installed": 4.8841,
+          "discovered 6 scripts": 3.4076,
+          "candidate scripts executed": 163.3699,
+          "candidate event plan prepared": 0.0381,
+          "candidate domain plans collected": 0.0763,
+          "candidate state plan validated": 0.028,
+          "committed": 3.1177
+        }
+      },
+      {
+        "totalMs": 170.2988,
+        "stepsMs": {
+          "candidate environment created": 22.2712,
+          "candidate bindings installed": 4.6211,
+          "discovered 6 scripts": 3.051,
+          "candidate scripts executed": 138.7853,
+          "candidate event plan prepared": 0.0258,
+          "candidate domain plans collected": 0.0492,
+          "candidate state plan validated": 0.1305,
+          "committed": 1.048
+        }
+      },
+      {
+        "totalMs": 191.4643,
+        "stepsMs": {
+          "candidate environment created": 25.9269,
+          "candidate bindings installed": 6.6187,
+          "discovered 6 scripts": 4.7212,
+          "candidate scripts executed": 151.7045,
+          "candidate event plan prepared": 0.0278,
+          "candidate domain plans collected": 0.0519,
+          "candidate state plan validated": 0.0184,
+          "committed": 1.4935
+        }
+      }
+    ],
+    "commands": [
+      {
+        "rootMs": 288.6054,
+        "recipeMs": 57.859
+      },
+      {
+        "rootMs": 229.3853,
+        "recipeMs": 53.5872
+      },
+      {
+        "rootMs": 228.4702,
+        "recipeMs": 57.1259
+      },
+      {
+        "rootMs": 215.3781,
+        "recipeMs": 59.7795
+      },
+      {
+        "rootMs": 206.0559,
+        "recipeMs": 32.4144
+      },
+      {
+        "rootMs": 199.7761,
+        "recipeMs": 31.9474
+      },
+      {
+        "rootMs": 244.7871,
+        "recipeMs": 38.2052
+      },
+      {
+        "rootMs": 197.7451,
+        "recipeMs": 31.2966
+      },
+      {
+        "rootMs": 215.5805,
+        "recipeMs": 31.9993
+      },
+      {
+        "rootMs": 194.4267,
+        "recipeMs": 33.1994
+      },
+      {
+        "rootMs": 218.9074,
+        "recipeMs": 30.1217
+      },
+      {
+        "rootMs": 194.6908,
+        "recipeMs": 29.3994
+      },
+      {
+        "rootMs": 202.916,
+        "recipeMs": 33.8166
+      },
+      {
+        "rootMs": 182.0301,
+        "recipeMs": 31.3121
+      },
+      {
+        "rootMs": 246.1389,
+        "recipeMs": 32.1303
+      },
+      {
+        "rootMs": 196.107,
+        "recipeMs": 29.1485
+      },
+      {
+        "rootMs": 250.2692,
+        "recipeMs": 30.1524
+      },
+      {
+        "rootMs": 209.1848,
+        "recipeMs": 31.637
+      },
+      {
+        "rootMs": 170.9503,
+        "recipeMs": 32.5291
+      },
+      {
+        "rootMs": 192.2457,
+        "recipeMs": 30.8898
+      }
+    ],
+    "candidateMeanMs": 213.533465,
+    "stepMeansMs": {
+      "candidate environment created": 26.976505,
+      "candidate bindings installed": 8.120505,
+      "discovered 6 scripts": 3.988195,
+      "candidate scripts executed": 171.53197,
+      "candidate event plan prepared": 0.030775,
+      "candidate domain plans collected": 0.0581,
+      "candidate state plan validated": 0.02658,
+      "committed": 2.13651
+    },
+    "commandMeansMs": {
+      "rootMs": 214.18253,
+      "recipeMs": 36.92754
+    }
+  },
+  "limitations": [
+    "All observations are instrumented diagnostics, not formal acceptance samples.",
+    "RCON duration differs from the original sampler marker metric.",
+    "JFR print requires --stack-depth 128; default export shows only five frames.",
+    "Recipe RegistryOps reuse was rejected and reverted; its samples are retained.",
+    "First reuse profiler launcher failed its path-list guard before starting a game."
+  ],
+  "archive": {
+    "file": "diagnostics.zip",
+    "sha256": "e319005d69e875904808a2e287d946d7b374236f2a71c807829f49b7743f5797",
+    "bytes": 2036650
+  },
+  "entries": {
+    "probes/phase-build.log": "8222b44d34961de3f03b3d25669467260a85ddb1dd0cf5d6fa26a0e46877c9a7",
+    "probes/phase-instrumentation.patch": "91c8bae9e60e6822366b7c61670e446708095bd705556b562744226141857107",
+    "probes/recipe-ops-build.log": "0df595291315d0b1f3e33d4cc80c6e48abfb3a2f10fc211ad329a8ddf7185c4d",
+    "probes/recipe-ops.patch": "7b52580bf5ccaa56a8a4dbcbce303fd1f5d571d8e7858d4831a716307f0eeb8f",
+    "probes/reuse-green-2.log": "768884548617a85b2bd481b19b0a22999912694cf01b30aaa93f04c17c6f6cf9",
+    "probes/reuse-green.log": "94e65bba4d8e65dd8f949b7ecf312c918125e269e48fb811f64ad9ed570b1e15",
+    "probes/reuse-profile.stderr.log": "c082b68e6e5cea417fd138a12fcade3ffef29776f1f217a4b05389093de1bce2",
+    "probes/reuse-red.log": "f0d36c33d1cf34dbb8d332c158b94d358a0fb1695214b13aa48d458d83298a4c",
+    "profile-builtin-reuse/jfr-configure.log": "bf49a8df5ff1a56d245d8e6ef8723513c23f072a78debfcd286c0e9ef0d50618",
+    "profile-builtin-reuse/jfr-start.log": "308a74e9db5eb6b99a5c361145329aeda111ff08c626ab42b4dbd6a69164bcd3",
+    "profile-builtin-reuse/jfr-stop.log": "6e9e136c208ff0dd73673f1e25cdc5333a6ba231cff80f15e2050eb3620b6cfc",
+    "profile-builtin-reuse/jvm.json": "238ffe46fc47304c2fb16f4ac080ac5b1b99446fb44334afad68ddd1f4fcbc5e",
+    "profile-builtin-reuse/profile-stderr.log": "052663f016a87be17e27b4c01edb55b0aeef21dd5a6484a55b27c65a9b526448",
+    "profile-builtin-reuse/profile-stdout.log": "7ebab86f2f18c7d33d57c869299d23f60fd060a21c85c3024ad49b5eb82401b9",
+    "profile-builtin-reuse/reload.jfr": "82bb4380f55e6f4c7e4db3f7a407a0e9e5cc3a5c6c0f7fa87febb10b3879dbfa",
+    "profile-builtin-reuse/reloads.json": "e940b22ea4772a64041a2cc1aec485d1acc3fe0d0f6ee329c7ef180a4d70b26a",
+    "profile-builtin-reuse/session.json": "9950c76fb3e713a362aa1893c5a745cbb5268872694d75edd14793016c2fd2fd",
+    "profile-builtin-reuse/source-hashes.json": "3985e1337e54ea0b00b660cbecfd7cb6a2d9c308c6b72324a66ed540299d0f73",
+    "profile-deep/jfr-configure.log": "62de00d462ae5178eb9c3468274dd445c4ed158a1ea8ebc5db654454fe286b93",
+    "profile-deep/jfr-start.log": "b0a9da190b912aefe1340d5ed3680f10ab329cbc97ed0fbac1160186d8bdf941",
+    "profile-deep/jfr-stop.log": "8b2fd52586fe6894860e655256bd4a3630ce331c54e14946ef1f1986f07a0744",
+    "profile-deep/jfr-summary-full.json": "a89986d92f5893b2c9e7ba0b5cc7f86cb3b9abc7036c0182be64419163908fd2",
+    "profile-deep/jfr-summary.json": "969c364c5ea0d6b22548c5d57cad3689a4160c01ea69b22fcfe644d27ce5040c",
+    "profile-deep/jvm.json": "9a5f621e530a5cb4e35e165be397a36885362ba56d30af86b1f019bd725d1ada",
+    "profile-deep/profile-stderr.log": "6b857c556d7bb194d1fcbe379d36b8ba2b748399e6afb9df077c62fc4b8517f8",
+    "profile-deep/profile-stdout.log": "7cfeb283b0f0491ef850dc46cc0026f2d83c40dbaebc8af4bfb068dd966158e0",
+    "profile-deep/reload.jfr": "1a343434c02244cb3d527ee4d1d7f6f48edb2610cde84f0bed4a531dd06b8e3e",
+    "profile-deep/reloads.json": "f0dc7f9445ccde1ebe6f39964cd2e7245c18d20a5c6d4b4e3e8d2a864e7ac824",
+    "profile-deep/session.json": "f78aeae013c159f24158f18669519fd810cb3fa3431cb4f13483b4acfef34fb9",
+    "profile-phase/jfr-configure.log": "e25351e82febe55efe81e4de2fdb790f0fbb9c23c63033592d42a07ac04d31e9",
+    "profile-phase/jfr-start.log": "2bf54d3819107251575be42a5926b81928123e329ff519ee1d4be5f7979e0663",
+    "profile-phase/jfr-stop.log": "65921f62321ce80aad20120070eec277594560243f5698db8d99718966ef5892",
+    "profile-phase/jvm.json": "26039b0e6ccb035a412be70b89fc4a33870c6bb367548144cbaa559ab1d32450",
+    "profile-phase/phase-summary.json": "771cf41072e673681a6a23230b49491044e5b012d978fc648bd5953937829a31",
+    "profile-phase/profile-stderr.log": "11eedca4ec6b2535981257bd57ecc9a6b7f9ddc738f8f59144e135276fb2f772",
+    "profile-phase/profile-stdout.log": "89ce45c34fcf00af87f6bcd7ceb16f6327ca97ba2343083ee42b37a6dc08e28e",
+    "profile-phase/reload.jfr": "857ea8b697946c9b34f590ea9b7509dd99de7a90fdfbf83ec97ca8828f5386d5",
+    "profile-phase/reloads.json": "c36cbc3f64e43b8ecd4d9e35f63860943a5362dfe10110d745fdf226d8974df1",
+    "profile-phase/session.json": "769ec751872c6436bb403846ac44b3f3448ec60f8880df1db9dc17f6944e1e92",
+    "profile-phase/source-hashes.json": "81f3c66947343baf82a786a9195ea9692eb078e0953a937a85d015b265256f0f",
+    "profile-recipe-ops/jfr-configure.log": "76012a19f9636d1eb7bf2600263c4812bb2736f60d4f100ee3ecc8ac89902c3e",
+    "profile-recipe-ops/jfr-start.log": "e36ff40f2aa0d455a320b6cdd2e2cd196a8affa67f61c34d30da3cf2f1c09fa5",
+    "profile-recipe-ops/jfr-stop.log": "f9bcbe4f49fe5c09f93517e7ea8c4a8fd6cd7be41c3ef377a63297dd4e6ec4d9",
+    "profile-recipe-ops/jvm.json": "1ca86b65b33c0c6cdf6797cec62c78d2949fc8318cd000e423c06a9a24cba35d",
+    "profile-recipe-ops/profile-stderr.log": "ef71c49483dd4c528a118992c334da5dadeaf88c758e2e62869764f8a03e6c9b",
+    "profile-recipe-ops/profile-stdout.log": "9bb4a7f8dc85ca3dc160da708146f1597c92c345cb2c16ab20fa973b3ba55d4b",
+    "profile-recipe-ops/reload.jfr": "0efe0e509f919b2303ca5e3d5055eedeee421b2674d1432eb58d15115cce3bf8",
+    "profile-recipe-ops/reloads.json": "b1b5b924d5a9a078ce411eb626677e30f214687d252b86c2c4e59b183110551b",
+    "profile-recipe-ops/session.json": "ba0ae408c58cbcf7b98f0739c8218d833ea11c9615938207063409c3ec7690fc",
+    "profile-recipe-ops/source-hashes.json": "cab7792e78df5dbb2d84bf347a163190385406caa9fa38345728bb4dfda752fa",
+    "profile/jfr-start.log": "cde7b3ecfa6c141c975a2aa5b050e99235a4f250454cc4695254c87c7472d3b4",
+    "profile/jfr-stop.log": "b9ef896203f0c94bfdb859dcf8da52008dfaef3e983560b9710cee37c9a0f155",
+    "profile/jfr-summary.json": "77282d3877af41431a1b313452cbaebef738a4df240801ebb91fdbd80da6175c",
+    "profile/jvm.json": "01918acc016ff62167aae580f65c7021c6a9316cc0dedab18de4c990dc66cd21",
+    "profile/profile-stderr.log": "4936b9d762cc6a0102d3b09843296402b657aa8656bc3de014039ef05861f456",
+    "profile/profile-stdout.log": "a4b042a6dae566743f339c7e43252d16f4e8913393a0394ca2eadff9787e8ec0",
+    "profile/reload.jfr": "31f5a967fea282b1721a180d63c232e0234a7dd6bc78459be04857424eceae27",
+    "profile/reloads.json": "8530f8729876f30c66d39005b50a641dcdd686ebc81c668018d98b938b1bacee",
+    "profile/session.json": "80e94d22ee34a3da08c616b33ee14aae6fe784884387954c9277eba81047b3ab"
+  }
+}
