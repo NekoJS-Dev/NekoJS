@@ -52,6 +52,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     private final NekoModulePipeline pipeline;
     private final Map<Path, PreparedEntry> preparedCache = new ConcurrentHashMap<>();
     private final Map<String, Source> builtinSources;
+    private final BuiltinModuleTransformCache builtinTransforms;
     private final SourceMapRegistry sourceMaps;
     private final NekoEsmVirtualModuleRegistry virtualModules;
     private final NekoTrustContext trustContext;
@@ -96,6 +97,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         this.bindingSchemaView = Objects.requireNonNull(bindingSchemaView, "bindingSchemaView");
         this.owner = owner;
         this.builtinSources = owner == null ? new ConcurrentHashMap<>() : owner.builtinSources;
+        this.builtinTransforms = owner == null ? new BuiltinModuleTransformCache() : owner.builtinTransforms;
     }
 
     /**
@@ -105,6 +107,8 @@ public final class NekoModulePipelineCache implements AutoCloseable {
      * entries, source maps, virtual sources and preparation observations are private to the
      * returned session. Only the root owner can open a session; a child cannot become another
      * session factory or long-lived runtime owner.
+     * Pure built-in transformations are bounded root-owned products shared across sessions;
+     * each session still reads and authorizes files and validates its own binding schema.
      */
     public NekoModulePipelineCache openSession() {
         return openSession(ScriptBindingSchema.emptyView());
@@ -151,6 +155,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
             return;
         }
         closed = true;
+        builtinTransforms.close();
         for (NekoModulePipelineCache session : sessions.toArray(NekoModulePipelineCache[]::new)) {
             session.closeSession();
         }
@@ -277,6 +282,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
 
     /** 清空本实例的全部 prepared 条目与对应 source map（runtime owner 释放语义）。 */
     public void clear() {
+        builtinTransforms.clear();
         if (owner == null) {
             for (NekoModulePipelineCache session : sessions.toArray(NekoModulePipelineCache[]::new)) {
                 session.closeSession();
@@ -312,6 +318,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
             }
         }
         preparedCache.entrySet().removeIf(entry -> entry.getValue().type() == type);
+        builtinTransforms.invalidate(path -> scriptTypeOf(path) == type);
         sourceMaps.clearByScriptType(type);
         virtualModules.clear(type);
     }
@@ -323,6 +330,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         }
         Path key = key(path);
         preparedCache.remove(key);
+        builtinTransforms.invalidate(key::equals);
         relativePath(key).ifPresent(sourceMaps::clear);
     }
 
@@ -720,7 +728,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     private NekoPreparedModule prepareSource(Path path, SourceSnapshot source,
                                               NekoTrustApprovedSource approval,
                                               ScriptBindingSchema.View schemaView) throws Exception {
-        return pipeline.prepareCaptured(path, source.source(), approval, source.binding(), schemaView);
+        return pipeline.prepareCaptured(path, source.source(), approval, source.binding(), schemaView, builtinTransforms);
     }
 
     private ScriptBindingSchema.View bindingSchemaViewFor(Path path) {

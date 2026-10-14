@@ -69,7 +69,7 @@ public final class NekoModulePipeline {
     NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
         LanguageBinding binding = captureBindingChecked(file);
         return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding,
-                ScriptBindingSchema.emptyView());
+                ScriptBindingSchema.emptyView(), null);
     }
 
     /**
@@ -83,19 +83,26 @@ public final class NekoModulePipeline {
 
     NekoPreparedModule prepareCaptured(Path file, String rawSource, NekoTrustApprovedSource approval,
                                        LanguageBinding binding, ScriptBindingSchema.View schemaView) throws Exception {
+        return prepareCaptured(file, rawSource, approval, binding, schemaView, null);
+    }
+
+    NekoPreparedModule prepareCaptured(Path file, String rawSource, NekoTrustApprovedSource approval,
+                                       LanguageBinding binding, ScriptBindingSchema.View schemaView,
+                                       BuiltinModuleTransformCache transforms) throws Exception {
         NekoModuleIdentity identity = binding.identity();
         if (approval == null || !approval.covers(file)) {
             throw NekoModuleError.denied(NekoModuleError.displayPath(file), identity.languageId(),
                     identity.requestedMode(), approval, "preparation requires a trust-approved source");
         }
-        return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding, schemaView);
+        return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding, schemaView, transforms);
     }
 
     private NekoPreparedModule prepareWithBinding(Path file, String rawSource, LanguageBinding binding,
-                                                  ScriptBindingSchema.View schemaView) throws Exception {
+                                                  ScriptBindingSchema.View schemaView,
+                                                  BuiltinModuleTransformCache transforms) throws Exception {
         NekoModuleIdentity identity = binding.identity();
         try {
-            return prepareStages(file, rawSource, binding, schemaView);
+            return prepareStages(file, rawSource, binding, schemaView, transforms);
         } catch (NekoModuleError staged) {
             throw staged;
         } catch (Exception failure) {
@@ -121,7 +128,8 @@ public final class NekoModulePipeline {
     }
 
     private NekoPreparedModule prepareStages(Path file, String rawSource, LanguageBinding binding,
-                                             ScriptBindingSchema.View schemaView) throws Exception {
+                                             ScriptBindingSchema.View schemaView,
+                                             BuiltinModuleTransformCache transforms) throws Exception {
         ensureBindingCurrent(file, binding);
         String extension = extension(file);
         // 加载时静态校验：扫描脚本对全局绑定（Utils/Platform/Items 等）的成员访问，
@@ -133,7 +141,11 @@ public final class NekoModulePipeline {
             GlobalBindingMemberValidator.validate(file, rawSource, schemaView);
             EventCallbackSourceValidator.validate(file, rawSource, schemaView);
         }
-        NekoPreparedModule prepared = prepareModule(file, rawSource, extension, binding);
+        // Only transformation is reusable. Authorization and current-schema checks remain live.
+        NekoPreparedModule prepared = transforms == null
+                ? prepareModule(file, rawSource, extension, binding)
+                : transforms.prepare(file, rawSource, binding,
+                        () -> prepareModule(file, rawSource, extension, binding));
         if (config.scriptMemberValidation() && !rawPreflightApplies(extension)) {
             GlobalBindingMemberValidator.validate(file, prepared.code(), schemaView);
             EventCallbackSourceValidator.validate(file, prepared.code(), schemaView);
