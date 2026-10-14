@@ -48,9 +48,16 @@ public final class ScriptLocator {
         ScriptPackRegistry packs
     ) {
         List<ScriptContainer> containers = new ArrayList<>();
-        for (ScriptPack pack : packs.enabledPacks()) {
-            for (Path path : discoverScriptFiles(pack.scriptsDirFor(type), filePolicy, com.tkisor.nekojs.script.ScriptTypeEnv.logger(type))) {
-                containers.add(packContainer(type, pack, path, propertyRegistry));
+        var dependencyPlan = packs.dependencyPlan();
+        for (ScriptPack pack : dependencyPlan.ordered()) {
+            List<Path> files = pack.manifest().descriptor() == null
+                    ? discoverScriptFiles(pack.scriptsDirFor(type), filePolicy, com.tkisor.nekojs.script.ScriptTypeEnv.logger(type))
+                    : pack.manifest().descriptor().entries().getOrDefault(type, List.of()).stream()
+                        .map(entry -> pack.scriptsDirFor(type).resolve(entry)).toList();
+            for (Path path : files) {
+                ScriptContainer container = packContainer(type, pack, path, propertyRegistry);
+                container.packDependencies = dependencyPlan.dependencies().getOrDefault(pack.selector(), List.of());
+                containers.add(container);
             }
         }
         for (Path path : discoverScriptFiles(ScriptTypeEnv.scriptsDir(type), filePolicy, com.tkisor.nekojs.script.ScriptTypeEnv.logger(type))) {
@@ -64,7 +71,9 @@ public final class ScriptLocator {
     ) {
         String relative = pack.scriptsDirFor(type).relativize(file).toString().replace('\\', '/');
         ScriptId id = ScriptId.of("nekojs", type.name + "/" + pack.idPathPrefix() + relative);
-        return new ScriptContainer(id, type, file, propertyRegistry, pack.id(), pack.scope());
+        ScriptContainer container = new ScriptContainer(id, type, file, propertyRegistry, pack.id(), pack.scope(), pack.version());
+        container.pack = pack;
+        return container;
     }
 
     public static List<String> suggestScriptFiles(ScriptType type, String input) {

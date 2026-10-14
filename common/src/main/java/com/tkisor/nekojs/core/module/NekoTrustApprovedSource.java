@@ -27,7 +27,8 @@ public record NekoTrustApprovedSource(Kind kind, String subject, String packId, 
     /** 信任来源：本地受信文件，或远端显式授权（带签名 key 证据）。 */
     public enum Kind {
         LOCAL_TRUSTED,
-        REMOTE_AUTHORIZED
+        REMOTE_AUTHORIZED,
+        REMOTE_UNSIGNED_AUTHORIZED
     }
 
     public NekoTrustApprovedSource {
@@ -40,6 +41,9 @@ public record NekoTrustApprovedSource(Kind kind, String subject, String packId, 
         subject = normalizeSubject(subject);
         if (kind == Kind.REMOTE_AUTHORIZED && (keyId == null || keyId.isBlank())) {
             throw new IllegalArgumentException("Remote authorization requires an explicit key id");
+        }
+        if (kind == Kind.REMOTE_UNSIGNED_AUTHORIZED && keyId != null) {
+            throw new IllegalArgumentException("Unsigned remote approval must not carry signing key evidence");
         }
     }
 
@@ -58,6 +62,11 @@ public record NekoTrustApprovedSource(Kind kind, String subject, String packId, 
         return new NekoTrustApprovedSource(Kind.REMOTE_AUTHORIZED, subjectOf(file), packId, keyId);
     }
 
+    /** Issued by the sync owner only after server trust and explicit unsigned policy approval. */
+    public static NekoTrustApprovedSource remoteUnsigned(Path file, String packId) {
+        return new NekoTrustApprovedSource(Kind.REMOTE_UNSIGNED_AUTHORIZED, subjectOf(file), packId, null);
+    }
+
     /** 本凭证是否覆盖该文件（精确路径匹配；包内其它文件需各自的凭证）。 */
     public boolean covers(Path file) {
         return file != null && subject.equals(subjectOf(file));
@@ -69,6 +78,7 @@ public record NekoTrustApprovedSource(Kind kind, String subject, String packId, 
             case LOCAL_TRUSTED -> "local-trusted:" + subject;
             case REMOTE_AUTHORIZED -> "remote-authorized:" + subject
                     + " (pack=" + packId + ", key=" + keyId + ")";
+            case REMOTE_UNSIGNED_AUTHORIZED -> "remote-unsigned-authorized:" + subject + " (pack=" + packId + ")";
         };
     }
 

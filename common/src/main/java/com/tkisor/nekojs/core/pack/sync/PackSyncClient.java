@@ -275,6 +275,17 @@ public final class PackSyncClient {
                     return Outcome.disconnect("NekoJS remote script pack integrity check failed: "
                         + expected.getKey() + " hash mismatch after write");
                 }
+                var descriptor = com.tkisor.nekojs.core.pack.ScriptPackManifest.parse(
+                        JsonParser.parseString(cached.manifestJson()).getAsJsonObject(), expected.getKey()).descriptor();
+                if (descriptor != null) {
+                    var manifest = JsonParser.parseString(cached.manifestJson()).getAsJsonObject();
+                    String id = manifest.get("id").getAsString();
+                    if (!expected.getKey().equals("packs:" + id) && !expected.getKey().equals("worldpacks:" + id)) {
+                        throw new IllegalArgumentException("[NEKO-1016] Versioned remote package identity differs from its sync identity: " + expected.getKey());
+                    }
+                    descriptor.validateFiles(stagingRoot.resolve(SyncedPack.encodeSyncId(expected.getKey())),
+                            com.tkisor.nekojs.core.ScriptFilePolicy.legacyRuntime());
+                }
                 resolved.put(expected.getKey(), cached);
             }
 
@@ -316,7 +327,7 @@ public final class PackSyncClient {
             // 6) Activate + authorize + reload. Any failure restores old files first, then
             //    rebuilds the old registry/credentials against those restored paths.
             try {
-                runtimeRoot.revokeRemoteSources(remoteRoot);
+                if (previousActiveRoot == null || !previousActiveRoot.equals(remoteRoot)) runtimeRoot.revokeRemoteSources(remoteRoot);
             } catch (Exception failure) {
                 RollbackOutcome rollback = rollbackBundle(runtimeRoot, remoteRoot, replacement, trustStore, trustStoreSnapshot,
                         previousActive, previousActiveRoot, previousState);
@@ -460,12 +471,6 @@ public final class PackSyncClient {
             return false;
         }
         if (runtimeRoot == null) return true;
-        try {
-            runtimeRoot.revokeRemoteSources(failedRoot);
-        } catch (Throwable failure) {
-            NekoJS.LOGGER.error("Failed to revoke failed server pack credentials", failure);
-            return false;
-        }
         List<NekoTrustContext.RemoteSource> sources = remoteSources(previous);
         if (sources == null) {
             NekoJS.LOGGER.error("Failed to reconstruct the previous server pack trust set after CLIENT reload failure");
@@ -586,14 +591,15 @@ public final class PackSyncClient {
         for (ScriptPack pack : packs) {
             JsonObject signature = pack.manifest() == null ? null : pack.manifest().signature();
             String keyId = signature == null ? null : PackSignatureVerifier.string(signature, "keyId");
-            if (keyId == null || keyId.isBlank()) {
+            if ((keyId == null || keyId.isBlank()) && !allowUnsigned()) {
                 return null;
             }
             try (var files = Files.walk(pack.root())) {
                 files.filter(Files::isRegularFile)
                         .filter(file -> !file.getFileName().toString().equals("manifest.json"))
-                        .forEach(file -> sources.add(new NekoTrustContext.RemoteSource(
-                                file, syncIdOf(pack), keyId)));
+                        .forEach(file -> sources.add(keyId == null || keyId.isBlank()
+                                ? NekoTrustContext.RemoteSource.unsigned(file, syncIdOf(pack))
+                                : new NekoTrustContext.RemoteSource(file, syncIdOf(pack), keyId)));
             } catch (IOException failure) {
                 return null;
             }
@@ -638,8 +644,14 @@ public final class PackSyncClient {
         if (keyId == null || publicKey == null || scopeName == null) return;
         PackSignatureVerifier.Result verified = PackSignatureVerifier.verify(
             syncId, scopeName, cached.manifestJson(), cached.files(), true, trustStore);
-        if (!verified.valid() || verified.fingerprint() == null) return;
+        if (!verified.valid() || verified.fingerprint() == null) {
+            throw new IllegalStateException("[NEKO-1017] Signing key admission failed after cache validation; pack="
+                    + syncId + "; reason=" + verified.reason());
+        }
         trustStore.trustPublicKey(keyId, publicKey, verified.fingerprint(), activeAddress == null ? "unknown" : activeAddress);
+        if (!publicKey.equals(trustStore.trustedPublicKey(keyId))) {
+            throw new IllegalStateException("[NEKO-1017] Signing key persistence failed; pack=" + syncId + "; key=" + keyId);
+        }
     }
 
     private static List<NekoTrustContext.RemoteSource> remoteSources(
@@ -648,13 +660,14 @@ public final class PackSyncClient {
         for (Map.Entry<String, ServerPackCache.CachedPack> entry : resolved.entrySet()) {
             JsonObject signature = PackSignatureVerifier.parseSignatureBlock(entry.getValue().manifestJson());
             String keyId = signature == null ? null : PackSignatureVerifier.string(signature, "keyId");
-            if ((keyId == null || keyId.isBlank()) && !entry.getValue().files().isEmpty()) return null;
-            if (keyId == null || keyId.isBlank()) continue;
+            if ((keyId == null || keyId.isBlank()) && !allowUnsigned() && !entry.getValue().files().isEmpty()) return null;
             Path packDir = bucketDir.resolve(SyncedPack.encodeSyncId(entry.getKey()));
             for (PackContentFile file : entry.getValue().files()) {
                 Path materialized = ServerPackCache.resolveInside(packDir, file.relativePath());
                 if (materialized != null) {
-                    sources.add(new NekoTrustContext.RemoteSource(materialized, entry.getKey(), keyId));
+                    sources.add(keyId == null || keyId.isBlank()
+                            ? NekoTrustContext.RemoteSource.unsigned(materialized, entry.getKey())
+                            : new NekoTrustContext.RemoteSource(materialized, entry.getKey(), keyId));
                 }
             }
         }

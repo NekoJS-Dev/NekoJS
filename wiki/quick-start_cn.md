@@ -63,10 +63,14 @@ nekojs/packs/my_pack/
 ```
 
 - **加载顺序**：全局包（按 id 字母序）→ 世界包 → 平铺目录。
-- **启用/禁用**：`/nekojs packs` 列出全部包；`/nekojs packs disable my_pack` 写状态文件
-  （优先级高于 manifest 的 `enabled`），随后 `/nekojs reload` 生效。
-- **世界包**：放在存档目录 `<世界文件夹>/nekojs_packs/<包id>/`（结构与全局包一致），
-  进入该世界时自动加载、退出世界时自动卸载其事件监听与定时器——不同世界可以有不同的脚本。
+- **启用/禁用**：`/nekojs packs` 展示配置启用意图，不代表运行状态。
+  `/nekojs packs disable GLOBAL:my_pack` 保存状态文件（优先级高于清单的 `enabled`）；
+  裸 ID 仅在唯一匹配时可用，保存失败不会报告成功。随后重载对应的 server/client/test 类型应用；STARTUP 变化需要重启。
+- **执行查询**：`/nekojs packs status server` 查看当前代的入口执行结果；
+  `/nekojs packs plan server` 查看当前文件排序与跳过原因，不执行或编译脚本。
+- **世界包（NeoForge）**：放在 `<世界文件夹>/nekojs_packs/<包id>/`，进入世界时挂载，
+  退出时清理监听器与定时器。当前世界的启停或编辑在对应类型重载后应用；Fabric 当前不挂载 WORLD 来源。
+- **远端缓存包**：已挂载的 SERVER_CACHE 包可查询，由远端授权控制，不能用本地启停命令改写。
 - manifest 字段宽松解析：`id`/`name`/`version`/`description`/`authors`/`enabled`/`clientSync`
   （`clientSync` 预留给多人脚本分发，见下）。每个包的脚本目录同样自动生成 `jsconfig.json`，
   编辑器补全与平铺目录一致。

@@ -74,7 +74,7 @@ public final class FabricNekoJSCommands {
                         .then(testCommand(rootProvider))
                         .then(errorCommand(rootProvider))
                         .then(viewAllErrorsCommand(rootProvider))
-                        .then(packsCommand())
+                        .then(packsCommand(rootProvider))
                         .then(registryCommand())
                         .then(handCommand())
                         .then(inventoryCommand())
@@ -376,54 +376,174 @@ public final class FabricNekoJSCommands {
         return 1;
     }
 
-    private static LiteralArgumentBuilder<CommandSourceStack> packsCommand() {
-        return Commands.literal("packs")
+    private static LiteralArgumentBuilder<CommandSourceStack> packsCommand(Supplier<NekoRuntimeRoot> rootProvider) {
+        var packs = Commands.literal("packs")
                 .executes(context -> {
                     listPacks(context.getSource());
                     return 1;
                 })
                 .then(Commands.literal("enable")
-                        .then(Commands.argument("id", StringArgumentType.word())
+                        .then(Commands.argument("id", StringArgumentType.greedyString())
                                 .executes(context -> togglePack(context.getSource(), StringArgumentType.getString(context, "id"), true))))
                 .then(Commands.literal("disable")
-                        .then(Commands.argument("id", StringArgumentType.word())
+                        .then(Commands.argument("id", StringArgumentType.greedyString())
                                 .executes(context -> togglePack(context.getSource(), StringArgumentType.getString(context, "id"), false))));
+        var status = Commands.literal("status");
+        var plan = Commands.literal("plan");
+        for (ScriptType type : ScriptType.all()) {
+            status.then(Commands.literal(type.name)
+                    .executes(context -> showPackExecution(context.getSource(), rootProvider.get(), type, false)));
+            plan.then(Commands.literal(type.name)
+                    .executes(context -> showPackExecution(context.getSource(), rootProvider.get(), type, true)));
+        }
+        var reload = Commands.literal("reload");
+        var create = Commands.literal("create");
+        for (ScriptType type : ScriptType.all()) {
+            create.then(Commands.literal(type.name).then(Commands.argument("id", StringArgumentType.greedyString())
+                    .executes(context -> reportPackTool(context.getSource(), rootProvider.get(), "create",
+                            StringArgumentType.getString(context, "id"), type, null, null))));
+            if (type == ScriptType.STARTUP) continue;
+            reload.then(Commands.literal(type.name).then(Commands.argument("id", StringArgumentType.greedyString())
+                    .executes(context -> reloadPackCommand(context.getSource(), rootProvider.get(), type, StringArgumentType.getString(context, "id")))));
+        }
+        packs.then(reload).then(create);
+        for (String action : java.util.List.of("validate", "archive")) {
+            packs.then(Commands.literal(action).then(Commands.argument("id", StringArgumentType.greedyString())
+                    .executes(context -> reportPackTool(context.getSource(), rootProvider.get(), action,
+                            StringArgumentType.getString(context, "id"), null, null, null))));
+        }
+        var jar = Commands.literal("jar");
+        for (String loader : java.util.List.of("neoforge", "fabric")) {
+            var target = Commands.literal(loader);
+            for (String minecraft : loader.equals("neoforge") ? java.util.List.of("1.21.1", "26.1.2", "26.2") : java.util.List.of("26.1.2", "26.2")) {
+                target.then(Commands.literal(minecraft).then(Commands.argument("id", StringArgumentType.greedyString())
+                        .executes(context -> reportPackTool(context.getSource(), rootProvider.get(), "jar",
+                                StringArgumentType.getString(context, "id"), null, loader, minecraft))));
+            }
+            jar.then(target);
+        }
+        packs.then(jar);
+        return packs.then(status).then(plan);
+    }
+
+    private static int reportPackTool(CommandSourceStack source, NekoRuntimeRoot root, String action,
+                                      String selector, ScriptType type, String loader, String minecraft) {
+        if (root == null) { source.sendFailure(Component.translatable("nekojs.command.packs.tool_failed", action, selector, "runtime unavailable")); return 0; }
+        var result = root.packTool(action, selector, type, loader, minecraft);
+        if (!result.success()) {
+            source.sendFailure(Component.translatable("nekojs.command.packs.tool_failed", action, selector, result.detail())); return 0;
+        }
+        source.sendSystemMessage(Component.translatable("nekojs.command.packs.tool_success", action, result.selector(),
+                result.output() == null ? result.detail() : result.output().toString()));
+        return 1;
+    }
+
+    private static int reloadPackCommand(CommandSourceStack source, NekoRuntimeRoot root, ScriptType type, String selector) {
+        if (!canReloadHere(source, type) || root == null || !root.hasScriptType(type)) return 0;
+        if (type == ScriptType.CLIENT) {
+            FabricClientReloadExecutor.execute(() -> {
+                var result = root.reloadPack(type, selector);
+                source.getServer().execute(() -> reportPackReload(source, result));
+            });
+            return 1;
+        }
+        var result = root.reloadPack(type, selector);
+        int outcome = reportPackReload(source, result);
+        if (result.success() && type == ScriptType.SERVER) {
+            try { applyRecipeScripts(source); }
+            catch (Exception failure) { source.sendFailure(Component.translatable("nekojs.command.packs.post_reload_failed", failure.getMessage())); return 0; }
+        }
+        return outcome;
+    }
+
+    private static int reportPackReload(CommandSourceStack source, com.tkisor.nekojs.core.pack.PackActivationCoordinator.Result result) {
+        if (!result.success()) { source.sendFailure(Component.translatable("nekojs.command.packs.reload_failed", result.failure())); return 0; }
+        source.sendSystemMessage(Component.translatable("nekojs.command.packs.reload_success", result.type().name, result.affected().size()));
+        result.affected().forEach((selector, reason) -> source.sendSystemMessage(Component.translatable("nekojs.command.packs.affected", selector, reason)));
+        result.waiting().forEach((selector, reason) -> source.sendSystemMessage(Component.translatable("nekojs.command.packs.blocked", selector, reason)));
+        result.cleanupFailures().forEach(failure -> source.sendFailure(Component.translatable("nekojs.command.packs.cleanup_failed", failure)));
+        return 1;
+    }
+
+    private static int showPackExecution(CommandSourceStack source, NekoRuntimeRoot root, ScriptType type, boolean plan) {
+        if (root == null || !root.hasScriptType(type)) {
+            source.sendFailure(Component.translatable("nekojs.command.packs.type_unavailable", type.name));
+            return 0;
+        }
+        if (!plan) {
+            for (var activation : root.packActivations(type)) source.sendSystemMessage(Component.translatable(
+                    "nekojs.command.packs.activation", activation.selector(), activation.activation(), activation.version(),
+                    Component.translatable("nekojs.command.packs.activation_" + activation.status().toLowerCase(java.util.Locale.ROOT)), activation.reason() == null ? "" : activation.reason()));
+        }
+        java.util.List<com.tkisor.nekojs.core.pack.PackScriptView> entries;
+        if (plan) {
+            var view = root.packExecutionPlan(type);
+            entries = view.entries();
+            source.sendSystemMessage(Component.translatable("nekojs.command.packs.plan_header", type.name, entries.size()));
+            view.blockedPacks().forEach((selector, reason) -> source.sendSystemMessage(
+                    Component.translatable("nekojs.command.packs.blocked", selector, reason)));
+            if (!view.orderWarning().isEmpty()) {
+                source.sendSystemMessage(Component.translatable("nekojs.command.packs.order_warning", view.orderWarning()));
+            }
+        } else {
+            var view = root.packRuntimeView(type);
+            entries = view.entries();
+            source.sendSystemMessage(Component.translatable("nekojs.command.packs.status_header", type.name,
+                    view.generation(), entries.size(), Component.translatable(view.activeFailed()
+                            ? "nekojs.command.packs.isolated" : "nekojs.command.packs.not_isolated")));
+        }
+        for (var entry : entries) {
+            String outcomeKey = switch (entry.status()) {
+                case READY -> "nekojs.command.packs.ready";
+                case EXECUTED -> "nekojs.command.packs.executed";
+                case SKIPPED -> "nekojs.command.packs.skipped";
+                case FAILED -> "nekojs.command.packs.failed";
+            };
+            var reason = switch (entry.reason()) {
+                case "disabled" -> Component.translatable("nekojs.command.packs.reason_disabled");
+                case "mod_unavailable" -> Component.translatable("nekojs.command.packs.reason_mod");
+                default -> Component.literal(entry.reason());
+            };
+            source.sendSystemMessage(Component.translatable("nekojs.command.packs.execution_entry", entry.scriptId(),
+                    entry.selector(), entry.version(), Component.translatable(outcomeKey), reason, entry.source().toString()));
+        }
+        return 1;
     }
 
     private static void listPacks(CommandSourceStack source) {
         var registry = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get();
-        registry.refreshGlobalPacks();
-        var all = new java.util.ArrayList<com.tkisor.nekojs.core.pack.ScriptPack>();
-        all.addAll(registry.globalPacks());
-        all.addAll(registry.worldPacks());
+        registry.refreshLocalPacks();
+        var all = registry.allPacks();
         if (all.isEmpty()) {
-            source.sendSystemMessage(Component.literal("No script packs found (looked in nekojs/packs/ and <world>/nekojs_packs/)."));
+            source.sendSystemMessage(Component.translatable("nekojs.command.packs.empty"));
             return;
         }
-        source.sendSystemMessage(Component.literal("Script packs (" + all.size() + "):"));
+        source.sendSystemMessage(Component.translatable("nekojs.command.packs.header", all.size()));
         for (var pack : all) {
-            source.sendSystemMessage(Component.literal("  [" + (pack.enabled() ? "x" : " ") + "] "
-                    + pack.scope() + ":" + pack.id() + " v" + pack.version()
-                    + (pack.name().equals(pack.id()) ? "" : " (" + pack.name() + ")")
-                    + " - " + pack.root()));
+            var intent = Component.translatable(pack.scope() == com.tkisor.nekojs.core.pack.ScriptPackScope.SERVER_CACHE
+                    ? "nekojs.command.packs.remote"
+                    : pack.enabled() ? "nekojs.command.packs.enabled" : "nekojs.command.packs.disabled");
+            source.sendSystemMessage(Component.translatable("nekojs.command.packs.entry",
+                    pack.selector(), pack.version(), pack.name(), intent, pack.root().toString()));
         }
     }
 
     private static int togglePack(CommandSourceStack source, String id, boolean enabled) {
         var registry = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get();
-        registry.refreshGlobalPacks();
-        var all = new java.util.ArrayList<com.tkisor.nekojs.core.pack.ScriptPack>();
-        all.addAll(registry.globalPacks());
-        all.addAll(registry.worldPacks());
-        var match = all.stream().filter(p -> p.id().equals(id)).findFirst();
-        if (match.isEmpty()) {
-            source.sendFailure(Component.literal("No script pack with id '" + id + "'. Use /nekojs packs to list."));
+        var result = registry.setEnabled(id, enabled);
+        if (!result.succeeded()) {
+            String key = switch (result.status()) {
+                case NOT_FOUND -> "nekojs.command.packs.not_found";
+                case AMBIGUOUS -> "nekojs.command.packs.ambiguous";
+                case READ_ONLY -> "nekojs.command.packs.read_only";
+                case SAVE_FAILED -> "nekojs.command.packs.save_failed";
+                case SAVED -> "nekojs.command.packs.saved";
+            };
+            source.sendFailure(Component.translatable(key, result.selector(), String.join(", ", result.matches())));
             return 0;
         }
-        com.tkisor.nekojs.core.pack.ScriptPackState.save(match.get().root(), enabled);
-        source.sendSystemMessage(Component.literal("Script pack " + match.get().scope() + ":" + id
-                + " " + (enabled ? "enabled" : "disabled")
-                + ". Run /nekojs reload (server|client) to apply."));
+        source.sendSystemMessage(Component.translatable("nekojs.command.packs.saved", result.selector(),
+                Component.translatable(enabled ? "nekojs.command.packs.enabled" : "nekojs.command.packs.disabled")));
         return 1;
     }
 

@@ -112,11 +112,15 @@ class NekoRuntimeRootLifecycleTest {
         }
 
         NekoRuntimeRoot build() {
+            return build(NekoSharedEngine.get());
+        }
+
+        NekoRuntimeRoot build(graal.graalvm.polyglot.Engine engine) {
             NekoJSPaths paths = NekoJSPaths.get();
             SandboxConfig config = SandboxConfig.defaultConfig();
             DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
             NekoCoreContext core = new NekoCoreContext(
-                    NekoSharedEngine.get(), config, ClassFilter.INSTANCE, tracker);
+                    engine, config, ClassFilter.INSTANCE, tracker);
             ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
             NekoModulePipelineCache cache = new NekoModulePipelineCache(
                     new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config),
@@ -206,6 +210,43 @@ class NekoRuntimeRootLifecycleTest {
 
         assertNull(root.scriptManagerOrNull(ScriptType.SERVER), "manager cleanup must complete despite bridge failure");
         assertNull(root.scriptManagerOrNull(ScriptType.CLIENT), "manager cleanup must complete despite bridge failure");
+    }
+
+    @Test
+    void bridgeCleanupFailureDoesNotSkipOtherTypes() {
+        RecordingBridge bridge = new RecordingBridge();
+        bridge.throwOnClear = ScriptType.STARTUP;
+        NekoRuntimeRoot root = new RootBuilder(bridge).build();
+        assertThrows(RuntimeException.class, root::close);
+        for (ScriptType type : ScriptType.values()) {
+            if (type != ScriptType.STARTUP) assertEquals(1, bridge.clearListenersCalls.get(type));
+        }
+        assertTrue(root.globalState().isClosed());
+    }
+
+    @Test
+    void listenerReleaseFailureStillClosesTheActiveContextAndManagerRoute() {
+        RecordingBridge bridge = new RecordingBridge();
+        try (var engine = graal.graalvm.polyglot.Engine.newBuilder().build()) {
+            NekoRuntimeRoot root = new RootBuilder(bridge).build(engine);
+            var manager = root.createScriptManager(ScriptType.SERVER);
+            graal.graalvm.polyglot.Context context;
+            Value callback;
+            try (var candidate = manager.preparePackCandidate(List.of(), ignored -> {})) {
+                context = candidate.context();
+                callback = context.eval("js", "(() => 42)");
+                com.tkisor.nekojs.core.state.GenerationGlobals.publishBatch(List.of(candidate.globals()));
+                candidate.commitRoute();
+            }
+            bridge.throwOnClear = ScriptType.SERVER;
+            assertThrows(RuntimeException.class, root::close);
+            assertThrows(IllegalStateException.class, callback::execute);
+            assertThrows(IllegalStateException.class, () -> com.tkisor.nekojs.script.ScriptManager.from(context));
+            assertNull(root.scriptManagerOrNull(ScriptType.SERVER));
+            assertNull(manager.activeContextForPackOwner());
+            assertTrue(root.globalState().isClosed());
+            assertDoesNotThrow(manager::close);
+        }
     }
 
     /** AC7 最小替代（无头环境）：CLIENT load/reload 与错误边界走同一 root 生命周期入口

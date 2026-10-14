@@ -37,6 +37,11 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-1008` | transactional script reload failed | 脚本事务重载失败，候选 generation 已关闭，active 环境保持不变 |
 | `NEKO-1009` | error closing old Node runtime | 关闭旧 Node runtime 时发生异常 |
 | `NEKO-1010` | error closing old context | 关闭旧上下文时发生异常 |
+| `NEKO-1013` | script pack state update or temporary cleanup failed | 脚本包状态保存或暂存文件清理失败 |
+| `NEKO-1014` | script pack state unreadable; discovery uses manifest default | 脚本包状态不可读取，发现时使用清单默认值 |
+| `NEKO-1016` | versioned pack descriptor or entry validation rejected | 新版脚本包描述或入口校验被拒绝 |
+| `NEKO-1017` | package activation, capability, operation or resource release rejected/failed | 包激活、能力、操作或资源释放被拒绝或失败 |
+| `NEKO-1018` | package author tool or embedded content admission failed | 包创建、校验、归档、安装、JAR 或已加载模组内容接入失败 |
 
 <a id="wiki-section-3"></a>
 ## Sandbox and resource limits
@@ -169,4 +174,4 @@ Routine progress messages carry an English summary but no code.
 
 ---
 
-[Previous: Commands](commands_us) · [Contents](Home) · [Next: Recipe system](recipe-system_us)
+[Previous: Commands](commands_us) · [Contents](Home) · [Next: Versioned script packs](script-packs_us)

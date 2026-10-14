@@ -54,6 +54,12 @@ public interface IPlatform {
 
     Map<String, IModInfo> getMods();
 
+    /** Content paths from mods already admitted by the loader; adapters never evaluate scripts. */
+    default Map<String, Path> loadedPackRoots() { return Map.of(); }
+    default void visitLoadedPackRoots(java.util.function.BiConsumer<String, Path> visitor) {
+        loadedPackRoots().forEach(visitor);
+    }
+
     IModInfo getInfo(String modID);
 
     default boolean isLoaded(String modId) {

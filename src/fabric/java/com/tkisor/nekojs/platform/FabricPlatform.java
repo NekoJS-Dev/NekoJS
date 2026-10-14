@@ -25,6 +25,15 @@ import net.fabricmc.loader.api.FabricLoader;
  * 而不是崩溃。
  */
 public final class FabricPlatform implements IPlatform {
+    @Override
+    public Map<String, Path> loadedPackRoots() {
+        Map<String, Path> roots = new LinkedHashMap<>();
+        for (var mod : FabricLoader.getInstance().getAllMods()) {
+            mod.findPath("nekojs/packs").filter(java.nio.file.Files::isDirectory)
+                    .ifPresent(root -> roots.put(mod.getMetadata().getId(), root));
+        }
+        return Map.copyOf(roots);
+    }
 
     private Map<String, IModInfo> modCache;
 

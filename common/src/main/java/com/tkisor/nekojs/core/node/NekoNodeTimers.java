@@ -50,13 +50,15 @@ public final class NekoNodeTimers implements AutoCloseable {
     private final Map<Integer, String> scriptIds = new ConcurrentHashMap<>();
     private final Map<Context, String> activeScriptIds = new ConcurrentHashMap<>();
     private final Queue<TimerCallback> ready = new ConcurrentLinkedQueue<>();
+    private volatile boolean closed;
 
     public NekoNodeTimers(ScriptType scriptType, ErrorTracker errorTracker) {
         this.scriptType = scriptType;
         this.errorTracker = errorTracker;
     }
 
-    public int setTimeout(Value callback, long delayMillis, Object... args) {
+    public synchronized int setTimeout(Value callback, long delayMillis, Object... args) {
+        rejectClosed();
         rejectStartupTimer(delayMillis);
         rejectTimerOverflow();
         int id = ids.getAndIncrement();
@@ -72,7 +74,8 @@ public final class NekoNodeTimers implements AutoCloseable {
         cancel(id);
     }
 
-    public int setInterval(Value callback, long delayMillis, Object... args) {
+    public synchronized int setInterval(Value callback, long delayMillis, Object... args) {
+        rejectClosed();
         if (scriptType == ScriptType.STARTUP) {
             throw new IllegalStateException("setInterval is not supported in startup scripts. Use server_scripts or client_scripts for lifecycle timers.");
         }
@@ -117,14 +120,14 @@ public final class NekoNodeTimers implements AutoCloseable {
         }
     }
 
-    public void cancelAll() {
+    public synchronized void cancelAll() {
         tasks.keySet().forEach(this::cancel);
         ready.clear();
         scriptIds.clear();
         activeScriptIds.clear();
     }
 
-    public void cancelScript(String scriptId) {
+    public synchronized void cancelScript(String scriptId) {
         if (scriptId == null || scriptId.isBlank()) return;
         List<Integer> idsToCancel = List.copyOf(scriptIds.entrySet()).stream()
                 .filter(entry -> scriptId.equals(entry.getValue()))
@@ -138,7 +141,7 @@ public final class NekoNodeTimers implements AutoCloseable {
      * 按 scriptId 前缀取消 timer（脚本包整体卸载用；包内脚本 id 统一携带
      * {@code packs/<id>/} / {@code worldpacks/<id>/} 前缀，见 ScriptPack#idPathPrefix）。
      */
-    public void cancelScriptByPrefix(String scriptIdPrefix) {
+    public synchronized void cancelScriptByPrefix(String scriptIdPrefix) {
         if (scriptIdPrefix == null || scriptIdPrefix.isBlank()) return;
         List<Integer> idsToCancel = List.copyOf(scriptIds.entrySet()).stream()
                 .filter(entry -> entry.getValue() != null && entry.getValue().startsWith(scriptIdPrefix))
@@ -151,7 +154,7 @@ public final class NekoNodeTimers implements AutoCloseable {
     public void flushReadyCallbacks() {
         TimerCallback callback;
         int executed = 0;
-        while (executed < MAX_CALLBACKS_PER_FLUSH && (callback = ready.poll()) != null) {
+        while (!closed && executed < MAX_CALLBACKS_PER_FLUSH && (callback = ready.poll()) != null) {
             ScheduledFuture<?> future = tasks.get(callback.id);
             if (future == null) continue;
             if (!callback.repeating) {
@@ -164,7 +167,8 @@ public final class NekoNodeTimers implements AutoCloseable {
     }
 
     /** 有界入队：队列已满时丢弃新回调并记一次错误（ErrorTracker 按签名去重，不会刷屏）。 */
-    private void enqueueReady(TimerCallback callback) {
+    private synchronized void enqueueReady(TimerCallback callback) {
+        if (closed || !tasks.containsKey(callback.id)) return;
         if (ready.size() >= MAX_READY_QUEUE_SIZE) {
             Context context = callback.callback == null ? null : callback.callback.getContext();
             errorTracker.recordCallbackError(context, scriptType, "timer",
@@ -176,26 +180,43 @@ public final class NekoNodeTimers implements AutoCloseable {
     }
 
     public boolean hasPendingCallbacks() {
-        return !ready.isEmpty() || tasks.values().stream().anyMatch(future -> !future.isDone() && !future.isCancelled());
+        return !closed && (!ready.isEmpty() || tasks.values().stream().anyMatch(future -> !future.isDone() && !future.isCancelled()));
     }
 
     @Override
     @HideFromJS
     public void close() {
-        cancelAll();
-        scheduler.shutdownNow();
+        synchronized (this) {
+            closed = true;
+            cancelAll();
+            scheduler.shutdownNow();
+        }
+        // The worker only queues callbacks; never wait while holding its enqueue monitor.
+        try {
+            if (!scheduler.awaitTermination(2, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("[NEKO-1017] Timer scheduler did not terminate within 2 seconds");
+            }
+        } catch (InterruptedException failure) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("[NEKO-1017] Timer scheduler teardown was interrupted", failure);
+        }
     }
 
-    private void cancel(int id) {
+    private void rejectClosed() {
+        if (closed) throw new IllegalStateException("[NEKO-1017] Timer registration rejected after runtime close");
+    }
+
+    private synchronized void cancel(int id) {
         ScheduledFuture<?> future = tasks.remove(id);
         scriptIds.remove(id);
         if (future != null) {
             future.cancel(false);
         }
+        ready.removeIf(callback -> callback.id == id);
     }
 
     private void recordScriptId(int id, Value callback) {
-        if (callback == null) return;
+        if (closed || callback == null) return;
         Context context = callback.getContext();
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
         if (scriptId == null || scriptId.isBlank()) {
@@ -207,7 +228,7 @@ public final class NekoNodeTimers implements AutoCloseable {
     }
 
     private void execute(int id, Value callback, Object[] args) {
-        if (callback == null) return;
+        if (closed || callback == null) return;
         Context context = callback.getContext();
         if (ScriptManager.isContextDead(context)) {
             // Context 已被 Graal 关闭（语句上限等）：回调闭包指向死环境，静默跳过，
@@ -229,11 +250,9 @@ public final class NekoNodeTimers implements AutoCloseable {
             try {
                 callback.executeVoid(args == null ? new Object[0] : args);
             } finally {
-                ScriptManager.noteCallbackExit();
-                // 不移除 activeScriptIds：保留「该 Context 最近执行的脚本」归属，使
-                // host 侧触发（无 currentScriptId）注册的 timer 也能在对应脚本 reload 时
-                // 被 cancelScript 清理，避免孤儿 interval 泄漏。
-                ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                // Keep attribution for host registrations until this runtime is released.
+                try { ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId); }
+                finally { ScriptManager.noteCallbackExit(); }
             }
         } catch (Throwable e) {
             // 语句上限关闭 Context 的 kill 在稳态下只能从回调路径发现（入口早已执行完）：

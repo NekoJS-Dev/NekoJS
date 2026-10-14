@@ -28,7 +28,7 @@ public final class PDataSyncListener {
 
     @SubscribeEvent
     public static void onServerTickPost(ServerTickEvent.Post event) {
-        runtimeRoot.scriptManagerOf(ScriptType.SERVER).flushReadyNodeTimers();
+        runtimeRoot.flushReadyNodeTimers(ScriptType.SERVER);
         var testSm = runtimeRoot.scriptManagerOrNull(ScriptType.TEST);
         if (testSm != null) {
             testSm.flushReadyNodeTimers();

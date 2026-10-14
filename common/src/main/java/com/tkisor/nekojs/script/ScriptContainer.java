@@ -28,6 +28,12 @@ public final class ScriptContainer {
     /** 所属脚本包作用域；平铺脚本为 {@code null}。 */
     @Nullable
     public final ScriptPackScope packScope;
+    /** Manifest version captured at discovery; runtime queries must not read newer metadata. */
+    public final String packVersion;
+    /** Immutable source snapshot attached by package discovery. */
+    public com.tkisor.nekojs.core.pack.ScriptPack pack;
+    /** Resolved package prerequisites; file priority cannot invert these edges. */
+    public java.util.List<String> packDependencies = java.util.List.of();
 
     public boolean disabled = false;
     public Throwable lastError;
@@ -38,12 +44,18 @@ public final class ScriptContainer {
 
     public ScriptContainer(ScriptId id, ScriptType type, Path path, ScriptPropertyRegistry propertyRegistry,
                            @Nullable String packId, @Nullable ScriptPackScope packScope) {
+        this(id, type, path, propertyRegistry, packId, packScope, "unknown");
+    }
+
+    public ScriptContainer(ScriptId id, ScriptType type, Path path, ScriptPropertyRegistry propertyRegistry,
+                           @Nullable String packId, @Nullable ScriptPackScope packScope, String packVersion) {
         this.id = id;
         this.type = type;
         this.path = path;
         this.properties = new ScriptProperties(propertyRegistry);
         this.packId = packId;
         this.packScope = packScope;
+        this.packVersion = packVersion;
     }
 
     public boolean isType(ScriptType type) {

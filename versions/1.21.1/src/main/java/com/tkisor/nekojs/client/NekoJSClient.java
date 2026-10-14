@@ -42,7 +42,7 @@ public class NekoJSClient {
     private static void onClientSetup(FMLConstructModEvent event, NekoRuntimeRoot root) {
         event.enqueueWork(() -> {
             NekoJS.LOGGER.debug("Client environment ready, loading CLIENT scripts...");
-            root.scriptManagerOf(ScriptType.CLIENT).loadScripts();
+            root.load(ScriptType.CLIENT);
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.CLIENT).debug("Early script injection...");
         });
     }
@@ -53,7 +53,7 @@ public class NekoJSClient {
     }
 
     private static void onClientTickPost(ClientTickEvent.Post event, NekoRuntimeRoot root) {
-        root.scriptManagerOf(ScriptType.CLIENT).flushReadyNodeTimers();
+        root.flushReadyNodeTimers(ScriptType.CLIENT);
     }
 
     private static void onLevelUnload(LevelEvent.Unload event) {

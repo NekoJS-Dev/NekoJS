@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * {@link NekoNodeTimers} 注册数上限（MAX_SCHEDULED_TIMERS）回归测试：
@@ -75,6 +76,41 @@ class NekoNodeTimersTest {
         assertTrue(registered > 0 && registered < SAFETY_BOUND, "注册必须先到达上限");
         timers.clearTimeout(lastId);
         assertDoesNotThrow(() -> timers.setTimeout(null, 60_000L), "clear 之后名额释放，应可继续注册");
+    }
+
+    @Test
+    void closeRejectsLateRegistrationAndClearsPendingCallbacks() {
+        timers.setInterval(null, 1L);
+        timers.close();
+        assertFalse(timers.hasPendingCallbacks());
+        assertTrue(assertThrows(IllegalStateException.class, () -> timers.setImmediate(null)).getMessage().contains("NEKO-1017"));
+        assertThrows(IllegalStateException.class, () -> timers.setInterval(null, 1L));
+        assertDoesNotThrow(timers::flushReadyCallbacks);
+        assertDoesNotThrow(timers::close);
+    }
+
+    @Test
+    void closeReportsAnUnterminatedWorkerAndCanRetryAfterItExits() throws Exception {
+        var field = NekoNodeTimers.class.getDeclaredField("scheduler");
+        field.setAccessible(true);
+        var scheduler = (java.util.concurrent.ScheduledExecutorService) field.get(timers);
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        scheduler.execute(() -> {
+            entered.countDown();
+            while (release.getCount() > 0) {
+                try { release.await(); } catch (InterruptedException ignored) { }
+            }
+        });
+        try {
+            assertTrue(entered.await(3, java.util.concurrent.TimeUnit.SECONDS));
+            assertTrue(assertThrows(IllegalStateException.class, timers::close).getMessage().contains("NEKO-1017"));
+            assertFalse(timers.hasPendingCallbacks());
+        } finally {
+            release.countDown();
+            assertTrue(scheduler.awaitTermination(3, java.util.concurrent.TimeUnit.SECONDS));
+        }
+        assertDoesNotThrow(timers::close);
     }
 
     /** 循环注册直到首个 {@link IllegalStateException}，返回成功注册数（即实际上限）。 */

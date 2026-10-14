@@ -66,11 +66,13 @@ class PackSyncClientTest {
     private final AtomicInteger reloads = new AtomicInteger();
     private NekoRuntimeTrustContext runtimeTrust;
     private NekoRuntimeRoot runtimeRoot;
+    private graal.graalvm.polyglot.Engine runtimeEngine;
 
     @BeforeEach
     void installTestRuntimeBinding() {
         runtimeTrust = NekoRuntimeTrustContext.local();
-        runtimeRoot = runtimeRoot(runtimeTrust);
+        runtimeEngine = graal.graalvm.polyglot.Engine.newBuilder().build();
+        runtimeRoot = runtimeRoot(runtimeTrust, runtimeEngine);
     }
 
     @AfterEach
@@ -80,6 +82,7 @@ class PackSyncClientTest {
         PackSyncClient.handleDisconnect(runtimeRoot);
         PackSyncClient.installClientReloadHook(null);
         runtimeRoot.closeSilently();
+        runtimeEngine.close();
     }
 
     @Test
@@ -94,6 +97,72 @@ class PackSyncClientTest {
         assertTrue(outcome.shouldDisconnect());
         assertTrue(outcome.disconnect().contains("unsigned"));
         assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty());
+        assertEquals(0, reloads.get());
+    }
+
+    @Test
+    void explicitUnsignedPolicyStillRequiresServerTrustAndNeverCreatesSigningEvidence() {
+        config("all", true);
+        installCountingReloadHook();
+        String address = "srv-unsigned-approved.test";
+        SyncedPack pack = pack("packs:unsigned", "GLOBAL", "{\"id\":\"unsigned\",\"version\":\"1.0.0\"}",
+                "client_scripts/main.js", "module.exports=1;");
+        PackSyncClient.handleHashList(runtimeRoot, address, hashes(pack));
+        assertTrue(PackSyncClient.handleBundle(runtimeRoot, List.of(pack)).shouldDisconnect());
+        PackSyncTrustStore.get().trustServer(address);
+        PackSyncClient.handleHashList(runtimeRoot, address, hashes(pack));
+        assertNull(PackSyncClient.handleBundle(runtimeRoot, List.of(pack)).disconnect());
+        Path file = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor(address))
+                .resolve(SyncedPack.encodeSyncId(pack.syncId())).resolve("client_scripts/main.js");
+        assertEquals(NekoTrustApprovedSource.Kind.REMOTE_UNSIGNED_AUTHORIZED, runtimeTrust.approvalFor(file).kind());
+        assertNull(runtimeTrust.approvalFor(file).keyId());
+        PackSyncClient.handleDisconnect(runtimeRoot);
+        assertNull(runtimeTrust.approvalFor(file), "revoked remote files must never fall back to local trust");
+    }
+
+    @Test
+    void failedVersionedSameBucketCandidateKeepsItsHealthyActivationAndCredentials() {
+        config("all", true);
+        var type = com.tkisor.nekojs.api.ScriptType.CLIENT;
+        runtimeRoot.createScriptManager(type);
+        java.util.concurrent.atomic.AtomicReference<Throwable> lastReloadFailure = new java.util.concurrent.atomic.AtomicReference<>();
+        PackSyncClient.installClientReloadHook(() -> {
+            try { runtimeRoot.reload(type); return true; }
+            catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException failure) { lastReloadFailure.set(failure); return false; }
+        });
+        String manifest = "{\"formatVersion\":1,\"id\":\"replacement\",\"version\":\"1.0.0\",\"entries\":{\"client\":[\"main.js\"]}}";
+        SyncedPack oldPack = pack("packs:replacement", "GLOBAL", manifest, "client_scripts/main.js", "global.count=(global.count||0)+1;");
+        SyncedPack badPack = pack("packs:replacement", "GLOBAL", manifest, "client_scripts/main.js", "throw Error('candidate rejected');");
+        String address = "srv-versioned-replacement.test";
+        PackSyncTrustStore.get().trustServer(address);
+        PackSyncClient.handleHashList(runtimeRoot, address, hashes(oldPack));
+        assertNull(PackSyncClient.handleBundle(runtimeRoot, List.of(oldPack)).disconnect(), () -> "Reload failure: " + lastReloadFailure.get());
+        var healthy = runtimeRoot.packActivations(type);
+        assertEquals(1, healthy.size());
+        assertEquals("SERVER_CACHE:packs:replacement", healthy.getFirst().selector());
+        PackSyncClient.handleHashList(runtimeRoot, address, hashes(badPack));
+        assertTrue(PackSyncClient.handleBundle(runtimeRoot, List.of(badPack)).shouldDisconnect());
+        assertEquals(healthy, runtimeRoot.packActivations(type));
+        Path file = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor(address))
+                .resolve(SyncedPack.encodeSyncId(oldPack.syncId())).resolve("client_scripts/main.js");
+        assertEquals(NekoTrustApprovedSource.Kind.REMOTE_UNSIGNED_AUTHORIZED, runtimeTrust.approvalFor(file).kind());
+    }
+
+    @Test
+    void versionedRemoteDescriptorsAreValidatedBeforePhysicalReplacementOrReload() {
+        config("all", true); installCountingReloadHook();
+        String address = "srv-invalid-descriptor.test";
+        PackSyncTrustStore.get().trustServer(address);
+        for (String fields : List.of("\"entries\":{\"client\":[\"missing.js\"]}", "\"entries\":{},\"unknown\":true")) {
+            SyncedPack invalid = pack("packs:invalid", "GLOBAL",
+                    "{\"formatVersion\":1,\"id\":\"invalid\",\"version\":\"1.0.0\"," + fields + "}",
+                    "client_scripts/main.js", "module.exports=1;");
+            PackSyncClient.handleHashList(runtimeRoot, address, hashes(invalid));
+            var outcome = PackSyncClient.handleBundle(runtimeRoot, List.of(invalid));
+            assertTrue(outcome.shouldDisconnect());
+            assertTrue(outcome.disconnect().contains("NEKO-1016"), outcome.disconnect());
+            assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty());
+        }
         assertEquals(0, reloads.get());
     }
 
@@ -685,7 +754,7 @@ class PackSyncClientTest {
 
     /* ================= 辅助 ================= */
 
-    private static NekoRuntimeRoot runtimeRoot(NekoRuntimeTrustContext trustContext) {
+    private static NekoRuntimeRoot runtimeRoot(NekoRuntimeTrustContext trustContext, graal.graalvm.polyglot.Engine engine) {
         NekoJSPaths paths = NekoJSPaths.get();
         SandboxConfig config = SandboxConfig.defaultConfig();
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
@@ -696,11 +765,17 @@ class PackSyncClientTest {
                 PackSyncClientTest.class.getClassLoader(), new Class<?>[]{IPluginRuntime.class},
                 new EmptyPluginRuntime());
         NekoCoreContext core = new NekoCoreContext(
-                NekoSharedEngine.get(), config, ClassFilter.INSTANCE, new DefaultErrorTracker(paths, config));
+                engine, config, ClassFilter.INSTANCE, new DefaultErrorTracker(paths, config));
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(
                 core, paths, compilers, plugins, cache);
+        var properties = new ScriptPropertyRegistry.Impl();
+        properties.register(com.tkisor.nekojs.script.prop.ScriptProperty.AFTER);
+        properties.register(com.tkisor.nekojs.script.prop.ScriptProperty.MODLOADED);
+        properties.register(com.tkisor.nekojs.script.prop.ScriptProperty.DISABLE);
+        properties.register(com.tkisor.nekojs.script.prop.ScriptProperty.PRIORITY);
+        properties.freeze();
         return new NekoRuntimeRoot(core, plugins, ScriptEventBridge.EMPTY,
-                new ScriptPropertyRegistry.Impl(), sandboxFactory, cache, trustContext);
+                properties, sandboxFactory, cache, trustContext);
     }
 
     private static final class EmptyPluginRuntime implements InvocationHandler {

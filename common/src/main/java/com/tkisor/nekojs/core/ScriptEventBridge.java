@@ -19,6 +19,17 @@ public interface ScriptEventBridge {
 
     void clearListeners(ScriptType type);
 
+    /** Scoped activation requires a bridge that can retain sibling owners. */
+    default ListenerBatch preparePackListeners(ScriptType type,
+            java.util.List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> pending,
+            java.util.Set<graal.graalvm.polyglot.Context> replaced) {
+        if (this == EMPTY) return new ListenerBatch() {
+            public void finish() {}
+            public void rollback() {}
+        };
+        throw new UnsupportedOperationException("[NEKO-1017] Event bridge does not support package activation owners");
+    }
+
     /** Prepared listener route retained until the surrounding generation commit succeeds. */
     interface ListenerBatch {
         void finish();

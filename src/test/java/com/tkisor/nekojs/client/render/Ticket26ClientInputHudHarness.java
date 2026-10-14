@@ -187,6 +187,20 @@ public final class Ticket26ClientInputHudHarness implements AutoCloseable {
         public void clearListeners(ScriptType type) {
             groups.values().forEach(group -> group.clearListeners(type));
         }
+
+        @Override
+        public ListenerBatch preparePackListeners(ScriptType type,
+                List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> pending,
+                java.util.Set<graal.graalvm.polyglot.Context> replaced) {
+            List<com.tkisor.nekojs.api.event.EventBusJS.PendingCommit> commits = new ArrayList<>();
+            groups.values().forEach(group -> commits.addAll(group.preparePendingListeners(type, pending, replaced::contains)));
+            return new ListenerBatch() {
+                public void finish() { commits.forEach(com.tkisor.nekojs.api.event.EventBusJS.PendingCommit::finish); }
+                public void rollback() {
+                    for (int index = commits.size() - 1; index >= 0; index--) commits.get(index).rollback();
+                }
+            };
+        }
     }
 
     /** 插件运行时桩：只广告事件组与空绑定面。 */

@@ -61,6 +61,13 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     private final CopyOnWriteArrayList<NekoModulePipelineCache> sessions = new CopyOnWriteArrayList<>();
     private volatile ScriptBindingSchema.View bindingSchemaView;
     private volatile boolean closed;
+    private Path packRoot;
+
+    /** Opt-in units import physical libraries within their own content root only. */
+    public void restrictToPackRoot(Path root) {
+        if (owner == null || !preparedCache.isEmpty()) throw new IllegalStateException("[NEKO-1017] Package module policy must be set on a fresh session");
+        packRoot = NekoCanonicalPath.pathOf(root);
+    }
 
     public NekoModulePipelineCache(NekoModulePipeline pipeline, SourceMapRegistry sourceMaps,
                                    NekoEsmVirtualModuleRegistry virtualModules,
@@ -664,6 +671,9 @@ public final class NekoModulePipelineCache implements AutoCloseable {
 
     NekoTrustApprovedSource approvedSource(Path path) throws IOException {
         ensureOpen();
+        if (packRoot != null && !NekoCanonicalPath.isWithin(NekoCanonicalPath.of(path), NekoCanonicalPath.of(packRoot))) {
+            throw new IOException("[NEKO-1017] Package physical import escapes its content root; use a declared capability for cross-package calls: " + path);
+        }
         NekoTrustApprovedSource approval = trustContext.approvalFor(path);
         if (approval == null || !approval.covers(path)) {
             NekoModuleIdentity identity;

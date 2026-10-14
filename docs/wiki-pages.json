@@ -63,8 +63,8 @@
       "us": "Quick start",
       "legacy": "快速开始.md",
       "legacyDigest": "6d7f5c999e495c3bf63ad6aab85a2a83cf6959be653897e5db8127e5698738e5",
-      "sourceDigest": "345f2c872b9e56b5e9d7e38bdd675da549bba754d12bd95b15650e112d716a9c",
-      "translationDigest": "4e225b2c2f6617a082e2a1af061766db024c40f6251737426891846077243f90",
+      "sourceDigest": "db974d99b967aa229531ccd061db2dc3b05ca049b6e550067625e654945d6733",
+      "translationDigest": "846a43f447798648a2f4c713b47c22add933b15ecc98f2be846966c475397319",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -159,8 +159,8 @@
       "us": "Commands",
       "legacy": "命令.md",
       "legacyDigest": "2a161db73102c1ce5604bea6c4aa9ff14bb77c7c25df701cc0eef9bf4084a72a",
-      "sourceDigest": "8c02f3d99630b654763e473baf1e36bbdca02f4eae300bbbc2096a9a9673b772",
-      "translationDigest": "23297b585c5c790e86ba6cff2cbdb4baec3ad40e3b8b1106b290bee5e3b072fa",
+      "sourceDigest": "323f83ad109e26df3b7637b07b4d0a53848518328c7c6dd670c1cf8c2f6fa031",
+      "translationDigest": "457c690911324415da98c70057c0230837c778c62a1ab7075d643b4d1a44a7ae",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -172,10 +172,21 @@
       "legacy": "en_us/Error-Reference.md",
       "sourceLocale": "us",
       "legacyDigest": "d655593a3910daa974f0cc8410ad608cb0fb8c8850922ee4fc61314b1ee57e3c",
-      "sourceDigest": "bcc849c8a62c7588917880ab4a12f81c160180df9d4866743f983f7fd8f56447",
-      "translationDigest": "14c58bb3ce4ede0a35960f3f6a2de2814aa08fd0f39f9ddfabc98b069474dd20",
+      "sourceDigest": "af6873c37e9bc49c1f9d28afc230b32716915bcc88a2c32bccba62dcf6d1d6bd",
+      "translationDigest": "41d30c4941d14785836221c2efec05637628bb07d95e0754bedba4bf4001ba13",
       "translationStatus": "draft",
       "humanReview": "pending"
+    },
+    {
+      "id": "script-packs",
+      "section": "modpacks",
+      "cn": "版本化脚本包",
+      "us": "Versioned script packs",
+      "legacy": "script-packs.md",
+      "translationStatus": "draft",
+      "humanReview": "pending",
+      "sourceDigest": "1de430775cf2d1189166c0158d072d6735552c4aa35594e78553247a7dc1be98",
+      "translationDigest": "ecc3fef687b5a2a432bb07436412aafa3dea145a233a3e8540f5bd6b362116d4"
     },
     {
       "id": "recipe-system",

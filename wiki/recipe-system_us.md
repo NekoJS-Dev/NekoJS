@@ -408,4 +408,4 @@ Schemas provide positional arguments, required-field validation, key recognition
 
 ---
 
-[Previous: Error and log reference](error-reference_us) · [Contents](Home) · [Next: Registering new content](registering-new-content_us)
+[Previous: Versioned script packs](script-packs_us) · [Contents](Home) · [Next: Registering new content](registering-new-content_us)

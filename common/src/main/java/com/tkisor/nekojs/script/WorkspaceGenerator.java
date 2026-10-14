@@ -78,7 +78,8 @@ public final class WorkspaceGenerator {
                 com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().enabledPacks()) {
             // Pack-local configs are hashed content: preserve signed inputs and received cache bytes.
             if (pack.manifest().signature() != null
-                    || pack.scope() == com.tkisor.nekojs.core.pack.ScriptPackScope.SERVER_CACHE) {
+                    || pack.scope() == com.tkisor.nekojs.core.pack.ScriptPackScope.SERVER_CACHE
+                    || pack.scope() == com.tkisor.nekojs.core.pack.ScriptPackScope.MOD) {
                 continue;
             }
             for (ScriptType type : ScriptType.all()) {

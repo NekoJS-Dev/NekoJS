@@ -18,6 +18,14 @@ import java.util.Map;
 import java.util.Set;
 
 public class NeoForgePlatform implements IPlatform {
+    @Override
+    public void visitLoadedPackRoots(java.util.function.BiConsumer<String, Path> visitor) {
+        for (var mod : ModList.get().getMods()) {
+            mod.getOwningFile().getFile().getContents()
+                    .findFile("nekojs/packs/" + mod.getModId() + "/manifest.json")
+                    .ifPresent(uri -> com.tkisor.nekojs.core.pack.LoadedModPackSource.visitManifestUri(mod.getModId(), uri, visitor));
+        }
+    }
     private static final NbtBinaryCodec NBT_BINARY_CODEC = NeoForgeNbtBinaryCodec.INSTANCE;
 
     @Override

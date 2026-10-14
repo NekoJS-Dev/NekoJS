@@ -29,6 +29,7 @@ public final class GlobalStateStores {
     final Object lock = new Object();
 
     private final EnumMap<ScriptType, GlobalStore> privateStores = new EnumMap<>(ScriptType.class);
+    private final java.util.Map<String, GlobalStore> packStores = new java.util.LinkedHashMap<>();
     private final GlobalStore sharedStore = new GlobalStore(this, "shared");
     private volatile boolean closed;
 
@@ -57,6 +58,26 @@ public final class GlobalStateStores {
         return new GenerationGlobals(this, type, transactional);
     }
 
+    /** Opt-in pack state is isolated by source instance and type; shared retains its root owner. */
+    public GenerationGlobals newPackGeneration(ScriptType type, String instance, boolean transactional) {
+        synchronized (lock) {
+            assertOpen();
+            GlobalStore store = packStores.computeIfAbsent(type.name + ":" + instance,
+                    key -> new GlobalStore(this, "pack:" + key));
+            return new GenerationGlobals(this, type, transactional, store);
+        }
+    }
+
+    /** World and connection teardown release their private state after borrowers stop. */
+    public void releasePackScope(String scope) {
+        synchronized (lock) {
+            packStores.entrySet().removeIf(entry -> {
+                if (!entry.getKey().contains(":" + scope + ":")) return false;
+                entry.getValue().release(); return true;
+            });
+        }
+    }
+
     /** root close：释放全部状态（此后本 stores 的一切写入入口明确拒绝）。 */
     public void closeAll() {
         closed = true;
@@ -65,6 +86,8 @@ public final class GlobalStateStores {
                 store.release();
             }
             privateStores.clear();
+            packStores.values().forEach(GlobalStore::release);
+            packStores.clear();
             sharedStore.release();
         }
     }

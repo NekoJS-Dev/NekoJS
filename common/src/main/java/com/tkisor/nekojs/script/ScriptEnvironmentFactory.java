@@ -129,6 +129,10 @@ public final class ScriptEnvironmentFactory {
 
             var environmentBindings = pluginRuntime.bindings(scriptType);
             Map<String, ScriptBindingSchema.BindingMembers> bindingSchema = new HashMap<>();
+            if (bindings.hasMember("Pack")) {
+                if (environmentBindings.containsKey("Pack")) throw new IllegalStateException("[NEKO-1017] Plugin binding conflicts with the versioned package binding: Pack");
+                bindingSchema.put("Pack", new ScriptBindingSchema.BindingMembers(Set.of("provide", "require", "selector", "activation")));
+            }
             environmentBindings.forEach((name, binding) -> {
                 Object obj = binding.value();
                 bindingSchema.put(name, resolveMembers(binding));

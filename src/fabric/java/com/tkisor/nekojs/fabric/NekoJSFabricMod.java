@@ -62,7 +62,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
     /** 客户端 tick 冲刷 CLIENT 侧 node timers（与 NeoForge 侧 NekoJSClient 同职责）。 */
     public static void flushClientNodeTimers() {
         if (runtimeRoot != null) {
-            runtimeRoot.scriptManagerOf(com.tkisor.nekojs.api.ScriptType.CLIENT).flushReadyNodeTimers();
+            runtimeRoot.flushReadyNodeTimers(com.tkisor.nekojs.api.ScriptType.CLIENT);
         }
     }
 

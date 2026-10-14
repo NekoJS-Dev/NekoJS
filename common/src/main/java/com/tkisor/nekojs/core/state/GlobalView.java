@@ -41,7 +41,7 @@ public final class GlobalView implements Map<String, Object> {
 
     @Override
     public Object put(String key, Object value) {
-        if (writes != null) {
+        if (writes != null && generation.isTransactional()) {
             return writes.set(key, value);
         }
         synchronized (store.ownerLock()) {
@@ -52,7 +52,7 @@ public final class GlobalView implements Map<String, Object> {
     @Override
     public Object remove(Object key) {
         if (!(key instanceof String stringKey)) return null;
-        if (writes != null) {
+        if (writes != null && generation.isTransactional()) {
             return writes.delete(stringKey);
         }
         synchronized (store.ownerLock()) {
@@ -62,7 +62,7 @@ public final class GlobalView implements Map<String, Object> {
 
     @Override
     public void clear() {
-        if (writes != null) {
+        if (writes != null && generation.isTransactional()) {
             writes.markClear();
             return;
         }
@@ -76,7 +76,7 @@ public final class GlobalView implements Map<String, Object> {
     @Override
     public Object get(Object key) {
         if (!(key instanceof String stringKey)) return null;
-        if (writes != null) {
+        if (writes != null && generation.isTransactional()) {
             return writes.effectiveGet(stringKey);
         }
         return store.get(stringKey);
@@ -85,7 +85,7 @@ public final class GlobalView implements Map<String, Object> {
     @Override
     public boolean containsKey(Object key) {
         if (!(key instanceof String stringKey)) return false;
-        if (writes != null) {
+        if (writes != null && generation.isTransactional()) {
             return writes.effectiveContainsKey(stringKey);
         }
         return store.containsKey(stringKey);
@@ -133,7 +133,7 @@ public final class GlobalView implements Map<String, Object> {
 
     /** 有效内容快照（写集覆盖 + clear 语义归并；复制出锁，避免暴露内部结构）。 */
     private Map<String, Object> effectiveContents() {
-        if (writes != null) {
+        if (writes != null && generation.isTransactional()) {
             return writes.effectiveSnapshot();
         }
         synchronized (store.ownerLock()) {

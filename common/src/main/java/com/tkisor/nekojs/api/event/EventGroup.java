@@ -171,11 +171,17 @@ public class EventGroup {
     /** Prepare every bus in this group; callers finish or roll back the returned batch together. */
     public java.util.List<EventBusJS.PendingCommit> preparePendingListeners(
             ScriptType type, java.util.List<EventBusJS.PendingListener> pending) {
+        return preparePendingListeners(type, pending, context -> true);
+    }
+
+    public java.util.List<EventBusJS.PendingCommit> preparePendingListeners(
+            ScriptType type, java.util.List<EventBusJS.PendingListener> pending,
+            java.util.function.Predicate<graal.graalvm.polyglot.Context> replaced) {
         java.util.List<EventBusJS.PendingCommit> commits = new java.util.ArrayList<>();
         try {
             for (RegisteredBus registered : buses.values()) {
                 if (registered.canApplyOn(type)) {
-                    commits.add(prepareBus(registered.bus, type, pending));
+                    commits.add(registered.bus.preparePendingListeners(type, pending, replaced));
                 }
             }
             return commits;

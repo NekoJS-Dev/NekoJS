@@ -66,7 +66,7 @@ public final class ClientRenderRegistry {
     private static final Map<Context, Candidate> CANDIDATE_BATCHES = new ConcurrentHashMap<>();
 
     /** 生产表当前所属的 generation Context（非事务路径的换装判据）。 */
-    private static volatile Context activeContext;
+    private static final java.util.Set<Context> activeContexts = ConcurrentHashMap.newKeySet();
 
     /** 候选批次的领域标识（收集器与候选计划共用，进入候选联合边界的 domain 归因）。 */
     static final String CANDIDATE_DOMAIN = "client-render-registration";
@@ -109,7 +109,7 @@ public final class ClientRenderRegistry {
         HUD_RENDERERS.clear();
         WORLD_RENDERERS.clear();
         CANDIDATE_BATCHES.clear();
-        activeContext = null;
+        activeContexts.clear();
     }
 
     /**
@@ -175,11 +175,8 @@ public final class ClientRenderRegistry {
                 // 非候选 Context（初始加载 / 击杀重建 / 单文件 reload）：生产表路径
                 return false;
             }
-            // 上一轮候选（失败或取消）的批次以已死 Context 为 key，随本轮首个注册丢弃。
-            // ponytail: 单候选假设——CLIENT reload 由 ScriptManager 实例锁与 ClientReloadExecutor 串行化。
-            // 计划已进候选联合边界：本批次的 preflight/publish 由联合边界驱动。
+            // Each participant owns its batch; teardown releases failed candidates.
             fresh.registered = true;
-            CANDIDATE_BATCHES.values().removeIf(other -> other != fresh);
             CANDIDATE_BATCHES.put(context, fresh);
             batch = fresh;
         }
@@ -208,14 +205,36 @@ public final class ClientRenderRegistry {
             batch.registered = true;
             handle.registerPlan(batch);
         }
-        // Same pruning as the execution-time first registration: at most one in-flight batch
-        // stays in the map. Candidate failure/cancel releases the batch through discard()
-        // (ticket 27 AC4); this prune is only the safety net that keeps the map bounded when
-        // a batch never became a registered plan.
-        // ponytail: 单候选假设——CLIENT reload 由 ScriptManager 实例锁与 ClientReloadExecutor 串行化。
         Candidate current = batch;
         CANDIDATE_BATCHES.put(context, current);
-        CANDIDATE_BATCHES.values().removeIf(other -> other != current);
+    }
+
+    /** Whole-table domains publish once for all contexts, including empty participants. */
+    static void registerCandidateBatches(com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector.Handle handle) {
+        List<Context> contexts = handle.candidateContexts();
+        if (contexts.size() == 1) {
+            registerCandidateBatch(contexts.getFirst(), handle);
+            return;
+        }
+        List<Candidate> batches = new ArrayList<>();
+        for (Context context : contexts) {
+            Candidate batch = CANDIDATE_BATCHES.computeIfAbsent(context, Candidate::new);
+            batch.delegated = true;
+            batches.add(batch);
+        }
+        handle.registerPlan(new CandidateStatePlan() {
+            public String domain() { return CANDIDATE_DOMAIN; }
+            public void preflight() {}
+            public void publish() {
+                HUD_RENDERERS.clear(); WORLD_RENDERERS.clear(); activeContexts.clear();
+                for (Candidate batch : batches) {
+                    HUD_RENDERERS.putAll(batch.hud); WORLD_RENDERERS.putAll(batch.world);
+                    activeContexts.add(batch.context); batch.published = true;
+                    CANDIDATE_BATCHES.remove(batch.context, batch);
+                }
+            }
+            public void discard() { batches.forEach(Candidate::discard); }
+        });
     }
 
     /**
@@ -227,12 +246,12 @@ public final class ClientRenderRegistry {
      * {@code ClientReloadExecutor} 都转投 Render 线程），故 clear + put 之间无并发读。
      */
     private static void beginActiveGeneration(Context context) {
-        if (context == null || context.equals(activeContext)) {
+        if (context == null || activeContexts.contains(context)) {
             return;
         }
         HUD_RENDERERS.clear();
         WORLD_RENDERERS.clear();
-        activeContext = context;
+        activeContexts.clear(); activeContexts.add(context);
     }
 
     private static boolean hasListener(Map<String, Entry> map, int layerOrdinal) {
@@ -273,6 +292,8 @@ public final class ClientRenderRegistry {
     }
 
     private static void invokeEntry(Entry entry, String kind, Object ctx, Object graphics) {
+        if (ScriptManager.isContextDead(entry.context())) return;
+        ScriptManager.noteCallbackEnter();
         try {
             String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(entry.context(), entry.scriptId());
             try {
@@ -292,6 +313,8 @@ public final class ClientRenderRegistry {
                     ScriptType.CLIENT,
                     "renderer kind=" + kind + " script=" + (entry.scriptId() == null ? "unknown" : entry.scriptId()),
                     t);
+        } finally {
+            ScriptManager.noteCallbackExit();
         }
     }
 
@@ -312,6 +335,8 @@ public final class ClientRenderRegistry {
 
         /** 是否已挂上候选的联合边界（执行期首个注册或 DOMAIN_PLAN 收集二选一，不重复）。 */
         private boolean registered;
+        private boolean delegated;
+        private boolean published;
         private final Map<String, Entry> hud = new LinkedHashMap<>();
         private final Map<String, Entry> world = new LinkedHashMap<>();
 
@@ -339,11 +364,13 @@ public final class ClientRenderRegistry {
          */
         @Override
         public void publish() {
+            if (delegated) return;
             HUD_RENDERERS.clear();
             HUD_RENDERERS.putAll(hud);
             WORLD_RENDERERS.clear();
             WORLD_RENDERERS.putAll(world);
-            activeContext = context;
+            activeContexts.clear(); activeContexts.add(context);
+            published = true;
             CANDIDATE_BATCHES.remove(context, this);
         }
 
@@ -357,6 +384,11 @@ public final class ClientRenderRegistry {
         @Override
         public void discard() {
             CANDIDATE_BATCHES.remove(context, this);
+            if (published) {
+                HUD_RENDERERS.values().removeIf(entry -> entry.context() == context);
+                WORLD_RENDERERS.values().removeIf(entry -> entry.context() == context);
+                activeContexts.remove(context);
+            }
         }
     }
 }

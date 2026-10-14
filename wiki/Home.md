@@ -22,6 +22,7 @@
 
 ## 整合包作者
 
+- [版本化脚本包](script-packs_cn)
 - [配方系统](recipe-system_cn)
 - [注册新内容](registering-new-content_cn)
 - [模块系统](module-system_cn)
@@ -64,6 +65,7 @@
 
 ## Modpack authors
 
+- [Versioned script packs](script-packs_us)
 - [Recipe system](recipe-system_us)
 - [Registering new content](registering-new-content_us)
 - [Module system](module-system_us)

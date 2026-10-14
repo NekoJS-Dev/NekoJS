@@ -77,9 +77,9 @@ class ScriptEventDefinitionClearListenersTest {
                                         EventListenerToken<E> token) throws Exception {
         Map<ScriptType, List<Object>> map = tokensByType(jsBus);
         Class<?> recordClass = Class.forName("com.tkisor.nekojs.api.event.EventBusJS$ScriptEventListenerToken");
-        Constructor<?> ctor = recordClass.getDeclaredConstructor(EventListenerToken.class, String.class);
+        Constructor<?> ctor = recordClass.getDeclaredConstructor(EventListenerToken.class, String.class, graal.graalvm.polyglot.Context.class);
         ctor.setAccessible(true);
-        Object entry = ctor.newInstance(token, scriptId);
+        Object entry = ctor.newInstance(token, scriptId, null);
         map.computeIfAbsent(type, t -> new CopyOnWriteArrayList<>()).add(entry);
     }
 

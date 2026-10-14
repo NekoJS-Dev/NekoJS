@@ -123,15 +123,12 @@ class FabricWorldPackStatusTest {
     }
 
     @Test
-    void fabricPackListMessageClaimsALookupThatNeverRunsThere() {
+    void fabricPackListDescribesMountedSourcesWithoutClaimingWorldActivation() {
         String fabricCommands = codeLinesOnly(
                 read(repoRoot().resolve("src/fabric/java/com/tkisor/nekojs/fabric/FabricNekoJSCommands.java")));
-        assertTrue(fabricCommands.contains(
-                        "No script packs found (looked in nekojs/packs/ and <world>/nekojs_packs/)."),
-                "the fabric empty-list message must stay pinned as documented (it claims a world lookup "
-                        + "that never runs on fabric; recorded as a known gap, not fixed here)");
-        // List content comes only from globalPacks + worldPacks; on fabric the latter is always empty (previous case pins the reason)
-        assertTrue(fabricCommands.contains("registry.worldPacks()"));
+        assertTrue(fabricCommands.contains("Component.translatable(\"nekojs.command.packs.empty\")"));
+        assertTrue(fabricCommands.contains("registry.allPacks()"));
+        assertFalse(fabricCommands.contains("looked in nekojs/packs/ and <world>/nekojs_packs/"));
     }
 
     @Test

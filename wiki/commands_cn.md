@@ -19,8 +19,10 @@ NekoJS 注册了一个根命令 `/nekojs`，需要权限等级 LEVEL_GAMEMASTERS
 | `/nekojs error` | 报告当前是否有脚本错误 | NeoForge / Fabric 26.x |
 | `/nekojs view_all_errors` | 列出完整错误；NeoForge 可打开错误 UI，Fabric 输出聊天文本 | NeoForge / Fabric 26.x |
 | `/nekojs editor`（历史命令） | 已移除；使用外部编辑器编辑脚本 | 当前平台不提供 |
-| `/nekojs packs` | 列出全部脚本包（全局 `nekojs/packs/` 与世界 `<世界>/nekojs_packs/`，含启用态/版本/目录） | NeoForge / Fabric 26.x |
-| `/nekojs packs enable\|disable <id>` | 写包状态文件（优先级高于 manifest 的 `enabled`），随后 `/nekojs reload` 生效 | NeoForge / Fabric 26.x |
+| `/nekojs packs` | 列出已挂载来源中的脚本包、配置启用意图、版本和目录；远端缓存包由授权控制，配置状态不代表已经运行 | NeoForge / Fabric 26.x |
+| `/nekojs packs enable\|disable <selector>` | 保存本地启用意图；可用 `GLOBAL:my_pack` / `WORLD:my_pack`，裸 ID 必须唯一。保存失败返回失败。重载对应类型应用，STARTUP 需要重启；远端缓存只读 | NeoForge / Fabric 26.x |
+| `/nekojs packs status <type>` | 查看当前类型 generation 中已完成的入口执行结果、原版本与故障隔离状态；不重新扫描、不执行脚本 | NeoForge / Fabric 26.x |
+| `/nekojs packs plan <type>` | 查看当前文件的执行顺序、跳过原因与排序诊断；不执行或编译脚本，不表示候选激活已经通过 | NeoForge / Fabric 26.x |
 | `/nekojs trust <address>` | 多人脚本包分发：把服务器加入本客户端信任存储（首连未信任会被断开并提示本命令，信任后重连收包；在单人世界或客户端进程中执行） | NeoForge / Fabric 26.x |
 | `/nekojs registry` | 动态注册健康快照；Fabric 当前快照为空 | NeoForge 26.x；Fabric 有命令但能力为空 |
 | `/nekojs registry stale` | 只列出上次 reload 后脚本不再注册的动态条目 | NeoForge 26.x；Fabric 有命令但能力为空 |
@@ -163,6 +165,8 @@ minecraft:diamond_sword x1          <- 物品 id（点击可复制）、数量
 - [脚本基础](script-basics_cn) —— reload 行为详解。
 - [快速开始](quick-start_cn)。
 - [常见问题](faq_cn)。
+
+版本化包另提供创建、严格校验、归档、模组 JAR 导出和包局部重载；完整命令、依赖、能力和兼容边界见 [版本化脚本包](script-packs_cn.md)。
 
 <!-- wiki-nav -->
 

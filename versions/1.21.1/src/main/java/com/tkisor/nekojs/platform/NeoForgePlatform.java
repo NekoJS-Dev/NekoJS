@@ -17,6 +17,15 @@ import java.util.Map;
 import java.util.Set;
 
 public class NeoForgePlatform implements IPlatform {
+    @Override
+    public Map<String, Path> loadedPackRoots() {
+        Map<String, Path> roots = new LinkedHashMap<>();
+        for (var mod : ModList.get().getMods()) {
+            Path root = mod.getOwningFile().getFile().findResource("nekojs", "packs");
+            if (java.nio.file.Files.isDirectory(root)) roots.put(mod.getModId(), root);
+        }
+        return Map.copyOf(roots);
+    }
 
     @Override
     public boolean isClient() {

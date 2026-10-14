@@ -127,11 +127,12 @@ public final class NekoRuntimeAssembly {
                 trustContext
         );
 
+        com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().discoverLoadedModPacks();
         for (ScriptType type : ScriptType.autoLoadTypes()) {
             root.createScriptManager(type).discoverScripts();
         }
 
-        root.scriptManagerOf(ScriptType.STARTUP).loadScripts();
+        root.load(ScriptType.STARTUP);
         NekoRuntimeAccess.get().fireInitStartup();
         return new Assembled(root);
     }

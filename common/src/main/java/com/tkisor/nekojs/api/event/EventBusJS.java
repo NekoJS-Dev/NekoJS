@@ -476,8 +476,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             try {
                 listener.executeVoid(event);
             } finally {
-                ScriptManager.noteCallbackExit();
-                ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                try { ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId); }
+                finally { ScriptManager.noteCallbackExit(); }
             }
         }
 
@@ -540,9 +540,15 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
      * snapshot is removed only after every candidate activation succeeds.
      */
     public PendingCommit preparePendingListeners(ScriptType type, List<PendingListener> pending) {
+        return preparePendingListeners(type, pending, context -> true);
+    }
+
+    /** Select old activation owners rather than a source name reused by a newer activation. */
+    public PendingCommit preparePendingListeners(ScriptType type, List<PendingListener> pending,
+            java.util.function.Predicate<Context> replaced) {
         if (type == null) return null;
         List<ScriptEventListenerToken<EVENT>> old = tokensByType.get(type) == null
-                ? List.of() : List.copyOf(tokensByType.get(type));
+                ? List.of() : tokensByType.get(type).stream().filter(token -> replaced.test(token.context())).toList();
         List<PendingListener> owned = pending == null ? List.of() : pending.stream()
                 .filter(candidate -> candidate != null && candidate.owner() == this
                         && candidate.type() == type)
@@ -669,7 +675,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             this.tokensByType.compute(pending.type, (ignored, tokens) -> {
                 List<ScriptEventListenerToken<EVENT>> list =
                         tokens == null ? new CopyOnWriteArrayList<>() : tokens;
-                list.add(new ScriptEventListenerToken<>(activated, pending.scriptId));
+                list.add(new ScriptEventListenerToken<>(activated, pending.scriptId, pending.listener.getContext()));
                 return list;
             });
             pending.activatedToken = token;
@@ -703,6 +709,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     private boolean skipDeadContext(Context context) {
+        if (ScriptManager.isCandidateContext(context) && !Boolean.TRUE.equals(collectionDispatch.get())) return true;
         if (!ScriptManager.isContextDead(context)) return false;
         if (Boolean.TRUE.equals(collectionDispatch.get())) throw new IllegalStateException();
         return true;
@@ -755,8 +762,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 try {
                     listener.executeVoid(event);
                 } finally {
-                    ScriptManager.noteCallbackExit();
-                    ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                    try { ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId); }
+                    finally { ScriptManager.noteCallbackExit(); }
                 }
             } catch (Throwable e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -790,8 +797,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                     Value result = listener.execute(event);
                     return result.isBoolean() && result.asBoolean();
                 } finally {
-                    ScriptManager.noteCallbackExit();
-                    ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                    try { ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId); }
+                    finally { ScriptManager.noteCallbackExit(); }
                 }
             } catch (Throwable e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -828,8 +835,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                                 listener.executeVoid(event);
                             }
                         } finally {
-                            ScriptManager.noteCallbackExit();
-                            ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                            try { ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId); }
+                            finally { ScriptManager.noteCallbackExit(); }
                         }
                     } catch (Throwable e) {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -867,8 +874,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                                 return result.isBoolean() && result.asBoolean();
                             }
                         } finally {
-                            ScriptManager.noteCallbackExit();
-                            ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                            try { ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId); }
+                            finally { ScriptManager.noteCallbackExit(); }
                         }
                     } catch (Throwable e) {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -895,5 +902,5 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         ScriptErrorReporter.recordCallbackError(context, type, kind, throwable);
     }
 
-    private record ScriptEventListenerToken<EVENT>(EventListenerToken<EVENT> token, String scriptId) {}
+    private record ScriptEventListenerToken<EVENT>(EventListenerToken<EVENT> token, String scriptId, Context context) {}
 }

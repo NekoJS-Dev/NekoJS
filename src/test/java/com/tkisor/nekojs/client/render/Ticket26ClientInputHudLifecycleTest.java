@@ -63,6 +63,44 @@ class Ticket26ClientInputHudLifecycleTest {
         return "ClientEvents.hudRender('" + id + "', { layer: 'normal' }, ctx => ctx.add('" + id + "'))\n";
     }
 
+    @Test
+    void jointPackageRenderersPublishTogetherRetainOnFailureAndRemoveDeletedContributions() throws Exception {
+        java.nio.file.Path packs = com.tkisor.nekojs.core.fs.NekoJSPaths.get().packsRoot();
+        java.nio.file.Files.createDirectories(packs);
+        List<java.nio.file.Path> created = new ArrayList<>();
+        try {
+            for (String id : List.of("packjoint_alpha", "packjoint_beta")) {
+                java.nio.file.Path directory = packs.resolve(id);
+                java.nio.file.Files.createDirectory(directory); created.add(directory);
+                java.nio.file.Files.createDirectory(directory.resolve("client_scripts"));
+                java.nio.file.Files.writeString(directory.resolve("manifest.json"),
+                        "{\"formatVersion\":1,\"id\":\"" + id + "\",\"version\":\"1.0.0\",\"entries\":{\"client\":[\"main.js\"]}}");
+                java.nio.file.Files.writeString(directory.resolve("client_scripts/main.js"), hudScript(id));
+            }
+            harness.root.reload(ScriptType.CLIENT);
+            assertEquals(Set.of("packjoint_alpha", "packjoint_beta"), Set.copyOf(Ticket26ClientInputHudHarness.dispatchHud("normal")));
+            List<List<String>> seen = observeDuringCandidate(true);
+            assertTrue(!harness.root.reloadPack(ScriptType.CLIENT, "packjoint_alpha").success());
+            assertEquals(Set.of("packjoint_alpha", "packjoint_beta"), Set.copyOf(seen.getFirst()));
+            assertEquals(Set.of("packjoint_alpha", "packjoint_beta"), Set.copyOf(Ticket26ClientInputHudHarness.dispatchHud("normal")));
+            assertEquals(0, ClientRenderRegistry.pendingCandidateRegistrations());
+            java.nio.file.Files.writeString(created.getFirst().resolve("client_scripts/main.js"), "global.noRenderer=true;");
+            var replacement = harness.root.reloadPack(ScriptType.CLIENT, "packjoint_alpha");
+            assertTrue(replacement.success(), replacement.toString());
+            assertEquals(List.of("packjoint_beta"), Ticket26ClientInputHudHarness.dispatchHud("normal"));
+            assertEquals(0, ClientRenderRegistry.pendingCandidateRegistrations());
+            harness.root.close();
+            assertTrue(Ticket26ClientInputHudHarness.dispatchHud("normal").isEmpty());
+        } finally {
+            for (java.nio.file.Path directory : created) {
+                try (var files = java.nio.file.Files.walk(directory)) {
+                    for (java.nio.file.Path file : files.sorted(java.util.Comparator.reverseOrder()).toList()) java.nio.file.Files.delete(file);
+                }
+            }
+            com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().refreshGlobalPacks();
+        }
+    }
+
     /**
      * peer 收集器：在 DOMAIN_PLAN 阶段记录「此刻生产路由长什么样」，并可选择让整批候选
      * 在 STATE_PLAN 预检失败一次（{@code rejectOnce}）。观察走只读公开面。

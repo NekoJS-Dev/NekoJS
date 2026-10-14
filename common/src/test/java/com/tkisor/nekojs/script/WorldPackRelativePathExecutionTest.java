@@ -97,6 +97,40 @@ class WorldPackRelativePathExecutionTest {
             manager.loadScripts();
             assertEquals("g4-world-pack-ok", recorder.value(),
                     "world pack scripts must execute after the activation reload");
+            var initialView = manager.packRuntimeView();
+            assertEquals(1, initialView.entries().size());
+            assertEquals(com.tkisor.nekojs.core.pack.PackScriptView.Status.EXECUTED,
+                    initialView.entries().getFirst().status());
+            assertEquals("WORLD:g4demo", initialView.entries().getFirst().selector());
+
+            assertTrue(ScriptPackRegistry.get().setEnabled("WORLD:g4demo", false).succeeded());
+            assertEquals(1, recorder.calls(), "saving intent alone must not execute scripts");
+            assertEquals(initialView, manager.packRuntimeView(), "saving intent must not rewrite runtime history");
+            assertTrue(manager.packExecutionPlan().entries().isEmpty(), "a disabled pack has no planned entries");
+            manager.reloadScripts();
+            assertEquals(1, recorder.calls(), "a disabled WORLD pack must not execute on current-world reload");
+            assertTrue(manager.packRuntimeView().entries().isEmpty());
+
+            assertTrue(ScriptPackRegistry.get().setEnabled("WORLD:g4demo", true).succeeded());
+            var plan = manager.packExecutionPlan();
+            assertEquals(com.tkisor.nekojs.core.pack.PackScriptView.Status.READY, plan.entries().getFirst().status());
+            assertEquals(1, recorder.calls(), "planning must not execute scripts");
+            assertTrue(manager.packRuntimeView().entries().isEmpty(), "planning must not publish runtime outcomes");
+            manager.reloadScripts();
+            assertEquals(2, recorder.calls(), "re-enabling must apply without remounting the world");
+            var healthyView = manager.packRuntimeView();
+            assertEquals(1, healthyView.entries().size());
+            Files.writeString(packScripts.resolve("w.js"), "throw new Error('candidate rejected');\n");
+            try {
+                manager.reloadScripts();
+                org.junit.jupiter.api.Assertions.fail("the broken candidate must fail");
+            } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException expected) {
+                assertEquals(healthyView, manager.packRuntimeView(), "failed candidates must retain active outcome history");
+            }
+            manager.discoverScripts();
+            assertEquals(healthyView, manager.packRuntimeView(), "discovery alone must not claim new activation");
+            manager.clearWorldPackListeners(ScriptPackRegistry.get().deactivateWorldPacks());
+            assertTrue(manager.packRuntimeView().entries().isEmpty());
         } finally {
             ScriptPackRegistry.get().deactivateWorldPacks();
             if (manager != null) {
@@ -114,13 +148,19 @@ class WorldPackRelativePathExecutionTest {
     /** Script-side reporting channel (global binding {@code TestRecorder}). */
     public static final class Recorder {
         private volatile String value;
+        private int calls;
 
         public void record(String value) {
             this.value = value;
+            calls++;
         }
 
         String value() {
             return value;
+        }
+
+        int calls() {
+            return calls;
         }
     }
 

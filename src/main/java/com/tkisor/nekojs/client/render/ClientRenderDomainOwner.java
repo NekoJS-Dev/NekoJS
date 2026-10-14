@@ -36,6 +36,11 @@ public final class ClientRenderDomainOwner implements CandidateDomainCollector {
 
     @Override
     public void collect(Handle handle) {
-        ClientRenderRegistry.registerCandidateBatch(handle.candidateContext(), handle);
+        ClientRenderRegistry.registerCandidateBatches(handle);
+    }
+
+    @Override
+    public void reconcileAfterRemoval(Handle handle) {
+        // Each published renderer batch withdraws entries belonging to its closing Context.
     }
 }

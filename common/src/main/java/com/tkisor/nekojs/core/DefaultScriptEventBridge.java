@@ -67,13 +67,26 @@ public class DefaultScriptEventBridge implements ScriptEventBridge {
     @Override
     public ListenerBatch prepareCandidateListeners(ScriptType type,
             java.util.List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> pending) {
+        return prepareListeners(type, pending, context -> true);
+    }
+
+    @Override
+    public ListenerBatch preparePackListeners(ScriptType type,
+            java.util.List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> pending,
+            java.util.Set<graal.graalvm.polyglot.Context> replaced) {
+        return prepareListeners(type, pending, replaced::contains);
+    }
+
+    private ListenerBatch prepareListeners(ScriptType type,
+            java.util.List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> pending,
+            java.util.function.Predicate<graal.graalvm.polyglot.Context> replaced) {
         java.util.List<com.tkisor.nekojs.api.event.EventBusJS.PendingCommit> commits =
                 new java.util.ArrayList<>();
         try {
             for (var group : pluginRuntime().eventGroups().values()) {
-                commits.addAll(group.preparePendingListeners(type, pending));
+                commits.addAll(group.preparePendingListeners(type, pending, replaced));
             }
-            commits.addAll(ScriptEventRegistry.preparePendingListeners(type, pending));
+            commits.addAll(ScriptEventRegistry.preparePendingListeners(type, pending, replaced));
             return new ListenerBatch() {
                 @Override
                 public void finish() {

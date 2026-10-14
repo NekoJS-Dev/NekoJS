@@ -18,6 +18,17 @@ public record ScriptPack(
     ScriptPackManifest manifest
 ) {
 
+    /** Source-qualified selector for management; not a runtime activation identity. */
+    public String selector() {
+        if (scope == ScriptPackScope.SERVER_CACHE && manifest.descriptor() != null) {
+            String directory = root.getFileName().toString();
+            for (String origin : java.util.List.of("packs", "worldpacks")) {
+                if (directory.equals(origin + "_" + id)) return scope.name() + ":" + origin + ":" + id;
+            }
+        }
+        return scope.name() + ":" + id;
+    }
+
     /** 本包某脚本类型的脚本目录（可能不存在，调用方自行判空）。 */
     public Path scriptsDirFor(ScriptType type) {
         return root.resolve(type.scriptsDirectoryName());
@@ -30,6 +41,9 @@ public record ScriptPack(
      * 该前缀同时是世界卸载时按 scriptId 前缀反注册监听器的定位键。
      */
     public String idPathPrefix() {
+        if (scope == ScriptPackScope.SERVER_CACHE && manifest.descriptor() != null) {
+            return scope.idSegment() + "/" + root.getFileName() + "/";
+        }
         return scope.idSegment() + "/" + id + "/";
     }
 

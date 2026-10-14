@@ -63,10 +63,14 @@ nekojs/packs/my_pack/
 ```
 
 - **Load order**: global packs (alphabetically by id) → world packs → standalone directories.
-- **Enable/disable**: `/nekojs packs` lists all packs; `/nekojs packs disable my_pack` writes a state file
-  (with precedence over the manifest's `enabled`), which takes effect after `/nekojs reload`.
-- **World packs**: place them in the save directory at `<world-folder>/nekojs_packs/<pack-id>/` (the same structure as global packs).
-  They load automatically when entering that world, and their event listeners and timers are unloaded automatically when leaving it. Different worlds can have different scripts.
+- **Enable/disable**: `/nekojs packs` displays configured intent, not runtime activation.
+  `/nekojs packs disable GLOBAL:my_pack` saves the state file (overriding manifest `enabled`).
+  Bare IDs must match uniquely, and save failures do not report success. Reload the relevant server/client/test type to apply; STARTUP changes require a restart.
+- **Execution queries**: `/nekojs packs status server` shows completed entry outcomes in the current generation;
+  `/nekojs packs plan server` shows current file order and exclusions without evaluating or compiling scripts.
+- **World packs (NeoForge)**: place them under `<world-folder>/nekojs_packs/<pack-id>/`.
+  Entering the world mounts them; leaving clears their listeners and timers. Current-world edits and enablement apply on the relevant type reload. Fabric does not currently mount WORLD sources.
+- **Remote cache packs**: mounted SERVER_CACHE content can be queried, but local enablement commands cannot change its remote authorization.
 - Manifest fields are parsed permissively: `id`/`name`/`version`/`description`/`authors`/`enabled`/`clientSync`
   (`clientSync` is reserved for multiplayer script distribution; see below). Each pack's script directories also get an automatically generated `jsconfig.json`,
   with the same editor completion as standalone directories.

@@ -56,6 +56,22 @@ public final class ScriptLifecycleGate {
     private volatile boolean activeFailed;
 
     private static final ThreadLocal<Integer> CALLBACK_DEPTH = ThreadLocal.withInitial(() -> 0);
+    private static final ThreadLocal<java.util.List<Runnable>> CALLBACK_RELEASES = new ThreadLocal<>();
+
+    public static boolean isInCallback() {
+        return CALLBACK_DEPTH.get() > 0;
+    }
+
+    /** Defer owner teardown until every nested guest callback has returned. */
+    public static void afterCallback(Runnable release) {
+        if (!isInCallback()) throw new IllegalStateException("[NEKO-1017] No callback owns deferred teardown");
+        var releases = CALLBACK_RELEASES.get();
+        if (releases == null) {
+            releases = new java.util.ArrayList<>();
+            CALLBACK_RELEASES.set(releases);
+        }
+        releases.add(release);
+    }
 
     /**
      * managed 回调进入（事件监听器 / timer 回调执行体）：调用方（EventBusJS /
@@ -71,6 +87,16 @@ public final class ScriptLifecycleGate {
         int remaining = CALLBACK_DEPTH.get() - 1;
         if (remaining <= 0) {
             CALLBACK_DEPTH.remove();
+            var releases = CALLBACK_RELEASES.get();
+            CALLBACK_RELEASES.remove();
+            if (releases != null) {
+                for (Runnable release : releases) {
+                    try { release.run(); }
+                    catch (Throwable failure) {
+                        com.tkisor.nekojs.NekoJS.LOGGER.error("[NEKO-1017] Deferred callback teardown failed", failure);
+                    }
+                }
+            }
         } else {
             CALLBACK_DEPTH.set(remaining);
         }

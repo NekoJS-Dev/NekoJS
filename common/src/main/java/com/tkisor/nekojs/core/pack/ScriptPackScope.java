@@ -17,7 +17,8 @@ package com.tkisor.nekojs.core.pack;
 public enum ScriptPackScope {
     GLOBAL("packs"),
     WORLD("worldpacks"),
-    SERVER_CACHE("serverpacks");
+    SERVER_CACHE("serverpacks"),
+    MOD("modpacks");
 
     /** ScriptId path 中的前缀段（见 {@link ScriptPack#idPathPrefix()}）。 */
     private final String idSegment;

@@ -40,12 +40,87 @@ public final class ScriptPackRegistry {
     private volatile List<ScriptPack> globalPacks = List.of();
     private volatile List<ScriptPack> worldPacks = List.of();
     private volatile List<ScriptPack> serverCachePacks = List.of();
+    private volatile List<ScriptPack> modPacks = List.of();
     private volatile boolean globalScanned;
+    private Path globalRoot;
+    private Path worldRoot;
+    private long worldSession;
+    private long cacheSession;
+    private Path cacheRoot;
+
+    /** Source instance is stable across replacements within a session and changes on remount. */
+    public synchronized String instanceKey(ScriptPack pack) {
+        long session = pack.scope() == ScriptPackScope.WORLD ? worldSession
+                : pack.scope() == ScriptPackScope.SERVER_CACHE ? cacheSession : 0;
+        return pack.scope() + ":" + pack.root().toAbsolutePath().normalize() + "#" + session;
+    }
+
+    /** Discovered snapshots, including authorized remote content; not active Contexts. */
+    public synchronized List<ScriptPack> allPacks() {
+        List<ScriptPack> packs = new ArrayList<>();
+        packs.addAll(globalPacks);
+        packs.addAll(modPacks);
+        packs.addAll(worldPacks);
+        packs.addAll(serverCachePacks);
+        return List.copyOf(packs);
+    }
+
+    /** Computes author dependencies without claiming that providers have activated. */
+    public synchronized PackDependencyPlan dependencyPlan() {
+        return PackDependencyPlan.resolve(allPacks(), PackDependencyPlan.Environment.current());
+    }
+
+    /** Refreshes local sources without remounting a closed world or rescanning remote content. */
+    public synchronized void refreshLocalPacks() {
+        refreshGlobalPacks(globalRoot == null ? NekoJSPaths.get().packsRoot() : globalRoot);
+        if (worldRoot != null) {
+            worldPacks = scan(worldRoot, ScriptPackScope.WORLD);
+        }
+    }
+
+    /** Selects, persists, then publishes local intent. Ambiguity and write failure never succeed. */
+    public synchronized PackOperationResult setEnabled(String selector, boolean enabled) {
+        refreshLocalPacks();
+        List<ScriptPack> matches = allPacks().stream()
+                .filter(pack -> matchesSelector(pack, selector)).toList();
+        List<String> names = matches.stream().map(ScriptPack::selector).toList();
+        if (matches.isEmpty()) {
+            return new PackOperationResult(PackOperationResult.Status.NOT_FOUND, selector, names);
+        }
+        if (matches.size() > 1) {
+            return new PackOperationResult(PackOperationResult.Status.AMBIGUOUS, selector, names);
+        }
+        ScriptPack pack = matches.getFirst();
+        if (pack.scope() == ScriptPackScope.SERVER_CACHE || pack.scope() == ScriptPackScope.MOD) {
+            return new PackOperationResult(PackOperationResult.Status.READ_ONLY, pack.selector(), names);
+        }
+        if (!ScriptPackState.save(pack.root(), enabled)) {
+            return new PackOperationResult(PackOperationResult.Status.SAVE_FAILED, pack.selector(), names);
+        }
+        ScriptPack updated = new ScriptPack(pack.id(), pack.name(), pack.version(), pack.scope(),
+                pack.root(), enabled, pack.manifest());
+        if (pack.scope() == ScriptPackScope.GLOBAL) {
+            globalPacks = globalPacks.stream().map(existing -> existing == pack ? updated : existing).toList();
+        } else {
+            worldPacks = worldPacks.stream().map(existing -> existing == pack ? updated : existing).toList();
+        }
+        return new PackOperationResult(PackOperationResult.Status.SAVED, pack.selector(), names);
+    }
+
+    private static boolean matchesSelector(ScriptPack pack, String selector) {
+        if (selector == null) return false;
+        if (pack.selector().equalsIgnoreCase(selector)) return true;
+        int separator = selector.indexOf(':');
+        if (separator < 0) return pack.id().equals(selector);
+        return pack.scope().name().equalsIgnoreCase(selector.substring(0, separator))
+                && pack.id().equals(selector.substring(separator + 1));
+    }
 
     /** 全部启用包：GLOBAL（字母序）→ WORLD（字母序）→ SERVER_CACHE（字母序），与脚本加载顺序一致。 */
     public List<ScriptPack> enabledPacks() {
         List<ScriptPack> out = new ArrayList<>(globalPacks.size() + worldPacks.size() + serverCachePacks.size());
         for (ScriptPack pack : globalPacks) if (pack.enabled()) out.add(pack);
+        for (ScriptPack pack : modPacks) if (pack.enabled()) out.add(pack);
         for (ScriptPack pack : worldPacks) if (pack.enabled()) out.add(pack);
         for (ScriptPack pack : serverCachePacks) if (pack.enabled()) out.add(pack);
         return out;
@@ -53,6 +128,14 @@ public final class ScriptPackRegistry {
 
     public List<ScriptPack> globalPacks() {
         return globalPacks;
+    }
+
+    /** Loader-owned content is materialized once before STARTUP and remains read-only. */
+    public synchronized void discoverLoadedModPacks() {
+        List<ScriptPack> discovered = new ArrayList<>();
+        com.tkisor.nekojs.platform.Platform.instance().visitLoadedPackRoots((mod, path) -> discovered.addAll(
+                LoadedModPackSource.discover(java.util.Map.of(mod, path), NekoJSPaths.get().root().resolve("mod_packs"))));
+        modPacks = List.copyOf(discovered);
     }
 
     public List<ScriptPack> worldPacks() {
@@ -69,19 +152,18 @@ public final class ScriptPackRegistry {
         if (globalScanned) return;
         synchronized (this) {
             if (globalScanned) return;
-            globalPacks = scan(NekoJSPaths.get().root().resolve(GLOBAL_PACKS_DIR), ScriptPackScope.GLOBAL);
-            globalScanned = true;
+            refreshGlobalPacks();
         }
     }
 
     /** 重扫全局包（reload 命令 / 包切换后调用）。 */
     public synchronized void refreshGlobalPacks() {
-        globalScanned = true;
-        globalPacks = scan(NekoJSPaths.get().root().resolve(GLOBAL_PACKS_DIR), ScriptPackScope.GLOBAL);
+        refreshGlobalPacks(NekoJSPaths.get().packsRoot());
     }
 
     /** 测试/注入用：按指定根目录重扫全局包。 */
     public synchronized void refreshGlobalPacks(Path packsRoot) {
+        globalRoot = packsRoot;
         globalScanned = true;
         globalPacks = scan(packsRoot, ScriptPackScope.GLOBAL);
     }
@@ -97,17 +179,21 @@ public final class ScriptPackRegistry {
      * and fail every WORLD pack script (ticket 03 §3-1 real-code defect, ticket 07 G4).
      */
     public synchronized List<ScriptPack> activateWorldPacks(Path worldDir) {
+        worldSession++;
         Path normalized = worldDir == null ? null : worldDir.toAbsolutePath().normalize();
-        worldPacks = normalized == null
+        worldRoot = normalized == null ? null : normalized.resolve(WORLD_PACKS_DIR);
+        worldPacks = worldRoot == null
                 ? List.of()
-                : scan(normalized.resolve(WORLD_PACKS_DIR), ScriptPackScope.WORLD);
+                : scan(worldRoot, ScriptPackScope.WORLD);
         return worldPacks;
     }
 
     /** 卸载世界包（serverStopped / 退出单人），返回被移除的包。 */
     public synchronized List<ScriptPack> deactivateWorldPacks() {
+        worldSession++;
         List<ScriptPack> removed = worldPacks;
         worldPacks = List.of();
+        worldRoot = null;
         return removed;
     }
 
@@ -117,6 +203,7 @@ public final class ScriptPackRegistry {
      * 服务器缓存包强制启用（manifest 默认值与状态文件均不适用），返回激活的全部包。
      */
     public synchronized List<ScriptPack> activateServerCachePacks(Path bucketDir) {
+        updateCacheSession(bucketDir);
         serverCachePacks = bucketDir == null
             ? List.of()
             : scanForceEnabled(bucketDir, ScriptPackScope.SERVER_CACHE);
@@ -129,6 +216,7 @@ public final class ScriptPackRegistry {
      */
     public synchronized List<ScriptPack> activateServerCachePacks(Path bucketDir,
                                                                     Collection<String> activePackIds) {
+        updateCacheSession(bucketDir);
         serverCachePacks = bucketDir == null
             ? List.of()
             : scanForceEnabled(bucketDir, ScriptPackScope.SERVER_CACHE, activePackIds);
@@ -137,13 +225,24 @@ public final class ScriptPackRegistry {
 
     /** 卸载服务器缓存包（断线 / 服务端清空包集），返回被移除的包。缓存文件保留。 */
     public synchronized List<ScriptPack> deactivateServerCachePacks() {
+        cacheSession++; cacheRoot = null;
         List<ScriptPack> removed = serverCachePacks;
         serverCachePacks = List.of();
         return removed;
     }
 
+    private void updateCacheSession(Path root) {
+        Path normalized = root == null ? null : root.toAbsolutePath().normalize();
+        if (!java.util.Objects.equals(cacheRoot, normalized)) cacheSession++;
+        cacheRoot = normalized;
+    }
+
     /** 重置扫描标记（测试用：让下一次 get() 重新懒扫描）。 */
     synchronized void resetForTest() {
+        modPacks = List.of();
+        worldSession++; cacheSession++; cacheRoot = null;
+        globalRoot = null;
+        worldRoot = null;
         globalScanned = false;
         globalPacks = List.of();
         worldPacks = List.of();
@@ -182,6 +281,14 @@ public final class ScriptPackRegistry {
             String fallbackId = ScriptPackManifest.sanitizeId(dir.getFileName().toString());
             ScriptPackManifest manifest = ScriptPackManifest.load(dir, fallbackId);
             if (manifest == null) continue; // 无 manifest（非包）或损坏（已 WARN）
+            if (manifest.descriptor() != null) {
+                try {
+                    manifest.descriptor().validateFiles(dir, com.tkisor.nekojs.core.ScriptFilePolicy.legacyRuntime());
+                } catch (IllegalArgumentException invalid) {
+                    NekoJS.LOGGER.warn("[NEKO-1016] Pack entries rejected; pack skipped: {}", dir, invalid);
+                    continue;
+                }
+            }
             String id = ScriptPackManifest.sanitizeId(manifest.id());
             if (!id.equals(manifest.id())) {
                 NekoJS.LOGGER.warn("Script pack id '{}' is invalid, sanitized to '{}' ({})", manifest.id(), id, dir);
@@ -189,8 +296,9 @@ public final class ScriptPackRegistry {
             boolean duplicate = false;
             for (ScriptPack existing : packs) {
                 if (existing.id().equals(id)) {
-                    NekoJS.LOGGER.warn("Duplicate script pack id '{}' in {}, keeping {} (skipped)", id, dir, existing.root());
-                    duplicate = true;
+                    duplicate = manifest.descriptor() == null && existing.manifest().descriptor() == null;
+                    NekoJS.LOGGER.warn("[NEKO-1016] Duplicate package identity detected; pack={}, previous={}, legacyDuplicateSkipped={}",
+                            dir, existing.root(), duplicate);
                     break;
                 }
             }

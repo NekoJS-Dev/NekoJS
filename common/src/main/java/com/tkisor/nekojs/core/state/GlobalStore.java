@@ -167,6 +167,11 @@ public final class GlobalStore {
         }
 
         /** 联合预检：基线之后有其他 writer 提交即冲突（不丢写——已提交值原样保留）。 */
+        boolean overlaps(MapWriteSet other) {
+            return store == other.store && hasWrites() && other.hasWrites()
+                    && (cleared || other.cleared || ops.keySet().stream().anyMatch(other.ops::containsKey));
+        }
+
         void validate() {
             for (Map.Entry<String, PendingOp> entry : ops.entrySet()) {
                 long current = store.keyVersionUnlocked(entry.getKey());

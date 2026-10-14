@@ -43,7 +43,7 @@ public class NekoJSClient {
     private static void onClientSetup(FMLConstructModEvent event, NekoRuntimeRoot root) {
         event.enqueueWork(() -> {
             NekoJS.LOGGER.debug("Client environment ready, loading CLIENT scripts...");
-            root.scriptManagerOf(ScriptType.CLIENT).loadScripts();
+            root.load(ScriptType.CLIENT);
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.CLIENT).debug("Early script injection...");
             // 票 28：CLIENT 声明的初始 generation 收集点（脚本经 ClientEvents.postEffects
             // 声明 register/unregister）。初始 load 是非事务路径（没有候选/commit），这里
@@ -69,7 +69,7 @@ public class NekoJSClient {
     }
 
     private static void onClientTickPost(ClientTickEvent.Post event, NekoRuntimeRoot root) {
-        root.scriptManagerOf(ScriptType.CLIENT).flushReadyNodeTimers();
+        root.flushReadyNodeTimers(ScriptType.CLIENT);
     }
 
     private static void onLevelUnload(LevelEvent.Unload event) {

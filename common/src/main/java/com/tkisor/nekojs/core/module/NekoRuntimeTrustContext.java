@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class NekoRuntimeTrustContext implements NekoTrustContext {
     private final Set<String> remotePaths = ConcurrentHashMap.newKeySet();
-    private final Map<String, NekoTrustApprovedSource> remoteApprovals = new ConcurrentHashMap<>();
+    private volatile Map<String, NekoTrustApprovedSource> remoteApprovals = Map.of();
     private final Set<String> protectedRoots = ConcurrentHashMap.newKeySet();
 
     private NekoRuntimeTrustContext() {}
@@ -34,25 +34,24 @@ public final class NekoRuntimeTrustContext implements NekoTrustContext {
             throw new IllegalArgumentException("remoteRoot");
         }
         String root = NekoCanonicalPath.of(remoteRoot);
-        protectedRoots.add(root);
-        remotePaths.clear();
-        remoteApprovals.clear();
-        if (sources == null) return;
-        for (RemoteSource source : sources) {
+        Map<String, NekoTrustApprovedSource> replacement = new java.util.LinkedHashMap<>();
+        for (RemoteSource source : sources == null ? java.util.List.<RemoteSource>of() : sources) {
             String subject = NekoCanonicalPath.of(source.file());
             if (!NekoCanonicalPath.isWithin(subject, root)) {
                 throw new IllegalArgumentException("Remote source is outside the active cache root: " + source.file());
             }
-            remotePaths.add(subject);
-            remoteApprovals.put(subject,
-                    NekoTrustApprovedSource.remote(source.file(), source.packId(), source.keyId()));
+            replacement.put(subject, source.unsignedAuthorized()
+                    ? NekoTrustApprovedSource.remoteUnsigned(source.file(), source.packId())
+                    : NekoTrustApprovedSource.remote(source.file(), source.packId(), source.keyId()));
         }
+        protectedRoots.add(root);
+        remoteApprovals = Map.copyOf(replacement);
+        remotePaths.addAll(replacement.keySet());
     }
 
     /** Revoke credentials and keep the supplied cache root protected against local fallback. */
     public synchronized void revokeRemoteSources(Path remoteRoot) {
-        remoteApprovals.clear();
-        remotePaths.clear();
+        remoteApprovals = Map.of();
         if (remoteRoot != null) {
             protectedRoots.add(NekoCanonicalPath.of(remoteRoot));
         }

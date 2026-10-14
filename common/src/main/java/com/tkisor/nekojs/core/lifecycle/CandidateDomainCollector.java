@@ -41,6 +41,14 @@ public interface CandidateDomainCollector {
     void collect(Handle handle);
 
     /**
+     * Rebuilds whole-type contributions after an activation is removed. The handle exposes
+     * surviving active listeners without re-running entry scripts. Contexts may be empty;
+     * plans join a detached preflight/publication batch. Owners whose generation resources
+     * already remove their own contributions can override this with a no-op.
+     */
+    default void reconcileAfterRemoval(Handle handle) { collect(handle); }
+
+    /**
      * 收集期把手：候选 Context + 面向候选挂起监听器的收集派发原语 + 计划注册。
      * 生命周期只在 {@link #collect(Handle)} 调用内有效。
      */
@@ -48,6 +56,11 @@ public interface CandidateDomainCollector {
 
         /** 正在构建的候选 Context（联合计划注册的来源判定）。 */
         Context candidateContext();
+
+        /** All participants in a joint replacement, in deterministic initialization order. */
+        default java.util.List<Context> candidateContexts() {
+            return java.util.List.of(candidateContext());
+        }
 
         ScriptType scriptType();
 

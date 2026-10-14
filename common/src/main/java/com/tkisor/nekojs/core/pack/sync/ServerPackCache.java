@@ -26,6 +26,45 @@ public final class ServerPackCache {
 
     private ServerPackCache() {}
 
+    /** Local tooling reuses the staged replacement and restoration used by remote activation. */
+    public static Path installLocal(Path root, String id, String manifest, List<PackContentFile> files,
+            boolean replace, java.util.function.Consumer<Path> validate) throws IOException {
+        if (!id.matches("[a-z0-9][a-z0-9_-]*")) throw new IOException("[NEKO-1018] Invalid local package id");
+        root = root.toAbsolutePath().normalize();
+        for (Path segment : root) if (segment.toString().equals("server_packs") || segment.toString().equals("mod_packs")) {
+            throw new IOException("[NEKO-1018] Local installation cannot write protected source caches");
+        }
+        Path target = root.resolve(id);
+        if (Files.exists(target) && !replace) throw new IOException("[NEKO-1018] Package target already exists: " + target);
+        if (!NekoJSPaths.isInside(target, root) || Files.isSymbolicLink(target)) throw new IOException("[NEKO-1018] Package target escapes its root");
+        Path stage = createStagingRoot(root);
+        PhysicalReplacement replacement = null;
+        try {
+            stagePack(stage, id, manifest, files);
+            Path staged = stage.resolve(id);
+            Path state = target.resolve(com.tkisor.nekojs.core.pack.ScriptPackState.FILE_NAME);
+            if (Files.exists(state)) {
+                if (!Files.isRegularFile(state) || !NekoJSPaths.isInside(state, target) || Files.size(state) > 65536
+                        || com.tkisor.nekojs.core.pack.ScriptPackState.load(target) == null) {
+                    throw new IOException("[NEKO-1018] Existing package intent is unreadable; installation rejected");
+                }
+                Files.copy(state, staged.resolve(com.tkisor.nekojs.core.pack.ScriptPackState.FILE_NAME));
+            }
+            validate.accept(staged);
+            replacement = replaceStaged(stage, root, List.of(id));
+            validate.accept(target);
+            replacement.commit();
+            return target;
+        } catch (Throwable failure) {
+            try {
+                if (replacement != null) replacement.restore();
+                else deleteRecursivelyStrict(stage);
+            } catch (IOException cleanup) { failure.addSuppressed(cleanup); }
+            if (failure instanceof IOException io) throw io;
+            throw new IOException("[NEKO-1018] Local package installation failed; previous content restored when restoration succeeded", failure);
+        }
+    }
+
     /** bucket 目录：{@code nekojs/server_packs/<bucket>}（不存在则创建）。 */
     public static Path bucketDir(String bucket) {
         Path dir = NekoJSPaths.get().serverPacks().resolve(bucket);

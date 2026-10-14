@@ -114,11 +114,17 @@ public final class ScriptEventRegistry {
     /** Prepare custom event buses for the bridge-wide pending listener transaction. */
     public static synchronized List<EventBusJS.PendingCommit> preparePendingListeners(
             ScriptType type, List<EventBusJS.PendingListener> pending) {
+        return preparePendingListeners(type, pending, context -> true);
+    }
+
+    public static synchronized List<EventBusJS.PendingCommit> preparePendingListeners(
+            ScriptType type, List<EventBusJS.PendingListener> pending,
+            java.util.function.Predicate<graal.graalvm.polyglot.Context> replaced) {
         List<EventBusJS.PendingCommit> commits = new ArrayList<>();
         try {
             for (ScriptEventDefinition definition : DEFINITIONS.values()) {
                 if (definition.canApplyOn(type)) {
-                    commits.add(definition.bus().preparePendingListeners(type, pending));
+                    commits.add(definition.bus().preparePendingListeners(type, pending, replaced));
                 }
             }
             return commits;

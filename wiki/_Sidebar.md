@@ -22,6 +22,7 @@
 
 ## 整合包作者 / Modpack authors
 
+- 版本化脚本包 / Versioned script packs · [中文](script-packs_cn) · [EN](script-packs_us)
 - 配方系统 / Recipe system · [中文](recipe-system_cn) · [EN](recipe-system_us)
 - 注册新内容 / Registering new content · [中文](registering-new-content_cn) · [EN](registering-new-content_us)
 - 模块系统 / Module system · [中文](module-system_cn) · [EN](module-system_us)

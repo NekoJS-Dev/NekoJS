@@ -19,8 +19,10 @@ NekoJS registers the root command `/nekojs`, which requires permission level LEV
 | `/nekojs error` | Report whether there are currently any script errors. | NeoForge / Fabric 26.x |
 | `/nekojs view_all_errors` | List full errors; NeoForge can open the error UI, while Fabric outputs chat text. | NeoForge / Fabric 26.x |
 | `/nekojs editor` (historical command) | Removed; edit scripts in an external editor | Not provided on current platforms |
-| `/nekojs packs` | List all script packs (global `nekojs/packs/` and world `<世界>/nekojs_packs/`, including enabled state, version, and directory). | NeoForge / Fabric 26.x |
-| `/nekojs packs enable\|disable <id>` | Write the pack state file (which takes precedence over the manifest's `enabled` field); apply it with `/nekojs reload`. | NeoForge / Fabric 26.x |
+| `/nekojs packs` | List packs from mounted sources, configured enablement, versions, and directories. Remote cache packs are authorization controlled; configuration is not runtime activation. | NeoForge / Fabric 26.x |
+| `/nekojs packs enable\|disable <selector>` | Save local enablement using `GLOBAL:my_pack` / `WORLD:my_pack`, or a unique bare ID. Save failures return failure. Reload the relevant type to apply; STARTUP requires a restart. Remote cache packs are read-only. | NeoForge / Fabric 26.x |
+| `/nekojs packs status <type>` | Show completed entry outcomes, original versions, and failure isolation for the current type generation without rescanning or evaluating scripts. | NeoForge / Fabric 26.x |
+| `/nekojs packs plan <type>` | Show current file order, exclusions, and ordering diagnostics without evaluating or compiling scripts. This is not candidate activation validation. | NeoForge / Fabric 26.x |
 | `/nekojs trust <address>` | Multiplayer script pack distribution: add the server to this client's trust store (an untrusted first connection is disconnected and shows this command; reconnect after trusting it to receive packs; execute in a single-player world or client process). | NeoForge / Fabric 26.x |
 | `/nekojs registry` | Show a dynamic registration health snapshot; Fabric's snapshot is currently empty. | NeoForge 26.x; Fabric has the command but the capability is empty |
 | `/nekojs registry stale` | List only dynamic entries that scripts no longer register after the last reload. | NeoForge 26.x; Fabric has the command but the capability is empty |
@@ -163,6 +165,8 @@ For full examples and field differences, see [Event reference - CommandEvents](e
 - [Script basics](script-basics_us): reload behavior in detail.
 - [Quick start](quick-start_us).
 - [FAQ](faq_us).
+
+Versioned packs also provide creation, strict validation, archives, mod JAR exports and package replacement. See [Versioned script packs](script-packs_us.md) for commands, dependencies, capabilities and compatibility boundaries.
 
 <!-- wiki-nav -->
 

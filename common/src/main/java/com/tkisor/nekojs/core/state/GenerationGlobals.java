@@ -47,12 +47,17 @@ public final class GenerationGlobals implements AutoCloseable {
     private GlobalView globalView;
     private GlobalView sharedView;
     private volatile boolean closed;
+    private boolean published;
 
     GenerationGlobals(GlobalStateStores stores, ScriptType scriptType, boolean transactional) {
+        this(stores, scriptType, transactional, stores.storeFor(scriptType));
+    }
+
+    GenerationGlobals(GlobalStateStores stores, ScriptType scriptType, boolean transactional, GlobalStore privateStore) {
         this.stores = stores;
         this.scriptType = scriptType;
         this.transactional = transactional;
-        this.privateStore = stores.storeFor(scriptType);
+        this.privateStore = privateStore;
         this.sharedStoreRef = stores.sharedStore();
         this.privateWrites = transactional ? new GlobalStore.MapWriteSet(privateStore) : null;
         this.sharedWrites = transactional ? new GlobalStore.MapWriteSet(sharedStoreRef) : null;
@@ -63,7 +68,7 @@ public final class GenerationGlobals implements AutoCloseable {
     }
 
     public boolean isTransactional() {
-        return transactional;
+        return transactional && !published;
     }
 
     /** 本 generation 的类型私有 {@code global} 视图（绑定到所属 Context）。 */
@@ -90,7 +95,7 @@ public final class GenerationGlobals implements AutoCloseable {
      */
     public void addPlan(CandidateStatePlan plan) {
         if (plan == null) throw new NullPointerException("plan");
-        if (!transactional) {
+        if (!isTransactional()) {
             throw new IllegalStateException(
                     "generation of " + scriptType.name + " is not a candidate; plans join candidates only");
         }
@@ -111,7 +116,7 @@ public final class GenerationGlobals implements AutoCloseable {
      * 外部计划 preflight 保持在锁外执行（不得在持锁下跑任意代码）。
      */
     public void preflightJoint() {
-        if (!transactional) return;
+        if (!isTransactional()) return;
         synchronized (stores.lock) {
             if (privateWrites != null) privateWrites.validate();
             if (sharedWrites != null) sharedWrites.validate();
@@ -135,7 +140,7 @@ public final class GenerationGlobals implements AutoCloseable {
      * 最后一次性应用私有 + 共享写集（同一持锁内完成，无半提交）。
      */
     public void publishJoint() {
-        if (!transactional) return;
+        if (!isTransactional()) return;
         synchronized (stores.lock) {
             stores.assertOpen();
             // (a) 复验（任何变更之前）：冲突在此抛出 → discardCandidate，不丢已提交写
@@ -155,6 +160,60 @@ public final class GenerationGlobals implements AutoCloseable {
             // (c) 一次性应用（锁内；此后不再有失败路径）
             if (privateWrites != null) privateWrites.apply(this);
             if (sharedWrites != null) sharedWrites.apply(this);
+            published = true;
+        }
+    }
+
+    /** Validate all participants before publishing any participant or external plan. */
+    public static void preflightBatch(List<GenerationGlobals> participants) {
+        if (participants.isEmpty()) return;
+        var owner = participants.getFirst().stores;
+        synchronized (owner.lock) {
+            validateBatch(participants, owner);
+        }
+        participants.forEach(GenerationGlobals::preflightJoint);
+    }
+
+    /** One root lock protects joint publication, including conflicts between candidates. */
+    public static void publishBatch(List<GenerationGlobals> participants) {
+        if (participants.isEmpty()) return;
+        var owner = participants.getFirst().stores;
+        synchronized (owner.lock) {
+            validateBatch(participants, owner);
+            for (var participant : participants) {
+                for (var plan : List.copyOf(participant.plans)) {
+                    try {
+                        plan.publish();
+                    } catch (Throwable failure) {
+                        throw new GlobalStateException("state-plan-publish:" + plan.domain(),
+                                "Candidate plan violated its publish contract; state write sets were not published; "
+                                        + "partial domain effects belong to the plan", failure);
+                    }
+                }
+            }
+            for (var participant : participants) {
+                participant.privateWrites.apply(participant);
+                participant.sharedWrites.apply(participant);
+                participant.published = true;
+            }
+        }
+    }
+
+    private static void validateBatch(List<GenerationGlobals> participants, GlobalStateStores owner) {
+        owner.assertOpen();
+        List<GlobalStore.MapWriteSet> writes = new ArrayList<>();
+        for (var participant : participants) {
+            if (participant.stores != owner || !participant.isTransactional() || participant.closed) {
+                throw new GlobalStateException("pack-batch-owner", "Candidate batch has an invalid state owner");
+            }
+            for (var write : List.of(participant.privateWrites, participant.sharedWrites)) {
+                write.validate();
+                if (writes.stream().anyMatch(write::overlaps)) {
+                    throw new GlobalStateException("pack-batch-write-conflict",
+                            "Candidate packages write the same shared state; no package was committed");
+                }
+                writes.add(write);
+            }
         }
     }
 

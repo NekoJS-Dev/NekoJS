@@ -253,3 +253,39 @@ tasks.register('verifyAddonFixtureDependencySurface') {
 }
 check.dependsOn tasks.named('verifyAddonFixtureDependencySurface')
 
+configurations {
+    packToolRuntime {
+        canBeConsumed = false
+        canBeResolved = true
+        extendsFrom compileOnly, runtimeClasspath
+    }
+}
+dependencies { packToolRuntime libs.icu4j }
+
+tasks.register('packTool', JavaExec) {
+    group = 'nekojs'
+    description = 'Creates, validates, archives, installs or builds a content mod from a versioned script pack.'
+    dependsOn classes
+    classpath = sourceSets.main.output + configurations.packToolRuntime
+    mainClass = 'com.tkisor.nekojs.core.pack.tool.PackToolMain'
+    workingDir = rootProject.projectDir
+    doFirst {
+        def argumentsFile = providers.gradleProperty('packArgsFile').orNull
+        def json = argumentsFile == null ? providers.gradleProperty('packArgs').getOrElse('[]') : rootProject.file(argumentsFile).getText('UTF-8')
+        def values = new groovy.json.JsonSlurper().parseText(json)
+        if (!(values instanceof List) || values.any { !(it instanceof String) }) {
+            throw new GradleException('packArgs must be a JSON string array')
+        }
+        args = values
+    }
+}
+
+tasks.register('generatePackSchema', JavaExec) {
+    group = 'nekojs'
+    description = 'Generates the versioned author schema from the authoritative parser.'
+    dependsOn classes
+    classpath = sourceSets.main.output + configurations.packToolRuntime
+    mainClass = 'com.tkisor.nekojs.core.pack.tool.PackToolMain'
+    args 'schema', rootProject.file('docs/schema/script-pack-v1.schema.json').absolutePath
+}
+

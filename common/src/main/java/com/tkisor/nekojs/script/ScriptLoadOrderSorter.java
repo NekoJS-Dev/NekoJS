@@ -119,7 +119,55 @@ final class ScriptLoadOrderSorter {
             i = end;
         }
 
+        applyPackageOrder(scripts, shouldRun, problems);
         return new Result(problems);
+    }
+
+    /** Package prerequisites override file preferences; unrelated legacy order stays stable. */
+    private static void applyPackageOrder(List<ScriptContainer> scripts, Predicate<ScriptContainer> shouldRun,
+                                          List<String> problems) {
+        if (scripts.stream().allMatch(script -> script.packDependencies.isEmpty())) return;
+        Map<String, Integer> outstanding = new HashMap<>();
+        boolean[] runnable = new boolean[scripts.size()];
+        String[] selectors = new String[scripts.size()];
+        for (int index = 0; index < scripts.size(); index++) {
+            ScriptContainer script = scripts.get(index);
+            runnable[index] = shouldRun.test(script);
+            selectors[index] = script.packId == null ? null : script.packScope.name() + ":" + script.packId;
+            if (runnable[index] && selectors[index] != null) outstanding.merge(selectors[index], 1, Integer::sum);
+        }
+        int[] waiting = new int[scripts.size()];
+        Map<String, List<Integer>> consumers = new HashMap<>();
+        java.util.PriorityQueue<Integer> ready = new java.util.PriorityQueue<>();
+        for (int index = 0; index < scripts.size(); index++) {
+            if (runnable[index]) {
+                for (String provider : scripts.get(index).packDependencies) {
+                    if (outstanding.getOrDefault(provider, 0) == 0) continue;
+                    waiting[index]++;
+                    consumers.computeIfAbsent(provider, ignored -> new ArrayList<>()).add(index);
+                }
+            }
+            if (waiting[index] == 0) ready.add(index);
+        }
+        List<ScriptContainer> ordered = new ArrayList<>();
+        boolean[] emitted = new boolean[scripts.size()];
+        while (!ready.isEmpty()) {
+            int index = ready.remove();
+            emitted[index] = true;
+            ordered.add(scripts.get(index));
+            String provider = selectors[index];
+            if (runnable[index] && provider != null && outstanding.merge(provider, -1, Integer::sum) == 0) {
+                for (int consumer : consumers.getOrDefault(provider, List.of())) {
+                    if (--waiting[consumer] == 0) ready.add(consumer);
+                }
+            }
+        }
+        if (ordered.size() != scripts.size()) {
+            problems.add("Package dependency order cannot be resolved");
+            for (int index = 0; index < scripts.size(); index++) if (!emitted[index]) ordered.add(scripts.get(index));
+        }
+        scripts.clear();
+        scripts.addAll(ordered);
     }
 
     /** 对 {@code [from, to)} 区间（同一 priority）做稳定拓扑排序并写回。 */

@@ -49,7 +49,8 @@ public final class PackSyncServer {
     public static List<SyncedPack> collectSyncPacks() {
         List<SyncedPack> out = new ArrayList<>();
         for (ScriptPack pack : ScriptPackRegistry.get().enabledPacks()) {
-            if (pack.scope() == com.tkisor.nekojs.core.pack.ScriptPackScope.SERVER_CACHE) continue;
+            if (pack.scope() != com.tkisor.nekojs.core.pack.ScriptPackScope.GLOBAL
+                    && pack.scope() != com.tkisor.nekojs.core.pack.ScriptPackScope.WORLD) continue;
             if (!pack.manifest().clientSync()) continue;
             try {
                 byte[] manifestBytes = PackHasher.readManifestBytes(pack.root());

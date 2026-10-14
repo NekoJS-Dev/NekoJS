@@ -77,7 +77,7 @@ public final class ScriptPackDataManager {
     /** True when at least one of the packs carries a {@code data/} directory worth mounting. */
     public static boolean hasDataPacks(List<ScriptPack> packs) {
         for (ScriptPack pack : packs) {
-            if (Files.isDirectory(pack.root().resolve("data"))) {
+            if (pack.scope() != com.tkisor.nekojs.core.pack.ScriptPackScope.MOD && Files.isDirectory(pack.root().resolve("data"))) {
                 return true;
             }
         }
@@ -240,6 +240,9 @@ public final class ScriptPackDataManager {
     }
 
     private static DataEntry createEntry(ScriptPack pack) {
+        // Content mods expose data at the JAR root through the loader's native pack.
+        // Mounting their materialized script copy would duplicate resources and reload startup.
+        if (pack.scope() == com.tkisor.nekojs.core.pack.ScriptPackScope.MOD) return null;
         Path dataDir = pack.root().resolve("data");
         if (!Files.isDirectory(dataDir)) {
             return null;

@@ -6,6 +6,7 @@ import com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetrySink;
 import com.tkisor.nekojs.api.event.ScriptEventRegistrar;
+import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.ScriptEvents;
 import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
@@ -112,13 +113,19 @@ public final class ScriptManager implements AutoCloseable {
         // equals/hashCode 相同的包装对象；必须用 equals 比较，否则正常回调也会被误判为 dead。
         Context active = manager.runtime.context();
         if (active != null && active.equals(context)) {
-            return manager.contextKilled;
+            return manager.contextKilled || !manager.packActivationAllowed.getAsBoolean();
         }
         Context candidate = manager.candidateContext;
         if (candidate != null && candidate.equals(context)) {
             return manager.candidateKilled;
         }
         return true;
+    }
+
+    /** Prepared listeners can exist on a bus before the surrounding state batch publishes. */
+    public static boolean isCandidateContext(Context context) {
+        ScriptManager manager = CONTEXT_TO_MANAGER.get(context);
+        return manager != null && manager.candidateContext != null && manager.candidateContext.equals(context);
     }
 
     /**
@@ -187,6 +194,31 @@ public final class ScriptManager implements AutoCloseable {
 
     private volatile RuntimeEnvironment runtime = RuntimeEnvironment.EMPTY;
     private List<ScriptContainer> scripts;
+    private final java.util.Map<String, com.tkisor.nekojs.core.pack.PackScriptView> executionEntries =
+            new java.util.LinkedHashMap<>();
+
+    /** Reads completed active entry outcomes without entering a Context or rescanning sources. */
+    public synchronized com.tkisor.nekojs.core.pack.PackRuntimeView packRuntimeView() {
+        return new com.tkisor.nekojs.core.pack.PackRuntimeView(scriptType, generation,
+                isActiveFailed(), List.copyOf(executionEntries.values()));
+    }
+
+    /** Builds a read-only file plan; preload diagnostics do not replace active errors or outcomes. */
+    public synchronized com.tkisor.nekojs.core.pack.PackExecutionPlan packExecutionPlan() {
+        com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().refreshLocalPacks();
+        List<ScriptContainer> planned = com.tkisor.nekojs.core.ScriptLocator.discover(scriptType, scriptProperties);
+        for (ScriptContainer script : planned) script.preload();
+        var order = ScriptLoadOrderSorter.applyAfterOrder(planned, ScriptContainer::shouldRun);
+        return new com.tkisor.nekojs.core.pack.PackExecutionPlan(scriptType,
+                planned.stream().map(script -> com.tkisor.nekojs.core.pack.PackScriptView.of(script, false)).toList(),
+                order.hasProblems() ? order.describe() : "",
+                com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().dependencyPlan().blocked());
+    }
+
+    private void recordExecution(ScriptContainer script) {
+        var entry = com.tkisor.nekojs.core.pack.PackScriptView.of(script, true);
+        executionEntries.put(entry.scriptId(), entry);
+    }
 
     /**
      * 已提交的 generation 序号（单调递增）。
@@ -231,6 +263,8 @@ public final class ScriptManager implements AutoCloseable {
      * 只在 owner thread（reload 持实例锁）上读写；commit 点统一激活，失败随候选丢弃。
      */
     private final List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> pendingListeners = new ArrayList<>();
+    private final java.util.concurrent.CopyOnWriteArrayList<EventBusJS.PendingListener> activePackListeners =
+            new java.util.concurrent.CopyOnWriteArrayList<>();
 
     /** 一次性标记：STARTUP reload 的非事务语义只警告一次（每个 ScriptType 一个实例）。 */
     private boolean warnedStartupReloadNonTransactional;
@@ -278,6 +312,142 @@ public final class ScriptManager implements AutoCloseable {
         return generation;
     }
 
+    private String packInstance;
+    private Path packModuleRoot;
+    private java.util.function.BooleanSupplier packActivationAllowed = () -> true;
+    private java.util.function.Supplier<List<ScriptContainer>> packDiscovery;
+
+    public java.util.Collection<ScriptError> packErrors() { return errorTracker.getAllErrors(); }
+    public Context activeContextForPackOwner() { return runtime.context(); }
+    public List<EventBusJS.PendingListener> activeListenersForPackOwner() { return List.copyOf(activePackListeners); }
+    public void restrictPackModules(Path root) { packModuleRoot = root; }
+    public void requestPackClose(boolean interrupt) {
+        lifecycleGate.requestClose();
+        if (interrupt) interruptCandidateBestEffort();
+    }
+
+    /** Cancel preparation without closing a healthy active manager retained by rollback. */
+    public void cancelPackCandidate() { interruptCandidateBestEffort(); }
+
+    /** Root configures a partition before its first evaluation. */
+    public void configurePackPartition(String instance,
+            java.util.function.Supplier<List<ScriptContainer>> discovery) {
+        if (!runtime.isEmpty()) throw new IllegalStateException("[NEKO-1017] Cannot repartition an active script manager");
+        packInstance = instance;
+        packDiscovery = java.util.Objects.requireNonNull(discovery);
+    }
+
+    /** A prepared unit stays inert until its root publishes the entire batch. */
+    public synchronized PreparedPack preparePackCandidate(List<ScriptContainer> entries,
+            java.util.function.Consumer<Context> initialize) {
+        entries = new ArrayList<>(entries);
+        var decision = lifecycleGate.tryEnter(ScriptLifecycleGate.Operation.RELOAD);
+        if (decision != ScriptLifecycleGate.Decision.EXECUTED) throw reloadRejected(decision, "pack-prepare");
+        RuntimeEnvironment candidate = null;
+        try {
+            candidate = createCandidateEnvironment(generation + 1);
+            initialize.accept(candidate.context());
+            environmentFactory.installEnvironmentBindings(candidate.context(), scriptType,
+                    candidate.globals(), candidate.moduleSession());
+            loadCandidateScripts(entries, candidate.context(), candidate.nodeRuntime());
+            if (candidateKilled) throw new IllegalStateException("[NEKO-1017] Package candidate context was terminated");
+            for (var listener : List.copyOf(pendingListeners)) listener.prepareForActivation();
+            return new PreparedPack(candidate, runtime, List.copyOf(entries));
+        } catch (Throwable failure) {
+            try { discardCandidate(candidate); }
+            catch (Throwable cleanup) { failure.addSuppressed(cleanup); }
+            finally { lifecycleGate.exit(ScriptLifecycleGate.Operation.RELOAD); }
+            if (failure instanceof RuntimeException exception) throw exception;
+            if (failure instanceof Error error) throw error;
+            throw new IllegalStateException("[NEKO-1017] Package candidate preparation failed", failure);
+        }
+    }
+
+    public final class PreparedPack implements AutoCloseable {
+        private final RuntimeEnvironment candidate;
+        private final RuntimeEnvironment previous;
+        private final List<ScriptContainer> entries;
+        private final ScriptBindingSchema.Snapshot previousSchema;
+        private final java.util.Map<com.tkisor.nekojs.api.data.ScriptId, ScriptError> previousErrors;
+        private boolean metadataPublished;
+        private boolean committed;
+        private boolean finished;
+        private java.util.function.BooleanSupplier activationAllowed = () -> true;
+
+        private PreparedPack(RuntimeEnvironment candidate, RuntimeEnvironment previous, List<ScriptContainer> entries) {
+            this.candidate = candidate;
+            this.previous = previous;
+            this.entries = entries;
+            previousSchema = candidate.moduleSession().snapshotBindingSchema(scriptType);
+            previousErrors = defaultErrorTracker() == null ? java.util.Map.of() : defaultErrorTracker().snapshotType(scriptType);
+        }
+
+        public Context context() { return candidate.context(); }
+        public Context previousContext() { return previous.context(); }
+        public com.tkisor.nekojs.core.state.GenerationGlobals globals() { return candidate.globals(); }
+        public List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> listeners() { return List.copyOf(pendingListeners); }
+        public CandidateDomainCollector.Handle collectionHandle() { return new CandidateCollectionHandleImpl(context()); }
+        public void activationGuard(java.util.function.BooleanSupplier guard) { activationAllowed = java.util.Objects.requireNonNull(guard); }
+
+        public void assertCanCommit() {
+            if (lifecycleGate.isCloseRequested() || lifecycleGate.isClosed() || candidateKilled) {
+                throw new IllegalStateException("[NEKO-1017] Package candidate was preempted before commit");
+            }
+        }
+
+        /** Reversible metadata is published before the irreversible joint state boundary. */
+        public void publishMetadata() {
+            assertCanCommit();
+            metadataPublished = true;
+            environmentFactory.publishEnvironmentBindings(context(), candidate.moduleSession());
+            if (defaultErrorTracker() != null) defaultErrorTracker().publishCandidateErrors(scriptType, context());
+            activateModuleViews(context(), candidate.moduleSession(), generation + 1);
+        }
+
+        /** No guest code runs in this route switch. Old resources are released after every unit switches. */
+        public void commitRoute() {
+            runtime = candidate;
+            scripts = entries;
+            generation++;
+            executionEntries.clear();
+            for (var script : entries) {
+                var view = com.tkisor.nekojs.core.pack.PackScriptView.of(script, true);
+                executionEntries.put(view.scriptId(), view);
+            }
+            contextKilled = false;
+            packActivationAllowed = activationAllowed;
+            candidateContext = null;
+            candidateEnvironment = null;
+            candidateKilled = false;
+            activePackListeners.clear(); activePackListeners.addAll(pendingListeners);
+            pendingListeners.clear();
+            lifecycleGate.clearActiveFailed();
+            committed = true;
+        }
+
+        @Override
+        public void close() {
+            synchronized (ScriptManager.this) {
+                if (finished) return;
+                finished = true;
+                try {
+                    if (committed) {
+                        if (!previous.isEmpty()) closeRuntimeResources(previous);
+                    } else {
+                        releaseAll(() -> {
+                            if (metadataPublished) {
+                                candidate.moduleSession().restoreBindingSchema(scriptType, previousSchema);
+                                if (defaultErrorTracker() != null) defaultErrorTracker().restoreType(scriptType, previousErrors);
+                            }
+                        }, () -> discardCandidate(candidate));
+                    }
+                } finally {
+                    lifecycleGate.exit(ScriptLifecycleGate.Operation.RELOAD);
+                }
+            }
+        }
+    }
+
     /**
      * api.event 回调 seam（{@code EventBusJS.execute} 调用）：注册来源 Context 属于
      * 构建中的候选 generation 时，把挂起注册收进候选收集器并返回 true（注册对生产总线
@@ -291,7 +461,10 @@ public final class ScriptManager implements AutoCloseable {
         ScriptManager manager = CONTEXT_TO_MANAGER.get(context);
         if (manager == null) return false;
         Context candidate = manager.candidateContext;
-        if (candidate == null || !candidate.equals(context)) return false;
+        if (candidate == null || !candidate.equals(context)) {
+            if (context.equals(manager.runtime.context())) manager.activePackListeners.add(pending);
+            return false;
+        }
         manager.pendingListeners.add(pending);
         return true;
     }
@@ -534,11 +707,7 @@ public final class ScriptManager implements AutoCloseable {
                 // 同属旧环境。缺一步就是「kill 重建后静默携带脏状态」——例如残留 errorTracker
                 // 条目永远不清、binding 缓存的旧 Context helper 下次取用报已关闭。
                 // 此处无法重跑脚本重建监听器（重建只创建空环境），恢复需再次 reload。
-                fullReloadCleanup();
-                for (var binding : pluginRuntime.bindings(scriptType).values()) {
-                    binding.close(scriptType);
-                }
-                closeRuntimeResources(this.runtime);
+                resetEnvironment();
             }
             NekoModulePipelineCache moduleSession = preparationCache.openSession(
                     preparationCache.activeBindingSchemaView(scriptType));
@@ -594,11 +763,11 @@ public final class ScriptManager implements AutoCloseable {
     }
 
     /**
-     * 发现脚本前重扫全局脚本包，使包的启用/禁用与增删在下次 reload 即时生效
-     * （WORLD 包由平台生命周期钩子另行激活/卸载，见 ScriptPackRegistry）。
+     * Refreshes local pack intent before discovery. World mounting remains lifecycle-owned.
      */
     private List<ScriptContainer> discoverWithPacks() {
-        com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().refreshGlobalPacks();
+        if (packDiscovery != null) return new ArrayList<>(packDiscovery.get());
+        com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().refreshLocalPacks();
         return ScriptLocator.discover(scriptType, scriptProperties);
     }
 
@@ -607,7 +776,7 @@ public final class ScriptManager implements AutoCloseable {
      * （含动态事件定义）并取消其 timer。供平台 serverStopped / 断线钩子调用——
      * 不做完整 reload（Context 与平铺/全局包脚本保持存活）。
      */
-    public void clearWorldPackListeners(List<com.tkisor.nekojs.core.pack.ScriptPack> packs) {
+    public synchronized void clearWorldPackListeners(List<com.tkisor.nekojs.core.pack.ScriptPack> packs) {
         for (com.tkisor.nekojs.core.pack.ScriptPack pack : packs) {
             if (pack.scope() != com.tkisor.nekojs.core.pack.ScriptPackScope.WORLD) continue;
             String prefix = pack.scriptIdPrefix(scriptType);
@@ -616,6 +785,7 @@ public final class ScriptManager implements AutoCloseable {
             if (nodeRuntime != null) {
                 nodeRuntime.timers().cancelScriptByPrefix(prefix);
             }
+            executionEntries.values().removeIf(entry -> entry.scriptId().startsWith(prefix));
         }
     }
 
@@ -688,6 +858,7 @@ public final class ScriptManager implements AutoCloseable {
      * 空列表只记录日志，不创建副作用。
      */
     private void loadScriptsInto(List<ScriptContainer> scriptsToLoad) {
+        executionEntries.clear();
         if (!prepareScriptsForLoad(scriptsToLoad)) {
             return;
         }
@@ -699,6 +870,7 @@ public final class ScriptManager implements AutoCloseable {
                 RuntimeEnvironment env = getOrCreateEnvironment();
                 scriptExecutor.executeEntry(env.context(), script, env.nodeRuntime(), env.moduleSession().bindingSchemaView());
             }
+            recordExecution(script);
         }
     }
 
@@ -949,7 +1121,6 @@ public final class ScriptManager implements AutoCloseable {
                     // 中断加速失败还是恰好走到这里），候选在此丢弃，永不出现
                     // 「半激活 generation」或「close 之后又 commit」。
                     if (lifecycleGate.isCloseRequested() || lifecycleGate.isClosed()) {
-                        discardCandidate(candidateEnvironment);
                         throw reloadFailure(candidateGeneration, ReloadPhase.COMMIT, null,
                                 "close-preempted",
                                 new IllegalStateException(scriptType.name()
@@ -962,7 +1133,8 @@ public final class ScriptManager implements AutoCloseable {
                     progressSuccess = true;
                     com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).info("{} 脚本重载完毕 — script reload finished", scriptType.name());
                 } catch (NekoReloadException f) {
-                    discardCandidate(candidateEnvironment);
+                    try { discardCandidate(candidateEnvironment); }
+                    catch (Throwable cleanup) { f.addSuppressed(cleanup); }
                     com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).error("[NEKO-1008] {} 脚本事务重载失败，候选 generation 已关闭，active 环境保持不变 — transactional script reload failed",
                             scriptType.name(), f);
                     throw f;
@@ -980,8 +1152,10 @@ public final class ScriptManager implements AutoCloseable {
          */
         private RuntimeEnvironment createCandidateEnvironment (long candidateGeneration) {
             com.tkisor.nekojs.core.state.GenerationGlobals candidateGlobals =
-                    environmentFactory.newGeneration(scriptType, true);
+                    packInstance == null ? environmentFactory.newGeneration(scriptType, true)
+                            : environmentFactory.globalStores().newPackGeneration(scriptType, packInstance, true);
             NekoModulePipelineCache moduleSession = preparationCache.openSession(ScriptBindingSchema.emptyView());
+            if (packModuleRoot != null) moduleSession.restrictToPackRoot(packModuleRoot);
             ScriptEnvironmentFactory.Environment candidate;
             try {
                 candidate = environmentFactory.createContext(scriptType, candidateGlobals, moduleSession);
@@ -1040,6 +1214,8 @@ public final class ScriptManager implements AutoCloseable {
          */
         private void commitGeneration (long candidateGeneration, RuntimeEnvironment candidateEnvironment,
                 List<ScriptContainer> candidateScripts, RuntimeEnvironment oldEnvironment) {
+            var candidateEntries = candidateScripts.stream()
+                    .map(script -> com.tkisor.nekojs.core.pack.PackScriptView.of(script, true)).toList();
             DefaultErrorTracker defaultTracker = defaultErrorTracker();
             ScriptBindingSchema.Snapshot oldSchema =
                     candidateEnvironment.moduleSession().snapshotBindingSchema(scriptType);
@@ -1071,10 +1247,13 @@ public final class ScriptManager implements AutoCloseable {
                 this.runtime = candidateEnvironment;
                 this.scripts = candidateScripts;
                 this.generation = candidateGeneration;
+                this.executionEntries.clear();
+                for (var entry : candidateEntries) this.executionEntries.put(entry.scriptId(), entry);
                 this.contextKilled = false;
                 this.candidateContext = null;
                 this.candidateEnvironment = null;
                 this.candidateKilled = false;
+                this.activePackListeners.clear(); this.activePackListeners.addAll(this.pendingListeners);
                 this.pendingListeners.clear();
                 lifecycleGate.clearActiveFailed();
             } catch (Throwable failure) {
@@ -1139,19 +1318,15 @@ public final class ScriptManager implements AutoCloseable {
             this.candidateEnvironment = null;
             this.candidateKilled = false;
             this.candidateKillScript = null;
-            discardCandidateModuleViews(candidate == null ? null : candidate.context());
-            if (candidate != null) {
-                environmentFactory.discardEnvironmentBindings(candidate.context(), candidate.moduleSession());
-            }
-            if (!runtime.isEmpty() && runtime.moduleSession() != null) {
-                activateModuleViews(runtime.context(), runtime.moduleSession(), this.generation);
-            }
-            if (candidate != null && candidate.globals() != null) {
-                candidate.globals().discard();
-            }
-            if (candidate != null && !candidate.isEmpty()) {
-                closeRuntimeResources(candidate);
-            }
+            releaseAll(
+                    () -> discardCandidateModuleViews(candidate == null ? null : candidate.context()),
+                    () -> {
+                        if (!runtime.isEmpty() && runtime.moduleSession() != null) {
+                            activateModuleViews(runtime.context(), runtime.moduleSession(), this.generation);
+                        }
+                    },
+                    () -> { if (candidate != null && candidate.globals() != null) candidate.globals().discard(); },
+                    () -> { if (candidate != null && !candidate.isEmpty()) closeRuntimeResources(candidate); });
         }
 
         /** 候选脚本逐个执行；首个触发候选 kill 的脚本被记录用于失败结果的 source location。 */
@@ -1382,9 +1557,12 @@ public final class ScriptManager implements AutoCloseable {
                 scriptExecutor.executeEntry(ctx, script, this.runtime.nodeRuntime(),
                         this.runtime.moduleSession().bindingSchemaView());
             }
+            recordExecution(script);
         }
 
         private void cleanupScriptEntry (ScriptContainer script){
+            executionEntries.remove(script.id.toString());
+            activePackListeners.removeIf(listener -> listener.scriptId().equals(script.id.toString()));
             scriptEventBridge.clearListeners(scriptType, script.id.toString());
             NekoNodeRuntime nodeRuntime = this.runtime.nodeRuntime();
             if (nodeRuntime != null) {
@@ -1395,13 +1573,11 @@ public final class ScriptManager implements AutoCloseable {
         }
 
         private void fullReloadCleanup () {
-            scriptEventBridge.clearListeners(scriptType);
-            errorTracker.clearByType(scriptType);
-            // 按类型清理 root-owned prepared 条目、source maps 和 virtual ESM sources。
-            // 局部清除避免一个脚本类型的 reset 误清同 owner 的其他类型产物。
-            if (!runtime.isEmpty()) {
-                runtime.moduleSession().clear(scriptType);
-            }
+            executionEntries.clear();
+            activePackListeners.clear();
+            releaseAll(() -> scriptEventBridge.clearListeners(scriptType),
+                    () -> errorTracker.clearByType(scriptType),
+                    () -> { if (!runtime.isEmpty() && packInstance == null) runtime.moduleSession().clear(scriptType); });
         }
 
         private DefaultErrorTracker defaultErrorTracker() {
@@ -1538,65 +1714,59 @@ public final class ScriptManager implements AutoCloseable {
         // ---- 环境重置 / 关闭 ----
 
         private void resetEnvironment () {
-            fullReloadCleanup();
-            for (var binding : pluginRuntime.bindings(scriptType).values()) {
-                binding.close(scriptType);
-            }
-
             RuntimeEnvironment oldEnvironment = this.runtime;
-            this.runtime = RuntimeEnvironment.EMPTY;
-            closeRuntimeResources(oldEnvironment);
+            try { releaseAll(this::fullReloadCleanup, this::closeBindings, () -> closeRuntimeResources(oldEnvironment)); }
+            finally { this.runtime = RuntimeEnvironment.EMPTY; }
         }
 
         private void closeRuntimeResources (RuntimeEnvironment environment){
-            // 票 10：先失效该 generation 写入的 guest 值（已销毁 Context 的 guest 函数/Value
-            // 不因存入 store 获得永久保活；非 guest 值保留跨 reload）。generation close 只做
-            // guest 失效，不清空 root 级 store（跨 reload/server stop/切世界保留由 root 负责）。
-            if (environment.globals() != null) {
-                try {
-                    environment.globals().close();
-                } catch (Throwable e) {
-                    com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).warn(
-                            "关闭 generation global 视图时发生异常", e);
-                }
-            }
             NekoNodeRuntime oldRuntime = environment.nodeRuntime();
             Context oldContext = environment.context();
-            if (oldRuntime != null) {
-                try {
-                    oldRuntime.close();
-                } catch (Throwable e) {
-                    com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).warn("[NEKO-1009] 关闭旧 Node runtime 时发生异常 — error closing old Node runtime", e);
+            // Every owned release runs even if a previous one fails. Context teardown precedes
+            // stream flushing, and generation cleanup never closes the root-owned stores.
+            releaseAll(
+                    () -> { if (environment.globals() != null) environment.globals().close(); },
+                    () -> { if (oldRuntime != null) oldRuntime.close(); },
+                    () -> { if (oldContext != null) environmentFactory.discardEnvironmentBindings(oldContext, environment.moduleSession()); },
+                    () -> { if (oldContext != null && defaultErrorTracker() != null) defaultErrorTracker().removeModuleViews(oldContext); },
+                    () -> { if (oldContext != null) { ScriptContextRegistry.unbind(oldContext); CONTEXT_TO_MANAGER.remove(oldContext); } },
+                    () -> { if (oldContext != null) closeOwnedContext(oldContext); },
+                    () -> closeStreamQuietly(environment.outStream()),
+                    () -> closeStreamQuietly(environment.errStream()),
+                    () -> { if (environment.moduleSession() != null) environment.moduleSession().closeSession(); });
+        }
+
+        private static void closeOwnedContext(Context context) {
+            synchronized (context) {
+                try { context.close(); }
+                catch (PolyglotException failure) {
+                    // Graal rethrows the cancellation cause when closing an already terminated
+                    // Context. This terminal notification is not an unperformed resource release.
+                    if (!failure.isCancelled() && !ScriptExecutor.isContextKilledByResourceLimits(failure)) throw failure;
                 }
             }
-            if (oldContext != null) {
-                environmentFactory.discardEnvironmentBindings(oldContext, environment.moduleSession());
-                DefaultErrorTracker defaultTracker = defaultErrorTracker();
-                if (defaultTracker != null) {
-                    defaultTracker.removeModuleViews(oldContext);
-                }
-                ScriptContextRegistry.unbind(oldContext);
-                CONTEXT_TO_MANAGER.remove(oldContext);
-                try {
-                    // 关闭前先取 Context 自己的 monitor：tick/分发线程可能正执行在
-                    // synchronized(context) 里，无锁直接 close 会撞上 Graal 单线程约束
-                    // （reload 后日志刷 "The Context is already closed"）
-                    synchronized (oldContext) {
-                        oldContext.close();
-                    }
-                } catch (Throwable e) {
-                    com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).warn("[NEKO-1010] 关闭旧上下文时发生异常 — error closing old context", e);
+        }
+
+        private void closeBindings() {
+            if (packInstance != null) return;
+            releaseAll(pluginRuntime.bindings(scriptType).values().stream()
+                    .<Runnable>map(binding -> () -> binding.close(scriptType)).toArray(Runnable[]::new));
+        }
+
+        private void releaseAll(Runnable... releases) {
+            Throwable first = null;
+            for (Runnable release : releases) {
+                try { release.run(); }
+                catch (Throwable failure) {
+                    com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).error(
+                            "[NEKO-1017] Script resource release failed; remaining resources continue closing: type={}", scriptType.name, failure);
+                    if (first == null) first = failure;
+                    else if (first != failure) first.addSuppressed(failure);
                 }
             }
-            // Graal 关闭 Context 时只 detach out/err 流、不 flush 也不 close，脚本末尾未以
-            // 换行结束的输出会滞留在 LoggerStream 行缓冲中丢失。这里在 context.close() 之后
-            // 补一次 close()（幂等冲刷残留缓冲）；必须在 Context 关闭之后——先关流再关
-            // Context 会把残余写入路由到已关闭的流。
-            closeStreamQuietly(environment.outStream());
-            closeStreamQuietly(environment.errStream());
-            if (environment.moduleSession() != null) {
-                environment.moduleSession().closeSession();
-            }
+            if (first instanceof Error error) throw error;
+            if (first instanceof RuntimeException exception) throw exception;
+            if (first != null) throw new IllegalStateException("[NEKO-1017] Script resource release failed", first);
         }
 
         private static void closeStreamQuietly (LoggerStream stream){
@@ -1618,6 +1788,7 @@ public final class ScriptManager implements AutoCloseable {
             lifecycleGate.requestClose();
             interruptCandidateBestEffort();
             synchronized (this) {
+                if (lifecycleGate.isClosed()) return;
                 ScriptLifecycleGate.Decision decision =
                         lifecycleGate.tryEnter(ScriptLifecycleGate.Operation.CLOSE);
                 if (decision != ScriptLifecycleGate.Decision.EXECUTED) {
@@ -1629,16 +1800,11 @@ public final class ScriptManager implements AutoCloseable {
                     return;
                 }
                 try {
-                    // 先取消并关闭在途/未开始的候选（若 close 中断晚于候选构建）
-                    discardCandidate(this.candidateEnvironment);
-                    fullReloadCleanup();
-                    for (var binding : pluginRuntime.bindings(scriptType).values()) {
-                        binding.close(scriptType);
-                    }
-                    closeRuntimeResources(this.runtime);
+                    releaseAll(() -> discardCandidate(this.candidateEnvironment), this::fullReloadCleanup,
+                            this::closeBindings, () -> closeRuntimeResources(this.runtime));
+                } finally {
                     this.runtime = RuntimeEnvironment.EMPTY;
                     lifecycleGate.markClosed();
-                } finally {
                     lifecycleGate.exit(ScriptLifecycleGate.Operation.CLOSE);
                 }
             }

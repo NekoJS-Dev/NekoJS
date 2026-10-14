@@ -9,6 +9,7 @@ import com.tkisor.nekojs.platform.IModInfo;
 import com.tkisor.nekojs.platform.IPlatform;
 import com.tkisor.nekojs.platform.Platform;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -46,56 +47,63 @@ class Ticket08LoaderDiscoveryTest {
     private static final String SECONDARY_PLUGIN = "com.example.addon.ExampleAddonSecondaryPlugin";
     private static final String CLIENT_ONLY_PLUGIN = "com.example.addon.ExampleAddonClientOnlyPlugin";
     private static final String MISSING_MOD_PLUGIN = "com.example.addon.ExampleAddonMissingModPlugin";
+    private static Object previousPlatform;
 
     @BeforeAll
-    static void initPlatformStub() {
-        // defensive like the other shared-tree tests: Platform may already be
-        // initialized by another test class in this JVM — reuse the existing instance
-        try {
-            Platform.init(new IPlatform() {
-                @Override
-                public boolean isClient() {
-                    return false;
-                }
+    static void initPlatformStub() throws Exception {
+        // The server-side discovery contract must not depend on a preceding client fixture.
+        Field platform = Platform.class.getDeclaredField("INSTANCE");
+        platform.setAccessible(true);
+        previousPlatform = platform.get(null);
+        platform.set(null, null);
+        Platform.init(new IPlatform() {
+            @Override
+            public boolean isClient() {
+                return false;
+            }
 
-                @Override
-                public boolean isDevelopment() {
-                    return true;
-                }
+            @Override
+            public boolean isDevelopment() {
+                return true;
+            }
 
-                @Override
-                public String getMcVersion() {
-                    return "test";
-                }
+            @Override
+            public String getMcVersion() {
+                return "test";
+            }
 
-                @Override
-                public Path getGameDir() {
-                    return com.tkisor.nekojs.TestGameDirs.unique("nekojs-t08-discovery");
-                }
+            @Override
+            public Path getGameDir() {
+                return com.tkisor.nekojs.TestGameDirs.unique("nekojs-t08-discovery");
+            }
 
-                @Override
-                public Map<String, IModInfo> getMods() {
-                    return Map.of();
-                }
+            @Override
+            public Map<String, IModInfo> getMods() {
+                return Map.of();
+            }
 
-                @Override
-                public IModInfo getInfo(String modID) {
-                    return null;
-                }
+            @Override
+            public IModInfo getInfo(String modID) {
+                return null;
+            }
 
-                @Override
-                public String getLoaderId() {
-                    return "test";
-                }
+            @Override
+            public String getLoaderId() {
+                return "test";
+            }
 
-                @Override
-                public String getLoaderVersion() {
-                    return "0";
-                }
-            });
-        } catch (IllegalStateException alreadyInitialized) {
-            // another test class in this JVM owns the platform instance
-        }
+            @Override
+            public String getLoaderVersion() {
+                return "0";
+            }
+        });
+    }
+
+    @AfterAll
+    static void restorePlatform() throws Exception {
+        Field platform = Platform.class.getDeclaredField("INSTANCE");
+        platform.setAccessible(true);
+        platform.set(null, previousPlatform);
     }
 
     @Test

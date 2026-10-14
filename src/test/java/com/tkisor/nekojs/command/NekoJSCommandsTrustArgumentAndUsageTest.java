@@ -2,6 +2,7 @@
 package com.tkisor.nekojs.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.tree.ArgumentCommandNode;
 import com.mojang.brigadier.tree.CommandNode;
 import net.minecraft.commands.CommandBuildContext;
@@ -40,7 +41,7 @@ class NekoJSCommandsTrustArgumentAndUsageTest {
     }
 
     @Test
-    void trustAddressArgumentAcceptsHostPortAndRootExecutesUsage() {
+    void trustAddressArgumentAcceptsHostPortAndRootExecutesUsage() throws Exception {
         Assumptions.assumeTrue(commandsClassInitializable(),
                 "net.minecraft.commands.Commands not initializable in this JVM; tree-shape assertions skipped");
 
@@ -67,6 +68,13 @@ class NekoJSCommandsTrustArgumentAndUsageTest {
         assertNotNull(root.getChild("reload"));
         assertNotNull(root.getChild("error"));
         assertNotNull(root.getChild("probe"));
+
+        var selectorNode = root.getChild("packs").getChild("disable").getChild("id");
+        assertTrue(selectorNode instanceof ArgumentCommandNode<?, ?>);
+        var selectorArgument = ((ArgumentCommandNode<?, ?>) selectorNode).getType();
+        StringReader selector = new StringReader("WORLD:demo");
+        assertEquals("WORLD:demo", selectorArgument.parse(selector));
+        assertEquals(0, selector.getRemainingLength(), "a qualified selector must be consumed without quotes");
     }
 }
 //?}

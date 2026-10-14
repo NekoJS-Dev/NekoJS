@@ -9,11 +9,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 脚本包 manifest（{@code manifest.json}）的宽松解析模型：字段缺失/类型不符时回退默认值，
- * 不因手误打断整批包加载。未知键保留在 {@link #raw()} 中（{@code signature}/{@code config}
- * 由后续的包分发阶段消费，本阶段只透传）。
- */
+/** Legacy manifests are permissive; formatVersion 1 opts into a strict pack descriptor. */
 public record ScriptPackManifest(
     String id,
     String name,
@@ -24,14 +20,21 @@ public record ScriptPackManifest(
     boolean clientSync,
     JsonObject signature,
     JsonObject config,
-    JsonObject raw
+    JsonObject raw,
+    PackDescriptor descriptor
 ) {
+
+    public ScriptPackManifest(String id, String name, String version, String description, List<String> authors,
+                              boolean enabledByDefault, boolean clientSync, JsonObject signature, JsonObject config, JsonObject raw) {
+        this(id, name, version, description, authors, enabledByDefault, clientSync, signature, config, raw,
+                PackDescriptor.parse(raw));
+    }
 
     public static final String FILE_NAME = "manifest.json";
 
     /** 目录名兜底用的 id 规则：小写字母/数字/下划线/连字符，其余字符替换为 {@code _}。 */
     public static String sanitizeId(String dirName) {
-        String cleaned = dirName == null ? "" : dirName.trim().toLowerCase().replaceAll("[^a-z0-9_-]", "_");
+        String cleaned = dirName == null ? "" : dirName.trim().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9_-]", "_");
         return cleaned.isBlank() ? "pack" : cleaned;
     }
 
@@ -56,6 +59,16 @@ public record ScriptPackManifest(
             com.tkisor.nekojs.NekoJS.LOGGER.warn("Script pack manifest is not a JSON object, skipping pack {}", packDir);
             return null;
         }
+        try {
+            return parse(root, fallbackId);
+        } catch (IllegalArgumentException invalid) {
+            com.tkisor.nekojs.NekoJS.LOGGER.warn("[NEKO-1016] Pack manifest rejected; pack skipped: {}", packDir, invalid);
+            return null;
+        }
+    }
+
+    /** Parses without changing raw signed bytes or applying disk state. */
+    public static ScriptPackManifest parse(JsonObject root, String fallbackId) {
         String id = string(root, "id", null);
         if (id == null || id.isBlank()) id = fallbackId;
         return new ScriptPackManifest(

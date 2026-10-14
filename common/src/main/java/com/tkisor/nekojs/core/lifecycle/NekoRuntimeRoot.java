@@ -55,6 +55,10 @@ public final class NekoRuntimeRoot implements AutoCloseable {
      */
     private final com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache;
     private final NekoTrustContext trustContext;
+    private final com.tkisor.nekojs.core.pack.PackActivationCoordinator packs;
+    private volatile boolean packClosePending;
+    private boolean closeInProgress;
+    private final java.util.Set<ScriptType> packTypes = java.util.concurrent.ConcurrentHashMap.newKeySet();
     /**
      * root 拥有的受管 global/shared 状态域（票 10）：按 {@link ScriptType} 的私有 backing
      * store + 显式共享 store（工作名 shared）。跨普通 reload、server stop、切换世界保留；
@@ -116,6 +120,9 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         this.resources = new ResourceTracker();
         this.preparationCache = preparationCache;
         this.trustContext = trustContext;
+        this.packs = new com.tkisor.nekojs.core.pack.PackActivationCoordinator(this::createPackManager,
+                this::scriptManagerOf, type -> com.tkisor.nekojs.core.ScriptLocator.discover(type, scriptProperties),
+                eventBridge, pluginRuntime, domainCollectors);
     }
 
     /** 本 root 的 prepared cache，仅供同包生命周期诊断；reload/失效经各 manager 入口。 */
@@ -138,9 +145,13 @@ public final class NekoRuntimeRoot implements AutoCloseable {
 
     /** Connection teardown revokes credentials while retaining protection for the cache root. */
     public void revokeRemoteSources(java.nio.file.Path remoteRoot) {
-        if (trustContext instanceof NekoRuntimeTrustContext runtimeTrust) {
-            runtimeTrust.revokeRemoteSources(remoteRoot);
-        }
+        try {
+            packs.sourcesRevoked(com.tkisor.nekojs.core.pack.ScriptPackScope.SERVER_CACHE);
+            globalState.releasePackScope("SERVER_CACHE");
+            if (trustContext instanceof NekoRuntimeTrustContext runtimeTrust) {
+                runtimeTrust.revokeRemoteSources(remoteRoot);
+            }
+        } finally { if (packClosePending && !packs.isOwnerOperation()) closeSilently(); }
     }
 
     /** 本 root 的受管 global/shared 状态域（Java 侧「其他 writer」与测试观察 seam）。 */
@@ -186,15 +197,154 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         return scriptManagers.get(type);
     }
 
+    /** Reports type availability without creating a manager or exposing its implementation. */
+    public boolean hasScriptType(ScriptType type) {
+        return scriptManagers.containsKey(type);
+    }
+
+    /** Completed active entry outcomes; querying an absent type does not initialize it. */
+    public com.tkisor.nekojs.core.pack.PackRuntimeView packRuntimeView(ScriptType type) {
+        ScriptManager manager = scriptManagers.get(type);
+        var previous = manager == null ? new com.tkisor.nekojs.core.pack.PackRuntimeView(type, 0, false, List.of())
+                : manager.packRuntimeView();
+        List<com.tkisor.nekojs.core.pack.PackScriptView> entries = new ArrayList<>(previous.entries());
+        entries.addAll(packs.entryViews(type));
+        return new com.tkisor.nekojs.core.pack.PackRuntimeView(type, previous.generation(), previous.activeFailed(), entries);
+    }
+
+    /** Plans the current sources without evaluating entries or altering the active generation. */
+    public com.tkisor.nekojs.core.pack.PackExecutionPlan packExecutionPlan(ScriptType type) {
+        return scriptManagerOf(type).packExecutionPlan();
+    }
+
     public boolean isActiveFailed(ScriptType type) {
         ScriptManager manager = scriptManagers.get(type);
         return manager != null && manager.isActiveFailed();
     }
 
     public ScriptManager createScriptManager(ScriptType type) {
-        ScriptManager manager = new ScriptManager(type, eventBridge, pluginRuntime, scriptProperties, core.errorTracker(), NekoJSPaths.get(), core.sandboxConfig(), environmentFactory, domainCollectors, preparationCache);
+        ScriptManager[] owner = new ScriptManager[1];
+        ScriptEventBridge partition = new ScriptEventBridge() {
+            public void bindEvents(graal.graalvm.polyglot.Value bindings, ScriptType scriptType) { eventBridge.bindEvents(bindings, scriptType); }
+            public void clearListeners(ScriptType scriptType) {
+                if (!packTypes.contains(scriptType)) { eventBridge.clearListeners(scriptType); return; }
+                var context = owner[0] == null ? null : owner[0].activeContextForPackOwner();
+                if (context != null) eventBridge.preparePackListeners(scriptType, List.of(), java.util.Set.of(context)).finish();
+            }
+            public ListenerBatch prepareCandidateListeners(ScriptType scriptType,
+                    List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> pending) {
+                if (!packTypes.contains(scriptType)) return eventBridge.prepareCandidateListeners(scriptType, pending);
+                var context = owner[0].activeContextForPackOwner();
+                return eventBridge.preparePackListeners(scriptType, pending, context == null ? java.util.Set.of() : java.util.Set.of(context));
+            }
+            public void clearListeners(ScriptType scriptType, String scriptId) { eventBridge.clearListeners(scriptType, scriptId); }
+            public void clearListenersByPrefix(ScriptType scriptType, String prefix) { eventBridge.clearListenersByPrefix(scriptType, prefix); }
+            public com.tkisor.nekojs.api.event.ScriptEventRegistrar scriptEventRegistrar() { return eventBridge.scriptEventRegistrar(); }
+        };
+        ScriptManager manager = new ScriptManager(type, partition, pluginRuntime, scriptProperties, core.errorTracker(), NekoJSPaths.get(), core.sandboxConfig(), environmentFactory, domainCollectors, preparationCache);
+        owner[0] = manager;
+        manager.configurePackPartition(null, () -> {
+            com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().refreshLocalPacks();
+            return com.tkisor.nekojs.core.ScriptLocator.discover(type, scriptProperties).stream()
+                    .filter(script -> script.pack == null || script.pack.manifest().descriptor() == null).toList();
+        });
         scriptManagers.put(type, manager);
         return manager;
+    }
+
+    private ScriptManager createPackManager(ScriptType type, com.tkisor.nekojs.core.pack.ScriptPack pack) {
+        ScriptManager[] owner = new ScriptManager[1];
+        ScriptEventBridge scoped = new ScriptEventBridge() {
+            public void bindEvents(graal.graalvm.polyglot.Value bindings, ScriptType scriptType) {
+                eventBridge.bindEvents(bindings, scriptType);
+            }
+            public void clearListeners(ScriptType scriptType) {
+                var context = owner[0] == null ? null : owner[0].activeContextForPackOwner();
+                if (context != null) eventBridge.preparePackListeners(scriptType, List.of(), java.util.Set.of(context)).finish();
+            }
+            public void clearListeners(ScriptType scriptType, String scriptId) { eventBridge.clearListeners(scriptType, scriptId); }
+            public void clearListenersByPrefix(ScriptType scriptType, String prefix) { eventBridge.clearListenersByPrefix(scriptType, prefix); }
+        };
+        ScriptManager manager = new ScriptManager(type, scoped, pluginRuntime, scriptProperties,
+                new com.tkisor.nekojs.core.error.DefaultErrorTracker(NekoJSPaths.get(), core.sandboxConfig()),
+                NekoJSPaths.get(), core.sandboxConfig(), environmentFactory, List.of(), preparationCache);
+        owner[0] = manager;
+        manager.restrictPackModules(pack.root());
+        manager.configurePackPartition(com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().instanceKey(pack),
+                () -> com.tkisor.nekojs.core.ScriptLocator.discover(type, scriptProperties).stream()
+                        .filter(script -> script.pack != null && script.pack.selector().equals(pack.selector())).toList());
+        return manager;
+    }
+
+    /** Initial platform evaluation follows the same source owner as reload. */
+    public void load(ScriptType type) {
+        try {
+            if (packs.handles(type)) {
+                var result = reloadPack(type, null);
+                if (!result.success()) throw new IllegalStateException("[NEKO-1017] Package loading failed: " + result.failure());
+                if (type == ScriptType.STARTUP) {
+                    flushReadyNodeTimers(type);
+                    com.tkisor.nekojs.api.event.ScriptEvents.post(eventBridge.scriptEventRegistrar());
+                }
+            } else scriptManagerOf(type).loadScripts();
+        } finally { if (type == ScriptType.STARTUP) packs.sealStartup(); }
+    }
+
+    public com.tkisor.nekojs.core.pack.PackActivationCoordinator.Result reloadPack(ScriptType type, String selector) {
+        packTypes.add(type);
+        try { return packs.reload(type, selector); }
+        finally { if (packClosePending) closeSilently(); }
+    }
+
+    public List<com.tkisor.nekojs.core.pack.PackActivationCoordinator.View> packActivations(ScriptType type) {
+        return packs.views(type);
+    }
+
+    /** Author operations share source selection and never rewrite protected cache content. */
+    public com.tkisor.nekojs.core.pack.PackToolResult packTool(String action, String selector,
+            ScriptType type, String loader, String minecraft) {
+        try {
+            if (globalState.isClosed()) throw new IllegalStateException("[NEKO-1018] Package author operation rejected: runtime is closed");
+            var registry = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get(); registry.refreshLocalPacks();
+            if (action.equals("create")) {
+                Path created = com.tkisor.nekojs.core.pack.tool.PackTools.create(NekoJSPaths.get().packsRoot(), selector, List.of(type));
+                registry.refreshLocalPacks();
+                return new com.tkisor.nekojs.core.pack.PackToolResult(true, "GLOBAL:" + selector, created, "created");
+            }
+            var matches = registry.allPacks().stream().filter(pack -> pack.selector().equalsIgnoreCase(selector)
+                    || !selector.contains(":") && pack.id().equals(selector)).toList();
+            if (matches.size() != 1) return new com.tkisor.nekojs.core.pack.PackToolResult(false, selector, null, "source selector is missing or ambiguous");
+            var pack = matches.getFirst();
+            var content = com.tkisor.nekojs.core.pack.tool.PackTools.validate(pack.root());
+            if (action.equals("validate")) return new com.tkisor.nekojs.core.pack.PackToolResult(true, pack.selector(), null, content.hash());
+            Path exports = NekoJSPaths.get().verifyInsideNekoRootForCreate(NekoJSPaths.get().root().resolve("exports"));
+            String name = pack.id() + "-" + pack.version();
+            Path output = switch (action) {
+                case "archive" -> com.tkisor.nekojs.core.pack.tool.PackTools.archive(pack.root(), exports.resolve(name + ".nekopack"));
+                case "jar" -> com.tkisor.nekojs.core.pack.tool.PackTools.modJar(pack.root(),
+                        exports.resolve(name + "-" + loader + "-" + minecraft + ".jar"), loader, minecraft);
+                default -> throw new IllegalArgumentException("[NEKO-1018] Unknown author operation: " + action);
+            };
+            return new com.tkisor.nekojs.core.pack.PackToolResult(true, pack.selector(), output, "written");
+        } catch (Exception failure) {
+            return new com.tkisor.nekojs.core.pack.PackToolResult(false, selector, null, failure.getMessage());
+        }
+    }
+
+    public void flushReadyNodeTimers(ScriptType type) {
+        try {
+            scriptManagerOf(type).flushReadyNodeTimers();
+            packs.flushTimers(type);
+        } finally { if (packClosePending && !packs.isOwnerOperation()) closeSilently(); }
+    }
+
+    public void clearWorldPackListeners(ScriptType type, List<com.tkisor.nekojs.core.pack.ScriptPack> removed) {
+        try {
+            packs.sourcesRevoked(com.tkisor.nekojs.core.pack.ScriptPackScope.WORLD);
+            globalState.releasePackScope("WORLD");
+            ScriptManager manager = scriptManagers.get(type);
+            if (manager != null) manager.clearWorldPackListeners(removed);
+        } finally { if (packClosePending && !packs.isOwnerOperation()) closeSilently(); }
     }
 
     /**
@@ -206,6 +356,14 @@ public final class NekoRuntimeRoot implements AutoCloseable {
      */
     public ReloadResult reload(ScriptType type) {
         ScriptManager manager = scriptManagerOf(type);
+        if (packs.handles(type)) {
+            var result = reloadPack(type, null);
+            if (!result.success()) throw new NekoReloadException(result.report() != null ? result.report()
+                    : new ReloadFailureReport(type, manager.generationId(), ReloadPhase.PREPARATION, null,
+                            "PackActivation[" + type.name + "]", "package-operation", new IllegalStateException(result.failure())));
+            return type == ScriptType.STARTUP ? ReloadResult.successNonTransactional(type, manager.generationId(), ReloadPhase.STARTUP)
+                    : ReloadResult.success(type, manager.generationId());
+        }
         manager.reloadScripts();
         // STARTUP 的重载路径是 reset+load 非事务语义（不可逆平台注册未被域 Adapter 证明
         // 可回滚，显式 restart/unsupported 边界，见 ScriptManager#reloadScripts 的 STARTUP
@@ -217,6 +375,11 @@ public final class NekoRuntimeRoot implements AutoCloseable {
 
     public ReloadResult reloadFile(ScriptType type, Path file) {
         Objects.requireNonNull(file, "file");
+        var source = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().allPacks().stream()
+                .filter(pack -> pack.manifest().descriptor() != null && com.tkisor.nekojs.core.fs.NekoJSPaths.isInside(file, pack.root()))
+                .findFirst();
+        if (source.isPresent()) return ReloadResult.failure(type, 0, ReloadPhase.FILE, file.toString(),
+                new IllegalStateException("[NEKO-1017] Versioned package files require package reload: " + source.get().selector()));
         ScriptManager manager = scriptManagers.get(type);
         if (manager == null) {
             return ReloadResult.failure(type, 0, ReloadPhase.PREPARATION, file.toString(),
@@ -253,6 +416,12 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     }
 
     public TestRunResult runTests() {
+        if (packs.handles(ScriptType.TEST)) {
+            scriptManagerOf(ScriptType.TEST);
+            reload(ScriptType.TEST);
+            flushReadyNodeTimers(ScriptType.TEST);
+            return TestRunResult.completed();
+        }
         ScriptManager testManager = scriptManagers.get(ScriptType.TEST);
         if (testManager == null) {
             return TestRunResult.notConfigured();
@@ -262,7 +431,9 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     }
 
     public ErrorSnapshot errors() {
-        return ErrorSnapshot.of(core.errorTracker());
+        List<ScriptError> errors = new ArrayList<>(core.errorTracker().getAllErrors());
+        errors.addAll(packs.errors());
+        return new ErrorSnapshot(errors, errors.size());
     }
 
     public ErrorTracker errorTracker() {
@@ -275,62 +446,77 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     }
 
     public void closeSilently() {
-        Throwable first = null;
-        for (ScriptType type : scriptManagers.keySet()) {
-            ScriptManager manager = scriptManagers.get(type);
-            try {
-                flushAndCloseManager(type, manager);
-            } catch (Throwable t) {
-                if (first == null) first = t;
-                else first.addSuppressed(t);
-            }
+        packs.requestClose();
+        if (closeInProgress) return;
+        if (ScriptLifecycleGate.isInCallback()) {
+            if (!packClosePending) ScriptLifecycleGate.afterCallback(this::closeSilently);
+            packClosePending = true;
+            return;
         }
-        scriptManagers.clear();
+        if (packs.isOwnerOperation()) { packClosePending = true; return; }
+        packClosePending = false;
+        closeInProgress = true;
         try {
+            Throwable first = null;
+            try { packs.close(); } catch (Throwable failure) { first = failure; }
+            for (ScriptType type : scriptManagers.keySet()) {
+                ScriptManager manager = scriptManagers.get(type);
+                try {
+                    flushAndCloseManager(type, manager);
+                } catch (Throwable t) {
+                    if (first == null) first = t;
+                    else first.addSuppressed(t);
+                }
+            }
+            scriptManagers.clear();
             for (ScriptType type : ScriptType.values()) {
-                eventBridge.clearListeners(type);
+                try {
+                    eventBridge.clearListeners(type);
+                } catch (Throwable t) {
+                    if (first == null) first = t;
+                    else first.addSuppressed(t);
+                }
             }
-        } catch (Throwable t) {
-            if (first == null) first = t;
-            else first.addSuppressed(t);
-        }
-        try {
-            resources.close();
-        } catch (Throwable t) {
-            if (first == null) first = t;
-            else first.addSuppressed(t);
-        }
-        // 票 11：root 最终关闭释放 prepared 模块缓存（server stop/切世界/reload 不清空；
-        // 按类型清理走各 manager 的 fullReloadCleanup，此处释放 owner 持有的全部条目）。
-        try {
-            preparationCache.close();
-        } catch (Throwable t) {
-            if (first == null) first = t;
-            else first.addSuppressed(t);
-        }
-        // 票 10：root 最终关闭释放 global/shared 状态域（server stop/切世界不清空；此处释放）。
-        try {
-            globalState.closeAll();
-        } catch (Throwable t) {
-            if (first == null) first = t;
-            else first.addSuppressed(t);
-        }
-        // 票 39：root 拥有的候选域收集器逐一关闭（Item/Block modification 基线恢复等
-        // 领域清理）——独立测试 root 各自从干净基线开始，不互相污染（AC5）。
-        for (com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector : domainCollectors) {
-            if (!(collector instanceof AutoCloseable closeable)) continue;
             try {
-                closeable.close();
+                resources.close();
             } catch (Throwable t) {
                 if (first == null) first = t;
                 else first.addSuppressed(t);
             }
-        }
-        domainCollectors.clear();
-        if (first != null) {
-            if (first instanceof Error e) throw e;
-            if (first instanceof RuntimeException re) throw re;
-            throw new RuntimeException("NekoRuntimeRoot close failed", first);
+            // 票 11：root 最终关闭释放 prepared 模块缓存（server stop/切世界/reload 不清空；
+            // 按类型清理走各 manager 的 fullReloadCleanup，此处释放 owner 持有的全部条目）。
+            try {
+                preparationCache.close();
+            } catch (Throwable t) {
+                if (first == null) first = t;
+                else first.addSuppressed(t);
+            }
+            // 票 10：root 最终关闭释放 global/shared 状态域（server stop/切世界不清空；此处释放）。
+            try {
+                globalState.closeAll();
+            } catch (Throwable t) {
+                if (first == null) first = t;
+                else first.addSuppressed(t);
+            }
+            // 票 39：root 拥有的候选域收集器逐一关闭（Item/Block modification 基线恢复等
+            // 领域清理）——独立测试 root 各自从干净基线开始，不互相污染（AC5）。
+            for (com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector : domainCollectors) {
+                if (!(collector instanceof AutoCloseable closeable)) continue;
+                try {
+                    closeable.close();
+                } catch (Throwable t) {
+                    if (first == null) first = t;
+                    else first.addSuppressed(t);
+                }
+            }
+            domainCollectors.clear();
+            if (first != null) {
+                if (first instanceof Error e) throw e;
+                if (first instanceof RuntimeException re) throw re;
+                throw new RuntimeException("[NEKO-1017] Runtime root teardown failed after releasing remaining resources", first);
+            }
+        } finally {
+            closeInProgress = false;
         }
     }
 
@@ -338,7 +524,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         try {
             manager.flushReadyNodeTimers();
         } catch (Throwable ignored) {
-            com.tkisor.nekojs.NekoJS.LOGGER.warn("Failed to flush pending {} timers before close", type.name(), ignored);
+            com.tkisor.nekojs.NekoJS.LOGGER.warn("[NEKO-1017] Pending timer flush failed before runtime teardown; type={}", type.name(), ignored);
         }
         manager.close();
     }

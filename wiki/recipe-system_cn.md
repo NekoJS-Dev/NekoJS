@@ -407,4 +407,4 @@ schema 换来的是位置参数写法、字段必填校验、`replaceInput`/`rep
 
 ---
 
-[上一篇: 错误与日志参考](error-reference_cn) · [目录](Home) · [下一篇: 注册新内容](registering-new-content_cn)
+[上一篇: 版本化脚本包](script-packs_cn) · [目录](Home) · [下一篇: 注册新内容](registering-new-content_cn)

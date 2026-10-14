@@ -162,11 +162,9 @@ public class ServerEventListener {
             villagerTradeDomain.clearServer();
         }
         if (removed.isEmpty()) return;
-        var serverManager = runtimeRoot.scriptManagerOrNull(ScriptType.SERVER);
-        if (serverManager != null) serverManager.clearWorldPackListeners(removed);
+        runtimeRoot.clearWorldPackListeners(ScriptType.SERVER, removed);
         if (com.tkisor.nekojs.platform.Platform.isClient()) {
-            var clientManager = runtimeRoot.scriptManagerOrNull(ScriptType.CLIENT);
-            if (clientManager != null) clientManager.clearWorldPackListeners(removed);
+            runtimeRoot.clearWorldPackListeners(ScriptType.CLIENT, removed);
         }
     }
 
