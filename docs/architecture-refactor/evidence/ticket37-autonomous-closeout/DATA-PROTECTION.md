@@ -41,3 +41,7 @@ The older jar hash identifies the available rollback bytes, not an inferred sour
 5. Do not introduce schema migration without a reviewed version marker, old reader fixture, idempotence/failure tests, backup retention and exact node restore proof. No such migration is needed or implemented here.
 
 Maintainer final rollback/cutover policy is still required; this technical preparation does not approve a downgrade on an arbitrary user installation.
+
+## Installed restart follow-up
+
+The [2026-10-16 restart trial](../2026-10-16-followup-acceptance/ROLLBACK.md) separately boots an older artifact against an advanced world and restores a complete stopped-world backup into another directory. Actual entity pdata readers and block checks distinguish the two outcomes; all four phases stop normally. The trial records exact artifact bytes, backup hashes and failed harness attempts. Its scope is the specified NeoForge 26.1.2 fixture; the older artifact has no verified source revision. This extends the offline rehearsal with installed runtime evidence and does not establish final release policy or recovery for arbitrary user data.

@@ -1,0 +1,421 @@
+{
+  "sourceRevision": "20809213920d28b08aecd5570c646319b1bd00c0",
+  "productionPatchSha256": "b80492922dd3f933bb2a9b210748e25a9797851106dfa9295a694c4c7a1624aa",
+  "tests": [
+    {
+      "module": "common",
+      "tests": 2322,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 4,
+      "suites": 304
+    },
+    {
+      "module": "common-api-processor",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "suites": 1
+    },
+    {
+      "module": "versions/1.21.1",
+      "tests": 437,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 31,
+      "suites": 98
+    },
+    {
+      "module": "versions/26.1.2",
+      "tests": 670,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 81,
+      "suites": 134
+    },
+    {
+      "module": "versions/26.2.0",
+      "tests": 670,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 81,
+      "suites": 134
+    },
+    {
+      "module": "versions/26.1.2-fabric",
+      "tests": 397,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 37,
+      "suites": 82
+    },
+    {
+      "module": "versions/26.2.0-fabric",
+      "tests": 397,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 37,
+      "suites": 82
+    }
+  ],
+  "testTotals": {
+    "tests": 4906,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 271
+  },
+  "reclaim": {
+    "red": {
+      "mode": "red",
+      "artifactSha256": "e3af4f3a598d7df066b353532bafddf14a62c00a328a28dbb1c559f72a6af708",
+      "componentsPreserved": false,
+      "verdict": "NOTGREEN",
+      "exitCode": 0
+    },
+    "green": {
+      "mode": "green",
+      "artifactSha256": "2138513affd763d19a938a0a6cd5f89994fa712b10e7dc5805dc95d4c20d1e65",
+      "componentsPreserved": true,
+      "verdict": "PASS",
+      "exitCode": 0
+    }
+  },
+  "ide": {
+    "sourceRevision": "20809213920d28b08aecd5570c646319b1bd00c0",
+    "productionPatchSha256": "b80492922dd3f933bb2a9b210748e25a9797851106dfa9295a694c4c7a1624aa",
+    "nodes": [
+      {
+        "node": "1.21.1",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 0,
+          "summary": {
+            "filesAnalyzed": 320,
+            "errorCount": 0,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 8.045
+          },
+          "stubCount": 320,
+          "rules": {}
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 586,
+            "codes": {
+              "TS2304": 150,
+              "TS2749": 11,
+              "TS2307": 113,
+              "TS2305": 11,
+              "TS2416": 74,
+              "TS2314": 12,
+              "TS2552": 5,
+              "TS2344": 118,
+              "TS2417": 32,
+              "TS2426": 4,
+              "TS2724": 13,
+              "TS2300": 18,
+              "TS2425": 1,
+              "TS2694": 20,
+              "TS2611": 2,
+              "TS2430": 1,
+              "TS2420": 1
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 587,
+            "codes": {
+              "TS2304": 150,
+              "TS2749": 11,
+              "TS2307": 114,
+              "TS2305": 11,
+              "TS2416": 74,
+              "TS2314": 12,
+              "TS2552": 5,
+              "TS2344": 118,
+              "TS2417": 32,
+              "TS2426": 4,
+              "TS2724": 13,
+              "TS2300": 18,
+              "TS2425": 1,
+              "TS2694": 20,
+              "TS2611": 2,
+              "TS2430": 1,
+              "TS2420": 1
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      },
+      {
+        "node": "26.1.2",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 0,
+          "summary": {
+            "filesAnalyzed": 378,
+            "errorCount": 0,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 10.911
+          },
+          "stubCount": 378,
+          "rules": {}
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 744,
+            "codes": {
+              "TS2304": 139,
+              "TS2749": 11,
+              "TS2307": 212,
+              "TS2305": 8,
+              "TS2724": 2,
+              "TS2416": 88,
+              "TS2314": 12,
+              "TS2552": 5,
+              "TS2344": 199,
+              "TS2417": 27,
+              "TS2430": 5,
+              "TS2426": 5,
+              "TS2300": 16,
+              "TS2694": 12,
+              "TS2611": 2,
+              "TS2420": 1
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 745,
+            "codes": {
+              "TS2304": 139,
+              "TS2749": 11,
+              "TS2307": 213,
+              "TS2305": 8,
+              "TS2724": 2,
+              "TS2416": 88,
+              "TS2314": 12,
+              "TS2552": 5,
+              "TS2344": 199,
+              "TS2417": 27,
+              "TS2430": 5,
+              "TS2426": 5,
+              "TS2300": 16,
+              "TS2694": 12,
+              "TS2611": 2,
+              "TS2420": 1
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      },
+      {
+        "node": "26.2.0",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 0,
+          "summary": {
+            "filesAnalyzed": 346,
+            "errorCount": 0,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 6.21
+          },
+          "stubCount": 346,
+          "rules": {}
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 638,
+            "codes": {
+              "TS2304": 187,
+              "TS2749": 11,
+              "TS2307": 166,
+              "TS2305": 8,
+              "TS2724": 3,
+              "TS2416": 81,
+              "TS2314": 14,
+              "TS2552": 5,
+              "TS2344": 100,
+              "TS2417": 26,
+              "TS2430": 5,
+              "TS2426": 4,
+              "TS2300": 14,
+              "TS2694": 12,
+              "TS2611": 1,
+              "TS2420": 1
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 639,
+            "codes": {
+              "TS2304": 187,
+              "TS2749": 11,
+              "TS2307": 167,
+              "TS2305": 8,
+              "TS2724": 3,
+              "TS2416": 81,
+              "TS2314": 14,
+              "TS2552": 5,
+              "TS2344": 100,
+              "TS2417": 26,
+              "TS2430": 5,
+              "TS2426": 4,
+              "TS2300": 14,
+              "TS2694": 12,
+              "TS2611": 1,
+              "TS2420": 1
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      },
+      {
+        "node": "26.1.2-fabric",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 0,
+          "summary": {
+            "filesAnalyzed": 296,
+            "errorCount": 0,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 8.207
+          },
+          "stubCount": 296,
+          "rules": {}
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 1162,
+            "codes": {
+              "TS2307": 704,
+              "TS2416": 68,
+              "TS2304": 114,
+              "TS2314": 63,
+              "TS2305": 36,
+              "TS2344": 115,
+              "TS2430": 2,
+              "TS2426": 5,
+              "TS2300": 30,
+              "TS2694": 12,
+              "TS2420": 2,
+              "TS2611": 2,
+              "TS2724": 9
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 1163,
+            "codes": {
+              "TS2307": 705,
+              "TS2416": 68,
+              "TS2304": 114,
+              "TS2314": 63,
+              "TS2305": 36,
+              "TS2344": 115,
+              "TS2430": 2,
+              "TS2426": 5,
+              "TS2300": 30,
+              "TS2694": 12,
+              "TS2420": 2,
+              "TS2611": 2,
+              "TS2724": 9
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      },
+      {
+        "node": "26.2.0-fabric",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 0,
+          "summary": {
+            "filesAnalyzed": 263,
+            "errorCount": 0,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 4.059
+          },
+          "stubCount": 263,
+          "rules": {}
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 917,
+            "codes": {
+              "TS2307": 519,
+              "TS2416": 61,
+              "TS2304": 143,
+              "TS2314": 81,
+              "TS2344": 18,
+              "TS2430": 2,
+              "TS2426": 4,
+              "TS2300": 28,
+              "TS2694": 12,
+              "TS2305": 35,
+              "TS2420": 1,
+              "TS2611": 1,
+              "TS2724": 12
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 918,
+            "codes": {
+              "TS2307": 520,
+              "TS2416": 61,
+              "TS2304": 143,
+              "TS2314": 81,
+              "TS2344": 18,
+              "TS2430": 2,
+              "TS2426": 4,
+              "TS2300": 28,
+              "TS2694": 12,
+              "TS2305": 35,
+              "TS2420": 1,
+              "TS2611": 1,
+              "TS2724": 12
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      }
+    ]
+  },
+  "releaseApproved": false
+}

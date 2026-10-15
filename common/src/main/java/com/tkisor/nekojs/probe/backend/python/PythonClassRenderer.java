@@ -21,6 +21,8 @@ import java.util.stream.Collectors;
  * Renders shared declarations as Python stub classes, interfaces and enums.
  * Bean aliases yield to real member names. Mixed static and instance overloads use a private
  * metaclass property for class access, leaving bound instance methods and their inheritance intact.
+ * Same-class instance fields and methods share a field/callable read union with the original
+ * write type. Python cannot distinguish direct host invocation from calling a stored scalar.
  * Types use {@link ApiTypeRefPyRenderer}; generic variables retain its existing best-effort mapping.
  */
 public final class PythonClassRenderer {
@@ -83,6 +85,8 @@ public final class PythonClassRenderer {
         StringBuilder sb = new StringBuilder();
         Set<String> mixedNames = mixedBindingNames(d, declarations);
         if (!mixedNames.isEmpty()) appendClassBindings(sb, d, mixedNames);
+        Map<FieldDecl, List<MethodDecl>> fieldCalls = fieldMethodBindings(d);
+        appendFieldCallables(sb, d, fieldCalls);
         String bases = bases(d, true);
         if (!mixedNames.isEmpty()) {
             bases = bases.isEmpty() ? "(metaclass=" + metaclassName(d) + ")"
@@ -97,6 +101,11 @@ public final class PythonClassRenderer {
         for (FieldDecl f : d.fields) {
             if (f.hidden || !isPythonIdentifier(f.effectiveName())) continue;
             MethodDecl getter = d.beanGetterForField(f);
+            if (fieldCalls.containsKey(f)) {
+                appendFieldCallableProperty(sb, d, f, getter);
+                hasMember = true;
+                continue;
+            }
             if (getter != null) {
                 appendBeanField(sb, d, f, getter);
                 hasMember = true;
@@ -157,11 +166,13 @@ public final class PythonClassRenderer {
         for (MethodDecl m : d.methods) {
             if (!isOrdinaryPythonMethod(m, propertyConflicts)) continue;
             if (m.isStatic && mixedNames.contains(pyIdent(m.effectiveName()))) continue;
+            if (fieldCalls.values().stream().anyMatch(methods -> methods.contains(m))) continue;
             methodNameCount.merge(pyIdent(m.effectiveName()), 1, Integer::sum);
         }
         for (MethodDecl m : d.methods) {
             if (!isOrdinaryPythonMethod(m, propertyConflicts)) continue;
             if (m.isStatic && mixedNames.contains(pyIdent(m.effectiveName()))) continue;
+            if (fieldCalls.values().stream().anyMatch(methods -> methods.contains(m))) continue;
             boolean overloaded = methodNameCount.getOrDefault(pyIdent(m.effectiveName()), 0) > 1;
             if (m.isStatic) sb.append("    @staticmethod\n");
             if (overloaded) sb.append("    @overload\n");
@@ -176,9 +187,15 @@ public final class PythonClassRenderer {
     }
 
     private void appendBeanField(StringBuilder sb, TypeDecl declaration, FieldDecl field, MethodDecl getter) {
+        appendBeanField(sb, declaration, field, getter, null);
+    }
+
+    private void appendBeanField(StringBuilder sb, TypeDecl declaration, FieldDecl field, MethodDecl getter,
+                                 String callableName) {
         String name = pyIdent(field.effectiveName());
         sb.append("    @property\n    def ").append(name)
-                .append("(self) -> ").append(renderSlot(getter.returnType));
+                .append("(self) -> ").append(renderSlot(getter.returnType))
+                .append(callableName == null ? "" : " | " + callableName);
         appendMethodBody(sb, field.docs);
         TypeSlot writeType = declaration.beanFieldWriteType(field, getter);
         if (writeType != null) {
@@ -186,6 +203,64 @@ public final class PythonClassRenderer {
                     .append("(self, value: ").append(renderSlot(writeType)).append(") -> None");
             appendMethodBody(sb, field.docs);
         }
+    }
+
+    /** Java host syntax can read a field or invoke a method through the same public name. */
+    private Map<FieldDecl, List<MethodDecl>> fieldMethodBindings(TypeDecl declaration) {
+        Map<FieldDecl, List<MethodDecl>> bindings = new LinkedHashMap<>();
+        if (declaration.hidden || declaration.kind != TypeDecl.Kind.CLASS) return bindings;
+        BeanPropertyConflicts conflicts = beanPropertyConflicts(declaration, declarations);
+        for (FieldDecl field : declaration.fields) {
+            if (field.hidden || field.isStatic || !isPythonIdentifier(field.effectiveName())) continue;
+            List<MethodDecl> calls = declaration.methods.stream()
+                    .filter(method -> isOrdinaryPythonMethod(method, conflicts)
+                            && field.isStatic == method.isStatic
+                            && pyIdent(field.effectiveName()).equals(pyIdent(method.effectiveName())))
+                    .toList();
+            if (!calls.isEmpty()) bindings.put(field, calls);
+        }
+        return bindings;
+    }
+
+    private void appendFieldCallableProperty(StringBuilder sb, TypeDecl declaration,
+                                              FieldDecl field, MethodDecl getter) {
+        String callable = fieldCallableName(declaration, field);
+        if (getter != null) {
+            appendBeanField(sb, declaration, field, getter, callable);
+            return;
+        }
+        String name = pyIdent(field.effectiveName());
+        sb.append("    @property\n    def ").append(name).append("(self) -> ")
+                .append(renderSlot(field.type)).append(" | ").append(callable);
+        appendMethodBody(sb, field.docs);
+        if (!field.isFinal) {
+            sb.append("    @").append(name).append(".setter\n    def ").append(name)
+                    .append("(self, value: ").append(renderSlot(field.type)).append(") -> None: ...\n");
+        }
+    }
+
+    private String fieldCallableName(TypeDecl declaration, FieldDecl field) {
+        return helperName(declaration, "field-call:" + field.effectiveName(),
+                "_NekoMember_" + effectiveClassName(declaration) + "_" + pyIdent(field.effectiveName()));
+    }
+
+    /** A union keeps both facts without claiming a stored scalar remains callable in Python. */
+    private void appendFieldCallables(StringBuilder sb, TypeDecl declaration,
+                                      Map<FieldDecl, List<MethodDecl>> bindings) {
+        bindings.forEach((field, methods) -> {
+            sb.append("class ").append(fieldCallableName(declaration, field)).append("(Protocol):\n");
+            for (MethodDecl method : methods) {
+                if (methods.size() > 1) sb.append("    @overload\n");
+                sb.append("    def __call__(").append(params(method, true)).append(") -> ")
+                        .append(renderSlot(method.returnType));
+                appendMethodBody(sb, method.docs);
+            }
+            sb.append("\n");
+        });
+    }
+
+    boolean hasFieldMethodBindings(TypeDecl declaration) {
+        return !fieldMethodBindings(declaration).isEmpty();
     }
 
     private MethodDecl inheritedBeanGetter(TypeDecl declaration, VisibleField visible) {

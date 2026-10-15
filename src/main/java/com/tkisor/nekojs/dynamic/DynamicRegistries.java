@@ -73,9 +73,9 @@ public final class DynamicRegistries {
     }
 
     /**
-     * Registers (or re-claims) an item and immediately binds its default holder
-     * components (26.x: components live on the holder, and the vanilla rebuild
-     * pass will not re-run for mid-session registrations).
+     * Registers an item and binds its initial holder components. Re-claiming an
+     * existing item preserves its components and tags; resource reload replay
+     * owns rebinding against fresh registries.
      */
     @SuppressWarnings("deprecation")
     public static Item item(
@@ -87,6 +87,7 @@ public final class DynamicRegistries {
             Rarity rarity,
             boolean fireResistant) {
         DynamicItemSpec spec = new DynamicItemSpec(id, stackSize, rarity, fireResistant);
+        boolean existed = BuiltInRegistries.ITEM.containsKey(id);
         Item item = ITEMS.ensureRegistered(id, mode, ownerScriptId, () -> {
             Item.Properties properties = new Item.Properties()
                     .setId(net.minecraft.resources.ResourceKey.create(Registries.ITEM, id))
@@ -102,9 +103,11 @@ public final class DynamicRegistries {
             // rebuild (datapack reload / client join) reproduces the same map.
             return new Item(properties);
         });
-        item.builtInRegistryHolder().bindComponents(spec.buildComponents(registries));
-        RegistrySurgery.clearHolderTags(item.builtInRegistryHolder());
-        ITEM_SPECS.put(id.toString(), spec);
+        if (!existed) {
+            item.builtInRegistryHolder().bindComponents(spec.buildComponents(registries));
+            RegistrySurgery.clearHolderTags(item.builtInRegistryHolder());
+            ITEM_SPECS.put(id.toString(), spec);
+        }
         return item;
     }
 

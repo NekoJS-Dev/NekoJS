@@ -52,9 +52,34 @@ class PythonProbeBackendIntegrationTest {
         assertEquals(2, declaration.methods.size());
         assertTrue(declaration.methods.stream().noneMatch(method -> method.isStatic));
         assertTrue(runGenerate(temp, emptySnapshot(), List.of(declaration), List.of()).success());
+        String module = Files.readString(temp.resolve(
+                "probe-python/nekojs/_java/com/tkisor/nekojs/probe/backend/python/__init__.pyi"));
+        assertTrue(module.contains("Protocol"), module);
+        assertTrue(module.contains("def locked(self) -> bool | _NekoMember_"), module);
+        assertTrue(module.contains("@locked.setter\n    def locked(self, value: bool) -> None"), module);
+        assertTrue(module.contains("def x(self) -> float | _NekoMember_"), module);
+        assertFalse(module.contains("@x.setter"), module);
+        assertTrue(module.contains("def __call__(self) -> bool"), module);
+        assertTrue(module.contains("def __call__(self) -> float"), module);
+        assertEquals(2, module.split("    def locked\\(", -1).length - 1, module);
+        assertEquals(1, module.split("    def x\\(", -1).length - 1, module);
         retainGenerated(temp.resolve("probe-python"), "probe-python-field-method-collision");
         assertEquals(2, declaration.fields.size());
         assertEquals(2, declaration.methods.size());
+    }
+
+    @Test
+    void beanFieldMethodCollisionKeepsTheOriginalWriter(@TempDir Path temp) throws Exception {
+        TypeDecl declaration = new TypeReflector().reflect(PythonFieldMethodCollisionTest.BeanFixture.class);
+        assertTrue(runGenerate(temp, emptySnapshot(), List.of(declaration), List.of()).success());
+        Path output = temp.resolve("probe-python");
+        retainGenerated(output, "probe-python-bean-field-method-collision");
+        String module = Files.readString(output.resolve(
+                "nekojs/_java/com/tkisor/nekojs/probe/backend/python/__init__.pyi"));
+        assertTrue(module.contains("def count(self) -> int | _NekoMember_"), module);
+        assertTrue(module.contains("def __call__(self, text: str) -> str"), module);
+        assertTrue(module.contains("@count.setter\n    def count(self, value: int) -> None"), module);
+        assertEquals(2, module.split("    def count\\(", -1).length - 1, module);
     }
 
     @Test

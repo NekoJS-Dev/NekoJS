@@ -41,7 +41,11 @@
 
 [当前性能索引](../evidence/ticket37-current-perf/README.md)中的 e473 源码组 startup 17718.2 ms、reload 214.4/228.4 ms 均通过；b7 的 320.6/327.2 ms 失败组保留为历史记录。e473 结果不证明本轮改动后的候选性能。本轮五节点安装包的 Python stub AST 全通过；完整默认严格 TSC/Pyright 的结果与诊断另列于领域报告，不以定向类型测试通过替代。历史 Python 语法失败已由后续修复取代，但原始失败证据保留。
 
-跨进程动态同步、票 28 多节点客户端首帧、完整 IDE、确切候选性能、release rollback/data rollback 和最终发布/回滚策略仍按各自 gate 核验；领域服务器验收不外推为发布通过。
+2026-10-16 [复核修复与完整声明验收](../evidence/2026-10-16-followup-acceptance/REPORT.md)：重复动态物品声明保留既有 holder 组件，新旧 JAR 实机对照成立；插件同名 Builder 嵌套属性改用唯一导出别名。修复 Python 同类实例字段/方法重名后，五节点实际全部 stub 的默认 Pyright 均为 0 error / 0 warning，完整构建和五节点新 JAR 实机均通过。严格 TSC 仍有上轮同量诊断，完整 IDE gate 未通过。
+
+[分离回退的四阶段重启](../evidence/2026-10-16-followup-acceptance/ROLLBACK.md)通过：旧 JAR 启动推进后的世界仍读取新 pdata/方块状态，恢复完整停机备份后实际读取回到旧状态。该证据限定领域切换时的指定 JAR、26.1.2 专属完整世界；不证明其他节点、未知旧制品来源或最终发布候选的恢复政策，因此不据此代签最终 release rollback gate。
+
+跨进程动态同步、票 28 多节点客户端首帧、完整 TSC、确切候选性能、最终候选的 release rollback/data rollback 和最终发布/回滚策略仍按各自 gate 核验；领域服务器验收不外推为发布通过。
 
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)
 - [PR 37 维护体验回归约束规格](../specs/00-pr37-maintainer-research.md)

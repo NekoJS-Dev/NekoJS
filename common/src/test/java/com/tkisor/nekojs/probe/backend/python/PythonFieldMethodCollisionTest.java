@@ -21,6 +21,13 @@ class PythonFieldMethodCollisionTest {
         public double x() { return x + 1.0; }
     }
 
+    public static final class BeanFixture {
+        public int count;
+        public int getCount() { return count + 1; }
+        public void setCount(int value) { count = value; }
+        public String count(String text) { return text; }
+    }
+
     @Test
     void realFieldReadAndMethodInvocationHaveDistinctHostResults() throws Exception {
         HostFixture fixture = new HostFixture();

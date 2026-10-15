@@ -51,7 +51,7 @@ public final class RegistryBuilderSurfaces {
                 .sorted(Comparator.comparing(key -> key.identifier().toString()))
                 .forEach(registry -> types.builderClassesOf(registry).forEach((typeName, builderClass) -> {
                     String defaultTypeName = types.defaults().get(registry);
-                    entries.add(entryOf(registry, typeName, builderClass, names.get(builderClass),
+                    entries.add(entryOf(registry, typeName, builderClass, names,
                             typeName.equals(defaultTypeName) ? sugarOf(registry) : null));
                 }));
         return List.copyOf(entries);
@@ -74,17 +74,17 @@ public final class RegistryBuilderSurfaces {
 
     private static RegistryBuilderSurfaceEntry entryOf(
             ResourceKey<? extends Registry<?>> registryKey, String typeName,
-            Class<? extends RegistryObjectBuilder<?>> builderClass, String builderName, String sugarName) {
+            Class<? extends RegistryObjectBuilder<?>> builderClass, java.util.Map<Class<?>, String> exportedNames, String sugarName) {
         RegistryBuilderContract contract = RegistryBuilderContract.of(builderClass);
         List<RegistryBuilderSurfaceEntry.Member> members = new ArrayList<>();
         for (RegistryBuilderContract.Member member : contract.members()) {
             switch (member.kind()) {
                 case WRITABLE_PROPERTY -> members.add(new RegistryBuilderSurfaceEntry.Member(
                         member.name(), RegistryBuilderSurfaceEntry.MemberKind.WRITABLE_PROPERTY,
-                        member.tsType(), member.pyType()));
+                        member.tsType(exportedNames), member.pyType(exportedNames)));
                 case READ_ONLY_PROPERTY -> members.add(new RegistryBuilderSurfaceEntry.Member(
                         member.name(), RegistryBuilderSurfaceEntry.MemberKind.READ_ONLY_PROPERTY,
-                        member.tsType(), member.pyType()));
+                        member.tsType(exportedNames), member.pyType(exportedNames)));
                 case METHOD -> member.overloads().stream()
                         .sorted(Comparator.comparingInt(Method::getParameterCount)
                                 .thenComparing(method -> Arrays.toString(method.getParameterTypes())))
@@ -96,7 +96,7 @@ public final class RegistryBuilderSurfaces {
             }
         }
         return new RegistryBuilderSurfaceEntry(
-                builderName,
+                exportedNames.get(builderClass),
                 registryKey.identifier().toString(),
                 typeName,
                 sugarName,

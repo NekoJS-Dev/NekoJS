@@ -59,9 +59,14 @@ public final class RegistryBuilderContract {
 
         /** TS 声明类型（确定性映射；未知类型 any）。 */
         public String tsType() {
+            return tsType(Map.of());
+        }
+
+        String tsType(Map<Class<?>, String> exportedNames) {
             if (getter != null && Map.class.isAssignableFrom(valueType)) return tsTypeOf(getter.getGenericReturnType());
             if (valueType != null && !overloads.isEmpty() && RegistryObjectBuilder.class.isAssignableFrom(valueType)) {
-                return valueType.getSimpleName() + " & ((consumer: (b: " + valueType.getSimpleName() + ") => void) => void)"
+                String name = exportedNames.getOrDefault(valueType, valueType.getSimpleName());
+                return name + " & ((consumer: (b: " + name + ") => void) => void)"
                         + (nullable() ? " | null" : "");
             }
             return tsTypeOf(valueType) + (nullable() ? " | null" : "");
@@ -69,9 +74,14 @@ public final class RegistryBuilderContract {
 
         /** Python 声明类型（与 TS 同一输入派生，成员语义一致）。 */
         public String pyType() {
+            return pyType(Map.of());
+        }
+
+        String pyType(Map<Class<?>, String> exportedNames) {
             if (getter != null && Map.class.isAssignableFrom(valueType)) return pyTypeOf(getter.getGenericReturnType());
             if (valueType != null && !overloads.isEmpty() && RegistryObjectBuilder.class.isAssignableFrom(valueType)) {
-                return valueType.getSimpleName() + " | Callable[..., None]" + (nullable() ? " | None" : "");
+                return exportedNames.getOrDefault(valueType, valueType.getSimpleName())
+                        + " | Callable[..., None]" + (nullable() ? " | None" : "");
             }
             return pyTypeOf(valueType) + (nullable() ? " | None" : "");
         }

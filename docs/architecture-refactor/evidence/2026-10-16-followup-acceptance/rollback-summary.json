@@ -1,0 +1,48 @@
+{
+  "verdict": "PASS",
+  "separateArtifactAndDataRollback": true,
+  "backupRetained": true,
+  "advancedWorldRetained": true,
+  "exactRestoreBeforeBoot": true,
+  "repeatedCopyHashesEqual": true,
+  "oldSourceRevision": null,
+  "scope": "26.1.2 NeoForge, owned whole-world fixture only",
+  "phases": [
+    {
+      "phase": "candidate-initial",
+      "artifactSha256": "aabd3d60e81397d157526148fbea7cd3eb73f9b4becc885ef14d9737d75e1db6",
+      "sourceRevision": "20809213",
+      "readValue": "proof-1",
+      "block": "minecraft:stone",
+      "exitCode": 0,
+      "verdict": "PASS"
+    },
+    {
+      "phase": "candidate-advance",
+      "artifactSha256": "aabd3d60e81397d157526148fbea7cd3eb73f9b4becc885ef14d9737d75e1db6",
+      "sourceRevision": "20809213",
+      "readValue": "proof-2",
+      "block": "minecraft:gold_block",
+      "exitCode": 0,
+      "verdict": "PASS"
+    },
+    {
+      "phase": "artifact-rollback",
+      "artifactSha256": "ade011a0bb7252d93f6374c234ec9353dbf6105f1793c448a0f64d5d6771c52b",
+      "sourceRevision": null,
+      "readValue": "proof-2",
+      "block": "minecraft:gold_block",
+      "exitCode": 0,
+      "verdict": "PASS"
+    },
+    {
+      "phase": "data-restore",
+      "artifactSha256": "aabd3d60e81397d157526148fbea7cd3eb73f9b4becc885ef14d9737d75e1db6",
+      "sourceRevision": "20809213",
+      "readValue": "proof-1",
+      "block": "minecraft:stone",
+      "exitCode": 0,
+      "verdict": "PASS"
+    }
+  ]
+}

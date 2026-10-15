@@ -81,17 +81,17 @@ public final class VillagerTradeQuerySurface {
         return adapterId;
     }
 
-    /** Total declarations NekoJS injected (0 for stale tokens). */
+    /** Total declarations in the current committed script generation, excluding retained omissions (0 for stale tokens). */
     public int getTotal() {
         return total;
     }
 
-    /** Trade sets carrying NekoJS declarations (empty for stale tokens). */
+    /** Trade sets declared by the current committed script generation (empty for stale tokens). */
     public List<String> getTradeSetIds() {
         return tradeSetIds;
     }
 
-    /** Declarations NekoJS injected into {@code tradeSetId} (0 for stale tokens). */
+    /** Current committed generation's declarations for {@code tradeSetId}, excluding retained omissions (0 for stale tokens). */
     public int countOf(String tradeSetId) {
         return counts.getOrDefault(tradeSetId, 0);
     }

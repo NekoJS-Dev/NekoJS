@@ -13,6 +13,8 @@ class RegistryBuilderNameCollisionTest {
         public static class FoodBuilder extends RegistryObjectBuilder<Object> {
             public FoodBuilder(Identifier id) { super(id); }
             public int getFirst() { return 1; }
+            public Second.FoodBuilder getNested() { return new Second.FoodBuilder(id); }
+            public void nested(java.util.function.Consumer<Second.FoodBuilder> build) { build.accept(getNested()); }
             @Override public Object build() { return new Object(); }
         }
     }
@@ -38,6 +40,11 @@ class RegistryBuilderNameCollisionTest {
                 .map(entry -> entry.builderName()).toList();
         assertEquals(2, names.stream().distinct().count());
         assertFalse(names.contains("FoodBuilder"));
+        var first = entries.stream().filter(entry -> entry.typeName().equals("first")).findFirst().orElseThrow();
+        var second = entries.stream().filter(entry -> entry.typeName().equals("second")).findFirst().orElseThrow();
+        var nested = first.members().stream().filter(member -> member.name().equals("nested")).findFirst().orElseThrow();
+        assertTrue(nested.tsType().startsWith(second.builderName() + " & "), nested.tsType());
+        assertTrue(nested.pyType().startsWith(second.builderName() + " | "), nested.pyType());
         String ts = RegistryBuilderTsRenderer.render(entries);
         String py = RegistryBuilderPyRenderer.render(entries);
         for (String name : names) {

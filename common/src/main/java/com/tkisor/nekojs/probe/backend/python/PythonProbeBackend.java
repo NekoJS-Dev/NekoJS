@@ -266,7 +266,8 @@ public final class PythonProbeBackend implements ProbeBackend {
         // overload 仅在存在同名 def（Java 重载方法/构造器）时导入
         boolean usesLiteral = aliasLines.stream().anyMatch(l -> l.contains("Literal["));
         boolean usesOverload = classes.stream().anyMatch(classR::hasRenderedOverloads);
-        boolean usesProtocol = classes.stream().anyMatch(classR::hasClassBindings);
+        boolean usesProtocol = classes.stream().anyMatch(classR::hasClassBindings)
+                || classes.stream().anyMatch(classR::hasFieldMethodBindings);
         sb.append("from typing import Any, Callable")
           .append(typeR.callableName().equals("Callable") ? "" : " as " + typeR.callableName())
           .append(", ClassVar")
