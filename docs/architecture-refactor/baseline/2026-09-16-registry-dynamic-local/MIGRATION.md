@@ -1,5 +1,7 @@
 # 运行期动态注册（Dynamic Registry）迁移材料（ticket 16 / 1.2.0 clean cutover）
 
+> **2026-10-16 当前切换结果**：旧 DynamicRegistry Binding、六个 overload、fluent Builders 与 handle 已在精确批准和验证后删除。迁移至 DynamicRegistryEvents.dynamicRegistry 的 callback Builder；共享 backend、事件与同步 gate 保留。下文旧入口内容用于迁移对照，不能继续调用。 验证与批准边界见[本轮报告](../../evidence/2026-10-15-domain-closeout/REPORT.md)。下文带历史 revision 的消费者与旧删除门禁记录保留当时事实，由本段更新当前状态。
+
 > 面向脚本作者的「服务器运行期动态注册 typed Builder + inert 候选计划」使用与迁移要点。
 > **本票只交付本地 inert 计划**：事件收集、fingerprint、preflight、同 key 冲突、stale 记录
 > 与 inert Adapter 请求。公开激活、多人 prepare/ack/commit、真实 registry mutation 由
@@ -27,13 +29,11 @@
 
 ## 3. 迁移要点（1.2.0）
 
-1. **旧静态 binding `DynamicRegistry` 保留**：`ServerEvents.started(() => DynamicRegistry.item(...))`
-   的旧写法本票**不改动、不双写**；新 facade 与旧直注路径各自独立记账。删除旧路径需要替代
-   parity + 旧 route 无消费者 + 维护者 sign-off（票面 AC11，见 REPORT §6 消费者清单）。
+1. **旧静态 binding `DynamicRegistry` 已删除**：旧 started 回调中的立即注册应移到 `DynamicRegistryEvents.dynamicRegistry` 的类型专用 callback Builder。替代 parity、消费者迁移与精确批准已完成，不保留双写 shim。
 2. **两种写法只影响声明位置，不影响定义语义**：新 facade 的 `event.item(id, b => ...)` 与旧
    `DynamicRegistry.item(id, b => ...)` 的配置项形状一致（stack size / rarity / fire resistant /
    mode），但新面走**候选计划**（前缀 `event.`，注册发生在 commit 点，不在脚本线程即时
-   registry mutation），旧面仍是即时注册。迁移时按「声明式候选计划」语义重写。
+   registry mutation），旧面原为即时注册，现已移除。迁移时按「声明式候选计划」语义重写。
 3. **property 写法的语义收紧**：`b.maxStackSize = 200` 在写入点即抛带成员名的错误
    （旧面允许留到 MC 注册冻结期）；`b.rarity = 'EPIC'` 与 `'epic'` 归一化相同。
 4. **同 key 定义变化＝整批冲突失败（第一版）**：把已声明 id 的定义改成不同内容会让整批
@@ -55,4 +55,4 @@
 - 不激活多人同步、不做 prepare/ack 跨进程原子性声明、不宣称动态热更新已完成。
 - 不提供 `remove`/`replace`/`modify`、同 key 覆盖或自动连带 Block/Fluid 注册。
 - 不在候选期修改 live registry、不挂生产 callback、不提前发布对外 binding。
-- 旧 `DynamicRegistry` 静态入口本票不删除、不双写（删除门禁见 REPORT §6）。
+- 旧 `DynamicRegistry` 静态入口已删除，不保留双写 shim（精确范围和结果见页首）。

@@ -111,11 +111,12 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> {
     }
 
     /** 创造标签页 id（已归一化：空白视为不分配——build 期本来就走同一分支）。 */
+    @com.tkisor.nekojs.api.annotation.ScriptNullable
     public String getGroupTab() {
         return groupTab;
     }
 
-    public void setGroupTab(String groupTab) {
+    public void setGroupTab(@com.tkisor.nekojs.api.annotation.ScriptNullable String groupTab) {
         definition.writable();
         this.groupTab = groupTab == null || groupTab.isBlank() ? null : groupTab;
     }
@@ -131,11 +132,13 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> {
     public void component(String id, Object value) { definition.component(id, value); }
     public Map<String, Object> getComponents() { return definition.components(); }
     public void setComponents(Map<String, Object> components) { definition.components(components); }
+    @com.tkisor.nekojs.api.annotation.ScriptNullable
     public String getJukeboxPlayable() { return definition.jukeboxPlayable(); }
-    public void setJukeboxPlayable(String song) { definition.jukeboxPlayable(song); }
+    public void setJukeboxPlayable(@com.tkisor.nekojs.api.annotation.ScriptNullable String song) { definition.jukeboxPlayable(song); }
 
+    @com.tkisor.nekojs.api.annotation.ScriptNullable
     public String getParentModel() { return definition.parentModel(); }
-    public void setParentModel(String parentModel) { definition.parentModel(parentModel); }
+    public void setParentModel(@com.tkisor.nekojs.api.annotation.ScriptNullable String parentModel) { definition.parentModel(parentModel); }
     public Map<String, String> getTextures() { return definition.textures(); }
     public void setTextures(Map<String, String> textures) { definition.textures(textures); }
     public void texture(String textureId) { texture("layer0", textureId); }

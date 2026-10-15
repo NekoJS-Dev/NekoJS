@@ -61,18 +61,23 @@ public final class RegistryBuilderContract {
         public String tsType() {
             if (getter != null && Map.class.isAssignableFrom(valueType)) return tsTypeOf(getter.getGenericReturnType());
             if (valueType != null && !overloads.isEmpty() && RegistryObjectBuilder.class.isAssignableFrom(valueType)) {
-                return valueType.getSimpleName() + " & ((consumer: (b: " + valueType.getSimpleName() + ") => void) => void)";
+                return valueType.getSimpleName() + " & ((consumer: (b: " + valueType.getSimpleName() + ") => void) => void)"
+                        + (nullable() ? " | null" : "");
             }
-            return tsTypeOf(valueType);
+            return tsTypeOf(valueType) + (nullable() ? " | null" : "");
         }
 
         /** Python 声明类型（与 TS 同一输入派生，成员语义一致）。 */
         public String pyType() {
             if (getter != null && Map.class.isAssignableFrom(valueType)) return pyTypeOf(getter.getGenericReturnType());
             if (valueType != null && !overloads.isEmpty() && RegistryObjectBuilder.class.isAssignableFrom(valueType)) {
-                return valueType.getSimpleName() + " | Callable[..., None]";
+                return valueType.getSimpleName() + " | Callable[..., None]" + (nullable() ? " | None" : "");
             }
-            return pyTypeOf(valueType);
+            return pyTypeOf(valueType) + (nullable() ? " | None" : "");
+        }
+
+        private boolean nullable() {
+            return getter != null && getter.isAnnotationPresent(com.tkisor.nekojs.api.annotation.ScriptNullable.class);
         }
     }
 
@@ -261,6 +266,9 @@ public final class RegistryBuilderContract {
 
     /** Maps Java types to TypeScript; boxed Float retains the nullable sound-range contract. */
     public static String tsTypeOf(Class<?> type) {
+        if (type == com.tkisor.nekojs.wrapper.registry.FoodBuilderJS.class) {
+            return "FoodBuilder";
+        }
         if (type == Float.class) {
             return "number | null";
         }
@@ -294,6 +302,9 @@ public final class RegistryBuilderContract {
 
     /** Maps the same Java types to Python, preserving nullable boxed Float independently of primitive float. */
     public static String pyTypeOf(Class<?> type) {
+        if (type == com.tkisor.nekojs.wrapper.registry.FoodBuilderJS.class) {
+            return "FoodBuilder";
+        }
         if (type == Float.class) {
             return "float | None";
         }

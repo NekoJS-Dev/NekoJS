@@ -31,6 +31,12 @@ final class StartupRegistryEventSurface {
             }
             types.typeNames(info.key()).stream().sorted().forEach(typeName ->
                     members.add(sugarMethod(sugar, typeName, find(builders, registry, typeName))));
+            if (!types.typeNames(info.key()).isEmpty()) {
+                // Computed names are validated by the runtime factory lookup, not by a declaration whitelist.
+                members.add(new Member(sugar, MemberKind.METHOD,
+                        sugar + "(id: string, typeName: string, build: (build: any) => void): any",
+                        "def " + sugar + "(self, id: str, typeName: str, build: Callable[[Any], None]) -> Any: ..."));
+            }
         });
         types.byRegistry().values().stream().flatMap(named -> named.keySet().stream()).distinct().sorted()
                 .forEach(typeName -> {
@@ -47,7 +53,7 @@ final class StartupRegistryEventSurface {
                 "custom(id: string, typeName: string, build: (build: any) => void): any",
                 "def custom(self, id: str, typeName: str, build: Callable[[Any], None]) -> Any: ..."));
         members.add(new Member("register", MemberKind.METHOD,
-                "register(registry: string, id: string, supplier: () => unknown): unknown",
+                "register(registry: string, id: string, supplier: () => unknown): any",
                 "def register(self, registry: str, id: str, supplier: Callable[[], Any]) -> Any: ..."));
         return new EventPayload(RegistryEventJS.class, "StartupRegistryEvent", members, BUILDER_NAMESPACE);
     }

@@ -13,8 +13,8 @@ import com.tkisor.nekojs.core.dynamic.facade.DynamicRegistryFacadeRuntime;
  * owner 同一接缝），reload 的 DOMAIN_PLAN 阶段统一调用；server registry ready 时由
  * {@code ServerEventListener#onServerAboutToStart} 触发初次候选。
  *
- * <p>旧 {@code DynamicRegistry} 静态绑定（{@link DynamicRegistryJS} 直注路径）保持不动：
- * 两条路径各自独立记账，旧路径的删除需维护者 sign-off（本票 AC11 不勾选）。
+ * <p>Declarations are collected through the event facade only. Successful activation owns backend
+ * claim retirement; releasing a script generation never changes registry claims.
  */
 public final class DynamicRegistryFacade {
 

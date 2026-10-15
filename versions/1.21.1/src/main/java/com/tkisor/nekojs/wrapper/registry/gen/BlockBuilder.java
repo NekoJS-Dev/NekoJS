@@ -102,15 +102,17 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
     }
 
     /** 渲染层（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    @com.tkisor.nekojs.api.annotation.ScriptNullable
     public String getRenderType() {
         return renderType;
     }
 
-    public void setRenderType(String renderType) {
+    public void setRenderType(@com.tkisor.nekojs.api.annotation.ScriptNullable String renderType) {
         this.renderType = renderType == null || renderType.isBlank() ? null : renderType;
     }
 
     /** 预创建的 BlockItem 子 builder（脚本面经 {@code BuilderSurface} 包装）。 */
+    @com.tkisor.nekojs.api.annotation.ScriptNullable
     public ItemBuilder getItem() {
         return item;
     }
@@ -119,7 +121,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
      * 连带 BlockItem 抑制/恢复的唯一写入点：{@code b.item = null} 与 {@link #noItem()}
      * 走本 setter。脚本侧只接受 null（抑制）；定制走 {@code b.item.xxx} 或 {@link #item(Consumer)}。
      */
-    public void setItem(ItemBuilder item) {
+    public void setItem(@com.tkisor.nekojs.api.annotation.ScriptNullable ItemBuilder item) {
         if (itemDefinitionFrozen) throw new IllegalStateException("[NEKO-4035] Block item definition is frozen after collection");
         if (item == this.item) {
             return;

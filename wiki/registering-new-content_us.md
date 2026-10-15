@@ -386,28 +386,28 @@ Missing resources **do not affect registration**: the item is still registered a
 - **Language files**: `nekojs/assets/<mod>/lang/zh_cn.json`; vanilla builds keys from the registry: `item.<mod>.<name>` for items, `block.<mod>.<name>` for blocks, and `entity.<mod>.<name>` for entities.
 
 <a id="wiki-section-15"></a>
-## DynamicRegistry - registration while the server is running (experimental, NeoForge 26.x only)
+## DynamicRegistryEvents — runtime registration (experimental, NeoForge 26.x only)
 
-`RegistryEvents.register` is effective only during game startup. If you need to register content **after the server has started** (for example, dynamically adding items through world script packs), use the `DynamicRegistry` binding. First enable `[dynamicRegistry] enabled = true` in `nekojs/config/engine.toml`:
+Use `DynamicRegistryEvents.dynamicRegistry` for server runtime declarations. Enable `[dynamicRegistry] enabled = true` in `nekojs/config/engine.toml` on both server and clients before starting. Callbacks collect inert definitions; registry activation happens only after a successful candidate commit and the synchronization gate.
 
 ```javascript
-// server_scripts/dyn.js
-// Wait for server startup before calling; a top-level call precedes server registry access initialization.
-ServerEvents.started(event => {
-  const ruby = DynamicRegistry.item('mymod:ruby', builder => builder
-      .maxStackSize(64)
-      .rarity('epic')
-      .fireResistant()
-      .mode('world'))
-
-  DynamicRegistry.soundEvent('mymod:boom', builder => builder
-      .mode('world').fixedRange(16))
-  DynamicRegistry.mobEffect('mymod:wither_touch', builder => builder
-      .category('harmful').color(0x8B0000))
+// server_scripts/dynamic.js
+DynamicRegistryEvents.dynamicRegistry(event => {
+  event.item('mymod:ruby', build => {
+    build.maxStackSize = 64
+    build.rarity = 'epic'
+    build.fireResistant = true
+    build.mode = 'world'
+  })
+  event.soundEvent('mymod:boom', build => { build.fixedRange = 16 })
+  event.mobEffect('mymod:wither_touch', build => {
+    build.category = 'harmful'
+    build.color = 0x8B0000
+  })
 })
 ```
 
-`DynamicRegistry` builders still use chained methods (`mode('world' | 'reloadable')`, and so on). Reload semantics are stale-retain: `/nekojs reload` **never unregisters** registered entries. Rerunning scripts claims entries by id; use `/nekojs registry` to inspect the health snapshot.
+Builders use Bean properties or explicit setters (`build.mode = 'world'` / `build.setMode('world')`). No immediate registration handle is returned. `/nekojs registry` reports committed activation claims; omitted entries become stale and remain physically registered. Invalid or changed definitions reject the batch and retain the previous active state. The old `DynamicRegistry` binding and fluent builders have been removed.
 
 <a id="wiki-section-16"></a>
 ## Migrating from older syntax

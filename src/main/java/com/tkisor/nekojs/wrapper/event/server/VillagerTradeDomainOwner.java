@@ -105,6 +105,8 @@ public final class VillagerTradeDomainOwner
 
     /** Snapshot published by the most recent successful commit (read-only query input). */
     private volatile VillagerTradeSetSnapshot committedSnapshot = VillagerTradeSetSnapshot.EMPTY;
+    private List<VillagerTradeDeclaration> committedDeclarations = List.of();
+    private Set<String> committedObsoleteSets = Set.of();
 
     /** Domain bookkeeping installed into the query facade by the platform assembly. */
     public VillagerTradeDomainState state() {
@@ -121,6 +123,29 @@ public final class VillagerTradeDomainOwner
     /** Drops the server binding (server stopped: reloadable registries die with the instance). */
     public void clearServer() {
         this.boundServer = null;
+        tradeSetBaselines.clear();
+        injectedTrades.clear();
+        snapshotEpoch = null;
+        committedDeclarations = List.of();
+        committedObsoleteSets = Set.of();
+        committedSnapshot = VillagerTradeSetSnapshot.EMPTY;
+        state.reset();
+    }
+
+    /** Replays the accepted generation after datapack reload replaces the live registry instances. */
+    public void replayAfterResourceReload() {
+        if (boundServer == null || snapshotEpoch == null || snapshotEpoch == tradeSetRegistry()) {
+            return;
+        }
+        try {
+            preflight(committedDeclarations);
+            apply(committedDeclarations, committedObsoleteSets);
+            state.refreshSnapshot(committedSnapshot);
+        } catch (Throwable failure) {
+            state.invalidateSnapshot("trade-resource-replay-failed");
+            NekoJS.LOGGER.error("[NEKO-4041] Villager trade replay failed after resource reload; "
+                    + "committed snapshot is unavailable", failure);
+        }
     }
 
     // ---- CandidateDomainCollector (DOMAIN_PLAN phase) ----
@@ -243,8 +268,8 @@ public final class VillagerTradeDomainOwner
 
     /**
      * Commit point: restore the trade sets NekoJS replaced, drop the entries NekoJS registered,
-     * then register and attach the whole declaration list. Declarations no longer present simply
-     * do not come back — ordinary reload never deletes a vanilla entry.
+     * then register and attach the materialized declarations, including omitted listings that
+     * were not explicitly retired. Both registry indexes are restored if publication fails.
      */
     @Override
     public void apply(List<VillagerTradeDeclaration> declarations, Set<String> obsoleteTradeSets) {
@@ -259,6 +284,48 @@ public final class VillagerTradeDomainOwner
             throw new VillagerTradeUnavailableException(
                     "reloadable trade registries are not ready at the commit point");
         }
+        RegistryCheckpoint setsBefore = new RegistryCheckpoint(tradeSetRegistry);
+        RegistryCheckpoint tradesBefore = new RegistryCheckpoint(tradeRegistry);
+        var baselinesBefore = new LinkedHashMap<>(tradeSetBaselines);
+        var injectedBefore = List.copyOf(injectedTrades);
+        var epochBefore = snapshotEpoch;
+        long sequenceBefore = registryEpochSequence;
+        try {
+            applyToRegistries(declarations, obsoleteTradeSets, tradeSetRegistry, tradeRegistry);
+        } catch (RuntimeException | Error failure) {
+            boolean restored = setsBefore.restoreAfterFailure(failure);
+            restored &= tradesBefore.restoreAfterFailure(failure);
+            tradeSetBaselines.clear();
+            tradeSetBaselines.putAll(baselinesBefore);
+            injectedTrades.clear();
+            injectedTrades.addAll(injectedBefore);
+            snapshotEpoch = epochBefore;
+            registryEpochSequence = sequenceBefore;
+            if (!restored) {
+                state.invalidateSnapshot("trade-rollback-failed");
+            }
+            throw failure;
+        }
+    }
+
+    private void applyToRegistries(List<VillagerTradeDeclaration> declarations, Set<String> obsoleteTradeSets,
+                                   MappedRegistry<TradeSet> tradeSetRegistry, MappedRegistry<VillagerTrade> tradeRegistry) {
+        // Resolve every value and reject foreign ID collisions before removing the accepted batch.
+        Map<ResourceKey<TradeSet>, List<VillagerTrade>> bySet = new LinkedHashMap<>();
+        for (var declaration : declarations) {
+            bySet.computeIfAbsent(tradeSetKey(declaration.tradeSetId()), key -> new ArrayList<>()).add(buildTrade(declaration));
+        }
+        Set<ResourceKey<VillagerTrade>> plannedKeys = new java.util.HashSet<>();
+        bySet.forEach((set, trades) -> {
+            for (int index = 1; index <= trades.size(); index++) {
+                var key = injectedTradeKey(set, index);
+                boolean owned = snapshotEpoch == tradeSetRegistry && injectedTrades.contains(key);
+                if (!plannedKeys.add(key) || (!owned && tradeRegistry.containsKey(key.identifier()))) {
+                    throw new IllegalStateException("[NEKO-4043] Villager trade batch rejected: generated ID collision at "
+                            + key.identifier());
+                }
+            }
+        });
         if (snapshotEpoch != tradeSetRegistry) {
             // Resource reload rebuilt the registries: the old snapshots are meaningless, the new
             // registry's vanilla content is the baseline (same rule the legacy path used).
@@ -280,16 +347,10 @@ public final class VillagerTradeDomainOwner
             injectedTrades.clear();
         }
 
-        // (2) group the declarations by trade set, preserving declaration order
-        Map<ResourceKey<TradeSet>, List<VillagerTradeDeclaration>> bySet = new LinkedHashMap<>();
-        for (VillagerTradeDeclaration declaration : declarations) {
-            bySet.computeIfAbsent(tradeSetKey(declaration.tradeSetId()), key -> new ArrayList<>()).add(declaration);
-        }
-
         // (3) register the new trades and attach them to their sets
         Map<String, Integer> appliedCounts = new LinkedHashMap<>();
         List<Holder<VillagerTrade>> newHolders = new ArrayList<>();
-        for (Map.Entry<ResourceKey<TradeSet>, List<VillagerTradeDeclaration>> entry : bySet.entrySet()) {
+        for (Map.Entry<ResourceKey<TradeSet>, List<VillagerTrade>> entry : bySet.entrySet()) {
             ResourceKey<TradeSet> setKey = entry.getKey();
             TradeSet original = tradeSetRegistry.getValue(setKey);
             if (original == null) {
@@ -299,12 +360,9 @@ public final class VillagerTradeDomainOwner
             tradeSetBaselines.putIfAbsent(setKey, original);
             HolderSet<VillagerTrade> baselineHolders = original.getTrades();
             int index = 0;
-            for (VillagerTradeDeclaration declaration : entry.getValue()) {
+            for (VillagerTrade trade : entry.getValue()) {
                 index++;
-                VillagerTrade trade = buildTrade(declaration);
-                Identifier tradeId = Identifier.fromNamespaceAndPath(
-                        NekoJS.MODID, "trade/" + setKey.identifier().getPath() + "/" + index);
-                ResourceKey<VillagerTrade> tradeKey = ResourceKey.create(Registries.VILLAGER_TRADE, tradeId);
+                ResourceKey<VillagerTrade> tradeKey = injectedTradeKey(setKey, index);
                 Holder.Reference<VillagerTrade> holder =
                         withUnfrozenFor(tradeRegistry, () -> Registry.registerForHolder(tradeRegistry, tradeKey, trade));
                 injectedTrades.add(tradeKey);
@@ -328,6 +386,75 @@ public final class VillagerTradeDomainOwner
                     obsoleteTradeSets.size());
         }
         committedSnapshot = VillagerTradeSetSnapshot.of(registryEpochSequence, appliedCounts);
+        committedDeclarations = List.copyOf(declarations);
+        committedObsoleteSets = Set.copyOf(obsoleteTradeSets);
+    }
+
+    private static ResourceKey<VillagerTrade> injectedTradeKey(ResourceKey<TradeSet> set, int index) {
+        return ResourceKey.create(Registries.VILLAGER_TRADE, Identifier.fromNamespaceAndPath(
+                NekoJS.MODID, "trade/" + set.identifier().getPath() + "/" + index));
+    }
+
+    /** Captures the indexes and holder tags changed by this adapter's register/unregister operations. */
+    private static final class RegistryCheckpoint {
+        private final MappedRegistry<?> registry;
+        private final Map<String, Map<Object, Object>> indexes = new LinkedHashMap<>();
+        private final List<Object> byId;
+        private final Map<Object, Object> holderTags = new java.util.IdentityHashMap<>();
+        private final Object lifecycle;
+
+        @SuppressWarnings("unchecked")
+        RegistryCheckpoint(MappedRegistry<?> registry) {
+            this.registry = registry;
+            for (String name : List.of("byKey", "byLocation", "byValue", "registrationInfos", "toId")) {
+                indexes.put(name, new java.util.IdentityHashMap<>((Map<Object, Object>) requiredField(registry, name)));
+            }
+            byId = new ArrayList<>((List<Object>) requiredField(registry, "byId"));
+            byId.forEach(holder -> holderTags.put(holder, requiredField(holder, "tags")));
+            lifecycle = requiredField(registry, "registryLifecycle");
+        }
+
+        @SuppressWarnings("unchecked")
+        boolean restoreAfterFailure(Throwable failure) {
+            try {
+                indexes.forEach((name, values) -> {
+                    Map<Object, Object> target = (Map<Object, Object>) requiredField(registry, name);
+                    target.clear();
+                    target.putAll(values);
+                });
+                List<Object> target = (List<Object>) requiredField(registry, "byId");
+                target.clear();
+                target.addAll(byId);
+                holderTags.forEach((holder, tags) -> writeRequiredField(holder, "tags", tags));
+                writeRequiredField(registry, "registryLifecycle", lifecycle);
+                return true;
+            } catch (RuntimeException | Error rollbackFailure) {
+                failure.addSuppressed(rollbackFailure);
+                return false;
+            }
+        }
+
+        private static Object requiredField(Object target, String name) {
+            try {
+                Field field = findField(target.getClass(), name);
+                if (field == null) throw new NoSuchFieldException(name);
+                field.setAccessible(true);
+                return field.get(target);
+            } catch (ReflectiveOperationException failure) {
+                throw new IllegalStateException("[NEKO-4044] Villager trade checkpoint read failed: " + name, failure);
+            }
+        }
+
+        private static void writeRequiredField(Object target, String name, Object value) {
+            try {
+                Field field = findField(target.getClass(), name);
+                if (field == null) throw new NoSuchFieldException(name);
+                field.setAccessible(true);
+                field.set(target, value);
+            } catch (ReflectiveOperationException failure) {
+                throw new IllegalStateException("[NEKO-4044] Villager trade checkpoint restore failed: " + name, failure);
+            }
+        }
     }
 
     @Override
@@ -435,6 +562,8 @@ public final class VillagerTradeDomainOwner
             snapshotEpoch = null;
             registryEpochSequence = -1L;
             committedSnapshot = VillagerTradeSetSnapshot.EMPTY;
+            committedDeclarations = List.of();
+            committedObsoleteSets = Set.of();
             boundServer = null;
             state.reset();
             com.tkisor.nekojs.core.villager.VillagerTradesFacade.uninstall(state);

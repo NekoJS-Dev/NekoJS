@@ -17,7 +17,6 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.resource.ScriptPackDataManager;
-import com.tkisor.nekojs.villager.VillagerTradeManager;
 import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
 import net.minecraft.resources.Identifier;
@@ -74,10 +73,6 @@ public class ServerEventListener {
         var server = event.getServer();
         activateWorldPacks(server);
         mountScriptPackData(server);
-        // 资源装载期（WorldStem 阶段 server 未就绪，TagsUpdated 刷出跳过）暂存的村民交易在此补刷。
-        if (VillagerTradeManager.pendingCount() > 0) {
-            VillagerTradeManager.apply(server);
-        }
         // Item/Block 属性修改（票 39 收口）：初始 generation 的收集点——事件派发给 active
         // 总线监听器，domain owner preflight 通过后恢复基线并应用完整计划（不通过 → 整批
         // blocked 保持既有值）。`/nekojs reload server` 与 vanilla /reload 的 SERVER 事务
@@ -91,15 +86,8 @@ public class ServerEventListener {
         if (villagerTradeDomain != null) {
             villagerTradeDomain.applyInitialPlan(server);
         }
-        // 动态注册事件 facade 的初次候选（ticket 16）：server registry ready 后收集一次
-        // inert 计划（preflight 通过才发布；每次成功的 script/data reload 也会在候选阶段
-        // 重新收集并联合发布，此处是对「初次 server registry ready」边界的显式触发，幂等）。
-        // 版本守卫的实际作用（与文件头的「本文件不应再出现版本守卫」是有意的例外，原因如下）：
-        // 1.21.1 的编译单元是 versions/1.21.1/src 下的孪生文件，本文件不参与其编译——所以
-        // 当前不会立即断裂；守卫是为了让孪生文件按 tools/extract_evaluated.py 重新提取时
-        // （= 本文件在 1.21.1 节点求值后的形态）不会把 26.x 专属的 facade 符号带进 1.21.1。
-        // 运行期动态注册在 1.21.1 整包缺席（DynamicRegistryJS/DynamicRegistries 同为 >=26
-        // 面），facade 因此不在该节点触发（能力记 not verified，见 baseline REPORT 能力表）。
+        // Collect the first inert dynamic batch after server registries become available.
+        // The guard preserves the 1.21.1 node's deliberate absence when re-extracting its source.
 //? if >=26 {
         com.tkisor.nekojs.dynamic.DynamicRegistryFacade.fireInitialCollection();
 //?}
@@ -153,7 +141,7 @@ public class ServerEventListener {
                 .activateWorldPacks(server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT));
         if (worldPacks.isEmpty()) return;
         try {
-            VillagerTradeManager.beginReload();
+
             runtimeRoot.reload(ScriptType.SERVER);
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("SERVER reload after world pack activation failed: ", e);
@@ -170,7 +158,7 @@ public class ServerEventListener {
         var removed = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().deactivateWorldPacks();
         // 脚本包 datapack 挂载与村民交易快照随服务器实例一起失效；重置以便下次挂载。
         ScriptPackDataManager.reset();
-        VillagerTradeManager.reset();
+
         // 修改域的 server 绑定随服务器实例失效（基线是进程级例外，保留到 root close）。
         com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner modificationDomain = modificationDomain();
         if (modificationDomain != null) {
@@ -187,6 +175,15 @@ public class ServerEventListener {
         }
     }
 
+    /** Replays accepted trade declarations after resource reload installs fresh registry instances. */
+    @SubscribeEvent
+    public static void onServerDataTagsUpdated(net.neoforged.neoforge.event.TagsUpdatedEvent.ServerDataLoad event) {
+        var owner = villagerTradeDomain();
+        if (owner != null) {
+            owner.replayAfterResourceReload();
+        }
+    }
+
     @SubscribeEvent
     public static void onServerResourceReload(AddServerReloadListenersEvent event) {
         if (!schemaAutoDiscovered) {
@@ -200,7 +197,7 @@ public class ServerEventListener {
         }
         event.addListener(Identifier.fromNamespaceAndPath(NekoJS.MODID, "recipe_type_definitions"), (ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
         try {
-            VillagerTradeManager.beginReload();
+
             runtimeRoot.reload(ScriptType.SERVER);
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("Script overload failed: ", e);
@@ -208,20 +205,6 @@ public class ServerEventListener {
         // loot table JSON 管理（reload 流程先于 loot 解析，修改当次 reload 生效）
         ServerEvents.LOOT_TABLES.post(new LootTableEventJS());
         postGenerateData();
-    }
-
-    /**
-     * 村民交易刷出点：服务器资源 reload 完成、{@code this.resources} 已切换到新实例之后
-     * （{@code updateComponentsAndStaticRegistryTags} 阶段，服务器线程上）。此前流水线内
-     * {@code server.reloadableRegistries()} 仍指向旧注册表，故不能更早刷出。
-     * 服务器未就绪（首次 WorldStem 装载）时跳过，由 {@link #onServerAboutToStart} 补刷。
-     */
-    @SubscribeEvent
-    public static void onServerDataTagsUpdated(net.neoforged.neoforge.event.TagsUpdatedEvent.ServerDataLoad event) {
-        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-        if (server != null) {
-            VillagerTradeManager.apply(server);
-        }
     }
 
     /**

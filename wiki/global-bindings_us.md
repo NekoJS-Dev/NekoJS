@@ -305,7 +305,7 @@ console.info(VillagerTrades.query().describe())
 
 Farmer ids use `minecraft:<profession>/level_1..5`. Wandering trader ids differ: 26.x uses trade-set keys such as `minecraft:wandering_trader/buying`; 1.21.1 uses `minecraft:wandering_trader/level_1|level_2` (aliases `buying|common`→1, `uncommon|rare`→2). The adapter validates the target during preflight. Queries are read-only and generation-bound; `statusReason` explicitly reports stale/unavailable results.
 
-Ordinary omission is recorded as unrestored; `ServerEvents.tradeReload(event => event.declareObsolete(id))` explicitly retires a set. Do not mix old and new writers on one set. The old `VillagerTrades.add/pendingCount` remain only in canonical NeoForge 26.x pending migration approval; **1.21.1 already exposes only query/describe**. Fabric has no `VillagerTrades` global and rejects nonempty trade declarations explicitly.
+Ordinary omission is recorded as unrestored; `ServerEvents.tradeReload(event => event.declareObsolete(id))` explicitly retires a set. NeoForge exposes only `VillagerTrades.query/describe`; declare writes through the events. The old `add/pendingCount` methods and staging manager are removed. Fabric has no `VillagerTrades` global and rejects nonempty trade declarations explicitly.
 
 <a id="wiki-section-22"></a>
 ### `EntitySelectors`

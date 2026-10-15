@@ -51,7 +51,7 @@ class TypeScriptSkippedDeclarationTest {
         try {
             Diagnostics.install(events::add);
             var snapshot = new NekoScriptCatalogSnapshot(List.of(), List.of(), List.of(), List.of(),
-                    List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
+                    List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
             var config = new ProbeConfig(true, ".neko_probe",
                     new ProbeConfig.ScanConfig(List.of(), List.of(), List.of(), List.of(), 5, "SMART"));
             var context = new ProbeContext.Of(snapshot, List.of(URI.class), config,

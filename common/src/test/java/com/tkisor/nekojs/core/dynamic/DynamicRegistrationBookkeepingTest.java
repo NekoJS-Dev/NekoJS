@@ -138,6 +138,26 @@ class DynamicRegistrationBookkeepingTest {
     }
 
     @Test
+    void failedActivationRestoresOwnersModesAndRetiredClaimsWithoutKeepingNewEntries() {
+        var bookkeeping = new DynamicRegistrationBookkeeping("item");
+        bookkeeping.claim("test:retired", "old", DynamicRegisterMode.WORLD);
+        bookkeeping.beginReload();
+        bookkeeping.claim("test:active", "old", DynamicRegisterMode.WORLD);
+        var checkpoint = bookkeeping.checkpoint();
+        bookkeeping.beginReload();
+        bookkeeping.claim("test:active", "candidate", DynamicRegisterMode.RELOADABLE);
+        bookkeeping.claim("test:new", "candidate", DynamicRegisterMode.WORLD);
+        bookkeeping.restore(checkpoint);
+        assertEquals(List.of("test:retired"), bookkeeping.staleIds());
+        assertEquals("old", bookkeeping.entry("test:active").ownerScriptId());
+        assertSame(DynamicRegisterMode.WORLD, bookkeeping.entry("test:active").mode());
+        assertFalse(bookkeeping.isTracked("test:new"));
+        bookkeeping.claim("test:retired", "another", DynamicRegisterMode.WORLD);
+        bookkeeping.restore(checkpoint);
+        assertEquals(List.of("test:retired"), bookkeeping.staleIds());
+    }
+
+    @Test
     void modeParsingRejectsGlobalWithActionableMessage() {
         IllegalArgumentException error = assertThrows(
                 IllegalArgumentException.class, () -> DynamicRegisterMode.parse("global"));

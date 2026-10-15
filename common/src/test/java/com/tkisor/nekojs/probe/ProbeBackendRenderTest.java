@@ -194,6 +194,6 @@ class ProbeBackendRenderTest {
     private static NekoScriptCatalogSnapshot emptySnapshot() {
         return new NekoScriptCatalogSnapshot(
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
     }
 }

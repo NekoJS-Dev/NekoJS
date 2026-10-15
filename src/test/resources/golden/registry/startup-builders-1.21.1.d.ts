@@ -5,18 +5,18 @@
 interface BlockBuilder {
     hardness: number;
     readonly id: any;
-    item: ItemBuilder & ((consumer: (b: ItemBuilder) => void) => void);
+    item: ItemBuilder & ((consumer: (b: ItemBuilder) => void) => void) | null;
     lightLevel: number;
     mapColor: string;
     noItem(): void;
-    renderType: string;
+    renderType: string | null;
     requiresTool: boolean;
     resistance: number;
     setHardness(hardness: number): void;
-    setItem(item: any): void;
+    setItem(item: any | null): void;
     setLightLevel(lightLevel: number): void;
     setMapColor(mapColor: string): void;
-    setRenderType(renderType: string): void;
+    setRenderType(renderType: string | null): void;
     setRequiresTool(requiresTool: boolean): void;
     setResistance(resistance: number): void;
     setSound(sound: string): void;
@@ -101,24 +101,24 @@ interface ItemBuilder {
     component(id: string, value: any): void;
     components: Record<string, any>;
     fireResistant: boolean;
-    food(consumer: (b: any) => void): void;
+    food(consumer: (build: FoodBuilder) => void): void;
     glowing: boolean;
-    groupTab: string;
+    groupTab: string | null;
     readonly id: any;
-    jukeboxPlayable: string;
+    jukeboxPlayable: string | null;
     maxDamage: number;
     maxStackSize: number;
-    parentModel: string;
+    parentModel: string | null;
     rarity: string;
     setBurnTime(burnTime: number): void;
     setComponents(components: Record<string, any>): void;
     setFireResistant(fireResistant: boolean): void;
     setGlowing(glowing: boolean): void;
-    setGroupTab(groupTab: string): void;
-    setJukeboxPlayable(song: string): void;
+    setGroupTab(groupTab: string | null): void;
+    setJukeboxPlayable(song: string | null): void;
     setMaxDamage(maxDamage: number): void;
     setMaxStackSize(maxStackSize: number): void;
-    setParentModel(parentModel: string): void;
+    setParentModel(parentModel: string | null): void;
     setRarity(rarity: string): void;
     setTextures(textures: Record<string, string>): void;
     texture(textureId: string): void;
@@ -159,5 +159,15 @@ interface SoundEventBuilder {
 /** VillagerTypeBuilder — registry 'minecraft:villager_type', type 'basic', sugar 'villagerType'. */
 interface VillagerTypeBuilder {
     readonly id: any;
+}
+
+/** FoodBuilder — registry '', type 'com.tkisor.nekojs.wrapper.registry.FoodBuilderJS'. */
+interface FoodBuilder {
+    alwaysEat(): FoodBuilder;
+    buildFood(): any;
+    effect(effectId: string, durationTicks: number, amplifier: number, probability: number): FoodBuilder;
+    fastEat(): FoodBuilder;
+    nutrition(nutrition: number): FoodBuilder;
+    saturation(saturation: number): FoodBuilder;
 }
 

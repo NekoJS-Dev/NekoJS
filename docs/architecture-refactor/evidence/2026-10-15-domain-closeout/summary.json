@@ -1,0 +1,685 @@
+{
+  "sourceRevision": "c92d781a1e2d64228457f4ca98b5344744cab59d",
+  "tests": [
+    {
+      "module": "common",
+      "tests": 2321,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 4,
+      "suites": 304
+    },
+    {
+      "module": "common-api-processor",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "suites": 1
+    },
+    {
+      "module": "versions/1.21.1",
+      "tests": 437,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 31,
+      "suites": 98
+    },
+    {
+      "module": "versions/26.1.2",
+      "tests": 670,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 81,
+      "suites": 134
+    },
+    {
+      "module": "versions/26.2.0",
+      "tests": 670,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 81,
+      "suites": 134
+    },
+    {
+      "module": "versions/26.1.2-fabric",
+      "tests": 397,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 37,
+      "suites": 82
+    },
+    {
+      "module": "versions/26.2.0-fabric",
+      "tests": 397,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 37,
+      "suites": 82
+    }
+  ],
+  "testTotals": {
+    "tests": 4905,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 271
+  },
+  "installed": [
+    {
+      "node": "1.21.1",
+      "checks": {
+        "startupCallbacks": true,
+        "registrations": true,
+        "nestedFingerprint": true,
+        "fluidTypeIdentity": true,
+        "blockPlacement": true,
+        "fluidPlacement": true,
+        "reloadCommitted": true,
+        "pythonStubCount": 320,
+        "pythonAst": true,
+        "actualTradePoolLifecycle": true
+      },
+      "errors": [],
+      "pythonAstFailures": [],
+      "tradeObservations": [
+        {
+          "phase": "declared",
+          "status": "ACTIVE",
+          "generation": 2,
+          "total": 1,
+          "unrestored": 0,
+          "retired": 0,
+          "physicalCount": 6
+        },
+        {
+          "phase": "omitted",
+          "status": "ACTIVE",
+          "generation": 3,
+          "total": 0,
+          "unrestored": 1,
+          "retired": 0,
+          "physicalCount": 6
+        },
+        {
+          "phase": "omitted",
+          "status": "ACTIVE",
+          "generation": 4,
+          "total": 0,
+          "unrestored": 1,
+          "retired": 0,
+          "physicalCount": 6
+        },
+        {
+          "phase": "obsolete",
+          "status": "ACTIVE",
+          "generation": 5,
+          "total": 0,
+          "unrestored": 0,
+          "retired": 1,
+          "physicalCount": 5
+        },
+        {
+          "phase": "obsolete",
+          "status": "ACTIVE",
+          "generation": 5,
+          "total": 0,
+          "unrestored": 0,
+          "retired": 1,
+          "physicalCount": 5
+        },
+        {
+          "phase": "redeclared",
+          "status": "ACTIVE",
+          "generation": 6,
+          "total": 1,
+          "unrestored": 0,
+          "retired": 0,
+          "physicalCount": 6
+        }
+      ],
+      "shutdown": "RCON stop requested; process exit verified separately",
+      "verdict": "PASS"
+    },
+    {
+      "node": "26.1.2",
+      "checks": {
+        "startupCallbacks": true,
+        "registrations": true,
+        "nestedFingerprint": true,
+        "fluidTypeIdentity": true,
+        "blockPlacement": true,
+        "fluidPlacement": true,
+        "effectBeforeReload": true,
+        "reloadCommitted": true,
+        "effectAfterReload": true,
+        "pythonStubCount": 378,
+        "pythonAst": true,
+        "actualTradePoolLifecycle": true,
+        "emptyDynamicGenerationRetainsPhysicalEffect": true
+      },
+      "errors": [],
+      "pythonAstFailures": [],
+      "tradeObservations": [
+        {
+          "phase": "declared",
+          "status": "ACTIVE",
+          "generation": 2,
+          "total": 1,
+          "unrestored": 0,
+          "retired": 0,
+          "physicalCount": 6
+        },
+        {
+          "phase": "omitted",
+          "status": "ACTIVE",
+          "generation": 3,
+          "total": 0,
+          "unrestored": 1,
+          "retired": 0,
+          "physicalCount": 6
+        },
+        {
+          "phase": "omitted",
+          "status": "ACTIVE",
+          "generation": 4,
+          "total": 0,
+          "unrestored": 1,
+          "retired": 0,
+          "physicalCount": 6
+        },
+        {
+          "phase": "obsolete",
+          "status": "ACTIVE",
+          "generation": 5,
+          "total": 0,
+          "unrestored": 0,
+          "retired": 1,
+          "physicalCount": 5
+        },
+        {
+          "phase": "obsolete",
+          "status": "ACTIVE",
+          "generation": 5,
+          "total": 0,
+          "unrestored": 0,
+          "retired": 1,
+          "physicalCount": 5
+        },
+        {
+          "phase": "redeclared",
+          "status": "ACTIVE",
+          "generation": 6,
+          "total": 1,
+          "unrestored": 0,
+          "retired": 0,
+          "physicalCount": 6
+        }
+      ],
+      "dynamicRetirement": {
+        "retired": "sound_event: 1 registered, 1 stale\nmob_effect: 1 registered, 1 stale\nitem: 1 registered, 1 stale\n",
+        "reclaimed": "sound_event: 1 registered, 0 stale\nmob_effect: 1 registered, 0 stale\nitem: 1 registered, 0 stale\n"
+      },
+      "shutdown": "RCON stop requested; process exit verified separately",
+      "verdict": "PASS"
+    },
+    {
+      "node": "26.2.0",
+      "checks": {
+        "startupCallbacks": true,
+        "registrations": true,
+        "nestedFingerprint": true,
+        "fluidTypeIdentity": true,
+        "blockPlacement": true,
+        "fluidPlacement": true,
+        "reloadCommitted": true,
+        "pythonStubCount": 346,
+        "pythonAst": true,
+        "actualTradePoolLifecycle": true,
+        "emptyDynamicGenerationRetainsPhysicalEffect": true
+      },
+      "errors": [],
+      "pythonAstFailures": [],
+      "tradeObservations": [
+        {
+          "phase": "declared",
+          "status": "ACTIVE",
+          "generation": 2,
+          "total": 1,
+          "unrestored": 0,
+          "retired": 0,
+          "physicalCount": 6
+        },
+        {
+          "phase": "omitted",
+          "status": "ACTIVE",
+          "generation": 3,
+          "total": 0,
+          "unrestored": 1,
+          "retired": 0,
+          "physicalCount": 6
+        },
+        {
+          "phase": "omitted",
+          "status": "ACTIVE",
+          "generation": 4,
+          "total": 0,
+          "unrestored": 1,
+          "retired": 0,
+          "physicalCount": 6
+        },
+        {
+          "phase": "obsolete",
+          "status": "ACTIVE",
+          "generation": 5,
+          "total": 0,
+          "unrestored": 0,
+          "retired": 1,
+          "physicalCount": 5
+        },
+        {
+          "phase": "obsolete",
+          "status": "ACTIVE",
+          "generation": 5,
+          "total": 0,
+          "unrestored": 0,
+          "retired": 1,
+          "physicalCount": 5
+        },
+        {
+          "phase": "redeclared",
+          "status": "ACTIVE",
+          "generation": 6,
+          "total": 1,
+          "unrestored": 0,
+          "retired": 0,
+          "physicalCount": 6
+        }
+      ],
+      "dynamicRetirement": {
+        "retired": "sound_event: 1 registered, 1 stale\nmob_effect: 1 registered, 1 stale\nitem: 1 registered, 1 stale\n",
+        "reclaimed": "sound_event: 1 registered, 0 stale\nmob_effect: 1 registered, 0 stale\nitem: 1 registered, 0 stale\n"
+      },
+      "shutdown": "RCON stop requested; process exit verified separately",
+      "verdict": "PASS"
+    },
+    {
+      "node": "26.1.2-fabric",
+      "checks": {
+        "startupCallbacks": true,
+        "registrations": true,
+        "nestedFingerprint": true,
+        "blockPlacement": true,
+        "reloadCommitted": true,
+        "pythonStubCount": 296,
+        "pythonAst": true
+      },
+      "errors": [],
+      "pythonAstFailures": [],
+      "shutdown": "RCON stop requested; process exit verified separately",
+      "verdict": "PASS"
+    },
+    {
+      "node": "26.2.0-fabric",
+      "checks": {
+        "startupCallbacks": true,
+        "registrations": true,
+        "nestedFingerprint": true,
+        "blockPlacement": true,
+        "reloadCommitted": true,
+        "pythonStubCount": 263,
+        "pythonAst": true
+      },
+      "errors": [],
+      "pythonAstFailures": [],
+      "shutdown": "RCON stop requested; process exit verified separately",
+      "verdict": "PASS"
+    }
+  ],
+  "ide": {
+    "sourceRevision": "c92d781a1e2d64228457f4ca98b5344744cab59d",
+    "productionPatchSha256": "277d087c7a59ecbf8bfe7794304d149c4c5c9466d919bbc2ce0fca02324c8aed",
+    "nodes": [
+      {
+        "node": "1.21.1",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 1,
+          "summary": {
+            "filesAnalyzed": 320,
+            "errorCount": 7,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 8.925
+          },
+          "stubCount": 320,
+          "rules": {
+            "reportRedeclaration": 7
+          }
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 586,
+            "codes": {
+              "TS2304": 150,
+              "TS2749": 11,
+              "TS2307": 113,
+              "TS2305": 11,
+              "TS2416": 74,
+              "TS2314": 12,
+              "TS2552": 5,
+              "TS2344": 118,
+              "TS2417": 32,
+              "TS2426": 4,
+              "TS2724": 13,
+              "TS2300": 18,
+              "TS2425": 1,
+              "TS2694": 20,
+              "TS2611": 2,
+              "TS2430": 1,
+              "TS2420": 1
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 587,
+            "codes": {
+              "TS2304": 150,
+              "TS2749": 11,
+              "TS2307": 114,
+              "TS2305": 11,
+              "TS2416": 74,
+              "TS2314": 12,
+              "TS2552": 5,
+              "TS2344": 118,
+              "TS2417": 32,
+              "TS2426": 4,
+              "TS2724": 13,
+              "TS2300": 18,
+              "TS2425": 1,
+              "TS2694": 20,
+              "TS2611": 2,
+              "TS2430": 1,
+              "TS2420": 1
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      },
+      {
+        "node": "26.1.2",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 1,
+          "summary": {
+            "filesAnalyzed": 378,
+            "errorCount": 7,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 11.467
+          },
+          "stubCount": 378,
+          "rules": {
+            "reportRedeclaration": 7
+          }
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 744,
+            "codes": {
+              "TS2304": 139,
+              "TS2749": 11,
+              "TS2307": 212,
+              "TS2305": 8,
+              "TS2724": 2,
+              "TS2416": 88,
+              "TS2314": 12,
+              "TS2552": 5,
+              "TS2344": 199,
+              "TS2417": 27,
+              "TS2430": 5,
+              "TS2426": 5,
+              "TS2300": 16,
+              "TS2694": 12,
+              "TS2611": 2,
+              "TS2420": 1
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 745,
+            "codes": {
+              "TS2304": 139,
+              "TS2749": 11,
+              "TS2307": 213,
+              "TS2305": 8,
+              "TS2724": 2,
+              "TS2416": 88,
+              "TS2314": 12,
+              "TS2552": 5,
+              "TS2344": 199,
+              "TS2417": 27,
+              "TS2430": 5,
+              "TS2426": 5,
+              "TS2300": 16,
+              "TS2694": 12,
+              "TS2611": 2,
+              "TS2420": 1
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      },
+      {
+        "node": "26.2.0",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 1,
+          "summary": {
+            "filesAnalyzed": 346,
+            "errorCount": 7,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 7.221
+          },
+          "stubCount": 346,
+          "rules": {
+            "reportRedeclaration": 7
+          }
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 638,
+            "codes": {
+              "TS2304": 187,
+              "TS2749": 11,
+              "TS2307": 166,
+              "TS2305": 8,
+              "TS2724": 3,
+              "TS2416": 81,
+              "TS2314": 14,
+              "TS2552": 5,
+              "TS2344": 100,
+              "TS2417": 26,
+              "TS2430": 5,
+              "TS2426": 4,
+              "TS2300": 14,
+              "TS2694": 12,
+              "TS2611": 1,
+              "TS2420": 1
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 639,
+            "codes": {
+              "TS2304": 187,
+              "TS2749": 11,
+              "TS2307": 167,
+              "TS2305": 8,
+              "TS2724": 3,
+              "TS2416": 81,
+              "TS2314": 14,
+              "TS2552": 5,
+              "TS2344": 100,
+              "TS2417": 26,
+              "TS2430": 5,
+              "TS2426": 4,
+              "TS2300": 14,
+              "TS2694": 12,
+              "TS2611": 1,
+              "TS2420": 1
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      },
+      {
+        "node": "26.1.2-fabric",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 1,
+          "summary": {
+            "filesAnalyzed": 296,
+            "errorCount": 13,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 8.805
+          },
+          "stubCount": 296,
+          "rules": {
+            "reportRedeclaration": 13
+          }
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 1162,
+            "codes": {
+              "TS2307": 704,
+              "TS2416": 68,
+              "TS2304": 114,
+              "TS2314": 63,
+              "TS2305": 36,
+              "TS2344": 115,
+              "TS2430": 2,
+              "TS2426": 5,
+              "TS2300": 30,
+              "TS2694": 12,
+              "TS2420": 2,
+              "TS2611": 2,
+              "TS2724": 9
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 1163,
+            "codes": {
+              "TS2307": 705,
+              "TS2416": 68,
+              "TS2304": 114,
+              "TS2314": 63,
+              "TS2305": 36,
+              "TS2344": 115,
+              "TS2430": 2,
+              "TS2426": 5,
+              "TS2300": 30,
+              "TS2694": 12,
+              "TS2420": 2,
+              "TS2611": 2,
+              "TS2724": 9
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      },
+      {
+        "node": "26.2.0-fabric",
+        "pyright": {
+          "version": "1.1.414",
+          "exitCode": 1,
+          "summary": {
+            "filesAnalyzed": 263,
+            "errorCount": 13,
+            "warningCount": 0,
+            "informationCount": 0,
+            "timeInSec": 5.002
+          },
+          "stubCount": 263,
+          "rules": {
+            "reportRedeclaration": 13
+          }
+        },
+        "typescript": [
+          {
+            "side": "server",
+            "exitCode": 2,
+            "diagnosticCount": 917,
+            "codes": {
+              "TS2307": 519,
+              "TS2416": 61,
+              "TS2304": 143,
+              "TS2314": 81,
+              "TS2344": 18,
+              "TS2430": 2,
+              "TS2426": 4,
+              "TS2300": 28,
+              "TS2694": 12,
+              "TS2305": 35,
+              "TS2420": 1,
+              "TS2611": 1,
+              "TS2724": 12
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          },
+          {
+            "side": "startup",
+            "exitCode": 2,
+            "diagnosticCount": 918,
+            "codes": {
+              "TS2307": 520,
+              "TS2416": 61,
+              "TS2304": 143,
+              "TS2314": 81,
+              "TS2344": 18,
+              "TS2430": 2,
+              "TS2426": 4,
+              "TS2300": 28,
+              "TS2694": 12,
+              "TS2305": 35,
+              "TS2420": 1,
+              "TS2611": 1,
+              "TS2724": 12
+            },
+            "defaultEditorIncludes": true,
+            "skipLibCheck": false
+          }
+        ]
+      }
+    ]
+  },
+  "releaseApproved": false
+}

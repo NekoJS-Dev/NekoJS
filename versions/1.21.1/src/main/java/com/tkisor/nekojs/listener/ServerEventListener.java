@@ -16,7 +16,6 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.resource.ScriptPackDataManager;
-import com.tkisor.nekojs.villager.VillagerTradeManager;
 import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
 import net.minecraft.resources.ResourceLocation;
@@ -63,10 +62,6 @@ public class ServerEventListener {
         var server = event.getServer();
         activateWorldPacks(server);
         mountScriptPackData(server);
-        // 资源装载期（WorldStem 阶段 server 未就绪，TagsUpdated 刷出跳过）暂存的村民交易在此补刷。
-        if (VillagerTradeManager.pendingCount() > 0) {
-            VillagerTradeManager.apply(server);
-        }
         // 物品属性修改（票 39 收口）：初始 generation 的收集点——active 总线监听器产出声明，
         // domain owner preflight 通过后恢复基线并应用完整计划（不通过 → 整批 blocked 保持既有值；
         // 1.21.1 无 block 半边）。SERVER 事务 reload 的重放在 DOMAIN_PLAN 阶段联合应用。
@@ -74,10 +69,7 @@ public class ServerEventListener {
         // BlockBehaviour.Properties 修改面与该总线，本节点不触发（NeoForgeBlockEvents 同款
         // 口径），故无对应声明面——重新提取孪生文件时须保持这种缺席（提取产物若含 26.x
         // 专属符号会破坏本节点编译，见 baseline twin-reextract-audit）。
-        // 动态注册事件 facade 的初次候选（ticket 16，26.x 侧为带 >=26 守卫的
-        // DynamicRegistryFacade.fireInitialCollection()）：本节点无该包（DynamicRegistryJS/
-        // DynamicRegistries 同为 >=26 面），调用缺席；能力记 not verified，见 baseline REPORT
-        // 能力表。重新提取孪生文件时同样须保持缺席。
+        // Dynamic registration is unavailable on this node; source re-extraction must preserve that absence.
         com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner modificationDomain = modificationDomain();
         if (modificationDomain != null) {
             modificationDomain.applyInitialPlan(server);
@@ -135,7 +127,7 @@ public class ServerEventListener {
                 .activateWorldPacks(server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT));
         if (worldPacks.isEmpty()) return;
         try {
-            VillagerTradeManager.beginReload();
+
             runtimeRoot.reload(ScriptType.SERVER);
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("SERVER reload after world pack activation failed: ", e);
@@ -152,7 +144,7 @@ public class ServerEventListener {
         var removed = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().deactivateWorldPacks();
         // 脚本包 datapack 挂载与村民交易快照随服务器实例一起失效；重置以便下次挂载。
         ScriptPackDataManager.reset();
-        VillagerTradeManager.reset();
+
         com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner modificationDomain = modificationDomain();
         if (modificationDomain != null) {
             modificationDomain.clearServer();
@@ -181,7 +173,7 @@ public class ServerEventListener {
         }
         event.addListener((ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
         try {
-            VillagerTradeManager.beginReload();
+
             runtimeRoot.reload(ScriptType.SERVER);
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("Script overload failed: ", e);
@@ -191,21 +183,11 @@ public class ServerEventListener {
         postGenerateData();
     }
 
-    /**
-     * 村民交易刷出点：服务器资源 reload 完成、{@code this.resources} 已切换到新实例之后
-     * （{@code updateComponentsAndStaticRegistryTags} 阶段，服务器线程上）。此前流水线内
-     * {@code server.reloadableRegistries()} 仍指向旧注册表，故不能更早刷出。
-     * 服务器未就绪（首次 WorldStem 装载）时跳过，由 {@link #onServerAboutToStart} 补刷。
-     */
-    @SubscribeEvent
-    public static void onTagsUpdated(net.neoforged.neoforge.event.TagsUpdatedEvent event) {
-        if (event.getUpdateCause() != net.neoforged.neoforge.event.TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD) {
-            return;
-        }
-        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-        if (server != null) {
-            VillagerTradeManager.apply(server);
-        }
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
+    public static void onServerDataTagsUpdated(net.neoforged.neoforge.event.TagsUpdatedEvent event) {
+        if (event.getUpdateCause() != net.neoforged.neoforge.event.TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD) return;
+        var owner = villagerTradeDomain();
+        if (owner != null) owner.replayAfterResourceReload();
     }
 
     /**

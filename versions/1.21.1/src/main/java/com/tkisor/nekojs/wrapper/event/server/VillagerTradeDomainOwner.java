@@ -68,6 +68,9 @@ public final class VillagerTradeDomainOwner
     private long registryEpoch = -1L;
     private volatile MinecraftServer boundServer;
     private volatile VillagerTradeSetSnapshot committedSnapshot = VillagerTradeSetSnapshot.EMPTY;
+    private List<VillagerTradeDeclaration> committedDeclarations = List.of();
+    private final Set<VillagerTrades.ItemListing> injectedListings =
+            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
     private final VillagerTradeDomainState state = new VillagerTradeDomainState(adapterId(), true);
     private volatile Diagnostics lastDiagnostics = new Diagnostics(Outcome.INITIAL, "none", 0, 0, List.of(), null);
 
@@ -86,9 +89,50 @@ public final class VillagerTradeDomainOwner
 
     /** Drops the server binding and the pool baseline (a new server instance starts from vanilla). */
     public void clearServer() {
+        if (originalTrades != null) {
+            setStaticField(VillagerTrades.class, "TRADES", originalTrades);
+        }
+        if (originalWanderingTrades != null) {
+            setStaticField(VillagerTrades.class, "WANDERING_TRADER_TRADES", originalWanderingTrades);
+        }
         this.boundServer = null;
         this.originalTrades = null;
         this.originalWanderingTrades = null;
+        this.committedSnapshot = VillagerTradeSetSnapshot.EMPTY;
+        committedDeclarations = List.of();
+        injectedListings.clear();
+        state.reset();
+    }
+
+    /** Replays the accepted listings after NeoForge rebuilds its mutable pools at NORMAL priority. */
+    public void replayAfterResourceReload() {
+        if (boundServer == null || !state.hasCommittedRecords()) return;
+        originalTrades = copyPools(VillagerTrades.TRADES);
+        originalWanderingTrades = copyLevels(VillagerTrades.WANDERING_TRADER_TRADES);
+        registryEpoch++;
+        try {
+            preflight(committedDeclarations);
+            apply(committedDeclarations, Set.of());
+            state.refreshSnapshot(committedSnapshot);
+        } catch (RuntimeException | Error failure) {
+            state.invalidateSnapshot("trade-resource-replay-failed");
+            NekoJS.LOGGER.error("[NEKO-4041] Villager trade replay failed after resource reload; "
+                    + "committed snapshot is unavailable", failure);
+        }
+    }
+
+    private Map<VillagerProfession, Int2ObjectMap<VillagerTrades.ItemListing[]>> copyPools(
+            Map<VillagerProfession, Int2ObjectMap<VillagerTrades.ItemListing[]>> pools) {
+        var copy = new HashMap<VillagerProfession, Int2ObjectMap<VillagerTrades.ItemListing[]>>();
+        pools.forEach((profession, levels) -> copy.put(profession, copyLevels(levels)));
+        return copy;
+    }
+
+    private Int2ObjectMap<VillagerTrades.ItemListing[]> copyLevels(Int2ObjectMap<VillagerTrades.ItemListing[]> levels) {
+        var copy = new Int2ObjectOpenHashMap<VillagerTrades.ItemListing[]>();
+        levels.int2ObjectEntrySet().forEach(entry -> copy.put(entry.getIntKey(), java.util.Arrays.stream(entry.getValue())
+                .filter(listing -> !injectedListings.contains(listing)).toArray(VillagerTrades.ItemListing[]::new)));
+        return copy;
     }
 
     // ---- CandidateDomainCollector (DOMAIN_PLAN phase) ----
@@ -186,9 +230,9 @@ public final class VillagerTradeDomainOwner
                             "Unknown wandering trader pool: " + declaration.tradeSetId());
                 }
             } else {
-                VillagerProfession profession = BuiltInRegistries.VILLAGER_PROFESSION.get(target.professionId());
+                VillagerProfession profession = BuiltInRegistries.VILLAGER_PROFESSION.getOptional(target.professionId()).orElse(null);
                 if (profession == null) {
-                    throw new IllegalArgumentException("Unknown profession: " + declaration.tradeSetId());
+                    throw new IllegalArgumentException("[NEKO-4045] Unknown profession: " + declaration.tradeSetId());
                 }
                 Int2ObjectMap<VillagerTrades.ItemListing[]> levels = originalTrades.get(profession);
                 if (levels == null || levels.get(target.level()) == null) {
@@ -205,8 +249,7 @@ public final class VillagerTradeDomainOwner
 
     /**
      * Commit point: restore the captured vanilla pools, then append the whole declaration list
-     * to fresh copies. Vanilla listings are never removed — a declaration that disappeared just
-     * does not come back.
+     * to fresh copies. The shared plan retains omitted listings until explicitly retired.
      */
     @Override
     public void apply(List<VillagerTradeDeclaration> declarations, Set<String> obsoleteTradeSets) {
@@ -214,12 +257,13 @@ public final class VillagerTradeDomainOwner
         Map<String, Integer> appliedCounts = new LinkedHashMap<>();
         Map<VillagerProfession, List<VillagerTradeDeclaration>> byProfession = new LinkedHashMap<>();
         Int2ObjectMap<List<VillagerTradeDeclaration>> wandering = new Int2ObjectOpenHashMap<>();
+        var nextOwned = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<VillagerTrades.ItemListing, Boolean>());
         for (VillagerTradeDeclaration declaration : declarations) {
             Target target = targetOf(declaration.tradeSetId());
             if (target.wandering()) {
                 wandering.computeIfAbsent(target.level(), level -> new ArrayList<>()).add(declaration);
             } else {
-                VillagerProfession profession = BuiltInRegistries.VILLAGER_PROFESSION.get(target.professionId());
+                VillagerProfession profession = BuiltInRegistries.VILLAGER_PROFESSION.getOptional(target.professionId()).orElse(null);
                 if (profession == null) {
                     throw new IllegalStateException("profession vanished between preflight and apply: "
                             + declaration.tradeSetId());
@@ -228,11 +272,10 @@ public final class VillagerTradeDomainOwner
             }
         }
 
+        Map<VillagerProfession, Int2ObjectMap<VillagerTrades.ItemListing[]>> nextTrades = new HashMap<>(originalTrades);
         if (!byProfession.isEmpty()) {
-            Map<VillagerProfession, Int2ObjectMap<VillagerTrades.ItemListing[]>> next =
-                    new HashMap<>(originalTrades);
             for (Map.Entry<VillagerProfession, List<VillagerTradeDeclaration>> entry : byProfession.entrySet()) {
-                Int2ObjectMap<VillagerTrades.ItemListing[]> levels = next.get(entry.getKey());
+                Int2ObjectMap<VillagerTrades.ItemListing[]> levels = nextTrades.get(entry.getKey());
                 if (levels == null) {
                     throw new IllegalStateException("profession has no trade pools: " + entry.getKey());
                 }
@@ -240,31 +283,52 @@ public final class VillagerTradeDomainOwner
                 for (VillagerTradeDeclaration declaration : entry.getValue()) {
                     int level = targetOf(declaration.tradeSetId()).level();
                     VillagerTrades.ItemListing[] base = nextLevels.get(level);
-                    nextLevels.put(level, append(base, buildListing(declaration)));
+                    var listing = buildListing(declaration);
+                    nextOwned.add(listing);
+                    nextLevels.put(level, append(base, listing));
                     appliedCounts.merge(declaration.tradeSetId(), 1, Integer::sum);
                 }
-                next.put(entry.getKey(), nextLevels);
+                nextTrades.put(entry.getKey(), nextLevels);
             }
-            setStaticField(VillagerTrades.class, "TRADES", Map.copyOf(next));
         }
 
+        Int2ObjectMap<VillagerTrades.ItemListing[]> nextWandering = new Int2ObjectOpenHashMap<>(originalWanderingTrades);
         if (!wandering.isEmpty()) {
-            Int2ObjectMap<VillagerTrades.ItemListing[]> next = new Int2ObjectOpenHashMap<>(originalWanderingTrades);
             for (Int2ObjectMap.Entry<List<VillagerTradeDeclaration>> entry : wandering.int2ObjectEntrySet()) {
-                VillagerTrades.ItemListing[] base = next.get(entry.getIntKey());
+                VillagerTrades.ItemListing[] base = nextWandering.get(entry.getIntKey());
                 if (base == null) {
                     throw new IllegalStateException("wandering trader has no level " + entry.getIntKey() + " pool");
                 }
                 VillagerTrades.ItemListing[] extended = base;
                 for (VillagerTradeDeclaration declaration : entry.getValue()) {
-                    extended = append(extended, buildListing(declaration));
+                    var listing = buildListing(declaration);
+                    nextOwned.add(listing);
+                    extended = append(extended, listing);
                     appliedCounts.merge(declaration.tradeSetId(), 1, Integer::sum);
                 }
-                next.put(entry.getIntKey(), extended);
+                nextWandering.put(entry.getIntKey(), extended);
             }
-            setStaticField(VillagerTrades.class, "WANDERING_TRADER_TRADES", next);
         }
 
+        var tradesBefore = VillagerTrades.TRADES;
+        var wanderingBefore = VillagerTrades.WANDERING_TRADER_TRADES;
+        try {
+            // NeoForge rebuilds these pools in place when tags are updated.
+            setStaticField(VillagerTrades.class, "TRADES", nextTrades);
+            setStaticField(VillagerTrades.class, "WANDERING_TRADER_TRADES", nextWandering);
+        } catch (RuntimeException | Error failure) {
+            try {
+                setStaticField(VillagerTrades.class, "TRADES", tradesBefore);
+                setStaticField(VillagerTrades.class, "WANDERING_TRADER_TRADES", wanderingBefore);
+            } catch (RuntimeException | Error rollbackFailure) {
+                failure.addSuppressed(rollbackFailure);
+                state.invalidateSnapshot("trade-rollback-failed");
+            }
+            throw failure;
+        }
+        injectedListings.clear();
+        injectedListings.addAll(nextOwned);
+        committedDeclarations = List.copyOf(declarations);
         committedSnapshot = VillagerTradeSetSnapshot.of(registryEpoch, appliedCounts);
         if (!obsoleteTradeSets.isEmpty()) {
             NekoJS.LOGGER.info("VillagerTrades: {} pool(s) explicitly released by script declaration",
@@ -279,11 +343,11 @@ public final class VillagerTradeDomainOwner
 
     private void snapshotOriginals() {
         if (originalTrades == null) {
-            originalTrades = VillagerTrades.TRADES;
+            originalTrades = copyPools(VillagerTrades.TRADES);
             registryEpoch = Math.max(registryEpoch, 0L) + 1L;
         }
         if (originalWanderingTrades == null) {
-            originalWanderingTrades = VillagerTrades.WANDERING_TRADER_TRADES;
+            originalWanderingTrades = copyLevels(VillagerTrades.WANDERING_TRADER_TRADES);
         }
     }
 
@@ -414,6 +478,8 @@ public final class VillagerTradeDomainOwner
             originalWanderingTrades = null;
             registryEpoch = -1L;
             committedSnapshot = VillagerTradeSetSnapshot.EMPTY;
+            committedDeclarations = List.of();
+            injectedListings.clear();
             boundServer = null;
             state.reset();
             com.tkisor.nekojs.core.villager.VillagerTradesFacade.uninstall(state);
@@ -447,7 +513,8 @@ public final class VillagerTradeDomainOwner
             sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
             unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
         } catch (Exception e) {
-            NekoJS.LOGGER.warn("VillagerTrades: failed to replace static field {}.{}", owner.getSimpleName(), name, e);
+            throw new IllegalStateException("[NEKO-4046] Villager trade pool replacement failed: "
+                    + owner.getSimpleName() + "." + name, e);
         }
     }
 }

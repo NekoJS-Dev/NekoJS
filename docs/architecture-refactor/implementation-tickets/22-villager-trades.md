@@ -4,9 +4,9 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** in-progress（Fabric unavailable 已验；1.21.1 两个旧 Script 入口已获追认，剩余旧路径删除与 legacy 实机缺口未闭合）
+**Status:** closed（2026-10-16：三个 NeoForge 节点真实交易池生命周期通过；精确批准范围旧入口、Manager 与钩子已删除）
 
-**Assignee:** zed-flash-22（main-session agent；deepseek-v4.1-flash subagent worktree）
+**Assignee:** main-session agent（codex/architecture-closeout；历史认领记录保留）
 
 **Claim record (2026-09-21):** worktree `../NekoJS-mult-t22` on branch `ticket-22-villager-trades`（基于 `d0974573`）。预计改动范围：`ServerEvents`新增 trade 子事件（收集阶段）、新增 domain collector + Adapter（归属 `NekoRuntimeRoot`的 SERVER 事务 reload）、generation/stale 只读 query、catalog/golden、TS/Python declaration、capability/source-trace、fixture 与 examples/MIGRATION。不消费/不修改 26/27/29 等其他域文件。
 
@@ -20,6 +20,14 @@
 **Work items:**
 
 - W7
+
+## 2026-10-16 收口记录
+
+维护者于 2026-10-15 明确批准精确范围，条件为验证通过后删除。26.x add/pendingCount、两套旧 Manager 和 listener/command hooks 已移除；query/describe producer 保留。三个 NeoForge 官方 JAR 完成真实池声明、遗漏保留、原版 reload、显式 obsolete、无效批次拒绝与重新声明；两个 Fabric 的 unavailable 边界沿用既有独立负例。
+
+修复遗漏声明仅查询保留、物理池却被重建丢失的问题；owner 保存已接受的物化声明并在资源重载后重放。26.x 两个注册表写入失败恢复索引、holder tags 与基线。1.21.1 使用可变池并在 NeoForge NORMAL 重建后于 LOWEST 重放；未知职业以 getOptional 验证，避免默认职业回退。
+
+完整命令、源码与 JAR 摘要、失败历史和边界见[本轮报告](../evidence/2026-10-15-domain-closeout/REPORT.md)。本地领域票关闭不代表票 28/37 或正式发布验收通过。以下带日期记录保留当时状态，由本节更新当前结论。
 
 ## Acceptance criteria
 
@@ -41,12 +49,12 @@
       证据：实现面无 packet/网络代码（common 域类型 + Adapter + binding）；`MIGRATION.md` §7 明示边界 → REPORT §3 AC8。
 - [x] Fabric Villager Trades 的 unavailable 通过 capability/source-trace/smoke 显式验证为明确拒绝或不可用，不用无错误 no-op 冒充；NeoForge 节点 supported/partial 只按实际测试证据记录。
       2026-10-07 补验：两个 Fabric 节点 `Ticket22VillagerTradeEventSurfaceTest` 的实际 owner collect/preflight 明确拒绝、未发布断言通过。官方 26.2 Fabric 制品的 declaration-only SERVER 脚本在 STATE_PLAN 以 `VillagerTradeUnavailableException` 拒绝，未到 Done（预期负例，不算 boot 成功）；去掉不可用声明后独立启动到 Done，再经 RCON 正常 stop。P4 capability 矩阵已有 VillagerTrades U 行，不需要把票25 query golden 扩成全域矩阵。NeoForge26.2 实际 farmer Offers 包含脚本 emerald→5 apples/12 uses/xp2；legacy 静态池实机与全节点 offer parity 仍未验证。见 `evidence/ticket37-autonomous-closeout/{ACTUAL-OFFER.md,fabric-declaration-rejection.txt,VERIFICATION.md}`。
-- [ ] 旧 VillagerTradesJS 静态 add/pendingCount、全局 Manager 暂存和直连 registry surgery 只能在事件+Adapter+query parity、迁移表、旧 route 无消费者和维护者确认后删除；删除后不保留长期兼容 shim。
-      **不勾选（其余门禁未完成）**：canonical NeoForge26.x 旧 add/pendingCount、两个节点旧 Manager 及 listener/command hooks 仍在，尚无删除批准；1.21.1 `VillagerTradesJS#add(String, Object)` / `#pendingCount()` 已移除，维护者已明确选择「追认仅1.21.1已发生的移除」。该追认不扩大到 26.x 入口、Managers/hooks 或 query producer，也不替代 legacy 静态池实机验证。替代路径 parity、迁移表与既有消费者清单见下方 sign-off 项及 `baseline/2026-09-21-villager-trades/MIGRATION.md` §2/§3/§5、`REPORT.md` §7；确认原文及边界见 [公开迁移记录](../evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md#已取得的维护者结论主会话原文)。
+- [x] 旧 VillagerTradesJS 静态 add/pendingCount、全局 Manager 暂存和直连 registry surgery 只能在事件+Adapter+query parity、迁移表、旧 route 无消费者和维护者确认后删除；删除后不保留长期兼容 shim。【2026-10-16：维护者于 2026-10-15 明确批准精确范围，条件为验证通过后删除。26.x add/pendingCount、两套旧 Manager 和 listener/command hooks 已移除；query/describe producer 保留。三个 NeoForge 官方 JAR 完成真实池声明、遗漏保留、原版 reload、显式 obsolete、无效批次拒绝与重新声明；两个 Fabric 的 unavailable 边界沿用既有独立负例。】
+      证据：[精确切换与五节点验收报告](../evidence/2026-10-15-domain-closeout/REPORT.md)；旧阶段的未批准清单保留在下方历史记录，不代表当前状态。
 - [x] 随实现交付 add/query、generation/stale 查询与 Fabric 明确不可用的最小可运行示例和必要迁移材料；示例只使用已通过 gate 的节点能力。
       证据：`baseline/2026-09-21-villager-trades/examples/villager-trades-add-and-query.js`、`examples/villager-trades-unavailable-fabric.js`、`MIGRATION.md`；**注**：示例为源码级、未经真机执行（REPORT §6 G2）→ REPORT §3 AC11。
 
-## 维护者 sign-off 项（AC10 门禁，1.21.1 入口已追认，其余待确认）
+## 历史 sign-off 待办清单（已由 2026-10-15 精确批准和本轮验证取代）
 
 当前 canonical NeoForge26.x 的旧 Script 入口、两个节点旧 Manager 及 listener/command hooks 仍保留；1.21.1 两个 Script 入口已移除。维护者在主会话选择「追认仅1.21.1已发生的移除」，仅确认 `VillagerTradesJS#add(String, Object)` / `#pendingCount()` 的既有移除，不批准其余删除。逐项替代与消费者记录见
 `baseline/2026-09-21-villager-trades/MIGRATION.md` §2/§3/§5 与同目录 `REPORT.md` §7：

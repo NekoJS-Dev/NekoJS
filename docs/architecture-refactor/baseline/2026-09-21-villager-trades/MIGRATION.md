@@ -1,11 +1,12 @@
 # Villager Trades 迁移材料（ticket 22）
 
+> **2026-10-16 当前切换结果**：26.x add/pendingCount、两套旧 Manager 与 listener/command hooks 已在精确批准和五节点适用验证后删除。只保留事件声明和 query/describe。三个 NeoForge 实际交易池完成遗漏保留、原版 reload、显式 obsolete、无效候选拒绝与重新声明；Fabric 仍 unavailable。 验证与批准边界见[本轮报告](../../evidence/2026-10-15-domain-closeout/REPORT.md)。下文带历史 revision 的消费者与旧删除门禁记录保留当时事实，由本段更新当前状态。
+
 > 面向脚本作者与 Java 侧消费者：Villager Trades 从「静态 binding + 静态 pending 队列 + reload
 > 末端直接反射改 registry」收口到「既有 ServerEvents 数据/reload 子事件 → root 持有的 domain
 > collector → 合法 commit 点由平台/版本 Adapter 执行 registry mutation → generation/stale 绑定的
 > 只读 query」。
 >
-> **当前确认补充**：两条 Script 写入路径只在 canonical NeoForge 26.x 并存；1.21.1 的 `VillagerTradesJS` 已只有 query/describe，add/pendingCount 已移除。维护者主会话明确选择「追认仅1.21.1已发生的移除」，仅覆盖这两个入口的既有移除，不批准 26.x 入口、两个节点旧 Manager/listener/command hooks 或 query producer 删除。legacy 静态池实机与其余删除条件仍未闭合。
 > 本文历史清单以当时 revision 为准；最新消费者核对与真实确认见 [公开迁移记录](../../evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md#已取得的维护者结论主会话原文)。
 
 ## 1. 入口与能力（当前快照）
@@ -15,8 +16,8 @@
 | 交易声明（新，推荐） | `ServerEvents.tradeDeclaration(event => event.add('<tradeSet>', { ... }))` | server 脚本；事件在「服务器启动收集点」与 `SERVER` reload 的 `DOMAIN_PLAN` 阶段被 post；收集期只产出 inert 计划，注册表 mutation 只在合法 commit 点由 Adapter 执行 |
 | reload 子事件（新） | `ServerEvents.tradeReload(event => event.declareObsolete('<tradeSet>'))` | 显式释放某个 trade set（commit 点恢复 NekoJS 基线）；**普通 reload 不物理删除**只是不再声明的交易，它们进 `unrestoredListingKeys` |
 | 只读查询（新） | `VillagerTrades.query()` | 返回只读快照：`status`(`ACTIVE`/`STALE`)、`generation`、`adapterId`、`total`、`tradeSetIds`、`countOf(id)`、`unrestoredListingKeys`、`retiredListingKeys`、`statusReason`、`describe()`；绑定调用方 generation，旧 generation 得到确定性空值 |
-| 旧静态 add | `VillagerTrades.add('<tradeSet>', { cost, costB?, result, maxUses?, xp?, priceMultiplier? })` | **保持原样**：暂存进 `VillagerTradeManager` 的进程级 `PENDING`，reload 收尾时反射改注册表；删除需维护者 sign-off（AC10） |
-| 旧计数 | `VillagerTrades.pendingCount()` | **保持原样**（旧暂存队列的计数）；同属 AC10 的删除项 |
+| 旧静态 add | `VillagerTrades.add('<tradeSet>', { cost, costB?, result, maxUses?, xp?, priceMultiplier? })` | **已删除**：迁移到 `ServerEvents.tradeDeclaration`；不再有全局 pending 队列 |
+| 旧计数 | `VillagerTrades.pendingCount()` | **已删除**：使用 generation-bound `VillagerTrades.query()` 查询已提交声明 |
 | 第一版**不提供** | — | `remove` / `replace` / `modify` 不在公开面、golden、declaration、示例或能力承诺中；也不定义 server/client 同步协议 |
 
 配置形状（新路径，与旧路径逐字一致，便于迁移）：`{ cost: '1x minecraft:emerald', costB: '2x minecraft:apple'(可选), result: '5x minecraft:apple', maxUses: 12, xp: 2, priceMultiplier: 0.05 }`；
@@ -31,7 +32,7 @@ trade set id 形状（节点差异，旧新路径一致）：
 
 ## 2. 旧静态路径 → 新路径对照
 
-| 环节 | 旧路径（仍在） | 新路径（本票） |
+| 环节 | 旧路径（已删除，迁移对照） | 新路径（本票） |
 |---|---|---|
 | 声明入口 | `VillagerTradesJS#add`（`bindings/static_access`，静态 binding） | `ServerEvents.tradeDeclaration`（既有事件组的子事件；payload = `VillagerTradeDeclarationEventJS`，SERVER、posted-object、非 cancel/非 dispatch） |
 | 收集时机 | 脚本执行期即时入队（`VillagerTradeManager.stageAdd`） | 候选 `DOMAIN_PLAN`（`CandidateDomainCollector#collect`）/ 服务器启动收集点；收集期**零 live registry 副作用** |
@@ -57,7 +58,7 @@ trade set id 形状（节点差异，旧新路径一致）：
 仓库内**没有测试**断言旧静态路径（`src/test`、`common/src/test` 内无 `VillagerTrades` 命中），
 也没有其它域引用其类型；旧路径的删除面因此是「5 个 Java 文件 + 1 个 wiki 段落 + 用户脚本」。
 
-## 4. 两条路径并存与混用边界（**同一 trade set 不可混用**）
+## 4. 历史两条路径并存与混用边界（**同一 trade set 不可混用**）
 
 新路径按「NekoJS 持有基线 → 恢复基线 → 应用完整新计划」重写它触碰的 trade set；旧路径按自己的
 `HOLDER_SNAPSHOTS`/`ORIGINALS`（vanilla 基线，首次触碰时捕获）重写它触碰的 trade set。两者对
@@ -68,9 +69,9 @@ trade set id 形状（节点差异，旧新路径一致）：
 - 本票**不引入**合并/去重政策，也不把旧路径改写成新路径的兼容 shim（那会让「不保留长期兼容
   双路径」这条验收项失去意义）。
 
-## 5. 删除条件（维护者 sign-off 门禁，AC10 不勾选）
+## 5. 历史删除条件（已由页首批准与验证完成）
 
-删除旧公开路径需要同时满足（本票已备 1–4，5 待维护者）：
+删除旧公开路径需要同时满足以下条件；2026-10-16 已完成，历史准备记录保留：
 
 1. **替代路径 parity**：`ServerEvents.tradeDeclaration` / `tradeReload` / `VillagerTrades.query()` 已交付；
    26.x 与 1.21.1 的 Adapter 由节点测试真跑（见 REPORT §3/§6 与 `command-output/`）。
@@ -80,12 +81,9 @@ trade set id 形状（节点差异，旧新路径一致）：
 4. **旧 route 无消费者证据**：§3 的清单——仓库内唯一的消费者是旧 binding 自身、两个 listener、
    两个 command 入口与一个 wiki 段落；无测试、无其它域依赖。
 5. **维护者确认**：删除是公开面 breaking（`VillagerTrades.add` / `pendingCount` 与
-   `VillagerTradeManager` 全部静态符号），需要维护者知情/追认。**本票不执行删除**，也不勾选 AC10。
+   `VillagerTradeManager` 全部静态符号），需要维护者知情/追认。本轮已取得精确批准并验证删除，AC10 已勾选。
 
-如后续取得对应精确批准，删除时只移除两个节点旧 Manager 及其 listener/command hooks、canonical26.x 的
-`VillagerTradesJS.add/pendingCount` 和仅服务旧路由的解析代码；这些剩余删除当前未批准。1.21.1 Script methods 的既有移除已获 A22 范围明确的追认，不扩大其余删除面。**保留 `VillagerTradesPlugin` binding 注册与 query/describe**；它不是纯旧路径。
-其 TypeDoc 已改为 declaration event/query 示例。wiki 的旧推荐示例已切到新事件路径，仍标明26.x
-暂留方法与 legacy/Fabric 差异。不因历史计数假定现有调用恰好只有5处；删除前重查所有消费者。
+本轮只删除页首列出的旧路由，保留 `VillagerTradesPlugin` binding 注册和 query/describe。消费者已迁移；无用户数据或 wire 变化。旧节点差异快照保留在下节，不代表当前仍有旧 Manager。
 
 ## 6. 接口/声明追溯
 

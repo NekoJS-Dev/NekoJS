@@ -78,7 +78,7 @@ class NativeEventsLegacyTierCharacterizationTest {
                 NekoScriptCatalog.bindings(new RuntimeWithNativeEvents(), ScriptType.STARTUP),
                 NekoScriptCatalog.events(new RuntimeWithNativeEvents()),
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), null, Map.of(), List.of());
+                List.of(), List.of(), List.of(), null, Map.of(), List.of());
         List<ApiSymbol> legacySurface = LegacySurfaceAdapter.convert(minimal);
 
         assertTrue(legacySurface.stream()

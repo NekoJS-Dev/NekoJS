@@ -115,7 +115,7 @@ public final class VillagerTradeCandidatePlan implements CandidateStatePlan {
         if (failure != null) {
             throw new IllegalStateException("villager trade collection failed: " + failure, collectionError);
         }
-        applier.preflight(declarations());
+        applier.preflight(state.effectiveDeclarations(this));
     }
 
     @Override
@@ -123,7 +123,7 @@ public final class VillagerTradeCandidatePlan implements CandidateStatePlan {
         if (published) {
             throw new IllegalStateException("villager trade plan already published");
         }
-        applier.apply(declarations(), Set.copyOf(obsoleteTradeSets));
+        applier.apply(state.effectiveDeclarations(this), Set.copyOf(obsoleteTradeSets));
         published = true;
         state.noteCommitted(this, applier.committedSnapshot());
     }

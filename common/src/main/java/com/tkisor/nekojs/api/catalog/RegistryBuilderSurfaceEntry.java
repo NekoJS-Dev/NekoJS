@@ -20,6 +20,7 @@ import java.util.List;
  * @param members        contract members in name order; each method overload has its own entry
  * @param description    描述（probe 文档用）
  * @param eventPayload   optional declaration-only event association; never grants host lookup access
+ * @param nestedBuilders callback-only helper surfaces derived from the same host contracts; not registry factories
  */
 public record RegistryBuilderSurfaceEntry(
         String builderName,
@@ -28,7 +29,15 @@ public record RegistryBuilderSurfaceEntry(
         String sugarName,
         List<Member> members,
         String description,
-        EventPayload eventPayload) {
+        EventPayload eventPayload,
+        List<RegistryBuilderSurfaceEntry> nestedBuilders) {
+
+    /** Preserves the catalog shape for contributors without nested callback builders. */
+    public RegistryBuilderSurfaceEntry(String builderName, String registryKey, String typeName,
+                                       String sugarName, List<Member> members, String description,
+                                       EventPayload eventPayload) {
+        this(builderName, registryKey, typeName, sugarName, members, description, eventPayload, List.of());
+    }
 
     public RegistryBuilderSurfaceEntry(String builderName, String registryKey, String typeName,
                                        String sugarName, List<Member> members, String description) {
@@ -37,6 +46,7 @@ public record RegistryBuilderSurfaceEntry(
 
     public RegistryBuilderSurfaceEntry {
         members = List.copyOf(members == null ? List.of() : members);
+        nestedBuilders = List.copyOf(nestedBuilders == null ? List.of() : nestedBuilders);
     }
 
     /** 成员种类：可写属性（setter 双形态）/ 只读属性 / 方法（含显式 setter）。 */

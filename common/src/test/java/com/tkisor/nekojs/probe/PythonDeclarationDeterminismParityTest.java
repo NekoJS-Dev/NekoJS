@@ -134,7 +134,7 @@ class PythonDeclarationDeterminismParityTest {
         return new NekoScriptCatalogSnapshot(
                 ScriptType.all(),
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
                 new com.tkisor.nekojs.api.catalog.TypeOutputLayout(Path.of("probe-types"), Path.of("snippets")),
                 Map.of(), List.of());
     }

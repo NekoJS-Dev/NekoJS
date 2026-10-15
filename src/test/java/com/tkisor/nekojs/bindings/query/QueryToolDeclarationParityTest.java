@@ -109,7 +109,7 @@ class QueryToolDeclarationParityTest {
         NekoScriptCatalogSnapshot snapshot = new NekoScriptCatalogSnapshot(
                 List.of(ScriptType.values()),
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
                 new TypeOutputLayout(Path.of("probe-types"), Path.of("snippets")),
                 Map.of(), List.of());
         ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(

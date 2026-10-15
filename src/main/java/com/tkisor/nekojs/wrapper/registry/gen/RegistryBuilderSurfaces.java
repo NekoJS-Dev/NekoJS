@@ -22,8 +22,7 @@ import net.minecraft.resources.ResourceKey;
  * runtime member（{@link BuilderSurface}）、definition fingerprint、TS/Python
  * declaration 与 contract/golden 全部同源，不手写第二份成员表。
  *
- * <p>未声明 builder 类的第三方类型不产生派生条目（其糖方法仍可用；声明面继续由
- * legacy 手写 manual declaration 观察，直到删除 gate 裁定）。
+ * <p>Addon factories without builder class metadata keep untyped event overloads.
  */
 public final class RegistryBuilderSurfaces {
 
@@ -32,11 +31,27 @@ public final class RegistryBuilderSurfaces {
     /** 把 {@code registry_types} 产物派生成结构化契约条目（确定性排序：注册表键 → 类型名）。 */
     public static List<RegistryBuilderSurfaceEntry> derive(RegistryTypesPoint.RegistryTypes types) {
         List<RegistryBuilderSurfaceEntry> entries = new ArrayList<>();
+        var classes = types.builderClasses().values().stream().flatMap(named -> named.values().stream())
+                .distinct().sorted(Comparator.comparing(Class::getName)).toList();
+        var names = new java.util.HashMap<Class<?>, String>();
+        var used = new java.util.HashSet<String>();
+        classes.forEach(type -> used.add(type.getSimpleName()));
+        used.add("FoodBuilder");
+        for (var type : classes) {
+            String name = type.getSimpleName();
+            if (name.equals("FoodBuilder") || classes.stream().anyMatch(other -> other != type
+                    && other.getSimpleName().equals(type.getSimpleName()))) {
+                name = "RegistryBuilder_" + java.util.HexFormat.of().formatHex(
+                        type.getName().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                while (!used.add(name)) name += "_";
+            }
+            names.put(type, name);
+        }
         types.builderClasses().keySet().stream()
                 .sorted(Comparator.comparing(key -> key.identifier().toString()))
                 .forEach(registry -> types.builderClassesOf(registry).forEach((typeName, builderClass) -> {
                     String defaultTypeName = types.defaults().get(registry);
-                    entries.add(entryOf(registry, typeName, builderClass,
+                    entries.add(entryOf(registry, typeName, builderClass, names.get(builderClass),
                             typeName.equals(defaultTypeName) ? sugarOf(registry) : null));
                 }));
         return List.copyOf(entries);
@@ -53,13 +68,13 @@ public final class RegistryBuilderSurfaces {
         List<RegistryBuilderSurfaceEntry> entries = derive(types);
         var payload = StartupRegistryEventSurface.derive(infos, types, entries);
         entries.stream().map(entry -> new RegistryBuilderSurfaceEntry(entry.builderName(), entry.registryKey(),
-                entry.typeName(), entry.sugarName(), entry.members(), entry.description(), payload))
+                entry.typeName(), entry.sugarName(), entry.members(), entry.description(), payload, entry.nestedBuilders()))
                 .forEach(registry::registerRegistryBuilderSurface);
     }
 
     private static RegistryBuilderSurfaceEntry entryOf(
             ResourceKey<? extends Registry<?>> registryKey, String typeName,
-            Class<? extends RegistryObjectBuilder<?>> builderClass, String sugarName) {
+            Class<? extends RegistryObjectBuilder<?>> builderClass, String builderName, String sugarName) {
         RegistryBuilderContract contract = RegistryBuilderContract.of(builderClass);
         List<RegistryBuilderSurfaceEntry.Member> members = new ArrayList<>();
         for (RegistryBuilderContract.Member member : contract.members()) {
@@ -81,13 +96,36 @@ public final class RegistryBuilderSurfaces {
             }
         }
         return new RegistryBuilderSurfaceEntry(
-                builderClass.getSimpleName(),
+                builderName,
                 registryKey.identifier().toString(),
                 typeName,
                 sugarName,
                 members,
                 "Startup registry builder for '" + registryKey.identifier() + "' (type '" + typeName
-                        + "'); derived from contract reflection, property writes and explicit setters hit the same setter.");
+                        + "'); derived from contract reflection, property writes and explicit setters hit the same setter.",
+                null, nestedBuilders(builderClass));
+    }
+
+    private static List<RegistryBuilderSurfaceEntry> nestedBuilders(Class<?> builderClass) {
+        boolean hasFoodCallback = Arrays.stream(builderClass.getMethods())
+                .flatMap(method -> Arrays.stream(method.getGenericParameterTypes()))
+                .anyMatch(parameter -> parameter instanceof java.lang.reflect.ParameterizedType callback
+                        && callback.getRawType() == java.util.function.Consumer.class
+                        && callback.getActualTypeArguments()[0] == com.tkisor.nekojs.wrapper.registry.FoodBuilderJS.class);
+        if (!hasFoodCallback) {
+            return List.of();
+        }
+        Class<?> food = com.tkisor.nekojs.wrapper.registry.FoodBuilderJS.class;
+        var members = Arrays.stream(food.getMethods())
+                .filter(method -> method.getDeclaringClass() == food
+                        && !method.isAnnotationPresent(com.tkisor.nekojs.api.annotation.HideFromJS.class))
+                .sorted(Comparator.comparing(Method::getName).thenComparing(Method::toGenericString))
+                .map(method -> new RegistryBuilderSurfaceEntry.Member(method.getName(),
+                        RegistryBuilderSurfaceEntry.MemberKind.METHOD, tsSignature(method), pySignature(method)))
+                .distinct()
+                .toList();
+        return List.of(new RegistryBuilderSurfaceEntry("FoodBuilder", "", food.getName(), null, members,
+                "Nested food configuration derived from the callback's public host methods."));
     }
 
     /** 糖方法名（与 RegistryEventJS 的 bySugar 派生同规则：path snake_case → lowerCamelCase）。 */
@@ -127,13 +165,21 @@ public final class RegistryBuilderSurfaces {
 
     private static String tsParamShape(Parameter param) {
         Class<?> type = param.getType();
+        if (type == net.minecraft.resources.Identifier.class) {
+            return ": string";
+        }
         if (java.util.function.Consumer.class.isAssignableFrom(type)) {
+            if (param.getParameterizedType() instanceof java.lang.reflect.ParameterizedType callback
+                    && callback.getActualTypeArguments()[0] == com.tkisor.nekojs.wrapper.registry.FoodBuilderJS.class) {
+                return ": (build: FoodBuilder) => void";
+            }
             return ": (b: any) => void";
         }
         if (type.isArray()) {
             return ": " + RegistryBuilderContract.tsTypeOf(type.getComponentType()) + "[]";
         }
-        return ": " + RegistryBuilderContract.tsTypeOf(param.getParameterizedType());
+        return ": " + RegistryBuilderContract.tsTypeOf(param.getParameterizedType())
+                + (param.isAnnotationPresent(com.tkisor.nekojs.api.annotation.ScriptNullable.class) ? " | null" : "");
     }
 
     /** Renders the Python signature from the same reflected overload as TypeScript. */
@@ -158,13 +204,21 @@ public final class RegistryBuilderSurfaces {
 
     private static String pyParamShape(Parameter param) {
         Class<?> type = param.getType();
+        if (type == net.minecraft.resources.Identifier.class) {
+            return ": str";
+        }
         if (java.util.function.Consumer.class.isAssignableFrom(type)) {
+            if (param.getParameterizedType() instanceof java.lang.reflect.ParameterizedType callback
+                    && callback.getActualTypeArguments()[0] == com.tkisor.nekojs.wrapper.registry.FoodBuilderJS.class) {
+                return ": Callable[[FoodBuilder], None]";
+            }
             return ": Callable[[Any], None]";
         }
         if (type.isArray()) {
             return ": list[" + RegistryBuilderContract.pyTypeOf(type.getComponentType()) + "]";
         }
-        return ": " + RegistryBuilderContract.pyTypeOf(param.getParameterizedType());
+        return ": " + RegistryBuilderContract.pyTypeOf(param.getParameterizedType())
+                + (param.isAnnotationPresent(com.tkisor.nekojs.api.annotation.ScriptNullable.class) ? " | None" : "");
     }
 
     private static String paramName(Parameter param, int index) {

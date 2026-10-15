@@ -104,11 +104,12 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
     // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点（ticket 15） ----
 
     /** 显示名（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    @com.tkisor.nekojs.api.annotation.ScriptNullable
     public String getDisplayName() {
         return displayName;
     }
 
-    public void setDisplayName(String displayName) {
+    public void setDisplayName(@com.tkisor.nekojs.api.annotation.ScriptNullable String displayName) {
         this.displayName = displayName == null || displayName.isBlank() ? null : displayName;
     }
 

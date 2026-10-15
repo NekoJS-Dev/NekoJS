@@ -4,9 +4,9 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** in-progress（2026-10-07 重核：历史实现交付保留；完整声明替代、实机缺口与公开删除门禁未闭合）
+**Status:** closed（2026-10-16：契约声明替代、五节点实机及精确批准范围删除已完成；完整 IDE 验收归票 37）
 
-**Assignee:** zcode-agent
+**Assignee:** main-session agent（codex/architecture-closeout；历史认领记录保留）
 
 **Optional:** false
 
@@ -19,6 +19,14 @@
 **Work items:**
 
 - W6
+
+## 2026-10-16 收口记录
+
+维护者于 2026-10-15 明确批准精确范围，条件为验证通过后删除。手写 producer 和 14 参数 ctor 已移除，内部消费者迁移；保留 15/16 参数 ctor、custom/Supplier 与事件 sugar。五节点官方 JAR 的启动回调、注册、嵌套指纹、放置及 Probe 已通过。
+
+补齐 FoodBuilder 回调、nullable 成员与计算类型名 fallback；双语言生成由真实元数据和契约反射驱动。普通 golden 测试先报告差异，经逐项审阅后更新两份 startup golden。新增 Food effect 字符串 overload 修复实际 Graal 参数转换失败。
+
+完整命令、源码与 JAR 摘要、失败历史和边界见[本轮报告](../evidence/2026-10-15-domain-closeout/REPORT.md)。本地领域票关闭不代表票 28/37 或正式发布验收通过。以下带日期记录保留当时状态，由本节更新当前结论。
 
 ## Acceptance criteria
 
@@ -34,7 +42,7 @@
 - [x] 成功、失败、重复、类型冲突、连带注册缺失和 drain 失败测试都从 RegistryEvents 调用者 Interface 贯穿到节点 Adapter 的可观察注册结果，测试输出包含定义、注册表、节点和错误来源，不依赖私有仓库字段。【E2E 9 用例经生产同款 EventGroupJS + 真实 Graal；结果读 DrainResult / 公开 live view，无私有字段】
 - [x] 五节点 source trace、artifact 检查和按各节点既定支持等级与声明能力的最小 runtime smoke 证明声明、实现与能力一致；差异显式记录，不自动补 Fabric parity，也不把 experimental 节点当作 primary 回归。【五节点 build 主会话合并门全绿（26.2.0/26.2.0-fabric 补齐）；fabric 无 FluidBuilder 为显式子集（unknown-registry 错误进 DrainResult.errors，审查 F7）；1.21.1 真实差异只剩六 builder 无 tag、painting 无 author/title 两项】
 - [x] 本票不把 Dynamic Registry 指向启动期 drain 路径，也不在服务器运行期修改 live registry；两个生命周期在契约、测试和迁移表中保持分离。【dynamic/ 零 diff；契约/测试/迁移表三处分离口径一致】
-- [ ] 旧类型化启动入口、手写 declaration、重复 type catalog 或不受测兼容 wrapper 只能在替代路径 parity、旧 route 无消费者、迁移表覆盖所有公开写法并获得维护者删除确认后删除；本票不保留长期双路径。【不勾选：维护者删除确认是门禁（Human input note）；替代 parity + 旧 route 消费者清单（REPORT §6）+ 迁移表已交付，待 sign-off】
+- [x] 旧类型化启动入口、手写 declaration、重复 type catalog 或不受测兼容 wrapper 只能在替代路径 parity、旧 route 无消费者、迁移表覆盖所有公开写法并获得维护者删除确认后删除；本票不保留长期双路径。【2026-10-16：维护者于 2026-10-15 明确批准精确范围，条件为验证通过后删除。手写 producer 和 14 参数 ctor 已移除，内部消费者迁移；保留 15/16 参数 ctor、custom/Supplier 与事件 sugar。五节点官方 JAR 的启动回调、注册、嵌套指纹、放置及 Probe 已通过。】
 
 - [x] 参照 PR 37 的收集与冻结边界补负例：Builder 配置 callback 抛错不得留可被 drain 的半成品，finish 后底层收集容器的变化不得修改已发布快照；只读 live view 不冒充冻结结果，任意 Supplier 的内部可变状态不被误称为深不可变。【callback 抛错不留半成品（先配置后入库）/快照不可变 + 后到声明进下一轮/live view 防御副本/Supplier 可变状态不称深不可变——4 用例全过】
 

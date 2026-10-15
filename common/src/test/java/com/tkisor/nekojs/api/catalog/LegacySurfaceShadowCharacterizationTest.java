@@ -71,7 +71,7 @@ class LegacySurfaceShadowCharacterizationTest {
         NekoScriptCatalogSnapshot snapshot = new NekoScriptCatalogSnapshot(
                 ScriptType.all(),
                 List.of(BindingCatalogEntry.of(MANAGED_NAME, ScriptType.SERVER, LegacyApiStub.class, true)),
-                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
                 List.of(),
                 new TypeOutputLayout(Path.of("probe-types"), Path.of("snippets")),
                 Map.of(ScriptType.SERVER, managed),
@@ -128,7 +128,7 @@ class LegacySurfaceShadowCharacterizationTest {
                 List.of(new AdapterCatalogEntry(LegacyApiStub.class,
                         List.of(com.tkisor.nekojs.api.AdapterInputShape.self()),
                         com.tkisor.nekojs.api.data.ConversionPrecedence.LOWEST, null)),
-                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
                 new TypeOutputLayout(Path.of("probe-types"), Path.of("snippets")),
                 Map.of(), List.of());
         List<ApiSymbol> legacy = LegacySurfaceAdapter.convert(legacyOnly);

@@ -4,7 +4,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-07：按维护者授权自主补技术验收与本地交接；公开删除确认、最终策略和正式发布授权不代答）
+**Status:** in-progress（2026-10-16：A15/A16/A22 精确删除已批准并验证；完整 IDE、客户端首帧、确切候选性能与回滚验收仍开放）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 
@@ -35,7 +35,13 @@
 
 ## Current handoff record
 
-The current local checklist is [ticket37handoffstatus](../evidence/2026-10-06-ticket37-handoff/README.md), extended by the [autonomoustechnicalcloseoutplan](../evidence/ticket37-autonomous-closeout/WORKPLAN.md). Ticket36maintaineracceptance, legacyitemsmoke andticket48proof are completed inputs, not current blockers. [Currentperformanceindex](../evidence/ticket37-current-perf/README.md)preservesallhistoricalfailedgroups. [1btwohotspot/1026byteparity pack](../evidence/ticket37-reload-optimization/README.md)and[complete1bconfirmations](../evidence/ticket37-reload-confirmation/README.md)remain sourcebound, not futureartifactcertificates. Latest[defaultProxyrepair](../evidence/ticket16-default-proxy-declarations/README.md)hasexactb7five-node4534test/271skip/0failure manifest. [Exactb7candidatevalidation](../evidence/ticket37-b7-candidate-validation/README.md)now recordsstartup27091.4msPASS/reload320.6/327.2msFAIL (combinedNOTGREEN), actualofficial26.2installedMobEffectentityapplication/reload anddefaultProbeoutput; wholelivePythonAST4syntaxFAIL remainsopen. Neither subgroupPASS nor oldticket35PASS waivescurrentfailures. MaintainerboundedA22/A28approvals are in[publicmigrations](../evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md#已取得的维护者结论主会话原文), not blanketdeletion/releaseapproval. Remainingexactartifactallnode/client/firstframe/domainwindows andfinalrelease/rollbackpolicy stay separate; technicalpreparation isnotreleaseauthorization.
+当前交接沿用[本地清单](../evidence/2026-10-06-ticket37-handoff/README.md)和[技术收尾计划](../evidence/ticket37-autonomous-closeout/WORKPLAN.md)。票 36 维护者试做与票 48 JSX proof 是已完成输入。
+
+2026-10-15 A15/A16/A22 的精确范围已获维护者明确批准；替代、消费者迁移和五节点官方 JAR 实机通过后删除，见[领域切换报告](../evidence/2026-10-15-domain-closeout/REPORT.md)。A28 既有精确追认继续有效，不重复申请。该批准不包含正式发布和最终回滚政策。
+
+[当前性能索引](../evidence/ticket37-current-perf/README.md)中的 e473 源码组 startup 17718.2 ms、reload 214.4/228.4 ms 均通过；b7 的 320.6/327.2 ms 失败组保留为历史记录。e473 结果不证明本轮改动后的候选性能。本轮五节点安装包的 Python stub AST 全通过；完整默认严格 TSC/Pyright 的结果与诊断另列于领域报告，不以定向类型测试通过替代。历史 Python 语法失败已由后续修复取代，但原始失败证据保留。
+
+跨进程动态同步、票 28 多节点客户端首帧、完整 IDE、确切候选性能、release rollback/data rollback 和最终发布/回滚策略仍按各自 gate 核验；领域服务器验收不外推为发布通过。
 
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)
 - [PR 37 维护体验回归约束规格](../specs/00-pr37-maintainer-research.md)

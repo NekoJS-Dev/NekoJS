@@ -189,6 +189,27 @@ class DynamicRegistryActivationFacadeTest {
     }
 
     @Test
+    void removingEveryDeclarationStillActivatesTheRetirementBatch() throws Exception {
+        adapter = new RecordingAdapter();
+        transport = new RecordingTransport();
+        try (FacadeTestHarness harness = new FacadeTestHarness(ScriptType.SERVER)) {
+            bind(harness);
+            harness.writeScript("main.js", "DynamicRegistryEvents.dynamicRegistry(event => event.item('test:retained', build => {}));");
+            harness.manager.discoverScripts();
+            harness.manager.loadScripts();
+            harness.facade.collectInitial("initial");
+            harness.writeScript("main.js", "// No dynamic declarations in this generation.\n");
+            harness.manager.reloadScripts();
+            harness.facade.pumpActivation();
+            assertEquals(2, adapter.activateCalls.size());
+            assertTrue(adapter.activateCalls.getLast().isEmpty());
+            assertEquals(2, harness.facade.activationEngine().activatedGeneration());
+            assertEquals(List.of("test:retained"), harness.facade.store().staleIds(DynamicDefinitionType.ITEM));
+            assertTrue(adapter.live.containsKey("minecraft:item|test:retained"));
+        }
+    }
+
+    @Test
     void sameKeyChangedDefinitionFailsReloadAndOldActiveKeepsServing() throws Exception {
         adapter = new RecordingAdapter();
         transport = new RecordingTransport();

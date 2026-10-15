@@ -117,6 +117,25 @@ public final class DynamicRegistrationBookkeeping {
         }
     }
 
+    /** Immutable claim values; a candidate cannot carry executable rollback callbacks. */
+    public record Claim(String id, String owner, DynamicRegisterMode mode, boolean stale) {}
+
+    /** Captures claim values before owner-thread activation mutates the backend ledger. */
+    public synchronized List<Claim> checkpoint() {
+        return entries.values().stream()
+                .map(entry -> new Claim(entry.id, entry.ownerScriptId, entry.mode, entry.stale)).toList();
+    }
+
+    /** Restores a checkpoint without retaining mutable Entry instances from the failed attempt. */
+    public synchronized void restore(List<Claim> saved) {
+        entries.clear();
+        for (Claim claim : saved) {
+            Entry entry = new Entry(registry, claim.id(), claim.owner(), claim.mode());
+            entry.stale = claim.stale();
+            entries.put(entry.id, entry);
+        }
+    }
+
     /** Drops a claim entirely (used by the world-leave cleanup path). */
     public synchronized void remove(String id) {
         entries.remove(id);

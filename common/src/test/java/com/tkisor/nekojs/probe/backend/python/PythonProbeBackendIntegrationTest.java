@@ -880,7 +880,7 @@ class PythonProbeBackendIntegrationTest {
                                                           List<String> modIds) {
         return new NekoScriptCatalogSnapshot(
                 List.of(), bindings, events, adapters, List.of(), List.of(), List.of(),
-                List.of(), List.of(), registries, modIds, null, Map.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), registries, modIds, null, Map.of(), List.of());
     }
 
     private static ProbeBackend.GenerateResult runGenerate(Path temp, NekoScriptCatalogSnapshot snapshot,
@@ -897,7 +897,7 @@ class PythonProbeBackendIntegrationTest {
     private static NekoScriptCatalogSnapshot emptySnapshot() {
         return new NekoScriptCatalogSnapshot(
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
     }
 
     private static int countOccurrences(String haystack, String needle) {

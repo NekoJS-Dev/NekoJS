@@ -338,7 +338,7 @@ class ProbeCoordinatorHardeningTest {
     private static NekoScriptCatalogSnapshot emptySnapshot() {
         return new NekoScriptCatalogSnapshot(
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
     }
 
     private static NekoScriptCatalogSnapshot snapshotWithBinding(Class<?> javaType) {
@@ -346,6 +346,6 @@ class ProbeCoordinatorHardeningTest {
                 List.of(),
                 List.of(BindingCatalogEntry.of("Host", ScriptType.SERVER, javaType, false)),
                 List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(), null, new LinkedHashMap<>(), List.of());
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null, new LinkedHashMap<>(), List.of());
     }
 }

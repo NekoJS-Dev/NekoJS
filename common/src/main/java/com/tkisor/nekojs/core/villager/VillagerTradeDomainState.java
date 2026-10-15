@@ -32,6 +32,7 @@ public final class VillagerTradeDomainState {
     private VillagerTradeSetSnapshot committedSnapshot = VillagerTradeSetSnapshot.EMPTY;
     private final List<String> unrestoredKeys = new ArrayList<>();
     private final Set<String> retiredKeys = new LinkedHashSet<>();
+    private final Map<String, VillagerTradeDeclaration> retainedDeclarations = new LinkedHashMap<>();
 
     public VillagerTradeDomainState(String adapterId, boolean available) {
         this.adapterId = adapterId;
@@ -62,12 +63,34 @@ public final class VillagerTradeDomainState {
         return committedSnapshot;
     }
 
+    private String snapshotFailure;
+
+    /** Refreshes the resource epoch without publishing another script generation. */
+    public synchronized void refreshSnapshot(VillagerTradeSetSnapshot snapshot) {
+        this.committedSnapshot = VillagerTradeSetSnapshot.of(snapshot.registryEpoch(), committedSnapshot.countsByTradeSet());
+        this.snapshotFailure = null;
+    }
+
+    /** Materializes current declarations plus omitted listings that were not explicitly retired. */
+    public synchronized List<VillagerTradeDeclaration> effectiveDeclarations(VillagerTradeCandidatePlan plan) {
+        var effective = new LinkedHashMap<>(retainedDeclarations);
+        effective.values().removeIf(declaration -> plan.obsoleteTradeSets().contains(declaration.tradeSetId()));
+        plan.declarations().forEach(declaration -> effective.put(declaration.key(), declaration));
+        return List.copyOf(effective.values());
+    }
+
+    /** Prevents a failed registry replay from being reported as an active query result. */
+    public synchronized void invalidateSnapshot(String reason) {
+        this.snapshotFailure = reason;
+    }
+
     /**
      * Commit bookkeeping: advances the domain generation and records which previously declared
      * listings the new generation does not declare any more (they stay active in the registry
      * and are reported as unrestored) plus which listings the batch retired explicitly.
      */
     public synchronized void noteCommitted(VillagerTradeCandidatePlan plan, VillagerTradeSetSnapshot snapshot) {
+        List<VillagerTradeDeclaration> effective = effectiveDeclarations(plan);
         Map<String, List<String>> declared = plan.declaredKeysByTradeSet();
         Set<String> declaredKeys = new LinkedHashSet<>();
         declared.values().forEach(declaredKeys::addAll);
@@ -88,7 +111,7 @@ public final class VillagerTradeDomainState {
                 retiredKeys.remove(key); // re-declared: active again
             }
         }
-        for (String key : previouslyDeclared) {
+        for (String key : retainedDeclarations.keySet()) {
             if (!declaredKeys.contains(key) && obsoleteSets.contains(tradeSetOf(key))) {
                 retiredKeys.add(key);
                 stillUnrestored.remove(key);
@@ -96,7 +119,12 @@ public final class VillagerTradeDomainState {
         }
 
         this.committedGeneration++;
-        this.committedSnapshot = snapshot;
+        Map<String, Integer> declaredCounts = new LinkedHashMap<>();
+        plan.declarations().forEach(declaration -> declaredCounts.merge(declaration.tradeSetId(), 1, Integer::sum));
+        this.committedSnapshot = VillagerTradeSetSnapshot.of(snapshot.registryEpoch(), declaredCounts);
+        retainedDeclarations.clear();
+        effective.forEach(declaration -> retainedDeclarations.put(declaration.key(), declaration));
+        this.snapshotFailure = null;
         this.acceptedDeclaredKeys.clear();
         this.acceptedDeclaredKeys.addAll(declaredKeys);
         this.unrestoredKeys.clear();
@@ -120,6 +148,9 @@ public final class VillagerTradeDomainState {
             return VillagerTradeQuerySurface.stale("node-unavailable:" + adapterId, generation);
         }
         synchronized (this) {
+            if (snapshotFailure != null) {
+                return VillagerTradeQuerySurface.stale(snapshotFailure, generation);
+            }
             if (committedGeneration == 0L) {
                 return VillagerTradeQuerySurface.stale("no-commit-yet", generation);
             }
@@ -140,9 +171,11 @@ public final class VillagerTradeDomainState {
     public synchronized void reset() {
         committedGeneration = 0L;
         committedSnapshot = VillagerTradeSetSnapshot.EMPTY;
+        snapshotFailure = null;
         acceptedDeclaredKeys.clear();
         unrestoredKeys.clear();
         retiredKeys.clear();
+        retainedDeclarations.clear();
     }
 
     /** Diagnostic copy of the current records (no live collections leave this object). */

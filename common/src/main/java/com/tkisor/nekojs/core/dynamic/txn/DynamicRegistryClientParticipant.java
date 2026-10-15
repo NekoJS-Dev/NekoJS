@@ -70,6 +70,11 @@ public final class DynamicRegistryClientParticipant {
         if (conflict != null) {
             return reject("conflict:" + conflict);
         }
+        try {
+            adapter.prepareActivation(adapterRequests(message));
+        } catch (Throwable failure) {
+            return reject("prepare-failed:" + failure.getMessage());
+        }
         staged = message;
         event("prepare-staged:" + message.generation() + " entries=" + message.entries().size());
         return new PrepareDecision(true, null);
@@ -101,8 +106,7 @@ public final class DynamicRegistryClientParticipant {
         } catch (Throwable e) {
             staged = null;
             event("activation-failed:" + message.generation() + " " + e.getMessage());
-            return notActivated(message.generation(), "activation-failed:"
-                    + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+            return notActivated(message.generation(), "activation-failed:" + failureDetail(e));
         }
         activatedGeneration = staged.generation();
         staged = null;
@@ -135,11 +139,11 @@ public final class DynamicRegistryClientParticipant {
         }
         if (message.generation() > activatedGeneration) {
             try {
+                adapter.prepareActivation(adapterRequests(message));
                 activateStaged(message);
             } catch (Throwable e) {
                 event("state-sync-failed:" + message.generation() + " " + e.getMessage());
-                return reject("activation-failed:"
-                        + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+                return reject("activation-failed:" + failureDetail(e));
             }
             activatedGeneration = message.generation();
             event("state-sync-activated:" + activatedGeneration);
@@ -171,7 +175,10 @@ public final class DynamicRegistryClientParticipant {
         return staged == null ? -1L : staged.generation();
     }
 
-    /** This node's activated definition ledger (its own conflict-detection view). */
+    /**
+     * This node's physical exposure ledger for conflict detection. Full-state wire messages
+     * include retained entries without a stale flag; server claim retirement remains authoritative.
+     */
     public DynamicRegistryPlanStore ledger() {
         return ledger;
     }
@@ -183,17 +190,39 @@ public final class DynamicRegistryClientParticipant {
 
     // ---- internals ----
 
-    private void activateStaged(DynamicSyncMessage message) {
-        List<DynamicAdapterRequest> requests = new ArrayList<>();
+    private void activateStaged(DynamicSyncMessage message) throws Throwable {
+        List<DynamicAdapterRequest> requests = adapterRequests(message);
         DynamicCandidateRegistryPlan plan = ledger.beginBatch();
         for (DynamicSyncMessage.Entry entry : message.entries()) {
             plan.stageExistingDefinition(entry.definition(), entry.ownerScriptId());
-            requests.add(new DynamicAdapterRequest(
-                    entry.definition(), message.generation(), entry.ownerScriptId()));
         }
         plan.preflight();
-        adapter.activate(requests);
+        try {
+            adapter.activate(requests);
+        } catch (Throwable failure) {
+            try {
+                adapter.rollbackActivation(requests);
+            } catch (Throwable rollbackFailure) {
+                failure.addSuppressed(rollbackFailure);
+                event("rollback-failed:" + message.generation() + " " + rollbackFailure.getMessage());
+            }
+            throw failure;
+        }
         plan.publish();
+    }
+
+    private static List<DynamicAdapterRequest> adapterRequests(DynamicSyncMessage message) {
+        return message.entries().stream().map(entry -> new DynamicAdapterRequest(
+                entry.definition(), message.generation(), entry.ownerScriptId())).toList();
+    }
+
+    private static String failureDetail(Throwable failure) {
+        String detail = failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage();
+        for (Throwable rollbackFailure : failure.getSuppressed()) {
+            detail += "; rollback also failed: " + (rollbackFailure.getMessage() == null
+                    ? rollbackFailure.getClass().getSimpleName() : rollbackFailure.getMessage());
+        }
+        return detail;
     }
 
     /** First key whose fingerprint differs from this node's ledger, or null when consistent. */

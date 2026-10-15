@@ -103,7 +103,7 @@ class TypeScriptInterfaceBindingTest {
     private static Map<String, String> render(TypeScriptProbeBackend backend, List<BindingCatalogEntry> bindings,
                                              Path directory, TypeDecl declaration) {
         var snapshot = new NekoScriptCatalogSnapshot(List.of(), bindings, List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
         var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("com.tkisor.nekojs.probe"), List.of(), List.of(), List.of(), 5, "SMART"));
         var context = new ProbeContext.Of(snapshot, List.of(EmptyApi.class), config, NekoJSPaths.fromGameDir(directory),

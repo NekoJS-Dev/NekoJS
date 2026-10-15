@@ -47,8 +47,8 @@ public interface VillagerTradeApplier {
     void preflight(List<VillagerTradeDeclaration> declarations);
 
     /**
-     * Commit: restore baselines, drop the previously injected entries and every trade set in
-     * {@code obsoleteTradeSets}, then apply the complete declaration list.
+     * Commit the materialized listing set, including omitted listings retained by the domain state.
+     * Explicit obsolete sets release their older listings; current declarations can claim them again.
      */
     void apply(List<VillagerTradeDeclaration> declarations, Set<String> obsoleteTradeSets);
 

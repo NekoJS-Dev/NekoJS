@@ -178,7 +178,7 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
             if (candidate.generation() <= lastStagedPlanGeneration) {
                 continue; // already staged (or superseded by a newer staged batch)
             }
-            if (!candidate.adapterRequests().isEmpty()) {
+            if (!candidate.adapterRequests().isEmpty() || !store.isEmpty()) {
                 engine.stage(candidate, targetState());
             }
             lastStagedPlanGeneration = candidate.generation();

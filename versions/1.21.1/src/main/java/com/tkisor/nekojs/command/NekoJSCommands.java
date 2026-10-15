@@ -350,10 +350,6 @@ public final class NekoJSCommands {
             if (type == ScriptType.CLIENT && com.tkisor.nekojs.client.ClientReloadExecutor.isClientDist()) {
                 return scheduleClientReload(source, type, root, null);
             }
-            if (type == ScriptType.SERVER) {
-                // 清空上一轮 stage 的村民交易，防止 reload 重复累积
-                com.tkisor.nekojs.villager.VillagerTradeManager.beginReload();
-            }
             reloadResult = root.reload(type);
             // SERVER 脚本 reload 后重新应用配方脚本（NeoForge 配方热重载）
             boolean recipeBroadcast = false;
@@ -362,9 +358,6 @@ public final class NekoJSCommands {
                     recipeBroadcast = applyRecipeScripts(source);
                     // The SERVER generation is committed before platform-owned follow-up runs.
                     MinecraftServer server = source.getServer();
-                    if (com.tkisor.nekojs.villager.VillagerTradeManager.pendingCount() > 0) {
-                        com.tkisor.nekojs.villager.VillagerTradeManager.apply(server);
-                    }
                     var packs = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().enabledPacks();
                     if (com.tkisor.nekojs.resource.ScriptPackDataManager.hasDataPacks(packs)
                             && com.tkisor.nekojs.resource.ScriptPackDataManager.activateForServer(server, packs)) {

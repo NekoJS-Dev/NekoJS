@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.objects.Reference2IntMap;
 import net.minecraft.core.Holder;
 import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.RegistrationInfo;
+import net.minecraft.core.component.DataComponentInitializers;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 
@@ -143,6 +144,20 @@ public final class RegistrySurgery {
      */
     public static void clearHolderTags(Holder.Reference<?> holder) {
         set(holder, "tags", Set.of());
+    }
+
+    static List<?> checkpointInitializers(DataComponentInitializers initializers) {
+        return List.copyOf((List<?>) get(initializers, "initializers"));
+    }
+
+    /** Removes only initializers added by the failed attempt for its newly registered items. */
+    static void rollbackInitializers(DataComponentInitializers initializers, List<?> checkpoint,
+                                     Set<? extends ResourceKey<?>> keys) {
+        if (keys.isEmpty()) return;
+        var retained = java.util.Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
+        retained.addAll(checkpoint);
+        ((List<?>) get(initializers, "initializers")).removeIf(entry ->
+                !retained.contains(entry) && keys.contains(get(entry, "key")));
     }
 
     /**

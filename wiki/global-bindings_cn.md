@@ -305,7 +305,7 @@ console.info(VillagerTrades.query().describe())
 
 农民等职业 id 为 `minecraft:<职业>/level_1..5`。流浪商人 id 有版本差异：26.x 使用 `minecraft:wandering_trader/buying` 等 trade-set key；1.21.1 使用 `minecraft:wandering_trader/level_1|level_2`（别名 `buying|common`→1、`uncommon|rare`→2）。Adapter 在 preflight 校验目标。query 只读且绑定 generation；过期/不可用原因通过 `statusReason` 明确返回。
 
-普通遗漏记为 unrestored；`ServerEvents.tradeReload(event => event.declareObsolete(id))` 显式 retire 某交易集。同一交易集不可混用旧新写入路径。旧 `VillagerTrades.add/pendingCount` 仅 canonical NeoForge 26.x 暂留，等待迁移确认；**1.21.1 已只有 query/describe**。Fabric 无 `VillagerTrades` global，非空交易声明会明确拒绝。
+普通遗漏记为 unrestored；`ServerEvents.tradeReload(event => event.declareObsolete(id))` 显式 retire 交易集。NeoForge 的 `VillagerTrades` 仅提供 query/describe，写入统一通过声明事件。旧 add/pendingCount 和暂存 Manager 已移除。Fabric 无 `VillagerTrades` global，非空交易声明会明确拒绝。
 
 <a id="wiki-section-22"></a>
 ### `EntitySelectors`

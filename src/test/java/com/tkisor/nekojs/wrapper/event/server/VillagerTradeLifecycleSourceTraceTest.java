@@ -16,6 +16,17 @@ class VillagerTradeLifecycleSourceTraceTest {
         assertLifecycleWiring(read("versions/1.21.1/src/main/java/com/tkisor/nekojs/listener/ServerEventListener.java"));
     }
 
+    @Test
+    void resourceReloadReplaysThroughTheRootOwnerWithoutLegacyStagingHooks() throws Exception {
+        String modern = read("src/main/java/com/tkisor/nekojs/listener/ServerEventListener.java");
+        String classic = read("versions/1.21.1/src/main/java/com/tkisor/nekojs/listener/ServerEventListener.java");
+        assertTrue(modern.contains("owner.replayAfterResourceReload()"));
+        assertTrue(!modern.contains("VillagerTradeManager") && !classic.contains("VillagerTradeManager"));
+        assertTrue(classic.contains("owner.replayAfterResourceReload()"));
+        assertTrue(classic.contains("EventPriority.LOWEST"), "replay must follow NeoForge's pool rebuild");
+        assertTrue(classic.contains("UpdateCause.SERVER_DATA_LOAD"), "client tag packets must not rewrite server pools");
+    }
+
     private static String read(String relativePath) throws Exception {
         Path directory = Path.of("").toAbsolutePath();
         while (directory != null) {

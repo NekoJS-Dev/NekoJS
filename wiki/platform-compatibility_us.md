@@ -38,7 +38,7 @@ Fabric nodes already cover script loading, recipes, networking, probe, some regi
 | `ClientEvents.generateAssets` / `lang` | Supported | Not yet ported |
 | `Fluid`, `FluidIngredient`, `FluidBuilder` | Supported | Not yet ported |
 | `Capabilities` / `CapabilityEvents` | Standard and third-party native capabilities for ordinary blocks, block entities, entities, and items; preserves each scope's context | Real Lookup integration is registered; items/fluids use Fabric Transfer, energy uses NekoJS's own interface, and custom typed Lookups are supported |
-| `VillagerTrades.add` | Supported | Currently unavailable; calls are rejected with an unavailable reason |
+| `ServerEvents.tradeDeclaration` / `VillagerTrades.query` | Supported | Nonempty declarations are rejected; query binding is unavailable |
 | `PostEffects` | Supported | Not yet ported |
 | JEI recipe viewer events | Supported (requires JEI) | Not yet ported |
 | 26.x enchantment registration builder | Unavailable | Unavailable |

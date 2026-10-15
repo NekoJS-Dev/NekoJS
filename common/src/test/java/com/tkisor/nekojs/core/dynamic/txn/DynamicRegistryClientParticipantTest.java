@@ -128,16 +128,59 @@ class DynamicRegistryClientParticipantTest {
     }
 
     @Test
+    void adapterPreflightRejectsPrepareBeforeAcknowledgementOrStaging() {
+        adapter.prepareRejection = new IllegalStateException("node cannot activate this batch");
+        var decision = client.onPrepare(singleItemPrepare(1, "mymod:ruby", 16));
+        assertFalse(decision.accepted());
+        assertTrue(decision.reason().startsWith("prepare-failed:"));
+        assertEquals(-1, client.stagedGeneration());
+        assertTrue(adapter.activateCalls.isEmpty());
+        assertTrue(adapter.live.isEmpty());
+        assertFalse(client.onCommit(DynamicSyncMessage.commit(1)).activated());
+    }
+
+    @Test
     void adapterActivationFailureIsAnExplicitDegradedResult() {
         adapter.activateFailure = new IllegalStateException("registry is frozen");
+        adapter.mutatePartiallyBeforeFailure = true;
         client.onPrepare(singleItemPrepare(1, "mymod:ruby", 16));
 
         DynamicRegistryClientParticipant.ActivationResult result = client.onCommit(DynamicSyncMessage.commit(1));
         assertFalse(result.activated());
+        assertEquals(1, adapter.rollbackCalls.size());
+        assertTrue(adapter.live.isEmpty(), "a rejected commit must not retain partial registry writes");
         assertTrue(result.outcome().startsWith("activation-failed:"),
                 "the failure is an explicit outcome: " + result.outcome());
         assertEquals(-1L, client.activatedGeneration());
         assertEquals(-1L, client.stagedGeneration(), "the failed staged prepare is discarded");
+    }
+
+    @Test
+    void rollbackFailureRemainsVisibleInTheCommitOutcome() {
+        adapter.activateFailure = new IllegalStateException("activation rejected");
+        adapter.rollbackFailure = new IllegalStateException("registry restoration rejected");
+        client.onPrepare(singleItemPrepare(1, "mymod:ruby", 16));
+        var result = client.onCommit(DynamicSyncMessage.commit(1));
+        assertFalse(result.activated());
+        assertTrue(result.outcome().contains("rollback also failed: registry restoration rejected"), result.outcome());
+        assertTrue(client.ledger().isEmpty());
+        assertEquals(-1, client.activatedGeneration());
+    }
+
+    @Test
+    void failedCatchUpRollsBackPartialWritesAndKeepsTheActivatedLedger() {
+        client.onPrepare(singleItemPrepare(1, "mymod:ruby", 16));
+        client.onCommit(DynamicSyncMessage.commit(1));
+        var before = new java.util.LinkedHashMap<>(adapter.live);
+        adapter.activateFailure = new IllegalStateException("catch-up activation failed");
+        adapter.mutatePartiallyBeforeFailure = true;
+        var message = DynamicSyncMessage.stateSync(2, List.of(new DynamicSyncMessage.Entry(
+                RecordingTxnSupport.item("mymod:sapphire", 16, "common"), "server_scripts/entry.js")));
+        assertFalse(client.onStateSync(message).accepted());
+        assertEquals(before, adapter.live);
+        assertEquals(1, client.activatedGeneration());
+        assertEquals(1, adapter.rollbackCalls.size());
+        assertNull(client.ledger().exposedEntry("minecraft:item|mymod:sapphire"));
     }
 
     @Test

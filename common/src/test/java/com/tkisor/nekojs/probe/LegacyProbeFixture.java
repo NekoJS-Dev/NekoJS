@@ -111,7 +111,7 @@ final class LegacyProbeFixture {
                 List.of(),
                 List.of(snippet),
                 List.of(),
-                List.of(manualDecl),
+                List.of(manualDecl), List.of(), List.of(),
                 List.of(registryType),
                 // mod 表（othermod 没往注册表注册任何东西，仍应出现在命名空间联合里）
                 List.of("othermod", "testcraft"),

@@ -22,28 +22,24 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Static runtime-registry state for the {@code DynamicRegistry} binding (B1:
- * sound events + mob effects; B2: items).
+ * Registry storage shared by the dynamic activation adapters and component replay.
  *
- * <p>Lifetime model (v1, honest):
+ * <p>Lifetime model:
  * <ul>
  *   <li>Entries are registered on first use while a server is running and are
  *       <b>never unregistered mid-session</b> — not by {@code /nekojs reload}
  *       (stale-retain) and not by mode. Real unregistration corrupts numeric ids
  *       and saved stacks (Katton's finding), so both {@link DynamicRegisterMode}
  *       variants currently differ in bookkeeping only.</li>
- *   <li>{@link #beginServerReload()} runs when SERVER scripts start (re)loading
- *       (binding close, i.e. the same blessed reload hook NativeEventsJS uses).
- *       All claims become stale; scripts that re-run re-claim by id.</li>
+ *   <li>Successful activation marks omitted claims stale and reclaims the accepted batch.
+ *       A rejected candidate or a released script generation never retires claims.</li>
  *   <li>{@link #clearWorldRegistrations()} performs the WORLD-mode unregister
  *       surgery for the future world-leave cleanup. Nothing calls it in this
  *       batch on purpose — wiring it to a lifecycle event is a later batch.</li>
  * </ul>
  *
- * <p>Client note: on a dedicated/integrated server the entries exist server-side
- * only. Singleplayer works because both sides share the JVM registries; on a
- * multiplayer client the remote server's dynamic entries are NOT synced (future
- * work) — clients must run the same scripts locally.
+ * <p>Multiplayer activation is coordinated by the prepare/ack/commit protocol; clients use
+ * the same storage through their activation adapter. No script binding mutates it directly.
  */
 public final class DynamicRegistries {
 
@@ -122,6 +118,21 @@ public final class DynamicRegistries {
         ITEMS.bookkeeping().beginReload();
     }
 
+    /** Publishes claim retirement only after the complete activation batch succeeds, including an empty batch. */
+    static void publishActivationClaims(List<com.tkisor.nekojs.core.dynamic.plan.DynamicAdapterRequest> requests) {
+        beginServerReload();
+        for (var request : requests) {
+            DynamicRegistrationBookkeeping claims = switch (request.registryKey()) {
+                case "minecraft:item" -> ITEMS.bookkeeping();
+                case "minecraft:sound_event" -> SOUND_EVENTS.bookkeeping();
+                case "minecraft:mob_effect" -> MOB_EFFECTS.bookkeeping();
+                default -> throw new AssertionError("[NEKO-4040] Activation claim publication rejected: unsupported registry "
+                        + request.registryKey());
+            };
+            claims.claim(request.id(), request.ownerScriptId(), request.mode());
+        }
+    }
+
     /**
      * Future world-leave cleanup (WORLD mode only). Implemented and unit-tested
      * down to the surgery call, but deliberately not wired to any lifecycle
@@ -140,19 +151,40 @@ public final class DynamicRegistries {
      * attempt merely re-claimed keep serving — they were legitimately registered by an
      * earlier batch. Must be called on the transaction owner thread.
      */
-    static void rollbackEntries(Map<String, List<Identifier>> newlyRegisteredByRegistryKey) {
+    static void rollbackEntries(Map<String, List<Identifier>> newlyRegisteredByRegistryKey, List<?> initializerCheckpoint) {
+        RuntimeException failure = null;
         for (Map.Entry<String, List<Identifier>> entry : newlyRegisteredByRegistryKey.entrySet()) {
-            switch (entry.getKey()) {
-                case "minecraft:item" -> {
-                    ITEMS.unregisterTrusted(entry.getValue());
-                    entry.getValue().forEach(id -> ITEM_SPECS.remove(id.toString()));
+            try {
+                switch (entry.getKey()) {
+                    case "minecraft:item" -> {
+                        ITEMS.unregisterTrusted(entry.getValue());
+                        entry.getValue().forEach(id -> ITEM_SPECS.remove(id.toString()));
+                    }
+                    case "minecraft:sound_event" -> SOUND_EVENTS.unregisterTrusted(entry.getValue());
+                    case "minecraft:mob_effect" -> MOB_EFFECTS.unregisterTrusted(entry.getValue());
+                    default -> NekoJS.LOGGER.warn(
+                            "DynamicRegistry rollback asked for an unknown registry key '{}'; {} id(s) left untouched",
+                            entry.getKey(), entry.getValue().size());
                 }
-                case "minecraft:sound_event" -> SOUND_EVENTS.unregisterTrusted(entry.getValue());
-                case "minecraft:mob_effect" -> MOB_EFFECTS.unregisterTrusted(entry.getValue());
-                default -> NekoJS.LOGGER.warn(
-                        "DynamicRegistry rollback asked for an unknown registry key '{}'; {} id(s) left untouched",
-                        entry.getKey(), entry.getValue().size());
+            } catch (RuntimeException rejected) {
+                if (failure == null) {
+                    failure = rejected;
+                } else {
+                    failure.addSuppressed(rejected);
+                }
             }
+        }
+        try {
+            var itemKeys = newlyRegisteredByRegistryKey.getOrDefault("minecraft:item", List.of()).stream()
+                    .map(id -> net.minecraft.resources.ResourceKey.create(Registries.ITEM, id))
+                    .collect(java.util.stream.Collectors.toSet());
+            RegistrySurgery.rollbackInitializers(BuiltInRegistries.DATA_COMPONENT_INITIALIZERS, initializerCheckpoint, itemKeys);
+        } catch (RuntimeException rejected) {
+            if (failure == null) failure = rejected;
+            else failure.addSuppressed(rejected);
+        }
+        if (failure != null) {
+            throw failure;
         }
     }
 

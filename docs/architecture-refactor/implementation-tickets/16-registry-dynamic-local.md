@@ -4,9 +4,9 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** in-progress（2026-10-07 重核：inert实现历史交付保留；公开删除与声明精度/实机窗口未闭合）
+**Status:** closed（2026-10-16：本地候选、精确声明替代和旧入口删除完成；多人激活能力仍由独立同步 gate 决定）
 
-**Assignee:** zcode-agent
+**Assignee:** main-session agent（codex/architecture-closeout；历史认领记录保留）
 
 **Optional:** false
 
@@ -18,6 +18,14 @@
 **Work items:**
 
 - W6
+
+## 2026-10-16 收口记录
+
+维护者于 2026-10-15 明确批准精确范围，条件为验证通过后删除。旧 Binding、六个 overload、fluent Builders 与 handle 已移除；成功 activation 才发布 claims，失败恢复原 claims 并清理新物品初始化记录；保留共享 backend、同步 gate、事件与查询。
+
+两个 26.x NeoForge 官方 JAR 的空代际实测：三类 registry 各保留一个物理对象并标记 stale，retained MobEffect 仍能施加；恢复声明后 stale 清零。客户端 prepare/partial activation/catch-up 回滚回归通过。冻结 wire 无 stale bit，客户端 ledger 是物理 exposure/conflict view，不推定其等同服务端所有权。多人跨进程实测不属于本地 inert 票的完成证明。
+
+完整命令、源码与 JAR 摘要、失败历史和边界见[本轮报告](../evidence/2026-10-15-domain-closeout/REPORT.md)。本地领域票关闭不代表票 28/37 或正式发布验收通过。以下带日期记录保留当时状态，由本节更新当前结论。
 
 ## Acceptance criteria
 
@@ -31,7 +39,7 @@
 - [x] 脚本不再声明的已暴露项标记 stale/retired，普通 reload 不物理删除；claim、stale、mode 与后续显式清理语义由 Registry Runtime/Adapter Interface 可观察并测试。【`staleMarkingIsNotAPhysicalDeletionAndKeepsTheConflictLedger`（stale/retired/claim/owner/trackedClaims 查询 + 指纹保留）、`DynamicRegistryReloadPipelineTest`、`undeclaredExposedEntriesBecomeStaleButAreNotPhysicallyDeleted`、`DynamicRegistrationBookkeepingTest` 12 用例；语义表见 REPORT §4；显式清理不在本票】
 - [x] 调用者 Interface、Registry Runtime/Adapter 契约、TS/Python declaration、contract/golden 和本地行为测试形成同一条证据链；测试优先穿过事件 facade 与 Adapter Interface，不断言私有 Manager 字段。【单一契约输入 `DynamicBuilderContract` 反射 → runtime member/fingerprint/结构化条目 → 生产渲染器；`DynamicRegistryDeclarationParityTest` + 两份新 golden（`DynamicRegistryEventsDeclarationGoldenTest`）；测试断言面全为 payload/事件组/`DynamicRegistryPlanStore` 公开查询与 reload 失败报告】
 - [x] 本票只证明本地 inert 计划行为，不激活多人同步、不宣称动态热更新或任何节点能力已完成；公开激活和能力结论由事务/同步 gate 决定。【计划面无网络/同步通道（通道扫描）；`collectInitial` 日志明示 inert local plan only；MIGRATION §4 不承诺热更新/多人同步；能力表把各方未验证项记 not verified（REPORT §3）】
-- [ ] 旧 DynamicRegistry 静态全局入口和直接 registry surgery 路径只能在事件 facade、候选计划、Adapter 请求、声明和迁移路径全部覆盖且无消费者后删除；删除需维护者确认，不保留双写 shim。【**不勾选**：维护者删除确认是发布门禁（Human input note）。替代 parity + 旧 route 消费者清单（REPORT §6）+ 迁移材料（MIGRATION）已交付；本票旧面零删除、零双写】
+- [x] 旧 DynamicRegistry 静态全局入口和直接 registry surgery 路径只能在事件 facade、候选计划、Adapter 请求、声明和迁移路径全部覆盖且无消费者后删除；删除需维护者确认，不保留双写 shim。【2026-10-16：维护者于 2026-10-15 明确批准精确范围，条件为验证通过后删除。旧 Binding、六个 overload、fluent Builders 与 handle 已移除；成功 activation 才发布 claims，失败恢复原 claims 并清理新物品初始化记录；保留共享 backend、同步 gate、事件与查询。】
 - [x] 随本票交付隔离测试 harness 可运行的候选计划 fixture，演示类型直达入口、setter/property parity、同 key 冲突与 stale 查询；明确标注仅本地计划、尚未公开激活，不作为生产脚本使用指南。本票不等待票 21 关闭；由票 21 在事务/同步 gate 通过后发布对应生产示例与迁移材料，未开放类型不展示为可用能力。【`FacadeTestHarness` + `DynamicRegistryInertPlanExampleTest`（四场景，示例与 `examples/dynamic-registry-inert-plan.js` 逐行一致）；示例头注/Javadoc 双处标注「仅本地计划、未公开激活、非生产指南」；未开放类型在示例末段与能力表显式说明】
 
 ## 当前补验与删除门禁（2026-10-07）

@@ -37,6 +37,11 @@ public class FoodBuilderJS {
     public FoodBuilderJS alwaysEat() { this.alwaysEat = true; return this; }
     public FoodBuilderJS fastEat() { this.fastEat = true; return this; }
 
+    /** Accepts script identifiers without depending on a platform-wide host conversion. */
+    public FoodBuilderJS effect(String effectId, int durationTicks, int amplifier, float probability) {
+        return effect(effectId == null ? (ResourceLocation) null : ResourceLocation.parse(effectId), durationTicks, amplifier, probability);
+    }
+
     /**
      * 添加药水效果
      * @param effectId 效果ID，如 "strength" 或 "minecraft:strength"

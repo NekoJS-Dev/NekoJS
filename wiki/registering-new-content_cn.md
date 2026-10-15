@@ -387,28 +387,28 @@ GoalEvents.register(event => {
 - **语言文件**：`nekojs/assets/<mod>/lang/zh_cn.json`；键名由原版按注册表拼出，物品是 `item.<mod>.<name>`、方块 `block.<mod>.<name>`、实体 `entity.<mod>.<name>`。
 
 <a id="wiki-section-15"></a>
-## DynamicRegistry —— 服务器运行中注册（实验性，仅 NeoForge 26.x）
+## DynamicRegistryEvents —— 服务器运行中注册（实验性，仅 NeoForge 26.x）
 
-`RegistryEvents.register` 只在游戏启动阶段有效。如果服务器**已经启动**后需要注册新内容（比如按世界脚本包动态添加物品），用 `DynamicRegistry` 绑定——需先在 `nekojs/config/engine.toml` 打开 `[dynamicRegistry] enabled = true`：
+通过 `DynamicRegistryEvents.dynamicRegistry` 声明运行期内容。启动前在服务器及客户端的 `nekojs/config/engine.toml` 中启用 `[dynamicRegistry] enabled = true`。回调只收集定义；候选提交成功并通过同步门禁后才激活注册。
 
 ```javascript
-// server_scripts/dyn.js
-// 必须等服务器启动后再调用；顶层调用会发生在 server registry access 建立之前。
-ServerEvents.started(event => {
-  const ruby = DynamicRegistry.item('mymod:ruby', builder => builder
-      .maxStackSize(64)
-      .rarity('epic')
-      .fireResistant()
-      .mode('world'))
-
-  DynamicRegistry.soundEvent('mymod:boom', builder => builder
-      .mode('world').fixedRange(16))
-  DynamicRegistry.mobEffect('mymod:wither_touch', builder => builder
-      .category('harmful').color(0x8B0000))
+// server_scripts/dynamic.js
+DynamicRegistryEvents.dynamicRegistry(event => {
+  event.item('mymod:ruby', build => {
+    build.maxStackSize = 64
+    build.rarity = 'epic'
+    build.fireResistant = true
+    build.mode = 'world'
+  })
+  event.soundEvent('mymod:boom', build => { build.fixedRange = 16 })
+  event.mobEffect('mymod:wither_touch', build => {
+    build.category = 'harmful'
+    build.color = 0x8B0000
+  })
 })
 ```
 
-`DynamicRegistry` 的 builder 仍是链式方法风格（`mode('world' | 'reloadable')` 等）。重载语义（stale-retain）：`/nekojs reload` **从不注销**已注册条目，脚本重跑时按 id 认领；用 `/nekojs registry` 查看健康快照。
+Builder 使用 Bean 属性或显式 setter（`build.mode = 'world'` / `build.setMode('world')`），不返回立即注册的 handle。`/nekojs registry` 查看已激活的认领状态；遗漏项标记 stale 并保留实际注册。无效或变更定义会拒绝整批候选并保留旧 active。旧 `DynamicRegistry` Binding 和链式 Builder 已移除。
 
 <a id="wiki-section-16"></a>
 ## 从旧写法迁移

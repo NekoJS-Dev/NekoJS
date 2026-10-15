@@ -1,7 +1,9 @@
 # 启动期注册迁移材料（ticket 15）
 
+> **2026-10-16 当前切换结果**：手写 declaration producer 和旧 14 参数 snapshot ctor 已在精确批准、替代验证通过后删除。脚本使用事件推导或 NekoStartupBuilders 命名空间；custom/Supplier 保留。 验证与批准边界见[本轮报告](../../evidence/2026-10-15-domain-closeout/REPORT.md)。下文带历史 revision 的消费者与旧删除门禁记录保留当时事实，由本段更新当前状态。
+
 > 面向脚本作者的启动期 `RegistryEvents.register` 使用与迁移要点。服务器运行期
-> Dynamic Registry（`DynamicRegistryJS` / 规划中的 `ServerEvents.dynamicRegistry` 面）
+> Dynamic Registry（`DynamicRegistryEvents.dynamicRegistry`）
 > 是**独立生命周期**，与本文的启动期入口保持分离（spec 08）。
 
 ## 1. 入口与能力（当前快照）
@@ -43,7 +45,7 @@
 | 面 | 来源 | tier |
 |---|---|---|
 | typed Builder 结构化声明（TS `@registry-builders/index.d.ts` / Python `_registry_builders/__init__.pyi`） | builder 类契约反射（`RegistryBuilderContract`）→ `RegistryBuilderSurfaceEntry` → probe 后端渲染 | managed 派生（contract/golden：`RegistryBuilderSurfaceGoldenTest` + `startup-builders*.d.ts`） |
-| 手写 manual declaration（`NekoRegistryDeclarations`） | 逐类型手写字符串 | **legacy 迁移观察**（保留，删除走维护者 gate + parity 证据） |
+| 手写 manual declaration（`NekoRegistryDeclarations`） | 逐类型手写字符串 | **已删除**：由真实元数据/契约生成替代，精确批准和验证见页首 |
 | `TypeDocCatalogEntry.binding(STARTUP, "RegistryEvents", ...)` | 文档/补全 | legacy 观察（ticket 14 既有） |
 
 ## 4. 已知边界（不在本票解决）

@@ -197,7 +197,7 @@ class ProbeUnavailableTypeTest {
                 List.of(), List.of(BindingCatalogEntry.of("Host", ScriptType.SERVER, host, false)),
                 List.of(EventCatalogEntry.of("FixtureEvents", "host", ScriptType.SERVER, host, null, false, false)),
                 List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
     }
 
     private static boolean containsStatus(Path path) {

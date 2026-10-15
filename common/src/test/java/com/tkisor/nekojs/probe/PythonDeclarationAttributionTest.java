@@ -235,6 +235,6 @@ class PythonDeclarationAttributionTest {
     private static NekoScriptCatalogSnapshot snapshotWith(List<BindingCatalogEntry> bindings) {
         return new NekoScriptCatalogSnapshot(
                 List.of(), bindings, List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(), null, new LinkedHashMap<>(), List.of());
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null, new LinkedHashMap<>(), List.of());
     }
 }

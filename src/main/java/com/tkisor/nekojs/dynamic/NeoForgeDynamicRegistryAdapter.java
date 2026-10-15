@@ -52,6 +52,9 @@ final class NeoForgeDynamicRegistryAdapter implements DynamicRegistryAdapter {
 
     /** Entries newly registered by the current activate attempt (registry key → ids); the sole rollback input, cleared on success. */
     private final Map<String, List<Identifier>> newlyRegisteredByLabel = new HashMap<>();
+    private final Map<com.tkisor.nekojs.core.dynamic.DynamicRegistrationBookkeeping,
+            List<com.tkisor.nekojs.core.dynamic.DynamicRegistrationBookkeeping.Claim>> previousClaims = new HashMap<>();
+    private List<?> previousItemInitializers = List.of();
 
     NeoForgeDynamicRegistryAdapter(String nodeLabel, Supplier<HolderLookup.Provider> registries) {
         this.nodeLabel = nodeLabel;
@@ -90,6 +93,9 @@ final class NeoForgeDynamicRegistryAdapter implements DynamicRegistryAdapter {
     @Override
     public void activate(List<DynamicAdapterRequest> requests) {
         newlyRegisteredByLabel.clear();
+        previousClaims.clear();
+        DynamicRegistries.bookkeepings().forEach(claims -> previousClaims.put(claims, claims.checkpoint()));
+        previousItemInitializers = RegistrySurgery.checkpointInitializers(BuiltInRegistries.DATA_COMPONENT_INITIALIZERS);
         for (DynamicAdapterRequest request : requests) {
             Identifier id = Identifier.parse(request.id());
             boolean existedBefore = switch (request.registryKey()) {
@@ -99,6 +105,10 @@ final class NeoForgeDynamicRegistryAdapter implements DynamicRegistryAdapter {
                 default -> throw new IllegalStateException(
                         "unsupported dynamic registry key '" + request.registryKey() + "' reached activation");
             };
+            if (!existedBefore) {
+                // Registration can succeed before item component binding fails.
+                newlyRegisteredByLabel.computeIfAbsent(request.registryKey(), key -> new ArrayList<>()).add(id);
+            }
             switch (request.registryKey()) {
                 case "minecraft:item" -> DynamicRegistries.item(id, request.mode(), request.ownerScriptId(),
                         registries.get(), maxStackSizeOf(request, id), rarityOf(request, id),
@@ -110,29 +120,27 @@ final class NeoForgeDynamicRegistryAdapter implements DynamicRegistryAdapter {
                 default -> throw new IllegalStateException(
                         "unsupported dynamic registry key '" + request.registryKey() + "' reached activation");
             }
-            if (!existedBefore) {
-                newlyRegisteredByLabel.computeIfAbsent(request.registryKey(), key -> new ArrayList<>()).add(id);
-            }
         }
-        newlyRegisteredByLabel.clear(); // success: nothing to roll back
+        DynamicRegistries.publishActivationClaims(requests);
+        newlyRegisteredByLabel.clear();
+        previousClaims.clear();
+        previousItemInitializers = List.of();
     }
 
     // ---- rollback: restore the last successfully activated state (unregister only this attempt's new entries) ----
 
     @Override
     public void rollbackActivation(List<DynamicAdapterRequest> requests) {
-        if (newlyRegisteredByLabel.isEmpty()) {
-            return;
-        }
         try {
-            DynamicRegistries.rollbackEntries(newlyRegisteredByLabel);
+            DynamicRegistries.rollbackEntries(newlyRegisteredByLabel, previousItemInitializers);
         } catch (Throwable rollbackFailure) {
-            NekoJS.LOGGER.error("DynamicRegistry activation rollback on {} failed to fully restore the"
-                    + " previously activated state: {}", nodeLabel,
-                    rollbackFailure.getMessage() == null ? rollbackFailure.getClass().getSimpleName()
-                            : rollbackFailure.getMessage());
+            throw new IllegalStateException("[NEKO-4042] Dynamic registry rollback failed on " + nodeLabel
+                    + "; the registry may retain partial writes", rollbackFailure);
         } finally {
             newlyRegisteredByLabel.clear();
+            previousClaims.forEach(com.tkisor.nekojs.core.dynamic.DynamicRegistrationBookkeeping::restore);
+            previousClaims.clear();
+            previousItemInitializers = List.of();
         }
     }
 

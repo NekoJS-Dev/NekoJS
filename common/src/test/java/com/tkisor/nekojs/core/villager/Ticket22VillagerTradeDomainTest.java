@@ -493,7 +493,55 @@ class Ticket22VillagerTradeDomainTest {
             assertEquals(0, latest.getTotal(), "no declaration is active any more");
             assertEquals(1, latest.getUnrestoredListingKeys().size(),
                     "the dropped listing is recorded as unrestored, not physically deleted");
+            assertEquals(2, harness.applier.live.get("synthetic:set"),
+                    "the materialized registry retains the vanilla listing and the omitted script listing");
             assertTrue(latest.getUnrestoredListingKeys().get(0).startsWith("synthetic:set|"));
+        }
+    }
+
+    @Test
+    void explicitlyObsoleteSetRetiresListingsOmittedByEarlierGenerations() throws Exception {
+        try (Harness harness = new Harness()) {
+            harness.applier.seed("synthetic:set", 1);
+            harness.writeServerScript("trades.js", declarationScript("synthetic:set", 1) + "\n" + PROBE_SCRIPT);
+            harness.load();
+            harness.root.reload(ScriptType.SERVER);
+            harness.writeServerScript("trades.js", PROBE_SCRIPT);
+            harness.root.reload(ScriptType.SERVER);
+            assertEquals(2, harness.applier.live.get("synthetic:set"));
+            harness.writeServerScript("trades.js",
+                    "TradeEvents.reload(event => event.declareObsolete('synthetic:set'))\n" + PROBE_SCRIPT);
+            harness.root.reload(ScriptType.SERVER);
+            assertEquals(1, harness.applier.live.get("synthetic:set"), "only the vanilla baseline remains");
+            var query = readFromActiveGeneration(harness);
+            assertTrue(query.getUnrestoredListingKeys().isEmpty());
+            assertEquals(1, query.getRetiredListingKeys().size());
+            harness.writeServerScript("trades.js", declarationScript("synthetic:set", 1) + "\n" + PROBE_SCRIPT);
+            harness.root.reload(ScriptType.SERVER);
+            assertEquals(2, harness.applier.live.get("synthetic:set"));
+            assertTrue(readFromActiveGeneration(harness).getRetiredListingKeys().isEmpty());
+        }
+    }
+
+    @Test
+    void registryReplayRefreshesTheEpochWithoutAdvancingTheGenerationOrClaimingRetainedListings() throws Exception {
+        try (Harness harness = new Harness()) {
+            harness.applier.seed("synthetic:set", 1);
+            harness.writeServerScript("trades.js", declarationScript("synthetic:set", 1) + "\n" + PROBE_SCRIPT);
+            harness.load();
+            harness.root.reload(ScriptType.SERVER);
+            harness.writeServerScript("trades.js", PROBE_SCRIPT);
+            harness.root.reload(ScriptType.SERVER);
+            long generation = harness.state.committedGeneration();
+            harness.state.invalidateSnapshot("resource-replay-failed");
+            assertEquals(VillagerTradeQuerySurface.Status.STALE, readFromActiveGeneration(harness).getStatus());
+            harness.state.refreshSnapshot(VillagerTradeSetSnapshot.of(99, Map.of("synthetic:set", 1)));
+            assertEquals(generation, harness.state.committedGeneration());
+            assertEquals(99, harness.state.committedSnapshot().registryEpoch());
+            var query = readFromActiveGeneration(harness);
+            assertEquals(VillagerTradeQuerySurface.Status.ACTIVE, query.getStatus());
+            assertEquals(0, query.getTotal());
+            assertEquals(1, query.getUnrestoredListingKeys().size());
         }
     }
 

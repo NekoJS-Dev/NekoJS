@@ -104,6 +104,13 @@
 | `NEKO-4037` | automatic item assets are unavailable on Fabric; registration rejected before supplier execution | Fabric 不支持自动物品资源，supplier 执行前拒绝注册 |
 | `NEKO-4038` | Probe predeclaration failed; the selected class is omitted from generated TypeScript | Probe 预声明失败，选定类未进入生成的 TypeScript |
 | `NEKO-4039` | Probe declaration task failed; some generated TypeScript declarations may be absent | Probe 声明任务失败，生成的 TypeScript 可能缺少部分声明 |
+| `NEKO-4040` | Activation claim publication rejected: unsupported registry | 激活认领发布遇到不支持的注册表，属于预检后的内部契约错误 |
+| `NEKO-4041` | Villager trade replay failed after resource reload; committed snapshot is unavailable | 资源重载后交易重放失败，已提交快照暂不可用 |
+| `NEKO-4042` | Dynamic registry rollback failed; the registry may retain partial writes | 动态注册回滚失败，未报告恢复成功 |
+| `NEKO-4043` | Villager trade batch rejected: generated ID collision | 交易批次生成的 ID 与已有非本域条目或另一个交易集冲突，写入前拒绝 |
+| `NEKO-4044` | Villager trade checkpoint read/restore failed | 交易注册表快照读取或恢复失败；恢复失败时查询不报告 active |
+| `NEKO-4045` | Unknown profession | 交易批次引用未知职业，整个候选被拒绝 |
+| `NEKO-4046` | Villager trade pool replacement failed | 静态交易池替换失败，不能报告成功 |
 
 <a id="wiki-section-6"></a>
 ## 配方与数据

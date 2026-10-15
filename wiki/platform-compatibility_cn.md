@@ -38,7 +38,7 @@ Fabric 节点已经覆盖脚本加载、配方、网络、probe、注册表的�
 | `ClientEvents.generateAssets` / `lang` | 支持 | 暂未移植 |
 | `Fluid`、`FluidIngredient`、`FluidBuilder` | 支持 | 暂未移植 |
 | `Capabilities` / `CapabilityEvents` | 普通方块、方块实体、实体、物品的标准与第三方原生 capability；保留各 scope 的 context | 已注册真实 Lookup 接入；物品/流体用 Fabric Transfer，能量用 NekoJS 自有接口，并支持自定义 typed Lookup |
-| `VillagerTrades.add` | 支持 | 暂不可用；当前会以 unavailable 原因拒绝 |
+| `ServerEvents.tradeDeclaration` / `VillagerTrades.query` | 支持 | 非空声明明确拒绝；无 query Binding |
 | `PostEffects` | 支持 | 暂未移植 |
 | JEI 配方查看器事件 | 支持（需要 JEI） | 暂未移植 |
 | 26.x 附魔注册 builder | 不可用 | 不可用 |
