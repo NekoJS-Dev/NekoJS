@@ -44,3 +44,5 @@ python docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/verify
 组件试验保留两次无效的早期验收：第一次 fixture 别名碰撞产生脚本错误，第二次在物理激活前过早观察。两者均未算 PASS；修正验收器并使用新目录、相同延迟重跑旧/新 JAR，得到实际 red/green。
 
 [四阶段回退重启报告](ROLLBACK.md)另行记录完整世界备份与实际 pdata reader 验收，绑定领域切换时的 JAR；不能替代最终候选的发布/回滚决策。完整 TSC、票 28 多节点客户端首帧、确切最终候选性能及最终发布/回滚策略继续开放。本批尚未执行新的客户端首帧或性能测量；没有代签维护者验收。
+
+后续独立验证：[26.2 首帧像素报告](FRAME.md)已用相同生产代码/JAR 补齐指定节点证据；[双轴增量复核](REVIEW.md)最终 Standards 0 / Spec 0。它们不回写以上构建/IDE 结果为整票发布通过。

@@ -45,6 +45,8 @@
 
 [分离回退的四阶段重启](../evidence/2026-10-16-followup-acceptance/ROLLBACK.md)通过：旧 JAR 启动推进后的世界仍读取新 pdata/方块状态，恢复完整停机备份后实际读取回到旧状态。该证据限定领域切换时的指定 JAR、26.1.2 专属完整世界；不证明其他节点、未知旧制品来源或最终发布候选的恢复政策，因此不据此代签最终 release rollback gate。
 
+[26.2 首帧像素验收](../evidence/2026-10-16-followup-acceptance/FRAME.md)已补：资源重载前后和恢复后的首个完成渲染的世界帧，以及失败后未再次 set 的保留画面均有实际 PNG、帧边界和 ROI 证据。仅覆盖 .75 / 0965 指定制品的 render target，不代替其他客户端节点或屏幕 present。
+
 跨进程动态同步、票 28 多节点客户端首帧、完整 TSC、确切候选性能、最终候选的 release rollback/data rollback 和最终发布/回滚策略仍按各自 gate 核验；领域服务器验收不外推为发布通过。
 
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)

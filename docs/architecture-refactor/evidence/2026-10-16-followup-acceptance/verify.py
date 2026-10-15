@@ -48,7 +48,22 @@ def main():
         assert node['pyright']['summary']['errorCount'] == 0
         assert node['pyright']['summary']['filesAnalyzed'] == node['pyright']['stubCount']
         assert all(side['skipLibCheck'] is False for side in node['typescript'])
-    print('PASS: archive hashes, source binding, five runtimes/Pyright runs, component red/green and four rollback phases')
+    frames = checked_archive(directory, 'frame')
+    summary = json.loads(frames['frame-summary.json'])
+    assert summary['verdict'] == 'PASS' and summary['clientExit'] == summary['serverExit'] == 0
+    assert summary['displayPresentVerified'] is False
+    captures = [row for row in summary['captures'] if 'request' in row]
+    assert len(captures) == 7
+    for capture in captures:
+        assert capture['request']['sameThread'] and capture['request']['overlayPresent'] is False
+        image = frames['accepted/clientA/screenshots/' + capture['screenshot']['file']]
+        assert hashlib.sha256(image).hexdigest() == capture['screenshot']['sha256']
+        energy = capture['wallRegion']['meanSquaredHorizontalGradient']
+        assert energy > 100 if capture['step'].startswith('clear-') else 0.5 < energy < 50
+    for step, filename in [('clear-before', 'frame-clear.png'), ('blur-before', 'frame-blur.png')]:
+        capture = next(row for row in captures if row['step'] == step)
+        assert hashlib.sha256((directory / filename).read_bytes()).hexdigest() == capture['screenshot']['sha256']
+    print('PASS: archive hashes, five runtimes/Pyright runs, component red/green, rollback and seven world-frame captures')
 
 
 if __name__ == '__main__':

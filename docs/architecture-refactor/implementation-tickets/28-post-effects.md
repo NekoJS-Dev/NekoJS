@@ -4,7 +4,7 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** in-progress（生产双语言 parity/Fabric 失败已验；精确公开删除与 binding teardown 变化已获追认，跨节点首帧与视觉缺口未闭合）
+**Status:** in-progress（2026-10-16：26.2 首个完成渲染的世界帧、资源重载及失败保留像素已验；其他客户端节点与整票范围仍未闭合）
 
 **Assignee:** zed-flash-28（main-session agent；deepseek-v4.1-flash subagent worktree）
 
@@ -35,6 +35,8 @@
 - [x] 随实现交付声明事件与 set/clear/toggle/current 分工的最小可运行示例和必要迁移材料；示例只使用已通过 gate 的客户端能力。【`baseline/2026-09-21-post-effects/examples/post-effects-declaration.js`（只用 `ClientEvents.postEffects` + `ClientEvents.tickPost`/`loggedOut` + `PostEffects.set/clear/isAvailable/activeGeneration/installed/hasDefinition`）；`MIGRATION.md`（旧→新对照、breaking 清单、删除条件）】
 
 ## Sources
+
+2026-10-16 主代理补充 [26.2 首帧像素验收](../evidence/2026-10-16-followup-acceptance/FRAME.md)：官方 JAR 绑定 `0965e29b` 生产源码，精确 .75 字节码确认 Post 在 render 后、present 前同步发布；七张世界帧覆盖资源重载前后、失败候选后未再次 set 的保留画面及恢复。set/clear 首个 Post 帧的 ROI 与实际图片通过，客户端/服务器正常退出。早期禁用类、无资源 id 与加载遮罩的无效试验保留并排除；不是屏幕 present 验收，不外推到其他节点或任意新 inline id，不据此勾选跨节点整体条件。
 
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)
 - [公开契约与插件模型规格](../specs/04-public-contract-and-plugin-model.md)
