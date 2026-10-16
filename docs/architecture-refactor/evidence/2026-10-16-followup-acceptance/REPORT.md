@@ -54,3 +54,5 @@ python docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/verify
 [入口路径修复与正式复测](RESOLVER.md)绑定 `6faed0e9`：完整构建 4916 tests、五节点实机及 Pyright 通过；完整 TSC 与上批一致，仍失败。正式启动 26101.8ms 通过，两组重载 335.4/376.6ms 均超过原 285.3ms 门槛，性能总结果仍 FAIL。定向组件改善不代替正式门禁。
 
 [擦除返回契约恢复](RETURN-CONTRACTS.md)绑定 `569376c6`：4921 tests、五节点新 JAR 实机、完整 Pyright 和定向回归通过；十个完整 TSC 入口减少 118 条 TS2314、无新增，完整 TSC 仍失败。真实 Type/ref 与 TS 保留 Host；Python 的普通 host 泛型投影限制及 Fabric 集合返回变化另有明确记录。
+
+[TS raw 输入修复](RAW-INPUT.md)绑定最终 `04550ae2`：4923 tests、五节点新 JAR、完整 Pyright、严格正负例和常规 CI gate 通过；十个完整 TSC 入口进一步减少 160 条 TS2314、无新增，仍 FAIL。Java 类 Python stub 五节点逐字节一致。新的 Entity Bean 迁移仅为[待决定提案](ENTITY-BEAN-DECISION.md)，尚未实施。

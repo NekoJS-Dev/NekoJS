@@ -83,3 +83,5 @@
 后续入口路径修复 `6faed0e9` 及正式性能复测见 [报告](../evidence/2026-10-16-followup-acceptance/RESOLVER.md)。4916 tests、五节点实机及 Pyright 通过，完整 TSC 保持失败；重载 335.4/376.6ms 超过原阈值 285.3ms，启动通过。票据继续开放，没有代签维护者或发布验收。
 
 `569376c6` 恢复擦除返回值的接口契约：[五节点报告](../evidence/2026-10-16-followup-acceptance/RETURN-CONTRACTS.md)。4921 tests、实际运行及 Pyright 通过，完整 TSC 无新增并减少 118 条 TS2314，仍未通过整体验收；Python 普通 host 泛型实参投影仍有限制。
+
+最终 `04550ae2` 的 [TS raw 输入修复](../evidence/2026-10-16-followup-acceptance/RAW-INPUT.md)完成 4923 tests、五节点实际运行、完整 Pyright 和严格正负例；完整 TSC 再减少 160 条 TS2314、无新增，仍失败。Java 类 Python stub 与上批逐字节一致。后续 Entity Bean 公开声明迁移[等待维护者决定](../evidence/2026-10-16-followup-acceptance/ENTITY-BEAN-DECISION.md)，本批未执行该删除。

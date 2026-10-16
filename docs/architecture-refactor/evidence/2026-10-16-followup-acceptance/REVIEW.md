@@ -43,3 +43,7 @@ Standards 0 / Spec 0；两轴均无剩余最高级别问题。该结论只覆盖
 ## 擦除返回契约恢复
 
 固定增量 `afbea905...569376c6`，Luna xhigh 只读 Standards 0 / Spec 0。Spec 初次发现 Object 父契约使 Server/Level 无法恢复，主代理已改为先筛返回擦除类型并补混合父契约回归；最终复核确认解决。新增单元断言未直接检查恢复后 sourceType 或 Python，主代理随后用五节点实际签名标记同时核对 Type/ref，并检查两后端的真实输出，见 [报告](RETURN-CONTRACTS.md)。Python 不输出普通 host 泛型实参的既有限制保持公开。
+
+## TS raw 输入修复
+
+固定生产增量 `dc67d1e0...04550ae2`，包括 `53461402`。Luna xhigh 只读最终 Standards 0 / Spec 0。Spec 要求补足注册输入 alias 后嵌套 host 不走 alias 的回归，主代理已添加精确反射断言；Standards 发现 SAM contextual 转换的并行路径仍产生裸 host，主代理已统一回退并补真实 Mapper alias 的严格 TSC 正负例，两轴分别确认解决。最终完整矩阵与五节点实际结果见 [RAW-INPUT.md](RAW-INPUT.md)，静态 0 项不代签完整 TSC 或发布验收。
