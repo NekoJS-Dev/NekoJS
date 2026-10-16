@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe.backend.typescript;
 
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
@@ -288,7 +289,7 @@ public final class FunctionalInterfaceAliasGenerator {
     public static String renderJavaTypeInput(Type declared, TypeAliasRegistry registry, Set<String> expanding) {
         if (declared instanceof WildcardType) {
             return TypeScriptClassRenderer.renderTypeRef(
-                    TypeReflector.toRef(declared), registry, true, expanding);
+                    hostRefWithRawArguments(declared), registry, true, expanding);
         }
         if (declared instanceof TypeVariable<?>) {
             return TypeScriptClassRenderer.renderTypeRef(
@@ -308,7 +309,7 @@ public final class FunctionalInterfaceAliasGenerator {
                 Type[] arguments = declared instanceof ParameterizedType parameterized
                         ? parameterized.getActualTypeArguments() : new Type[0];
                 return registry.renderRegisteredAlias(raw.getName(), Arrays.stream(arguments)
-                        .map(argument -> TypeScriptClassRenderer.renderTypeRef(TypeReflector.toRef(argument),
+                        .map(argument -> TypeScriptClassRenderer.renderTypeRef(hostRefWithRawArguments(argument),
                                 registry, false, expanding)).toList());
             }
             TypeAliasRegistry.FunctionalInterfaceAlias functionalAlias =
@@ -328,14 +329,41 @@ public final class FunctionalInterfaceAliasGenerator {
                 // An ordinary host container cannot convert its invariant type arguments independently.
                 // Conversion belongs to the outer parameter or callback return, not the container's contents.
                 String[] hostArguments = Arrays.stream(arguments)
-                        .map(argument -> TypeScriptClassRenderer.renderTypeRef(TypeReflector.toRef(argument),
+                        .map(argument -> TypeScriptClassRenderer.renderTypeRef(hostRefWithRawArguments(argument),
                                 registry, false, expanding)).toArray(String[]::new);
                 return registry.reference(raw.getName(), "$" + tsClassName(raw))
                         + "<" + String.join(", ", hostArguments) + ">";
             }
         }
-        return TypeScriptClassRenderer.renderTypeRef(
-                TypeReflector.toRef(declared), registry, true, expanding);
+        return TypeScriptClassRenderer.renderTypeRef(hostRefWithRawArguments(declared), registry, true, expanding);
+    }
+
+    // Erasure belongs to actual raw Java use sites, including nested invariant arguments. The shared IR,
+    // edited slots and class declarations keep their original facts; input conversions still occur outside.
+    private static ApiTypeRef hostRefWithRawArguments(Type declared) {
+        if (declared instanceof WildcardType wildcard) {
+            Type[] upper = wildcard.getUpperBounds();
+            return upper.length > 0 && upper[0] != Object.class ? hostRefWithRawArguments(upper[0])
+                    : TypeReflector.toRef(declared);
+        }
+        ApiTypeRef reference = TypeReflector.toRef(declared);
+        if (reference.kind() == ApiTypeRef.Kind.SYMBOL) {
+            if (declared instanceof Class<?> cls && cls.getTypeParameters().length > 0) {
+                return ApiTypeRef.symbol(new ApiSymbolId("java", cls.getName()),
+                        Collections.nCopies(cls.getTypeParameters().length, ApiTypeRef.primitive("any")));
+            }
+            if (declared instanceof ParameterizedType parameterized) {
+                return ApiTypeRef.symbol(new ApiSymbolId("java", FunctionalInterfaceResolver.rawClass(declared).getName()),
+                        Arrays.stream(parameterized.getActualTypeArguments())
+                                .map(FunctionalInterfaceAliasGenerator::hostRefWithRawArguments).toList());
+            }
+        }
+        if (reference.kind() == ApiTypeRef.Kind.ARRAY) {
+            Type component = declared instanceof GenericArrayType array ? array.getGenericComponentType()
+                    : ((Class<?>) declared).getComponentType();
+            return ApiTypeRef.array(hostRefWithRawArguments(component));
+        }
+        return reference;
     }
 
     private static String renderCallbackResult(ApiTypeRef result, TypeAliasRegistry registry, Set<String> expanding) {
