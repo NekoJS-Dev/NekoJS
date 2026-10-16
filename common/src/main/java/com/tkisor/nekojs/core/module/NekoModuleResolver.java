@@ -28,7 +28,7 @@ public final class NekoModuleResolver {
     }
 
     public NekoResolvedModule resolveEntry(String entryPath) throws IOException {
-        return resolveFileModule(pathFromLoaderPath(entryPath));
+        return resolveFileModule(parseLoaderPath(entryPath));
     }
 
     public NekoResolvedModule resolve(String parentPath, String specifier) throws IOException {
@@ -180,19 +180,24 @@ public final class NekoModuleResolver {
     }
 
     private Path pathFromLoaderPath(String path) throws IOException {
+        return verifyModulePath(parseLoaderPath(path));
+    }
+
+    /** Entry resolution verifies before file access; parent paths must be verified before directory inspection. */
+    private Path parseLoaderPath(String path) throws IOException {
         if (path == null || path.isBlank()) {
             throw new IOException("Module path must not be blank");
         }
         String normalized = path.replace('\\', '/');
         if (normalized.startsWith("file:")) {
-            return verifyModulePath(Path.of(URI.create(normalized)).normalize());
+            return Path.of(URI.create(normalized)).normalize();
         }
         if (normalized.startsWith("./")) {
             normalized = normalized.substring(2);
         }
         Path parsed = Path.of(normalized);
         Path resolved = parsed.isAbsolute() ? parsed : root.resolve(parsed);
-        return verifyModulePath(resolved.normalize());
+        return resolved.normalize();
     }
 
     private NekoModuleKind specialKind(String specifier) throws IOException {

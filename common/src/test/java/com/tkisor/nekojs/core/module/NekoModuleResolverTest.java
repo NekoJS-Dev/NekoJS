@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core.module;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
@@ -140,6 +141,56 @@ class NekoModuleResolverTest {
             Files.deleteIfExists(link);
             Files.deleteIfExists(outside);
         }
+    }
+
+    @Test
+    void entryPathFormsRetainCanonicalModuleIdentity() throws Exception {
+        NekoModuleResolver resolver = resolverFor(gameDir);
+        Path entry = gameDir.resolve("nekojs/server_scripts/entry.js");
+        Files.createDirectories(entry.getParent());
+        Files.writeString(entry, "export const value = 1;\n");
+
+        NekoResolvedModule relative = resolver.resolveEntry("./server_scripts/entry.js");
+        assertEquals(entry.toRealPath(), relative.path());
+        assertEquals(relative, resolver.resolveEntry(entry.toString()));
+        assertEquals(relative, resolver.resolveEntry(entry.toUri().toString()));
+        assertEquals(relative, resolver.resolveEntry("server_scripts/entry"));
+    }
+
+    @Test
+    void rejectsOutsideEntriesAndParentsEvenWhenTheChildIsInside(@TempDir Path outsideDirectory) throws Exception {
+        NekoModuleResolver resolver = resolverFor(gameDir);
+        Path outside = outsideDirectory.resolve("parent.js");
+        Files.writeString(outside, "export const value = 1;\n");
+        Path inside = gameDir.resolve("nekojs/server_scripts/inside.js");
+        Files.createDirectories(inside.getParent());
+        Files.writeString(inside, "export const value = 2;\n");
+        String specifier = outsideDirectory.relativize(inside).toString().replace('\\', '/');
+
+        assertThrows(IOException.class, () -> resolver.resolveEntry(outside.toString()));
+        assertThrows(IOException.class, () -> resolver.resolveEntry(outside.toUri().toString()));
+        assertThrows(IOException.class, () -> resolver.resolve(outside.toString(), specifier));
+        assertThrows(IOException.class, () -> resolver.resolveForRequire(outside.toString(), specifier));
+    }
+
+    @Test
+    void rejectsEntrySymlinksEscapingTheGameDirectory(@TempDir Path outsideDirectory) throws Exception {
+        NekoModuleResolver resolver = resolverFor(gameDir);
+        Path outside = outsideDirectory.resolve("outside.js");
+        Files.writeString(outside, "export const value = 1;\n");
+        Path link = gameDir.resolve("nekojs/server_scripts/link.js");
+        Files.createDirectories(link.getParent());
+        try {
+            Files.createSymbolicLink(link, outside);
+        } catch (UnsupportedOperationException | IOException unavailable) {
+            Assumptions.assumeTrue(false, "Symbolic links unavailable: " + unavailable.getClass().getSimpleName());
+            return;
+        }
+
+        IOException error = assertThrows(IOException.class,
+                () -> resolver.resolveEntry("./server_scripts/link.js"));
+        assertTrue(error.getMessage().contains("Symlink escape"), error::getMessage);
+        assertThrows(IOException.class, () -> resolver.resolveEntry(link.toUri().toString()));
     }
 
     private static NekoModuleResolver resolverFor(Path gameDir) throws Exception {
