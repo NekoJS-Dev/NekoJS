@@ -51,6 +51,8 @@
 
 跨进程动态同步、票 28 多节点客户端首帧、完整 TSC、确切候选性能、最终候选的 release rollback/data rollback 和最终发布/回滚策略仍按各自 gate 核验；领域服务器验收不外推为发布通过。
 
+[枚举继承修复与实际声明复测](../evidence/2026-10-16-followup-acceptance/ENUM.md)：`489b4a6b` 的五节点新 JAR 实机、完整构建和全部默认 Pyright 通过。完整严格 TSC 的 server/startup 诊断分别为 572/573、725/726、619/620、1148/1149、903/904，十入口共减少 160 条且无新增诊断，仍未通过。所有 Java 类 Python stub 字节一致；入口/事件的顺序和本地导入别名差异保留，不能据此宣称完整输出确定性已通过。草稿 PR 为 [#67](https://github.com/NekoJS-Dev/NekoJS/pull/67)，保持草稿且不执行正式发布。
+
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)
 - [PR 37 维护体验回归约束规格](../specs/00-pr37-maintainer-research.md)
 - [维护者模块设计与运行时所有权规格](../specs/01-maintainer-module-design.md)

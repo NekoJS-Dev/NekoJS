@@ -1,5 +1,7 @@
 """Check archived hashes and the recorded runtime boundaries without writing files."""
 
+import ast
+from collections import Counter
 import hashlib
 import json
 import statistics
@@ -18,6 +20,114 @@ def checked_archive(directory, prefix):
     for name, expected in manifest['entries'].items():
         assert hashlib.sha256(entries[name]).hexdigest() == expected, name
     return entries
+
+
+def python_declaration_facts(data):
+    module = ast.parse(data)
+    imports = {}
+    for statement in module.body:
+        if isinstance(statement, ast.ImportFrom):
+            for alias in statement.names:
+                imports[alias.asname or alias.name] = '.' * statement.level + (statement.module or '') + '.' + alias.name
+    # The archived stub modules have no local shadowing of imported type names.
+    for node in ast.walk(module):
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            assert node.name not in imports
+        if isinstance(node, ast.arg):
+            assert node.arg not in imports
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            assert node.id not in imports
+
+    class CanonicalImports(ast.NodeTransformer):
+        def visit_Name(self, node):
+            if isinstance(node.ctx, ast.Load) and node.id in imports:
+                return ast.Name(id=imports[node.id], ctx=node.ctx)
+            return node
+
+        def visit_ImportFrom(self, node):
+            return ast.ImportFrom(module=node.module, level=node.level,
+                                  names=[ast.alias(name=alias.name) for alias in node.names])
+
+    module = CanonicalImports().visit(module)
+    statements = []
+    exports = []
+    last_annotations = {}
+    for statement in module.body:
+        if isinstance(statement, ast.Assign) and any(isinstance(t, ast.Name) and t.id == '__all__' for t in statement.targets):
+            exports.extend(ast.literal_eval(statement.value))
+        else:
+            statements.append(ast.dump(statement))
+        if isinstance(statement, ast.AnnAssign) and isinstance(statement.target, ast.Name):
+            last_annotations[statement.target.id] = ast.dump(statement.annotation)
+    return Counter(statements), Counter(exports), last_annotations
+
+
+def check_enum_evidence(directory, reviewed):
+    original = b'from host.item import Event\nfrom host.player import Event as Other\nclass Events:\n def item(self, value: Event) -> None: ...\n def player(self, value: Other) -> None: ...\n'
+    renamed = b'from host.player import Event\nfrom host.item import Event as Other\nclass Events:\n def item(self, value: Other) -> None: ...\n def player(self, value: Event) -> None: ...\n'
+    incorrect = renamed.replace(b'value: Other', b'value: Event')
+    assert python_declaration_facts(original) == python_declaration_facts(renamed)
+    assert python_declaration_facts(original) != python_declaration_facts(incorrect)
+    assert python_declaration_facts(b'x: int\nx: str\n') != python_declaration_facts(b'x: str\nx: int\n')
+    entries = checked_archive(directory, 'enum')
+    preparation = json.loads(entries['preparation-manifest.json'])
+    summary = json.loads(entries['enum-summary.json'])
+    assert preparation['sourceRevision'].startswith('489b4a6b')
+    assert summary['sourceRevision'] == preparation['sourceRevision']
+    assert hashlib.sha256(entries['production-source.patch']).hexdigest() == preparation['productionPatchSha256']
+    assert summary['testTotals'] == dict(tests=4909, failures=0, errors=0, skipped=271)
+    assert len(preparation['nodes']) == len(summary['ide']['nodes']) == 5
+    for node in preparation['nodes']:
+        prefix = 'installed/' + node['node'] + '/'
+        assert json.loads(entries[prefix + 'runtime-verdict.json'])['verdict'] == 'PASS'
+        assert json.loads(entries[prefix + 'server-exit.json'])['exitCode'] == 0
+        assert node['classBindings'] and len(node['sha256']) == 64
+        invalid_prefix = 'first-invalid/' + node['node'] + '/'
+        invalid = json.loads(entries[invalid_prefix + 'runtime-verdict.json'])
+        assert json.loads(entries[invalid_prefix + 'server-exit.json'])['exitCode'] == 0
+        if not node['node'].endswith('-fabric'):
+            assert invalid['verdict'] != 'PASS'
+            assert invalid['errors'] == ['No current trade observation for declared']
+            assert any(name.endswith('/domain-closeout-trades.js') for name in node['fixtureHashes'])
+    for node in summary['ide']['nodes']:
+        pyright = node['pyright']
+        assert pyright['exitCode'] == 0 and pyright['summary']['errorCount'] == pyright['summary']['warningCount'] == 0
+        assert pyright['summary']['filesAnalyzed'] == pyright['stubCount']
+        for side in node['typescript']:
+            assert side['skipLibCheck'] is False and side['defaultEditorIncludes']
+            assert side['diagnosticCount'] == sum(side['codes'].values())
+            assert side['exitCode'] != 0 and side['diagnosticCount'] > 0
+    for row in summary['comparisons']:
+        assert not row['pythonByteIdentical']
+        assert row['javaClassStubsByteIdentical']
+        assert row['pythonBefore'].keys() == row['pythonAfter'].keys()
+        prefix = 'installed/' + row['node'] + '/.neko_probe/python/'
+        for path, expected in row['pythonAfter'].items():
+            assert hashlib.sha256(entries[prefix + path]).hexdigest() == expected
+            assert hashlib.sha256(reviewed[prefix + path]).hexdigest() == row['pythonBefore'][path]
+            if path.startswith('nekojs/_java/'):
+                assert row['pythonBefore'][path] == expected
+        for changed in row['changedFiles']:
+            path = changed['path']
+            assert path == 'nekojs/__init__.pyi' or path.startswith('nekojs/_events/')
+            before = entries['python-before/' + row['node'] + '/' + path]
+            after = entries[prefix + path]
+            assert hashlib.sha256(before).hexdigest() == changed['beforeSha256']
+            assert hashlib.sha256(after).hexdigest() == changed['afterSha256']
+            assert before != after and python_declaration_facts(before) == python_declaration_facts(after)
+    diagnostic_comparison = json.loads(entries['ide/diagnostic-comparison.json'])
+    assert len(diagnostic_comparison) == 5
+    assert sum(item['count'] for row in diagnostic_comparison for side in row['sides'] for item in side['removed']) == 160
+    assert all(not side['added'] for row in diagnostic_comparison for side in row['sides'])
+    strict = json.loads(entries['checks/strict-results.json'])
+    assert len(strict) == 6
+    for row in strict:
+        log = entries['checks/' + row['log']]
+        assert hashlib.sha256(log).hexdigest() == row['sha256']
+        assert (row['exitCode'] == 0) == (row['mode'] == 'green')
+        prefix = 'fixtures/' + row['mode'] + '/' + row['case'] + '/'
+        for path, expected in row['fixtureHashes'].items():
+            assert hashlib.sha256(entries[prefix + path]).hexdigest() == expected
 
 
 def main():
@@ -106,7 +216,8 @@ def main():
     session = json.loads(investigation['phases/session.json'].decode('utf-8-sig'))
     assert not session['forcedKill'] and not session['extra']['killed']
     assert session['extra']['stopChannel'] == 'rcon'
-    print('PASS: artifact, runtime, IDE, rollback, frame and performance evidence integrity; reload performance verdict remains FAIL')
+    check_enum_evidence(directory, reviewed)
+    print('PASS: artifact, runtime, IDE, rollback, frame, performance and enum evidence integrity; full TSC and reload performance remain FAIL')
 
 
 if __name__ == '__main__':
