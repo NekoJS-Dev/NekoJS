@@ -450,7 +450,7 @@ public final class FunctionalInterfaceAliasGenerator {
             return ApiTypeRef.array(toRef(cls.getComponentType(), interfaceClass, callbackArgument,
                     callbackReturn, substitutions, generatedTypes, samMethod));
         }
-        ApiTypeRef ref = com.tkisor.nekojs.probe.ir.TypeReflector.toRef(type);
+        ApiTypeRef ref = hostRefWithRawArguments(type);
         if (ref.kind() == ApiTypeRef.Kind.SYMBOL && !generatedTypes.contains(ref.name().substring(
                 ref.name().indexOf(':') + 1))) return ApiTypeRef.primitive("any");
         return ref;

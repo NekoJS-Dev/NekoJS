@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -17,6 +18,7 @@ class TypeScriptRawInputTest {
     public static class Payload implements Listener { public void listen() {} }
     public static class Raw<T extends Listener> { public T value; }
     public static class Pair<L, R> { public L first; public R second; }
+    public interface Mapper<T, R> { R apply(T value); }
     public static class Api {
         public void raw(Raw value) {}
         public void array(Raw[][] values) {}
@@ -24,6 +26,8 @@ class TypeScriptRawInputTest {
         public void edited(Raw value) {}
         public void nested(Pair<Raw, Payload> value) {}
         public void wildcard(Pair<? extends Raw[], Payload> value) {}
+        public void callback(Mapper<Raw, Payload> value) {}
+        public void typedCallback(Mapper<Raw<Payload>, Payload> value) {}
     }
 
     @Test
@@ -42,15 +46,19 @@ class TypeScriptRawInputTest {
     @Test
     void realDeclarationsPreserveExplicitAndEditedArgumentsWithoutClassDefaults() throws Exception {
         var reflector = new TypeReflector();
-        var renderer = new TypeScriptClassRenderer(new TypeAliasRegistry());
+        var registry = new TypeAliasRegistry();
+        var functional = new FunctionalInterfaceAliasGenerator(registry);
+        functional.prepare(Set.of(Mapper.class.getName(), Raw.class.getName(), Payload.class.getName(),
+                Listener.class.getName(), Pair.class.getName(), Api.class.getName()), Set.of());
+        var renderer = new TypeScriptClassRenderer(registry);
         TypeDecl api = reflector.reflect(Api.class);
         TypeSlot typed = api.methods.stream().filter(method -> method.name.equals("typed")).findFirst().orElseThrow().params.getFirst().type;
         TypeSlot edited = api.methods.stream().filter(method -> method.name.equals("edited")).findFirst().orElseThrow().params.getFirst().type;
         edited.ref = typed.ref;
         edited.overridden = true;
         StringBuilder declarations = new StringBuilder("declare module 'raw-input-fixture' {\n");
-        for (Class<?> type : List.of(Listener.class, Payload.class, Raw.class, Pair.class)) declarations.append(renderer.render(reflector.reflect(type)));
-        declarations.append(renderer.render(api)).append("}\n");
+        for (Class<?> type : List.of(Listener.class, Payload.class, Raw.class, Pair.class, Mapper.class)) declarations.append(renderer.render(reflector.reflect(type)));
+        declarations.append(renderer.render(api)).append(functional.declaration(Mapper.class.getName())).append("}\n");
         Path output = Path.of("build/probe-ts-raw-input");
         Files.createDirectories(output);
         Files.writeString(output.resolve("index.d.ts"), declarations);
@@ -67,6 +75,8 @@ class TypeScriptRawInputTest {
                 api.edited(valid);
                 api.nested({first: {value: 1}, second: {listen() {}}});
                 api.wildcard({first: [{value: 1}], second: {listen() {}}});
+                api.callback(value => ({listen() {}}));
+                api.callback({apply(value) {return {listen() {}};}});
                 // @ts-expect-error Explicit host arguments retain their member types.
                 api.typed({value: 1});
                 // @ts-expect-error An edited slot must not regain reflection's raw erasure.
@@ -75,6 +85,10 @@ class TypeScriptRawInputTest {
                 type Invalid = Raw<number>;
                 // @ts-expect-error Erasing one raw argument must preserve its typed sibling.
                 api.nested({first: {value: 1}, second: 1});
+                // @ts-expect-error Raw callback arguments retain the typed callback result.
+                api.callback(value => 1);
+                // @ts-expect-error Explicit callback host arguments remain precise.
+                api.typedCallback(value => {value.value = 1; return {listen() {}};});
                 """);
         String text = declarations.toString();
         assertTrue(text.contains("raw(value: $TypeScriptRawInputTest$Raw<any>)"), text);
