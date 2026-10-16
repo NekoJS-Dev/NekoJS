@@ -35,6 +35,8 @@
 
 ## Current handoff record
 
+2026-10-16 [泛型适配器实际复测](../evidence/2026-10-16-followup-acceptance/GENERIC.md)：`f3f32a69` 保留泛型/bound 和编辑后 IR；完整构建 4913 tests（271 skipped，0 failures/errors）、五节点新 JAR 实机、默认全部 Pyright 与定向严格 TSC 通过。完整默认 TSC 移除 40 条裸泛型错误但新增 930 条约束错误，净增 890，未按完整声明或无新增诊断验收。原始失败和 `$Bat`/`$Entity` Bean/方法投影链保留，继续开放。
+
 当前交接沿用[本地清单](../evidence/2026-10-06-ticket37-handoff/README.md)和[技术收尾计划](../evidence/ticket37-autonomous-closeout/WORKPLAN.md)。票 36 维护者试做与票 48 JSX proof 是已完成输入。
 
 2026-10-15 A15/A16/A22 的精确范围已获维护者明确批准；替代、消费者迁移和五节点官方 JAR 实机通过后删除，见[领域切换报告](../evidence/2026-10-15-domain-closeout/REPORT.md)。A28 既有精确追认继续有效，不重复申请。该批准不包含正式发布和最终回滚政策。

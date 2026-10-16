@@ -4,6 +4,7 @@ import ast
 from collections import Counter
 import hashlib
 import json
+import re
 import statistics
 import zipfile
 from pathlib import Path
@@ -130,6 +131,100 @@ def check_enum_evidence(directory, reviewed):
             assert hashlib.sha256(entries[prefix + path]).hexdigest() == expected
 
 
+def check_generic_evidence(directory):
+    entries = checked_archive(directory, 'generic')
+    previous = checked_archive(directory, 'enum')
+    preparation = json.loads(entries['preparation-manifest.json'])
+    summary = json.loads(entries['generic-summary.json'])
+    assert preparation['sourceRevision'].startswith('f3f32a69')
+    assert summary['sourceRevision'] == preparation['sourceRevision']
+    assert hashlib.sha256(entries['production-source.patch']).hexdigest() == preparation['productionPatchSha256']
+    assert len(preparation['sourceHashes']) == 7
+    assert summary['testTotals'] == dict(tests=4913, failures=0, errors=0, skipped=271)
+    assert not summary['fullTscPassed'] and not summary['releaseApproved']
+    assert not summary['noNewDiagnostics']
+    assert len(preparation['nodes']) == len(summary['ide']['nodes']) == 5
+    for node in preparation['nodes']:
+        prefix = 'installed/' + node['node'] + '/'
+        assert json.loads(entries[prefix + 'runtime-verdict.json'])['verdict'] == 'PASS'
+        assert json.loads(entries[prefix + 'server-exit.json'])['exitCode'] == 0
+        assert node['classBindings'] and len(node['sha256']) == 64
+    for node in summary['ide']['nodes']:
+        pyright = node['pyright']
+        assert pyright['exitCode'] == 0
+        assert pyright['summary']['errorCount'] == pyright['summary']['warningCount'] == 0
+        assert pyright['summary']['filesAnalyzed'] == pyright['stubCount']
+        for side in node['typescript']:
+            assert not side['skipLibCheck'] and side['defaultEditorIncludes']
+            assert side['exitCode'] != 0 and side['diagnosticCount'] > 0
+            data = entries['ide/' + node['node'] + '-' + side['side'] + '-tsc.txt'].decode('utf-8-sig')
+            assert side['diagnosticCount'] == sum(side['codes'].values()) == len(re.findall(r'error TS\d+:', data))
+    for row in summary['comparisons']:
+        assert row['javaClassStubsByteIdentical'] and row['pythonCanonicalFactsEqual']
+        assert row['pythonBefore'].keys() == row['pythonAfter'].keys()
+        prefix = 'installed/' + row['node'] + '/.neko_probe/python/'
+        changed = []
+        for path, expected in row['pythonAfter'].items():
+            before = previous[prefix + path]
+            after = entries[prefix + path]
+            assert hashlib.sha256(before).hexdigest() == row['pythonBefore'][path]
+            assert hashlib.sha256(after).hexdigest() == expected
+            if path.startswith('nekojs/_java/'):
+                assert before == after
+            if before != after:
+                changed.append(path)
+                assert path == 'nekojs/__init__.pyi' or path.startswith('nekojs/_events/')
+                assert python_declaration_facts(before) == python_declaration_facts(after)
+        assert sorted(changed) == sorted(row['changedPythonFiles'])
+        assert row['pythonByteIdentical'] == (not changed)
+
+    def diagnostics(data, prefix):
+        result = Counter()
+        text = data.decode('utf-8-sig')
+        for line in text.splitlines():
+            match = re.match(r'(.+?)\(\d+,\d+\): error (TS\d+): (.*)', line)
+            if match:
+                path, code, message = match.groups()
+                result[(path.removeprefix(prefix), code, message)] += 1
+            elif re.match(r'error TS\d+:', line):
+                result[('<global>', *re.match(r'error (TS\d+): (.*)', line).groups())] += 1
+        assert sum(result.values()) == len(re.findall(r'error TS\d+:', text))
+        return result
+
+    comparison = json.loads(entries['ide/diagnostic-comparison.json'])
+    assert len(comparison) == 5
+    removed_count = 0
+    added_count = 0
+    for row in comparison:
+        for side in row['sides']:
+            name = row['node'] + '-' + side['side'] + '-tsc.txt'
+            before = diagnostics(entries['ide-before/' + name], 'build/domain-enum-heritage-installed-2/' + row['node'] + '/')
+            after = diagnostics(entries['ide/' + name], 'build/domain-generic-adapter-installed/' + row['node'] + '/')
+            added, removed = after - before, before - after
+            recorded_added = Counter({(item['file'], item['code'], item['message']):item['count'] for item in side['added']})
+            assert recorded_added == added
+            assert all(code == 'TS2344' for path, code, message in added)
+            added_count += sum(added.values())
+            recorded = Counter({(item['file'], item['code'], item['message']):item['count'] for item in side['removed']})
+            assert recorded == removed
+            removed_count += sum(removed.values())
+    assert summary['diagnosticComparison'] == dict(added=added_count, removed=removed_count)
+    assert added_count == 930 and removed_count == 40
+    strict = json.loads(entries['checks/strict-results.json'])
+    assert len(strict) == 6
+    for row in strict:
+        data = entries['checks/' + row['log']]
+        assert hashlib.sha256(data).hexdigest() == row['sha256']
+        assert row['exitCode'] == (0 if row['mode'] == 'green' else 2)
+        if row['mode'] == 'green':
+            assert not data
+        else:
+            assert b'TS2314' in data and b'TS2578' in data
+        prefix = 'fixtures/' + row['mode'] + '/' + row['case'] + '/'
+        for path, expected in row['fixtureHashes'].items():
+            assert hashlib.sha256(entries[prefix + path]).hexdigest() == expected
+
+
 def main():
     directory = Path(__file__).resolve().parent
     rollback = checked_archive(directory, 'rollback')
@@ -217,7 +312,8 @@ def main():
     assert not session['forcedKill'] and not session['extra']['killed']
     assert session['extra']['stopChannel'] == 'rcon'
     check_enum_evidence(directory, reviewed)
-    print('PASS: artifact, runtime, IDE, rollback, frame, performance and enum evidence integrity; full TSC and reload performance remain FAIL')
+    check_generic_evidence(directory)
+    print('PASS: artifact, runtime, IDE, rollback, frame, performance, enum and generic evidence integrity; full TSC and reload performance remain FAIL')
 
 
 if __name__ == '__main__':

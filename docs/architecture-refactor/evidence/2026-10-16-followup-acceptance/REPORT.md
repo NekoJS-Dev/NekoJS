@@ -48,3 +48,5 @@ python docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/verify
 后续独立验证：[26.2 首帧像素报告](FRAME.md)已用相同生产代码/JAR 补齐指定节点证据；[双轴增量复核](REVIEW.md)最终 Standards 0 / Spec 0。它们不回写以上构建/IDE 结果为整票发布通过。
 
 [枚举继承修复与五节点声明复测](ENUM.md)使用后续 `489b4a6b` 新制品：完整构建、五节点实机和 Pyright 通过，十个严格 TSC 入口减少 160 条诊断、无新增诊断，完整 TSC 仍失败。Python Java 类 stub 逐字节一致；入口/事件模块的顺序与导入别名差异另有原始记录和类型身份比较，不声称全部文件字节一致。
+
+[泛型适配器修复与完整复测](GENERIC.md)使用 `f3f32a69` 新制品：类型参数、bound、嵌套 Self 和编辑后 IR 得以保留，完整构建、五节点实机、Pyright 和定向严格 TSC 通过。完整默认 TSC 移除 40 条裸泛型错误，同时新增 930 条约束错误，净增 890；本批不能按完整声明或无新增诊断验收。真实错误链与原始失败证据保留，完整 gate 仍开放。
