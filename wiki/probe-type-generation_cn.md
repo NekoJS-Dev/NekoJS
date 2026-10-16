@@ -464,7 +464,7 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 
 另外两条是选择而非限制：同语言多 backend 时 `/nekojs probe <语言>` 选 priority 最高者（`probe.toml [languages.<lang>].backend` 可以指定），其余用 `/nekojs probe <语言> <名字>` 显式跑；替换 TS 实现时布局怎么办见上面的命名约定一节。
 
-## Entity 属性的 TypeScript 迁移
+**Entity 属性的 TypeScript 迁移**
 
 NeoForge 1.21.1、26.1.2、26.2.0 及 Fabric 26.1.2、26.2.0 的生成声明采用以下迁移：
 

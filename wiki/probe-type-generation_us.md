@@ -470,7 +470,7 @@ These three rules are enforced by code:
 
 Two more items describe selection, not restrictions: for a language with multiple backends, `/nekojs probe <语言>` chooses the highest priority (overridable by `probe.toml [languages.<lang>].backend`); other backends can be run explicitly with `/nekojs probe <语言> <名字>`. See the naming-conventions section above for layouts when replacing TS.
 
-## Entity property migration in TypeScript
+**Entity property migration in TypeScript**
 
 Generated declarations for NeoForge 1.21.1, 26.1.2, 26.2.0 and Fabric 26.1.2, 26.2.0 use this migration:
 

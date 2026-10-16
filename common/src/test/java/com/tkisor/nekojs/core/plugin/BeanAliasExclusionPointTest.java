@@ -50,7 +50,7 @@ class BeanAliasExclusionPointTest {
         for (Class<?> target : List.of(int.class, String[].class)) {
             assertTrue(assertThrows(IllegalArgumentException.class,
                     () -> new BeanAliasExclusionCatalogEntry(target, "isReady", "ready"))
-                    .getMessage().contains("[NEKO-4034]"));
+                    .getMessage().contains("[NEKO-4047]"));
         }
         assertThrows(IllegalArgumentException.class,
                 () -> new BeanAliasExclusionCatalogEntry(String.class, " ", "empty"));

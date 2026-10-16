@@ -19,7 +19,7 @@ public interface TypeDocsRegister {
 
     /** Registers one exact TypeScript Bean alias exclusion while retaining its real accessor. */
     default void registerBeanAliasExclusion(BeanAliasExclusionCatalogEntry entry) {
-        throw new UnsupportedOperationException("[NEKO-4034] Bean alias exclusion rejected: "
+        throw new UnsupportedOperationException("[NEKO-4047] Bean alias exclusion rejected: "
                 + "this type-docs collector does not support exclusions");
     }
 

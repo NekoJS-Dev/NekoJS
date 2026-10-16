@@ -111,6 +111,7 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-4044` | Villager trade checkpoint read/restore failed | 交易注册表快照读取或恢复失败；恢复失败时查询不报告 active |
 | `NEKO-4045` | Unknown profession | 交易批次引用未知职业，整个候选被拒绝 |
 | `NEKO-4046` | Villager trade pool replacement failed | 静态交易池替换失败，不能报告成功 |
+| `NEKO-4047` | TypeScript Bean alias exclusion registration rejected | TypeScript Bean 派生属性排除条目无效或收集器不支持 |
 
 <a id="wiki-section-6"></a>
 ## Recipes and data
