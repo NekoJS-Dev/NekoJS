@@ -94,6 +94,18 @@ def main():
     assert not profile_session['forcedKill'] and not profile_session['extra']['killed']
     assert profile_session['extra']['stopChannel'] == 'rcon'
     assert len(json.loads(performance['profile/reloads.json'].decode('utf-8-sig'))) == 5
+    investigation = checked_archive(directory, 'investigation')
+    prototype = json.loads(investigation['shared-parse/summary.json'])
+    assert prototype['verdict'] == 'REJECTED' and prototype['diagnosticOnly']
+    assert len(prototype['pairs']) == 10 and prototype['focusedTests']['failures'] == 0
+    phases = json.loads(investigation['phases/phase-summary.json'])
+    assert phases['diagnosticOnly'] and len(phases['commandedPhases']) == len(phases['commands']) == 20
+    assert phases['phaseMeanMs'] == statistics.mean(row['totalMs'] for row in phases['commandedPhases'])
+    for name, mean in phases['stepMeansMs'].items():
+        assert mean == statistics.mean(row['stepsMs'][name] for row in phases['commandedPhases'])
+    session = json.loads(investigation['phases/session.json'].decode('utf-8-sig'))
+    assert not session['forcedKill'] and not session['extra']['killed']
+    assert session['extra']['stopChannel'] == 'rcon'
     print('PASS: artifact, runtime, IDE, rollback, frame and performance evidence integrity; reload performance verdict remains FAIL')
 
 

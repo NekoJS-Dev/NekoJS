@@ -37,3 +37,5 @@
 [摘要](performance-summary.json)、[完整归档](performance-evidence.zip)和[逐文件摘要](performance-manifest.json)包含全部正式样本、环境快照、stdout/stderr、当前类绑定、旧版对照、诊断时间窗、JFR 与分析工具。原始失败结果保持失败。运行 `python docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/verify.py` 可验证摘要、全部样本和归档一致性。
 
 后续需要更密集的定向剖析和可重复的修复实验，或维护者基于新证据显式重裁政策。当前没有阈值调整、正式发布、远程上传或最终回滚政策代签。完整严格 TSC、其他客户端首帧及最终候选验证继续保留各自未完成状态。
+
+[后续定向实验](INVESTIGATION.md)已记录撤回的共享解析试作和二十次阶段计时；它们没有改变上述正式判定。
