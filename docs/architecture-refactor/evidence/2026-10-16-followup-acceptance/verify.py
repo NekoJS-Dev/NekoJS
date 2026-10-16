@@ -225,6 +225,136 @@ def check_generic_evidence(directory):
             assert hashlib.sha256(entries[prefix + path]).hexdigest() == expected
 
 
+def check_resolver_evidence(directory):
+    entries = checked_archive(directory, 'resolver')
+    previous = checked_archive(directory, 'generic')
+    preparation = json.loads(entries['preparation-manifest.json'])
+    summary = json.loads(entries['resolver-summary.json'])
+    assert preparation['sourceRevision'].startswith('6faed0e9')
+    assert summary['sourceRevision'] == preparation['sourceRevision']
+    assert hashlib.sha256(entries['production-source.patch']).hexdigest() == preparation['productionPatchSha256']
+    assert len(preparation['sourceHashes']) == 1
+    assert summary['testTotals'] == dict(tests=4916, failures=0, errors=0, skipped=271)
+    assert not summary['fullTscPassed'] and not summary['releaseApproved']
+    assert summary['noNewDiagnostics']
+    assert len(preparation['nodes']) == len(summary['ide']['nodes']) == 5
+    for node in preparation['nodes']:
+        prefix = 'installed/' + node['node'] + '/'
+        assert json.loads(entries[prefix + 'runtime-verdict.json'])['verdict'] == 'PASS'
+        assert json.loads(entries[prefix + 'server-exit.json'])['exitCode'] == 0
+        assert node['classBindings'] and len(node['sha256']) == 64
+    for node in summary['ide']['nodes']:
+        pyright = node['pyright']
+        assert pyright['exitCode'] == 0
+        assert pyright['summary']['errorCount'] == pyright['summary']['warningCount'] == 0
+        assert pyright['summary']['filesAnalyzed'] == pyright['stubCount']
+        for side in node['typescript']:
+            assert not side['skipLibCheck'] and side['defaultEditorIncludes']
+            assert side['exitCode'] != 0 and side['diagnosticCount'] > 0
+            data = entries['ide/' + node['node'] + '-' + side['side'] + '-tsc.txt'].decode('utf-8-sig')
+            assert side['diagnosticCount'] == sum(side['codes'].values()) == len(re.findall(r'error TS\d+:', data))
+    for row in summary['comparisons']:
+        assert row['javaClassStubsByteIdentical'] and row['pythonCanonicalFactsEqual']
+        assert row['pythonBefore'].keys() == row['pythonAfter'].keys()
+        prefix = 'installed/' + row['node'] + '/.neko_probe/python/'
+        changed = []
+        for path, expected in row['pythonAfter'].items():
+            before = previous[prefix + path]
+            after = entries[prefix + path]
+            assert hashlib.sha256(before).hexdigest() == row['pythonBefore'][path]
+            assert hashlib.sha256(after).hexdigest() == expected
+            if path.startswith('nekojs/_java/'):
+                assert before == after
+            if before != after:
+                changed.append(path)
+                assert path == 'nekojs/__init__.pyi' or path.startswith('nekojs/_events/')
+                assert python_declaration_facts(before) == python_declaration_facts(after)
+        assert sorted(changed) == sorted(row['changedPythonFiles'])
+        assert row['pythonByteIdentical'] == (not changed)
+
+    def diagnostics(data, prefix):
+        result = Counter()
+        text = data.decode('utf-8-sig')
+        for line in text.splitlines():
+            match = re.match(r'(.+?)\(\d+,\d+\): error (TS\d+): (.*)', line)
+            if match:
+                path, code, message = match.groups()
+                result[(path.removeprefix(prefix), code, message)] += 1
+            elif re.match(r'error TS\d+:', line):
+                result[('<global>', *re.match(r'error (TS\d+): (.*)', line).groups())] += 1
+        assert sum(result.values()) == len(re.findall(r'error TS\d+:', text))
+        return result
+
+    comparison = json.loads(entries['ide/diagnostic-comparison.json'])
+    assert len(comparison) == 5
+    removed_count = 0
+    added_count = 0
+    for row in comparison:
+        for side in row['sides']:
+            name = row['node'] + '-' + side['side'] + '-tsc.txt'
+            before = diagnostics(entries['ide-before/' + name], 'build/domain-generic-adapter-installed/' + row['node'] + '/')
+            after = diagnostics(entries['ide/' + name], 'build/domain-resolver-installed/' + row['node'] + '/')
+            added, removed = after - before, before - after
+            recorded_added = Counter({(item['file'], item['code'], item['message']):item['count'] for item in side['added']})
+            assert recorded_added == added
+            assert all(code == 'TS2344' for path, code, message in added)
+            added_count += sum(added.values())
+            recorded = Counter({(item['file'], item['code'], item['message']):item['count'] for item in side['removed']})
+            assert recorded == removed
+            removed_count += sum(removed.values())
+    assert summary['diagnosticComparison'] == dict(added=added_count, removed=removed_count)
+    assert added_count == removed_count == 0
+    component = summary['component']
+    measured = json.loads(entries['component/result-actual.json'])
+    assert component['diagnosticOnly'] and measured['diagnosticOnly']
+    assert measured['identityCases'] == 6 and measured['rejectionCases'] == 5 and measured['symlinkChecked']
+    pairs = measured['pairs']
+    assert len(pairs) == 10 and [r['baselineFirst'] for r in pairs] == [i % 2 == 0 for i in range(10)]
+    scale = measured['repeatsPerArm'] * 1e6
+    baseline = statistics.mean(r['baselineNs'] / scale for r in pairs)
+    candidate = statistics.mean(r['candidateNs'] / scale for r in pairs)
+    assert abs(component['baselineMeanMsPerSet'] - baseline) < 1e-9
+    assert abs(component['candidateMeanMsPerSet'] - candidate) < 1e-9
+    assert abs(component['meanSavingMsPerSet'] - (baseline - candidate)) < 1e-9
+    assert hashlib.sha256(entries['component/baseline-source.java.txt']).hexdigest() == component['baselineBinding']['sourceSha256']
+    assert hashlib.sha256(entries['component/baseline-resolver.class.bin']).hexdigest() == component['baselineBinding']['classSha256']
+    judgment = json.loads(entries['performance/judgment.json'])
+    assert judgment == summary['performance'] and judgment['complete'] and judgment['verdict'] == 'FAIL'
+    assert [r['group'] for r in judgment['groups']] == ['reload-1', 'reload-2', 'startup']
+    for group in judgment['groups']:
+        prefix = 'performance/formal/' + group['group'] + '/'
+        rows = [json.loads(line) for line in entries[prefix + 'samples.jsonl'].decode('utf-8-sig').splitlines()]
+        formal = [r for r in rows if r['kind'] == 'formal']
+        assert len(formal) == 5 and all(r['rev'].startswith('6faed0e9') for r in formal)
+        assert all(not r.get('timeout') and not r['forced_kill'] and not r['killed'] and r['stop_channel'] == 'rcon' for r in rows)
+        assert group['values'] == [r[group['measure']] for r in formal]
+        assert group['mean'] == statistics.mean(group['values'])
+        startup = group['group'] == 'startup'
+        assert group['limit'] == (41173 if startup else 285.3)
+        assert group['verdict'] == ('PASS' if group['mean'] <= group['limit'] else 'FAIL')
+        if startup:
+            assert len([r for r in rows if r['kind'] == 'warmup']) == 2
+        else:
+            assert all('phase=COMMIT - no errors' in r['rcon_response'] for r in formal)
+    frozen = json.loads(entries['performance/frozen-classes.json'])
+    primary = next(r for r in preparation['nodes'] if r['node'] == '26.1.2')
+    assert frozen['classesMatchReviewedArtifact'] and frozen['classBindings'] == primary['classBindings']
+    assert frozen['reviewedArtifactSha256'] == primary['sha256']
+    assert frozen['classBindings']['com/tkisor/nekojs/core/module/NekoModuleResolver.class'] == component['candidateClassSha256']
+    perf_preparation = json.loads(entries['performance/preparation.json'])
+    assert perf_preparation['samplerSha256'] == '1f9c5d14a1a586da4b3f1ca8e71b2407ce089ee8bee185418963e1b5745df0b4'
+    prefix = 'signature-diagnostic/'
+    invalid = json.loads(entries[prefix + 'runtime-verdict.json'])
+    assert invalid['verdict'] != 'PASS' and invalid['errors'] == ['No current trade observation for declared']
+    assert json.loads(entries[prefix + 'server-exit.json'])['exitCode'] == 0
+    markers = [json.loads(line.split(b'OWNED-DATA-SIGNATURES=', 1)[1]) for line in entries[prefix + 'server-stdout.log'].splitlines() if b'OWNED-DATA-SIGNATURES=' in line]
+    assert len(markers) == 6 and len({r['host'] for r in markers}) == 3
+    for row in markers:
+        actual = [m for m in row['reflection'] if not m['bridge']]
+        assert len(actual) == 1 and actual[0]['genericReturnType'].endswith('.AttachedData')
+        assert row['ir'] and all(m['sourceType'].endswith('.AttachedData') and not m['overridden'] for m in row['ir'])
+
+
 def main():
     directory = Path(__file__).resolve().parent
     rollback = checked_archive(directory, 'rollback')
@@ -313,7 +443,8 @@ def main():
     assert session['extra']['stopChannel'] == 'rcon'
     check_enum_evidence(directory, reviewed)
     check_generic_evidence(directory)
-    print('PASS: artifact, runtime, IDE, rollback, frame, performance, enum and generic evidence integrity; full TSC and reload performance remain FAIL')
+    check_resolver_evidence(directory)
+    print('PASS: artifact, runtime, IDE, rollback, frame, performance, enum, generic and resolver evidence integrity; full TSC and reload performance remain FAIL')
 
 
 if __name__ == '__main__':

@@ -50,3 +50,5 @@ python docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/verify
 [枚举继承修复与五节点声明复测](ENUM.md)使用后续 `489b4a6b` 新制品：完整构建、五节点实机和 Pyright 通过，十个严格 TSC 入口减少 160 条诊断、无新增诊断，完整 TSC 仍失败。Python Java 类 stub 逐字节一致；入口/事件模块的顺序与导入别名差异另有原始记录和类型身份比较，不声称全部文件字节一致。
 
 [泛型适配器修复与完整复测](GENERIC.md)使用 `f3f32a69` 新制品：类型参数、bound、嵌套 Self 和编辑后 IR 得以保留，完整构建、五节点实机、Pyright 和定向严格 TSC 通过。完整默认 TSC 移除 40 条裸泛型错误，同时新增 930 条约束错误，净增 890；本批不能按完整声明或无新增诊断验收。真实错误链与原始失败证据保留，完整 gate 仍开放。
+
+[入口路径修复与正式复测](RESOLVER.md)绑定 `6faed0e9`：完整构建 4916 tests、五节点实机及 Pyright 通过；完整 TSC 与上批一致，仍失败。正式启动 26101.8ms 通过，两组重载 335.4/376.6ms 均超过原 285.3ms 门槛，性能总结果仍 FAIL。定向组件改善不代替正式门禁。
