@@ -1,0 +1,131 @@
+{
+  "candidate": {
+    "complete": true,
+    "verdict": "FAIL",
+    "scope": "primary 26.1.2 existing source harness; no installation or release approval",
+    "groups": [
+      {
+        "group": "reload-1",
+        "revision": "0965e29b",
+        "measure": "marker_ms",
+        "values": [
+          554,
+          368,
+          403,
+          329,
+          389
+        ],
+        "mean": 408.6,
+        "stdev": 85.93776818139973,
+        "limit": 285.3,
+        "verdict": "FAIL",
+        "samples": 5,
+        "sampleFile": "C:\\Users\\11515\\.codex\\worktrees\\domain-perf-0965\\NekoJS-mult\\bench\\perf\\out\\20261015T170055Z-reload-26.1.2\\samples.jsonl",
+        "environmentFile": "C:\\Users\\11515\\.codex\\worktrees\\domain-perf-0965\\NekoJS-mult\\bench\\perf\\out\\20261015T170055Z-reload-26.1.2\\env-snapshot.txt",
+        "rconMean": 335.2,
+        "markerMinusRconMean": 73.4
+      },
+      {
+        "group": "reload-2",
+        "revision": "0965e29b",
+        "measure": "marker_ms",
+        "values": [
+          526,
+          446,
+          424,
+          373,
+          390
+        ],
+        "mean": 431.8,
+        "stdev": 59.87653964617528,
+        "limit": 285.3,
+        "verdict": "FAIL",
+        "samples": 5,
+        "sampleFile": "C:\\Users\\11515\\.codex\\worktrees\\domain-perf-0965\\NekoJS-mult\\bench\\perf\\out\\20261015T170301Z-reload-26.1.2\\samples.jsonl",
+        "environmentFile": "C:\\Users\\11515\\.codex\\worktrees\\domain-perf-0965\\NekoJS-mult\\bench\\perf\\out\\20261015T170301Z-reload-26.1.2\\env-snapshot.txt",
+        "rconMean": 315.8,
+        "markerMinusRconMean": 116
+      },
+      {
+        "group": "startup",
+        "revision": "0965e29b",
+        "measure": "wall_done_ms",
+        "values": [
+          27632,
+          27427,
+          26894,
+          28379,
+          30260
+        ],
+        "mean": 28118.4,
+        "stdev": 1310.356554530102,
+        "limit": 41173,
+        "verdict": "PASS",
+        "samples": 5,
+        "sampleFile": "C:\\Users\\11515\\.codex\\worktrees\\domain-perf-0965\\NekoJS-mult\\bench\\perf\\out\\20261015T170349Z-startup-26.1.2\\samples.jsonl",
+        "environmentFile": "C:\\Users\\11515\\.codex\\worktrees\\domain-perf-0965\\NekoJS-mult\\bench\\perf\\out\\20261015T170349Z-startup-26.1.2\\env-snapshot.txt"
+      }
+    ]
+  },
+  "control": {
+    "complete": true,
+    "verdict": "FAIL",
+    "scope": "Matched old-revision control for failed current reload policy; diagnostic comparison only",
+    "groups": [
+      {
+        "group": "reload-1",
+        "revision": "e473479a",
+        "measure": "marker_ms",
+        "values": [
+          389,
+          406,
+          379,
+          380,
+          378
+        ],
+        "mean": 386.4,
+        "stdev": 11.802542099056456,
+        "limit": 285.3,
+        "verdict": "FAIL",
+        "samples": 5,
+        "sampleFile": "C:\\Users\\11515\\.codex\\worktrees\\domain-perf-0965\\NekoJS-mult\\bench\\perf\\out\\20261015T171130Z-reload-26.1.2\\samples.jsonl",
+        "environmentFile": "C:\\Users\\11515\\.codex\\worktrees\\domain-perf-0965\\NekoJS-mult\\bench\\perf\\out\\20261015T171130Z-reload-26.1.2\\env-snapshot.txt",
+        "rconMean": 291.8,
+        "markerMinusRconMean": 94.6
+      },
+      {
+        "group": "reload-2",
+        "revision": "e473479a",
+        "measure": "marker_ms",
+        "values": [
+          486,
+          289,
+          464,
+          394,
+          389
+        ],
+        "mean": 404.4,
+        "stdev": 77.25477331531043,
+        "limit": 285.3,
+        "verdict": "FAIL",
+        "samples": 5,
+        "sampleFile": "C:\\Users\\11515\\.codex\\worktrees\\domain-perf-0965\\NekoJS-mult\\bench\\perf\\out\\20261015T171229Z-reload-26.1.2\\samples.jsonl",
+        "environmentFile": "C:\\Users\\11515\\.codex\\worktrees\\domain-perf-0965\\NekoJS-mult\\bench\\perf\\out\\20261015T171229Z-reload-26.1.2\\env-snapshot.txt",
+        "rconMean": 310.8,
+        "markerMinusRconMean": 93.6
+      }
+    ]
+  },
+  "profile": {
+    "diagnosticOnly": true,
+    "commands": 5,
+    "normalRconStop": true
+  },
+  "conclusion": "Candidate remains blocked by reload policy. The old passing source also fails in the current environment; latest changes alone do not explain the slowdown. No causal source fix established.",
+  "limits": [
+    "Source runServer timing, not installed-JAR startup.",
+    "No unfavorable samples removed.",
+    "Environment snapshots are point observations, not continuous load control.",
+    "JFR sample counts are not elapsed time."
+  ]
+}

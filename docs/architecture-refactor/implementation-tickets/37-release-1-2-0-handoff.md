@@ -47,6 +47,8 @@
 
 [26.2 首帧像素验收](../evidence/2026-10-16-followup-acceptance/FRAME.md)已补：资源重载前后和恢复后的首个完成渲染的世界帧，以及失败后未再次 set 的保留画面均有实际 PNG、帧边界和 ROI 证据。仅覆盖 .75 / 0965 指定制品的 render target，不代替其他客户端节点或屏幕 present。
 
+[0965 当前性能复测](../evidence/2026-10-16-followup-acceptance/PERFORMANCE.md)：startup 28118.4 ms 通过，reload 408.6/431.8 ms 超过原 285.3 ms 门槛，候选仍阻塞。旧通过 e473 在当前环境的两组对照也为 386.4/404.4 ms；全部样本、正常退出与定向 JFR 已归档，尚未建立单一源码原因，不以环境推测或历史通过结果消除当前失败。
+
 跨进程动态同步、票 28 多节点客户端首帧、完整 TSC、确切候选性能、最终候选的 release rollback/data rollback 和最终发布/回滚策略仍按各自 gate 核验；领域服务器验收不外推为发布通过。
 
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)

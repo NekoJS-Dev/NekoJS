@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import statistics
 import zipfile
 from pathlib import Path
 
@@ -63,7 +64,37 @@ def main():
     for step, filename in [('clear-before', 'frame-clear.png'), ('blur-before', 'frame-blur.png')]:
         capture = next(row for row in captures if row['step'] == step)
         assert hashlib.sha256((directory / filename).read_bytes()).hexdigest() == capture['screenshot']['sha256']
-    print('PASS: archive hashes, five runtimes/Pyright runs, component red/green, rollback and seven world-frame captures')
+    performance = checked_archive(directory, 'performance')
+    for label, expected_groups in [('candidate', 3), ('control', 2)]:
+        judgment = json.loads(performance[label + '/judgment.json'])
+        assert judgment['complete'] and judgment['verdict'] == 'FAIL'
+        assert len(judgment['groups']) == expected_groups
+        for group in judgment['groups']:
+            prefix = label + '/formal/' + group['group'] + '/'
+            rows = [json.loads(line) for line in performance[prefix + 'samples.jsonl'].decode('utf-8-sig').splitlines()]
+            formal = [row for row in rows if row['kind'] == 'formal']
+            assert len(formal) == 5
+            assert all(not row.get('timeout') and not row['forced_kill'] and not row['killed']
+                       and row['stop_channel'] == 'rcon' for row in rows)
+            assert group['values'] == [row[group['measure']] for row in formal]
+            assert group['mean'] == statistics.mean(group['values'])
+            expected_verdict = 'PASS' if group['mean'] <= group['limit'] else 'FAIL'
+            assert group['verdict'] == expected_verdict
+            if group['group'] == 'startup':
+                assert len([row for row in rows if row['kind'] == 'warmup']) == 2
+                assert group['limit'] == 41173
+            else:
+                assert group['limit'] == 285.3
+                assert all('phase=COMMIT - no errors' in row['rcon_response'] for row in formal)
+    frozen = json.loads(performance['candidate/frozen-classes.json'])
+    primary = next(row for row in preparation['nodes'] if row['node'] == '26.1.2')
+    assert frozen['classesMatchReviewedArtifact'] and frozen['classBindings'] == primary['classBindings']
+    assert frozen['reviewedArtifactSha256'] == primary['sha256']
+    profile_session = json.loads(performance['profile/session.json'].decode('utf-8-sig'))
+    assert not profile_session['forcedKill'] and not profile_session['extra']['killed']
+    assert profile_session['extra']['stopChannel'] == 'rcon'
+    assert len(json.loads(performance['profile/reloads.json'].decode('utf-8-sig'))) == 5
+    print('PASS: artifact, runtime, IDE, rollback, frame and performance evidence integrity; reload performance verdict remains FAIL')
 
 
 if __name__ == '__main__':
