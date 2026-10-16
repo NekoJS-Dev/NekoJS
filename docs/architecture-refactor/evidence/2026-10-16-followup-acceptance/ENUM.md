@@ -56,3 +56,5 @@ Luna 对稳定的上一批完整 26.1.2 声明作了两项限定调查，仅记�
 - 十二条 TS2314 中，八条引用裸泛型 host 类型（`Class[]`、四个 `Packet`、三个 `AttachedData`），另四条来自 generic adapter 的输入别名：`Holder_`、`ParticleType_`、`EntityType_`、`BlockEntityType_` 的 self 分支没有泛型实参。`AdapterAliasGenerator.renderAlias`/`render` 与 `TypeScriptClassRenderer.renderSymbol` 是后者的共享修复入口。后续应先用泛型目标与带实参调用的回归证明，保留 typed use-site 实参；裸 Java 签名和擦除语义尚需直接核对，不以统一 Any 或泛型默认值遮盖。
 
 这两项未实施新的生产修改，也未扩大扫描范围。Python 入口/事件输出顺序仍需另行处理；当前报告只证明枚举 Java 类声明保留及此次完整输出的实际结果。
+
+进一步只读核对确认，generic adapter 的描述应同时保留裸导出名、泛型参数及 bound，声明事实来自已编辑的 `ctx.ir()`，不能反射另一份未编辑父本。`IndexFileGenerator` 的导入分配仍需裸标识符，两个输入渲染入口则必须转交 use-site 实参。直接书写 `$Foo_` 的现有消费者也必须保留兼容；不能仅把所有别名改成必填泛型参数。`HostValue` 目前只携带 `Class<?>`，不在这处修复中扩展为新的参数化形状 API。这些约束尚未实施或验证。
