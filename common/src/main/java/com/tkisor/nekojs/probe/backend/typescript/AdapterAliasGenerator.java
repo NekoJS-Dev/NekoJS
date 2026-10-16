@@ -3,6 +3,9 @@ package com.tkisor.nekojs.probe.backend.typescript;
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.AdapterInputShape.Slot;
 import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
+import com.tkisor.nekojs.probe.ir.TypeDecl;
+import com.tkisor.nekojs.probe.ir.TypeReflector;
+import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 
 import java.util.ArrayList;
@@ -31,6 +34,7 @@ public final class AdapterAliasGenerator {
     private final TypeAliasRegistry aliasRegistry;
     private final Map<String, AdapterAlias> aliases = new LinkedHashMap<>();
     private final Map<String, AdapterCatalogEntry> entries = new LinkedHashMap<>();
+    private final Map<String, List<TypeDecl.TypeParam>> parameters = new LinkedHashMap<>();
     private final Set<String> hostImports = new LinkedHashSet<>();
 
     public AdapterAliasGenerator(TypeAliasRegistry aliasRegistry) {
@@ -52,9 +56,20 @@ public final class AdapterAliasGenerator {
      *                         避免为未生成的目标注册别名而引入悬空类型引用
      */
     public void prepare(List<AdapterCatalogEntry> adapters, Set<String> generatedClasses) {
+        prepare(adapters, generatedClasses, List.of());
+    }
+
+    /** Uses edited declarations when available; fallback reflection reads only generic parameters. */
+    public void prepare(List<AdapterCatalogEntry> adapters, Set<String> generatedClasses,
+                        List<TypeDecl> declarations) {
         aliases.clear();
         entries.clear();
+        parameters.clear();
         hostImports.clear();
+        Map<String, TypeDecl> declarationsByName = new LinkedHashMap<>();
+        if (declarations != null) {
+            for (TypeDecl declaration : declarations) declarationsByName.put(declaration.fqn, declaration);
+        }
 
         List<AdapterCatalogEntry> eligible = new ArrayList<>();
         for (AdapterCatalogEntry entry : adapters) {
@@ -62,13 +77,18 @@ public final class AdapterAliasGenerator {
             String fqn = entry.targetType().getName();
             if (!generatedClasses.contains(fqn)) continue;
             eligible.add(entry);
-            aliasRegistry.registerClassAlias(fqn, "$" + tsClassName(entry.targetType()) + "_");
+            TypeDecl declaration = declarationsByName.get(fqn);
+            List<TypeDecl.TypeParam> typeParameters = declaration == null
+                    ? TypeReflector.typeParametersOf(entry.targetType()) : List.copyOf(declaration.typeParams);
+            parameters.put(fqn, typeParameters);
+            aliasRegistry.registerAdapterAlias(fqn, "$" + tsClassName(entry.targetType()) + "_",
+                    typeParameters.size());
         }
 
         for (AdapterCatalogEntry entry : eligible) {
             String fqn = entry.targetType().getName();
             entries.put(fqn, entry);
-            AdapterAlias alias = renderAlias(entry);
+            AdapterAlias alias = renderAlias(entry, parameters.get(fqn));
             aliases.put(fqn, alias);
             // 收集别名引用的跨包 host 类型，供 orchestrator 确保它们也被生成，避免悬空 import
             for (String imp : alias.importFqns()) {
@@ -98,20 +118,43 @@ public final class AdapterAliasGenerator {
     /** Re-renders canonical shapes when an imported host or input alias needs a local name. */
     public AdapterAlias getAlias(String fqn, TypeAliasRegistry moduleAliases) {
         AdapterCatalogEntry entry = entries.get(fqn);
-        return entry == null ? null : new AdapterAliasGenerator(moduleAliases).renderAlias(entry);
+        return entry == null ? null : new AdapterAliasGenerator(moduleAliases).renderAlias(entry, parameters.get(fqn));
     }
 
-    private AdapterAlias renderAlias(AdapterCatalogEntry entry) {
+    private AdapterAlias renderAlias(AdapterCatalogEntry entry, List<TypeDecl.TypeParam> typeParameters) {
         Class<?> target = entry.targetType();
         String selfSimple = tsClassName(target);
         String selfPackage = target.getPackageName();
         Set<String> imports = new LinkedHashSet<>();
         Set<String> usedRegistries = new LinkedHashSet<>();
+        TypeAliasRegistry scopedAliases = aliasRegistry.withReferences((fqn, name) -> {
+            int separator = fqn.lastIndexOf('.');
+            if (separator >= 0 && !fqn.substring(0, separator).equals(selfPackage)) imports.add(fqn);
+            return aliasRegistry.reference(fqn, name);
+        });
+        List<String> declarations = new ArrayList<>();
+        List<String> arguments = new ArrayList<>();
+        for (TypeDecl.TypeParam parameter : typeParameters) {
+            String declaration = parameter.name;
+            if (parameter.bound != null) {
+                declaration += " extends " + TypeScriptClassRenderer.renderTypeParameterBound(
+                        parameter.bound.ref, parameter.name, scopedAliases, new LinkedHashSet<>());
+            }
+            // Raw Java uses historically accept erased values; explicit arguments still retain their bounds.
+            declarations.add(declaration + " = any");
+            arguments.add(parameter.name);
+        }
+        String argumentList = arguments.isEmpty() ? "" : "<" + String.join(", ", arguments) + ">";
+        ShapeContext context = new ShapeContext(
+                aliasRegistry.reference(target.getName(), "$" + selfSimple) + argumentList,
+                aliasRegistry.reference(target.getName(), "$" + selfSimple + "_") + argumentList,
+                selfPackage, imports, usedRegistries);
         Set<String> rendered = new LinkedHashSet<>();
         for (AdapterInputShape shape : entry.shapes()) {
-            rendered.add(render(shape, selfSimple, selfPackage, imports, usedRegistries, false));
+            rendered.add(render(shape, context, false));
         }
-        return new AdapterAlias("$" + selfSimple + "_", String.join(" | ", rendered), imports,
+        String parameterList = declarations.isEmpty() ? "" : "<" + String.join(", ", declarations) + ">";
+        return new AdapterAlias("$" + selfSimple + "_", parameterList, String.join(" | ", rendered), imports,
                 !usedRegistries.isEmpty(), entry.syntaxDoc());
     }
 
@@ -127,6 +170,7 @@ public final class AdapterAliasGenerator {
     /** 单个适配器目标的渲染结果。 */
     public record AdapterAlias(
             String aliasName,
+            String typeParameters,
             String union,
             Set<String> importFqns,
             boolean usesRegistry,
@@ -135,68 +179,69 @@ public final class AdapterAliasGenerator {
 
     // ===================== 形状渲染 =====================
 
+    private record ShapeContext(String hostSelf, String inputSelf, String selfPackage,
+                                Set<String> imports, Set<String> usedRegistries) {}
+
     /**
      * @param nested 是否处于嵌套位置（数组元素 / 对象槽位 / 联合成员 / 模板洞）。嵌套位置的
      *               目标类型要放宽成输入别名 {@code $Foo_}：运行时那些位置同样经适配器转换，
      *               所以 {@code { any: ['minecraft:stone'] }} 之类的写法必须能通过类型检查。
      *               顶层不放宽——否则 {@code $Foo_ = $Foo_ | ...} 自引用成环。
      */
-    private String render(AdapterInputShape shape, String selfSimple, String selfPackage,
-                          Set<String> imports, Set<String> usedRegistries, boolean nested) {
+    private String render(AdapterInputShape shape, ShapeContext context, boolean nested) {
         return switch (shape) {
             case AdapterInputShape.StringValue v -> "string";
             case AdapterInputShape.LiteralValue v -> "\"" + v.text().replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
             case AdapterInputShape.NumberValue v -> "number";
             case AdapterInputShape.BooleanValue v -> "boolean";
-            case AdapterInputShape.SelfValue v -> "$" + selfSimple + (nested ? "_" : "");
+            case AdapterInputShape.SelfValue v -> nested ? context.inputSelf() : context.hostSelf();
             case AdapterInputShape.HostValue v -> {
                 Class<?> hostCls = v.cls();
                 // 同包目标已在当前模块声明，无需 import；跨包才收集
                 String hostPkg = hostCls.getPackage() != null ? hostCls.getPackage().getName() : "";
-                if (!hostPkg.equals(selfPackage)) {
-                    imports.add(hostCls.getName());
+                if (!hostPkg.equals(context.selfPackage())) {
+                    context.imports().add(hostCls.getName());
                 }
                 String hostAlias = nested ? aliasRegistry.getAlias(hostCls.getName()) : null;
                 yield hostAlias != null ? hostAlias : aliasRegistry.reference(hostCls.getName(), "$" + tsClassName(hostCls));
             }
             case AdapterInputShape.ArrayOfValue v ->
-                    render(v.element(), selfSimple, selfPackage, imports, usedRegistries, true) + "[]";
+                    render(v.element(), context, true) + "[]";
             case AdapterInputShape.ObjectValue v ->
-                    renderObject(v.slots(), selfSimple, selfPackage, imports, usedRegistries);
+                    renderObject(v.slots(), context);
             case AdapterInputShape.UnionValue v -> {
                 List<String> members = new ArrayList<>();
                 for (AdapterInputShape member : v.members()) {
-                    members.add(render(member, selfSimple, selfPackage, imports, usedRegistries, true));
+                    members.add(render(member, context, true));
                 }
                 // 恒加括号：槽位/数组元素位置都合法，且不依赖调用点自己判断优先级
                 yield "(" + String.join(" | ", members) + ")";
             }
             case AdapterInputShape.RegistryValue v -> {
-                usedRegistries.add(v.typeName());
+                context.usedRegistries().add(v.typeName());
                 yield "RegistryTypes." + v.typeName();
             }
             case AdapterInputShape.RegistryTagValue v -> {
-                usedRegistries.add(v.typeName());
+                context.usedRegistries().add(v.typeName());
                 yield "RegistryTypes." + v.typeName() + "Tag";
             }
             case AdapterInputShape.NamespaceValue v -> {
                 // 与注册表字面量同一模块（@special/types），复用同一条 import 触发
-                usedRegistries.add("Namespace");
+                context.usedRegistries().add("Namespace");
                 yield "RegistryTypes.Namespace";
             }
             case AdapterInputShape.TemplateValue v -> "`" + v.prefix()
-                    + "${" + render(v.hole(), selfSimple, selfPackage, imports, usedRegistries, true) + "}"
+                    + "${" + render(v.hole(), context, true) + "}"
                     + v.suffix() + "`";
             case AdapterInputShape.RawValue v -> v.ts();
         };
     }
 
-    private String renderObject(List<Slot> slots, String selfSimple, String selfPackage,
-                                Set<String> imports, Set<String> usedRegistries) {
+    private String renderObject(List<Slot> slots, ShapeContext context) {
         if (slots.isEmpty()) return "{ [key: string]: any }";
         List<String> parts = new ArrayList<>();
         for (Slot slot : slots) {
-            String type = render(slot.shape(), selfSimple, selfPackage, imports, usedRegistries, true);
+            String type = render(slot.shape(), context, true);
             parts.add(quoteKey(slot.name()) + (slot.required() ? "" : "?") + ": " + type);
         }
         return "{ " + String.join(", ", parts) + " }";

@@ -2,8 +2,9 @@
   "name": "nekojs-build-tools",
   "private": true,
   "scripts": {
-    "test:probe-types": "tsc -p common/src/test/probe-ts/tsconfig.json --noEmit && tsc -p common/src/test/probe-ts/tsconfig.community.json --noEmit && npm run test:probe-enum-heritage",
+    "test:probe-types": "tsc -p common/src/test/probe-ts/tsconfig.json --noEmit && tsc -p common/src/test/probe-ts/tsconfig.community.json --noEmit && npm run test:probe-enum-heritage && npm run test:probe-generic-adapter",
     "test:probe-enum-heritage": "tsc -p common/build/probe-ts-enum-heritage/plain/tsconfig.json && tsc -p common/build/probe-ts-enum-heritage/renamed/tsconfig.json && tsc -p common/build/probe-ts-enum-heritage/collision/tsconfig.json",
+    "test:probe-generic-adapter": "tsc -p common/build/probe-ts-generic-adapter/plain/tsconfig.json && tsc -p common/build/probe-ts-generic-adapter/renamed/tsconfig.json && tsc -p common/build/probe-ts-generic-adapter/edited/tsconfig.json",
     "test:community-probe-types": "tsc -p common/src/test/probe-ts/tsconfig.community.json --noEmit",
     "check:wiki": "node scripts/wiki-docs.mjs check --strict",
     "test:wiki": "node --test scripts/wiki-docs.test.mjs"

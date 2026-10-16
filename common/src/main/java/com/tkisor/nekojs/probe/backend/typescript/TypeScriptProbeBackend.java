@@ -140,7 +140,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 int previousSize = classesToGenerate.size();
                 Set<String> aliasEligibleClasses = new LinkedHashSet<>(classesToGenerate);
                 aliasEligibleClasses.removeAll(hiddenFqns);
-                adapterAliasGenerator.prepare(snapshot.adapters(), aliasEligibleClasses);
+                adapterAliasGenerator.prepare(snapshot.adapters(), aliasEligibleClasses, ctx.ir());
                 for (String host : adapterAliasGenerator.hostImports()) {
                     if (ctx.config().isRelevantClass(host, platformPkgs) && !hiddenFqns.contains(host)) {
                         classesToGenerate.add(host);

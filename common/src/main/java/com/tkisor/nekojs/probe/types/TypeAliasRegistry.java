@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class TypeAliasRegistry {
     private final Map<String, String> classAliases = new LinkedHashMap<>();
+    private final Map<String, Integer> adapterTypeParameters = new LinkedHashMap<>();
     private final Map<String, CollectionAlias> collectionAliases = new LinkedHashMap<>();
     private final Map<String, FunctionalInterfaceAlias> functionalAliases = new LinkedHashMap<>();
     private java.util.function.BiFunction<String, String, String> references = (fqn, name) -> name;
@@ -36,6 +37,7 @@ public final class TypeAliasRegistry {
         TypeAliasRegistry view = new TypeAliasRegistry();
         view.classAliases.clear();
         view.classAliases.putAll(classAliases);
+        view.adapterTypeParameters.putAll(adapterTypeParameters);
         view.collectionAliases.clear();
         view.collectionAliases.putAll(collectionAliases);
         view.functionalAliases.putAll(functionalAliases);
@@ -97,6 +99,7 @@ public final class TypeAliasRegistry {
      */
     public void clear() {
         classAliases.clear();
+        adapterTypeParameters.clear();
         collectionAliases.clear();
         functionalAliases.clear();
         enumAliasCache.clear();
@@ -184,12 +187,28 @@ public final class TypeAliasRegistry {
      */
     public void registerClassAlias(String className, String tsType) {
         classAliases.put(className, tsType);
+        adapterTypeParameters.remove(className);
+    }
+
+    /** Registers an adapter's actual generic arity; ordinary aliases do not consume host arguments. */
+    public void registerAdapterAlias(String className, String tsType, int parameters) {
+        classAliases.put(className, tsType);
+        adapterTypeParameters.put(className, parameters);
     }
 
     /** Returns an explicitly registered class alias without resolving the lazy enum aliases. */
     public String getRegisteredAlias(String className) {
         String alias = classAliases.get(className);
         return alias == null ? null : reference(className, alias);
+    }
+
+    /** Explicit host arguments retain their identity; an empty list selects the alias's raw Java defaults. */
+    public String renderRegisteredAlias(String className, List<String> hostArguments) {
+        String alias = getRegisteredAlias(className);
+        if (alias == null || adapterTypeParameters.getOrDefault(className, 0) == 0 || hostArguments.isEmpty()) {
+            return alias;
+        }
+        return alias + "<" + String.join(", ", hostArguments) + ">";
     }
 
     public FunctionalInterfaceAlias getFunctionalInterfaceAlias(String className) {

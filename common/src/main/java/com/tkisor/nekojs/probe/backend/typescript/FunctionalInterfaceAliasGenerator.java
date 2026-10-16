@@ -304,7 +304,13 @@ public final class FunctionalInterfaceAliasGenerator {
         Class<?> raw = FunctionalInterfaceResolver.rawClass(declared);
         if (raw != null) {
             String explicitAlias = registry.getRegisteredAlias(raw.getName());
-            if (explicitAlias != null) return explicitAlias;
+            if (explicitAlias != null) {
+                Type[] arguments = declared instanceof ParameterizedType parameterized
+                        ? parameterized.getActualTypeArguments() : new Type[0];
+                return registry.renderRegisteredAlias(raw.getName(), Arrays.stream(arguments)
+                        .map(argument -> TypeScriptClassRenderer.renderTypeRef(TypeReflector.toRef(argument),
+                                registry, false, expanding)).toList());
+            }
             TypeAliasRegistry.FunctionalInterfaceAlias functionalAlias =
                     registry.getFunctionalInterfaceAlias(raw.getName());
             if (functionalAlias != null) {

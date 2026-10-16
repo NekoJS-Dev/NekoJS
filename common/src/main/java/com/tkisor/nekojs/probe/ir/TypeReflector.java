@@ -36,15 +36,7 @@ public final class TypeReflector {
         // 类级 @Doc → JSDoc（注解缺省时 docs 为空，渲染零输出）
         decl.docs.addAll(AnnotatedDocs.typeDocs(cls));
 
-        // 类级泛型
-        for (TypeVariable<?> tv : cls.getTypeParameters()) {
-            TypeSlot bound = null;
-            Type[] bounds = tv.getBounds();
-            if (bounds.length > 0 && bounds[0] != Object.class) {
-                bound = TypeSlot.of(bounds[0], toRef(bounds[0]));
-            }
-            decl.typeParams.add(new TypeDecl.TypeParam(tv.getName(), bound));
-        }
+        decl.typeParams.addAll(typeParametersOf(cls));
 
         // Enums also retain Enum<Self>; each backend chooses how to expose the instance heritage.
         if (kind != TypeDecl.Kind.INTERFACE) {
@@ -456,6 +448,18 @@ public final class TypeReflector {
             return name.substring(2, 3).toLowerCase(Locale.ROOT) + name.substring(3);
         }
         return null;
+    }
+
+    /** Reflects generic parameters without loading members when no edited declaration is available. */
+    public static List<TypeDecl.TypeParam> typeParametersOf(Class<?> cls) {
+        List<TypeDecl.TypeParam> parameters = new ArrayList<>();
+        for (TypeVariable<?> variable : cls.getTypeParameters()) {
+            Type[] bounds = variable.getBounds();
+            TypeSlot bound = bounds.length > 0 && bounds[0] != Object.class
+                    ? TypeSlot.of(bounds[0], toRef(bounds[0])) : null;
+            parameters.add(new TypeDecl.TypeParam(variable.getName(), bound));
+        }
+        return parameters;
     }
 
     // ---- Java Type → ApiTypeRef（唯一类型映射：无损承载，语言糖由各渲染器决定）----

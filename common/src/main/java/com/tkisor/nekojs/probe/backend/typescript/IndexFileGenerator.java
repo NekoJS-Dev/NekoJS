@@ -203,6 +203,7 @@ public final class IndexFileGenerator {
                     adapterAlias.doc().ifPresent(doc ->
                         sb.append("    /** ").append(doc.replace("\n", "\n     * ")).append(" */\n"));
                     sb.append("    export type ").append(adapterAlias.aliasName())
+                      .append(adapterAlias.typeParameters())
                       .append(" = ").append(adapterAlias.union()).append(";\n");
                     continue;
                 }

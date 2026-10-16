@@ -485,7 +485,10 @@ public final class TypeScriptClassRenderer {
         String fqn = fqnOfSymbol(ref.name());
         if (input && aliases != null) {
             String registeredAlias = aliases.getRegisteredAlias(fqn);
-            if (registeredAlias != null) return registeredAlias;
+            if (registeredAlias != null) {
+                return aliases.renderRegisteredAlias(fqn, ref.arguments().stream()
+                        .map(argument -> renderTypeRef(argument, aliases, false, expandingFunctionalAliases)).toList());
+            }
             TypeAliasRegistry.FunctionalInterfaceAlias functionalAlias =
                     aliases.getFunctionalInterfaceAlias(fqn);
             if (functionalAlias != null) {
