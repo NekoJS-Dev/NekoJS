@@ -14,16 +14,25 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MinecraftTypeDocsPluginTest {
+    private static boolean hasNeoForgeDiscovery() {
+        try {
+            Class.forName("com.tkisor.nekojs.core.NeoForgePluginLoader");
+            return true;
+        } catch (ClassNotFoundException fabricNode) {
+            return false;
+        }
+    }
+
     @Test
     void contributesOnlyTheLocalEntityRuleThroughTheNodeDiscoveryPath() throws Exception {
         assertNotNull(MinecraftTypeDocsPlugin.class.getAnnotation(RegisterNekoJSPlugin.class));
-        //? if fabric {
+        if (!hasNeoForgeDiscovery()) {
             Class<?> loader = Class.forName("com.tkisor.nekojs.fabric.FabricPluginLoader");
             var field = loader.getDeclaredField("BUILTIN_PLUGINS");
             field.setAccessible(true);
             assertTrue(((List<?>) field.get(null)).contains(MinecraftTypeDocsPlugin.class),
                     "Fabric discovery must include the shared Minecraft TypeDocs contributor");
-        //?}
+        }
         List<BeanAliasExclusionCatalogEntry> rules = new ArrayList<>();
         new MinecraftTypeDocsPlugin().registerTypeDocs(new TypeDocsRegister() {
             @Override
