@@ -47,3 +47,12 @@ python docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/verify
 [归档](enum-evidence.zip)、[摘要](enum-summary.json)和[清单](enum-manifest.json)包含上述记录、完整生成声明、完整诊断、编译器退出码、测试 XML、源码/class/制品绑定及复现工具。归档不含 JAR、世界、口令或用户 profile。首次 Python 比较未解析本地导入别名，原始 false 结果仍在摘要；独立 verifier 根据归档的新旧字节重新计算类型身份，不修改原始记录。
 
 规范轴对生产增量发现 0 项；需求轴最初指出尚缺修复后的完整实际声明结果，本报告与归档补齐该验证步骤。最终只读复核结论见 [REVIEW.md](REVIEW.md)。本轮未复跑性能、其他节点客户端或最终候选回滚，也未代签发布门禁。票 28、37 继续开放。
+
+## 下一处具体调查入口
+
+Luna 对稳定的上一批完整 26.1.2 声明作了两项限定调查，仅记录实际发现，不把推断当验证：
+
+- `MemoryLayout.PathElement`、`UserApiService.UserFlag`、`Provider.Service` 的声明实际未被选入，而非已生成却拼错嵌套名。collector 在配置深度处停止签名边扩展；`MemoryLayout` 的深度边界已有记录。不能靠改 import 拼写解决，也不据此将全部 TS2304 都归为同一原因。
+- 十二条 TS2314 中，八条引用裸泛型 host 类型（`Class[]`、四个 `Packet`、三个 `AttachedData`），另四条来自 generic adapter 的输入别名：`Holder_`、`ParticleType_`、`EntityType_`、`BlockEntityType_` 的 self 分支没有泛型实参。`AdapterAliasGenerator.renderAlias`/`render` 与 `TypeScriptClassRenderer.renderSymbol` 是后者的共享修复入口。后续应先用泛型目标与带实参调用的回归证明，保留 typed use-site 实参；裸 Java 签名和擦除语义尚需直接核对，不以统一 Any 或泛型默认值遮盖。
+
+这两项未实施新的生产修改，也未扩大扫描范围。Python 入口/事件输出顺序仍需另行处理；当前报告只证明枚举 Java 类声明保留及此次完整输出的实际结果。
