@@ -284,19 +284,90 @@ public final class TypeReflector {
 
     private MethodDecl reflectClassMethod(Class<?> cls, Method method) {
         MethodDecl declaration = reflectMethod(method);
-        if (method.getDeclaringClass() == cls) return declaration;
-        FunctionalInterfaceResolver.Signature signature = inheritedSignature(cls, method);
-        reflectTypeParameters(declaration, signature.typeParameters());
-        declaration.returnType = TypeSlot.of(signature.returnType(), toRef(signature.returnType()));
-        for (int index = 0; index < declaration.params.size(); index++) {
-            Type type = signature.parameterTypes().get(index);
-            if (declaration.params.get(index).varargs) {
-                type = type instanceof GenericArrayType array ? array.getGenericComponentType()
-                        : ((Class<?>) type).getComponentType();
+        if (declaration.hidden) return declaration;
+        if (method.getDeclaringClass() != cls) {
+            FunctionalInterfaceResolver.Signature signature = inheritedSignature(cls, method);
+            reflectTypeParameters(declaration, signature.typeParameters());
+            declaration.returnType = TypeSlot.of(signature.returnType(), toRef(signature.returnType()));
+            for (int index = 0; index < declaration.params.size(); index++) {
+                Type type = signature.parameterTypes().get(index);
+                if (declaration.params.get(index).varargs) {
+                    type = type instanceof GenericArrayType array ? array.getGenericComponentType()
+                            : ((Class<?>) type).getComponentType();
+                }
+                declaration.params.get(index).type = TypeSlot.of(type, toRef(type));
             }
-            declaration.params.get(index).type = TypeSlot.of(type, toRef(type));
         }
+        Type result = interfaceReturnContract(cls, method, declaration.returnType.sourceType);
+        declaration.returnType = TypeSlot.of(result, toRef(result));
         return declaration;
+    }
+
+    // Bytecode injection can erase an implementation's Signature attribute while retaining its typed interface.
+    // Recover only an agreed, in-scope contract with the same erasure; ambiguous or method-generic contracts stay raw.
+    private static Type interfaceReturnContract(Class<?> cls, Method method, Type original) {
+        if (cls.isInterface() || Modifier.isStatic(method.getModifiers()) || method.getTypeParameters().length != 0
+                || !(original instanceof Class<?> raw) || raw.getTypeParameters().length == 0) return original;
+        List<Method> contracts = new ArrayList<>();
+        collectInterfaceMethods(cls, new HashSet<>(), contracts);
+        Type agreed = null;
+        for (Method candidate : contracts) {
+            if (Modifier.isStatic(candidate.getModifiers()) || !Modifier.isPublic(candidate.getModifiers())
+                    || candidate.isBridge() || candidate.isSynthetic() || !candidate.getName().equals(method.getName())
+                    || !Arrays.equals(candidate.getParameterTypes(), method.getParameterTypes())) continue;
+            if (candidate.getReturnType() != raw) continue;
+            FunctionalInterfaceResolver.Signature signature = FunctionalInterfaceResolver.resolve(cls, candidate);
+            if (signature == null || !signature.typeParameters().isEmpty()
+                    || !(signature.returnType() instanceof ParameterizedType result)
+                    || result.getRawType() != raw || !contractInScope(result, cls)) return original;
+            if (agreed != null && !sameContract(agreed, result)) return original;
+            agreed = result;
+        }
+        return agreed == null ? original : agreed;
+    }
+
+    private static void collectInterfaceMethods(Class<?> cls, Set<Class<?>> visited, List<Method> methods) {
+        if (cls == null || !visited.add(cls)) return;
+        if (cls.isInterface()) methods.addAll(List.of(cls.getDeclaredMethods()));
+        for (Class<?> parent : cls.getInterfaces()) collectInterfaceMethods(parent, visited, methods);
+        collectInterfaceMethods(cls.getSuperclass(), visited, methods);
+    }
+
+    private static boolean contractInScope(Type type, Class<?> cls) {
+        if (type instanceof TypeVariable<?> variable) return List.of(cls.getTypeParameters()).contains(variable);
+        if (type instanceof ParameterizedType parameterized) {
+            return (parameterized.getOwnerType() == null || contractInScope(parameterized.getOwnerType(), cls))
+                    && Arrays.stream(parameterized.getActualTypeArguments()).allMatch(arg -> contractInScope(arg, cls));
+        }
+        if (type instanceof GenericArrayType array) return contractInScope(array.getGenericComponentType(), cls);
+        if (type instanceof WildcardType wildcard) {
+            return Arrays.stream(wildcard.getUpperBounds()).allMatch(bound -> contractInScope(bound, cls))
+                    && Arrays.stream(wildcard.getLowerBounds()).allMatch(bound -> contractInScope(bound, cls));
+        }
+        return type instanceof Class<?>;
+    }
+
+    private static boolean sameContract(Type left, Type right) {
+        if (left == null || right == null) return left == right;
+        if (left instanceof ParameterizedType a && right instanceof ParameterizedType b) {
+            return a.getRawType().equals(b.getRawType()) && sameContract(a.getOwnerType(), b.getOwnerType())
+                    && sameContracts(a.getActualTypeArguments(), b.getActualTypeArguments());
+        }
+        if (left instanceof GenericArrayType a && right instanceof GenericArrayType b) {
+            return sameContract(a.getGenericComponentType(), b.getGenericComponentType());
+        }
+        if (left instanceof WildcardType a && right instanceof WildcardType b) {
+            return sameContracts(a.getUpperBounds(), b.getUpperBounds()) && sameContracts(a.getLowerBounds(), b.getLowerBounds());
+        }
+        return left.equals(right);
+    }
+
+    private static boolean sameContracts(Type[] left, Type[] right) {
+        if (left.length != right.length) return false;
+        for (int index = 0; index < left.length; index++) {
+            if (!sameContract(left[index], right[index])) return false;
+        }
+        return true;
     }
 
     private static FunctionalInterfaceResolver.Signature inheritedSignature(Class<?> cls, Method method) {
