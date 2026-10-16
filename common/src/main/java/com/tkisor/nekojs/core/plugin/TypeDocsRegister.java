@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.BeanAliasExclusionCatalogEntry;
 
 public interface TypeDocsRegister {
     void register(TypeDocCatalogEntry entry);
@@ -14,6 +15,12 @@ public interface TypeDocsRegister {
     default void registerClassDeclaration(ClassDeclarationCatalogEntry entry) {
         throw new UnsupportedOperationException("[NEKO-4031] Class declaration registration rejected: "
                 + "this type-docs collector does not support replacements");
+    }
+
+    /** Registers one exact TypeScript Bean alias exclusion while retaining its real accessor. */
+    default void registerBeanAliasExclusion(BeanAliasExclusionCatalogEntry entry) {
+        throw new UnsupportedOperationException("[NEKO-4034] Bean alias exclusion rejected: "
+                + "this type-docs collector does not support exclusions");
     }
 
     /**

@@ -464,6 +464,18 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 
 另外两条是选择而非限制：同语言多 backend 时 `/nekojs probe <语言>` 选 priority 最高者（`probe.toml [languages.<lang>].backend` 可以指定），其余用 `/nekojs probe <语言> <名字>` 显式跑；替换 TS 实现时布局怎么办见上面的命名约定一节。
 
+## Entity 属性的 TypeScript 迁移
+
+NeoForge 1.21.1、26.1.2、26.2.0 及 Fabric 26.1.2、26.2.0 的生成声明采用以下迁移：
+
+| 原来的 TypeScript 用法 | 迁移后的用法 | 影响 |
+|---|---|---|
+| `entity.attackable`（Entity 类型的派生属性） | `entity.isAttackable()` | 仅移除 Entity 自身的 TS 属性声明 |
+| `livingEntity.attackable()` | 保持原用法 | 子类真实方法保留 |
+| 其他类自己声明的 `attackable` 属性 | 保持原用法 | 独立 Bean 属性保留 |
+
+运行 `/nekojs probe` 刷新声明。此迁移解决 Entity 的 boolean 属性与 LivingEntity 同名方法在 TypeScript 继承及泛型约束中的冲突。Java/Graal 运行时仍可使用原有成员；Python 声明保持原样。
+
 <a id="wiki-section-29"></a>
 ## Probe 的当前局限
 

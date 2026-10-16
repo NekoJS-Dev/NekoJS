@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core.plugin;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.BeanAliasExclusionCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 
@@ -39,12 +40,14 @@ public final class TypeDocsPoint {
             List<TypeDocCatalogEntry> docs,
             List<ManualDeclarationCatalogEntry> manualDeclarations,
             List<ClassDeclarationCatalogEntry> classDeclarations,
+            List<BeanAliasExclusionCatalogEntry> beanAliasExclusions,
             List<RegistryBuilderSurfaceEntry> registryBuilderSurfaces) {
         TypeDocsSnapshot {
             docs = docs.stream().sorted(Comparator.comparingInt(TypeDocCatalogEntry::priority)).toList();
             manualDeclarations = manualDeclarations.stream()
                     .sorted(Comparator.comparingInt(ManualDeclarationCatalogEntry::priority)).toList();
             classDeclarations = List.copyOf(classDeclarations);
+            beanAliasExclusions = List.copyOf(beanAliasExclusions);
             registryBuilderSurfaces = registryBuilderSurfaces.stream()
                     .sorted(Comparator.comparing(RegistryBuilderSurfaceEntry::builderName)
                             .thenComparing(RegistryBuilderSurfaceEntry::typeName))
@@ -57,6 +60,7 @@ public final class TypeDocsPoint {
         private final List<TypeDocCatalogEntry> docs = new ArrayList<>();
         private final List<ManualDeclarationCatalogEntry> manualDeclarations = new ArrayList<>();
         private final List<ClassDeclarationCatalogEntry> classDeclarations = new ArrayList<>();
+        private final List<BeanAliasExclusionCatalogEntry> beanAliasExclusions = new ArrayList<>();
         private final List<RegistryBuilderSurfaceEntry> registryBuilderSurfaces = new ArrayList<>();
         private boolean sealed;
 
@@ -85,6 +89,12 @@ public final class TypeDocsPoint {
         }
 
         @Override
+        public void registerBeanAliasExclusion(BeanAliasExclusionCatalogEntry entry) {
+            checkSealed();
+            beanAliasExclusions.add(java.util.Objects.requireNonNull(entry, "entry"));
+        }
+
+        @Override
         public void registerRegistryBuilderSurface(RegistryBuilderSurfaceEntry entry) {
             checkSealed();
             registryBuilderSurfaces.add(java.util.Objects.requireNonNull(entry, "entry"));
@@ -93,7 +103,7 @@ public final class TypeDocsPoint {
         TypeDocsSnapshot snapshot() {
             sealed = true;
             return new TypeDocsSnapshot(List.copyOf(docs), List.copyOf(manualDeclarations),
-                    List.copyOf(classDeclarations), List.copyOf(registryBuilderSurfaces));
+                    List.copyOf(classDeclarations), List.copyOf(beanAliasExclusions), List.copyOf(registryBuilderSurfaces));
         }
 
         @Override

@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core.plugin;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.BeanAliasExclusionCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
@@ -59,6 +60,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
     private final List<TypeDocCatalogEntry> typeDocs;
     private final List<ManualDeclarationCatalogEntry> manualDeclarations;
     private final List<ClassDeclarationCatalogEntry> classDeclarations;
+    private final List<BeanAliasExclusionCatalogEntry> beanAliasExclusions;
     private final List<RegistryBuilderSurfaceEntry> registryBuilderSurfaces;
     private final Map<String, String> nodeModules;
     private final Map<String, RecipeNamespaceEntry> recipeNamespaces;
@@ -79,6 +81,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         this.typeDocs = mergedTypeDocs();
         this.manualDeclarations = mergedManualDeclarations();
         this.classDeclarations = mergedClassDeclarations();
+        this.beanAliasExclusions = mergedBeanAliasExclusions();
         this.registryBuilderSurfaces = mergedRegistryBuilderSurfaces();
         this.nodeModules = product(NodeModulesPoint.ID);
         this.recipeNamespaces = product(RecipeNamespacesPoint.ID);
@@ -323,6 +326,18 @@ public final class NekoPluginRuntime implements IPluginRuntime {
                 typeDocsSnapshot(TypeDocsPoint.ID).classDeclarations());
         merged.addAll(typeDocsSnapshot(NodeTypeDocsPoint.ID).classDeclarations());
         return ClassDeclarationCatalogEntry.resolve(merged);
+    }
+
+    private List<BeanAliasExclusionCatalogEntry> mergedBeanAliasExclusions() {
+        List<BeanAliasExclusionCatalogEntry> merged = new ArrayList<>(
+                typeDocsSnapshot(TypeDocsPoint.ID).beanAliasExclusions());
+        merged.addAll(typeDocsSnapshot(NodeTypeDocsPoint.ID).beanAliasExclusions());
+        return merged.stream().distinct().toList();
+    }
+
+    @Override
+    public List<BeanAliasExclusionCatalogEntry> beanAliasExclusions() {
+        return beanAliasExclusions;
     }
 
     @Override

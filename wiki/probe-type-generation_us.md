@@ -470,6 +470,18 @@ These three rules are enforced by code:
 
 Two more items describe selection, not restrictions: for a language with multiple backends, `/nekojs probe <语言>` chooses the highest priority (overridable by `probe.toml [languages.<lang>].backend`); other backends can be run explicitly with `/nekojs probe <语言> <名字>`. See the naming-conventions section above for layouts when replacing TS.
 
+## Entity property migration in TypeScript
+
+Generated declarations for NeoForge 1.21.1, 26.1.2, 26.2.0 and Fabric 26.1.2, 26.2.0 use this migration:
+
+| Previous TypeScript usage | Updated usage | Effect |
+|---|---|---|
+| `entity.attackable` (the derived property on Entity) | `entity.isAttackable()` | Only Entity's own TS property declaration is omitted |
+| `livingEntity.attackable()` | Keep the existing call | The real subclass method remains |
+| An `attackable` property declared by another class | Keep the existing usage | Independent Bean properties remain |
+
+Run `/nekojs probe` to refresh declarations. This resolves the conflict between Entity's boolean property and LivingEntity's same-name method in TypeScript inheritance and generic constraints. Java/Graal retains the original runtime members; Python declarations remain unchanged.
+
 <a id="wiki-section-29"></a>
 ## Current Probe limitations
 

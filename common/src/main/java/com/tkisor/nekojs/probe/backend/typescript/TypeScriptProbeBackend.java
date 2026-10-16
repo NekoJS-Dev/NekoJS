@@ -98,6 +98,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     public Map<String, String> render(ProbeContext ctx) {
         applyBuiltinGetterOverrides();
         NekoScriptCatalogSnapshot snapshot = ctx.snapshot();
+        tsClassRenderer.setBeanAliasExclusions(snapshot.beanAliasExclusions());
         Set<String> interfaceClassBindings = new LinkedHashSet<>();
         for (BindingCatalogEntry binding : snapshot.bindings()) {
             if (!binding.emit()) continue;

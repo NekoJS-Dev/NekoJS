@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe.ir;
 
 import com.google.gson.JsonPrimitive;
+import com.tkisor.nekojs.api.catalog.BeanAliasExclusionCatalogEntry;
 import com.tkisor.nekojs.probe.backend.typescript.IndexFileGenerator;
 import com.tkisor.nekojs.probe.backend.typescript.FunctionalInterfaceAliasGenerator;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
@@ -23,6 +24,17 @@ import java.util.stream.Collectors;
 public final class TypeScriptClassRenderer {
     private final TypeAliasRegistry aliases;
     private Set<String> interfaceClassBindings = Set.of();
+    private Set<BeanAliasExclusionCatalogEntry> beanAliasExclusions = Set.of();
+
+    /** Replaces the per-snapshot rules; matching never expands to subclasses or same-name properties. */
+    public void setBeanAliasExclusions(List<BeanAliasExclusionCatalogEntry> exclusions) {
+        beanAliasExclusions = Set.copyOf(exclusions);
+    }
+
+    private boolean excludesBeanAlias(TypeDecl declaration, MethodDecl getter) {
+        return beanAliasExclusions.stream().anyMatch(entry -> entry.targetType() == declaration.sourceClass
+                && entry.getterName().equals(getter.name) && entry.propertyName().equals(getter.property));
+    }
 
     // 覆盖 getter 的返回类型 (fqn -> getter 属性名 -> { returnType, importStatement })
     // 键是 getter 的**属性名**（如 "recipes"），与 ClassDeclGenerator 的 lookup 口径一致
@@ -88,6 +100,7 @@ public final class TypeScriptClassRenderer {
         TypeScriptClassRenderer scoped = new TypeScriptClassRenderer(moduleAliases);
         scoped.getterOverrides.putAll(getterOverrides);
         scoped.interfaceClassBindings = interfaceClassBindings;
+        scoped.beanAliasExclusions = beanAliasExclusions;
         return scoped.render(decl);
     }
 
@@ -144,7 +157,7 @@ public final class TypeScriptClassRenderer {
             if (m.hidden || !m.isGetter) continue;
             // 属性名非合法 TS 标识符（数字开头，如 get2DigitYearStart → 2DigitYearStart）：
             // 只渲染原方法名（getter 标记使方法段排除它，这里降级补发），脚本仍可调用
-            if (!isValidTsIdentifier(m.property) || propertyConflicts.contains(m.property)) {
+            if (!isValidTsIdentifier(m.property) || propertyConflicts.contains(m.property) || excludesBeanAlias(d, m)) {
                 sb.append(formatMethod(m, false));
                 continue;
             }

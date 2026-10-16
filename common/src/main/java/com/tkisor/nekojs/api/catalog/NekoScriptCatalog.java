@@ -52,7 +52,8 @@ public final class NekoScriptCatalog {
                 modIds(),
                 platformProvider.outputLayout(),
                 Map.of(),
-                List.of()
+                List.of(),
+                runtime.beanAliasExclusions()
         );
 
         Map<ScriptType, ApiEnvironmentSnapshot> managedApis = buildManagedApis(runtime, ScriptType.all());
@@ -74,7 +75,8 @@ public final class NekoScriptCatalog {
                 modIds(),
                 platformProvider.outputLayout(),
                 managedApis,
-                legacySurface
+                legacySurface,
+                runtime.beanAliasExclusions()
         );
     }
 
@@ -99,7 +101,8 @@ public final class NekoScriptCatalog {
                 modIds(),
                 platformProvider.outputLayout(),
                 Map.of(),
-                List.of()
+                List.of(),
+                runtime.beanAliasExclusions()
         );
 
         Map<ScriptType, ApiEnvironmentSnapshot> managedApis = buildManagedApis(runtime, List.of(scriptType));
@@ -121,7 +124,8 @@ public final class NekoScriptCatalog {
                 modIds(),
                 platformProvider.outputLayout(),
                 managedApis,
-                legacySurface
+                legacySurface,
+                runtime.beanAliasExclusions()
         );
     }
 

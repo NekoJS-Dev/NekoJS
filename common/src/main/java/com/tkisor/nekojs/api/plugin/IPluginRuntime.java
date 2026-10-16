@@ -3,6 +3,7 @@ package com.tkisor.nekojs.api.plugin;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.BeanAliasExclusionCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.data.Binding;
@@ -36,6 +37,11 @@ public interface IPluginRuntime {
 
     /** Returns immutable global class replacements collected during Plugin Runtime bootstrap. */
     default List<ClassDeclarationCatalogEntry> classDeclarations() {
+        return List.of();
+    }
+
+    /** Returns exact TypeScript Bean alias exclusions collected during bootstrap. */
+    default List<BeanAliasExclusionCatalogEntry> beanAliasExclusions() {
         return List.of();
     }
 
