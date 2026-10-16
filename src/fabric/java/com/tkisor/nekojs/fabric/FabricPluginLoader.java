@@ -5,6 +5,7 @@ import com.tkisor.nekojs.core.NekoJSBasePluginManager;
 import com.tkisor.nekojs.core.plugin.NekoCommonBuiltinPlugin;
 import com.tkisor.nekojs.core.compiler.python.PythonTranspilerPlugin;
 import com.tkisor.nekojs.probe.NekoProbeBuiltinPlugin;
+import com.tkisor.nekojs.probe.MinecraftTypeDocsPlugin;
 import com.tkisor.nekojs.util.selector.EntitySelectorsPlugin;
 import com.tkisor.nekojs.wrapper.registry.gen.NekoRegistryPointsPlugin;
 import net.fabricmc.loader.api.FabricLoader;
@@ -32,6 +33,7 @@ public final class FabricPluginLoader {
     private static final List<Class<?>> BUILTIN_PLUGINS = List.of(
             NekoCommonBuiltinPlugin.class,
             NekoProbeBuiltinPlugin.class,
+            MinecraftTypeDocsPlugin.class,
             PythonTranspilerPlugin.class,
             NekoRegistryPointsPlugin.class,
             EntitySelectorsPlugin.class,
