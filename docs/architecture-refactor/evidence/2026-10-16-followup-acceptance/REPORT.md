@@ -52,3 +52,5 @@ python docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/verify
 [泛型适配器修复与完整复测](GENERIC.md)使用 `f3f32a69` 新制品：类型参数、bound、嵌套 Self 和编辑后 IR 得以保留，完整构建、五节点实机、Pyright 和定向严格 TSC 通过。完整默认 TSC 移除 40 条裸泛型错误，同时新增 930 条约束错误，净增 890；本批不能按完整声明或无新增诊断验收。真实错误链与原始失败证据保留，完整 gate 仍开放。
 
 [入口路径修复与正式复测](RESOLVER.md)绑定 `6faed0e9`：完整构建 4916 tests、五节点实机及 Pyright 通过；完整 TSC 与上批一致，仍失败。正式启动 26101.8ms 通过，两组重载 335.4/376.6ms 均超过原 285.3ms 门槛，性能总结果仍 FAIL。定向组件改善不代替正式门禁。
+
+[擦除返回契约恢复](RETURN-CONTRACTS.md)绑定 `569376c6`：4921 tests、五节点新 JAR 实机、完整 Pyright 和定向回归通过；十个完整 TSC 入口减少 118 条 TS2314、无新增，完整 TSC 仍失败。真实 Type/ref 与 TS 保留 Host；Python 的普通 host 泛型投影限制及 Fabric 集合返回变化另有明确记录。

@@ -355,6 +355,172 @@ def check_resolver_evidence(directory):
         assert row['ir'] and all(m['sourceType'].endswith('.AttachedData') and not m['overridden'] for m in row['ir'])
 
 
+def python_return_contracts(data):
+    module = ast.parse(data)
+    imports = {}
+    for statement in module.body:
+        if isinstance(statement, ast.ImportFrom):
+            for alias in statement.names:
+                imports[alias.asname or alias.name] = '.' * statement.level + (statement.module or '') + '.' + alias.name
+
+    class CanonicalImports(ast.NodeTransformer):
+        def visit_Name(self, node):
+            if isinstance(node.ctx, ast.Load) and node.id in imports:
+                return ast.Name(id=imports[node.id], ctx=node.ctx)
+            return node
+
+        def visit_ImportFrom(self, node):
+            return None
+
+    module = CanonicalImports().visit(module)
+    returns = {}
+    for cls in module.body:
+        if not isinstance(cls, ast.ClassDef):
+            continue
+        for method in cls.body:
+            if not isinstance(method, ast.FunctionDef):
+                continue
+            key = (cls.name, method.name, ast.dump(method.args), tuple(ast.dump(d) for d in method.decorator_list))
+            assert key not in returns
+            returns[key] = ast.unparse(method.returns)
+            method.returns = ast.Name(id='RETURN_CONTRACT', ctx=ast.Load())
+    return ast.dump(module), returns
+
+
+def check_return_contract_evidence(directory):
+    entries = checked_archive(directory, 'return-contract')
+    previous = checked_archive(directory, 'resolver')
+    preparation = json.loads(entries['preparation-manifest.json'])
+    summary = json.loads(entries['return-contract-summary.json'])
+    assert preparation['sourceRevision'].startswith('569376c6')
+    assert summary['sourceRevision'] == preparation['sourceRevision']
+    assert hashlib.sha256(entries['production-source.patch']).hexdigest() == preparation['productionPatchSha256']
+    assert len(preparation['sourceHashes']) == 1
+    assert summary['testTotals'] == dict(tests=4921, failures=0, errors=0, skipped=271)
+    assert not summary['fullTscPassed'] and not summary['releaseApproved']
+    assert summary['noNewDiagnostics']
+    assert len(preparation['nodes']) == len(summary['ide']['nodes']) == 5
+    for node in preparation['nodes']:
+        prefix = 'installed/' + node['node'] + '/'
+        assert json.loads(entries[prefix + 'runtime-verdict.json'])['verdict'] == 'PASS'
+        assert json.loads(entries[prefix + 'server-exit.json'])['exitCode'] == 0
+        assert node['classBindings'] and len(node['sha256']) == 64
+    for node in summary['ide']['nodes']:
+        pyright = node['pyright']
+        assert pyright['exitCode'] == 0
+        assert pyright['summary']['errorCount'] == pyright['summary']['warningCount'] == 0
+        assert pyright['summary']['filesAnalyzed'] == pyright['stubCount']
+        for side in node['typescript']:
+            assert not side['skipLibCheck'] and side['defaultEditorIncludes']
+            assert side['exitCode'] != 0 and side['diagnosticCount'] > 0
+            data = entries['ide/' + node['node'] + '-' + side['side'] + '-tsc.txt'].decode('utf-8-sig')
+            assert side['diagnosticCount'] == sum(side['codes'].values()) == len(re.findall(r'error TS\d+:', data))
+    shared_returns = {
+        ('Connection', 'fabric_getPendingChannelsNames'): 'nekojs._java.net.minecraft.resources.Identifier',
+        ('Connection', 'fabric_getSyncedRecipeSerializers'): 'nekojs._java.net.minecraft.world.item.crafting.RecipeSerializer',
+        ('RegistryFriendlyByteBuf', 'fabric_getSendableConfigurationChannels'): 'nekojs._java.net.minecraft.resources.Identifier',
+        ('RecipeMap', 'fabric_getRecipesBySyncedSerializer'): 'RecipeHolder',
+        ('Level', 'fabric_getLoadedChunks'): 'nekojs._java.net.minecraft.world.level.chunk.LevelChunk',
+    }
+    modern_returns = {
+        ('BlockEntityType', 'blocks'): 'nekojs._java.net.minecraft.world.level.block.Block',
+        ('LootPool', 'fabric_getConditions'): 'nekojs._java.net.minecraft.world.level.storage.loot.predicates.LootItemCondition',
+        ('LootPool', 'fabric_getEntries'): 'nekojs._java.net.minecraft.world.level.storage.loot.entries.LootPoolEntryContainer',
+        ('LootPool', 'fabric_getFunctions'): 'nekojs._java.net.minecraft.world.level.storage.loot.functions.LootItemFunction',
+        ('LootTable', 'fabric_getFunctions'): 'nekojs._java.net.minecraft.world.level.storage.loot.functions.LootItemFunction',
+        ('LootTable', 'fabric_getPools'): 'LootPool',
+    }
+    for row in summary['comparisons']:
+        changed_returns = {}
+        assert row['pythonBefore'].keys() == row['pythonAfter'].keys()
+        prefix = 'installed/' + row['node'] + '/.neko_probe/python/'
+        changed = []
+        for path, expected in row['pythonAfter'].items():
+            before = previous[prefix + path]
+            after = entries[prefix + path]
+            assert hashlib.sha256(before).hexdigest() == row['pythonBefore'][path]
+            assert hashlib.sha256(after).hexdigest() == expected
+            if before != after:
+                changed.append(path)
+                if path.startswith('nekojs/_java/'):
+                    old_shape, old_returns = python_return_contracts(before)
+                    new_shape, new_returns = python_return_contracts(after)
+                    assert old_shape == new_shape and old_returns.keys() == new_returns.keys()
+                    for key in old_returns:
+                        if old_returns[key] != new_returns[key]:
+                            assert old_returns[key] in {'nekojs._java.java.util.Collection', 'nekojs._java.java.util.Set', 'nekojs._java.java.util.List'}
+                            changed_returns[key[:2]] = new_returns[key]
+                else:
+                    assert path == 'nekojs/__init__.pyi' or path.startswith('nekojs/_events/')
+                    assert python_declaration_facts(before) == python_declaration_facts(after)
+        assert sorted(changed) == sorted(row['changedPythonFiles'])
+        assert row['pythonByteIdentical'] == (not changed)
+        expected = shared_returns if row['node'] == '26.1.2-fabric' else (shared_returns | modern_returns if row['node'] == '26.2.0-fabric' else {})
+        assert changed_returns == {key:'list[' + element + ']' for key, element in expected.items()}
+        assert row['javaClassStubsByteIdentical'] == (not row['node'].endswith('-fabric'))
+
+    def diagnostics(data, prefix):
+        result = Counter()
+        text = data.decode('utf-8-sig')
+        for line in text.splitlines():
+            match = re.match(r'(.+?)\(\d+,\d+\): error (TS\d+): (.*)', line)
+            if match:
+                path, code, message = match.groups()
+                result[(path.removeprefix(prefix), code, message)] += 1
+            elif re.match(r'error TS\d+:', line):
+                result[('<global>', *re.match(r'error (TS\d+): (.*)', line).groups())] += 1
+        assert sum(result.values()) == len(re.findall(r'error TS\d+:', text))
+        return result
+
+    comparison = json.loads(entries['ide/diagnostic-comparison.json'])
+    assert len(comparison) == 5
+    removed_count = 0
+    added_count = 0
+    for row in comparison:
+        for side in row['sides']:
+            name = row['node'] + '-' + side['side'] + '-tsc.txt'
+            before = diagnostics(entries['ide-before/' + name], 'build/domain-resolver-installed/' + row['node'] + '/')
+            after = diagnostics(entries['ide/' + name], 'build/domain-return-contract-installed/' + row['node'] + '/')
+            added, removed = after - before, before - after
+            recorded_added = Counter({(item['file'], item['code'], item['message']):item['count'] for item in side['added']})
+            assert recorded_added == added
+            assert all(code == 'TS2314' for path, code, message in removed)
+            added_count += sum(added.values())
+            recorded = Counter({(item['file'], item['code'], item['message']):item['count'] for item in side['removed']})
+            assert recorded == removed
+            removed_count += sum(removed.values())
+    assert summary['diagnosticComparison'] == dict(added=added_count, removed=removed_count)
+    assert added_count == 0 and removed_count == 118
+    observations = json.loads(entries['return-contract-outputs.json'])
+    assert len(observations) == 5
+    for row in observations:
+        prefix = 'installed/' + row['node'] + '/'
+        markers = [json.loads(line.split(b'OWNED-DATA-SIGNATURES=', 1)[1]) for line in entries[prefix + 'server-stdout.log'].splitlines() if b'OWNED-DATA-SIGNATURES=' in line]
+        assert len(markers) == row['observations'] and len(markers) >= 6 and len(markers) % 3 == 0
+        assert len(row['contracts']) == 3 and len({m['host'] for m in markers}) == 3
+        for contract in row['contracts']:
+            host = contract['host']
+            name = host.rsplit('.', 1)[1]
+            selected = [m for m in markers if m['host'] == host]
+            assert len(selected) == len(markers) // 3
+            for marker in selected:
+                reflection = [m for m in marker['reflection'] if not m['bridge']]
+                assert len(reflection) == 1 and reflection[0]['genericReturnType'] == 'com.tkisor.nekojs.api.data.AttachedData'
+                assert len(marker['ir']) == 1
+                slot = marker['ir'][0]
+                assert slot['sourceType'] == contract['sourceType'] == 'com.tkisor.nekojs.api.data.AttachedData<' + host + '>'
+                assert 'name=java:' + host in slot['ref'] and not slot['overridden'] and not slot['getter']
+            stub = ast.parse(entries[prefix + contract['python']])
+            cls = next(c for c in stub.body if isinstance(c, ast.ClassDef) and c.name == name)
+            method = next(m for m in cls.body if isinstance(m, ast.FunctionDef) and m.name == 'data')
+            assert ast.unparse(method.returns) == contract['pythonAfter'] == 'AttachedData'
+            assert contract['pythonBefore'] == 'AttachedData'
+            assert re.search(r'\bdata\(\): \$AttachedData<\$' + name + r'>;', entries[prefix + contract['typescript']].decode('utf-8'))
+    red = entries['checks/domain-return-contract-red-corrected.xml']
+    import xml.etree.ElementTree as ET
+    assert ET.fromstring(red).attrib['failures'] == '3'
+
+
 def main():
     directory = Path(__file__).resolve().parent
     rollback = checked_archive(directory, 'rollback')
@@ -444,7 +610,8 @@ def main():
     check_enum_evidence(directory, reviewed)
     check_generic_evidence(directory)
     check_resolver_evidence(directory)
-    print('PASS: artifact, runtime, IDE, rollback, frame, performance, enum, generic and resolver evidence integrity; full TSC and reload performance remain FAIL')
+    check_return_contract_evidence(directory)
+    print('PASS: artifact, runtime, IDE, rollback, frame, performance, enum, generic, resolver and return-contract evidence integrity; full TSC and reload performance remain FAIL')
 
 
 if __name__ == '__main__':

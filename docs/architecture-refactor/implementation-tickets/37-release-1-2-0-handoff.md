@@ -81,3 +81,5 @@
 票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。
 
 后续入口路径修复 `6faed0e9` 及正式性能复测见 [报告](../evidence/2026-10-16-followup-acceptance/RESOLVER.md)。4916 tests、五节点实机及 Pyright 通过，完整 TSC 保持失败；重载 335.4/376.6ms 超过原阈值 285.3ms，启动通过。票据继续开放，没有代签维护者或发布验收。
+
+`569376c6` 恢复擦除返回值的接口契约：[五节点报告](../evidence/2026-10-16-followup-acceptance/RETURN-CONTRACTS.md)。4921 tests、实际运行及 Pyright 通过，完整 TSC 无新增并减少 118 条 TS2314，仍未通过整体验收；Python 普通 host 泛型实参投影仍有限制。

@@ -39,3 +39,7 @@ Standards 0 / Spec 0；两轴均无剩余最高级别问题。该结论只覆盖
 ## 模块入口路径检查修复
 
 固定比较 `45fc820f...6faed0e9`，Luna xhigh 只读规范轴 0 / 需求轴 0。两轴未修改文件或执行构建、测试、游戏。复核确认父路径、候选路径和最终真实路径边界仍保留，JSON 定向测量不等同正式门禁。随后主代理补齐完整构建、五节点新 JAR 及正式性能，见 [RESOLVER.md](RESOLVER.md)：完整 TSC 和重载性能仍 FAIL，静态 0 项不代表整票完成。
+
+## 擦除返回契约恢复
+
+固定增量 `afbea905...569376c6`，Luna xhigh 只读 Standards 0 / Spec 0。Spec 初次发现 Object 父契约使 Server/Level 无法恢复，主代理已改为先筛返回擦除类型并补混合父契约回归；最终复核确认解决。新增单元断言未直接检查恢复后 sourceType 或 Python，主代理随后用五节点实际签名标记同时核对 Type/ref，并检查两后端的真实输出，见 [报告](RETURN-CONTRACTS.md)。Python 不输出普通 host 泛型实参的既有限制保持公开。
