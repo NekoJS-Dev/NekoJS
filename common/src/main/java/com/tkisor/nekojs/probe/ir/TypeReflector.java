@@ -46,8 +46,8 @@ public final class TypeReflector {
             decl.typeParams.add(new TypeDecl.TypeParam(tv.getName(), bound));
         }
 
-        // 父类（仅 class；interface/enum 的 extends 在旧实现里不渲染 superclass）
-        if (kind == TypeDecl.Kind.CLASS) {
+        // Enums also retain Enum<Self>; each backend chooses how to expose the instance heritage.
+        if (kind != TypeDecl.Kind.INTERFACE) {
             Class<?> sc = cls.getSuperclass();
             if (sc != null && sc != Object.class) {
                 Type genericSuperclass = cls.getGenericSuperclass();

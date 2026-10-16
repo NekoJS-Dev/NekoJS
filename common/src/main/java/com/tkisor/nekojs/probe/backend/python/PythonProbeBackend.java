@@ -700,7 +700,10 @@ public final class PythonProbeBackend implements ProbeBackend {
     // ============================== import 收集 ==============================
 
     private static void collectDeclSymbolFqns(TypeDecl d, Set<String> out) {
-        if (d.superType != null) ApiTypeRefPyRenderer.collectSymbolFqns(d.superType.ref, out);
+        // Python enums use their dedicated surface rather than the Java superclass.
+        if (d.kind != TypeDecl.Kind.ENUM && d.superType != null) {
+            ApiTypeRefPyRenderer.collectSymbolFqns(d.superType.ref, out);
+        }
         for (TypeSlot i : d.interfaces) ApiTypeRefPyRenderer.collectSymbolFqns(i.ref, out);
         for (MethodDecl c : d.constructors) collectMethodRefs(c, out);
         for (MethodDecl m : d.methods) collectMethodRefs(m, out);

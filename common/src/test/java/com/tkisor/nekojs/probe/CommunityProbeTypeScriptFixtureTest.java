@@ -45,14 +45,21 @@ class CommunityProbeTypeScriptFixtureTest {
         var adapter = new AdapterCatalogEntry(CommunityProbeTypes.Payload.class,
                 List.of(AdapterInputShape.self(), AdapterInputShape.string()),
                 ConversionPrecedence.LOWEST, Optional.empty());
+        // This selected-class fixture supplies only the Java enum contract its callers exercise.
+        var enumBase = ClassDeclarationCatalogEntry.of(Enum.class, """
+                export class $Enum<E extends $Enum<E>> {
+                    compareTo(other: E): number;
+                    static valueOf<T extends $Enum<T>>(kind: object, name: string): T;
+                }
+                """, Set.of());
         var snapshot = new NekoScriptCatalogSnapshot(List.of(), List.of(), List.of(), List.of(adapter),
-                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(replacement),
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(replacement, enumBase),
                 List.of(), List.of(), List.of(), null, Map.of(), List.of());
         List<Class<?>> classes = List.of(CommunityProbeTypes.Api.class, CommunityProbeTypes.Payload.class,
                 CommunityProbeTypes.Mapper.class, CommunityProbeTypes.StringMapper.class,
                 CommunityProbeTypes.Supplier.class, CommunityProbeTypes.RpcBuilder.class,
                 CommunityProbeTypes.Container.class,
-                CommunityProbeTypes.Mode.class,
+                CommunityProbeTypes.Mode.class, Enum.class,
                 com.tkisor.nekojs.probe.testfixture.samebase.PersistentData.class,
                 com.tkisor.nekojs.probe.testfixture.sameother.PersistentData.class,
                 com.tkisor.nekojs.probe.testfixture.callback.CallbackValue.class);

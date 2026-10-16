@@ -61,6 +61,7 @@ public final class PythonClassRenderer {
 
     /** A projected inherited writer may reference a type absent from the child's own members. */
     void collectFieldProjectionSymbols(TypeDecl declaration, Set<String> symbols) {
+        if (declaration.kind == TypeDecl.Kind.ENUM) return;
         for (VisibleField visible : beanPropertyConflicts(declaration, declarations).fields().values()) {
             MethodDecl getter = declaration.beanGetterForField(visible.field());
             if (getter == null) continue;

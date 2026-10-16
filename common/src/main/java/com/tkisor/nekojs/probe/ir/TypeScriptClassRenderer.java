@@ -244,6 +244,16 @@ public final class TypeScriptClassRenderer {
         sb.append("        static values(): ").append(name).append("[];\n");
         sb.append("        static valueOf(name: string): ").append(name).append(";\n");
         sb.append("    }\n");
+        if (d.superType != null) {
+            TypeAliasRegistry enumAliases = d.effectiveTypeName() == null ? aliases
+                    : aliases.withReferences((host, exported) -> host.equals(d.fqn)
+                            ? name : aliases.reference(host, exported));
+            String heritage = renderTypeRef(d.superType.ref, enumAliases, false);
+            if (isHeritageSafe(heritage)) {
+                // Instance merging preserves Enum<Self> without conflicting with Enum's static valueOf overload.
+                sb.append("    export interface ").append(name).append(" extends ").append(heritage).append(" {}\n");
+            }
+        }
         return sb.toString();
     }
 

@@ -1,4 +1,4 @@
-import { $Class } from "java:java/lang";
+import { $Class, $Enum } from "java:java/lang";
 import { $MethodHandle, $MethodHandles$Lookup, $MethodType, $TypeDescriptor$OfField, $TypeDescriptor$OfMethod } from "java:java/lang/invoke";
 import { $List, $Optional } from "java:java/util";
 
@@ -60,6 +60,7 @@ declare module "java:java/lang/constant" {
         static values(): $DirectMethodHandleDesc$Kind[];
         static valueOf(name: string): $DirectMethodHandleDesc$Kind;
     }
+    export interface $DirectMethodHandleDesc$Kind extends $Enum<$DirectMethodHandleDesc$Kind> {}
 
     export class $DynamicConstantDesc<T> implements $ConstantDesc {
         static ofCanonical<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3: $ConstantDesc_<$MethodHandles$Lookup, object>[]): $ConstantDesc;

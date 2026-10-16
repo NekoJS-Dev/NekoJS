@@ -1,5 +1,5 @@
 import { $Serializable } from "java:java/io";
-import { $Character, $Cloneable, $Comparable, $Comparable_, $Iterable, $Runnable, $Runnable_, $Throwable } from "java:java/lang";
+import { $Character, $Cloneable, $Comparable, $Comparable_, $Enum, $Iterable, $Runnable, $Runnable_, $Throwable } from "java:java/lang";
 import { $BiConsumer, $BiConsumer_, $BiFunction, $BiFunction_, $Consumer, $Consumer_, $DoubleConsumer, $DoubleConsumer_, $DoubleSupplier, $DoubleSupplier_, $Function, $Function_, $IntConsumer, $IntConsumer_, $IntFunction, $IntFunction_, $IntSupplier, $IntSupplier_, $LongConsumer, $LongConsumer_, $LongSupplier, $LongSupplier_, $Predicate, $Predicate_, $Supplier, $Supplier_, $ToDoubleFunction, $ToDoubleFunction_, $ToIntFunction, $ToIntFunction_, $ToLongFunction, $ToLongFunction_, $UnaryOperator, $UnaryOperator_ } from "java:java/util/function";
 import { $DoubleStream, $IntStream, $LongStream, $Stream } from "java:java/util/stream";
 
@@ -271,6 +271,7 @@ declare module "java:java/util" {
         static values(): $Locale$Category[];
         static valueOf(name: string): $Locale$Category;
     }
+    export interface $Locale$Category extends $Enum<$Locale$Category> {}
 
     export class $Locale$FilteringMode {
         static AUTOSELECT_FILTERING: $Locale$FilteringMode;
@@ -284,6 +285,7 @@ declare module "java:java/util" {
         static values(): $Locale$FilteringMode[];
         static valueOf(name: string): $Locale$FilteringMode;
     }
+    export interface $Locale$FilteringMode extends $Enum<$Locale$FilteringMode> {}
 
     export class $Locale$IsoCountryCode {
         static PART1_ALPHA2: $Locale$IsoCountryCode;
@@ -295,6 +297,7 @@ declare module "java:java/util" {
         static values(): $Locale$IsoCountryCode[];
         static valueOf(name: string): $Locale$IsoCountryCode;
     }
+    export interface $Locale$IsoCountryCode extends $Enum<$Locale$IsoCountryCode> {}
 
     export class $Locale$LanguageRange {
         constructor(arg0: string);

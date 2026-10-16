@@ -1,5 +1,5 @@
 import { $Serializable } from "java:java/io";
-import { $Class, $ClassLoader } from "java:java/lang";
+import { $Class, $ClassLoader, $Enum } from "java:java/lang";
 import { $ClassDesc, $Constable, $Constable_, $DynamicConstantDesc, $MethodHandleDesc, $MethodTypeDesc } from "java:java/lang/constant";
 import { $Constructor, $Field, $Member, $Method } from "java:java/lang/reflect";
 import { $List, $Optional } from "java:java/util";
@@ -100,6 +100,7 @@ declare module "java:java/lang/invoke" {
         static values(): $MethodHandles$Lookup$ClassOption[];
         static valueOf(name: string): $MethodHandles$Lookup$ClassOption;
     }
+    export interface $MethodHandles$Lookup$ClassOption extends $Enum<$MethodHandles$Lookup$ClassOption> {}
 
     export class $MethodType implements $Constable, $TypeDescriptor$OfMethod<$Class<any>, $MethodType>, $Serializable {
         static fromMethodDescriptorString(arg0: string, arg1: $ClassLoader): $MethodType;
@@ -248,6 +249,7 @@ declare module "java:java/lang/invoke" {
         static values(): $VarHandle$AccessMode[];
         static valueOf(name: string): $VarHandle$AccessMode;
     }
+    export interface $VarHandle$AccessMode extends $Enum<$VarHandle$AccessMode> {}
 
     export class $VarHandle$VarHandleDesc extends $DynamicConstantDesc<$VarHandle> {
         static ofArray(arg0: $ClassDesc): $VarHandle$VarHandleDesc;

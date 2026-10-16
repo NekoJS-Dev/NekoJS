@@ -1,4 +1,4 @@
-import { $Class, $Runtime$Version } from "java:java/lang";
+import { $Class, $Enum, $Runtime$Version } from "java:java/lang";
 import { $Annotation, $Annotation_ } from "java:java/lang/annotation";
 import { $Set } from "java:java/util";
 
@@ -33,6 +33,7 @@ declare module "java:java/lang/reflect" {
         static values(): $AccessFlag[];
         static valueOf(name: string): $AccessFlag;
     }
+    export interface $AccessFlag extends $Enum<$AccessFlag> {}
 
     export class $AccessFlag$Location {
         static CLASS: $AccessFlag$Location;
@@ -50,6 +51,7 @@ declare module "java:java/lang/reflect" {
         static values(): $AccessFlag$Location[];
         static valueOf(name: string): $AccessFlag$Location;
     }
+    export interface $AccessFlag$Location extends $Enum<$AccessFlag$Location> {}
 
     export class $AccessibleObject implements $AnnotatedElement {
         get annotations(): $Annotation[];
@@ -117,6 +119,7 @@ declare module "java:java/lang/reflect" {
         static values(): $ClassFileFormatVersion[];
         static valueOf(name: string): $ClassFileFormatVersion;
     }
+    export interface $ClassFileFormatVersion extends $Enum<$ClassFileFormatVersion> {}
 
     export class $Constructor<T> extends $Executable {
         get annotatedReceiverType(): $AnnotatedType;
