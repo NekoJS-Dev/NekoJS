@@ -540,6 +540,9 @@ public final class TypeScriptClassRenderer {
                 return aliases.getAlias(fqn);
             }
         }
+        // Graal exposes boxed characters as string values, including returns and generic contents.
+        // This is an intrinsic value projection; ordinary host identities and input adapters stay separate.
+        if (fqn.equals("java.lang.Character")) return "string";
         String name = "$" + simpleSymbolName(ref.name());
         StringBuilder sb = new StringBuilder(aliases == null ? name : aliases.reference(fqn, name));
         if (!ref.arguments().isEmpty()) {

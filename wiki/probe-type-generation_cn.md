@@ -134,6 +134,8 @@ TypeScript 的 class 构造器不能声明方法级泛型，因此构造器局�
 
 fastutil 的 19 个 Object/Reference 结果函数接口显式标记结果参数 `out V`，避免 TypeScript 在递归的 compose/andThen 和回调/主机对象联合之间反复推导方差。输入参数继续沿用原有类型关系，不会全面改成不变泛型；已编辑的 IR 不套用原库的方差规则。该处理不代表其他声明错误已经解决。
 
+Java 的 `char` 与装箱 `Character` 值在 TS 中表示为 `string`，涵盖返回值、数组、泛型内容及回调位置，与 Graal 的字符值读取一致。Java 的单个 UTF-16 代码单元限制仍由运行时检查，TS 的 `string` 不表达长度。值投影也不保证擦除后的 `Object` 参数或字段能把字符串自动装箱为 `Character`：例如泛型容器写入后由 Java 强转读取、泛型宿主 lambda 调用，以及 1.21.1 旧 Guava 的 `CharMatcher.test` 仍可能被运行时拒绝。具体的 `Character` 参数与带泛型信息的回调需按其实际入口验证。该处理不把 UUID、Path、File 等其他主机对象改成字符串，也不改写共享 IR、Python 声明或运行时转换；显式输入适配器继续按原有优先级处理。
+
 | 键 | 默认 | 语义 |
 |---|---|---|
 | `enabled` | `true` | 总开关。`false` 时 probe 直接返回失败结果（"probe disabled in probe.toml"）。`/nekojs probe enable|disable` 就是改这个键 |

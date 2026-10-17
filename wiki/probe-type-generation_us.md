@@ -140,6 +140,8 @@ TypeScript class constructors cannot declare method-local type parameters. Their
 
 The 19 fastutil function interfaces with Object/Reference results explicitly mark their result parameter as `out V`. This avoids recursive TypeScript variance inference through compose/andThen and callback-or-host unions. Input parameters retain their existing type relations; they are not made invariant. Edited IR does not inherit the original library's variance rule. Other declaration errors still require their own checks.
 
+Java `char` and boxed `Character` values are represented as TypeScript `string`, including returns, arrays, generic contents and callback positions, matching Graal character-value reads. Java's single UTF-16 code unit constraint is still checked at runtime; TypeScript `string` does not express that length. Value projection also does not guarantee Character boxing through erased `Object` parameters or fields: a generic container write followed by a Java cast, a generic host lambda call, and the older Guava `CharMatcher.test` on 1.21.1 can still be rejected at runtime. Concrete `Character` parameters and callbacks carrying generic metadata need verification through their actual entry points. This does not convert other host identities such as UUID, Path or File into strings, or rewrite shared IR, Python declarations or runtime conversions. Explicit input adapters retain their existing precedence.
+
 | Key | Default | Semantics |
 |---|---|---|
 | `enabled` | `true` | Master switch. `false` makes probe immediately return failure (`"probe disabled in probe.toml"`). `/nekojs probe enable|disable` changes this key. |

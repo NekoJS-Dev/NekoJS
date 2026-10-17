@@ -1,5 +1,5 @@
 import { $InputStream, $OutputStream, $PrintStream, $PrintWriter, $Reader, $Serializable, $Writer } from "java:java/io";
-import { $Character, $Cloneable, $Comparable, $Comparable_, $Enum, $Iterable, $Runnable, $Runnable_, $Throwable } from "java:java/lang";
+import { $Cloneable, $Comparable, $Comparable_, $Enum, $Iterable, $Runnable, $Runnable_, $Throwable } from "java:java/lang";
 import { $Charset } from "java:java/nio/charset";
 import { $Instant } from "java:java/time";
 import { $BiConsumer, $BiConsumer_, $BiFunction, $BiFunction_, $Consumer, $Consumer_, $DoubleConsumer, $DoubleConsumer_, $DoubleSupplier, $DoubleSupplier_, $Function, $Function_, $IntConsumer, $IntConsumer_, $IntFunction, $IntFunction_, $IntSupplier, $IntSupplier_, $LongConsumer, $LongConsumer_, $LongSupplier, $LongSupplier_, $Predicate, $Predicate_, $Supplier, $Supplier_, $ToDoubleFunction, $ToDoubleFunction_, $ToIntFunction, $ToIntFunction_, $ToLongFunction, $ToLongFunction_, $UnaryOperator, $UnaryOperator_ } from "java:java/util/function";
@@ -213,8 +213,8 @@ declare module "java:java/util" {
         getDisplayScript(): string;
         get displayVariant(): string;
         getDisplayVariant(): string;
-        get extensionKeys(): $Set<$Character>;
-        getExtensionKeys(): $Set<$Character>;
+        get extensionKeys(): $Set<string>;
+        getExtensionKeys(): $Set<string>;
         get iSO3Country(): string;
         getISO3Country(): string;
         get iSO3Language(): string;

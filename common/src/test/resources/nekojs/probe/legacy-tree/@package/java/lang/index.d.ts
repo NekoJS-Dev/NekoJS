@@ -104,7 +104,7 @@ declare module "java:java/lang" {
         compare(arg0: $CharSequence, arg1: $CharSequence): number;
     };
 
-    export class $Character implements $Serializable, $Comparable<$Character>, $Constable {
+    export class $Character implements $Serializable, $Comparable<string>, $Constable {
         constructor(arg0: string);
         static BYTES: number;
         static COMBINING_SPACING_MARK: number;
@@ -173,7 +173,7 @@ declare module "java:java/lang" {
         static START_PUNCTUATION: number;
         static SURROGATE: number;
         static TITLECASE_LETTER: number;
-        static TYPE: $Class<$Character>;
+        static TYPE: $Class<string>;
         static UNASSIGNED: number;
         static UPPERCASE_LETTER: number;
         static charCount(arg0: number): number;
@@ -264,10 +264,10 @@ declare module "java:java/lang" {
         static toTitleCase(arg0: number): number;
         static toUpperCase(arg0: string): string;
         static toUpperCase(arg0: number): number;
-        static valueOf(arg0: string): $Character;
+        static valueOf(arg0: string): string;
         charValue(): string;
         compareTo(arg0: string): number;
-        describeConstable(): $Optional<$DynamicConstantDesc<$Character>>;
+        describeConstable(): $Optional<$DynamicConstantDesc<string>>;
         equals(arg0: object): boolean;
         hashCode(): number;
         toString(): string;
