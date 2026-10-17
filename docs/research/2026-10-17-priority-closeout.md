@@ -32,6 +32,7 @@
 - **最新正式结果为 `6e5bb8f0`：两组重载 466.4 / 469.4 ms，均 FAIL；启动 34110.6 ms，PASS。** 不以旧 a09 的较好成绩替代当前结果。原始样本、失败记录、源码绑定及独立复核器见[本轮证据](../architecture-refactor/evidence/2026-10-17-reload-performance/trust-6e5bb8f0/README.md)。
 - Python 客户端启动诊断：二十对正常启动 / `-S` 子进程，仅导入 RCON 所需模块而不连游戏，约 41.25 / 36.70 ms。没有修改原采样器或 Python 环境。
 - CommonJS 隔离原型：共享 Engine、每轮新 Context、六最小模块，十对交替测量；动态 Function / 复用 Source 约 0.507 / 0.267 ms，执行段均未调用沙盒 `toRealPath`。直接 Source 包装改变 `this` 语义，因此否决该替换。最小模块不代表真实 fixture 的全部行为，但足以反驳把文件系统开销直接归因于 sourceURL；继续定位真实调用。原型未进入生产代码。
+- 八个固定正则预编译的组件对照仅节省约 0.0166 ms / 六源码，未修改生产。已建立生产 root / Sandbox / Node / fs 的快速闭环，原六 fixture 连续三十次 COMMIT、每代新 Context、旧 Context 关闭后拒绝 eval；补真实日志桥后留存实际脚本日志。该诊断缺少 Minecraft、完整绑定、配方及 RCON，不替代正式门禁或包内存验收。[原始对照和失败记录](../architecture-refactor/evidence/2026-10-17-reload-performance/diagnostic-controls/README.md)已归档；下一步在完整游戏环境补阶段计时。
 
 ## 2. 脚本包最终验收（待进行）
 
