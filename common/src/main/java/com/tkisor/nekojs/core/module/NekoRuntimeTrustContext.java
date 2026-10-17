@@ -64,6 +64,7 @@ public final class NekoRuntimeTrustContext implements NekoTrustContext {
                 .anyMatch(root -> NekoCanonicalPath.isWithin(subject, root))) {
             return remoteApprovals.get(subject);
         }
-        return NekoTrustApprovedSource.local(file);
+        // Issue for the identity checked above; resolving again could observe a different target.
+        return new NekoTrustApprovedSource(NekoTrustApprovedSource.Kind.LOCAL_TRUSTED, subject, null, null);
     }
 }
