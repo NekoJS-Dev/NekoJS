@@ -84,4 +84,7 @@
 
 `569376c6` 恢复擦除返回值的接口契约：[五节点报告](../evidence/2026-10-16-followup-acceptance/RETURN-CONTRACTS.md)。4921 tests、实际运行及 Pyright 通过，完整 TSC 无新增并减少 118 条 TS2314，仍未通过整体验收；Python 普通 host 泛型实参投影仍有限制。
 
-最终 `04550ae2` 的 [TS raw 输入修复](../evidence/2026-10-16-followup-acceptance/RAW-INPUT.md)完成 4923 tests、五节点实际运行、完整 Pyright 和严格正负例；完整 TSC 再减少 160 条 TS2314、无新增，仍失败。Java 类 Python stub 与上批逐字节一致。后续 Entity Bean 公开声明迁移[等待维护者决定](../evidence/2026-10-16-followup-acceptance/ENTITY-BEAN-DECISION.md)，本批未执行该删除。
+最终 `04550ae2` 的 [TS raw 输入修复](../evidence/2026-10-16-followup-acceptance/RAW-INPUT.md)完成 4923 tests、五节点实际运行、完整 Pyright 和严格正负例；完整 TSC 再减少 160 条 TS2314、无新增，仍失败。Java 类 Python stub 与上批逐字节一致。本批未执行 Entity Bean 删除；后续批准与独立结果见下。
+
+
+用户明确批准五处 Entity 公开声明精确迁移后，最终 `e551e559` 完成 [实际验证](../evidence/2026-10-16-followup-acceptance/ENTITY-BEAN.md)：4933 tests、五节点新 JAR、完整 Pyright、严格正负例及 CI 通过，恰好删除五处派生属性、保留其他 24 处、真实方法与运行时/Python。完整 TSC 减少 1560 条且无新增，仍失败；最近正式性能及其他 release gate 继续开放。本次精确批准不代表整票维护者或发布验收。

@@ -47,3 +47,10 @@ Standards 0 / Spec 0；两轴均无剩余最高级别问题。该结论只覆盖
 ## TS raw 输入修复
 
 固定生产增量 `dc67d1e0...04550ae2`，包括 `53461402`。Luna xhigh 只读最终 Standards 0 / Spec 0。Spec 要求补足注册输入 alias 后嵌套 host 不走 alias 的回归，主代理已添加精确反射断言；Standards 发现 SAM contextual 转换的并行路径仍产生裸 host，主代理已统一回退并补真实 Mapper alias 的严格 TSC 正负例，两轴分别确认解决。最终完整矩阵与五节点实际结果见 [RAW-INPUT.md](RAW-INPUT.md)，静态 0 项不代签完整 TSC 或发布验收。
+
+
+## Entity Bean 五处精确迁移
+
+固定最终源码/测试增量 `d2655f5e...e551e559`，Luna xhigh 只读 Standards 0 / Spec 0。初次 Standards 发现错误码复用，已分配 NEKO-4047 并补双语索引。首轮实际 JAR 检查由主代理发现 Fabric 显式发现清单遗漏；修复后两轴重新核对实际发现/装配链、共享节点接线回归和贡献精确范围。节点测试未预处理条件注释的问题亦修正，最终完整矩阵包含五节点回归。验证器另独立核对实际生成包、24 个保留 alias、Python、诊断和 XML；静态结论不代签完整 TSC、性能或发布验收。完整结果见 [ENTITY-BEAN.md](ENTITY-BEAN.md)。
+
+验证工具的只读复核另发现两处可能误判：AST 打印移除 reference 指令、诊断记录未强制完整节点/入口。主代理补入 reference/TS 指令比较，使用归档内两批实际声明经 stdin 重新执行归档 AST 工具，并强制五节点及十入口、零新增/1560 移除。完整归档重放 PASS；对内存材料分别删去 startup 入口、改动 reference 指令，两项均被实际拒绝。这里记录主代理修复和验证结果，不将前一轮静态源码 0 项结论扩大为验证工具的独立复核结论。

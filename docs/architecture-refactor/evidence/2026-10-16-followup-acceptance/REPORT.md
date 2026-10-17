@@ -55,4 +55,7 @@ python docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/verify
 
 [擦除返回契约恢复](RETURN-CONTRACTS.md)绑定 `569376c6`：4921 tests、五节点新 JAR 实机、完整 Pyright 和定向回归通过；十个完整 TSC 入口减少 118 条 TS2314、无新增，完整 TSC 仍失败。真实 Type/ref 与 TS 保留 Host；Python 的普通 host 泛型投影限制及 Fabric 集合返回变化另有明确记录。
 
-[TS raw 输入修复](RAW-INPUT.md)绑定最终 `04550ae2`：4923 tests、五节点新 JAR、完整 Pyright、严格正负例和常规 CI gate 通过；十个完整 TSC 入口进一步减少 160 条 TS2314、无新增，仍 FAIL。Java 类 Python stub 五节点逐字节一致。新的 Entity Bean 迁移仅为[待决定提案](ENTITY-BEAN-DECISION.md)，尚未实施。
+[TS raw 输入修复](RAW-INPUT.md)绑定最终 `04550ae2`：4923 tests、五节点新 JAR、完整 Pyright、严格正负例和常规 CI gate 通过；十个完整 TSC 入口进一步减少 160 条 TS2314、无新增，仍 FAIL。Java 类 Python stub 五节点逐字节一致。随后用户批准的 Entity Bean 迁移独立记录如下。
+
+
+[Entity Bean 五处精确迁移](ENTITY-BEAN.md)绑定最终 `e551e559`：用户明确批准后，仅移除五节点 Entity 自身的 TS attackable 派生属性。实际审计确认其他 24 处 alias、真实方法、其他包声明及 Java 类 Python stub 保留；4933 tests、五节点新 JAR 实际运行、完整 Pyright、严格正负例及 CI 通过。十个完整 TSC 入口由 8551 降至 6991，减少 1560、无新增，仍 FAIL。Fabric 初步接线遗漏和节点测试失败均已修正并保留记录；最近正式重载 FAIL 和其他 release gate 不因本批变为通过。

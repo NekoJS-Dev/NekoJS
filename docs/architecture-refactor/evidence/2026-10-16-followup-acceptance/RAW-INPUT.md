@@ -47,4 +47,4 @@ python docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/verify
 
 双轴最终 Standards 0 / Spec 0，均为静态复核；过程中发现的嵌套 alias 覆盖与 SAM 路径问题均已补齐。未在本批重跑正式性能、客户端首帧或最终候选数据回退。最近正式重载仍 FAIL，不能用本批 Probe 类型检查代替。
 
-[Entity Bean 精确迁移提案](ENTITY-BEAN-DECISION.md)是下一项待维护者决定的公开声明变化，尚未实施；本批没有删除或改名任何 Bean alias。票 28、37 仍开放，没有新增 PR、执行远程发布或代签维护者验收。
+本批没有删除或改名任何 Bean alias。随后用户批准了 [Entity Bean 五处精确迁移](ENTITY-BEAN-DECISION.md)，其独立实施和验证见 [ENTITY-BEAN.md](ENTITY-BEAN.md)，不回写本批的原始证据。票 28、37 仍开放，没有新增 PR、执行远程发布或代签维护者验收。

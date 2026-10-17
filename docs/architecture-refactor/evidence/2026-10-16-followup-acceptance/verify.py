@@ -615,6 +615,175 @@ def check_raw_input_evidence(directory):
     assert ET.fromstring(entries['checks/red.xml']).attrib['failures'] == '2'
 
 
+def check_entity_bean_evidence(directory):
+    entries = checked_archive(directory, 'entity-bean')
+    previous = checked_archive(directory, 'raw-input')
+    preparation = json.loads(entries['preparation-manifest.json'])
+    summary = json.loads(entries['entity-bean-summary.json'])
+    expected_nodes = {'1.21.1', '26.1.2', '26.2.0', '26.1.2-fabric', '26.2.0-fabric'}
+    for rows in [preparation['nodes'], summary['ide']['nodes'], summary['comparisons'], summary['aliasAudit']]:
+        assert len(rows) == 5 and {row['node'] for row in rows} == expected_nodes
+    assert preparation['sourceRevision'].startswith('e551e559')
+    assert summary['sourceRevision'] == preparation['sourceRevision']
+    assert len(preparation['sourceHashes']) == 11
+    assert hashlib.sha256(entries['production-source.patch']).hexdigest() == preparation['productionPatchSha256']
+    assert summary['testTotals'] == dict(tests=4933, failures=0, errors=0, skipped=271)
+    assert not summary['fullTscPassed'] and not summary['releaseApproved']
+    import xml.etree.ElementTree as ET
+    totals = Counter()
+    for name, data in entries.items():
+        if name.startswith('tests/') and name.endswith('.xml'):
+            root = ET.fromstring(data)
+            totals.update({key:int(root.get(key, 0)) for key in ['tests', 'failures', 'errors', 'skipped']})
+    assert dict(totals) == summary['testTotals']
+    gates = json.loads(entries['checks/ci-gates.json'])['gates']
+    assert len(gates) == 4 and all(gate['state'] == 'pass' and not gate['failures'] for gate in gates)
+    assert b'BUILD SUCCESSFUL' in entries['checks/domain-entity-bean-final-matrix-3.log']
+    assert b'BUILD FAILED' in entries['checks/domain-entity-bean-final-matrix-2.log']
+    assert ET.fromstring(entries['checks/node-discovery-red.xml']).attrib['failures'] == '1'
+    assert len(preparation['nodes']) == len(summary['ide']['nodes']) == 5
+    for node in preparation['nodes']:
+        prefix = 'installed/' + node['node'] + '/'
+        assert json.loads(entries[prefix + 'runtime-verdict.json'])['verdict'] == 'PASS'
+        assert json.loads(entries[prefix + 'server-exit.json'])['exitCode'] == 0
+        assert node['classBindings'] and len(node['sha256']) == 64
+        assert any(name.endswith('/MinecraftTypeDocsPlugin.class') for name in node['classBindings'])
+    for node in summary['ide']['nodes']:
+        assert len(node['typescript']) == 2 and {side['side'] for side in node['typescript']} == {'server', 'startup'}
+        pyright = node['pyright']
+        assert pyright['exitCode'] == 0
+        assert pyright['summary']['errorCount'] == pyright['summary']['warningCount'] == 0
+        assert pyright['summary']['filesAnalyzed'] == pyright['stubCount']
+        for side in node['typescript']:
+            assert not side['skipLibCheck'] and side['defaultEditorIncludes']
+            assert side['exitCode'] == 2 and side['diagnosticCount'] > 0
+            data = entries['ide/' + node['node'] + '-' + side['side'] + '-tsc.txt'].decode('utf-8-sig')
+            assert side['diagnosticCount'] == sum(side['codes'].values()) == len(re.findall(r'error TS\d+:', data))
+    for row in summary['comparisons']:
+        prefix = 'installed/' + row['node'] + '/.neko_probe/python/'
+        before = {name.removeprefix(prefix):data for name, data in previous.items()
+                  if name.startswith(prefix) and name.endswith('.pyi')}
+        after = {name.removeprefix(prefix):data for name, data in entries.items()
+                 if name.startswith(prefix) and name.endswith('.pyi')}
+        assert before.keys() == after.keys() == row['pythonBefore'].keys() == row['pythonAfter'].keys()
+        changes = []
+        for name in before:
+            assert hashlib.sha256(before[name]).hexdigest() == row['pythonBefore'][name]
+            assert hashlib.sha256(after[name]).hexdigest() == row['pythonAfter'][name]
+            if name.startswith('nekojs/_java/'):
+                assert before[name] == after[name]
+            if before[name] != after[name]:
+                changes.append(name)
+                assert name == 'nekojs/__init__.pyi' or name.startswith('nekojs/_events/')
+                assert python_declaration_facts(before[name]) == python_declaration_facts(after[name])
+        assert sorted(changes) == sorted(row['changedPythonFiles'])
+        assert row['pythonByteIdentical'] == (not changes)
+        assert row['javaClassStubsByteIdentical'] and row['pythonCanonicalFactsEqual']
+
+    def aliases(files):
+        found = []
+        for name, data in files.items():
+            owner = None
+            for line in data.decode('utf-8').splitlines():
+                match = re.match(r'    export class (\$[^\s<{]+)', line)
+                if match:
+                    owner = match[1]
+                elif line == '    }':
+                    owner = None
+                elif re.match(r'        get attackable\(\):', line):
+                    assert owner is not None
+                    found.append(dict(file=name, **{'class':owner}, declaration=line.strip()))
+        return sorted(found, key=lambda value:(value['file'], value['class'], value['declaration']))
+
+    audit = json.loads(entries['alias-audit.json'])
+    assert audit == summary['aliasAudit'] and len(audit) == 5
+    payload = dict(before={}, after={})
+    old_count = new_count = 0
+    target = '@package/net/minecraft/world/entity/index.d.ts'
+    for row in audit:
+        prefix = 'installed/' + row['node'] + '/.neko_probe/typescript/'
+        before = {name.removeprefix(prefix):data for name, data in previous.items()
+                  if name.startswith(prefix) and name.endswith('.d.ts')}
+        after = {name.removeprefix(prefix):data for name, data in entries.items()
+                 if name.startswith(prefix) and name.endswith('.d.ts')}
+        assert before.keys() == after.keys()
+        payload['before'][row['node']] = {name:data.decode('utf-8') for name, data in before.items()}
+        payload['after'][row['node']] = {name:data.decode('utf-8') for name, data in after.items()}
+        original = before[target]
+        start = original.index(b'    export class $Entity ')
+        end = original.index(b'\n    }', start)
+        member = b'        get attackable(): boolean;\n'
+        body = original[start:end]
+        assert body.count(member) == 1 and b'isAttackable(): boolean;' in body
+        expected = original[:start] + body.replace(member, b'') + original[end:]
+        assert after[target] == expected
+        for name in before:
+            if name.startswith('@package/') and name != target:
+                assert before[name] == after[name], (row['node'], name)
+        old_aliases, new_aliases = aliases(before), aliases(after)
+        removed = [value for value in old_aliases if value['file'] == target and value['class'] == '$Entity']
+        assert len(removed) == 1 and row['removed'] == removed
+        assert new_aliases == [value for value in old_aliases if value not in removed]
+        assert sorted(row['retained'], key=lambda value:(value['file'], value['class'], value['declaration'])) == new_aliases
+        assert row['beforeAliasCount'] == len(old_aliases) and row['afterAliasCount'] == len(new_aliases)
+        assert row['onlyEntityPackageChanged'] and row['realGetterRetained'] and row['sideModuleDeclarationFactsEqual']
+        old_count += len(old_aliases)
+        new_count += len(new_aliases)
+        initial = entries['preliminary/' + row['node'] + '/entity.d.ts']
+        assert (member in initial[initial.index(b'    export class $Entity '):initial.index(b'\n    }', initial.index(b'    export class $Entity '))]) == row['node'].endswith('-fabric')
+    assert (old_count, new_count) == (29, 24)
+    import subprocess
+    replay = subprocess.run(['node', '-e', entries['tooling/audit-entity-bean.cjs'].decode('utf-8'), '--', '--from-json'],
+        input=json.dumps(payload).encode('utf-8'), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        cwd=directory.parents[3], check=True)
+    assert not replay.stderr and json.loads(replay.stdout) == audit
+
+    def diagnostics(data, prefix):
+        counts = Counter()
+        for line in data.decode('utf-8-sig').splitlines():
+            match = re.match(r'(.+?)\(\d+,\d+\): error (TS\d+): (.*)', line)
+            if match:
+                name, code, message = match.groups()
+                counts[(name.removeprefix(prefix), code, message)] += 1
+            elif re.match(r'error TS\d+:', line):
+                counts[('<global>', *re.match(r'error (TS\d+): (.*)', line).groups())] += 1
+        assert sum(counts.values()) == len(re.findall(rb'error TS\d+:', data))
+        return counts
+
+    removed_total = added_total = 0
+    comparison = json.loads(entries['ide/diagnostic-comparison.json'])
+    assert len(comparison) == 5 and {row['node'] for row in comparison} == expected_nodes
+    for row in comparison:
+        assert len(row['sides']) == 2 and {side['side'] for side in row['sides']} == {'server', 'startup'}
+        for side in row['sides']:
+            name = row['node'] + '-' + side['side'] + '-tsc.txt'
+            before = diagnostics(entries['ide-before/' + name], 'build/domain-raw-input-installed/' + row['node'] + '/')
+            after = diagnostics(entries['ide/' + name], 'build/domain-entity-bean-final-installed/' + row['node'] + '/')
+            for label, counts in [('added', after - before), ('removed', before - after)]:
+                recorded = Counter({(item['file'], item['code'], item['message']):item['count'] for item in side[label]})
+                assert recorded == counts
+            added_total += sum((after - before).values())
+            removed_total += sum((before - after).values())
+    assert summary['diagnosticComparison'] == dict(added=added_total, removed=removed_total)
+    assert summary['noNewDiagnostics'] == (added_total == 0)
+    assert added_total == 0 and removed_total == 1560
+
+    strict = json.loads(entries['checks/strict-results.json'])
+    assert [row['case'] for row in strict] == ['before', 'after']
+    for row in strict:
+        data = entries['checks/' + row['log']]
+        assert hashlib.sha256(data).hexdigest() == row['sha256']
+        assert row['exitCode'] == (2 if row['case'] == 'before' else 0)
+        codes = Counter(code.decode() for code in re.findall(rb'error (TS\d+):', data))
+        assert codes == row['codes'] == (dict(TS2416=1, TS2426=1, TS2344=1, TS2322=1) if row['case'] == 'before' else {})
+        for name, expected in row['fixtureHashes'].items():
+            assert hashlib.sha256(entries['fixtures/' + row['case'] + '/' + name]).hexdigest() == expected
+    baseline_wiki = entries['checks/domain-entity-bean-wiki-baseline.log'].decode('utf-8-sig').replace('\r\n', '\n').strip()
+    final_wiki = entries['checks/domain-entity-bean-wiki-final-3.log'].decode('utf-8-sig').replace('\r\n', '\n')
+    assert baseline_wiki in final_wiki
+    assert b'0 problem(s)' in entries['checks/domain-entity-bean-wiki-structure-final.log']
+
+
 def main():
     directory = Path(__file__).resolve().parent
     rollback = checked_archive(directory, 'rollback')
@@ -706,7 +875,8 @@ def main():
     check_resolver_evidence(directory)
     check_return_contract_evidence(directory)
     check_raw_input_evidence(directory)
-    print('PASS: artifact, runtime, IDE, rollback, frame, performance, enum, generic, resolver, return-contract and raw-input evidence integrity; full TSC and reload performance remain FAIL')
+    check_entity_bean_evidence(directory)
+    print('PASS: artifact, runtime, IDE, rollback, frame, performance, enum, generic, resolver, return-contract, raw-input and Entity Bean evidence integrity; full TSC and reload performance remain FAIL')
 
 
 if __name__ == '__main__':
