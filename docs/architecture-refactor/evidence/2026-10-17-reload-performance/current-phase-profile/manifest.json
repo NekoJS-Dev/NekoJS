@@ -1,0 +1,187 @@
+{
+  "diagnosticOnly": true,
+  "revision": "6e5bb8f00c3747b828056589853cb0471477b18a",
+  "archiveSha256": "7bd231561e4afa74a5e344ea27516594128eddb34eac3e7fd75f6afae25b8afe",
+  "entries": {
+    "diagnostic/env-snapshot.txt": {
+      "bytes": 213,
+      "sha256": "e80572367cc596c78e73c6f989ac0a78dfb248c7d18f1b8a2ac4ae5c2f328c37"
+    },
+    "diagnostic/jfr-configure.log": {
+      "bytes": 54,
+      "sha256": "1c162ca3485071d4e64dc9cfc95516ddeeca88dd045f9c40945e50f9acd0d75a"
+    },
+    "diagnostic/jfr-start.log": {
+      "bytes": 348,
+      "sha256": "d597072a9eebfb2f766c64fe6d1755898a1a672b17cd24d18a3c4e07080e6d44"
+    },
+    "diagnostic/jfr-stop.log": {
+      "bytes": 284,
+      "sha256": "994264306df33a9f2bdd8f3270cfd6c4aff7a5d5461a3782ace117fd025cc46f"
+    },
+    "diagnostic/jvm.json": {
+      "bytes": 156,
+      "sha256": "1319095d3769b079e872ef43779af36bf8f1e481b47e82742e74eab1cf89c954"
+    },
+    "diagnostic/profile-stderr.log": {
+      "bytes": 35604,
+      "sha256": "eb2f35f3565bc27d53802ac5bbc1453dfd73df75d478b171d9c4f3c3423b7ed2"
+    },
+    "diagnostic/profile-stdout.log": {
+      "bytes": 4446779,
+      "sha256": "f0bdb2cff2c0fbd0779bd65543bd1844e1ab848011a5f5f045ac6eade5bda7e7"
+    },
+    "diagnostic/reload.jfc": {
+      "bytes": 39513,
+      "sha256": "60e4d05c064fff8ee358f9785dfd194c4a2a7f2ddee9aae56a98ea5cd827ece1"
+    },
+    "diagnostic/reloads.json": {
+      "bytes": 5528,
+      "sha256": "618cb4906ccd19c71cf40a8b7ffcab5db8e442eec92cee52db0c2946cfd15372"
+    },
+    "diagnostic/restoration.json": {
+      "bytes": 181,
+      "sha256": "875fcfb2346f14157a3b3178d99f30f6e65df941007f697198a2bdc7c7d38f3e"
+    },
+    "diagnostic/session.json": {
+      "bytes": 284,
+      "sha256": "11ab57cb69c87c2f276b03c76967c6314a641ad02b752b20e382db8ab85122c3"
+    },
+    "diagnostic/source-hashes.json": {
+      "bytes": 2175,
+      "sha256": "34c61dcbb41c9f7cbad29249aa3ebe51398cdc97a18e30a90815737f5c853700"
+    },
+    "diagnostic/summary.json": {
+      "bytes": 77528,
+      "sha256": "cbe7225d721d1f8091749cb10e4fdff0021c6dd0af1e03b7bc48ff8868e49b01"
+    },
+    "diagnostic/windowed-profile.txt": {
+      "bytes": 164118,
+      "sha256": "f7f1897f48c66e23dad1a183974313ca895b97764dd0adc6ca0b9c6cc829858e"
+    },
+    "diagnostic/windows.tsv": {
+      "bytes": 1180,
+      "sha256": "5b3803cd238d7e3d144efb02cb94aef7adb6ceec0225e33e8ccb1121353f2300"
+    },
+    "original-sources/0.java": {
+      "bytes": 7696,
+      "sha256": "b9d2ca44e5155b02c4a3c38a118745ea27ea86083772da7f01b7d9dacbfd53d1"
+    },
+    "original-sources/1.java": {
+      "bytes": 43610,
+      "sha256": "89113fc13fedab6013f83506f010c666ef3fd1b85b9866501e4da66eeed47ee4"
+    },
+    "original-sources/10.java": {
+      "bytes": 3295,
+      "sha256": "962edf58eda9ed8e6f868754ea5fb4491254f7d6abad342161970c8a371dbf1b"
+    },
+    "original-sources/2.java": {
+      "bytes": 14290,
+      "sha256": "8a9ea382afaf13ab8a6a5ed69f457c4562d87e2dfd49fe937cc473fc4e07bd8e"
+    },
+    "original-sources/3.java": {
+      "bytes": 38125,
+      "sha256": "24f1d081bad46ab2ed4eebdcf352193538dd40d621814ff22303f28f294b89dd"
+    },
+    "original-sources/4.java": {
+      "bytes": 51905,
+      "sha256": "55d8c145f8e78675ae737194c82cfb4f371862a9bce99305eac81e5b352e3833"
+    },
+    "original-sources/5.java": {
+      "bytes": 10247,
+      "sha256": "b91106a799dcb61c7e96773e486b2ede6261fc366346f74ea00e4b06b623e774"
+    },
+    "original-sources/6.java": {
+      "bytes": 1614,
+      "sha256": "1d0c19022753aa84d97bb2c2115b4b82789686b839fdd59e495daa5a9783500c"
+    },
+    "original-sources/7.java": {
+      "bytes": 12254,
+      "sha256": "f95587b0702728ef2c2b9397f01fc437b29f859e35ea7520deeb920cdfbf5482"
+    },
+    "original-sources/8.java": {
+      "bytes": 7192,
+      "sha256": "3ce7c14a3bd5ced39c8bac6543d36a08095b23f7af71c0495aeddb08c63dc717"
+    },
+    "original-sources/9.java": {
+      "bytes": 19891,
+      "sha256": "d2469bb9e2d77a7e356bc430ccdc4ac5fee63f6eb6486dfb5c1dd64085d2d07f"
+    },
+    "redactions.json": {
+      "bytes": 960,
+      "sha256": "c382bb808bd018637be16a868680cef60e9dc634cd1ee83f6ffe1485997a9aa0"
+    },
+    "tooling/WindowedReloadProfile.java": {
+      "bytes": 6863,
+      "sha256": "eb1469ac014a2634547b228be3ea3935cb6cd1c12cd559dbc1554e5898137a01"
+    },
+    "tooling/analyze-diagnostic-current.py": {
+      "bytes": 1491,
+      "sha256": "750a09680c79912cc5d3331a5556ed84d828de84df3bb6d8d7276d514759d1b9"
+    },
+    "tooling/diagnostic-current-controller-stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "tooling/diagnostic-current-controller.log": {
+      "bytes": 4401,
+      "sha256": "44cf2bad06fc920d71b4869252dea44d7990d304507cce390905e2e81afba394"
+    },
+    "tooling/diagnostic-current-exit.json": {
+      "bytes": 57,
+      "sha256": "63125f8a6835c7083e86e331d67c0b132ddc40c4cba28e3199567c5fd1ce3f5f"
+    },
+    "tooling/diagnostic-current-manifest.json": {
+      "bytes": 3543,
+      "sha256": "7647633ddeca6bb8f11e5497a8d64ef4abe75f0756eb5b00bcf0a97fcd35c57a"
+    },
+    "tooling/diagnostic-current-restored-build-stderr.log": {
+      "bytes": 561,
+      "sha256": "a6e891a3460762b7bbf42c2207cf3648aae03092c5d9422a9d669c35bd436219"
+    },
+    "tooling/diagnostic-current-restored-build.log": {
+      "bytes": 3133,
+      "sha256": "d388f693f180ce060b92f5d4df7eda411fd8275e00064b99cdbe139db91e94f2"
+    },
+    "tooling/diagnostic-current-restored-build.ps1": {
+      "bytes": 2942,
+      "sha256": "edc0266d7d434df37ffb7a8a1af56b238510bcd11066f537a59f1c2e1ead7faa"
+    },
+    "tooling/diagnostic-current-restored-controller-stderr.log": {
+      "bytes": 108,
+      "sha256": "446dcc9f6c3613e77e5b42dee9c5a67f9eb16aaabc232aa2651d4155a9292e50"
+    },
+    "tooling/diagnostic-current-restored-controller.log": {
+      "bytes": 36,
+      "sha256": "30225d4cd61e50899d6251993032e1d861b9d0b72c0ca5b2b90dc417611ee328"
+    },
+    "tooling/diagnostic-current.patch": {
+      "bytes": 24351,
+      "sha256": "9d5a0b03507c90ffb42a6adf728e13117585eca09a755cf6ff9fe972c19b1002"
+    },
+    "tooling/diagnostic-current.ps1": {
+      "bytes": 6958,
+      "sha256": "b2814587fa50691cf9e8f499e420a974cf6dd583649201ebbbd4e1171840ba5a"
+    },
+    "tooling/prepare-diagnostic-current.py": {
+      "bytes": 4147,
+      "sha256": "d80079b6726825e04c821388f62306bc3d878f9d4b2252e577b655b7a7864e1b"
+    },
+    "tooling/restore-current-build.py": {
+      "bytes": 967,
+      "sha256": "43d1ef252203643d5f5cccdbd12b569a7b0b03342115ec0f9777aba5b2ba9f71"
+    },
+    "tooling/restore-diagnostic-current.py": {
+      "bytes": 1117,
+      "sha256": "db28b43997fd561369f64ad4b7bcf198738499a682f88cb8eda6b86e823dc247"
+    },
+    "tooling/run-diagnostic-current.py": {
+      "bytes": 1204,
+      "sha256": "fe4912539f3d08cda66f9e6b8406c4e8de2377c321efe67ec5f226c70a275293"
+    },
+    "tooling/verify-diagnostic-restored.py": {
+      "bytes": 1330,
+      "sha256": "b8892d591e66cbf630f8cccde84bb4c46008f1a92a59199f2fcdcf90d0f08635"
+    }
+  }
+}
