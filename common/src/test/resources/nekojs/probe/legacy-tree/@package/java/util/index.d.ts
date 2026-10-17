@@ -1,10 +1,13 @@
-import { $Serializable } from "java:java/io";
+import { $InputStream, $OutputStream, $PrintStream, $PrintWriter, $Reader, $Serializable, $Writer } from "java:java/io";
 import { $Character, $Cloneable, $Comparable, $Comparable_, $Enum, $Iterable, $Runnable, $Runnable_, $Throwable } from "java:java/lang";
+import { $Charset } from "java:java/nio/charset";
+import { $Instant } from "java:java/time";
 import { $BiConsumer, $BiConsumer_, $BiFunction, $BiFunction_, $Consumer, $Consumer_, $DoubleConsumer, $DoubleConsumer_, $DoubleSupplier, $DoubleSupplier_, $Function, $Function_, $IntConsumer, $IntConsumer_, $IntFunction, $IntFunction_, $IntSupplier, $IntSupplier_, $LongConsumer, $LongConsumer_, $LongSupplier, $LongSupplier_, $Predicate, $Predicate_, $Supplier, $Supplier_, $ToDoubleFunction, $ToDoubleFunction_, $ToIntFunction, $ToIntFunction_, $ToLongFunction, $ToLongFunction_, $UnaryOperator, $UnaryOperator_ } from "java:java/util/function";
 import { $DoubleStream, $IntStream, $LongStream, $Stream } from "java:java/util/stream";
 
 export * as function from "java:java/util/function";
 export * as stream from "java:java/util/stream";
+export * as concurrent from "java:java/util/concurrent";
 
 declare module "java:java/util" {
     export interface $Collection<E> extends $Iterable<E> {
@@ -638,6 +641,163 @@ declare module "java:java/util" {
         tryAdvance(arg0: T_CONS): boolean;
         tryAdvance(arg0: $Consumer_<T, T>): boolean;
         trySplit(): T_SPLITR;
+    }
+
+    export class $Date implements $Serializable, $Cloneable, $Comparable<$Date> {
+        constructor();
+        constructor(arg0: number, arg1: number, arg2: number);
+        constructor(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number);
+        constructor(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number);
+        constructor(arg0: string);
+        constructor(arg0: number);
+        get date(): number;
+        getDate(): number;
+        set date(value: number);
+        get day(): number;
+        getDay(): number;
+        get hours(): number;
+        getHours(): number;
+        set hours(value: number);
+        get minutes(): number;
+        getMinutes(): number;
+        set minutes(value: number);
+        get month(): number;
+        getMonth(): number;
+        set month(value: number);
+        get seconds(): number;
+        getSeconds(): number;
+        set seconds(value: number);
+        get timezoneOffset(): number;
+        getTimezoneOffset(): number;
+        get time(): number;
+        getTime(): number;
+        set time(value: number);
+        get year(): number;
+        getYear(): number;
+        set year(value: number);
+        static UTC(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number): number;
+        static from(arg0: $Instant): $Date;
+        static parse(arg0: string): number;
+        after(arg0: $Date): boolean;
+        before(arg0: $Date): boolean;
+        clone(): object;
+        compareTo(arg0: $Date): number;
+        equals(arg0: object): boolean;
+        hashCode(): number;
+        setDate(arg0: number): void;
+        setHours(arg0: number): void;
+        setMinutes(arg0: number): void;
+        setMonth(arg0: number): void;
+        setSeconds(arg0: number): void;
+        setTime(arg0: number): void;
+        setYear(arg0: number): void;
+        toGMTString(): string;
+        toInstant(): $Instant;
+        toLocaleString(): string;
+        toString(): string;
+    }
+
+    export class $Properties extends $Hashtable<object, object> {
+        constructor();
+        constructor(arg0: number);
+        constructor(arg0: $Properties);
+        get empty(): boolean;
+        isEmpty(): boolean;
+        clear(): void;
+        clone(): object;
+        computeIfAbsent(arg0: object, arg1: $Function_<object, any, object, any>): object;
+        computeIfPresent(arg0: object, arg1: $BiFunction_<object, object, any, object, object, any>): object;
+        compute(arg0: object, arg1: $BiFunction_<object, object, any, object, object, any>): object;
+        containsKey(arg0: object): boolean;
+        containsValue(arg0: object): boolean;
+        contains(arg0: object): boolean;
+        elements(): $Enumeration<object>;
+        entrySet(): $Set<$Map$Entry<object, object>>;
+        equals(arg0: object): boolean;
+        forEach(arg0: $BiConsumer_<object, object, object, object>): void;
+        getOrDefault(arg0: object, arg1: object): object;
+        getProperty(arg0: string, arg1: string): string;
+        getProperty(arg0: string): string;
+        get(arg0: object): object;
+        hashCode(): number;
+        keySet(): $Set<object>;
+        keys(): $Enumeration<object>;
+        list(arg0: $PrintStream): void;
+        list(arg0: $PrintWriter): void;
+        loadFromXML(arg0: $InputStream): void;
+        load(arg0: $InputStream): void;
+        load(arg0: $Reader): void;
+        merge(arg0: object, arg1: object, arg2: $BiFunction_<object, object, any, object, object, any>): object;
+        propertyNames(): $Enumeration<any>;
+        putAll(arg0: ($Map<any, any> | ([any] extends [PropertyKey] ? Partial<Record<Extract<any, PropertyKey>, any>> : never))): void;
+        putIfAbsent(arg0: object, arg1: object): object;
+        put(arg0: object, arg1: object): object;
+        remove(arg0: object, arg1: object): boolean;
+        remove(arg0: object): object;
+        replaceAll(arg0: $BiFunction_<object, object, any, object, object, any>): void;
+        replace(arg0: object, arg1: object, arg2: object): boolean;
+        replace(arg0: object, arg1: object): object;
+        save(arg0: $OutputStream, arg1: string): void;
+        setProperty(arg0: string, arg1: string): object;
+        size(): number;
+        storeToXML(arg0: $OutputStream, arg1: string, arg2: string): void;
+        storeToXML(arg0: $OutputStream, arg1: string, arg2: $Charset): void;
+        storeToXML(arg0: $OutputStream, arg1: string): void;
+        store(arg0: $OutputStream, arg1: string): void;
+        store(arg0: $Writer, arg1: string): void;
+        stringPropertyNames(): $Set<string>;
+        toString(): string;
+        values(): $Collection<object>;
+    }
+
+    export class $Hashtable<K, V> extends $Dictionary<K, V> implements $Map<K, V>, $Cloneable, $Serializable {
+        constructor();
+        constructor(arg0: number);
+        constructor(arg0: number, arg1: number);
+        constructor(arg0: ($Map<K, V> | ([K] extends [PropertyKey] ? Partial<Record<Extract<K, PropertyKey>, V>> : never)));
+        get empty(): boolean;
+        isEmpty(): boolean;
+        clear(): void;
+        clone(): object;
+        computeIfAbsent(arg0: K, arg1: $Function_<K, V, K, V>): V;
+        computeIfPresent(arg0: K, arg1: $BiFunction_<K, V, V, K, V, V>): V;
+        compute(arg0: K, arg1: $BiFunction_<K, V, V, K, V, V>): V;
+        containsKey(arg0: object): boolean;
+        containsValue(arg0: object): boolean;
+        contains(arg0: object): boolean;
+        elements(): $Enumeration<V>;
+        entrySet(): $Set<$Map$Entry<K, V>>;
+        equals(arg0: object): boolean;
+        forEach(arg0: $BiConsumer_<K, V, K, V>): void;
+        getOrDefault(arg0: object, arg1: V): V;
+        get(arg0: object): V;
+        hashCode(): number;
+        keySet(): $Set<K>;
+        keys(): $Enumeration<K>;
+        merge(arg0: K, arg1: V, arg2: $BiFunction_<V, V, V, V, V, V>): V;
+        putAll(arg0: ($Map<K, V> | ([K] extends [PropertyKey] ? Partial<Record<Extract<K, PropertyKey>, V>> : never))): void;
+        putIfAbsent(arg0: K, arg1: V): V;
+        put(arg0: K, arg1: V): V;
+        remove(arg0: object, arg1: object): boolean;
+        remove(arg0: object): V;
+        replaceAll(arg0: $BiFunction_<K, V, V, K, V, V>): void;
+        replace(arg0: K, arg1: V, arg2: V): boolean;
+        replace(arg0: K, arg1: V): V;
+        size(): number;
+        toString(): string;
+        values(): $Collection<V>;
+    }
+
+    export class $Dictionary<K, V> {
+        constructor();
+        get empty(): boolean;
+        isEmpty(): boolean;
+        elements(): $Enumeration<V>;
+        get(arg0: object): V;
+        keys(): $Enumeration<K>;
+        put(arg0: K, arg1: V): V;
+        remove(arg0: object): V;
+        size(): number;
     }
 
     export type $Collection_<E> = E[];

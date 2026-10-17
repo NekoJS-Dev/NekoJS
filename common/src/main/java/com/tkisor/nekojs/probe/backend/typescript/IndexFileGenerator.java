@@ -33,6 +33,7 @@ public final class IndexFileGenerator {
     private final java.util.concurrent.ConcurrentHashMap<String, String> declCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<String, Set<String>> importCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<String, TypeDecl> irCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<String, Set<String>> referenceCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final Set<String> authoredClasses = java.util.concurrent.ConcurrentHashMap.newKeySet();
     /**
      * 枚举输入别名缓存（FQN → 别名名 + 就近发射的声明行）。predeclareClass 时从 {@link TypeDecl}
@@ -457,19 +458,25 @@ public final class IndexFileGenerator {
         authoredClasses.remove(fqn);
         registerEnumAlias(fqn, decl);
         String packageName = packageOf(fqn);
-        Set<String> imports = new LinkedHashSet<>(collectImportsFromIr(decl, packageName));
+        Set<String> imports = new LinkedHashSet<>();
+        Set<String> referencesNeeded = new LinkedHashSet<>();
         // Contextual callback arguments can introduce host types absent from the Java parameter.
         // Observe the same rendering references used for module-local names instead of expanding a second signature.
         TypeAliasRegistry references = adapterAliasGenerator.aliasRegistry().withReferences((host, name) -> {
-            if (name.startsWith("$") && !packageOf(host).equals(packageName)) imports.add(host);
+            if (name.startsWith("$")) {
+                referencesNeeded.add(host);
+                if (!packageOf(host).equals(packageName)) imports.add(host);
+            }
             return name;
         });
         declCache.put(fqn, irRenderer.render(decl, references));
         functionalInterfaceAliasGenerator.declaration(fqn, references);
         if (extraImportFqns != null) {
             imports.addAll(extraImportFqns);
+            referencesNeeded.addAll(extraImportFqns);
         }
         importCache.put(fqn, imports);
+        referenceCache.put(fqn, Set.copyOf(referencesNeeded));
         if (decl.sourceClass != null) {
             classCache.put(fqn, decl.sourceClass);
         }
@@ -540,6 +547,12 @@ public final class IndexFileGenerator {
             if (!packageOf(imported).equals(currentPackage)) imports.add(imported);
         }
         importCache.put(fqn, imports);
+        referenceCache.put(fqn, Set.copyOf(importFqns));
+    }
+
+    /** Includes same-package references, which require declarations even though they need no import. */
+    public Set<String> referencedClasses(String fqn) {
+        return referenceCache.getOrDefault(fqn, Set.of());
     }
 
     public boolean hasDeclaration(String fqn) {
@@ -554,6 +567,7 @@ public final class IndexFileGenerator {
         importCache.clear();
         enumAliasCache.clear();
         irCache.clear();
+        referenceCache.clear();
         authoredClasses.clear();
     }
 }

@@ -2,6 +2,8 @@ import { $Appendable, $CharSequence, $Comparable, $Comparable_, $Readable, $Read
 import { $IntStream } from "java:java/util/stream";
 
 export * as charset from "java:java/nio/charset";
+export * as file from "java:java/nio/file";
+export * as channels from "java:java/nio/channels";
 
 declare module "java:java/nio" {
     export class $Buffer {
@@ -404,6 +406,27 @@ declare module "java:java/nio" {
         slice(arg0: number, arg1: number): $ShortBuffer;
         slice(): $ShortBuffer;
         toString(): string;
+    }
+
+    export class $MappedByteBuffer extends $ByteBuffer {
+        get loaded(): boolean;
+        isLoaded(): boolean;
+        clear(): $MappedByteBuffer;
+        compact(): $MappedByteBuffer;
+        duplicate(): $MappedByteBuffer;
+        flip(): $MappedByteBuffer;
+        force(arg0: number, arg1: number): $MappedByteBuffer;
+        force(): $MappedByteBuffer;
+        limit(arg0: number): $MappedByteBuffer;
+        limit(): number;
+        load(): $MappedByteBuffer;
+        mark(): $MappedByteBuffer;
+        position(arg0: number): $MappedByteBuffer;
+        position(): number;
+        reset(): $MappedByteBuffer;
+        rewind(): $MappedByteBuffer;
+        slice(arg0: number, arg1: number): $MappedByteBuffer;
+        slice(): $MappedByteBuffer;
     }
 
 }

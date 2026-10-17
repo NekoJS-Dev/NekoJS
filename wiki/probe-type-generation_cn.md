@@ -77,6 +77,7 @@
 │   ├── server/{events,events/recipes,bindings}/index.d.ts
 │   └── client/{events,bindings}/index.d.ts
 ├── @special/
+│   ├── dependencies.json          # 声明依赖补齐结果及未完成原因
 │   ├── index.d.ts                  # export * as types from "@special/types"
 │   └── types/index.d.ts            # 注册表字面量（如所有 item id 的 union）
 ├── @manual/
@@ -127,6 +128,12 @@
 
 配置文件在 `<game>/nekojs/config/probe.toml`。首次加载时按需写入默认值与注释（`CommentedFileConfig` + autosave）；文件损坏/异常时回退到默认配置。`/nekojs probe reload` 可热重读。
 
+扫描配置决定主类集合。TypeScript 还会为实际输出的签名和输入别名补齐真实声明依赖，包括 include 白名单外或主扫描深度外的类型，因此生成文件量与耗时可能增加。此过程不扩大运行时类访问权限，也不注册额外 Binding。显式 exclude 和隐藏类继续生效；无法提供的依赖记入 `typescript/@special/dependencies.json`，报告 `complete: false` 并产生 `NEKO-4048` 诊断。文件生成成功不代表完整 IDE 检查通过。Python 保留主收集行为。
+
+TypeScript 的 class 构造器不能声明方法级泛型，因此构造器局部变量投影到第一个 Java 上界；无界或递归位置按使用点擦除。这一近似不保留不同构造参数之间的类型关联。类级变量、泛型方法和明确编辑过的类型槽继续使用各自的声明。
+
+fastutil 的 19 个 Object/Reference 结果函数接口显式标记结果参数 `out V`，避免 TypeScript 在递归的 compose/andThen 和回调/主机对象联合之间反复推导方差。输入参数继续沿用原有类型关系，不会全面改成不变泛型；已编辑的 IR 不套用原库的方差规则。该处理不代表其他声明错误已经解决。
+
 | 键 | 默认 | 语义 |
 |---|---|---|
 | `enabled` | `true` | 总开关。`false` 时 probe 直接返回失败结果（"probe disabled in probe.toml"）。`/nekojs probe enable|disable` 就是改这个键 |
@@ -136,8 +143,8 @@
 | `scan.extraIncludePackages` | `[]` | 追加到生效白名单（**追加语义**，同样支持字面前缀与 `re:` 正则）。适合加 `com.mojang` 或某 mod 的包 |
 | `scan.excludePackages` | `[]` | 排除规则（deny-list，支持字面前缀与 `re:` 正则）。**始终生效**（FULL 模式也保留），命中即跳过 |
 | `scan.forceScanMods` | `["minecraft"]` | 在白名单之外**强制纳入**扫描的 mod id 或包规则。内置 modId 映射表：`minecraft`→`net.minecraft`、`neoforge`→`net.neoforged`、`forge`→`net.minecraftforge`、`java`→`java`。条目含 `.` 视为字面包前缀、`re:` 开头为正则；未知 mod id 记 debug 日志并忽略。excludePackages 仍优先于强制包含 |
-| `scan.maxDepth` | `5` | 从事件/绑定种子出发的 BFS 最大深度（≤0 时兜底为 5） |
-| `scan.mode` | `"SMART"` | 扫描模式：`SMART`=白名单 + forceScanMods 过滤；`FULL`=跳过 include 白名单，闭包只受 exclude 与 maxDepth 约束；`NONE`=完全不扫描，probe 返回失败结果。未知取值兜底为 `SMART` |
+| `scan.maxDepth` | `5` | 主扫描从事件/绑定种子出发的 BFS 最大深度（≤0 时兜底为 5）；TS 声明依赖另行补齐 |
+| `scan.mode` | `"SMART"` | 扫描模式：`SMART`=白名单 + forceScanMods 过滤；`FULL`=跳过 include 白名单，主扫描只受 exclude 与 maxDepth 约束；`NONE`=完全不扫描，probe 返回失败结果。未知取值兜底为 `SMART` |
 | `languages.<lang>.outputDir` | 语言 id 本身 | 该语言产物在 `baseDir` 下的**子目录**（如默认 `typescript` → `.neko_probe/typescript`）。缺省/null 回退语言 id。`ProbeBackend.outputDir` 默认实现优先取此键 |
 
 > **包规则的正则支持**：`includePackages` / `extraIncludePackages` / `excludePackages` / `forceScanMods` 的条目既可以是字面包前缀（旧行为，`fqn.startsWith("前缀.")`），也可以写成 `re:<pattern>` 形式的正则（对类全限定名做**全匹配**，如 `re:com\.example\.(mod1|mod2)\..*` 一次纳入多个 mod 包）。正则编译结果有缓存，扫描热路径无额外开销；非法正则会 warn 一次并视为永不命中。

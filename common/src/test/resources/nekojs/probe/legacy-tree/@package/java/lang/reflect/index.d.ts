@@ -1,4 +1,4 @@
-import { $Class, $Enum, $Runtime$Version } from "java:java/lang";
+import { $Class, $Enum } from "java:java/lang";
 import { $Annotation, $Annotation_ } from "java:java/lang/annotation";
 import { $Set } from "java:java/util";
 

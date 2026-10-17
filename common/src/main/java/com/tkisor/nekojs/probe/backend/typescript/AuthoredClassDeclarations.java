@@ -2,7 +2,6 @@ package com.tkisor.nekojs.probe.backend.typescript;
 
 import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
 import com.tkisor.nekojs.probe.ProbeContext;
-import com.tkisor.nekojs.probe.ProbeCoordinator;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.FieldDecl;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
@@ -33,25 +32,18 @@ final class AuthoredClassDeclarations {
         Map<String, ClassDeclarationCatalogEntry> active = new LinkedHashMap<>();
         for (ClassDeclarationCatalogEntry entry : context.snapshot().classDeclarations()) {
             String target = entry.targetType().getName();
-            if (classes.contains(target) && !hidden.contains(target) && !context.config().isExcluded(target)) {
+            if (!hidden.contains(target) && !context.config().isExcluded(target)) {
                 active.put(target, entry);
             }
         }
-        boolean missingImports = active.values().stream().flatMap(entry -> entry.imports().stream())
-                .anyMatch(type -> !classes.contains(type.getName()));
-        if (missingImports) {
-            // Production has already collected these seeds. Direct render contexts can omit them.
-            // Reuse the same bounded scan rather than growing a backend-only dependency graph.
-            for (Class<?> type : ProbeCoordinator.collectClasses(context.snapshot(), context.config())) {
-                classes.add(type.getName());
-            }
-        }
         for (ClassDeclarationCatalogEntry entry : active.values()) {
+            if (!classes.contains(entry.targetType().getName())) continue;
             for (Class<?> imported : entry.imports().stream().sorted(Comparator.comparing(Class::getName)).toList()) {
                 String name = imported.getName();
-                if (!classes.contains(name) || context.config().isExcluded(name) || hidden.contains(name)) {
+                if (context.config().isExcluded(name) || hidden.contains(name)) {
                     throw missingDependency(entry, name);
                 }
+                classes.add(name);
             }
         }
         return new AuthoredClassDeclarations(active);
@@ -76,6 +68,7 @@ final class AuthoredClassDeclarations {
 
     void validateGeneratedImports(IndexFileGenerator generator) {
         for (ClassDeclarationCatalogEntry entry : entries.values()) {
+            if (!generator.hasDeclaration(entry.targetType().getName())) continue;
             for (Class<?> imported : entry.imports().stream().sorted(Comparator.comparing(Class::getName)).toList()) {
                 if (!generator.hasDeclaration(imported.getName())) {
                     throw missingDependency(entry, imported.getName());

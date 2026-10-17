@@ -1,5 +1,5 @@
 import { $InputStream, $OutputStream, $Serializable } from "java:java/io";
-import { $Class, $Comparable, $Comparable_ } from "java:java/lang";
+import { $Class, $Comparable, $Comparable_, $Enum } from "java:java/lang";
 import { $Permission } from "java:java/security";
 import { $List, $Map } from "java:java/util";
 
@@ -170,11 +170,11 @@ declare module "java:java/net" {
         static getFileNameMap(): $FileNameMap;
         static guessContentTypeFromName(arg0: string): string;
         static guessContentTypeFromStream(arg0: $InputStream): string;
-        static setContentHandlerFactory(arg0: $ContentHandlerFactory): void;
+        static setContentHandlerFactory(arg0: $ContentHandlerFactory_<string, $ContentHandler>): void;
         static setDefaultAllowUserInteraction(arg0: boolean): void;
         static setDefaultRequestProperty(arg0: string, arg1: string): void;
         static setDefaultUseCaches(arg0: string, arg1: boolean): void;
-        static setFileNameMap(arg0: $FileNameMap): void;
+        static setFileNameMap(arg0: $FileNameMap_<string, string>): void;
         addRequestProperty(arg0: string, arg1: string): void;
         connect(): void;
         getContent(arg0: $Class<any>[]): object;
@@ -205,5 +205,38 @@ declare module "java:java/net" {
         createURLStreamHandler(arg0: string): $URLStreamHandler;
     }
 
+    export class $Proxy$Type {
+        static DIRECT: $Proxy$Type;
+        static HTTP: $Proxy$Type;
+        static SOCKS: $Proxy$Type;
+        name(): string;
+        ordinal(): number;
+        toString(): string;
+        static values(): $Proxy$Type[];
+        static valueOf(name: string): $Proxy$Type;
+    }
+    export interface $Proxy$Type extends $Enum<$Proxy$Type> {}
+
+    export class $SocketAddress implements $Serializable {
+        constructor();
+    }
+
+    export interface $ContentHandlerFactory {
+        createContentHandler(arg0: string): $ContentHandler;
+    }
+
+    export interface $FileNameMap {
+        getContentTypeFor(arg0: string): string;
+    }
+
+    export class $ContentHandler {
+        constructor();
+        getContent(arg0: $URLConnection, arg1: $Class<any>[]): object;
+        getContent(arg0: $URLConnection): object;
+    }
+
     export type $URLStreamHandlerFactory_<CallbackArg0 = string, CallbackResult = $URLStreamHandler> = ((arg0: CallbackArg0) => CallbackResult) | ($URLStreamHandlerFactory & { readonly [Symbol.hasInstance]?: never });
+    export type $Proxy$Type_ = $Proxy$Type | "DIRECT" | "HTTP" | "SOCKS";
+    export type $ContentHandlerFactory_<CallbackArg0 = string, CallbackResult = $ContentHandler> = ((arg0: CallbackArg0) => CallbackResult) | ($ContentHandlerFactory & { readonly [Symbol.hasInstance]?: never });
+    export type $FileNameMap_<CallbackArg0 = string, CallbackResult = string> = ((arg0: CallbackArg0) => CallbackResult) | ($FileNameMap & { readonly [Symbol.hasInstance]?: never });
 }

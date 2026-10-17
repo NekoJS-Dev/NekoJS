@@ -362,18 +362,20 @@ class ModifyTypeEditorTest {
         String ioModule = Files.readString(out.resolve("@package/java/io/index.d.ts"));
         assertFalse(ioModule.contains("import { $Path }"),
                 "hidden class must not be imported: " + ioModule);
-        assertTrue(ioModule.contains("import { $URI, $URL } from \"java:java/net\";"), ioModule);
+        assertTrue(java.util.regex.Pattern.compile("import \\{[^}]*\\$URI(?:,| )[^}]*\\$URL(?:,| )[^}]*} from \\\"java:java/net\\\";")
+                .matcher(ioModule).find(), ioModule);
 
         // Path 自身模块：声明已被覆盖为空，类名不得出现
         String fileModule = Files.readString(out.resolve("@package/java/nio/file/index.d.ts"));
-        assertFalse(fileModule.contains("$Path"), "hidden class declaration must be empty: " + fileModule);
+        assertFalse(java.util.regex.Pattern.compile("(?<![\\w$])\\$Path(?![\\w$])").matcher(fileModule).find(),
+                "The exact hidden class must not be declared: " + fileModule);
 
         // 整个产物树：任何 import 语句都不得出现隐藏类名
         try (var files = Files.walk(out)) {
             for (Path f : files.filter(Files::isRegularFile).toList()) {
                 for (String line : Files.readAllLines(f)) {
                     if (line.strip().startsWith("import ")) {
-                        assertFalse(line.contains("Path"),
+                        assertFalse(java.util.regex.Pattern.compile("(?<![\\w$])\\$Path(?![\\w$])").matcher(line).find(),
                                 "hidden class leaked into import in " + f + ": " + line);
                     }
                 }

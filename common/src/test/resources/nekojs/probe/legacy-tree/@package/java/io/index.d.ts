@@ -1,5 +1,6 @@
-import { $Appendable, $AutoCloseable, $AutoCloseable_, $CharSequence, $Comparable, $Comparable_ } from "java:java/lang";
+import { $Appendable, $AutoCloseable, $AutoCloseable_, $CharSequence, $Comparable, $Comparable_, $Readable, $Readable_ } from "java:java/lang";
 import { $URI, $URL } from "java:java/net";
+import { $CharBuffer } from "java:java/nio";
 import { $Charset } from "java:java/nio/charset";
 import { $Path } from "java:java/nio/file";
 import { $Locale } from "java:java/util";
@@ -63,10 +64,10 @@ declare module "java:java/io" {
         hashCode(): number;
         lastModified(): number;
         length(): number;
-        listFiles(arg0: $FileFilter): $File[];
-        listFiles(arg0: $FilenameFilter): $File[];
+        listFiles(arg0: $FileFilter_<$File, boolean>): $File[];
+        listFiles(arg0: $FilenameFilter_<$File, string, boolean>): $File[];
         listFiles(): $File[];
-        list(arg0: $FilenameFilter): string[];
+        list(arg0: $FilenameFilter_<$File, string, boolean>): string[];
         list(): string[];
         mkdirs(): boolean;
         mkdir(): boolean;
@@ -235,5 +236,35 @@ declare module "java:java/io" {
         write(arg0: string): void;
     }
 
+    export interface $FileFilter {
+        accept(arg0: $File): boolean;
+    }
+
+    export interface $FilenameFilter {
+        accept(arg0: $File, arg1: string): boolean;
+    }
+
+    export interface $Flushable {
+        flush(): void;
+    }
+
+    export class $Reader implements $Readable, $Closeable {
+        static nullReader(): $Reader;
+        close(): void;
+        markSupported(): boolean;
+        mark(arg0: number): void;
+        ready(): boolean;
+        read(arg0: string[], arg1: number, arg2: number): number;
+        read(arg0: string[]): number;
+        read(arg0: $CharBuffer): number;
+        read(): number;
+        reset(): void;
+        skip(arg0: number): number;
+        transferTo(arg0: $Writer): number;
+    }
+
     export type $Closeable_ = (() => void) | ($Closeable & { readonly [Symbol.hasInstance]?: never });
+    export type $FileFilter_<CallbackArg0 = $File, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | ($FileFilter & { readonly [Symbol.hasInstance]?: never });
+    export type $FilenameFilter_<CallbackArg0 = $File, CallbackArg1 = string, CallbackResult = boolean> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($FilenameFilter & { readonly [Symbol.hasInstance]?: never });
+    export type $Flushable_ = (() => void) | ($Flushable & { readonly [Symbol.hasInstance]?: never });
 }

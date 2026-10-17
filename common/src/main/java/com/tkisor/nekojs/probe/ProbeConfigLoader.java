@@ -46,7 +46,7 @@ public final class ProbeConfigLoader {
             setup(config, "scan.forceScanMods", List.of("minecraft"),
                     " Mod IDs or package rules force-included into scanning ON TOP of the whitelist (excludePackages still wins). Built-in modId table: minecraft=net.minecraft, neoforge=net.neoforged, forge=net.minecraftforge, java=java. Entries containing '.' are literal package prefixes; 're:' entries are regexes; unknown mod IDs are ignored (debug log).");
             setup(config, "scan.maxDepth", 5,
-                    " Max BFS depth when walking the type-reachability closure from event/binding/adapter seeds.");
+                    " Max BFS depth for the primary scan from event/binding/adapter seeds. TypeScript separately completes referenced declarations beyond include/depth limits, while honoring excludePackages and hidden types; see @special/dependencies.json for unavailable dependencies.");
             setup(config, "scan.mode", "SMART",
                     " Scan mode: SMART = classes reachable from event/binding/adapter seeds, filtered by the whitelist + forceScanMods | FULL = whole reachable closure, whitelist bypassed but excludePackages still honored (bounded by maxDepth) | NONE = no scanning at all (probe returns a failure result).");
             setup(config, "languages.typescript.outputDir", "typescript",

@@ -90,15 +90,15 @@ public final class AdapterAliasGenerator {
             entries.put(fqn, entry);
             AdapterAlias alias = renderAlias(entry, parameters.get(fqn));
             aliases.put(fqn, alias);
-            // 收集别名引用的跨包 host 类型，供 orchestrator 确保它们也被生成，避免悬空 import
-            for (String imp : alias.importFqns()) {
+            // Same-package references also need declarations even though they require no imports.
+            for (String imp : alias.referenceFqns()) {
                 if (!imp.equals(fqn)) hostImports.add(imp);
             }
         }
     }
 
     /**
-     * 所有别名引用的跨包 host 类型全限定名（如 NekoId、Item），供 orchestrator 纳入生成集合。
+     * Host types referenced by aliases, including same-package types, for declaration dependency completion.
      *
      * <p>返回按收集序的不可变快照：{@link Set#copyOf} 的迭代序无规范保证（跨 JVM/平台可能
      * 不同），直接暴露会破坏 probe 输出的确定性，故按插入序复制。
@@ -126,8 +126,10 @@ public final class AdapterAliasGenerator {
         String selfSimple = tsClassName(target);
         String selfPackage = target.getPackageName();
         Set<String> imports = new LinkedHashSet<>();
+        Set<String> references = new LinkedHashSet<>();
         Set<String> usedRegistries = new LinkedHashSet<>();
         TypeAliasRegistry scopedAliases = aliasRegistry.withReferences((fqn, name) -> {
+            references.add(fqn);
             int separator = fqn.lastIndexOf('.');
             if (separator >= 0 && !fqn.substring(0, separator).equals(selfPackage)) imports.add(fqn);
             return aliasRegistry.reference(fqn, name);
@@ -148,14 +150,14 @@ public final class AdapterAliasGenerator {
         ShapeContext context = new ShapeContext(
                 aliasRegistry.reference(target.getName(), "$" + selfSimple) + argumentList,
                 aliasRegistry.reference(target.getName(), "$" + selfSimple + "_") + argumentList,
-                selfPackage, imports, usedRegistries);
+                selfPackage, imports, usedRegistries, references);
         Set<String> rendered = new LinkedHashSet<>();
         for (AdapterInputShape shape : entry.shapes()) {
             rendered.add(render(shape, context, false));
         }
         String parameterList = declarations.isEmpty() ? "" : "<" + String.join(", ", declarations) + ">";
         return new AdapterAlias("$" + selfSimple + "_", parameterList, String.join(" | ", rendered), imports,
-                !usedRegistries.isEmpty(), entry.syntaxDoc());
+                !usedRegistries.isEmpty(), entry.syntaxDoc(), references);
     }
 
     /**
@@ -174,13 +176,19 @@ public final class AdapterAliasGenerator {
             String union,
             Set<String> importFqns,
             boolean usesRegistry,
-            Optional<String> doc
-    ) {}
+            Optional<String> doc,
+            Set<String> referenceFqns
+    ) {
+        public AdapterAlias(String aliasName, String typeParameters, String union, Set<String> importFqns,
+                            boolean usesRegistry, Optional<String> doc) {
+            this(aliasName, typeParameters, union, importFqns, usesRegistry, doc, importFqns);
+        }
+    }
 
     // ===================== 形状渲染 =====================
 
     private record ShapeContext(String hostSelf, String inputSelf, String selfPackage,
-                                Set<String> imports, Set<String> usedRegistries) {}
+                                Set<String> imports, Set<String> usedRegistries, Set<String> references) {}
 
     /**
      * @param nested 是否处于嵌套位置（数组元素 / 对象槽位 / 联合成员 / 模板洞）。嵌套位置的
@@ -197,6 +205,7 @@ public final class AdapterAliasGenerator {
             case AdapterInputShape.SelfValue v -> nested ? context.inputSelf() : context.hostSelf();
             case AdapterInputShape.HostValue v -> {
                 Class<?> hostCls = v.cls();
+                context.references().add(hostCls.getName());
                 // 同包目标已在当前模块声明，无需 import；跨包才收集
                 String hostPkg = hostCls.getPackage() != null ? hostCls.getPackage().getName() : "";
                 if (!hostPkg.equals(context.selfPackage())) {

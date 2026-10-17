@@ -8,7 +8,9 @@ import { $URL } from "java:java/net";
 import { $CharBuffer } from "java:java/nio";
 import { $Charset } from "java:java/nio/charset";
 import { $ProtectionDomain } from "java:java/security";
-import { $Comparator, $Comparator_, $Enumeration, $Iterator, $List, $Locale, $Optional, $Set, $Spliterator } from "java:java/util";
+import { $Duration } from "java:java/time";
+import { $Comparator, $Comparator_, $Enumeration, $Iterator, $List, $Locale, $Map, $Optional, $Set, $Spliterator } from "java:java/util";
+import { $ThreadFactory, $ThreadFactory_ } from "java:java/util/concurrent";
 import { $Consumer, $Consumer_, $Function, $Function_ } from "java:java/util/function";
 import { $IntStream, $Stream } from "java:java/util/stream";
 
@@ -17,6 +19,7 @@ export * as constant from "java:java/lang/constant";
 export * as invoke from "java:java/lang/invoke";
 export * as module from "java:java/lang/module";
 export * as reflect from "java:java/lang/reflect";
+export * as foreign from "java:java/lang/foreign";
 
 declare module "java:java/lang" {
     export class $AbstractStringBuilder implements $Appendable, $CharSequence {
@@ -1016,9 +1019,182 @@ declare module "java:java/lang" {
         toString(): string;
     }
 
+    export class $ModuleLayer$Controller {
+        addExports(arg0: $Module, arg1: string, arg2: $Module): $ModuleLayer$Controller;
+        addOpens(arg0: $Module, arg1: string, arg2: $Module): $ModuleLayer$Controller;
+        addReads(arg0: $Module, arg1: $Module): $ModuleLayer$Controller;
+        enableNativeAccess(arg0: $Module): $ModuleLayer$Controller;
+        layer(): $ModuleLayer;
+    }
+
+    export class $Thread implements $Runnable {
+        constructor();
+        constructor(arg0: $Runnable_);
+        constructor(arg0: $Runnable_, arg1: string);
+        constructor(arg0: string);
+        constructor(arg0: $ThreadGroup, arg1: $Runnable_);
+        constructor(arg0: $ThreadGroup, arg1: $Runnable_, arg2: string);
+        constructor(arg0: $ThreadGroup, arg1: $Runnable_, arg2: string, arg3: number);
+        constructor(arg0: $ThreadGroup, arg1: $Runnable_, arg2: string, arg3: number, arg4: boolean);
+        constructor(arg0: $ThreadGroup, arg1: string);
+        static MAX_PRIORITY: number;
+        static MIN_PRIORITY: number;
+        static NORM_PRIORITY: number;
+        get contextClassLoader(): $ClassLoader;
+        getContextClassLoader(): $ClassLoader;
+        set contextClassLoader(value: $ClassLoader);
+        get id(): number;
+        getId(): number;
+        get name(): string;
+        getName(): string;
+        set name(value: string);
+        get priority(): number;
+        getPriority(): number;
+        set priority(value: number);
+        get stackTrace(): $StackTraceElement[];
+        getStackTrace(): $StackTraceElement[];
+        get state(): $Thread$State;
+        getState(): $Thread$State;
+        get threadGroup(): $ThreadGroup;
+        getThreadGroup(): $ThreadGroup;
+        get uncaughtExceptionHandler(): $Thread$UncaughtExceptionHandler;
+        getUncaughtExceptionHandler(): $Thread$UncaughtExceptionHandler;
+        set uncaughtExceptionHandler(value: $Thread$UncaughtExceptionHandler_<$Thread, $Throwable>);
+        get alive(): boolean;
+        isAlive(): boolean;
+        get daemon(): boolean;
+        isDaemon(): boolean;
+        set daemon(value: boolean);
+        get interrupted(): boolean;
+        isInterrupted(): boolean;
+        get virtual(): boolean;
+        isVirtual(): boolean;
+        static activeCount(): number;
+        static currentThread(): $Thread;
+        static dumpStack(): void;
+        static enumerate(arg0: $Thread[]): number;
+        static getAllStackTraces(): $Map<$Thread, $StackTraceElement[]>;
+        static getDefaultUncaughtExceptionHandler(): $Thread$UncaughtExceptionHandler;
+        static holdsLock(arg0: object): boolean;
+        static interrupted(): boolean;
+        static ofPlatform(): $Thread$Builder$OfPlatform;
+        static ofVirtual(): $Thread$Builder$OfVirtual;
+        static onSpinWait(): void;
+        static setDefaultUncaughtExceptionHandler(arg0: $Thread$UncaughtExceptionHandler_<$Thread, $Throwable>): void;
+        static sleep(arg0: $Duration): void;
+        static sleep(arg0: number, arg1: number): void;
+        static sleep(arg0: number): void;
+        static startVirtualThread(arg0: $Runnable_): $Thread;
+        static yield(): void;
+        checkAccess(): void;
+        countStackFrames(): number;
+        interrupt(): void;
+        join(arg0: $Duration): boolean;
+        join(arg0: number, arg1: number): void;
+        join(arg0: number): void;
+        join(): void;
+        resume(): void;
+        run(): void;
+        setContextClassLoader(arg0: $ClassLoader): void;
+        setDaemon(arg0: boolean): void;
+        setName(arg0: string): void;
+        setPriority(arg0: number): void;
+        setUncaughtExceptionHandler(arg0: $Thread$UncaughtExceptionHandler_<$Thread, $Throwable>): void;
+        start(): void;
+        stop(): void;
+        suspend(): void;
+        threadId(): number;
+        toString(): string;
+    }
+
+    export interface $Thread$Builder$OfPlatform extends $Thread$Builder {
+        daemon(arg0: boolean): $Thread$Builder$OfPlatform;
+        daemon(): $Thread$Builder$OfPlatform;
+        group(arg0: $ThreadGroup): $Thread$Builder$OfPlatform;
+        inheritInheritableThreadLocals(arg0: boolean): $Thread$Builder$OfPlatform;
+        name(arg0: string, arg1: number): $Thread$Builder$OfPlatform;
+        name(arg0: string): $Thread$Builder$OfPlatform;
+        priority(arg0: number): $Thread$Builder$OfPlatform;
+        stackSize(arg0: number): $Thread$Builder$OfPlatform;
+        uncaughtExceptionHandler(arg0: $Thread$UncaughtExceptionHandler_<$Thread, $Throwable>): $Thread$Builder$OfPlatform;
+    }
+
+    export interface $Thread$Builder$OfVirtual extends $Thread$Builder {
+        inheritInheritableThreadLocals(arg0: boolean): $Thread$Builder$OfVirtual;
+        name(arg0: string, arg1: number): $Thread$Builder$OfVirtual;
+        name(arg0: string): $Thread$Builder$OfVirtual;
+        uncaughtExceptionHandler(arg0: $Thread$UncaughtExceptionHandler_<$Thread, $Throwable>): $Thread$Builder$OfVirtual;
+    }
+
+    export class $Thread$State {
+        static BLOCKED: $Thread$State;
+        static NEW: $Thread$State;
+        static RUNNABLE: $Thread$State;
+        static TERMINATED: $Thread$State;
+        static TIMED_WAITING: $Thread$State;
+        static WAITING: $Thread$State;
+        name(): string;
+        ordinal(): number;
+        toString(): string;
+        static values(): $Thread$State[];
+        static valueOf(name: string): $Thread$State;
+    }
+    export interface $Thread$State extends $Enum<$Thread$State> {}
+
+    export interface $Thread$UncaughtExceptionHandler {
+        uncaughtException(arg0: $Thread, arg1: $Throwable): void;
+    }
+
+    export class $ThreadGroup implements $Thread$UncaughtExceptionHandler {
+        constructor(arg0: string);
+        constructor(arg0: $ThreadGroup, arg1: string);
+        get maxPriority(): number;
+        getMaxPriority(): number;
+        set maxPriority(value: number);
+        get name(): string;
+        getName(): string;
+        get parent(): $ThreadGroup;
+        getParent(): $ThreadGroup;
+        get daemon(): boolean;
+        isDaemon(): boolean;
+        set daemon(value: boolean);
+        get destroyed(): boolean;
+        isDestroyed(): boolean;
+        activeCount(): number;
+        activeGroupCount(): number;
+        checkAccess(): void;
+        destroy(): void;
+        enumerate(arg0: $ThreadGroup[], arg1: boolean): number;
+        enumerate(arg0: $ThreadGroup[]): number;
+        enumerate(arg0: $Thread[], arg1: boolean): number;
+        enumerate(arg0: $Thread[]): number;
+        interrupt(): void;
+        list(): void;
+        parentOf(arg0: $ThreadGroup): boolean;
+        resume(): void;
+        setDaemon(arg0: boolean): void;
+        setMaxPriority(arg0: number): void;
+        stop(): void;
+        suspend(): void;
+        toString(): string;
+        uncaughtException(arg0: $Thread, arg1: $Throwable): void;
+    }
+
+    export interface $Thread$Builder {
+        factory(): $ThreadFactory;
+        inheritInheritableThreadLocals(arg0: boolean): $Thread$Builder;
+        name(arg0: string, arg1: number): $Thread$Builder;
+        name(arg0: string): $Thread$Builder;
+        start(arg0: $Runnable_): $Thread;
+        uncaughtExceptionHandler(arg0: $Thread$UncaughtExceptionHandler_<$Thread, $Throwable>): $Thread$Builder;
+        unstarted(arg0: $Runnable_): $Thread;
+    }
+
     export type $AutoCloseable_ = (() => void) | ($AutoCloseable & { readonly [Symbol.hasInstance]?: never });
     export type $Comparable_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Comparable<Host0> & { readonly [Symbol.hasInstance]?: never });
     export type $Iterable_<T> = T[];
     export type $Readable_<CallbackArg0 = $CharBuffer, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Readable & { readonly [Symbol.hasInstance]?: never });
     export type $Runnable_ = (() => void) | ($Runnable & { readonly [Symbol.hasInstance]?: never });
+    export type $Thread$State_ = $Thread$State | "BLOCKED" | "NEW" | "RUNNABLE" | "TERMINATED" | "TIMED_WAITING" | "WAITING";
+    export type $Thread$UncaughtExceptionHandler_<CallbackArg0 = $Thread, CallbackArg1 = $Throwable> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($Thread$UncaughtExceptionHandler & { readonly [Symbol.hasInstance]?: never });
 }

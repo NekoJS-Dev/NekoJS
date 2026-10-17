@@ -50,7 +50,7 @@ public record ProbeConfig(boolean enabled, boolean runAtStartup, String baseDir,
         this(enabled, false, baseDir, scan, Map.of());
     }
 
-    /** 类扫描过滤配置。 */
+    /** Primary scan filters; TypeScript completes emitted dependencies separately while retaining excludes. */
     public record ScanConfig(
             List<String> includePackages,
             List<String> extraIncludePackages,

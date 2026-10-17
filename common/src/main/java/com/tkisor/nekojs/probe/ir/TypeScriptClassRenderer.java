@@ -25,6 +25,13 @@ public final class TypeScriptClassRenderer {
     private final TypeAliasRegistry aliases;
     private Set<String> interfaceClassBindings = Set.of();
     private Set<BeanAliasExclusionCatalogEntry> beanAliasExclusions = Set.of();
+    private Map<String, Set<String>> covariantTypeParameters = Map.of();
+
+    /** Records measured result variance for specific library interfaces, without changing input parameters. */
+    public void setCovariantTypeParameters(Map<String, Set<String>> parameters) {
+        covariantTypeParameters = parameters.entrySet().stream().collect(Collectors.toUnmodifiableMap(
+                Map.Entry::getKey, entry -> Set.copyOf(entry.getValue())));
+    }
 
     /** Replaces the per-snapshot rules; matching never expands to subclasses or same-name properties. */
     public void setBeanAliasExclusions(List<BeanAliasExclusionCatalogEntry> exclusions) {
@@ -101,6 +108,7 @@ public final class TypeScriptClassRenderer {
         scoped.getterOverrides.putAll(getterOverrides);
         scoped.interfaceClassBindings = interfaceClassBindings;
         scoped.beanAliasExclusions = beanAliasExclusions;
+        scoped.covariantTypeParameters = covariantTypeParameters;
         return scoped.render(decl);
     }
 
@@ -274,7 +282,10 @@ public final class TypeScriptClassRenderer {
         if (d.typeParams.isEmpty()) return;
         sb.append("<");
         sb.append(d.typeParams.stream().map(tp -> {
-            String s = tp.name;
+            // Edited IR remains authoritative; a library's original variance may no longer describe it.
+            boolean covariant = d.kind == TypeDecl.Kind.INTERFACE && !d.mutated
+                    && covariantTypeParameters.getOrDefault(d.fqn, Set.of()).contains(tp.name);
+            String s = (covariant ? "out " : "") + tp.name;
             if (tp.bound != null) s += " extends " + renderTypeParameterBound(tp.bound.ref, tp.name, aliases,
                     new LinkedHashSet<>());
             return s;
@@ -286,7 +297,7 @@ public final class TypeScriptClassRenderer {
         StringBuilder sb = new StringBuilder();
         appendDoc(sb, "        ", c.docs);
         sb.append("        constructor(");
-        appendParameters(sb, c.params);
+        appendParameters(sb, c.params, true);
         sb.append(");\n");
         appendOverloads(sb, c, true, false);
         return sb.toString();
@@ -347,13 +358,24 @@ public final class TypeScriptClassRenderer {
     }
 
     private void appendParameters(StringBuilder sb, List<MethodDecl.MethodParam> params) {
+        appendParameters(sb, params, false);
+    }
+
+    private void appendParameters(StringBuilder sb, List<MethodDecl.MethodParam> params, boolean constructor) {
         for (int i = 0; i < params.size(); i++) {
             MethodDecl.MethodParam p = params.get(i);
             if (i > 0) sb.append(", ");
             sb.append(tsParamName(p.name));
             if (p.varargs || p.optional) sb.append("?");
             sb.append(": ");
-            sb.append(renderSlot(p.type, true));
+            if (constructor && !p.type.overridden && p.type.sourceType != null) {
+                // TypeScript class constructors cannot declare their own type parameters.
+                // Project only those local variables; ordinary class variables and edited slots keep their scope.
+                sb.append(FunctionalInterfaceAliasGenerator.renderJavaTypeInput(
+                        ConstructorInputTypes.project(p.type.sourceType), aliases, new LinkedHashSet<>()));
+            } else {
+                sb.append(renderSlot(p.type, true));
+            }
             if (p.varargs) sb.append("[]");
         }
     }

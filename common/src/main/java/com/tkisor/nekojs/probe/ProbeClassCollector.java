@@ -105,6 +105,9 @@ final class ProbeClassCollector {
                 for (Constructor<?> ctor : cls.getDeclaredConstructors()) {
                     if (Modifier.isPublic(ctor.getModifiers())) {
                         for (Type p : ctor.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
+                        for (TypeVariable<?> variable : ctor.getTypeParameters()) {
+                            for (Type bound : variable.getBounds()) collectTypeToQueue(bound, queue, nextDepth);
+                        }
                     }
                 }
                 for (Method method : TypeReflector.declarationMethods(cls)) {
@@ -175,8 +178,12 @@ final class ProbeClassCollector {
             }
         } else if (type instanceof GenericArrayType gat) {
             collectTypeToQueue(gat.getGenericComponentType(), queue, depth);
+        } else if (type instanceof WildcardType wildcard) {
+            // Ordinary wildcard slots render their upper bound, even inside non-functional containers.
+            // The bound is part of this signature edge; its members still use the next BFS depth.
+            for (Type bound : wildcard.getUpperBounds()) collectTypeToQueue(bound, queue, depth);
         }
         // Declaration parameter bounds are queued explicitly at their owner's next depth.
-        // Other nested type variables and ordinary wildcard bounds do not expand the scan.
+        // Other nested type variables do not expand the scan.
     }
 }

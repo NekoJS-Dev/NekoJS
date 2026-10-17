@@ -60,15 +60,7 @@ public final class EventDeclarationGenerator {
         }
 
         // 收集所有需要 import 的类型
-        Set<String> imports = new LinkedHashSet<>();
-        for (EventCatalogEntry event : events) {
-            if (event.eventType() != null && !payloads.containsKey(event.eventType())) {
-                collectImports(event.eventType(), imports);
-            }
-            if (event.dispatchKeyType() != null) {
-                collectImports(event.dispatchKeyType(), imports);
-            }
-        }
+        Set<String> imports = referencedClasses(events, payloads);
 
         // 生成 import 语句
         if (!imports.isEmpty()) {
@@ -196,6 +188,20 @@ public final class EventDeclarationGenerator {
         }
 
         return sb.toString();
+    }
+
+    /** Includes emitted payload and dispatch imports without reflecting replaced builder payloads. */
+    Set<String> referencedClasses(List<EventCatalogEntry> events, List<RegistryBuilderSurfaceEntry> builders) {
+        return referencedClasses(events, EventPayloadDeclarations.resolve(events, builders));
+    }
+
+    private Set<String> referencedClasses(List<EventCatalogEntry> events, Map<Class<?>, EventPayload> payloads) {
+        Set<String> imports = new LinkedHashSet<>();
+        for (EventCatalogEntry event : events) {
+            if (event.eventType() != null && !payloads.containsKey(event.eventType())) collectImports(event.eventType(), imports);
+            if (event.dispatchKeyType() != null) collectImports(event.dispatchKeyType(), imports);
+        }
+        return imports;
     }
 
     private void collectImports(Class<?> cls, Set<String> imports) {

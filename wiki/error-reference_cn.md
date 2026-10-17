@@ -112,6 +112,7 @@
 | `NEKO-4045` | Unknown profession | 交易批次引用未知职业，整个候选被拒绝 |
 | `NEKO-4046` | Villager trade pool replacement failed | 静态交易池替换失败，不能报告成功 |
 | `NEKO-4047` | TypeScript Bean alias exclusion registration rejected | TypeScript Bean 派生属性排除条目无效或收集器不支持 |
+| `NEKO-4048` | Probe TypeScript dependency closure incomplete | 必需类型被排除、隐藏或无法反射；详见 `@special/dependencies.json`。生成文件不代表完整 IDE 检查通过。 |
 
 <a id="wiki-section-6"></a>
 ## 配方与数据

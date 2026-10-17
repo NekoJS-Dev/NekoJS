@@ -82,6 +82,7 @@ The following layouts are **actual output from the built-in backends**, not form
 │   ├── server/{events,events/recipes,bindings}/index.d.ts
 │   └── client/{events,bindings}/index.d.ts
 ├── @special/
+│   ├── dependencies.json          # Declaration dependency completion and unavailable reasons
 │   ├── index.d.ts                  # export * as types from "@special/types"
 │   └── types/index.d.ts            # Registry literals, such as a union of all item ids
 ├── @manual/
@@ -133,6 +134,12 @@ Probe **automatically merges** `jsconfig.json` in each `*_scripts/` directory, r
 
 Configuration lives in `<game>/nekojs/config/probe.toml`. On first load, defaults and comments are written as needed through `CommentedFileConfig` + autosave. A damaged or invalid file falls back to defaults. `/nekojs probe reload` rereads it without a restart.
 
+The scan settings select the primary class set. TypeScript also generates the real declarations referenced by emitted signatures and input aliases, including dependencies outside the include allowlist or primary depth limit. This can increase output size and generation time. It does not grant runtime class access or register additional Bindings. Explicit excludes and hidden types still apply; unavailable dependencies are listed in `typescript/@special/dependencies.json` with `complete: false` and diagnostic `NEKO-4048`. Successful file generation does not certify a complete IDE check. Python retains the primary collection behavior.
+
+TypeScript class constructors cannot declare method-local type parameters. Their local variables therefore project to the first Java upper bound, with unbounded or recursive occurrences erased at those use sites. This approximation does not preserve correlations between separate constructor arguments. Class variables, generic methods and explicitly edited slots retain their own declarations.
+
+The 19 fastutil function interfaces with Object/Reference results explicitly mark their result parameter as `out V`. This avoids recursive TypeScript variance inference through compose/andThen and callback-or-host unions. Input parameters retain their existing type relations; they are not made invariant. Edited IR does not inherit the original library's variance rule. Other declaration errors still require their own checks.
+
 | Key | Default | Semantics |
 |---|---|---|
 | `enabled` | `true` | Master switch. `false` makes probe immediately return failure (`"probe disabled in probe.toml"`). `/nekojs probe enable|disable` changes this key. |
@@ -142,8 +149,8 @@ Configuration lives in `<game>/nekojs/config/probe.toml`. On first load, default
 | `scan.extraIncludePackages` | `[]` | Append to the effective allowlist; **append semantics**, also supporting literal prefixes and `re:` regexes. Useful for adding `com.mojang` or a mod package. |
 | `scan.excludePackages` | `[]` | Denylist rules supporting literal prefixes and `re:` regexes. **Always applied**, including in FULL mode; matching classes are skipped. |
 | `scan.forceScanMods` | `["minecraft"]` | Mod ids or package rules **forced into** scanning outside the allowlist. Built-in mappings: `minecraft` → `net.minecraft`, `neoforge` → `net.neoforged`, `forge` → `net.minecraftforge`, `java` → `java`. An entry containing `.` is a literal prefix; one starting with `re:` is a regex. Unknown mod ids are logged at debug and ignored. excludePackages still takes precedence over forced inclusion. |
-| `scan.maxDepth` | `5` | Maximum BFS depth from event/binding seeds; values ≤0 fall back to 5 |
-| `scan.mode` | `"SMART"` | `SMART`: allowlist + forceScanMods filtering. `FULL`: skip the include allowlist; closure is constrained only by excludes and maxDepth. `NONE`: no scanning, and probe returns failure. Unknown values fall back to `SMART`. |
+| `scan.maxDepth` | `5` | Maximum primary-scan BFS depth from event/binding seeds; values ≤0 fall back to 5. TS declaration dependencies are completed separately. |
+| `scan.mode` | `"SMART"` | `SMART`: allowlist + forceScanMods filtering. `FULL`: skip the include allowlist; the primary scan is constrained only by excludes and maxDepth. `NONE`: no scanning, and probe returns failure. Unknown values fall back to `SMART`. |
 | `languages.<lang>.outputDir` | Language id itself | The language output's **subdirectory** under `baseDir`, such as default `typescript` → `.neko_probe/typescript`. Missing/null falls back to the language id. The default `ProbeBackend.outputDir` checks this key first. |
 
 > **Regex package rules**: entries in `includePackages` / `extraIncludePackages` / `excludePackages` / `forceScanMods` can be literal package prefixes (the old behavior, `fqn.startsWith("prefix.")`) or `re:<pattern>` regexes matching the **entire** class FQN. For example, `re:com\.example\.(mod1|mod2)\..*` includes several mod packages at once. Compiled regexes are cached, avoiding extra work on the scanning hot path. An invalid regex warns once and never matches.

@@ -31,15 +31,7 @@ public final class BindingDeclarationGenerator {
         sb.append("// Bindings for ").append(scriptType.name).append(" scripts\n");
 
         // 收集需要 import 的类
-        Set<String> imports = new LinkedHashSet<>();
-        for (BindingCatalogEntry binding : bindings) {
-            if (binding.javaType() != null) {
-                collectImports(binding.javaType(), imports);
-            }
-            for (Class<?> extra : binding.extraDocTypes()) {
-                collectImports(extra, imports);
-            }
-        }
+        Set<String> imports = referencedClasses(bindings);
 
         // 生成 import
         Map<String, List<String>> importsByPackage = new TreeMap<>();
@@ -121,6 +113,16 @@ public final class BindingDeclarationGenerator {
 
         sb.append(";\n");
         return sb.toString();
+    }
+
+    /** Shares actual binding imports with dependency completion, including roots outside the primary allowlist. */
+    Set<String> referencedClasses(List<BindingCatalogEntry> bindings) {
+        Set<String> imports = new LinkedHashSet<>();
+        for (BindingCatalogEntry binding : bindings) {
+            collectImports(binding.javaType(), imports);
+            for (Class<?> extra : binding.extraDocTypes()) collectImports(extra, imports);
+        }
+        return imports;
     }
 
     private void collectImports(Class<?> cls, Set<String> imports) {

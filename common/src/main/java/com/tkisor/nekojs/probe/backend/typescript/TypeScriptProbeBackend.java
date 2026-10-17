@@ -14,7 +14,6 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
-import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
@@ -23,9 +22,7 @@ import com.tkisor.nekojs.api.catalog.RegistryTypeCatalogEntry;
 import com.tkisor.nekojs.api.surface.ApiEnvironmentSnapshot;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.probe.events.GlobalDecl;
-import com.tkisor.nekojs.probe.events.ProbeModifyTypeEventJS;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
-import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 
@@ -34,18 +31,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-/**
- * 内置 TypeScript probe backend：把共享收集到的类 + catalog 渲染成 {@code .d.ts}。
- *
- * <p>Phase 1：从旧 {@code ProbeOrchestrator} 逐字搬迁全部发射逻辑，仅改三处入口：
- * <ol>
- *   <li>种子类来自 {@link ProbeContext#collectedClasses()}（共享 BFS 结果），不再自带 BFS</li>
- *   <li>包过滤改用 {@link ProbeConfig#isRelevantClass(String, java.util.List)}（配置驱动）</li>
- *   <li>输出目录 = {@link ProbeContext#languageDir()}（每 backend 一个目录，落盘由默认 generate 负责）</li>
- * </ol>
- * 故 TS 产物**内容**与重构前字节一致（仅目录由 {@code .neko_probe/} 迁到 {@code .neko_probe/typescript/}）。
- * 外部副作用（agent 模板 + workspace 配置）移至 {@link ProbeCoordinator} 统一执行一次。
- */
+/** Renders catalog and shared IR as TypeScript, completing referenced declarations after the primary scan. */
 public final class TypeScriptProbeBackend implements ProbeBackend {
 
     private final TypeAliasRegistry aliasRegistry = new TypeAliasRegistry();
@@ -97,6 +83,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     @Override
     public Map<String, String> render(ProbeContext ctx) {
         applyBuiltinGetterOverrides();
+        tsClassRenderer.setCovariantTypeParameters(fastutilResultVariance());
         NekoScriptCatalogSnapshot snapshot = ctx.snapshot();
         tsClassRenderer.setBeanAliasExclusions(snapshot.beanAliasExclusions());
         Set<String> interfaceClassBindings = new LinkedHashSet<>();
@@ -121,9 +108,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 classesToGenerate.add(c.getName());
             }
 
-            // 强制纳入相关前缀内的适配器目标类，确保其包模块与输入别名（$Foo_）一定生成。
-            // 跳过不在相关性前缀内的目标（如 gson 的 JsonObject）：它们的依赖图无法被干净探测，
-            // 强行生成会引入悬空类型引用；这类目标若被引用，按既有行为保持原样。
+            // Relevant adapter targets remain roots for their package modules and input aliases.
+            // Targets outside the primary prefixes are discovered when an emitted signature references them.
             for (AdapterCatalogEntry adapter : snapshot.adapters()) {
                 String name = adapter.targetType().getName();
                 if (ctx.config().isRelevantClass(name, platformPkgs)) {
@@ -131,11 +117,20 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 }
             }
 
-            // Register input aliases before rendering parameters; their dependencies join the class set until stable.
+            // The primary scan selects roots; emitted signatures own a separate declaration dependency closure.
             AuthoredClassDeclarations authored = AuthoredClassDeclarations.prepare(ctx, classesToGenerate);
             aliasRegistry.clear();
             Set<String> hiddenFqns = hiddenClasses(ctx.ir());
             indexFileGenerator.setHiddenClasses(hiddenFqns);
+            TypeScriptDeclarationClosure declarations = new TypeScriptDeclarationClosure(ctx, indexFileGenerator,
+                    reflectionLoader(ctx));
+            for (String dependency : bindingGenerator.referencedClasses(snapshot.bindings().stream()
+                    .filter(BindingCatalogEntry::emit).toList())) {
+                declarations.includeReference(classesToGenerate, dependency);
+            }
+            for (String dependency : eventGenerator.referencedClasses(snapshot.events(), snapshot.registryBuilderSurfaces())) {
+                declarations.includeReference(classesToGenerate, dependency);
+            }
             boolean closureChanged;
             do {
                 int previousSize = classesToGenerate.size();
@@ -143,39 +138,44 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 aliasEligibleClasses.removeAll(hiddenFqns);
                 adapterAliasGenerator.prepare(snapshot.adapters(), aliasEligibleClasses, ctx.ir());
                 for (String host : adapterAliasGenerator.hostImports()) {
-                    if (ctx.config().isRelevantClass(host, platformPkgs) && !hiddenFqns.contains(host)) {
-                        classesToGenerate.add(host);
-                    }
+                    declarations.includeReference(classesToGenerate, host);
                 }
 
                 functionalInterfaceAliasGenerator.prepare(classesToGenerate, hiddenFqns);
                 for (String host : functionalInterfaceAliasGenerator.hostImports()) {
-                    if (ctx.config().isRelevantClass(host, platformPkgs) && !hiddenFqns.contains(host)) {
-                        classesToGenerate.add(host);
-                    }
+                    declarations.includeReference(classesToGenerate, host);
                 }
+                declarations.expand(classesToGenerate);
                 closureChanged = classesToGenerate.size() != previousSize;
             } while (closureChanged);
+
+            Map<String, String> unavailable = new TreeMap<>(declarations.unavailable());
+            Map<String, Object> dependencyReport = new LinkedHashMap<>();
+            dependencyReport.put("complete", unavailable.isEmpty());
+            dependencyReport.put("primaryClassCount", ctx.collectedClasses().size());
+            dependencyReport.put("referencedClassCount", classesToGenerate.size());
+            dependencyReport.put("unavailable", unavailable);
+            files.put("@special/dependencies.json", new com.google.gson.GsonBuilder().setPrettyPrinting().create()
+                    .toJson(dependencyReport) + "\n");
+            if (!unavailable.isEmpty()) {
+                NekoJS.LOGGER.warn("[NEKO-4048] Probe TypeScript dependency closure incomplete: {} unavailable types; "
+                        + "declarations may contain unresolved references; see @special/dependencies.json", unavailable.size());
+            }
 
             NekoJS.LOGGER.info("Probe [typescript]: {} classes to generate", classesToGenerate.size());
 
             // 2. 构建包树
             PackageTree tree = new PackageTree();
             for (String fqn : classesToGenerate) {
-                tree.addClass(fqn);
+                if (indexFileGenerator.hasDeclaration(fqn) || hiddenFqns.contains(fqn)) tree.addClass(fqn);
             }
 
-            // 3. 单次反射多产物：共享 IR + TS 专属额外类 → 逐类渲染声明与 import 集合，
-            //    全部走唯一 IR 渲染路径（TypeReflector → TypeScriptClassRenderer）。
-            //    ctx.ir() 由 ProbeCoordinator 构建（TS 声明 requiresIr，共享层总是反射一次）。
-            //    线程池优先复用 ProbeCoordinator 的共享池（整个 probe 运行单池）；测试直连
-            //    构造的 ProbeContext 没有共享池时，本 backend 自建并负责关闭。
+            // Package rendering reuses cached declarations and the coordinator's pool when available.
             ExecutorService provided = ctx.sharedPool();
             ExecutorService pool = provided != null
                     ? provided
                     : Executors.newFixedThreadPool(parallelism());
             try {
-                predeclareClasses(ctx.ir(), classesToGenerate, pool, authored);
                 authored.validateGeneratedImports(indexFileGenerator);
 
                 // 4. 渲染 @package Java 类型声明（并行渲染，产物进内存，复用同一线程池）
@@ -250,83 +250,45 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         }
     }
 
-    /**
-     * IR 唯一路径的并行预声明：共享 IR（{@code sharedIr}，可能为 null——测试直连的 {@code ProbeContext}
-     * 构造）与 TS 专属额外类（适配器目标/宿主类型）统一为 {@link TypeDecl}，逐类渲染声明 + 计算
-     * import 集合写入 {@link IndexFileGenerator} 缓存；同时收集被 {@code probe.modify_type} hide 的
-     * 类供 import/别名过滤。每类只反射一次（共享 IR 已反射的不再反射），一次反射同时产出
-     * 声明与 import 两个产物。
-     */
-    private void predeclareClasses(List<TypeDecl> sharedIr, Set<String> classNames, ExecutorService pool,
-                                  AuthoredClassDeclarations authored) {
-        Map<String, TypeDecl> irByFqn = new LinkedHashMap<>();
-        if (sharedIr != null) {
-            for (TypeDecl d : sharedIr) {
-                irByFqn.put(d.fqn, d);
-            }
-        }
-
-        List<Future<?>> futures = new ArrayList<>();
-        for (String fqn : classNames) {
-            futures.add(pool.submit(() -> {
-                try {
-                    TypeDecl decl = irByFqn.get(fqn);
-                    ClassDeclarationCatalogEntry replacement = authored.get(fqn);
-                    if (replacement != null) {
-                        // Authored bodies bypass member reflection; shared hide decisions already won during selection.
-                        // Auxiliary enum aliases use canonical runtime names, independently of replaced IR edits.
-                        if (replacement.targetType().isEnum()) {
-                            decl = AuthoredClassDeclarations.enumAliasType(replacement.targetType());
-                        }
-                        Set<String> imports = new LinkedHashSet<>();
-                        for (Class<?> imported : replacement.imports()) imports.add(imported.getName());
-                        indexFileGenerator.predeclareClassDeclaration(fqn, replacement.declaration(), imports, decl);
-                        return;
-                    }
-                    if (decl == null) {
-                        // 共享 IR 缺失（共享层反射失败，或测试直连 ir=null）：本 backend 自行反射
-                        Class<?> cls = Class.forName(fqn, false, Thread.currentThread().getContextClassLoader());
-                        decl = new TypeReflector().reflect(cls);
-                    }
-                    Set<String> extraImports = decl.mutated
-                            ? ProbeModifyTypeEventJS.collectEditedSymbolFqns(decl, pkgOf(decl.fqn))
-                            : Set.of();
-                    indexFileGenerator.predeclareClass(fqn, decl, extraImports);
-                } catch (Throwable t) {
-                    // Selected foreign types can be required by public signatures; omission must remain observable.
-                    com.tkisor.nekojs.core.error.Diagnostics.report("probe-typescript", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
-                            "[NEKO-4038] Probe declaration skipped: class=" + fqn
-                                    + "; declaration omitted from generated TypeScript", t);
-                }
-            }));
-        }
-        for (var f : futures) {
-            try {
-                f.get();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
-            } catch (ExecutionException e) {
-                com.tkisor.nekojs.core.error.Diagnostics.report("probe-typescript", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
-                        "[NEKO-4039] Probe declaration task failed: some declarations may be absent from generated TypeScript", e.getCause());
-            }
-        }
-
-        // hide 过滤：被 probe.modify_type hide 的类不产出声明/别名，其它类 import 中剔除其引用
-        Set<String> hiddenFqns = new LinkedHashSet<>();
-        for (TypeDecl d : irByFqn.values()) {
-            if (d.hidden) hiddenFqns.add(d.fqn);
-        }
-        indexFileGenerator.setHiddenClasses(hiddenFqns);
-    }
-
     private static int parallelism() {
         return Math.min(Runtime.getRuntime().availableProcessors(), 8);
     }
 
-    private static String pkgOf(String fqn) {
-        int dot = fqn.lastIndexOf('.');
-        return dot >= 0 ? fqn.substring(0, dot) : "";
+    private static Map<String, Set<String>> fastutilResultVariance() {
+        // These 19 interfaces have covariant V in their emitted method-based shape. Explicit results
+        // avoid TS 5.8's recursive variance inference through compose/andThen and callback-or-host aliases.
+        // K keeps its existing inferred variance; making it invariant would narrow valid host inputs.
+        Map<String, Set<String>> results = new LinkedHashMap<>();
+        results.put("it.unimi.dsi.fastutil.Function", Set.of("V"));
+        for (String family : List.of("Byte", "Char", "Double", "Float", "Int", "Long", "Short", "Object", "Reference")) {
+            String pkg = switch (family) {
+                case "Object", "Reference" -> "objects";
+                default -> family.toLowerCase(Locale.ROOT) + "s";
+            };
+            for (String result : List.of("Object", "Reference")) {
+                results.put("it.unimi.dsi.fastutil." + pkg + "." + family + "2" + result + "Function", Set.of("V"));
+            }
+        }
+        return results;
+    }
+
+    private static ClassLoader reflectionLoader(ProbeContext context) {
+        if (context.sharedPool() == null) {
+            return Thread.currentThread().getContextClassLoader();
+        }
+        // Only loader selection runs on the supplied pool; mutable rendering state stays with this call.
+        Future<ClassLoader> task = context.sharedPool().submit(() -> Thread.currentThread().getContextClassLoader());
+        try {
+            return task.get();
+        } catch (InterruptedException interrupted) {
+            task.cancel(true);
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("[NEKO-4039] Probe reflection loader selection interrupted; generation rejected", interrupted);
+        } catch (ExecutionException failure) {
+            if (failure.getCause() instanceof RuntimeException runtime) throw runtime;
+            if (failure.getCause() instanceof Error error) throw error;
+            throw new IllegalStateException("[NEKO-4039] Probe reflection loader selection failed; generation rejected", failure.getCause());
+        }
     }
 
     private static Set<String> hiddenClasses(List<TypeDecl> declarations) {
