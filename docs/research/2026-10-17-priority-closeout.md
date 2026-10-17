@@ -26,13 +26,22 @@
 
 配方 no-op 只读调查没有找到足够的已有状态来安全早退：需要同时保留旧配方还原、脚本与插件前后回调、数据包资源重载、ingredient actions 清理和客户端行为。另观察到现有 base/raw JSON 为浅复制，不能直接当作不可变基线。没有据此改配方生产源码，也没有以跳过配方处理来降低固定工作负载。
 
+后续进度：
+
+- `6e5bb8f0` 修复本地信任批准的主体切换：直接绑定已通过保护根检查的规范主体，保留后续 covers 和读前后校验。红绿回归成立；精确旧/新组件对照约节省 5.61 ms / 六文件。完整 common/处理器检查、guardLint、五节点 build、四项 CI gate 和 required GameTest 均 PASS；冻结 XML 为 4959 tests、0 failures/errors、271 skipped。
+- **最新正式结果为 `6e5bb8f0`：两组重载 466.4 / 469.4 ms，均 FAIL；启动 34110.6 ms，PASS。** 不以旧 a09 的较好成绩替代当前结果。原始样本、失败记录、源码绑定及独立复核器见[本轮证据](../architecture-refactor/evidence/2026-10-17-reload-performance/trust-6e5bb8f0/README.md)。
+- Python 客户端启动诊断：二十对正常启动 / `-S` 子进程，仅导入 RCON 所需模块而不连游戏，约 41.25 / 36.70 ms。没有修改原采样器或 Python 环境。
+- CommonJS 隔离原型：共享 Engine、每轮新 Context、六最小模块，十对交替测量；动态 Function / 复用 Source 约 0.507 / 0.267 ms，执行段均未调用沙盒 `toRealPath`。直接 Source 包装改变 `this` 语义，因此否决该替换。最小模块不代表真实 fixture 的全部行为，但足以反驳把文件系统开销直接归因于 sourceURL；继续定位真实调用。原型未进入生产代码。
+
 ## 2. 脚本包最终验收（待进行）
 
 复用 [A–E 交付与五节点证据](2026-10-14-script-pack-final-verification.md)，补齐多包独立 Context 的内存成本、重复重载的资源释放、客户端双世界切换、签名同步实机验证。自动化、实际客户端观察与维护者结论分别记录；缺少人工结论时不代签。
 
-## 3. 社区事项收尾（待进行）
+## 3. 社区事项收尾（本地核对已完成，外部收尾未完成）
 
 逐项核对 #60、#63 和 PR #61/#65/#66 的当前正文、讨论、提案差异及 stonecutter 实现，记录关闭或保留的依据。它们目标为 master；适配到 stonecutter 不等于原 PR 已合并。外部评论属于向他人发送消息，需要用户明确授权；可以先完成本地核对与结论。
+
+已保存[逐项核对与保留依据](2026-10-17-community-closeout.md)和 GitHub 最新读取快照：两 Issue / 三 PR 仍开放，三个 PR 均未合并。#63 建议 needs-info，其余建议 ready-for-human；标签尚未外部应用。#63 的注解诉求/注册 API 取舍、外部 RPC 实际集成，以及 #61 精确独立语料仍有差距，因此没有关闭任何一项。
 
 ## 4. Fabric 目录包资源桥（待进行）
 
