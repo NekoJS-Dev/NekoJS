@@ -191,73 +191,71 @@ public final class SourceMapRegistry implements NekoSourceMapView {
     }
 
     private static List<List<MappingEntry>> parseMappings(String mappings, int sourceCount, int nameCount) {
-        String[] generatedLines = mappings.split(";", -1);
-        List<List<MappingEntry>> lineMappings = new ArrayList<>(generatedLines.length);
+        List<List<MappingEntry>> lineMappings = new ArrayList<>();
+        List<MappingEntry> entries = new ArrayList<>();
+        lineMappings.add(entries);
+        // Reuse five field slots across segments; extra fields are still fully validated.
+        int[] values = new int[5];
 
         int sourceIndex = 0;
         int originalLine = 0;
         int originalColumn = 0;
         int nameIndex = 0;
-
-        for (String generatedLine : generatedLines) {
-            List<MappingEntry> entries = new ArrayList<>();
-            lineMappings.add(entries);
-            if (generatedLine.isEmpty()) {
-                continue;
+        int generatedColumn = 0;
+        int start = 0;
+        while (start <= mappings.length()) {
+            int end = start;
+            while (end < mappings.length() && mappings.charAt(end) != ',' && mappings.charAt(end) != ';') {
+                end++;
             }
-
-            int generatedColumn = 0;
-            for (String segment : generatedLine.split(",")) {
-                if (segment.isEmpty()) continue;
-                List<Integer> values = decodeVlq(segment);
-                if (values.isEmpty()) continue;
-
-                generatedColumn += values.get(0);
-                if (values.size() < 4) {
-                    continue;
-                }
-
-                sourceIndex += values.get(1);
-                originalLine += values.get(2);
-                originalColumn += values.get(3);
-
-                int entryNameIndex = -1;
-                if (values.size() >= 5) {
-                    nameIndex += values.get(4);
-                    if (nameIndex >= 0 && nameIndex < nameCount) {
-                        entryNameIndex = nameIndex;
+            int count = decodeVlq(mappings, start, end, values);
+            if (count > 0) {
+                generatedColumn += values[0];
+                if (count >= 4) {
+                    sourceIndex += values[1];
+                    originalLine += values[2];
+                    originalColumn += values[3];
+                    int entryNameIndex = -1;
+                    if (count >= 5) {
+                        nameIndex += values[4];
+                        if (nameIndex >= 0 && nameIndex < nameCount) entryNameIndex = nameIndex;
+                    }
+                    if (sourceIndex >= 0 && sourceIndex < sourceCount && originalLine >= 0 && originalColumn >= 0) {
+                        entries.add(new MappingEntry(generatedColumn, sourceIndex, originalLine, originalColumn, entryNameIndex));
                     }
                 }
-
-                if (sourceIndex >= 0 && sourceIndex < sourceCount && originalLine >= 0 && originalColumn >= 0) {
-                    entries.add(new MappingEntry(generatedColumn, sourceIndex, originalLine, originalColumn, entryNameIndex));
-                }
             }
+            if (end == mappings.length()) break;
+            if (mappings.charAt(end) == ';') {
+                entries = new ArrayList<>();
+                lineMappings.add(entries);
+                generatedColumn = 0;
+            }
+            start = end + 1;
         }
         return lineMappings;
     }
 
-    private static List<Integer> decodeVlq(String str) {
-        List<Integer> result = new ArrayList<>();
+    /** Retains complete fields, but rejects the whole segment if any character is invalid. */
+    private static int decodeVlq(String text, int start, int end, int[] values) {
+        int count = 0;
         int value = 0;
         int shift = 0;
-        for (int i = 0; i < str.length(); i++) {
-            int c = VLQ_CHARS.indexOf(str.charAt(i));
-            if (c < 0) {
-                result.clear();
-                return result;
-            }
+        for (int i = start; i < end; i++) {
+            int c = VLQ_CHARS.indexOf(text.charAt(i));
+            if (c < 0) return 0;
             value |= (c & 31) << shift;
             if ((c & 32) == 0) {
                 int decoded = value >> 1;
-                result.add((value & 1) != 0 ? -decoded : decoded);
+                if (count < values.length) values[count] = (value & 1) != 0 ? -decoded : decoded;
+                count++;
                 value = 0;
                 shift = 0;
             } else {
                 shift += 5;
             }
         }
-        return result;
+        return count;
     }
 
     private static String stringMember(JsonObject object, String member) {

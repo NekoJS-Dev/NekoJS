@@ -83,6 +83,60 @@ class SourceMapRegistryTest {
         assertEquals("second runtime", other.getMappedPosition("server_scripts/shared.ts", 1, 1).sourceContent);
     }
 
+    @Test
+    void denseMappingsKeepColumnsAndEmptyGeneratedLines() {
+        String source = "server_scripts/dense.ts";
+        String map = minimalMap(source).replace("AAAA", "AAAA" + ",CAAC".repeat(4096) + ";;AAEA;");
+        registry.register(source, map);
+
+        assertEquals(4097, registry.getMappedPosition(source, 1, 4097).column);
+        assertNull(registry.getMappedPosition(source, 2, 1).path);
+        OriginalPosition next = registry.getMappedPosition(source, 3, 1);
+        assertEquals(3, next.line);
+        assertEquals(4097, next.column);
+        assertNull(registry.getMappedPosition(source, 4, 1).path);
+    }
+
+    @Test
+    void malformedSegmentDoesNotApplyItsPartialDeltas() {
+        String source = "server_scripts/invalid-segment.ts";
+        registry.register(source, minimalMap(source).replace("AAAA", "AAAA,CCEE?,CAAC"));
+
+        OriginalPosition mapped = registry.getMappedPosition(source, 1, 2);
+        assertNotNull(mapped.path);
+        assertEquals(1, mapped.line);
+        assertEquals(2, mapped.column);
+    }
+
+    @Test
+    void incompleteTrailingFieldAndExtraFieldsKeepExistingTolerance() {
+        String source = "server_scripts/tolerated-segment.ts";
+        registry.register(source, minimalMap(source).replace("AAAA", "AAAAAA,CAACg"));
+
+        OriginalPosition mapped = registry.getMappedPosition(source, 1, 2);
+        assertNotNull(mapped.path);
+        assertEquals(1, mapped.line);
+        assertEquals(2, mapped.column);
+    }
+
+    @Test
+    void sourceColumnAndNameDeltasContinueAcrossGeneratedLines() {
+        String file = "server_scripts/deltas.ts";
+        registry.register(file, """
+                {"version":3,"sources":["one.ts","two.ts"],"names":["first","second"],
+                 "mappings":"AAAAA,CCAEC;CDADD"}
+                """);
+
+        OriginalPosition second = registry.getMappedPosition(file, 1, 2);
+        assertTrue(second.path.endsWith("two.ts"));
+        assertEquals(3, second.column);
+        assertEquals("second", second.name);
+        OriginalPosition first = registry.getMappedPosition(file, 2, 2);
+        assertTrue(first.path.endsWith("one.ts"));
+        assertEquals(2, first.column);
+        assertEquals("first", first.name);
+    }
+
     private static String minimalMap(String source) {
         return "{\"version\":3,\"file\":\"generated.js\",\"sourceRoot\":\"\",\"sources\":[\""
                 + source + "\"],\"names\":[],\"mappings\":\"AAAA\"}";
