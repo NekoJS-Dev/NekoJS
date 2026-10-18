@@ -29,6 +29,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class PackSyncBridgeSourceTraceTest {
 
+    @Test
+    void localWorldClientScriptsReloadAfterLoginOnBothNeoforgeTrees() {
+        for (String tree : List.of("src/main/java", "versions/1.21.1/src/main/java")) {
+            String source = codeLinesOnly(read(repoRoot().resolve(tree)
+                    .resolve("com/tkisor/nekojs/client/NekoJSClient.java")));
+            assertTrue(source.contains("(ClientPlayerNetworkEvent.LoggingIn event) -> onClientLoggingIn(event, root)"),
+                    tree + " must reload local world CLIENT scripts after login, after server activation");
+            int start = source.indexOf("private static void onClientLoggingIn(");
+            int end = source.indexOf("private static void ", start + 1);
+            assertTrue(start >= 0 && end > start, tree + " must provide the login handler");
+            String handler = source.substring(start, end);
+            assertTrue(handler.contains("event.getConnection().isMemoryConnection()"),
+                    tree + " must leave remote configuration-phase activation to pack sync");
+            assertTrue(handler.contains("ScriptPackRegistry.get().worldPacks().isEmpty()"),
+                    tree + " must avoid reloading when no local world packs were mounted");
+            assertTrue(handler.contains("root.reload(ScriptType.CLIENT)"),
+                    tree + " must use the existing transactional CLIENT reload");
+            assertTrue(handler.contains("root.errorTracker().recordCallbackError("),
+                    tree + " must expose failed login reloads through the error tracker");
+        }
+    }
+
     private static Path repoRoot() {
         Path dir = Path.of("").toAbsolutePath();
         while (dir != null) {

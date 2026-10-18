@@ -9,6 +9,7 @@ import com.tkisor.nekojs.client.renderer.NekoEntityRenderers;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
+import com.tkisor.nekojs.core.pack.ScriptPackRegistry;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
@@ -21,6 +22,7 @@ import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -33,6 +35,7 @@ public class NekoJSClient {
         modEventBus.addListener((AddClientReloadListenersEvent event) -> onClientResourceReload(event, root));
         modEventBus.addListener(NekoJSClient::onRegisterEntityRenderers);
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> onClientTickPost(event, root));
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingIn event) -> onClientLoggingIn(event, root));
         NeoForge.EVENT_BUS.addListener(NekoJSClient::onLevelUnload);
         // Reload progress HUD (8e)：自包含订阅 RenderGuiEvent.Post，不走 ClientEvents
         com.tkisor.nekojs.client.hud.NekoReloadProgressHud.install();
@@ -66,6 +69,20 @@ public class NekoJSClient {
     private static void onRegisterEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         EntityTypeBuilder.registeredEntityTypes().forEach(type -> event.registerEntityRenderer(type,
                 NekoEntityRenderers.provider(EntityTypeBuilder.renderConfiguration(type))));
+    }
+
+    private static void onClientLoggingIn(ClientPlayerNetworkEvent.LoggingIn event, NekoRuntimeRoot root) {
+        // Login runs on the client thread after the integrated server publishes WORLD sources.
+        // Remote sources already activate during configuration; do not reload them again here.
+        if (!event.getConnection().isMemoryConnection() || ScriptPackRegistry.get().worldPacks().isEmpty()) {
+            return;
+        }
+        try {
+            root.reload(ScriptType.CLIENT);
+        } catch (Exception failure) {
+            NekoJS.LOGGER.error("[NEKO-1017] CLIENT reload after local world pack activation failed", failure);
+            root.errorTracker().recordCallbackError(ScriptType.CLIENT, "world_pack_login", failure);
+        }
     }
 
     private static void onClientTickPost(ClientTickEvent.Post event, NekoRuntimeRoot root) {

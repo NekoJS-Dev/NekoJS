@@ -54,6 +54,8 @@
 
 补充[进程与 HotSpot NMT 观测](../architecture-refactor/evidence/2026-10-18-pack-native-memory/README.md)：在只加入观测的临时测试类中，五项原资源场景全部通过，采集 29 组原始点；四包 10→50 次重载私有提交增加约 4.17 MiB、工作集增加约 3.65 MiB，250 个旧 Context 全部观察到回收，root 关闭后 Context 为 0。进程计数包含 Java 堆，NMT 不覆盖全部第三方原生分配；该独立 JVM 的 JVMCI 未启用，不能替代完整游戏/GraalMC 内存验收。未改生产源码、资源断言或既有堆门槛，原始全部窗口和独立复核器已归档。
 
+实机补验中另修复了 NeoForge 世界包 CLIENT 未随登录自动加载的缺口：[源码、red/green 和实际客户端证据](../architecture-refactor/evidence/2026-10-18-client-world-login/README.md)。共享 26.x 与 1.21.1 仅对本地连接且存在世界包触发已有 CLIENT 事务重载，三节点 build / guardLint 与四项 CI gate 均通过；实际 A 的 CLIENT probe/consumer 自动执行。当前 MCP 暂停菜单缺少人工接管按钮，尚未完成同进程 A→B→A 或签名网络，详见[客户端记录](2026-10-18-pack-client-acceptance.md)。
+
 ## 3. 社区事项收尾（本地核对已完成，外部收尾未完成）
 
 逐项核对 #60、#63 和 PR #61/#65/#66 的当前正文、讨论、提案差异及 stonecutter 实现，记录关闭或保留的依据。它们目标为 master；适配到 stonecutter 不等于原 PR 已合并。外部评论属于向他人发送消息，需要用户明确授权；可以先完成本地核对与结论。

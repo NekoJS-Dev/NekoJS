@@ -31,6 +31,29 @@
 
 服务端 PID 18604 已到 Done，RCON 查询确认发现一份启用的 GLOBAL:signedacceptance、在线玩家为 0。服务端发现包不等于客户端已收到、验签或执行。
 
+## MCP 26.2 屏幕兼容与首次进入世界
+
+元数据修正后进一步定位到 MCP 的屏幕访问仍沿用旧版 Minecraft 根对象字段/方法。26.2 将当前 screen 和 setScreen 移到 `Minecraft.gui`；旧反射会漏掉 onboarding，并在进入世界后把 LocalPlayer 当作 screen。已在 owned MCP 测试副本添加窄适配，未修改 NekoJS 的依赖声明、全局缓存或人工接管边界：
+
+- getter 在确认 Gui API 存在时以 `gui.screen()` 为准，包含合法的 null；旧版本继续原 fallback。
+- closeScreen、openPauseMenu 和手动 transfer overlay 的现有 setter 查找/调用指向 Gui owner，原分支和控制模式判定保留。
+- v3 副本 SHA-256 为 `920692b6702c0ac5882bc446db4c89f1840ee32cc06004ea536e86fe04ffd97f`；相对原 jar 只修改 ReflectionCache、PlayerWorldHelper、ControlModeHelper 三个 class，另增 McpGuiLookup。上表的 MCP SHA 仅描述此前元数据副本，不能代表当前 v3。
+- 原实现对照、现代 Gui 非空/空值、旧根字段、原 null 输入异常、真实 PlayerWorldHelper 在假 Gui owner 上关闭屏幕的检查均通过 `-Xverify:all`。早期 v2 在真实世界把 LocalPlayer 当作 screen 的失败和第一次错误预期 null 输入不抛异常的测试失败均保留。
+
+PID 22036、29460 均自动进入隔离世界 A。v3 的只读接口在无菜单时正确返回 `no screen`，并能读取玩家位置、维度、血量；世界元信息仍有 unknown/默认值，未声称整个 MCP 已兼容。PID 29460 从 20:36:17 运行，A 的 SERVER probe/consumer 均仅首次执行且 count=1，CLIENT entry 未出现。人工接管尚未观察到激活，因此没有驱动 A→B→A 或网络连接。
+
+源路径确认：初始 CLIENT load/资源 reload 早于 WORLD 包发布；server 启动激活世界包只重载 SERVER，客户端没有登录后的重载接线。两个 NeoForge 实现的 server-stop 注释声称“下次进世界整体重载”，但原客户端未实现该动作。这是此次真实输入发现的产品缺口。Fabric 当前未挂载 WORLD 包，不能把它记录为同一自动切换已实现。
+
+为修复准备重启：独立签名服务端通过 RCON 正常 stop；核实 PID 29460 创建时间后仅终止该 owned 客户端。后者是强制结束的兼容准备会话，不能作为正常退出或资源释放通过。前述失败/准备日志保留为 client-launch-1 至 5（首轮文件名为 client-launch.log）。
+
+回归接线检查在未修复源码上运行一次，精确失败于缺少 LoggingIn listener，原 XML/log 保留。修复在共享 26.x 和 1.21.1 的 NeoForge CLIENT 注册处监听 LoggingIn：仅 memory connection 且 WORLD 包非空时调用现有事务 CLIENT reload；远程 configuration-phase 激活保持原路径。失败使用现有 NEKO-1017 并写入错误跟踪器。验证结果在下方继续记录；接线测试不能代替实际 CLIENT entry 证据。
+
+修复后 `guardLint :1.21.1:build :26.1.2:build :26.2.0:build --console=plain` 通过（3m14s，67 tasks），四项 `tools/nekojs-ci-gates.py` 的 subsets / processor / declaration / nodes 均 pass。1625 个实际 main 类相对上一轮仅 NekoJSClient.class 改变，common 生产类不变。新客户端 PID 9932 的 client-launch-6.log 记录 20:52:09 Render thread 自动执行 A 的 CLIENT probe，activation=3/count=1，20:52:10 consumer 确认 world=A/count=1；SERVER probe/consumer 也已执行。未使用显式 CLIENT reload 命令，这是首次实际自动加载证据。
+
+为检查手动接管入口，通过允许的 pause_game 打开暂停菜单；返回 setScreen(PauseScreen)，截图及只读 widget 枚举确认当前 screen 正确，但菜单没有 MCP 接管按钮。界面枚举的 label 仍为空，也未假设 widget id 可用。此问题继续在 MCP 测试副本调查；没有再次要求用户点击不存在的按钮，也没有调用 enter_control_mode 绕过。旧接管提示失效时用户回复“没有mc啊”，因为原测试进程已为上述产品修复而结束；已解释并在新客户端截图确认后更新状态。
+
+该轮还有一项独立环境限制：JEI 30.1.0.12 的 NeoForgeGuiPlugin 引用已不存在的 ContainerScreenEvent.Render.Foreground，实际日志由 JEI PluginCaller 捕获 NoClassDefFoundError。游戏仍进入世界，未将该可选集成的失败记作通过，亦未把它误归因于本轮 NekoJS 登录接线。
+
 ## 待执行断言
 
 先解决客户端控制问题并记录人工激活，再在同一进程完成 A→B→A。分别记录 SERVER/CLIENT 是否自动加载；如果需要显式 CLIENT reload，注明操作，不能写成自动切换通过。验证来源和私有计数重建、旧事件/timer 撤回与资源窗口。
