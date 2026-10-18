@@ -35,6 +35,7 @@
 - 八个固定正则预编译的组件对照仅节省约 0.0166 ms / 六源码，未修改生产。已建立生产 root / Sandbox / Node / fs 的快速闭环，原六 fixture 连续三十次 COMMIT、每代新 Context、旧 Context 关闭后拒绝 eval；补真实日志桥后留存实际脚本日志。该诊断缺少 Minecraft、完整绑定、配方及 RCON，不替代正式门禁或包内存验收。[原始对照和失败记录](../architecture-refactor/evidence/2026-10-17-reload-performance/diagnostic-controls/README.md)已归档；下一步在完整游戏环境补阶段计时。
 - 完整游戏 `6e5bb8f0` 二十条阶段诊断已完成：root 104.39 ms、recipe 29.74 ms、RCON 209.15 ms；JSX eval 0.88 ms、managed globals 0.70 ms，均不足以优先改造。模块规范化 24 次，符合已实现的主体修复；全部 COMMIT、正常停服。插桩按摘要还原、重新 build 通过，1625 个 main 类无诊断标记。该会话没有正式 marker 指标，不改判此前 FAIL；下一步分开观察命令/回执/日志可见延迟。[证据与旧 JFR 回读限制更正](../architecture-refactor/evidence/2026-10-17-reload-performance/current-phase-profile/README.md)。
 - 2026-10-18：完成十对查询/重载控制及十条三日志 sink 诊断。后者的每条 marker 在游戏日志都先于 Gradle 转发 stdout 可见，均值相差 80.04 ms（48.33–110.51 ms）；root / recipe 为 64.40 / 18.55 ms。原 marker 发生于脚本执行中，原采样器仍先等完整 RCON 返回再轮询 stdout；不把阶段计时或直接游戏日志替代原指标，不将不同会话差异声称为生产优化。两轮正常停服，插桩恢复、重新 build 和类扫描通过；[完整原始证据与重算器](../architecture-refactor/evidence/2026-10-17-reload-performance/output-visibility/README.md)已保存。继续检查 Gradle 转发机制，正式重载目标仍 FAIL。
+- [调用链控制](../architecture-refactor/evidence/2026-10-17-reload-performance/invocation-controls/README.md)：同一原客户端的空响应端点二十对原 native / 直接进程调用，以及二十轮 C/D 路径四臂对照，共 120 条成功控制命令，原 native 约 48–50 ms、C/D 差不到 1 ms；不支持这两项解释正式数百毫秒 RCON。实际 Gradle 字节码确认 plain 也经默认 100 ms 节流，daemon dispatcher 空闲 sleep 为 10 ms；没有修改内部参数或正式口径。下一步重建精确历史源码同机对照；旧 worktree/二进制缺失，不能仅据缓存存在声称可复现。
 
 ## 2. 脚本包最终验收（资源自动化通过，实机与原生内存未完成）
 

@@ -1,0 +1,114 @@
+{
+  "diagnosticOnly": true,
+  "archiveSha256": "e0f82f3d52790aa82ada8038a1516d93ea8f9d5b5442d2c31a6db20311ea6634",
+  "entries": {
+    "client-path/observations.json": {
+      "bytes": 17393,
+      "sha256": "c88e032697f75f93778806f51c23f7cd0203acb78687a39cc495f1aa03884ac2"
+    },
+    "client-path/server.json": {
+      "bytes": 5001,
+      "sha256": "236d13a328612348db8a5424cd5aefe5c498315c3565958a1c62c24cd57cb1d8"
+    },
+    "client-path/stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "client-path/stdout.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "client-path/summary.json": {
+      "bytes": 442,
+      "sha256": "63ec57dce2c11e23f17421b2acb74f9a1bb4504c97d0d5a45f57d741dc92727d"
+    },
+    "failed-native-direct/server.json": {
+      "bytes": 110,
+      "sha256": "a6f433f6b01de398bbb7fba2105f99153fba08f0dee415b43a902362ebefcf07"
+    },
+    "failed-native-direct/stderr.log": {
+      "bytes": 424,
+      "sha256": "c2d480c2127e2e1ec9492d9223580ae148018e40e3bb431da6797b3ead8608a9"
+    },
+    "failed-native-direct/stdout.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "gradle/LogToClient$AsynchronousLogDispatcher.txt": {
+      "bytes": 10045,
+      "sha256": "7c421001c14aea955db3288c1373dd6d4ce9206f2e563d141b9f880ff5d2238e"
+    },
+    "gradle/OutputEventRenderer.txt": {
+      "bytes": 5723,
+      "sha256": "8cc28274ff053316b05da88a6a3f0f2fa694c9c56f0aaa9cc175615c5342f67e"
+    },
+    "gradle/ThrottlingOutputEventListener.txt": {
+      "bytes": 8893,
+      "sha256": "caf2b476d0323cb9037a0e62e993e875e6fafa5b67c2e8c9993fb5a32275899f"
+    },
+    "gradle/UpdateNowEvent.txt": {
+      "bytes": 1995,
+      "sha256": "0d54e48661d582f3f7b50ae6d015d1795f94c6657d4559320877b923c090fb02"
+    },
+    "gradle/manifest.json": {
+      "bytes": 1608,
+      "sha256": "97d74395afec15a7d852d9e7ce47cec23bcf9ecca3a991398ba515c3f68d7050"
+    },
+    "native-direct/observations.json": {
+      "bytes": 8695,
+      "sha256": "3b5a416b47288c4909886243f91c386ebb21d0faa0a1c445e591aa531ca1741a"
+    },
+    "native-direct/server.json": {
+      "bytes": 2529,
+      "sha256": "05f32e53eea4dcc9e24964221ef11b2df272beecd6fb62fc00482fcc83f88112"
+    },
+    "native-direct/stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native-direct/stdout.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native-direct/summary.json": {
+      "bytes": 393,
+      "sha256": "8b732d3f68f119deed1b77a5239ff3b50421d181fe51dbefd033a754b7cbbc2e"
+    },
+    "redactions.json": {
+      "bytes": 164,
+      "sha256": "2e6e5ed9da7edd803c1a35c466723ae0056af68d49284741c831d1a8e5b33824"
+    },
+    "tooling/original-rcon.py": {
+      "bytes": 2135,
+      "sha256": "e1b6166174d694019c833fca66ed48a433254bbdf5cb3ccb5bfd7a8694b6e8ae"
+    },
+    "tooling/prepare-rcon-path-control.py": {
+      "bytes": 1915,
+      "sha256": "9c3f448b1c479ca581d429f78d0862a0194127b0e97e3c7e46e52e049d54cc6f"
+    },
+    "tooling/rcon-invocation-control.ps1": {
+      "bytes": 2476,
+      "sha256": "adf3419ac7d2b4895baf2659d65578703e862e43aaca43295d3ffb0fcead1f93"
+    },
+    "tooling/rcon-invocation-control.py": {
+      "bytes": 3829,
+      "sha256": "a51146145450b8eb4ba543dceceb58e719b739b1ff4daae68c57a0eb14e349f7"
+    },
+    "tooling/rcon-path-control.ps1": {
+      "bytes": 2762,
+      "sha256": "51496e9a43de04c296927c3bf3eea3edcf91132a7e4a2e7ed62052775e7522d1"
+    },
+    "tooling/rcon-path-control.py": {
+      "bytes": 4153,
+      "sha256": "1b22b1caf3ed2a0b4a500ed0534e753e8678a2b68b0a2286e3fd1172a98f8809"
+    },
+    "tooling/record-gradle-output-chain.py": {
+      "bytes": 2004,
+      "sha256": "78328de01596cff99f06b99348e5333f0ef86eff5b5006caa0608970f4bf70cc"
+    },
+    "tooling/seal-invocation-controls.py": {
+      "bytes": 2357,
+      "sha256": "5c9908bd315907550ed43806aca78be5dbbb32f0d7208e1616a8cb4b0fec42ce"
+    }
+  }
+}
