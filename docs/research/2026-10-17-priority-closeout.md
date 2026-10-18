@@ -50,6 +50,8 @@
 
 2026-10-19 [source-map 解码优化及正式复验](../architecture-refactor/evidence/2026-10-19-source-map-decoder/README.md)：主线 `280128e1` 对应实测 `606d1fff`，只去除逐行／逐段临时字符串及字段列表，保留全部既有解码边界；10,019 个兼容输入一致，30 对同进程分配约下降 76.1%。完整 common isolation／处理器／五节点 build 为 4,989 tests、0 failures/errors、271 skipped，四 CI gate PASS。但原正式两组重载 **601.2 / 527.4 ms**、启动 **60346.8 ms**，全部有效且均 FAIL；全部首值／失败及九次正常停服已冻结。不能据小组件通过称整体完成，也不能把跨会话时间差归因于源码。后续单独调查启动请求／Gradle task／游戏 JVM／NekoJS 初始化边界，保留当前正式 FAIL。
 
+[启动边界诊断](../architecture-refactor/evidence/2026-10-19-startup-boundaries/README.md)录制覆盖 JVM 启动：请求到 JVM 创建约 8.528 秒，之后到约略 Done 58.507 秒，涉及 framework／原版／NekoJS 多类初始化。两次控制器失败完整保留；第二次正常停服并恢复退出时录制，JFR PID／唯一路径和 stdout 一致。正常 run 配置恢复 PASS、1,625 个编译类不变，未将诊断改判为正式通过。随后在 D 盘近原工程位置以同提交／逐类一致产物做预定原采样器对照，原 C 盘失败仍有效。
+
 ## 2. 脚本包最终验收（世界切换与签名实机通过，整体接受未完成）
 
 复用 [A–E 交付与五节点证据](2026-10-14-script-pack-final-verification.md)，补齐多包独立 Context 的内存成本、重复重载的资源释放、客户端双世界切换、签名同步实机验证。自动化、实际客户端观察与维护者结论分别记录；缺少人工结论时不代签。
