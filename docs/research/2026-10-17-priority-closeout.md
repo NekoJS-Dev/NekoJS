@@ -44,7 +44,7 @@
 
 - [显式进程策略下的原采样器复验](../architecture-refactor/evidence/2026-10-18-controlled-performance/README.md)完成：当前 `6e5bb8f0` 两组重载 **233.6 / 243.0 ms，PASS**，启动 **24977.4 ms，PASS**；重建历史源码 `3400e97e` 两组 **299.0 / 310.6 ms，FAIL**，启动 **24980.2 ms，PASS**。共十八次会话均有效并正常停服，原首值和门槛保留。仅专用游戏进程显式 HighQoS，原采样器和生产类未变，所有策略在 Done 前应用；进程退出结束其策略生命周期。历史组首次分析误用了新版成功响应，原错误判定保留，按旧版精确响应修正后仍 FAIL。该组确认明确运行条件下当前版本可以达标；**默认条件的 466.4 / 469.4 ms FAIL 仍有效，尚未通过产品改动解决默认环境缺口**。两个源码工作树 world 不同，不能将其差值全归于源码；没有加入 Windows 专用生产策略或放宽门槛。
 
-## 2. 脚本包最终验收（资源自动化通过，进程内存已观测，完整实机未完成）
+## 2. 脚本包最终验收（世界切换与签名实机通过，整体接受未完成）
 
 复用 [A–E 交付与五节点证据](2026-10-14-script-pack-final-verification.md)，补齐多包独立 Context 的内存成本、重复重载的资源释放、客户端双世界切换、签名同步实机验证。自动化、实际客户端观察与维护者结论分别记录；缺少人工结论时不代签。
 
@@ -54,13 +54,15 @@
 
 补充[进程与 HotSpot NMT 观测](../architecture-refactor/evidence/2026-10-18-pack-native-memory/README.md)：在只加入观测的临时测试类中，五项原资源场景全部通过，采集 29 组原始点；四包 10→50 次重载私有提交增加约 4.17 MiB、工作集增加约 3.65 MiB，250 个旧 Context 全部观察到回收，root 关闭后 Context 为 0。进程计数包含 Java 堆，NMT 不覆盖全部第三方原生分配；该独立 JVM 的 JVMCI 未启用，不能替代完整游戏/GraalMC 内存验收。未改生产源码、资源断言或既有堆门槛，原始全部窗口和独立复核器已归档。
 
-实机补验中另修复了 NeoForge 世界包 CLIENT 未随登录自动加载的缺口：[源码、red/green 和实际客户端证据](../architecture-refactor/evidence/2026-10-18-client-world-login/README.md)。共享 26.x 与 1.21.1 仅对本地连接且存在世界包触发已有 CLIENT 事务重载，三节点 build / guardLint 与四项 CI gate 均通过；实际 A 的 CLIENT probe/consumer 自动执行。当前 MCP 暂停菜单缺少人工接管按钮，尚未完成同进程 A→B→A 或签名网络，详见[客户端记录](2026-10-18-pack-client-acceptance.md)。
+实机补验中另修复了 NeoForge 世界包 CLIENT 未随登录自动加载的缺口：[源码、red/green 和实际客户端证据](../architecture-refactor/evidence/2026-10-18-client-world-login/README.md)。共享 26.x 与 1.21.1 仅对本地连接且存在世界包触发已有 CLIENT 事务重载，三节点 build / guardLint 与四项 CI gate 均通过。随后在人工接管已激活的同一 PID 25128 完成 A→B→A，双方自动 entry/私有状态与 capability 正确；真实签名连接、未信任/内容篡改/换钥拒绝及恢复重连通过，六个退出 quiet 窗口均通过。九组完整游戏/GraalMC OS/NMT 点和独立复核器已冻结于[实机验收证据](../architecture-refactor/evidence/2026-10-18-pack-live-acceptance/README.md)。MCP 测试工具阻止无辅助 JVM 退出，关闭 owned HTTP executor 后才正常结束；未通过游戏授权命令路径，未验证游戏内 1/4/8 包内存预算或长期稳定性，维护者接受仍未收到。准备失败与全部限制见[客户端记录](2026-10-18-pack-client-acceptance.md)。
 
 ## 3. 社区事项收尾（本地核对已完成，外部收尾未完成）
 
 逐项核对 #60、#63 和 PR #61/#65/#66 的当前正文、讨论、提案差异及 stonecutter 实现，记录关闭或保留的依据。它们目标为 master；适配到 stonecutter 不等于原 PR 已合并。外部评论属于向他人发送消息，需要用户明确授权；可以先完成本地核对与结论。
 
 已保存[逐项核对与保留依据](2026-10-17-community-closeout.md)和 GitHub 最新读取快照：两 Issue / 三 PR 仍开放，三个 PR 均未合并。#63 建议 needs-info，其余建议 ready-for-human；标签尚未外部应用。#63 的注解诉求/注册 API 取舍、外部 RPC 实际集成，以及 #61 精确独立语料仍有差距，因此没有关闭任何一项。
+
+2026-10-18 补齐 #61 原提案中的精确 `interface Visitor` 箭头函数属性语料；focused 73 tests 通过，完整 common:check 为 2376 tests、0 failures/errors、4 skipped，隔离检查通过。[冻结证据](../architecture-refactor/evidence/2026-10-18-community61-interface/README.md)绑定提交 `4181b6ed`。该本地差距已消除；上段外部状态为 10-17 快照，没有发评论、改标签、关闭事项或创建 PR。
 
 ## 4. Fabric 目录包资源桥（待进行）
 

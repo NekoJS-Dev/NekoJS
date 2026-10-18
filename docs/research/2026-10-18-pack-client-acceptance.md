@@ -1,6 +1,6 @@
 # 脚本包真实客户端验收：隔离输入与执行记录
 
-状态：**准备通过，真实 A→B→A 与签名网络验收尚未完成。** 本记录接续[优先级工作](2026-10-17-priority-closeout.md)，实现与执行由主代理负责，Luna 仅只读调查。
+状态：**同一实际客户端 A→B→A、真实签名同步正反向断言通过；内存已有完整游戏观察，整体维护者接受仍待结论。** 本记录接续[优先级工作](2026-10-17-priority-closeout.md)，实现与执行由主代理负责，Luna 限于只读调查；一次违反只读限制的调查操作及核查在最终证据中记录。下方准备记录按发生时状态保留，最新结果见末节。
 
 ## 测试范围与输入
 
@@ -54,10 +54,24 @@ PID 22036、29460 均自动进入隔离世界 A。v3 的只读接口在无菜单
 
 该轮还有一项独立环境限制：JEI 30.1.0.12 的 NeoForgeGuiPlugin 引用已不存在的 ContainerScreenEvent.Render.Foreground，实际日志由 JEI PluginCaller 捕获 NoClassDefFoundError。游戏仍进入世界，未将该可选集成的失败记作通过，亦未把它误归因于本轮 NekoJS 登录接线。
 
-## 待执行断言
+## 当时待执行的断言
 
 先解决客户端控制问题并记录人工激活，再在同一进程完成 A→B→A。分别记录 SERVER/CLIENT 是否自动加载；如果需要显式 CLIENT reload，注明操作，不能写成自动切换通过。验证来源和私有计数重建、旧事件/timer 撤回与资源窗口。
 
 随后连接上述独立服务器：首次不信任应拒绝；按实际拒绝身份仅授权本轮 loopback 来源；允许有效签名且 pin 公钥、CLIENT entry/tick/timer 执行；断线撤回后回调停止。保持签名而篡改内容必须拒绝，换同 keyId 的另一公钥必须被既有 pin 拒绝；恢复原签名和 key 后重连。原 key、有效包与失败日志均保留。真正到达网络事件和客户端日志之前，各项均为未运行。
 
 真实图形行为、完整游戏/GraalMC 内存、维护者接受结论仍独立记录。此次 NMT 在测试客户端开启，不用于重载性能评分；显式 HighQoS 的通过也没有撤销默认性能 FAIL。
+
+## 同一客户端执行与最终结果
+
+最终客户端 PID 25128 从 20:57:26 运行；owned 测试 adapter 为暂停菜单补上人工按钮，用户看到该窗口后回复“已点击 MCP Take Over”，实际日志记录激活才开始控制。原 MCP 缺失列表 Entry 选择和原生截图的 26.2 接线也仅在 owned 测试环境修正；原失败、注入 V1 的类加载失败及 V2 成功均保留。没有改变生产依赖、全局缓存或自动绕过人工激活。
+
+前三轮 A→B→A 的 SERVER activation 为 1/5/9，CLIENT 为 3/7/11，全部私有 count=1、consumer 世界与 provider activation 正确。每次实际 Save & Quit 后各独立观察 8 秒，无旧回调。为授权再进入一次 A，SERVER/CLIENT 为 13/15，另有第四个退出 quiet 窗口；不是将额外步骤算作原三轮切换。
+
+独立签名服务器通过真实 TCP 连接：首次未信任拒绝；按真实归一化来源 `kubernetes.docker.internal` 调用现有 trust store API 授权后，原签名包 CLIENT activation=17，tick/timer 执行且 pin 正确。原签名不变而内容篡改被 signature mismatch 拒绝；同 keyId 的另一份有效签名公钥被现存 pin 拒绝；恢复原脚本和清单摘要后再次连接 activation=18，tick/timer 执行。两次实际断线各观察 8 秒，无旧 signed 回调，服务端无人在线。MCP 游戏命令反射失败，因此 `/nekojs trust` 命令路径没有通过，不把 API 授权记为游戏命令通过。
+
+保留九组完整游戏/GraalMC 的 OS 和 NMT 观察，原值、显式 GC 前后及口径见[最终冻结证据](../architecture-refactor/evidence/2026-10-18-pack-live-acceptance/README.md)。有限切换与缓存/辅助工具线程不能用于宣称无限次无泄漏，也未验证游戏内 1/4/8 包 Context 成本预算；旧 capability handle 在真实 guest 中保留后调用同样未运行，继续使用已有 common 回归作为逻辑证据。
+
+独立服务器 RCON 正常 stop；客户端实际 Quit Game 后 Minecraft/FML 已停，但 MCP 的非 daemon HTTP executor 使 JVM 不能自行结束。捕获 thread dump 后仅关闭该 owned MCP 服务/executor，最终 Gradle exit 0。没有 kill/System.exit；**菜单退出通过，无辅助 JVM 退出失败**。所有 owned 测试游戏均已结束。真实原生截图核实远端暂停菜单和 A/B 存档列表；早期反射黑图/纯天空不作有效画面证据。
+
+`python docs/architecture-refactor/evidence/2026-10-18-pack-live-acceptance/verify.py` 通过，归档 264 项；生产 1625 个 main class 在整轮开始/结束一致。维护者整体接受仍未收到；默认重载性能 FAIL、Fabric 目录包资源桥未实现，不能宣布总目标完成。

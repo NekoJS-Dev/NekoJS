@@ -119,3 +119,5 @@ Copy-Item -LiteralPath build/script-pack-native-final/clipack-neoforge-261-start
 2026-10-18 后续：[资源自动化验收](../architecture-refactor/evidence/2026-10-18-pack-resource-acceptance/README.md)已补 1/4/8 包、五十次替换及失败候选释放；[进程与 NMT 观测](../architecture-refactor/evidence/2026-10-18-pack-native-memory/README.md)补充 29 组原始内存点，原五项断言全部通过。后者为 JVMCI 未启用的独立 common JVM，进程计数包含堆，NMT 有覆盖限制，不能替代完整游戏原生内存、实际客户端双世界和签名跨进程验收。
 
 维护者接受记录：目前只收到加载器继续/本地连接操作完成的回复，尚无整体验收结论。工程实现、自动门禁和上述本地运行证据已交付。
+
+2026-10-18 实机补验：[同一客户端 A→B→A 与签名网络冻结证据](../architecture-refactor/evidence/2026-10-18-pack-live-acceptance/README.md)已完成此前缺少的 NeoForge 26.2 双世界切换，以及未信任拒绝、原签名通过、内容篡改/同 keyId 换钥拒绝、恢复重连与断线回调撤回。另修复 CLIENT 登录后未自动加载世界包的产品缺口（`32504630`），三 NeoForge 节点构建及四项 CI gate 通过。已补九组实际游戏/GraalMC 内存快照；长期稳定性与完整游戏内每包 Context 成本预算仍未验证。MCP 游戏 trust 命令不兼容，使用现有 API 授权 owned 来源；客户端无辅助 JVM 退出因 MCP HTTP executor 遗留失败，关闭该 owned executor 后 Gradle exit 0。人工回复仅确认接管按钮点击，不能代签维护者整体接受。Fabric 目录资源桥及其他节点图形验收仍未完成。
