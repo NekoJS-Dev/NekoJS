@@ -100,6 +100,12 @@ class TypeScriptErasureParseCorpusTest {
                   transform: (n: number) => string = String;
                 }
                 """, false, true),
+            new CorpusCase("arrow-fn-type-in-interface", """
+                interface Visitor {
+                  visit(node: unknown): void;
+                  map: (n: number) => number;
+                }
+                """, false, true),
             new CorpusCase("arrow-fn-type-nested-return", """
                 function factory(): () => number { return () => 1 }
                 """, false, true),
