@@ -1,0 +1,88 @@
+{
+  "baseCommit": "4550a3859b40f215084016082f97fa28eb1ac250",
+  "diagnosticOnly": true,
+  "formalVerdictUnchanged": "FAIL",
+  "archiveSha256": "09a5aba9ae125afe93bb5f43c55d6cd0ea6af00daea60390ae7fe4e95d683749",
+  "archiveBytes": 404486,
+  "rawJfrExcluded": "Raw JFR may contain environment and program properties; only stack/event analysis is exported.",
+  "rawJfrSha256": "260661f5b6a37858da48d08eda1c8d33ff28d43f38e7c3e6a07683ba4d1b5885",
+  "entries": {
+    "analysis-0-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "analysis-0.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "analysis-1-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "analysis-1.log": "87c6f34663e79cad6b7b002e72e26b4ce6385d129406b038fced95e611c98a72",
+    "analysis.json": "d7161006ec927a24d3c889b7c9863cf354a72158f0543a4c557f14cf3604d5c0",
+    "binding.json": "29b4a6db7ee64a4744eddb55ca7bd31401f1b038d48208e84469ffad75046712",
+    "first-failure.json": "e9a544c265ea122f9b34dec31ffc49cd29e678bd19a0e36e3eff1567acd092c4",
+    "instrumentation.patch": "daa3a83f7507502600bedfce1000890ab9ea5de26c09d6a11040284a49d3bf07",
+    "original-command.java": "89113fc13fedab6013f83506f010c666ef3fd1b85b9866501e4da66eeed47ee4",
+    "recipe-analysis-0.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "recipe-analysis-1.log": "16d4a720a1c3fcd61c45817281e3e4e56aed44fc07605a32b2f95bbe8edb2281",
+    "recipe-analysis.json": "f83c17f0d678bac4271cbb4d9681b913824a0a317123f8d91830e1da7da10694",
+    "restoration.json": "be54a61692f8dcae60ed93211e16e51e94ac188a1fee23b35bf84a99c9602342",
+    "session-v2/env-snapshot.txt": "187f12a69da718a9a06bc110a6156d7c269ed6a7f5af92bd92758c1a49aad811",
+    "session-v2/jfr-start.txt": "21b6344449b6a0e0053a67159b1393e02ddf82a1b28700543674f9cc736369fa",
+    "session-v2/jfr-stop.txt": "85e3ddee047e8c8ec1ec80b4838507b697d47e33e3a40d88fd407dbb7aa9f3d6",
+    "session-v2/observations.json": "5f120e4172f93696ff20483bd0bad9784f36437ab86a53eb488e64be0a9d564e",
+    "session-v2/owner.json": "6bb81e36a780f81bac7c6d1272f0064ce3416f66e99b01759eecb516e9f478b6",
+    "session-v2/session.json": "baef436a1ec24f73eae133ed8dd7348ca6b0a5ebb79da0d3e5a216ea238d7941",
+    "session-v2/stages-stderr.log": "c686805dea29ca0c3bc050c0a7e4769f2ffbed444ef9a92968d922da340bb2a9",
+    "session-v2/stages-stdout.log": "032bc84c2b524069e11c0ca75e8b5042573ff0d8aad4c9dfc089599b33e91179",
+    "session/env-snapshot.txt": "506f64da522b8517f30b2e7fd4cfec5b0237ea612a5817c1bc01ccbf93feacc4",
+    "session/jfr-start.txt": "93c4ac6cd387fb9c4e83827196e2cdcb28e844d9b77c4a17de9f8c921acdbbb3",
+    "session/jfr-stop.txt": "4f10ff7470fd66eb5d8ef7636f733600144cd7478d63845e5c242bbd93e6347b",
+    "session/owner.json": "3270a656d18b563d74595c10241b876a34bed351a0b0a7d9885742a8ff56bae8",
+    "session/stages-stderr.log": "8dc9f8a99884739364b74e4776b0313cc0d667e61bfeb59324babc8d232b2b91",
+    "session/stages-stdout.log": "d0eca3d05ede6b52834d671ee095c4e0baba830796bd92fd7aba0bf3461ec465",
+    "summary.json": "3c078109d289e3209cf6a25fdd5fc03743ce413056a30998f8127eec0475cb1c",
+    "tools/ReloadStageAnalysis.java": "d66a7dcd876d460eccf8668ef083fad3d65c4fa0f4488968755062f60645e3f0",
+    "tools/analyze-stage-jfr.py": "ce47a1233b6fd6a35333dc609a72ef31470fc8818f32120b6a2e60da914c2e2f",
+    "tools/prepare-stage-jfr.py": "06cabada4b57978bd5b1a51dd8c4ba887dc4e6e4925a61f2502026887511c7a0",
+    "tools/restore-stage-jfr.py": "509b50e7bd8ea3e65091246ad916f73c5c90c340614284a08bd5707d053c67c7",
+    "tools/run-stage-jfr-v2.py": "e2d0ae4a8aac8ae50fa4004152ee9da8cf5e7334b3165de5248f6b224550f924",
+    "tools/run-stage-jfr.py": "7ee6372830df3716f57cfdf49be1c2e3b103e1416fa225379951bd31f1bd39e7",
+    "tools/seal-stage-jfr.py": "2ac0c5ac95d963468f3f9647df4ec045f240f15135c0d6a1812a4938f3113ad9",
+    "tools/stage-jfr-build.log": "41124e1d79e73c496c6dc4a861fed4e0c330fd2f6d060b6b2c0852b75ee577cf",
+    "tools/stage-jfr-controller-stderr.log": "5bd7b763f477b84578bf6a3c0fb4698ebb831f291009226f4e7b6c13208d907d",
+    "tools/stage-jfr-controller.log": "390f6b8ae4958e2f1aa54af6d3561fd3a0f9c498672305b1caedc875d6ad989e",
+    "tools/stage-jfr-diagnostic.ps1": "f20640b1c596af2570621440653bd0b9d33251131bb6c2e95e9b1ead61d593f5",
+    "tools/stage-jfr-exit.json": "73c6d7d96b45dc21ca80af0a5947ca07645778dfbb45d8d8c39f02064ced6eb9",
+    "tools/stage-jfr-restored-build.log": "476f8694b803eecd14633ac85a9c594ef2678894903233f64427ca35ed25f6b0",
+    "tools/stage-jfr-v2-controller-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tools/stage-jfr-v2-controller.log": "2c77a182fad61ee135937516617b1e908949985f20bf097ec37018a320c0b645",
+    "tools/stage-jfr-v2-diagnostic.ps1": "d1b5320ff1d462e87bb3b28a6ea3a171f95fa8661e9e2fddabc75be84ff58116",
+    "tools/stage-jfr-v2-exit.json": "d9b4f4d1ebb80cdbfcc8846a0a5d5903da647157a695c87c847a76e9a213319b"
+  },
+  "redactions": {
+    "session-v2/env-snapshot.txt": {
+      "originalSha256": "004ebdd9e9206340a57b02fb2081f786edb0e8307be7e85e1b3020d37bf17a6b"
+    },
+    "session-v2/stages-stderr.log": {
+      "originalSha256": "eac7632b86555035e5c3c1db84b5377a4b819bad0e283ee8a7bb2c10c0fbeefc"
+    },
+    "session-v2/stages-stdout.log": {
+      "originalSha256": "35d59d9d3b538e88edf8a477593f90431ed5316816318a35e29ebcc58018cc9c"
+    },
+    "session/env-snapshot.txt": {
+      "originalSha256": "1f93c54f39dcc96eaff7f590b8bfa9fa33f948ab38ee3193f286066eec403656"
+    },
+    "session/stages-stderr.log": {
+      "originalSha256": "8c1149824be063915cee16db93a8d4d965454056e54f6d1746d764e5ebd4ad1a"
+    },
+    "session/stages-stdout.log": {
+      "originalSha256": "d56536e37f7ad929d07e10228d7cb79a15c2cd8c8ced8e44e62b31c603d801d7"
+    },
+    "tools/stage-jfr-build.log": {
+      "originalSha256": "fc15732396bd634b3ab914a815853c09847f1feb964347ba97b424c155ad1c95"
+    },
+    "tools/stage-jfr-diagnostic.ps1": {
+      "originalSha256": "d15b4908d809ad38c85d8a71f3a78009ee41fa96dadd8810cf76fbd950289001"
+    },
+    "tools/stage-jfr-restored-build.log": {
+      "originalSha256": "a3e966679c1c4a14cfaeb312575bd4e22a37a1ee25ffea34d9898d579964dd03"
+    },
+    "tools/stage-jfr-v2-diagnostic.ps1": {
+      "originalSha256": "d08ac9c8011912fdc55677f55d8591dbb10c70c2d3aa4dc15260ef8092106d05"
+    }
+  }
+}
