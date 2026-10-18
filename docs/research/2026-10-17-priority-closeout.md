@@ -38,12 +38,15 @@
 - [调用链控制](../architecture-refactor/evidence/2026-10-17-reload-performance/invocation-controls/README.md)：同一原客户端的空响应端点二十对原 native / 直接进程调用，以及二十轮 C/D 路径四臂对照，共 120 条成功控制命令，原 native 约 48–50 ms、C/D 差不到 1 ms；不支持这两项解释正式数百毫秒 RCON。实际 Gradle 字节码确认 plain 也经默认 100 ms 节流，daemon dispatcher 空闲 sleep 为 10 ms；没有修改内部参数或正式口径。下一步重建精确历史源码同机对照；旧 worktree/二进制缺失，不能仅据缓存存在声称可复现。
 - 历史正式 RCON→marker 均值增加 89.0 ms，当前增加 52.8 / 64.4 ms；当前 RCON 自身已为 413.6 / 405.0 ms，主要回归在返回前。因此去掉转发等待也不能使已测两组通过，不继续把输出节流当作主要生产修复方向。[旧源码 `3400e97e` 同机重建对照](../architecture-refactor/evidence/2026-10-17-reload-performance/historical-reference-3400/README.md)已完成：启动 43231.6 ms、两组重载 430.6 / 452.6 ms，均超过原门槛，九会话正常停服。旧源码生产代码未改，但原 world / 二进制缺失、使用本次重新构建和新建 world，因此不证明环境是唯一原因，也不替代当前正式 FAIL。
 - [游戏内四十条调用方式控制](../architecture-refactor/evidence/2026-10-17-reload-performance/real-invocation-control/README.md)：同一原客户端、相同 1625 个正式编译类，原 native / 直接 .NET Process 的 RCON 均值为 265.54 / 251.00 ms，marker 为 352.37 / 330.46 ms；二十对轮换顺序，差值有正有负，两臂均超过门槛。没有据此改调用器或重判正式结果。后续回到模块准备中的可归因重复工作；HostAccess 已在 factory 构造时复用，不是每代 build 的重复项。
+- 用户确认原环境已无保留，继续按原门槛排查。[十条 CPU 诊断](../architecture-refactor/evidence/2026-10-17-reload-performance/cpu-and-preflight/README.md)的 root 墙钟 / 线程 CPU 为 188.94 / 170.31 ms，recipe 为 55.53 / 56.25 ms（CPU 计时较粗）；GC 窗口计时未增长，进程 / 编译计数含并行工作，不能与墙钟相加。现有 JFR 复读未定位单一原因。入口重复校验的 common 组件原型约节省 5.37 ms / 六源码，schema 不含完整 MC 绑定；暂未引入跨边界凭据协议。诊断工具首次默认编码造成十项源码追踪失败，显式 UTF-8 后节点 build 通过；原始源码恢复并重建后 1625 个 main 类与正式版本完全相同。正式重载仍 FAIL，继续定位必要 CPU 工作中的重复初始化，保留原检查和公开行为。
 
 ## 2. 脚本包最终验收（资源自动化通过，实机与原生内存未完成）
 
 复用 [A–E 交付与五节点证据](2026-10-14-script-pack-final-verification.md)，补齐多包独立 Context 的内存成本、重复重载的资源释放、客户端双世界切换、签名同步实机验证。自动化、实际客户端观察与维护者结论分别记录；缺少人工结论时不代签。
 
 2026-10-18 新增五项资源检查通过：1/4/8 包活动 Context 为 2/5/9、替换峰值 4/10/18；四包五十次重载中旧 Context、注册表、事件监听器和 timer scheduler 均释放，最终观察到 250/250 个旧 Context 回收；五次 DOMAIN_PLAN 拒绝保留健康代并成功恢复。[资源验收证据](../architecture-refactor/evidence/2026-10-18-pack-resource-acceptance/README.md)保留 Java 堆窗口。首次 common 检查遇到语言文件原子替换 AccessDenied；失败已归档，单测控制和未改源码的完整复验通过（2375 tests、0 failures/errors、4 skipped），根因未知。原生内存、真实客户端双世界和签名同步仍缺证据，不能标为整体验收通过。
+
+只读核对确认当前没有可直接重放的真实客户端切世界 / 签名网络验收脚本。`PackActivationTest` 的 A→B→A 为 common SERVER 类型语义测试，`PackSyncClientTest` 直接调用接收处理器；已有跨进程实机 fixture 是授权无签名包。可复用这些断言和现有 NeoForge 26.2 客户端启动记录，但仍需真实客户端控制和带测试签名密钥的网络 fixture，不能将这些逻辑测试补记为实机通过。
 
 ## 3. 社区事项收尾（本地核对已完成，外部收尾未完成）
 
