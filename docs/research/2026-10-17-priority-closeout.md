@@ -48,6 +48,8 @@
 
 后续[同会话阶段／CPU 与 JFR 诊断](../architecture-refactor/evidence/2026-10-19-reload-stage-jfr/README.md)在主线 `4550a385` 完成二十对查询／重载：root 228.10 ms、recipe 63.78 ms、command 293.87 ms，command CPU 286.72 ms；完整 reload RCON 444.10 ms、轻量查询 149.10 ms。首轮控制命令不兼容的失败保留，修正控制命令后四十条成功且正常停服；插桩还原及节点 build 通过。它只支持“实际 CPU 与外部调用均有开销”，不是正式成绩或单一热点定论。下一步先量化 source-map 解码的临时分配，原门槛保持。
 
+2026-10-19 [source-map 解码优化及正式复验](../architecture-refactor/evidence/2026-10-19-source-map-decoder/README.md)：主线 `280128e1` 对应实测 `606d1fff`，只去除逐行／逐段临时字符串及字段列表，保留全部既有解码边界；10,019 个兼容输入一致，30 对同进程分配约下降 76.1%。完整 common isolation／处理器／五节点 build 为 4,989 tests、0 failures/errors、271 skipped，四 CI gate PASS。但原正式两组重载 **601.2 / 527.4 ms**、启动 **60346.8 ms**，全部有效且均 FAIL；全部首值／失败及九次正常停服已冻结。不能据小组件通过称整体完成，也不能把跨会话时间差归因于源码。后续单独调查启动请求／Gradle task／游戏 JVM／NekoJS 初始化边界，保留当前正式 FAIL。
+
 ## 2. 脚本包最终验收（世界切换与签名实机通过，整体接受未完成）
 
 复用 [A–E 交付与五节点证据](2026-10-14-script-pack-final-verification.md)，补齐多包独立 Context 的内存成本、重复重载的资源释放、客户端双世界切换、签名同步实机验证。自动化、实际客户端观察与维护者结论分别记录；缺少人工结论时不代签。
