@@ -28,6 +28,8 @@ Windows PowerShell 5.1 从采样器 AST 读取原 `Invoke-Rcon` 函数，只替�
 
 结合[同条命令三 sink 观察](../output-visibility/README.md)，这些是 plain 输出转发存在延迟机制的证据。仍不能把观察到的 80.04 ms 全部当作某个内部类的独占耗时，也不能证明修改内部 property 是受支持的生产修复。没有设置该 property、绕开 daemon、换计时文件或降低门槛。
 
+已有正式记录还能约束归因：历史基线 RCON / marker 均值为 139.2 / 228.2 ms，返回后增加约 89.0 ms；当前两组分别为 413.6 / 466.4 和 405.0 / 469.4 ms，增加约 52.8 / 64.4 ms。主要增长发生在 RCON 返回前，而且当前 RCON 本身已超过 285.3 ms。因此即使去掉返回后的全部日志等待，也不能让这两组通过；不能把 Gradle 输出节流当作已定位的主要回归原因。
+
 ## 复核与下一步
 
 ```powershell
@@ -36,4 +38,4 @@ python docs/architecture-refactor/evidence/2026-10-17-reload-performance/invocat
 
 完整性 PASS，独立重算 120 条成功控制命令，保留最初失败；静态检查只验证当前二进制机制，不执行 Gradle 内部类。
 
-下一步在精确旧源码 `3400e97e` 上重建同机对照。旧项目位于该提交的 `NekoJS-mult/` 子目录，原工作树和二进制已不在本机；关键依赖缓存存在，但重建尚未通过验证。固定 harness 是后续 c860 版本，当前 sampler / fixtures 与其相同，作为未跟踪诊断输入加入；不修改旧生产源码。旧源码重建失败、旧 world 缺失或样本不可比，都必须分别记录，不能据此推断环境漂移。
+精确旧源码 `3400e97e` 已在独立工作树离线构建成功；[同机重建对照](../historical-reference-3400/README.md)的启动 / 两组重载均超过原门槛。原历史 world 与二进制缺失，不能把它当作原环境的精确重放或据此批准当前版本。[四十条真实游戏调用控制](../real-invocation-control/README.md)也未支持调用器是主要回归原因；后续回到生产模块准备与重载工作本身。
