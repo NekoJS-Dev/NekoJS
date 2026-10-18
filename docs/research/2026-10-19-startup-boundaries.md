@@ -24,3 +24,5 @@
 请求到游戏 JVM 为 **8.528 秒**，JVM 到约略 Done 为 **58.507 秒**；包含框架／原版／NekoJS 的多种初始化栈，未确定单一根因。恢复正常 run 配置 PASS，1,625 个编译类保持原正式摘要。完整记录和独立复核见[冻结证据](../architecture-refactor/evidence/2026-10-19-startup-boundaries/README.md)。
 
 下一项工程位置对照预先指定两组各五次重载、两次预热加五次正式启动，仍使用原 sampler。D 盘新 checkout 位于 `D:/mcmodDemo/NekoJS-perf-606d1fff`，源码同为 `606d1fff`，1,625 个实际编译类与 C 盘一致；受控 world/config/mods、server.properties、eula 共 42 个文件按摘要复制，未覆盖已存在目标。盘符、路径深度及测试时点不同，顺序 cohort 不足以单独证明路径长度因果；不替代已保留的 C 盘 FAIL。
+
+工程位置对照已完成：两边整个 JAR 亦逐摘要相同。D 盘两组重载 **318.0 / 318.4 ms（FAIL）**，启动 **25001.8 ms（PASS）**，17 行有效、九会话正常停服。完整原始证据和跨归档制品复核见[位置控制记录](../architecture-refactor/evidence/2026-10-19-project-location/README.md)。源码优化的组件通过、位置差异与原重载失败分别记录，总目标仍未完成。

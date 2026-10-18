@@ -52,6 +52,8 @@
 
 [启动边界诊断](../architecture-refactor/evidence/2026-10-19-startup-boundaries/README.md)录制覆盖 JVM 启动：请求到 JVM 创建约 8.528 秒，之后到约略 Done 58.507 秒，涉及 framework／原版／NekoJS 多类初始化。两次控制器失败完整保留；第二次正常停服并恢复退出时录制，JFR PID／唯一路径和 stdout 一致。正常 run 配置恢复 PASS、1,625 个编译类不变，未将诊断改判为正式通过。随后在 D 盘近原工程位置以同提交／逐类一致产物做预定原采样器对照，原 C 盘失败仍有效。
 
+[工程位置对照](../architecture-refactor/evidence/2026-10-19-project-location/README.md)已完成：整个 JAR 及 1,625 个 main 类相同，D 盘两组重载 **318.0 / 318.4 ms** 仍 FAIL，启动 **25001.8 ms** PASS；17 行有效、九会话正常停服。复制的 42 个测试 world/config 等文件已比较摘要；采样器、门槛和系统策略未改。盘符／深度／项目缓存／会话时点仍有多个变量，不能仅凭顺序差值判定路径长度根因，也不能覆盖 C 盘先前 FAIL。配方只读调查确认现有 datapack JSON 缓存，当前 registry codec 校验仍不可跳过；另外的可变 JSON baseline 别名风险未实现修复，需独立行为复现后再决定缓存边界。
+
 ## 2. 脚本包最终验收（世界切换与签名实机通过，整体接受未完成）
 
 复用 [A–E 交付与五节点证据](2026-10-14-script-pack-final-verification.md)，补齐多包独立 Context 的内存成本、重复重载的资源释放、客户端双世界切换、签名同步实机验证。自动化、实际客户端观察与维护者结论分别记录；缺少人工结论时不代签。
