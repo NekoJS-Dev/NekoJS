@@ -354,7 +354,7 @@ class PackActivationTest {
         int calls(String key) { return counts.getOrDefault(key, 0); }
     }
 
-    private static final class Fixture implements AutoCloseable {
+    static final class Fixture implements AutoCloseable {
         final NekoJSPaths previous = NekoJSPaths.get();
         final NekoJSPaths paths;
         final Engine engine = Engine.newBuilder().build();

@@ -36,9 +36,11 @@
 - 完整游戏 `6e5bb8f0` 二十条阶段诊断已完成：root 104.39 ms、recipe 29.74 ms、RCON 209.15 ms；JSX eval 0.88 ms、managed globals 0.70 ms，均不足以优先改造。模块规范化 24 次，符合已实现的主体修复；全部 COMMIT、正常停服。插桩按摘要还原、重新 build 通过，1625 个 main 类无诊断标记。该会话没有正式 marker 指标，不改判此前 FAIL；下一步分开观察命令/回执/日志可见延迟。[证据与旧 JFR 回读限制更正](../architecture-refactor/evidence/2026-10-17-reload-performance/current-phase-profile/README.md)。
 - 2026-10-18：完成十对查询/重载控制及十条三日志 sink 诊断。后者的每条 marker 在游戏日志都先于 Gradle 转发 stdout 可见，均值相差 80.04 ms（48.33–110.51 ms）；root / recipe 为 64.40 / 18.55 ms。原 marker 发生于脚本执行中，原采样器仍先等完整 RCON 返回再轮询 stdout；不把阶段计时或直接游戏日志替代原指标，不将不同会话差异声称为生产优化。两轮正常停服，插桩恢复、重新 build 和类扫描通过；[完整原始证据与重算器](../architecture-refactor/evidence/2026-10-17-reload-performance/output-visibility/README.md)已保存。继续检查 Gradle 转发机制，正式重载目标仍 FAIL。
 
-## 2. 脚本包最终验收（待进行）
+## 2. 脚本包最终验收（资源自动化通过，实机与原生内存未完成）
 
 复用 [A–E 交付与五节点证据](2026-10-14-script-pack-final-verification.md)，补齐多包独立 Context 的内存成本、重复重载的资源释放、客户端双世界切换、签名同步实机验证。自动化、实际客户端观察与维护者结论分别记录；缺少人工结论时不代签。
+
+2026-10-18 新增五项资源检查通过：1/4/8 包活动 Context 为 2/5/9、替换峰值 4/10/18；四包五十次重载中旧 Context、注册表、事件监听器和 timer scheduler 均释放，最终观察到 250/250 个旧 Context 回收；五次 DOMAIN_PLAN 拒绝保留健康代并成功恢复。[资源验收证据](../architecture-refactor/evidence/2026-10-18-pack-resource-acceptance/README.md)保留 Java 堆窗口。首次 common 检查遇到语言文件原子替换 AccessDenied；失败已归档，单测控制和未改源码的完整复验通过（2375 tests、0 failures/errors、4 skipped），根因未知。原生内存、真实客户端双世界和签名同步仍缺证据，不能标为整体验收通过。
 
 ## 3. 社区事项收尾（本地核对已完成，外部收尾未完成）
 

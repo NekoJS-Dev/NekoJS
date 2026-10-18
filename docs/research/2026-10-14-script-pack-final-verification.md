@@ -4,6 +4,8 @@
 
 按维护者授权完成 [交接任务](2026-10-14-script-pack-work-handoff.md) A–E，并加入内容模组 JAR 生成器。实现未使用子代理；早期只读探索结果作为参考。本文记录工程实现与实际验证结果，不代签维护者验收。完整契约见 [实施记录](2026-10-14-script-pack-implementation.md)，作者用法见 [脚本包中文文档](../../wiki/script-packs_cn.md)。
 
+后续补充（2026-10-18）：[包资源自动化验收](../architecture-refactor/evidence/2026-10-18-pack-resource-acceptance/README.md)已覆盖 1/4/8 包 Context 数量与 Java 堆观察、四包五十次重载资源释放、五次候选拒绝及恢复。该补充不代替下文尚缺的客户端双世界、签名同步、原生内存与维护者验收。
+
 ## 最终行为与范围
 
 | 阶段 | 最终行为 | 主要证据 |
