@@ -116,4 +116,6 @@ Copy-Item -LiteralPath build/script-pack-native-final/clipack-neoforge-261-start
 
 **范围外：** VS Code/语言服务器/编辑器扩展、在线市场、自动依赖下载、Forge 节点、完整 Fabric 目录包资源桥、任意宿主副作用回滚。内容 JAR 依赖 NekoJS，JS 没有编译成独立 Java 模组；当前支持三 NeoForge、两 Fabric 目标。
 
+2026-10-18 后续：[资源自动化验收](../architecture-refactor/evidence/2026-10-18-pack-resource-acceptance/README.md)已补 1/4/8 包、五十次替换及失败候选释放；[进程与 NMT 观测](../architecture-refactor/evidence/2026-10-18-pack-native-memory/README.md)补充 29 组原始内存点，原五项断言全部通过。后者为 JVMCI 未启用的独立 common JVM，进程计数包含堆，NMT 有覆盖限制，不能替代完整游戏原生内存、实际客户端双世界和签名跨进程验收。
+
 维护者接受记录：目前只收到加载器继续/本地连接操作完成的回复，尚无整体验收结论。工程实现、自动门禁和上述本地运行证据已交付。

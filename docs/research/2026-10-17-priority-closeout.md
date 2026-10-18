@@ -44,13 +44,15 @@
 
 - [显式进程策略下的原采样器复验](../architecture-refactor/evidence/2026-10-18-controlled-performance/README.md)完成：当前 `6e5bb8f0` 两组重载 **233.6 / 243.0 ms，PASS**，启动 **24977.4 ms，PASS**；重建历史源码 `3400e97e` 两组 **299.0 / 310.6 ms，FAIL**，启动 **24980.2 ms，PASS**。共十八次会话均有效并正常停服，原首值和门槛保留。仅专用游戏进程显式 HighQoS，原采样器和生产类未变，所有策略在 Done 前应用；进程退出结束其策略生命周期。历史组首次分析误用了新版成功响应，原错误判定保留，按旧版精确响应修正后仍 FAIL。该组确认明确运行条件下当前版本可以达标；**默认条件的 466.4 / 469.4 ms FAIL 仍有效，尚未通过产品改动解决默认环境缺口**。两个源码工作树 world 不同，不能将其差值全归于源码；没有加入 Windows 专用生产策略或放宽门槛。
 
-## 2. 脚本包最终验收（资源自动化通过，实机与原生内存未完成）
+## 2. 脚本包最终验收（资源自动化通过，进程内存已观测，完整实机未完成）
 
 复用 [A–E 交付与五节点证据](2026-10-14-script-pack-final-verification.md)，补齐多包独立 Context 的内存成本、重复重载的资源释放、客户端双世界切换、签名同步实机验证。自动化、实际客户端观察与维护者结论分别记录；缺少人工结论时不代签。
 
 2026-10-18 新增五项资源检查通过：1/4/8 包活动 Context 为 2/5/9、替换峰值 4/10/18；四包五十次重载中旧 Context、注册表、事件监听器和 timer scheduler 均释放，最终观察到 250/250 个旧 Context 回收；五次 DOMAIN_PLAN 拒绝保留健康代并成功恢复。[资源验收证据](../architecture-refactor/evidence/2026-10-18-pack-resource-acceptance/README.md)保留 Java 堆窗口。首次 common 检查遇到语言文件原子替换 AccessDenied；失败已归档，单测控制和未改源码的完整复验通过（2375 tests、0 failures/errors、4 skipped），根因未知。原生内存、真实客户端双世界和签名同步仍缺证据，不能标为整体验收通过。
 
 只读核对确认当前没有可直接重放的真实客户端切世界 / 签名网络验收脚本。`PackActivationTest` 的 A→B→A 为 common SERVER 类型语义测试，`PackSyncClientTest` 直接调用接收处理器；已有跨进程实机 fixture 是授权无签名包。可复用这些断言和现有 NeoForge 26.2 客户端启动记录，但仍需真实客户端控制和带测试签名密钥的网络 fixture，不能将这些逻辑测试补记为实机通过。
+
+补充[进程与 HotSpot NMT 观测](../architecture-refactor/evidence/2026-10-18-pack-native-memory/README.md)：在只加入观测的临时测试类中，五项原资源场景全部通过，采集 29 组原始点；四包 10→50 次重载私有提交增加约 4.17 MiB、工作集增加约 3.65 MiB，250 个旧 Context 全部观察到回收，root 关闭后 Context 为 0。进程计数包含 Java 堆，NMT 不覆盖全部第三方原生分配；该独立 JVM 的 JVMCI 未启用，不能替代完整游戏/GraalMC 内存验收。未改生产源码、资源断言或既有堆门槛，原始全部窗口和独立复核器已归档。
 
 ## 3. 社区事项收尾（本地核对已完成，外部收尾未完成）
 
