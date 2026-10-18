@@ -1,0 +1,402 @@
+{
+  "diagnosticOnly": true,
+  "archiveSha256": "b7606aaf1ef7daf76f0bb5174d009f61a48e4255fffb77d390bd2aef49f10f11",
+  "entries": {
+    "current-sources/NekoCanonicalPath.java": {
+      "bytes": 1614,
+      "sha256": "1d0c19022753aa84d97bb2c2115b4b82789686b839fdd59e495daa5a9783500c"
+    },
+    "current-sources/NekoJSPaths.java": {
+      "bytes": 12254,
+      "sha256": "f95587b0702728ef2c2b9397f01fc437b29f859e35ea7520deeb920cdfbf5482"
+    },
+    "fixtures/nekojs/client_scripts/src/main.js": {
+      "bytes": 76,
+      "sha256": "3aaba61face8de376ad1b590e392893d3c6bbd6abb57256a6cefff0c053fa9a1"
+    },
+    "fixtures/nekojs/server_scripts/adapter-bench.js": {
+      "bytes": 3273,
+      "sha256": "49dcaebe9de4e4bd2d38e53f0257a39995552d7c6362db7ac708c86394b72d64"
+    },
+    "fixtures/nekojs/server_scripts/arith-bench.js": {
+      "bytes": 2307,
+      "sha256": "d066315cbfc5b26f4e020dadb3ff6224997e22433ed7832a4aee56a140420164"
+    },
+    "fixtures/nekojs/server_scripts/main.js": {
+      "bytes": 1323,
+      "sha256": "f984e2c3b9e35d0fd5adea661c05e5754890ecc17d5a9dc043b79ab3629983f1"
+    },
+    "fixtures/nekojs/server_scripts/mem-bench.js": {
+      "bytes": 2107,
+      "sha256": "6b19574ba3318a3afe633747115dd0e568ebacaa5208e16fd304cbc8cf2dce19"
+    },
+    "fixtures/nekojs/server_scripts/src/main.js": {
+      "bytes": 164,
+      "sha256": "05056ab378810e3fbc9065c33e9451c028be6b2832eb779480397302cde4599d"
+    },
+    "fixtures/nekojs/server_scripts/tick-bench.js": {
+      "bytes": 2489,
+      "sha256": "d5588e64c88cf55f34fb15a8cb19996540ea3997d954c755f8bce6a321beada4"
+    },
+    "fixtures/nekojs/startup_scripts/s01-items-basic.js": {
+      "bytes": 942,
+      "sha256": "6b6e7e26616d798eb4d2a49c7ffdeed9fef1b85cbf1e2dfe3a7bf11b6f25701e"
+    },
+    "fixtures/nekojs/startup_scripts/s02-items-tagged.js": {
+      "bytes": 849,
+      "sha256": "f717c89e21326c13a15b1c28b27ed25ee3f70f5d48eedf1fcfee31eca67becbb"
+    },
+    "fixtures/nekojs/startup_scripts/s03-blocks-basic.js": {
+      "bytes": 738,
+      "sha256": "7a634cb59a0733816f130a49fc6bb7525c0cf0bf28ffa831479403da33f79213"
+    },
+    "fixtures/nekojs/startup_scripts/s04-blocks-tagged.js": {
+      "bytes": 757,
+      "sha256": "51a52626d8d0891f8b6f30a141f6bf83b96234fca200685847ed6b2cd2ab1889"
+    },
+    "fixtures/nekojs/startup_scripts/s05-entitytypes.js": {
+      "bytes": 882,
+      "sha256": "e25fed02231a812f098e1cd70de5d30e7a8ff23a4b17b14233b45fc584395e35"
+    },
+    "fixtures/nekojs/startup_scripts/s06-fluids-tabs.js": {
+      "bytes": 796,
+      "sha256": "e8c399e5afd4900b8fe81c8a91a7d4a2d8e50a66247238fa9e41c09330ee02a5"
+    },
+    "fixtures/nekojs/startup_scripts/s07-script-events.js": {
+      "bytes": 543,
+      "sha256": "ca542d0d838e55ff4ea24040933d6c4dfbcee54acd808b27e5bc5837f236d2cb"
+    },
+    "fixtures/nekojs/startup_scripts/s08-data-setup.js": {
+      "bytes": 965,
+      "sha256": "c3acf9936b695aab950534ff96d3e26911c45a8a0bfa9b8b63f42cc2c7520172"
+    },
+    "fixtures/nekojs/startup_scripts/s09-interop-refs.js": {
+      "bytes": 846,
+      "sha256": "3f7512940185691aef67f4f0274b22a4fffea74099ecc3fd76d5804b245d7f3c"
+    },
+    "fixtures/nekojs/startup_scripts/s10-marker.js": {
+      "bytes": 258,
+      "sha256": "4cde679cc515f99440047a69f2f751930c0b6f41ea08ac9b309d32ca23b66df1"
+    },
+    "fixtures/nekojs/startup_scripts/src/main.js": {
+      "bytes": 165,
+      "sha256": "1c26010c151200949b0632deba2259b6c148d60e5ceab5bf7a808e9ca0c74cb7"
+    },
+    "game-thread-qos-control-6e5bb8f0/env-snapshot.txt": {
+      "bytes": 219,
+      "sha256": "baf4ece3cf0b9bd15d878ddc3f4ed49d73933615d3e5862c2e88c7e877b1a476"
+    },
+    "game-thread-qos-control-6e5bb8f0/initial-thread-dump-stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "game-thread-qos-control-6e5bb8f0/initial-thread-dump.txt": {
+      "bytes": 64168,
+      "sha256": "4f4bae1c4fe5a25d8da3ba27709284630b7095fc52a4c6497f0e7ffd860dd040"
+    },
+    "game-thread-qos-control-6e5bb8f0/observations.json": {
+      "bytes": 67242,
+      "sha256": "9193121269e5f3c1da756164769c5ab0f3bedcd35d38e280019729580a46ab79"
+    },
+    "game-thread-qos-control-6e5bb8f0/restored-thread-policy.json": {
+      "bytes": 164,
+      "sha256": "7f3cc0ecf4e91811b2f1bc51039390a244f78d18cc731890c405020298848860"
+    },
+    "game-thread-qos-control-6e5bb8f0/session.json": {
+      "bytes": 287,
+      "sha256": "49413a934772ffd600a5b9af315b053127e63159e88333a8ebd4f98be84c3b9a"
+    },
+    "game-thread-qos-control-6e5bb8f0/summary.json": {
+      "bytes": 829,
+      "sha256": "91b0e36536ccff9502c36fc5431614fb3e08505b2c3b2bf59e7403af08b43562"
+    },
+    "game-thread-qos-control-6e5bb8f0/thread-policy-binding.json": {
+      "bytes": 197,
+      "sha256": "d49905136e7e88511253e892b185b79c598557717fa9143e20fe10317b2766ce"
+    },
+    "game-thread-qos-control-6e5bb8f0/thread-qos-control-stderr.log": {
+      "bytes": 1217,
+      "sha256": "b6a600b2fe9c2d821c0e139028ae9baf24fdd1f53a8af6bd314ff024b5f55626"
+    },
+    "game-thread-qos-control-6e5bb8f0/thread-qos-control-stdout.log": {
+      "bytes": 4483218,
+      "sha256": "dcfd40a38fa1c4b08e2027b417e2ce1dc92559deef5fb417e4c7ebe229c6ec75"
+    },
+    "input-bindings.json": {
+      "bytes": 157925,
+      "sha256": "ac9869ce803b3d79466bcc74a6cb6709af561c79e4738a5fbf845be259726ecf"
+    },
+    "owned-worktree-status.json": {
+      "bytes": 16,
+      "sha256": "e6eed8468d60e84c6599c3f5d6de0e656ed6932f9741a0402743d2a2e6fd4e44"
+    },
+    "path-cpu-attribution/compile-stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "path-cpu-attribution/compile.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "path-cpu-attribution/run-stderr.log": {
+      "bytes": 1063,
+      "sha256": "1e511a826c19119a52ac467f1c650725710bee1917622c29fc0f79d6b2c806bd"
+    },
+    "path-cpu-attribution/run.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "path-cpu-attribution/samples.json": {
+      "bytes": 12731,
+      "sha256": "c77ba6a28fcdecf4f0ee35f82ef2578ffa0fb2fad8ded1f1bc295565895cfdc6"
+    },
+    "path-cpu-attribution/source-bindings.json": {
+      "bytes": 529,
+      "sha256": "1c65dbc33daa7ae9732a3697fa22981fe93f6c3d0d1ee3123c6a6b2c84d47140"
+    },
+    "path-cpu-attribution/sources/NekoCanonicalPath.java": {
+      "bytes": 1818,
+      "sha256": "d1c9e078c5ecfe08370e8f971a4bceb71e5d3388704427ca106d93a901b9addf"
+    },
+    "path-cpu-attribution/sources/NekoCanonicalPath.original.java": {
+      "bytes": 1614,
+      "sha256": "1d0c19022753aa84d97bb2c2115b4b82789686b839fdd59e495daa5a9783500c"
+    },
+    "path-cpu-attribution/sources/NekoJSPaths.java": {
+      "bytes": 12697,
+      "sha256": "39a3dd343c8e326a01cb0352032278eab8645d0d97a550195c0a2ead286310f4"
+    },
+    "path-cpu-attribution/sources/NekoJSPaths.original.java": {
+      "bytes": 12254,
+      "sha256": "f95587b0702728ef2c2b9397f01fc437b29f859e35ea7520deeb920cdfbf5482"
+    },
+    "path-cpu-attribution/sources/PathCounters.java": {
+      "bytes": 1135,
+      "sha256": "d047aecc410b5388db377648cd8d36ffbc2f042e3d46caee25371da17db199ea"
+    },
+    "path-cpu-attribution/sources/PathCpuAttribution.java": {
+      "bytes": 7260,
+      "sha256": "402689326e6f5c4e5912d09f0f5dc48368fe11f9bdbb7f8059e12bdd53e7f3d8"
+    },
+    "path-cpu-attribution/summary.json": {
+      "bytes": 1310,
+      "sha256": "7e4a7ee726b1fa2cfdbe4107b08a6b38ed727748d1ba0f8da0134e78183c6b06"
+    },
+    "redactions.json": {
+      "bytes": 3785,
+      "sha256": "841830a828cdd2774b760c082483144047f63d96d572547f873b03b7e76af6cb"
+    },
+    "root-cpu-placement/RootCpuPlacement.java": {
+      "bytes": 7886,
+      "sha256": "f52886cbf0ba782460bf33ee80c19fe965690b3967bae90e2a42ea1f88b59e92"
+    },
+    "root-cpu-placement/compile-stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-cpu-placement/compile.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-cpu-placement/run-stderr.log": {
+      "bytes": 536,
+      "sha256": "73017f0271101cb816f888d1de026fc7c61871b0cbb352f72eba4bce29060ab0"
+    },
+    "root-cpu-placement/run.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-cpu-placement/samples.json": {
+      "bytes": 8566,
+      "sha256": "23461cb192de702609d59e50a12b499918ca2c86841d26ff7e63ef3f756355d3"
+    },
+    "root-cpu-placement/summary.json": {
+      "bytes": 9469,
+      "sha256": "8cabea7a4b9322f6fcdff856a995aad52bc8d139cbb3974ef73d1189e62532c4"
+    },
+    "root-cpu-placement/topology.json": {
+      "bytes": 3004,
+      "sha256": "e4da11116249e86a96720ffef207c8ffc3bc15871ae181e6ac26314d942a31eb"
+    },
+    "root-cpu-split/RootCpuSplit.java": {
+      "bytes": 7104,
+      "sha256": "5ea48f9c623df37dba461be36eafa361681d41911fabd6892df7c6cf6a9e0646"
+    },
+    "root-cpu-split/class-binding.json": {
+      "bytes": 156405,
+      "sha256": "9f222bcc369750e25d1bcefc1cb885fa10a7fe53ea81368932e6d70434aa1cd0"
+    },
+    "root-cpu-split/compile-stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-cpu-split/compile.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-cpu-split/run-stderr.log": {
+      "bytes": 1063,
+      "sha256": "1e511a826c19119a52ac467f1c650725710bee1917622c29fc0f79d6b2c806bd"
+    },
+    "root-cpu-split/run.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-cpu-split/samples.json": {
+      "bytes": 7353,
+      "sha256": "86d0955856dd1cb849731b368fc619021d6937a2fccd2d3c3c89df6a210531b1"
+    },
+    "root-cpu-split/summary.json": {
+      "bytes": 604,
+      "sha256": "8de0020f99a865699eb7e0ec890bcffa534dc7c61d432410f26b2f614bd58cc4"
+    },
+    "root-native-attribution/RootNativeAnalysis.java": {
+      "bytes": 2689,
+      "sha256": "a371338ae3145a275e294c9138d2434e6803678cb1a43f5d71870d394e57673e"
+    },
+    "root-native-attribution/RootNativeAttribution.java": {
+      "bytes": 7629,
+      "sha256": "67181a4ebf2dba754c8f537e0ff23aadf6e53454e5570f945199d123a2bc3829"
+    },
+    "root-native-attribution/analyze-stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-native-attribution/analyze.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-native-attribution/compile-stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-native-attribution/compile.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-native-attribution/input-binding.json": {
+      "bytes": 117,
+      "sha256": "c22518f99ed62c7ddebf38bfebd647dc870fa4194f7255255e870077e17f150f"
+    },
+    "root-native-attribution/run-stderr.log": {
+      "bytes": 1063,
+      "sha256": "1e511a826c19119a52ac467f1c650725710bee1917622c29fc0f79d6b2c806bd"
+    },
+    "root-native-attribution/run.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-native-attribution/samples.json": {
+      "bytes": 7357,
+      "sha256": "fb7cf1887c920ba4dcdbe5449bcbd6fc967e97b75dc804e16b64438a27ebc579"
+    },
+    "root-native-attribution/summary.json": {
+      "bytes": 30095,
+      "sha256": "3ce3792bd9bd080b076c0d23eb258375d80a1054052fa24e16bb458a82af2938"
+    },
+    "root-thread-qos-control/OwnThreadPolicy.java": {
+      "bytes": 1849,
+      "sha256": "fd74103136b9f79ed02b694be90f869f2c1c890cc1bd1899f5a3dc9671b47299"
+    },
+    "root-thread-qos-control/RootThreadQosControl.java": {
+      "bytes": 8984,
+      "sha256": "9d1091b9197a9920d96b92153cdda4ddc690eedcbd218a999d87ae47970a8dff"
+    },
+    "root-thread-qos-control/compile-stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-thread-qos-control/compile.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-thread-qos-control/original-policy.json": {
+      "bytes": 7,
+      "sha256": "7ff52993d5d3cb149089942de7fc7a6511db2671cf2125976c081ad6fff89772"
+    },
+    "root-thread-qos-control/restored-policy.json": {
+      "bytes": 7,
+      "sha256": "7ff52993d5d3cb149089942de7fc7a6511db2671cf2125976c081ad6fff89772"
+    },
+    "root-thread-qos-control/run-stderr.log": {
+      "bytes": 536,
+      "sha256": "73017f0271101cb816f888d1de026fc7c61871b0cbb352f72eba4bce29060ab0"
+    },
+    "root-thread-qos-control/run.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root-thread-qos-control/samples.json": {
+      "bytes": 17060,
+      "sha256": "ac00cfa788604ab9a76b38ece295d4cdc58c8eb3ee22072af0688ad716a1e5db"
+    },
+    "root-thread-qos-control/summary.json": {
+      "bytes": 1319,
+      "sha256": "e36af30684f8aa58bbb211c6689a7a1a8b1b3e14bce64622f7f232a365f792da"
+    },
+    "tooling/analyze-game-thread-qos-control.py": {
+      "bytes": 1127,
+      "sha256": "ac15d5bf4f40a5464b18787eba8640b06756d54f46a259569f38613b2244f297"
+    },
+    "tooling/game-thread-qos-control-bindings.json": {
+      "bytes": 221689,
+      "sha256": "dcf7a2da37e1e049329879393eda7f24273f9257d2181062d32452ab3a201c9e"
+    },
+    "tooling/game-thread-qos-control-controller-stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "tooling/game-thread-qos-control-controller.log": {
+      "bytes": 254,
+      "sha256": "262d582a2e41a1ec22d808ebf98ce09c86f71002a586b3e697455ddfad509ed6"
+    },
+    "tooling/game-thread-qos-control-exit.json": {
+      "bytes": 17,
+      "sha256": "d45db54bba0c56e2691a52869729c0a3eade7f5d50545e7832a20e3262a9d422"
+    },
+    "tooling/game-thread-qos-control.ps1": {
+      "bytes": 5907,
+      "sha256": "67a9b9d0fd13aacbdde14d5bebf7f410f4e6957bc44d03ecc48f24037881b4b0"
+    },
+    "tooling/game-thread-qos.py": {
+      "bytes": 3677,
+      "sha256": "2ae1a419fcd808d426dc17a7624a0368ab6e357f3d8235f3fcda94bbdaacfe6b"
+    },
+    "tooling/path-cpu-attribution.py": {
+      "bytes": 5370,
+      "sha256": "ab59eeaa8770a0f91bde9b84f2d29d28ac2070fc0331ae0e17fac3e482543d50"
+    },
+    "tooling/prepare-game-thread-qos.py": {
+      "bytes": 2950,
+      "sha256": "30b477bece7deff0addde2e1648c198ae554550978fa3431744b3b9ecea4a264"
+    },
+    "tooling/root-cpu-placement.py": {
+      "bytes": 4576,
+      "sha256": "6e82f96b2e5c21215c94b27b1217949461c106605002a37e7c73f1113af1725f"
+    },
+    "tooling/root-cpu-split.py": {
+      "bytes": 3623,
+      "sha256": "02d908345fe68d8599db36d34787675e26a14e2a34d29d21d25e202c1771ba63"
+    },
+    "tooling/root-native-attribution.py": {
+      "bytes": 5467,
+      "sha256": "0420fb0bd3223599c90cca8d75ab4914fcadacf9d0a8c39f8b7563eb73a3e03e"
+    },
+    "tooling/root-thread-qos-control.py": {
+      "bytes": 5940,
+      "sha256": "e34a0428619b50fb183d5deb52fede0c060ec58bbbb7d3423e628423940f529b"
+    },
+    "tooling/run-game-thread-qos-control.py": {
+      "bytes": 2351,
+      "sha256": "e77c27451142bc84c89d38c7181f649aab455ad22eacbbbf08af81d052770f7a"
+    },
+    "tooling/runtime-classpath.txt": {
+      "bytes": 3036,
+      "sha256": "1367b348ea95f316de48be8b349cd42f61eb2199cde02ddd892715b9d61ecf56"
+    },
+    "tooling/seal-cpu-placement.py": {
+      "bytes": 4271,
+      "sha256": "c763f2bff2242242f89ca6a2c341f7f28896e51cc848e3ddf6969ee8a7153264"
+    }
+  }
+}

@@ -40,6 +40,8 @@
 - [游戏内四十条调用方式控制](../architecture-refactor/evidence/2026-10-17-reload-performance/real-invocation-control/README.md)：同一原客户端、相同 1625 个正式编译类，原 native / 直接 .NET Process 的 RCON 均值为 265.54 / 251.00 ms，marker 为 352.37 / 330.46 ms；二十对轮换顺序，差值有正有负，两臂均超过门槛。没有据此改调用器或重判正式结果。后续回到模块准备中的可归因重复工作；HostAccess 已在 factory 构造时复用，不是每代 build 的重复项。
 - 用户确认原环境已无保留，继续按原门槛排查。[十条 CPU 诊断](../architecture-refactor/evidence/2026-10-17-reload-performance/cpu-and-preflight/README.md)的 root 墙钟 / 线程 CPU 为 188.94 / 170.31 ms，recipe 为 55.53 / 56.25 ms（CPU 计时较粗）；GC 窗口计时未增长，进程 / 编译计数含并行工作，不能与墙钟相加。现有 JFR 复读未定位单一原因。入口重复校验的 common 组件原型约节省 5.37 ms / 六源码，schema 不含完整 MC 绑定；暂未引入跨边界凭据协议。诊断工具首次默认编码造成十项源码追踪失败，显式 UTF-8 后节点 build 通过；原始源码恢复并重建后 1625 个 main 类与正式版本完全相同。正式重载仍 FAIL，继续定位必要 CPU 工作中的重复初始化，保留原检查和公开行为。
 
+- [路径与线程策略对照](../architecture-refactor/evidence/2026-10-17-reload-performance/cpu-placement/README.md)缩小了诊断范围：每次组件 root 的 24 次规范化与 6 次包含校验，后二十次分别约 19.86 / 11.40 ms，解释不了全部开销；未删安全复验。只读位置观测落在较低性能 CPU 类别。组件二十对临时 owner-thread HighQoS 对照为 113.46 → 40.38 ms；随后同一未改动游戏代码的四十条诊断中，original / HighQoS 的原 marker 均值为 319.16 / 230.87 ms，RCON 为 255.43 / 125.59 ms，二十个配对 RCON 差均下降。只控制专用游戏 Server thread，每条后及 finally 恢复原策略，正常停服；1625 个正式类不变。这支持 Windows 自动线程策略是当前耗时的重要因素，但改变运行条件的诊断不能代替原正式两组和启动组，正式 FAIL 仍保留。下一步需在明确、相同的运行条件下复验当前与旧源码，保留原采样器、门槛和失败记录。
+
 ## 2. 脚本包最终验收（资源自动化通过，实机与原生内存未完成）
 
 复用 [A–E 交付与五节点证据](2026-10-14-script-pack-final-verification.md)，补齐多包独立 Context 的内存成本、重复重载的资源释放、客户端双世界切换、签名同步实机验证。自动化、实际客户端观察与维护者结论分别记录；缺少人工结论时不代签。
