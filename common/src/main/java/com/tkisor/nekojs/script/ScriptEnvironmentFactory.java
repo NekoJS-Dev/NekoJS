@@ -158,12 +158,19 @@ public final class ScriptEnvironmentFactory {
             // globalThis 全量属性名（JS 内置 + console 等引擎全局）∪ polyglot 绑定键（平台装的绑定），
             // 并补上解析器视作标识符的关键字（this/arguments/super）。单一来源都会漏：
             // console 不在绑定键里、而 guest 侧注入的绑定不一定都在 globalThis 上。
-            Set<String> knownGlobals = new LinkedHashSet<>(context.getBindings("js").getMemberKeys());
-            Value globalNames = context.eval("js", "Object.getOwnPropertyNames(globalThis)");
-            if (globalNames.hasArrayElements()) {
-                for (long i = 0; i < globalNames.getArraySize(); i++) {
-                    knownGlobals.add(globalNames.getArrayElement(i).asString());
+            Set<String> knownGlobals;
+            // Batch only guest inspection; plugin callbacks retain their caller's current Context.
+            context.enter();
+            try {
+                knownGlobals = new LinkedHashSet<>(context.getBindings("js").getMemberKeys());
+                Value globalNames = context.eval("js", "Object.getOwnPropertyNames(globalThis)");
+                if (globalNames.hasArrayElements()) {
+                    for (long i = 0; i < globalNames.getArraySize(); i++) {
+                        knownGlobals.add(globalNames.getArrayElement(i).asString());
+                    }
                 }
+            } finally {
+                context.leave();
             }
             knownGlobals.addAll(List.of("this", "arguments", "super"));
             ScriptBindingSchema.View schemaView = moduleSession.beginBindingSchemaCandidate(

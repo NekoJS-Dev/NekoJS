@@ -68,6 +68,8 @@
 
 紧凑映射存储 `24d35a5d` 已完成[集中检查与组件对照](../architecture-refactor/evidence/2026-10-20-source-map-storage-checks/README.md)，全量 5,024 次执行、0 failures/errors、271 skipped；映射可观测行为一致，组件分配下降约 49.4%，六源码墙钟只节省约 0.063 ms。**最新原标准正式重载为 289.4 / 338.0 ms，均 FAIL；启动 36661.0 ms，PASS。** [17 行原样本与实际 JAR](../architecture-refactor/evidence/2026-10-20-source-map-storage-performance/README.md)全部保留，九会话正常停服，没有改门槛或择优重跑。性能目标仍未完成。
 
+后续实现候选已限缩为[guest 全局名枚举的显式 Context 范围](2026-10-20-binding-inspection-scope.md)：保留插件回调原调用方 Context、每代全局扫描与候选 schema 事务，四项回归已编写。遵循用户本轮“不要着急测试，先完成任务”，未运行新测试、编译或采样；尚未证明收益，不改变上述 FAIL。
+
 ## 2. 脚本包最终验收（世界切换与签名实机通过，整体接受未完成）
 
 复用 [A–E 交付与五节点证据](2026-10-14-script-pack-final-verification.md)，补齐多包独立 Context 的内存成本、重复重载的资源释放、客户端双世界切换、签名同步实机验证。自动化、实际客户端观察与维护者结论分别记录；缺少人工结论时不代签。
