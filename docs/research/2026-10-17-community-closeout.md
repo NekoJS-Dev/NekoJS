@@ -6,6 +6,8 @@
 
 ## 当前状态与处理结论
 
+2026-10-20 的[只读刷新](2026-10-20-community-snapshot.json)仍为五项开放、三 PR merged=false，目标 master 及三个 head SHA 均未变化。两 Issue 仍零评论；当前读取未提供新的作者需求确认。没有外部写入，也不将 mergeable=true 或预览 merge_commit_sha 当作已合并。
+
 GitHub 连接器于 `2026-10-17T12:16:44.313Z` 读取的[状态快照](2026-10-17-community-snapshot.json)：两项 Issue 均 open，三个 PR 均 open、`merged=false`，目标均为 master。PR 的 `merge_commit_sha` 是预览合并提交，不能据此称已合并。下面标签是本地建议，尚未应用。
 
 | 事项 | stonecutter 已有内容 | 剩余差异与建议 |
