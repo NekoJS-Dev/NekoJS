@@ -20,6 +20,6 @@
 
 新增 `ScriptSourcePreflightTest`，比较独立两次调用和合并入口的完整诊断（类型、回调标识、含路径/行列的消息），覆盖绑定及回调同时出错、CRLF/Unicode、别名、函数回调和嵌套调用；另外检查相同源码更换当前 schema、同路径改源码、不同文件的诊断归属，以及空输入/空 schema。
 
-这些回归已编写，**尚未运行**；未执行编译、游戏或性能复验。已人工复查 diff，`git diff --check` 通过。旧证据不覆盖本次改动。
+实现阶段只编写回归并人工复查 diff，未立即执行；随后在 `4dcfe604` 集中验证，定向 common 61 项、两个 Fabric 节点各 35 项全部通过。完整 common isolation/check、处理器测试、guardLint、五节点 build 和四项 CI 一致性 gate 均通过；[冻结记录](../architecture-refactor/evidence/2026-10-19-implementation-checks/README.md)保留全部日志与 XML，全量 5,020 次执行、0 failures/errors、271 skipped。实际性能仍未测量，不据测试通过推断提速或原门槛通过。
 
-实现收口后的检查：先运行 focused 预检/语言门禁回归，再运行 `:common:check`（含隔离检查）、`guardLint` 和受影响的五节点构建；最后在最终源码上按原采样器及原门槛统一复验，完整保留首值和失败。此次没有改变任何完成标准。
+接下来在最终源码上按原采样器及原门槛统一复验，完整保留首值和失败。此次没有改变任何完成标准。

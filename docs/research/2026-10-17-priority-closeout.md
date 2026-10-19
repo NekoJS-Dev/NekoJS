@@ -93,3 +93,5 @@
 自动模型后续收口：Fabric 无 ITEM 条目的启动现在也会在其他注册生产者结束后完成一次空 ITEM 阶段，使移除全部自定义物品后的所有权清理可以执行。两个 Fabric 节点均补充完成门控、最后执行和失败保留回归；仍未运行测试、编译或游戏，不修改原性能完成标准。
 
 每阶段分别记录通过、失败和未运行项。发布、最终回滚政策和真实维护者验收不由代理代签；当前总目标仍未完成。
+
+集中检查补记（2026-10-19）：实现收口到 `4dcfe604` 后，定向 131 项、common isolation/check、处理器、guardLint、五节点构建及平台门禁、四项 CI 一致性 gate 均通过；全量 5,020 次执行、0 failures/errors、271 skipped。[原始证据与独立复核](../architecture-refactor/evidence/2026-10-19-implementation-checks/README.md)已冻结，已有两份工作区文件摘要保持。性能工作树复用 `D:/mcmodDemo/NekoJS-perf-606d1fff`，在保留原分支的前提下切到 `codex/perf-final-4dcfe604`；原 sampler 摘要未变。原性能门槛和 Fabric 实机验收仍待证明，不能标为总目标完成。

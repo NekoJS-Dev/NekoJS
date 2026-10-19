@@ -36,4 +36,6 @@
 
 已完成五节点 `compileTestJava` + `guardLint`（exit 0，4m 8s）；补资源栈展开后，两个 Fabric 节点再次 `compileTestJava` + `guardLint`（exit 0，22s），最后收口合法标签/语言 fixture 的相同检查为 exit 0、13s。原始日志有编译器警告，guardLint 零警告。[编译记录与源文件摘要](../architecture-refactor/evidence/2026-10-19-fabric-directory-implementation/README.md)完整保留；没有执行测试或启动游戏。共享及 1.21.1 配方隔离提交为 `3e692eff`。
 
-集中验收仍未运行：两个 Fabric 节点 build/平台门禁、五节点配方 JSON 隔离与注册 receipt 回归、CI 制品检查、初次客户端模型、GLOBAL/WORLD 资源与配方、原版标签/语言资源栈合并、A→B→A、远端授权/拒绝/断线资源撤回、原版 `/reload` 与 F3+T。当前实现尚未按原性能标准复验，最近冻结结果未整体通过，不用本功能编译代替性能复验。
+随后在 `4dcfe604` 完成[集中检查](../architecture-refactor/evidence/2026-10-19-implementation-checks/README.md)：定向 131 项全部执行并通过；完整 common isolation/check、处理器测试、guardLint、五节点 build/平台门禁及四项 CI 一致性 gate 均通过，全量 5,020 次测试执行、0 failures/errors、271 skipped。五节点配方 JSON 隔离、Fabric 注册完成门控及 receipt 回归已执行；没有修改 golden 或放宽门禁。
+
+实机集中验收仍未运行：Mixin 实际应用、初次客户端模型、GLOBAL/WORLD 资源与配方、原版标签/语言实际合并、A→B→A、远端授权/拒绝/断线资源撤回、原版 `/reload` 与 F3+T。当前实现尚未按原性能标准复验，最近冻结结果未整体通过，不用本功能测试通过代替性能复验。
