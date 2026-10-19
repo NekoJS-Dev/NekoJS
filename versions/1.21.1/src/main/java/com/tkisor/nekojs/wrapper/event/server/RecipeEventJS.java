@@ -73,7 +73,9 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     public RecipeEventJS(Map<ResourceLocation, JsonElement> originalJsons, HolderLookup.Provider registries, RecipeTypeDefinitionRegistry recipeTypeDefinitions) {
-        this.jsons = new HashMap<>(originalJsons);
+        this.jsons = new HashMap<>();
+        // Script edits must not mutate the datapack baseline reused by later applications.
+        originalJsons.forEach((id, json) -> this.jsons.put(id, json == null ? null : json.deepCopy()));
         // ids already present in the wrapped datapack JSON map must be treated as taken,
         // otherwise generateRecipeId can silently return an existing recipe id and
         // RecipeJsonBuilder would overwrite that recipe.
