@@ -26,6 +26,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -119,9 +120,14 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
         }
 
         List<RecipeHolder<?>> newHolders = new ArrayList<>();
+        // Keep registry lookup reuse within this decode pass and after the modification hooks.
+        RegistryOps<JsonElement> recipeOps = null;
         for (Map.Entry<Identifier, JsonElement> entry : eventJS.getFinalJsons().entrySet()) {
             try {
-                Recipe<?> recipe = Recipe.CODEC.parse(this.registries.createSerializationContext(JsonOps.INSTANCE), entry.getValue()).getOrThrow(JsonParseException::new);
+                if (recipeOps == null) {
+                    recipeOps = this.registries.createSerializationContext(JsonOps.INSTANCE);
+                }
+                Recipe<?> recipe = Recipe.CODEC.parse(recipeOps, entry.getValue()).getOrThrow(JsonParseException::new);
                 newHolders.add(new RecipeHolder<>(ResourceKey.create(Registries.RECIPE, entry.getKey()), recipe));
             } catch (Exception e) {
                 if (entry.getValue().isJsonObject()) {

@@ -106,9 +106,14 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
         }
 
         List<RecipeHolder<?>> newHolders = new ArrayList<>();
+        // Keep registry lookup reuse within this decode pass and after the modification hooks.
+        RegistryOps<JsonElement> recipeOps = null;
         for (Map.Entry<ResourceLocation, JsonElement> entry : eventJS.getFinalJsons().entrySet()) {
             try {
-                Recipe<?> recipe = Recipe.CODEC.parse(this.registries.createSerializationContext(JsonOps.INSTANCE), entry.getValue())
+                if (recipeOps == null) {
+                    recipeOps = this.registries.createSerializationContext(JsonOps.INSTANCE);
+                }
+                Recipe<?> recipe = Recipe.CODEC.parse(recipeOps, entry.getValue())
                         .getOrThrow(JsonParseException::new);
                 newHolders.add(new RecipeHolder<>(entry.getKey(), recipe));
             } catch (Exception e) {

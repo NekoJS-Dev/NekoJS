@@ -247,22 +247,21 @@ public final class GlobalBindingMemberValidator {
 
         Set<Class<?>> objectClasses = resolveType(access.object(), schema, remap, localTypes);
         if (objectClasses != null && !objectClasses.isEmpty()) {
-            Set<String> knownMembers = new LinkedHashSet<>();
-            List<Class<?>> next = new ArrayList<>();
             boolean anyKnown = false;
             for (Class<?> cls : objectClasses) {
                 JavaMemberIndex.ExposedMembers exposed = JavaMemberIndex.exposedMembersOf(cls);
-                knownMembers.addAll(exposed.methods().keySet());
-                knownMembers.addAll(exposed.propertyGetters().keySet());
-                knownMembers.addAll(exposed.fields().keySet());
                 if (exposed.hasMember(member)) {
                     anyKnown = true;
-                    for (Type type : exposed.propertyTypes(member)) {
-                        next.addAll(JavaMemberIndex.typeClasses(type));
-                    }
                 }
             }
             if (!anyKnown) {
+                Set<String> knownMembers = new LinkedHashSet<>();
+                for (Class<?> cls : objectClasses) {
+                    JavaMemberIndex.ExposedMembers exposed = JavaMemberIndex.exposedMembersOf(cls);
+                    knownMembers.addAll(exposed.methods().keySet());
+                    knownMembers.addAll(exposed.propertyGetters().keySet());
+                    knownMembers.addAll(exposed.fields().keySet());
+                }
                 report(file, source, reported, access.start(), member.length(),
                         "Type chain: no member '" + member + "' on " + classNames(objectClasses)
                                 + suggestion(knownMembers, member), "chain-member " + member, view);

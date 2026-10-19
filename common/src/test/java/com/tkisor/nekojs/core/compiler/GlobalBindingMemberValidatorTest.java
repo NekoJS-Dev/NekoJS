@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -127,6 +128,22 @@ class GlobalBindingMemberValidatorTest {
                 "Item.of('minecraft:stone').withCount(3).getId()\r\n");
 
         assertTrue(reported.isEmpty(), "legit chains must not be reported: " + reported);
+    }
+
+    @Test
+    void unionMembersAcceptEitherTypeAndKeepSuggestionsFromBothTypes() {
+        view = new ScriptBindingSchema.View(Map.of("Union", new ScriptBindingSchema.BindingMembers(
+                Set.of(), Set.of(TestStackJS.class, UtilsJS.class))), Set.of("console"));
+
+        validate(file("union-valid"), "Union.withCount(3); Union.serverTell('hi'); Union.id;");
+        assertTrue(reported.isEmpty(), "a member on either possible type must remain valid: " + reported);
+
+        validate(file("union-typos"), "Union.withCont(3); Union.serverTel('hi');");
+        assertEquals(2, reported.size());
+        assertTrue(reported.stream().anyMatch(message -> message.contains("Did you mean 'withCount'?")),
+                "the suggestion must include the stack members: " + reported);
+        assertTrue(reported.stream().anyMatch(message -> message.contains("Did you mean 'serverTell'?")),
+                "the suggestion must include the helper members: " + reported);
     }
 
     @Test
