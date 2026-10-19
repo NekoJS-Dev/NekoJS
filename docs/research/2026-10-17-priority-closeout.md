@@ -62,6 +62,8 @@
 
 该实现提交 `46505ad2` 随后通过[集中检查](../architecture-refactor/evidence/2026-10-19-redundant-work-checks/README.md)：定向 89 项、全量 5,021 次执行，0 failures/errors、271 skipped；common 隔离、处理器、guardLint、五节点 build 与四项 CI gate 均 PASS。游戏与新正式性能尚未运行，原门槛保持。
 
+**最新正式结果为 `46505ad2`：重载 335.6 / 318.2 ms，均 FAIL；启动 36738.6 ms，PASS。** [全部原始样本与实际 JAR](../architecture-refactor/evidence/2026-10-19-redundant-work-performance/README.md)已冻结；17 行有效、九次正常停服。默认系统策略、首值、sampler、world 路径及原门槛保持，没有跨会话单因果结论；继续定位实际重复工作，性能目标未完成。
+
 ## 2. 脚本包最终验收（世界切换与签名实机通过，整体接受未完成）
 
 复用 [A–E 交付与五节点证据](2026-10-14-script-pack-final-verification.md)，补齐多包独立 Context 的内存成本、重复重载的资源释放、客户端双世界切换、签名同步实机验证。自动化、实际客户端观察与维护者结论分别记录；缺少人工结论时不代签。

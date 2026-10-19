@@ -26,4 +26,6 @@
 
 随后固定在 `46505ad2` 集中检查：定向 89 项全部执行并通过，完整 common isolation/check、处理器、五节点 build/平台门禁和四项 CI 一致性 gate 全部通过；全量 5,021 次执行、0 failures/errors、271 skipped。原始证据与独立复核见[集中检查](../architecture-refactor/evidence/2026-10-19-redundant-work-checks/README.md)。这仍不是实际 codec 或正式性能通过。
 
+其后按原 sampler 完成[正式复验](../architecture-refactor/evidence/2026-10-19-redundant-work-performance/README.md)：重载 335.6 / 318.2 ms，均 FAIL；启动 36738.6 ms，PASS。17 行有效、九会话正常停服。未单独量化两项源码修改的收益，不能把不同会话分数变化归为单一源码因果；没有为择优成绩重复正式组。
+
 后续集中验证先覆盖成员与组合预检、配方 JSON 隔离/生命周期，完成 common isolation/check 和受影响五节点检查，再将最终源码绑定到原两组重载及启动复验。实际 Mixin/codec 及 Fabric 客户端资源验收仍需游戏证据；没有合适的普通 JUnit 接缝来证明注入后的完整配方循环，本阶段未增加只匹配新实现文字的测试。
