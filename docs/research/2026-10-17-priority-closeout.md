@@ -72,6 +72,8 @@
 
 实现继续收口到[预检固定正则生命周期](2026-10-20-preflight-fixed-patterns.md)：八个固定 Pattern 原样复用，各 Matcher 与校验状态仍独立。入口预检的清错后重报、prepared 命中边界及转译阶段不同，故没有直接删除入口预检或用未批准字符串替代准备读取。本阶段仍未运行新验证，原正式 FAIL 保留。
 
+上述两项在 `26844b7e` 完成一次[集中检查](../architecture-refactor/evidence/2026-10-20-binding-preflight-checks/README.md)：定向 121 项、完整 common 2392 项（0 failures/errors、4 skipped）、common isolation 和五节点运行产物 gate 通过。组件诊断 45 组与绑定安装 100 次等价，固定正则六源码平均省 0.0604 ms / 分配降 14.76%，Context 批次配对中位省 0.1969 ms。收益较小，没有新正式 cohort，不将组件通过改写为性能完成；后续优先处理有具体依据的实现，避免反复运行整轮以取更好成绩。
+
 ## 2. 脚本包最终验收（世界切换与签名实机通过，整体接受未完成）
 
 复用 [A–E 交付与五节点证据](2026-10-14-script-pack-final-verification.md)，补齐多包独立 Context 的内存成本、重复重载的资源释放、客户端双世界切换、签名同步实机验证。自动化、实际客户端观察与维护者结论分别记录；缺少人工结论时不代签。

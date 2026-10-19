@@ -1,0 +1,58 @@
+{
+  "revision": "26844b7e65a6e71f7623af631192b03bbd5543b4",
+  "archiveSha256": "c071693689ce2af6f5523b2b26a290c9e6060c81cfb4b7c12ea5a3e545b3d66b",
+  "archiveBytes": 430972,
+  "entries": 361,
+  "components": {
+    "regex": {
+      "means": {
+        "before": {
+          "wallNs": 1288540.3333333333,
+          "cpuNs": 1276041.6666666667,
+          "allocatedBytes": 620440.2533333333
+        },
+        "after": {
+          "wallNs": 1228140.3333333333,
+          "cpuNs": 1223958.3333333333,
+          "allocatedBytes": 528880.4666666667
+        }
+      },
+      "pairedWallWins": 23,
+      "pairs": 30,
+      "wallSavedNs": 60400.0,
+      "pairedMedianSavedNs": 43100.0
+    },
+    "binding": {
+      "means": {
+        "before": {
+          "wallNs": 3343586.6666666665,
+          "cpuNs": 2604166.6666666665,
+          "allocatedBytes": 704877.6
+        },
+        "after": {
+          "wallNs": 2412953.3333333335,
+          "cpuNs": 2604166.6666666665,
+          "allocatedBytes": 704886.4
+        }
+      },
+      "pairedWallWins": 19,
+      "pairs": 30,
+      "wallSavedNs": 930633.333333333,
+      "pairedMedianSavedNs": 196900.0
+    }
+  },
+  "counts": {
+    "focused-xml": {
+      "tests": 121,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "full-common-xml": {
+      "tests": 2392,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 4
+    }
+  }
+}

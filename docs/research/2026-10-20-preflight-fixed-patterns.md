@@ -23,3 +23,5 @@ Pattern 只保存固定规则，由 JVM 类初始化安全发布；Matcher 与�
 遵循用户先完成实现的要求，本阶段没有运行测试、编译、游戏或新性能测量；完成源码、调用方与 diff 人工检查，git diff --check 通过。当前正式结论仍是 24d35a5d 的重载 289.4 / 338.0 ms 均 FAIL、启动 36661.0 ms PASS。
 
 已有 GlobalBindingMemberValidatorTest 的 importAndCatchAndGlobalsAreNotFlagged、namedFunctionDeclarationAndCallAreNotFlagged 覆盖 import/标识符提取/普通 catch 和 function 声明；class、解构、for-of/in 及 catch 可选捕获组非空分支缺少明确独立用例。本次是固定规则生命周期调整，没有补只检查字段或表达式文字的测试。集中验证须覆盖既有成员/组合预检、当前 schema 变化及绑定安装四项新回归，再进行固定语料的前后对照；原正式采样器和门槛保持，不能以本组件通过代替总体性能通过。
+
+集中检查补记：`26844b7e` 的定向 121 项、完整 common 2392 项（0 failures/errors、4 skipped）和五节点运行产物 gate 均通过。[固定语料组件对照](../architecture-refactor/evidence/2026-10-20-binding-preflight-checks/README.md)中 45 组诊断相等，覆盖额外 class、解构、for-of/in 等输入；这属于对照证据，没有冒充新增永久回归。六份源码均值省约 0.0604 ms，线程分配下降约 14.76%。收益小，不证明原门槛通过；本轮未运行游戏或正式性能组。
