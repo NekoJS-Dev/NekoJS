@@ -62,9 +62,11 @@
 
 该实现提交 `46505ad2` 随后通过[集中检查](../architecture-refactor/evidence/2026-10-19-redundant-work-checks/README.md)：定向 89 项、全量 5,021 次执行，0 failures/errors、271 skipped；common 隔离、处理器、guardLint、五节点 build 与四项 CI gate 均 PASS。游戏与新正式性能尚未运行，原门槛保持。
 
-**最新正式结果为 `46505ad2`：重载 335.6 / 318.2 ms，均 FAIL；启动 36738.6 ms，PASS。** [全部原始样本与实际 JAR](../architecture-refactor/evidence/2026-10-19-redundant-work-performance/README.md)已冻结；17 行有效、九次正常停服。默认系统策略、首值、sampler、world 路径及原门槛保持，没有跨会话单因果结论；继续定位实际重复工作，性能目标未完成。
+**上轮正式结果为 `46505ad2`：重载 335.6 / 318.2 ms，均 FAIL；启动 36738.6 ms，PASS。** [全部原始样本与实际 JAR](../architecture-refactor/evidence/2026-10-19-redundant-work-performance/README.md)已冻结；17 行有效、九次正常停服。默认系统策略、首值、sampler、world 路径及原门槛保持，没有跨会话单因果结论；继续定位实际重复工作，性能目标未完成。
 
 2026-10-20 已保存[成功 AST 复用否决证据](../architecture-refactor/evidence/2026-10-20-syntax-reuse-decision/README.md)及[当前完整命令阶段诊断](../architecture-refactor/evidence/2026-10-20-current-reload-stages/README.md)：root / 配方 / 命令分别约 102.44 / 48.26 / 152.20 ms，20 次 COMMIT、正常停服、生产类与 JAR 精确还原，正式 FAIL 不变。只读复查未找到可安全删除的高收益路径复验，转而落实[源码映射的紧凑段存储](2026-10-20-source-map-storage.md)，去除逐段对象分配并补兼容回归；先完成实现，尚未编译、测试或测量新源码。
+
+紧凑映射存储 `24d35a5d` 已完成[集中检查与组件对照](../architecture-refactor/evidence/2026-10-20-source-map-storage-checks/README.md)，全量 5,024 次执行、0 failures/errors、271 skipped；映射可观测行为一致，组件分配下降约 49.4%，六源码墙钟只节省约 0.063 ms。**最新原标准正式重载为 289.4 / 338.0 ms，均 FAIL；启动 36661.0 ms，PASS。** [17 行原样本与实际 JAR](../architecture-refactor/evidence/2026-10-20-source-map-storage-performance/README.md)全部保留，九会话正常停服，没有改门槛或择优重跑。性能目标仍未完成。
 
 ## 2. 脚本包最终验收（世界切换与签名实机通过，整体接受未完成）
 
