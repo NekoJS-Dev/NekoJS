@@ -74,11 +74,15 @@
 
 2026-10-18 补齐 #61 原提案中的精确 `interface Visitor` 箭头函数属性语料；focused 73 tests 通过，完整 common:check 为 2376 tests、0 failures/errors、4 skipped，隔离检查通过。[冻结证据](../architecture-refactor/evidence/2026-10-18-community61-interface/README.md)绑定提交 `4181b6ed`。该本地差距已消除；上段外部状态为 10-17 快照，没有发评论、改标签、关闭事项或创建 PR。
 
-## 4. Fabric 目录包资源桥（待进行）
+2026-10-19 已[刷新社区元数据](2026-10-19-community-snapshot.json)：五项仍开放，三个 PR 的目标和 head SHA 未变，没有外部写操作。原提案的 master 合入、#63 合同/集成与维护者接受仍需单独收尾。
+
+## 4. Fabric 目录包资源桥（实现已提交，待集中验收）
 
 为 Fabric 目录脚本包挂载资源，并接入已有自动物品模型生成，使 `parentModel`、`texture` 能通过实际资源加载生效。先调查现有资源所有权、生命周期和节点 API，再实现共享机制及必要节点适配；目录包不冒充已有 MOD JAR 挂载证据。
 
 完成条件：受影响 Fabric 节点构建及运行验证通过，资源覆盖顺序、重载和卸载行为明确，自动生成模型有实际客户端资源证据。
+
+2026-10-19 按用户“先完成任务，不要着急测试”先落实[目录资源与自动模型实现](2026-10-19-fabric-directory-resource-bridge.md)，实现提交 `6bbd6663`：独立 `nekojs:directory` 组、原版资源栈展开、GLOBAL/WORLD 绑定、仅客户端的授权 SERVER_CACHE、换包后异步刷新、WORLD 生命周期及首次配方补应用。自动模型复用注册成功 receipt 与所有权生成器；配方 baseline 别名隔离已提交 `3e692eff`，此前“未实现”属于上文调查阶段状态。五节点编译及最后两个 Fabric 重编通过，guardLint 零警告；未执行新测试、游戏、制品或性能复验。此阶段没有改变第 1 项性能完成标准，也不能代替本节的实际客户端验收。
 
 ## 验收边界
 
