@@ -73,8 +73,10 @@ public final class FabricRegistryAdapter {
                 .thenComparing(key -> key.identifier().toString());
         while (true) {
             java.util.Set<ResourceKey<? extends Registry<?>>> pending = current.snapshotUndrainedRegistries();
-            if (pending.isEmpty()) return;
-            ResourceKey<? extends Registry<?>> next = pending.stream().min(order).orElseThrow();
+            if (pending.isEmpty() && current.itemRegistrationComplete()) return;
+            // Even an empty ITEM pass must finish before stale owned assets can be removed.
+            ResourceKey<? extends Registry<?>> next = pending.isEmpty()
+                    ? Registries.ITEM : pending.stream().min(order).orElseThrow();
             if (!visited.add(next)) {
                 throw new IllegalStateException("[NEKO-4028] Registry pass did not drain its pending content: "
                         + next.identifier());

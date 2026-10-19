@@ -134,12 +134,41 @@ class FabricRegistryDrainBehaviorTest {
     }
 
     @Test
-    void emptyBatchDoesNotInvokeAnyRegistryPass() {
+    void emptyBatchCompletesItemRegistrationSoOwnedAssetsCanBeReconciled() {
         Batch batch = new Batch();
+        assertFalse(batch.runtime.itemRegistrationComplete());
         batch.drain();
-        assertTrue(batch.passes.isEmpty());
+        assertEquals(List.of(Registries.ITEM), batch.passes);
         assertTrue(batch.delivered.isEmpty());
+        assertTrue(batch.runtime.itemRegistrationComplete());
+        assertTrue(batch.runtime.itemAssetDefinitions().isEmpty());
         assertTrue(batch.runtime.isFullyDrained());
+    }
+
+    @Test
+    void nonItemOnlyBatchFinishesWithOneEmptyItemPass() {
+        Batch batch = new Batch();
+        batch.add(Registries.ENTITY_TYPE, "entity_without_item", false);
+        batch.drain();
+        assertEquals(List.of(Registries.ENTITY_TYPE, Registries.ITEM), batch.passes);
+        assertTrue(batch.itemIds().isEmpty());
+        assertTrue(batch.runtime.itemRegistrationComplete());
+        assertTrue(batch.errors.isEmpty());
+        batch.drain();
+        assertEquals(List.of(Registries.ENTITY_TYPE, Registries.ITEM), batch.passes);
+    }
+
+    @Test
+    void failedEmptyItemPassDoesNotPublishCompletion() {
+        Batch batch = new Batch();
+        IllegalArgumentException expected = new IllegalArgumentException("empty item pass fixture failure");
+        IllegalArgumentException actual = assertThrows(IllegalArgumentException.class,
+                () -> FabricRegistryAdapter.drainPendingRegistries(batch.runtime, registry -> {
+                    assertEquals(Registries.ITEM, registry);
+                    throw expected;
+                }));
+        assertSame(expected, actual);
+        assertFalse(batch.runtime.itemRegistrationComplete());
     }
 
     @Test
@@ -156,7 +185,7 @@ class FabricRegistryDrainBehaviorTest {
                 throw new IllegalStateException("unknown fixture registry");
             }).errors());
         });
-        assertEquals(1, passes.get());
+        assertEquals(2, passes.get());
         assertEquals(1, errors.size());
         assertEquals("platform-register", errors.get(0).source());
         assertEquals(unknown, errors.get(0).registry());
