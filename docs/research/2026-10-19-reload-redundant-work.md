@@ -29,4 +29,6 @@
 
 其后按原 sampler 完成[正式复验](../architecture-refactor/evidence/2026-10-19-redundant-work-performance/README.md)：重载 335.6 / 318.2 ms，均 FAIL；启动 36738.6 ms，PASS。17 行有效、九会话正常停服。未单独量化两项源码修改的收益，不能把不同会话分数变化归为单一源码因果；没有为择优成绩重复正式组。
 
+2026-10-20 补当前源码[完整命令阶段诊断](../architecture-refactor/evidence/2026-10-20-current-reload-stages/README.md)：20 对交替重载/简单查询全部保留，root 102.43654 ms、配方 48.25974 ms、命令 152.19757 ms；RCON 249.32855 ms，查询 94.362455 ms。root 栈中多次出现 Windows 路径规范化，但采样次数不是毫秒数，只据此调查同一操作内的重复计算。正常停服、源码和 1,627 个类及整个 JAR 完整还原；插桩诊断不改判原正式 FAIL。
+
 后续集中验证先覆盖成员与组合预检、配方 JSON 隔离/生命周期，完成 common isolation/check 和受影响五节点检查，再将最终源码绑定到原两组重载及启动复验。实际 Mixin/codec 及 Fabric 客户端资源验收仍需游戏证据；没有合适的普通 JUnit 接缝来证明注入后的完整配方循环，本阶段未增加只匹配新实现文字的测试。
