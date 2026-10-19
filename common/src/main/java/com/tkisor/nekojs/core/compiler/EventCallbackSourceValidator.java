@@ -29,13 +29,18 @@ public final class EventCallbackSourceValidator {
     private EventCallbackSourceValidator() {}
 
     public static void validate(Path file, String source, ScriptBindingSchema.View view) {
+        validate(file, source, view, new ScriptSourcePreflight.ParsedSource(source));
+    }
+
+    static void validate(Path file, String source, ScriptBindingSchema.View view,
+                         ScriptSourcePreflight.ParsedSource parsed) {
         if (file == null || source == null || source.isEmpty()) return;
         Map<String, ScriptBindingSchema.BindingMembers> schema = ScriptBindingSchema.schemaForPath(file, view);
         if (schema.isEmpty()) return;
 
         ValNode.Block ast;
         try {
-            ast = ValParser.parse(source);
+            ast = parsed.ast();
         } catch (Throwable e) {
             // ValParser 是简化解析器：脚本含其不支持的语法时无法静态检查。
             // 不静默——至少记一条日志，让用户知道该文件没有获得 preflight 保护。

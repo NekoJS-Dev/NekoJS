@@ -8,8 +8,7 @@ import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.NekoScriptLanguage;
 import com.tkisor.nekojs.core.compiler.ScriptCompileResult;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.compiler.EventCallbackSourceValidator;
-import com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator;
+import com.tkisor.nekojs.core.compiler.ScriptSourcePreflight;
 import com.tkisor.nekojs.core.compiler.NekoCompileException;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoJavaScriptLanguagePlugin;
@@ -138,8 +137,7 @@ public final class NekoModulePipeline {
         // JS（# 注释、类型注解、def/class 会被 JS-only 的 ValParser 碎成伪调用 → 'Unknown
         // identifier' 系统性误报），改为在编译后对产物 JS 跑——那才是运行时真正执行的代码。
         if (config.scriptMemberValidation() && rawPreflightApplies(extension)) {
-            GlobalBindingMemberValidator.validate(file, rawSource, schemaView);
-            EventCallbackSourceValidator.validate(file, rawSource, schemaView);
+            ScriptSourcePreflight.validate(file, rawSource, schemaView);
         }
         // Only transformation is reusable. Authorization and current-schema checks remain live.
         NekoPreparedModule prepared = transforms == null
@@ -147,8 +145,7 @@ public final class NekoModulePipeline {
                 : transforms.prepare(file, rawSource, binding,
                         () -> prepareModule(file, rawSource, extension, binding));
         if (config.scriptMemberValidation() && !rawPreflightApplies(extension)) {
-            GlobalBindingMemberValidator.validate(file, prepared.code(), schemaView);
-            EventCallbackSourceValidator.validate(file, prepared.code(), schemaView);
+            ScriptSourcePreflight.validate(file, prepared.code(), schemaView);
         }
         ensureBindingCurrent(file, binding);
         return prepared;

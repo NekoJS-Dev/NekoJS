@@ -46,13 +46,18 @@ public final class GlobalBindingMemberValidator {
     private GlobalBindingMemberValidator() {}
 
     public static void validate(Path file, String source, ScriptBindingSchema.View view) {
+        validate(file, source, view, new ScriptSourcePreflight.ParsedSource(source));
+    }
+
+    static void validate(Path file, String source, ScriptBindingSchema.View view,
+                         ScriptSourcePreflight.ParsedSource parsed) {
         if (file == null || source == null || source.isEmpty()) return;
         Map<String, ScriptBindingSchema.BindingMembers> schema = ScriptBindingSchema.schemaForPath(file, view);
         if (schema.isEmpty()) return;
 
         ValNode.Block ast;
         try {
-            ast = ValParser.parse(source);
+            ast = parsed.ast();
         } catch (Throwable e) {
             // 与 EventCallbackSourceValidator 一致：不静默跳过，记日志提示该文件未获 preflight 保护
             com.tkisor.nekojs.NekoJS.LOGGER.warn(
