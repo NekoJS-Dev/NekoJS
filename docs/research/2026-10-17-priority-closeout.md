@@ -60,6 +60,8 @@
 
 性能后续实现：已落实[合法成员访问不提前构建拼写候选、配方最终解码批次复用局部 RegistryOps](2026-10-19-reload-redundant-work.md)，保留完整校验和逐条 codec。新增联合类型/建议回归；本阶段仅完成源码与 diff 复查，尚未运行测试、构建、游戏或新正式组，不能改变上文 `4dcfe604` 的 FAIL。没有采用收益仅约 0.0126 ms / 五文件的属性查询合并候选。
 
+该实现提交 `46505ad2` 随后通过[集中检查](../architecture-refactor/evidence/2026-10-19-redundant-work-checks/README.md)：定向 89 项、全量 5,021 次执行，0 failures/errors、271 skipped；common 隔离、处理器、guardLint、五节点 build 与四项 CI gate 均 PASS。游戏与新正式性能尚未运行，原门槛保持。
+
 ## 2. 脚本包最终验收（世界切换与签名实机通过，整体接受未完成）
 
 复用 [A–E 交付与五节点证据](2026-10-14-script-pack-final-verification.md)，补齐多包独立 Context 的内存成本、重复重载的资源释放、客户端双世界切换、签名同步实机验证。自动化、实际客户端观察与维护者结论分别记录；缺少人工结论时不代签。

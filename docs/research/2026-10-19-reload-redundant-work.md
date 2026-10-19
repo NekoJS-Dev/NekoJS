@@ -24,4 +24,6 @@
 
 本次实现及新回归尚未运行测试、构建、游戏或正式采样；仅人工复查受影响调用与双节点实现、执行 `git diff --check`。此前五节点检查与正式失败结果绑定旧源码，不能代替新源码的验证。上述两个改动的实际总耗时收益尚未测量，性能目标仍未完成。
 
+随后固定在 `46505ad2` 集中检查：定向 89 项全部执行并通过，完整 common isolation/check、处理器、五节点 build/平台门禁和四项 CI 一致性 gate 全部通过；全量 5,021 次执行、0 failures/errors、271 skipped。原始证据与独立复核见[集中检查](../architecture-refactor/evidence/2026-10-19-redundant-work-checks/README.md)。这仍不是实际 codec 或正式性能通过。
+
 后续集中验证先覆盖成员与组合预检、配方 JSON 隔离/生命周期，完成 common isolation/check 和受影响五节点检查，再将最终源码绑定到原两组重载及启动复验。实际 Mixin/codec 及 Fabric 客户端资源验收仍需游戏证据；没有合适的普通 JUnit 接缝来证明注入后的完整配方循环，本阶段未增加只匹配新实现文字的测试。
