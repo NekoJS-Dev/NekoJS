@@ -145,6 +145,8 @@ public final class FabricServerEventBindings {
         });
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
             currentServer = server;
+            com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().activateWorldPacks(
+                    server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT));
             loadServerScripts.run();
             ABOUT_TO_START.post(new ServerLifecycleEventJS(server));
             // 与 NeoForge 侧 ServerEventListener#onServerAboutToStart 同位次：
@@ -159,9 +161,22 @@ public final class FabricServerEventBindings {
             }
             STARTING.post(new ServerLifecycleEventJS(server));
         });
-        bridge.bind(STARTED,
-                listener -> ServerLifecycleEvents.SERVER_STARTED.register(server ->
-                        listener.accept(new ServerLifecycleEventJS(server))));
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            // WorldLoader binds initial recipe resources before the runtime WORLD scripts activate.
+            // Replay with the installed registries and player list before announcing script startup.
+            if (!com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().worldPacks().isEmpty()
+                    && server.getRecipeManager() instanceof com.tkisor.nekojs.api.recipe.IRecipeManagerExtension recipes) {
+                try {
+                    recipes.nekojs$applyScripts();
+                } catch (Exception failure) {
+                    com.tkisor.nekojs.NekoJS.LOGGER.error("[NEKO-1017] WORLD recipe replay failed after server startup", failure);
+                    var root = rootSupplier.get();
+                    if (root != null) root.errorTracker().recordCallbackError(
+                            com.tkisor.nekojs.api.ScriptType.SERVER, "world_pack_recipes", failure);
+                }
+            }
+            STARTED.post(new ServerLifecycleEventJS(server));
+        });
         bridge.bind(STOPPING,
                 listener -> ServerLifecycleEvents.SERVER_STOPPING.register(server ->
                         listener.accept(new ServerLifecycleEventJS(server))));
@@ -179,6 +194,18 @@ public final class FabricServerEventBindings {
                 }
             }
             STOPPED.post(new ServerLifecycleEventJS(server));
+            var removed = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().deactivateWorldPacks();
+            if (root != null) {
+                root.clearWorldPackListeners(com.tkisor.nekojs.api.ScriptType.SERVER, removed);
+                if (com.tkisor.nekojs.platform.Platform.isClient()) {
+                    com.tkisor.nekojs.fabric.FabricClientReloadExecutor.execute(() -> {
+                        // A delayed teardown must not revoke the next world's client generation.
+                        if (com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().worldPacks().isEmpty()) {
+                            root.clearWorldPackListeners(com.tkisor.nekojs.api.ScriptType.CLIENT, removed);
+                        }
+                    });
+                }
+            }
         });
         bridge.bindTransformed(
                 TICK_PRE,

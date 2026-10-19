@@ -14,28 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Fabric WORLD status fixture for ticket 19 AC6 (pure file reads, runs on every node): pins
- * Fabric's current "WORLD packs are never activated" behavior and its external surface, as
- * the factual input for partial/unavailable capability evidence — no fabricated parity, and
- * no change to local pack paths or defaults (this test is read-only).
- *
- * <p>Current behavior chain (2026-09-22, mult@7768e02d):
- *
- * <ul>
- *   <li>Activation: the only WORLD pack activation entry is the NeoForge-side {@code
- *       ServerEventListener#onServerAboutToStart}; the fabric raw root (including the
- *       SERVER_STARTING/STOPPED wiring in {@code FabricServerEventBindings}) never touches
- *       {@code ScriptPackRegistry}'s world batch.</li>
- *   <li>Listing: the fabric {@code /nekojs packs} empty-result message claims it looked in
- *       {@code <world>/nekojs_packs/}, but that directory is never scanned on fabric
- *       (worldPacks is always empty) — a known message/behavior mismatch, kept and recorded
- *       per ticket 19's scope, not fixed here.</li>
- *   <li>Distribution: the gather reads only the registry (GLOBAL → WORLD → SERVER_CACHE);
- *       on fabric the WORLD batch is always empty, so a fabric server can only distribute
- *       GLOBAL packs.</li>
- * </ul>
- */
+/** Source wiring checks; resource behavior and native lifecycle acceptance have separate coverage. */
 class FabricWorldPackStatusTest {
 
     private static Path repoRoot() {
@@ -79,30 +58,18 @@ class FabricWorldPackStatusTest {
         }
     }
 
-    /** All code lines of the fabric raw root (javadoc/comments stripped). */
-    private static String fabricCodeLines() {
-        StringBuilder out = new StringBuilder();
-        for (Path file : javaFiles(repoRoot().resolve("src/fabric/java"))) {
-            out.append(codeLinesOnly(read(file)));
-        }
-        return out.toString();
+    @Test
+    void fabricActivatesBeforeLoadingServerScriptsAndRevokesOnStop() {
+        String lifecycle = codeLinesOnly(read(repoRoot().resolve(
+                "src/fabric/java/com/tkisor/nekojs/fabric/event/FabricServerEventBindings.java")));
+        int activation = lifecycle.indexOf("activateWorldPacks(");
+        assertTrue(activation >= 0 && activation < lifecycle.indexOf("loadServerScripts.run()"));
+        assertTrue(lifecycle.contains("deactivateWorldPacks()"));
+        assertTrue(lifecycle.contains("root.clearWorldPackListeners("));
     }
 
     @Test
-    void fabricNeverActivatesOrDeactivatesWorldPacks() {
-        String fabric = fabricCodeLines();
-        assertFalse(fabric.contains("activateWorldPacks("),
-                "fabric must not activate WORLD packs (current behavior: activation is unavailable)");
-        assertFalse(fabric.contains("deactivateWorldPacks("),
-                "fabric must not deactivate WORLD packs (the batch never exists there)");
-        assertFalse(fabric.contains("WORLD_PACKS_DIR"),
-                "fabric must not scan the world pack directory directly");
-    }
-
-    @Test
-    void worldPackActivationExistsOnlyInTheNeoforgeServerLifecycle() {
-        // activateWorldPacks call sites in main sources may exist only in the two NeoForge
-        // ServerEventListeners (shared tree + 1.21.1 twin) — no second activation route on fabric
+    void worldDiscoveryIsLimitedToLifecycleAndRepositoryPreview() {
         List<Path> roots = List.of(
                 repoRoot().resolve("src/main/java"),
                 repoRoot().resolve("src/fabric/java"),
@@ -116,10 +83,12 @@ class FabricWorldPackStatusTest {
             }
         }
         assertEquals(List.of(
+                        "com/tkisor/nekojs/fabric/event/FabricServerEventBindings.java",
+                        "com/tkisor/nekojs/fabric/resource/FabricDirectoryPackSource.java",
                         "com/tkisor/nekojs/listener/ServerEventListener.java",
                         "com/tkisor/nekojs/listener/ServerEventListener.java"),
                 callers.stream().sorted().toList(),
-                "WORLD pack activation must stay a NeoForge-only lifecycle route");
+                "preview discovery must not introduce another script activation route");
     }
 
     @Test
@@ -132,7 +101,7 @@ class FabricWorldPackStatusTest {
     }
 
     @Test
-    void sharedGatherReadsOnlyTheRegistrySoFabricDistributionIsGlobalOnly() {
+    void sharedGatherReadsActivatedSourcesWithoutScanningSaves() {
         String gather = codeLinesOnly(
                 read(repoRoot().resolve("common/src/main/java/com/tkisor/nekojs/core/pack/sync/PackSyncServer.java")));
         assertTrue(gather.contains("ScriptPackRegistry.get().enabledPacks()"),

@@ -92,7 +92,11 @@ STARTUP 内容变更需要重启。旧单文件重跑继续采用 active Context
 
 JAR 是依赖 NekoJS 的内容模组。模组 ID 等于包 ID，要求 2–48 个小写字母、数字或下划线，且以字母开头，不能占用 runtime ID。目标支持 NeoForge 1.21.1/26.1.2/26.2 和 Fabric 26.1.2/26.2，`26.2` 是 Minecraft 版本字符串。需要安装含本功能的 NekoJS 及其依赖；没有 Forge 目标。
 
-将 JAR 放入对应侧 `mods/`，loader 发现的内容进入 MOD 来源；不直接扫描未知 JAR，也不把 JS 编译为独立 Java 模组。JAR 根的 `assets/data` 由原生 loader 资源机制处理。MOD 来源不加入现有 GLOBAL/WORLD 同步协议，需要在要求运行的一侧部署。目录包在 Fabric 上的自动资源挂载桥不属于此功能。
+将 JAR 放入对应侧 `mods/`，loader 发现的内容进入 MOD 来源；不直接扫描未知 JAR，也不把 JS 编译为独立 Java 模组。JAR 根的 `assets/data` 由原生 loader 资源机制处理。MOD 来源不加入现有 GLOBAL/WORLD 同步协议，需要在要求运行的一侧部署。
+
+Fabric 26.1.2/26.2 将目录资源合成为一个必选 NekoJS 资源包（`nekojs:directory`，与原生模组资源包分开）。后者覆盖前者：`nekojs/assets` 或 `nekojs/data` → 按 id 排序的 GLOBAL 包 → 按 id 排序的 WORLD 包 → 已授权 SERVER_CACHE 包（仅客户端 assets）。禁用包、清单环境或依赖检查阻止的包不提供资源；不重复挂载 MOD 的物化副本。服务端仓库在首次数据加载前发现对应存档的 WORLD data，预览存档不会激活脚本。WORLD 脚本随服务器启动激活、停止撤销；客户端 WORLD assets 只在连接对应单人服务器期间可见。
+
+标签、语言等读取资源栈的消费者仍能看到各个目录层，并按原版规则合并。目录 data 改动使用原版 `/reload`，客户端资源改动使用 F3+T。远端包接受或本地连接变化会在后续客户端 tick 请求资源重载，避开脚本同步的等待锁。原版资源加载有独立的成功/失败边界，脚本 generation 接受不代表原版模型解析成功。`parentModel` 和 `texture` 沿用 NeoForge 的注册成功后发布及文件所有权规则。
 
 游戏内也支持 `/nekojs packs validate <selector>`、`archive <selector>`、`jar <loader> <minecraft> <selector>`；输出写到游戏的 `nekojs/exports/`，已有制品不会覆盖。CLI 可安装归档，游戏内不提供从任意路径安装的命令。
 

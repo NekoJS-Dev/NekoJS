@@ -93,7 +93,7 @@ RegistryEvents.register(event => {
 
 组件值必须符合当前节点 Minecraft codec 的 JSON 格式，仅接受普通对象、数组、基本值；拒绝函数和任意 Java 对象。26.x 在原版组件初始化阶段使用注册表上下文解码，错误值或引用使该阶段失败；禁止覆盖原版 `item_name`、`item_model` 身份组件。1.21.1 在构建物品时使用普通 JsonOps 解码，依赖注册表上下文的 codec 不受通用 JSON 入口支持，会明确报错；歌曲便捷属性使用原版 ResourceKey 实现。未知/不可序列化组件及非法耐久与堆叠组合均失败；此 API 不注册新组件类型。
 
-自动资源目前仅支持 **NeoForge**。Fabric 对带自动资源配置的条目报 `NEKO-4037` 并拒绝注册，组件及歌曲/材料能力仍可用。未配置模型或纹理的物品不生成文件。省略父模型时采用 `minecraft:item/generated`，省略纹理时采用 `layer0: '<命名空间>:item/<路径>'`；PNG 由作者提供。资源值使用不带扩展名的 id，省略命名空间表示 minecraft。
+自动物品资源支持 NeoForge 和 Fabric。Fabric 目录资源桥在客户端首次枚举资源前及资源重载时生成已注册物品的资源；只有原生注册成功后才发布文件，所有权检查会保留用户修改的文件。未配置模型或纹理的物品不生成文件。省略父模型时采用 `minecraft:item/generated`，省略纹理时采用 `layer0: '<命名空间>:item/<路径>'`；PNG 由作者提供。资源值使用不带扩展名的 id，省略命名空间表示 minecraft。
 
 NeoForge 1.21.1 写入 `assets/<命名空间>/models/item/<路径>.json`；26.x 额外写入 `assets/<命名空间>/items/<路径>.json` 并引用前者。首次加载和重载均在资源枚举前生成。现有 `Assets.itemModel` 仍只写模型文件，1.21.1 仍不提供 Assets Binding。
 

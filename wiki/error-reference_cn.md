@@ -101,7 +101,7 @@
 | `NEKO-4034` | item component, model, texture or identifier configuration rejected | 物品组件、模型、纹理或标识符配置被拒绝 |
 | `NEKO-4035` | item definition modification rejected after startup collection | STARTUP 收集后物品定义已冻结，修改被拒绝 |
 | `NEKO-4036` | item component type or codec value rejected with item, component and node context | 物品组件类型或 codec 值被拒绝，消息包含物品、组件与节点上下文 |
-| `NEKO-4037` | automatic item assets are unavailable on Fabric; registration rejected before supplier execution | Fabric 不支持自动物品资源，supplier 执行前拒绝注册 |
+| `NEKO-4037` | Retired: Fabric automatic item resources now use the directory resource bridge. | 已停用：Fabric 自动物品资源已接入目录资源桥。 |
 | `NEKO-4038` | Probe predeclaration failed; the selected class is omitted from generated TypeScript | Probe 预声明失败，选定类未进入生成的 TypeScript |
 | `NEKO-4039` | Probe declaration task failed; some generated TypeScript declarations may be absent | Probe 声明任务失败，生成的 TypeScript 可能缺少部分声明 |
 | `NEKO-4040` | Activation claim publication rejected: unsupported registry | 激活认领发布遇到不支持的注册表，属于预检后的内部契约错误 |
@@ -131,6 +131,7 @@
 | `NEKO-6008` | 自动资源组因已有文件属于外部或被修改而跳过。 |
 | `NEKO-6009` | 自动物品资源生成失败；发布阶段失败会尝试回滚，还原失败作为 suppressed cause 保留。 |
 | `NEKO-6010` | 物品资源所有权索引读取或校验失败；拒绝生成且不替换索引。 |
+| `NEKO-6011` | 目录包客户端资源重载失败；查看异常原因及原版资源恢复结果。 |
 
 | NEKO-6001 | UI 颜色属性不是受控颜色格式（ARGB/RGB 整数、`#RGB`/`#RRGGBB`/`#AARRGGBB`、CSS 基础命名色）。 |
 | NEKO-6002 | UI 视觉属性值超出范围或类型错误（`opacity`、`fontSize`、`borderWidth`、`radius`、`fit`、`crop`）。 |

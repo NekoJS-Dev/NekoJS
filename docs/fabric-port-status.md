@@ -6,6 +6,12 @@
 > 关联 spec：[fabric-node-expansion.md](fabric-node-expansion.md)（版本图扩展，其第 0 步上移
 > 会消化本文"节点孪生"小节的债）。
 
+## 目录包资源桥（2026-10-19，实现待集中验收）
+
+两个 Fabric 节点新增原版仓库构造期接线与单包目录叠加：根目录、GLOBAL、WORLD、已授权 SERVER_CACHE（仅客户端资源）。服务端资源仓库绑定自身存档，预览发现不激活运行时 WORLD；真正的 WORLD 脚本在 SERVER_STARTING 激活，在 SERVER_STOPPED 撤销。客户端本地登录补载 WORLD CLIENT 脚本，退出时移除 WORLD 资源；远端同步完成后在后续 tick 刷新原版资源。
+
+自动物品模型接入现有成功注册凭据、生成器与所有权索引，在资源 `openFull` 时准备文件；Fabric 不再以 NEKO-4037 拒绝配置。清单环境/依赖门禁继续约束目录资源，MOD 副本不重复挂载，远端 data 不进入服务端仓库。原版资源解析与脚本 generation 保持独立结果。当前只是实现状态，不能将本段当作启动、客户端模型或双世界实机通过证据；验收与剩余项见 [实现记录](research/2026-10-19-fabric-directory-resource-bridge.md)。
+
 ## 本轮已补全（2026-09-02）
 
 1. **惰性 mixin 全量激活**（7 个编译进 jar 却无配置引用的共享 mixin）：

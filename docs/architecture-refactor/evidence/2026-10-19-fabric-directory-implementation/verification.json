@@ -1,0 +1,49 @@
+{
+  "scope": "compilation-only",
+  "first_compile_exit_code": 0,
+  "final_fabric_compile_exit_code": 0,
+  "tests_executed": false,
+  "game_launched": false,
+  "performance_measured": false,
+  "compiler_warnings": "Present; see complete logs. No warning-free compilation claim.",
+  "commands": [
+    "./gradlew.bat -g D:/mcmodDemo/NekoJS/.gradle-perf02 -Dorg.gradle.java.home=<JDK-25.0.2> --offline --no-parallel --console=plain :26.1.2-fabric:compileTestJava :26.2.0-fabric:compileTestJava :1.21.1:compileTestJava :26.1.2:compileTestJava :26.2.0:compileTestJava guardLint",
+    "./gradlew.bat -g D:/mcmodDemo/NekoJS/.gradle-perf02 -Dorg.gradle.java.home=<JDK-25.0.2> --offline --no-parallel --console=plain :26.1.2-fabric:compileTestJava :26.2.0-fabric:compileTestJava guardLint",
+    "./gradlew.bat -g D:/mcmodDemo/NekoJS/.gradle-perf02 -Dorg.gradle.java.home=<JDK-25.0.2> --offline --no-parallel --console=plain :26.1.2-fabric:compileTestJava :26.2.0-fabric:compileTestJava guardLint"
+  ],
+  "log_sha256": {
+    "compile.log": "93924032ebc91e63b6b030b60e2b6b6e13422eec634c832e560b25a71acffba5",
+    "compile-resource-stacks.log": "760299568b163ff9785858324c7c883bc241d2beb76a893fbd7feb659d19f134",
+    "compile-final-fixtures.log": "75e44c9ef5c7e28f8c047c71e436a63f63cca6370ebd5847bc7db0875229fae8"
+  },
+  "source_sha256": {
+    "src/fabric/java/com/tkisor/nekojs/fabric/mixin/FolderRepositorySourceAccessor.java": "aa39ea0e4d035ace6b6c6c576ab49f65eab813abb282be2f7c1f8b28f0b4d01e",
+    "src/fabric/java/com/tkisor/nekojs/fabric/mixin/PackRepositoryMixin.java": "7008bf4dad0aa87346dafe9187b9391608dad520c9d4fb7ce22fb3f464af8544",
+    "src/fabric/java/com/tkisor/nekojs/fabric/mixin/MultiPackResourceManagerMixin.java": "3dd84257a72e6ceaee63c960c4c5ce50e79a4bc21328a4dd439c48295fc8010b",
+    "src/fabric/java/com/tkisor/nekojs/fabric/resource/FabricDirectoryPackSource.java": "5dc7d84751c5c4b97d550083f4cef366349e67a730dec006559fc6a12af92759",
+    "src/fabric/java/com/tkisor/nekojs/fabric/resource/FabricDirectoryPackResources.java": "0c69c0c62c26283214b0544f2123422b75949e6fcf21141b7e22b31132cac5a2",
+    "src/fabric/java/com/tkisor/nekojs/fabric/resource/FabricClientPackResources.java": "53f7494649bdfc763fecfe0e9b7d0fa3ff4f5639652ffcd303283c1d28d8eecc",
+    "src/fabric/java/com/tkisor/nekojs/fabric/event/FabricServerEventBindings.java": "59b13af63c5fddc1b78a32ec7ab6449363fa9890e2e97de9d7bcec18a159bc9f",
+    "src/fabric/java/com/tkisor/nekojs/fabric/NekoJSFabricClient.java": "b29a4779b82236988aeea9ae34677fa02fde619b7972bd5828c8877ca5e27caa",
+    "src/fabric/java/com/tkisor/nekojs/fabric/FabricPackSync.java": "6169c7491a049212e525ef438b9fecb7ebaa7081e6e3abcd4c58fa0aac2e15b1",
+    "src/fabric/resources/nekojs-fabric.mixins.json": "c1e4403e89259e657fffb958885db5fce7cb4a81fd33ad8c8b36606d6dfbb9ed",
+    "src/main/java/com/tkisor/nekojs/wrapper/registry/gen/StartupRegistryRuntime.java": "7bfb5542b762eeb7f5aa8f5f0f73debbe0248961b616447397758f04a46af864",
+    "src/main/java/com/tkisor/nekojs/resource/NekoJSPathPackResources.java": "8bb71c0abee0057b0cc64fa1899f219b6247eb3a5c4ecea918c50de7cc5011c7",
+    "versions/1.21.1/src/main/java/com/tkisor/nekojs/resource/NekoJSPathPackResources.java": "f8c3fcf4261a14dfbc3e5ad580ba3f29b44d820455c6330928ad00238aad9d96",
+    "src/main/java/com/tkisor/nekojs/wrapper/event/server/RecipeEventJS.java": "d2c8b1ca8e5536549be58ecc91a31d84dbd62a4f8fa58b67204d7c142ac9feeb",
+    "versions/1.21.1/src/main/java/com/tkisor/nekojs/wrapper/event/server/RecipeEventJS.java": "a5347b2076ca494760dfa3ba90097df0c5b738daf6b53eff978b817c20545f80",
+    "src/test/java/com/tkisor/nekojs/wrapper/event/server/RecipeEventJSBaselineIsolationTest.java": "0dc25ef000fb78f47388bf8847268a0263ba93ce458b749879cddbe36489f273",
+    "src/test/java/com/tkisor/nekojs/fabric/resource/FabricDirectoryPackResourcesTest.java": "780e7c06935004cbd1f1b17d20eddbc1a6e765faff0efbc0de735f70589c5db8",
+    "src/test/java/com/tkisor/nekojs/pack/FabricWorldPackStatusTest.java": "0410c1dec2418c0fc5baf8273bdc674145be2ffe4873e2ea5322d60299657c83",
+    "src/test/java/com/tkisor/nekojs/wrapper/registry/gen/ItemBuilderIssue36Test.java": "bdb5900b6208741280a65561185e89c3cdb3c492541e73ebef24a8add58592b7"
+  },
+  "final_fixtures_compile_exit_code": 0,
+  "original_log_sha256": {
+    "compile.log": "3ad49efd1c9411b637274cf5249aad63bafb21e8b9170a55dfe85a3239ac7352",
+    "compile-resource-stacks.log": "f55166e6799dd7c1a9ee43da2aab6721acf846c3d6776f5a526fdece62165abb",
+    "compile-final-fixtures.log": "9bc30de8ccc92d7f02b5b63d2a384ae6db3b9ff289a13fd694c814c2174a5b3b"
+  },
+  "archive_preflight_initial": "FAIL: Git normalized CRLF logs, so the first indexed-log SHA comparison raised AssertionError",
+  "archive_log_encoding": "UTF-8 with LF line endings; original byte hashes retained separately",
+  "archive_preflight_final": "PASS: indexed LF logs and current implementation source bytes match their recorded SHA-256"
+}

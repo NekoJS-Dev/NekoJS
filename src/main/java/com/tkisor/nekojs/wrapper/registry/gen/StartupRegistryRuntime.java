@@ -182,10 +182,6 @@ public final class StartupRegistryRuntime {
     private void registerWithAssets(RegistrySink sink, ResourceKey<? extends Registry<?>> registry,
                                     Identifier id, Supplier<?> supplier,
                                     com.tkisor.nekojs.core.registry.ItemAssetDefinition assets) {
-        if (assets != null && node.startsWith("fabric:")) {
-            throw new IllegalArgumentException("[NEKO-4037] Item '" + id
-                    + "' resource generation is unavailable on " + node);
-        }
         Supplier<?> validated = validatedSupplier(id, registry, supplier);
         // A delayed supplier may run after the sink returns. Both boundaries must succeed.
         class Receipt implements Supplier<Object> {

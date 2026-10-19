@@ -25,7 +25,9 @@ public final class NekoJSFabricClient implements ClientModInitializer {
     public void onInitializeClient() {
         LOGGER.info("NekoJS fabric client entrypoint reached.");
         registerScriptEntityRenderers();
-        FabricPackSync.registerClient();
+        Runnable refreshPackResources = com.tkisor.nekojs.fabric.resource.FabricClientPackResources.register(
+                NekoJSFabricMod::runtimeRootOrNull);
+        FabricPackSync.registerClient(refreshPackResources);
         FabricPlayNetwork.registerClient();
         FabricPDataSync.registerClient();
         // 脚本按键绑定：register 入口 + pressed/released/tick 轮询（ClientTickEvents）

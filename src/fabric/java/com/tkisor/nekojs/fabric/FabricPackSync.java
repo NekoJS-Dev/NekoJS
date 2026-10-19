@@ -96,15 +96,25 @@ public final class FabricPackSync {
     }
 
     /** 客户端半：配置阶段 receiver + 断线卸载 + CLIENT 重载钩子（client init 调用）。 */
-    public static void registerClient() {
+    public static void registerClient(Runnable refreshPackResources) {
         ClientConfigurationNetworking.registerGlobalReceiver(PackHashListPayload.TYPE, FabricPackSync::handleHashList);
         ClientConfigurationNetworking.registerGlobalReceiver(PackBundlePayload.TYPE, FabricPackSync::handleBundle);
-        PackSyncClient.installClientReloadHook(FabricPackSync::reloadClientScripts);
+        PackSyncClient.installClientReloadHook(() -> {
+            boolean accepted = reloadClientScripts();
+            if (accepted) refreshPackResources.run();
+            return accepted;
+        });
         // 两个阶段都要卸载远端包：未信任/验签失败是在配置阶段就被踢，走不到 play 阶段断线
-        ClientConfigurationConnectionEvents.DISCONNECT.register((handler, client) ->
-                PackSyncClient.handleDisconnect(NekoJSFabricMod.runtimeRootOrNull()));
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
-                PackSyncClient.handleDisconnect(NekoJSFabricMod.runtimeRootOrNull()));
+        ClientConfigurationConnectionEvents.DISCONNECT.register((handler, client) -> {
+            boolean hadPacks = !com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().serverCachePacks().isEmpty();
+            PackSyncClient.handleDisconnect(NekoJSFabricMod.runtimeRootOrNull());
+            if (hadPacks) refreshPackResources.run();
+        });
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            boolean hadPacks = !com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().serverCachePacks().isEmpty();
+            PackSyncClient.handleDisconnect(NekoJSFabricMod.runtimeRootOrNull());
+            if (hadPacks) refreshPackResources.run();
+        });
     }
 
     /* ================= 客户端 receiver（netty 线程） ================= */

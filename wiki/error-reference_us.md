@@ -101,7 +101,7 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-4034` | item component, model, texture or identifier configuration rejected | 物品组件、模型、纹理或标识符配置被拒绝 |
 | `NEKO-4035` | item definition modification rejected after startup collection | STARTUP 收集后物品定义已冻结，修改被拒绝 |
 | `NEKO-4036` | item component type or codec value rejected with item, component and node context | 物品组件类型或 codec 值被拒绝，消息包含物品、组件与节点上下文 |
-| `NEKO-4037` | automatic item assets are unavailable on Fabric; registration rejected before supplier execution | Fabric 不支持自动物品资源，supplier 执行前拒绝注册 |
+| `NEKO-4037` | Retired: Fabric automatic item resources now use the directory resource bridge. | 已停用：Fabric 自动物品资源已接入目录资源桥。 |
 | `NEKO-4038` | Probe predeclaration failed; the selected class is omitted from generated TypeScript | Probe 预声明失败，选定类未进入生成的 TypeScript |
 | `NEKO-4039` | Probe declaration task failed; some generated TypeScript declarations may be absent | Probe 声明任务失败，生成的 TypeScript 可能缺少部分声明 |
 | `NEKO-4040` | Activation claim publication rejected: unsupported registry | 激活认领发布遇到不支持的注册表，属于预检后的内部契约错误 |
@@ -131,6 +131,7 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-6008` | Automatic item resource group skipped because an existing file is externally owned or modified. |
 | `NEKO-6009` | Automatic item asset generation failed; publication failures attempt rollback and attach restoration failures as suppressed causes. |
 | `NEKO-6010` | Item asset ownership index cannot be read or validated; generation rejected without replacing it. |
+| `NEKO-6011` | Directory pack client resource reload failed; inspect the cause and native resource recovery. |
 
 | NEKO-6001 | A UI color prop is not a controlled color form (ARGB/RGB int, `#RGB`/`#RRGGBB`/`#AARRGGBB`, CSS basic named color). |
 | NEKO-6002 | A UI visual prop value is out of range or has the wrong type (`opacity`, `fontSize`, `borderWidth`, `radius`, `fit`, `crop`). |

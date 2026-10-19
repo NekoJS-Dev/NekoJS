@@ -76,13 +76,14 @@ class ItemBuilderIssue36Test {
         assertTrue(deferred.itemAssetDefinitions().isEmpty());
     }
 
-    @Test void fabricRejectsResourceConfigurationBeforeExecutingTheNativeSupplier() {
+    @Test void fabricAcceptsResourceConfigurationAndWaitsForTheNativeSupplier() {
         StartupRegistryRuntime runtime = new StartupRegistryRuntime("fabric:26.1.2");
         ItemBuilder builder = item(); builder.texture("test:item/gem");
         runtime.repository().add(Registries.ITEM, builder);
-        var result = runtime.drainFor(Registries.ITEM, (registry, id, supplier) -> fail("must reject before native registration"));
-        assertEquals(1, result.errors().size());
-        assertTrue(result.errors().getFirst().message().contains("NEKO-4037"));
+        var supplier = new java.util.concurrent.atomic.AtomicReference<java.util.function.Supplier<?>>();
+        var result = runtime.drainFor(Registries.ITEM, (registry, id, pending) -> supplier.set(pending));
+        assertTrue(result.errors().isEmpty(), result.errors().toString());
+        assertNotNull(supplier.get());
         assertTrue(runtime.itemAssetDefinitions().isEmpty());
     }
 }

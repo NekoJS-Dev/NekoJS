@@ -4,6 +4,9 @@
   "package": "com.tkisor.nekojs.fabric.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "FolderRepositorySourceAccessor",
+    "PackRepositoryMixin",
+    "MultiPackResourceManagerMixin",
     "MixinEntity",
     "MixinLivingEntity",
     "NekoEntityPDataMixin",
