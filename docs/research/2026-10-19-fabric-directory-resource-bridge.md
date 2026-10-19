@@ -38,4 +38,4 @@
 
 随后在 `4dcfe604` 完成[集中检查](../architecture-refactor/evidence/2026-10-19-implementation-checks/README.md)：定向 131 项全部执行并通过；完整 common isolation/check、处理器测试、guardLint、五节点 build/平台门禁及四项 CI 一致性 gate 均通过，全量 5,020 次测试执行、0 failures/errors、271 skipped。五节点配方 JSON 隔离、Fabric 注册完成门控及 receipt 回归已执行；没有修改 golden 或放宽门禁。
 
-实机集中验收仍未运行：Mixin 实际应用、初次客户端模型、GLOBAL/WORLD 资源与配方、原版标签/语言实际合并、A→B→A、远端授权/拒绝/断线资源撤回、原版 `/reload` 与 F3+T。当前实现尚未按原性能标准复验，最近冻结结果未整体通过，不用本功能测试通过代替性能复验。
+实机集中验收仍未运行：Mixin 实际应用、初次客户端模型、GLOBAL/WORLD 资源与配方、原版标签/语言实际合并、A→B→A、远端授权/拒绝/断线资源撤回、原版 `/reload` 与 F3+T。当前 `4dcfe604` 已按[原性能标准复验](../architecture-refactor/evidence/2026-10-19-preflight-performance/README.md)，重载 285.8 / 286.6 ms 均 FAIL、启动 24250.4 ms PASS；不以本功能测试通过代替性能通过。
