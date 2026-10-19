@@ -68,13 +68,13 @@ nekojs/packs/my_pack/
   Bare IDs must match uniquely, and save failures do not report success. Reload the relevant server/client/test type to apply; STARTUP changes require a restart.
 - **Execution queries**: `/nekojs packs status server` shows completed entry outcomes in the current generation;
   `/nekojs packs plan server` shows current file order and exclusions without evaluating or compiling scripts.
-- **World packs (NeoForge)**: place them under `<world-folder>/nekojs_packs/<pack-id>/`.
-  Entering the world mounts them; leaving clears their listeners and timers. Current-world edits and enablement apply on the relevant type reload. Fabric does not currently mount WORLD sources.
+- **World packs (NeoForge / Fabric 26.x)**: place them under `<world-folder>/nekojs_packs/<pack-id>/`.
+  Entering the world mounts them; leaving clears their listeners and timers. Current-world edits and enablement apply on the relevant type reload.
 - **Remote cache packs**: mounted SERVER_CACHE content can be queried, but local enablement commands cannot change its remote authorization.
 - Manifest fields are parsed permissively: `id`/`name`/`version`/`description`/`authors`/`enabled`/`clientSync`
   (`clientSync` is reserved for multiplayer script distribution; see below). Each pack's script directories also get an automatically generated `jsconfig.json`,
   with the same editor completion as standalone directories.
-- A pack's `data/<namespace>/**` directory is mounted as a mandatory data pack when the server starts/reloads (recipes, loot tables, tags, villager trade JSON, etc.). This is a NeoForge capability; Fabric does not currently provide equivalent datagen/mandatory data pack support.
+- Both loaders mount directory-pack `data/<namespace>/**`. Fabric discovers directories before initial data loading; use native `/reload` for later data changes and F3+T for client assets. Directory mounting does not imply that every data-generation Script Event is available on both platforms. See [Script packs](script-packs_us) for resource precedence, remote restrictions, and loading boundaries.
 
 <a id="wiki-section-5"></a>
 ### Multiplayer script pack distribution (server → client)

@@ -97,8 +97,10 @@ public final class FabricPackSync {
 
     /** 客户端半：配置阶段 receiver + 断线卸载 + CLIENT 重载钩子（client init 调用）。 */
     public static void registerClient(Runnable refreshPackResources) {
-        ClientConfigurationNetworking.registerGlobalReceiver(PackHashListPayload.TYPE, FabricPackSync::handleHashList);
-        ClientConfigurationNetworking.registerGlobalReceiver(PackBundlePayload.TYPE, FabricPackSync::handleBundle);
+        ClientConfigurationNetworking.registerGlobalReceiver(PackHashListPayload.TYPE,
+                (payload, context) -> handleHashList(payload, context, refreshPackResources));
+        ClientConfigurationNetworking.registerGlobalReceiver(PackBundlePayload.TYPE,
+                (payload, context) -> handleBundle(payload, context, refreshPackResources));
         PackSyncClient.installClientReloadHook(() -> {
             boolean accepted = reloadClientScripts();
             if (accepted) refreshPackResources.run();
@@ -119,7 +121,8 @@ public final class FabricPackSync {
 
     /* ================= 客户端 receiver（netty 线程） ================= */
 
-    private static void handleHashList(PackHashListPayload payload, ClientConfigurationNetworking.Context context) {
+    private static void handleHashList(PackHashListPayload payload, ClientConfigurationNetworking.Context context,
+                                       Runnable refreshPackResources) {
         Connection connection = context.packetContext().get(PacketContext.CONNECTION);
         if (connection == null || connection.isMemoryConnection()) return;
         String address = PackSyncClient.normalizeRemoteAddress(connection.getRemoteAddress());
@@ -130,6 +133,8 @@ public final class FabricPackSync {
                 PackSyncClient.Outcome outcome = PackSyncClient.handleHashList(
                         NekoJSFabricMod.runtimeRootOrNull(), address, entries);
                 if (outcome.shouldDisconnect()) {
+                    // Fatal rollback can already have cleared the registry before disconnect cleanup.
+                    refreshPackResources.run();
                     connection.disconnect(new DisconnectionDetails(Component.literal(outcome.disconnect())));
                 }
             } finally {
@@ -139,7 +144,8 @@ public final class FabricPackSync {
         PackSyncClient.awaitMainThreadWork();
     }
 
-    private static void handleBundle(PackBundlePayload payload, ClientConfigurationNetworking.Context context) {
+    private static void handleBundle(PackBundlePayload payload, ClientConfigurationNetworking.Context context,
+                                     Runnable refreshPackResources) {
         Connection connection = context.packetContext().get(PacketContext.CONNECTION);
         if (connection == null || connection.isMemoryConnection()) return;
         List<SyncedPack> packs = payload.toSyncedPacks();
@@ -149,6 +155,8 @@ public final class FabricPackSync {
                 PackSyncClient.Outcome outcome = PackSyncClient.handleBundle(
                         NekoJSFabricMod.runtimeRootOrNull(), packs);
                 if (outcome.shouldDisconnect()) {
+                    // The registry can be empty even while old remote resources remain mounted.
+                    refreshPackResources.run();
                     connection.disconnect(new DisconnectionDetails(Component.literal(outcome.disconnect())));
                 }
             } finally {

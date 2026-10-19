@@ -144,6 +144,26 @@ class PackSyncBridgeSourceTraceTest {
     }
 
     @Test
+    void fabricRejectionsRefreshResourcesEvenAfterFatalRollbackClearsTheRegistry() {
+        String source = fabricRaw("com/tkisor/nekojs/fabric/FabricPackSync.java");
+        for (String handler : List.of("handleHashList", "handleBundle")) {
+            assertTrue(source.contains(handler + "(payload, context, refreshPackResources)"),
+                    handler + " must receive the native resource refresh request");
+            int start = source.indexOf("private static void " + handler + "(");
+            int end = source.indexOf("private static ", start + 1);
+            assertTrue(start >= 0 && end > start);
+            String code = source.substring(start, end);
+            int rejected = code.indexOf("if (outcome.shouldDisconnect()) {");
+            int refresh = code.indexOf("refreshPackResources.run();", rejected);
+            int disconnect = code.indexOf("connection.disconnect(", rejected);
+            assertTrue(rejected >= 0 && refresh > rejected && disconnect > refresh,
+                    handler + " must request native cleanup before disconnect, even with an empty registry");
+            assertFalse(code.contains("serverCachePacks()"),
+                    handler + " must not infer mounted native resources from the cleared registry");
+        }
+    }
+
+    @Test
     void bothBridgesUseTheSameConfigurationTaskTypeId() {
         String neoforge = sharedMain("src/main/java/com/tkisor/nekojs/network/PackSyncConfigurationTask.java");
         String fabric = fabricRaw("com/tkisor/nekojs/fabric/FabricPackSync.java");

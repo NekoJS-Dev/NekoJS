@@ -12,6 +12,7 @@
 - Fabric SERVER_STARTING 在脚本加载前激活 WORLD；停止事件派发后撤销包实例和旧监听器。客户端 JOIN 补载 WORLD CLIENT 脚本；延迟清理不会撤销下一世界的客户端 generation。
 - 初次原版 WorldLoader 配方绑定发生在 SERVER_STARTING 之前，WORLD 配方监听器在 SERVER_STARTED、玩家加入前补应用。为保证重复应用不会污染原始 datapack JSON，共享及 1.21.1 的 `RecipeEventJS` 在构造时复制可变 JSON 树；不缓存跨 registry 的已解码 Recipe，不跳过 codec。新增独立的嵌套别名与下一轮恢复回归；性能影响留待原标准复验，不据此承诺提速。
 - 远端脚本 reload 成功/断线及本地连接变化只请求刷新，由客户端后续 tick 发起原版资源重载；不在同步 latch 内等待模型加载，重叠请求合并，失败不堵死后续请求。
+- 同步被拒绝时，两个接收入口在断线前都显式请求资源刷新。致命回滚可能已经清空 SERVER_CACHE 注册表，此时不能再凭包数量推断原生资源管理器中是否还留着旧资源；正常无包断线仍不额外触发完整资源重载。
 - 删除 Fabric 自动物品资源的 NEKO-4037 拒绝分支。复用注册成功才发布的 receipt、`RegisteredItemAssets`、节点资源布局与原有所有权恢复规则。首次及后续资源 `openFull` 在枚举前准备模型/物品定义。
 
 ## 行为与边界
@@ -19,6 +20,14 @@
 目录 data 改动由原版 `/reload` 更新，assets 改动由 F3+T 更新。普通脚本重载不强制额外跑完整数据包重载，不引入新的 OS 性能策略。脚本 generation 与原版资源解析分别报告结果，不宣称两者形成跨系统原子事务。签名、信任、wire 格式、公开脚本 API、用户资源与生成文件所有权规则保持。
 
 历史 `FabricWorldPackStatusTest` 的“Fabric 永不激活 WORLD”断言与新能力冲突，改为生命周期与预览来源边界检查；另补真实资源读取/枚举覆盖、卸载后回退、客户端/服务端隔离、远端/MOD/禁用排除及清单环境/依赖约束的行为测试。Fabric 物品测试改为接受配置但等待原生 supplier 成功，不再期待旧拒绝码。NEKO-4037 保留为已停用码，新增 NEKO-6011 报告异步原版资源失败。
+
+## 实现复查
+
+主代理收口前请两名 Luna xhigh 在限定文件范围内只读检查生命周期与原版仓库接缝。仓库构造后、首次发现前加入来源，资源管理器构造入口展开目录层，原版负责读取栈与关闭各层；registry 源码确认 GLOBAL、MOD、WORLD、SERVER_CACHE 顺序。生命周期复查发现上述致命回滚的资源撤回缺口，已在 Fabric 的 hash-list/bundle 拒绝分支补齐；沿用现有 source-trace 回归框架约束两个入口的请求传递与断线前顺序，尚未执行。
+
+原版异步资源解析失败与脚本事务仍是独立边界，失败只报告 NEKO-6011 并交给原版资源恢复；不把已接受的脚本 generation 标成同步回滚。目录层复用已有 `NekoJSPathPackResources` 的直接路径读取，不声明原版 `FolderRepositorySource` 的 `DirectoryValidator` 校验语义；本阶段没有改变共享资源的符号链接策略。运行时 Mixin 应用、资源恢复和实际合并行为仍待集中验收。
+
+快速入门中两处历史“Fabric 无 WORLD/data 挂载”说明已与当前实现同步；数据生成 Script Event 的平台覆盖仍独立记录。此次复查与修正没有执行测试、编译或启动游戏，不能扩展下节既有编译记录的覆盖范围。
 
 ## 验证状态
 

@@ -68,13 +68,13 @@ nekojs/packs/my_pack/
   裸 ID 仅在唯一匹配时可用，保存失败不会报告成功。随后重载对应的 server/client/test 类型应用；STARTUP 变化需要重启。
 - **执行查询**：`/nekojs packs status server` 查看当前代的入口执行结果；
   `/nekojs packs plan server` 查看当前文件排序与跳过原因，不执行或编译脚本。
-- **世界包（NeoForge）**：放在 `<世界文件夹>/nekojs_packs/<包id>/`，进入世界时挂载，
-  退出时清理监听器与定时器。当前世界的启停或编辑在对应类型重载后应用；Fabric 当前不挂载 WORLD 来源。
+- **世界包（NeoForge / Fabric 26.x）**：放在 `<世界文件夹>/nekojs_packs/<包id>/`，进入世界时挂载，
+  退出时清理监听器与定时器。当前世界的启停或编辑在对应类型重载后应用。
 - **远端缓存包**：已挂载的 SERVER_CACHE 包可查询，由远端授权控制，不能用本地启停命令改写。
 - manifest 字段宽松解析：`id`/`name`/`version`/`description`/`authors`/`enabled`/`clientSync`
   （`clientSync` 预留给多人脚本分发，见下）。每个包的脚本目录同样自动生成 `jsconfig.json`，
   编辑器补全与平铺目录一致。
-- 包的 `data/<命名空间>/**` 目录会在服务器启动/reload 时作为强制数据包挂载（配方、战利品表、标签、村民交易 JSON 等）。这是 NeoForge 能力；Fabric 当前不提供同等 datagen/强制数据包面。
+- 两个加载器都支持挂载目录包的 `data/<命名空间>/**`；Fabric 在首次数据加载前发现目录，后续 data 改动使用原版 `/reload`，客户端 assets 改动使用 F3+T。目录挂载不表示数据生成 Script Event 已在各平台全部可用。资源覆盖、远端限制与加载边界见[脚本包](script-packs_cn)。
 
 <a id="wiki-section-5"></a>
 ### 多人脚本包分发（服务端 → 客户端）
