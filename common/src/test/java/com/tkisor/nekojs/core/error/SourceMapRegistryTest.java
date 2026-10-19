@@ -137,6 +137,44 @@ class SourceMapRegistryTest {
         assertEquals("first", first.name);
     }
 
+    @Test
+    void nonMonotonicColumnsKeepOrderedSearchAndFirstEntryFallback() {
+        String source = "server_scripts/non-monotonic.ts";
+        registry.register(source, minimalMap(source).replace("AAAA", "EAAI,DAAC,AAAC"));
+
+        // A query before the first generated column keeps the first segment, even when a
+        // later segment has a smaller column. Duplicate matching columns keep the last one.
+        assertEquals(5, registry.getMappedPosition(source, 1, 1).column);
+        assertEquals(5, registry.getMappedPosition(source, 1, 2).column);
+        assertEquals(7, registry.getMappedPosition(source, 1, 3).column);
+    }
+
+    @Test
+    void extraFieldsKeepNameDeltasWithoutAddingMappingFields() {
+        String source = "server_scripts/extra-fields.ts";
+        registry.register(source, """
+                {"version":3,"sources":["original.ts"],"names":["zero","one","two"],
+                 "mappings":"AAAACE,AAAAC"}
+                """);
+
+        OriginalPosition mapped = registry.getMappedPosition(source, 1, 1);
+        assertTrue(mapped.path.endsWith("original.ts"));
+        assertEquals(1, mapped.line);
+        assertEquals(1, mapped.column);
+        assertEquals("two", mapped.name);
+    }
+
+    @Test
+    void oversizedVlqKeepsExistingIntegerWrapAndOrderedSearch() {
+        String source = "server_scripts/oversized-vlq.ts";
+        registry.register(source, minimalMap(source).replace("AAAA", "AAAA,ggggggDAAC,igggggBAAA"));
+
+        OriginalPosition mapped = registry.getMappedPosition(source, 1, 1);
+        assertNotNull(mapped.path);
+        assertEquals(1, mapped.line);
+        assertEquals(2, mapped.column);
+    }
+
     private static String minimalMap(String source) {
         return "{\"version\":3,\"file\":\"generated.js\",\"sourceRoot\":\"\",\"sources\":[\""
                 + source + "\"],\"names\":[],\"mappings\":\"AAAA\"}";

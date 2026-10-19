@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -18,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class SourceMapRegistry implements NekoSourceMapView {
     private static final String VLQ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    private static final int MAPPING_ENTRY_WIDTH = 5;
     private final Map<String, NormalizedSourceMap> mappings = new ConcurrentHashMap<>();
     /** Cache key of the prepared module that registered each source map (ticket 30). */
     private final Map<String, String> revisions = new ConcurrentHashMap<>();
@@ -190,10 +192,12 @@ public final class SourceMapRegistry implements NekoSourceMapView {
         }
     }
 
-    private static List<List<MappingEntry>> parseMappings(String mappings, int sourceCount, int nameCount) {
-        List<List<MappingEntry>> lineMappings = new ArrayList<>();
-        List<MappingEntry> entries = new ArrayList<>();
-        lineMappings.add(entries);
+    private static List<int[]> parseMappings(String mappings, int sourceCount, int nameCount) {
+        List<int[]> lineMappings = new ArrayList<>();
+        // Pack each segment's five fields into one line array instead of allocating a record.
+        // Copy completed lines so reusing the scratch buffer cannot change published mappings.
+        int[] entries = new int[MAPPING_ENTRY_WIDTH * 4];
+        int entrySize = 0;
         // Reuse five field slots across segments; extra fields are still fully validated.
         int[] values = new int[5];
 
@@ -221,14 +225,24 @@ public final class SourceMapRegistry implements NekoSourceMapView {
                         if (nameIndex >= 0 && nameIndex < nameCount) entryNameIndex = nameIndex;
                     }
                     if (sourceIndex >= 0 && sourceIndex < sourceCount && originalLine >= 0 && originalColumn >= 0) {
-                        entries.add(new MappingEntry(generatedColumn, sourceIndex, originalLine, originalColumn, entryNameIndex));
+                        if (entries.length - entrySize < MAPPING_ENTRY_WIDTH) {
+                            entries = Arrays.copyOf(entries, entries.length * 2);
+                        }
+                        entries[entrySize++] = generatedColumn;
+                        entries[entrySize++] = sourceIndex;
+                        entries[entrySize++] = originalLine;
+                        entries[entrySize++] = originalColumn;
+                        entries[entrySize++] = entryNameIndex;
                     }
                 }
             }
-            if (end == mappings.length()) break;
+            if (end == mappings.length()) {
+                lineMappings.add(Arrays.copyOf(entries, entrySize));
+                break;
+            }
             if (mappings.charAt(end) == ';') {
-                entries = new ArrayList<>();
-                lineMappings.add(entries);
+                lineMappings.add(Arrays.copyOf(entries, entrySize));
+                entrySize = 0;
                 generatedColumn = 0;
             }
             start = end + 1;
@@ -419,7 +433,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
             String generatedPath,
             String file,
             int prependedLineCount,
-            List<List<MappingEntry>> lineMappings,
+            List<int[]> lineMappings,
             List<String> sources,
             List<String> sourcesContent,
             List<String> names
@@ -440,29 +454,29 @@ public final class SourceMapRegistry implements NekoSourceMapView {
                 return new OriginalPosition(adjustedLine > 0 ? adjustedLine : jsLine, jsColumn, null);
             }
 
-            List<MappingEntry> entries = lineMappings.get(lineIndex);
-            if (entries == null || entries.isEmpty()) {
+            int[] entries = lineMappings.get(lineIndex);
+            if (entries == null || entries.length == 0) {
                 return new OriginalPosition(adjustedLine > 0 ? adjustedLine : jsLine, jsColumn, null);
             }
 
             int targetColumn = Math.max(0, jsColumn - 1);
-            MappingEntry bestMatch = entries.get(0);
-            for (MappingEntry entry : entries) {
-                if (entry.generatedColumn <= targetColumn) {
-                    bestMatch = entry;
+            int bestMatch = 0;
+            for (int index = 0; index < entries.length; index += MAPPING_ENTRY_WIDTH) {
+                if (entries[index] <= targetColumn) {
+                    bestMatch = index;
                 } else {
                     break;
                 }
             }
 
-            String path = bestMatch.sourceIndex >= 0 && bestMatch.sourceIndex < sources.size() ? sources.get(bestMatch.sourceIndex) : null;
-            String sourceContent = bestMatch.sourceIndex >= 0 && bestMatch.sourceIndex < sourcesContent.size() ? sourcesContent.get(bestMatch.sourceIndex) : null;
-            String name = bestMatch.nameIndex >= 0 && bestMatch.nameIndex < names.size() ? names.get(bestMatch.nameIndex) : null;
-            return new OriginalPosition(path, bestMatch.originalLine + 1, bestMatch.originalColumn + 1, name, sourceContent);
+            int sourceIndex = entries[bestMatch + 1];
+            int nameIndex = entries[bestMatch + 4];
+            String path = sourceIndex >= 0 && sourceIndex < sources.size() ? sources.get(sourceIndex) : null;
+            String sourceContent = sourceIndex >= 0 && sourceIndex < sourcesContent.size() ? sourcesContent.get(sourceIndex) : null;
+            String name = nameIndex >= 0 && nameIndex < names.size() ? names.get(nameIndex) : null;
+            return new OriginalPosition(path, entries[bestMatch + 2] + 1, entries[bestMatch + 3] + 1, name, sourceContent);
         }
     }
-
-    private record MappingEntry(int generatedColumn, int sourceIndex, int originalLine, int originalColumn, int nameIndex) {}
 
     public static class OriginalPosition {
         public final String path;
