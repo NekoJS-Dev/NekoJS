@@ -43,6 +43,16 @@ public final class GlobalBindingMemberValidator {
             "of", "new", "delete", "void", "await", "yield", "class", "function", "import",
             "export", "extends", "const", "let", "var", "enum");
 
+    // Patterns contain no source state; each scan creates its own Matcher.
+    private static final Pattern IMPORT_CLAUSE = Pattern.compile("\\bimport\\s+([^;='\"`]{1,200}?)\\s*from", Pattern.MULTILINE);
+    private static final Pattern CLASS_DECLARATION = Pattern.compile("\\bclass\\s+([A-Za-z_$][\\w$]*)");
+    private static final Pattern FUNCTION_DECLARATION = Pattern.compile("\\bfunction\\s+([A-Za-z_$][\\w$]*)\\s*\\(");
+    private static final Pattern CATCH_BINDING = Pattern.compile("\\bcatch\\s*\\(\\s*[A-Za-z_$][\\w$]*\\s*[,)]\\s*([A-Za-z_$][\\w$]*)?");
+    private static final Pattern CATCH_PARAMETER = Pattern.compile("\\bcatch\\s*\\(\\s*([A-Za-z_$][\\w$]*)\\s*\\)");
+    private static final Pattern DESTRUCTURING_BINDING = Pattern.compile("\\b(?:const|let|var)\\s*[\\{\\[]([^\\}\\]]{1,300})[\\}\\]]");
+    private static final Pattern LOOP_BINDING = Pattern.compile("\\(\\s*(?:const|let|var)?\\s*([A-Za-z_$][\\w$]*)\\s+(?:of|in)\\b");
+    private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_$][\\w$]*");
+
     private GlobalBindingMemberValidator() {}
 
     public static void validate(Path file, String source, ScriptBindingSchema.View view) {
@@ -131,20 +141,20 @@ public final class GlobalBindingMemberValidator {
 
     /** AST 覆盖不了的声明：ESM import 名、class 名、catch 参数、解构声明、for-of/in 变量。 */
     private static void collectSourceLevelNames(String source, Set<String> out) {
-        Matcher imports = Pattern.compile("\\bimport\\s+([^;='\"`]{1,200}?)\\s*from", Pattern.MULTILINE).matcher(source);
+        Matcher imports = IMPORT_CLAUSE.matcher(source);
         while (imports.find()) {
             addIdentifiersIn(imports.group(1), out);
         }
-        matchAll(source, Pattern.compile("\\bclass\\s+([A-Za-z_$][\\w$]*)"), out);
-        matchAll(source, Pattern.compile("\\bfunction\\s+([A-Za-z_$][\\w$]*)\\s*\\("), out);
-        matchAll(source, Pattern.compile("\\bcatch\\s*\\(\\s*[A-Za-z_$][\\w$]*\\s*[,)]\\s*([A-Za-z_$][\\w$]*)?"), out);
+        matchAll(source, CLASS_DECLARATION, out);
+        matchAll(source, FUNCTION_DECLARATION, out);
+        matchAll(source, CATCH_BINDING, out);
         // catch (e) 单参数形态（上一条只覆盖多参可选绑定形态）
-        matchAll(source, Pattern.compile("\\bcatch\\s*\\(\\s*([A-Za-z_$][\\w$]*)\\s*\\)"), out);
-        Matcher destructure = Pattern.compile("\\b(?:const|let|var)\\s*[\\{\\[]([^\\}\\]]{1,300})[\\}\\]]").matcher(source);
+        matchAll(source, CATCH_PARAMETER, out);
+        Matcher destructure = DESTRUCTURING_BINDING.matcher(source);
         while (destructure.find()) {
             addIdentifiersIn(destructure.group(1), out);
         }
-        matchAll(source, Pattern.compile("\\(\\s*(?:const|let|var)?\\s*([A-Za-z_$][\\w$]*)\\s+(?:of|in)\\b"), out);
+        matchAll(source, LOOP_BINDING, out);
     }
 
     private static void matchAll(String source, Pattern pattern, Set<String> out) {
@@ -158,7 +168,7 @@ public final class GlobalBindingMemberValidator {
 
     /** 从 import 子句 / 解构模式片段中提取标识符（覆盖 {@code a as b}、{@code a: c}、默认值、rest）。 */
     private static void addIdentifiersIn(String clause, Set<String> out) {
-        Matcher m = Pattern.compile("[A-Za-z_$][\\w$]*").matcher(clause);
+        Matcher m = IDENTIFIER.matcher(clause);
         while (m.find()) out.add(m.group());
     }
 
