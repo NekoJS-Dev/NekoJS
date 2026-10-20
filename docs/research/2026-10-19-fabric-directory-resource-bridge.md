@@ -45,3 +45,5 @@
 后续完整游戏资源观测发现另一处平台接线遗漏：[Fabric SERVER 定时器未被原生 tick 冲刷](../architecture-refactor/evidence/2026-10-20-fabric-server-timers/README.md)。已在现有 end tick 接回 root 的 SERVER 冲刷入口，使旧目录脚本和独立包共用相同调度；不改 TEST 或 CLIENT 调度。修复后检查尚未运行。上述 data/配方证据仍是对应旧源码的通过记录，未覆盖定时器行为。
 
 客户端补验入口已实现于 [tools/acceptance/fabric-directory-client](../../tools/acceptance/fabric-directory-client/README.md)：使用锁定 Fabric Client GameTest 的公开创建/重开存档、输入与截图接口，独立准备和执行；覆盖初次自动模型、资源栈/语言、真实 F3+T 输入和同客户端 A→B→A，并为截图审核及远端网络保留独立状态。源码与生产类有摘要绑定，失败不覆盖旧目录。按本轮实现优先要求，尚未编译或运行，不当作客户端通过证据；不依赖 MCP 接管，也没有改变其控制权限。
+
+随后补齐该入口的可选 `--remote` 场景：独立服务端 JVM、真实 TCP、owned 地址的先拒绝后信任、签名 assets 接受，以及在已挂载资源时通过 Fabric 公开 reconfigure 重新握手，分别检查篡改/换钥拒绝、恢复和正常断线撤回。拒绝需匹配原生 narration 中的具体原因；私钥仅位于隔离服务端，未放宽 `allowUnsigned`，没有直接调用接收 handler。它仍是未执行的验收实现，不能作为远端客户端通过证据。

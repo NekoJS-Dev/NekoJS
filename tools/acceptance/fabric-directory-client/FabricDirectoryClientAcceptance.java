@@ -2,6 +2,8 @@ package neko.acceptance;
 
 import com.google.gson.Gson;
 import com.tkisor.nekojs.core.pack.ScriptPackRegistry;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.pack.sync.PackSyncTrustStore;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
@@ -9,10 +11,16 @@ import net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldSave;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.client.gui.screens.DisconnectedScreen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.client.renderer.item.MissingItemModel;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
@@ -23,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,6 +45,8 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
     private static final Path OUTPUT = Path.of(System.getProperty("neko.acceptance.output"));
     private static final Path GAME = Path.of(System.getProperty("neko.acceptance.game"));
     private final List<String> completed = new ArrayList<>();
+    private boolean remoteAccepted;
+    private int remoteRequest;
 
     @Override
     public void runTest(ClientGameTestContext context) {
@@ -67,6 +78,7 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
             }
             waitForMarker(context, "GLOBAL");
             check(context, "after-a-return", "GLOBAL", 2);
+            if (System.getProperty("neko.acceptance.remote") != null) remote(context);
             writeResult(true, null);
         } catch (Throwable failure) {
             writeResult(false, failure.toString());
@@ -112,8 +124,14 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
             require(I18n.get("neko.acceptance.root").equals("ROOT"), "Root translation was lost");
             require(I18n.get("neko.acceptance.global").equals("GLOBAL"), "Global translation was lost");
             require(I18n.get("neko.acceptance.shared").equals(expected), "Translation precedence changed");
-            boolean world = !expected.startsWith("GLOBAL");
+            boolean world = expected.equals("A") || expected.equals("B");
             require(ScriptPackRegistry.get().worldPacks().size() == (world ? 1 : 0), "WORLD registry leaked or was absent");
+            boolean remote = expected.equals("REMOTE");
+            require(ScriptPackRegistry.get().serverCachePacks().size() == (remote ? 1 : 0), "Remote activation leaked or was absent");
+            require(resources.getResource(Identifier.parse("neko_acceptance:remote-only.txt")).isPresent() == remote,
+                    "Native remote resource did not follow activation lifetime");
+            require(I18n.get("neko.acceptance.remote").equals(remote ? "REMOTE" : "neko.acceptance.remote"),
+                    "Remote translation did not follow activation lifetime");
             for (String marker : List.of("A", "B")) {
                 String key = "neko.acceptance.world_" + marker.toLowerCase();
                 require(I18n.get(key).equals(marker.equals(expected) ? marker : key), "Stale WORLD translation: " + key);
@@ -196,6 +214,75 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
         } catch (IOException failure) { throw new UncheckedIOException(failure); }
     }
 
+    private void remote(ClientGameTestContext context) throws Exception {
+        require(NekoJSPaths.get().root().toAbsolutePath().normalize().equals(GAME.resolve("nekojs").toAbsolutePath().normalize()),
+                "Trust configuration escaped the isolated client");
+        var key = com.google.gson.JsonParser.parseString(Files.readString(OUTPUT.resolve("remote-fixture.json"))).getAsJsonObject();
+        String host = key.get("host").getAsString();
+        String bucket = PackSyncTrustStore.bucketFor(host);
+        context.runOnClient(client -> require(!PackSyncTrustStore.get().isServerTrusted(bucket), "Fixture host was already trusted"));
+        connect(context);
+        rejected(context, "untrusted", "Run /nekojs trust " + host);
+        check(context, "remote-untrusted", "GLOBAL", 2);
+        context.runOnClient(client -> PackSyncTrustStore.get().trustServer(host));
+        connect(context);
+        waitForMarker(context, "REMOTE");
+        check(context, "remote-valid", "REMOTE", 3);
+        context.runOnClient(client -> require(key.get("publicKey").getAsString().equals(
+                PackSyncTrustStore.get().trustedPublicKey(key.get("keyId").getAsString())), "Accepted key was not pinned"));
+        request(context, "tampered");
+        rejected(context, "tampered", "signature mismatch for " + key.get("keyId").getAsString());
+        check(context, "remote-tampered", "GLOBAL", 2);
+        request(context, "restore");
+        connect(context);
+        waitForMarker(context, "REMOTE");
+        check(context, "remote-recovered", "REMOTE", 3);
+        request(context, "rotated");
+        rejected(context, "rotated", "key rotation not accepted");
+        check(context, "remote-rotated", "GLOBAL", 2);
+        request(context, "restore");
+        connect(context);
+        waitForMarker(context, "REMOTE");
+        check(context, "remote-final", "REMOTE", 3);
+        context.runOnClient(client -> {
+            require(client.getConnection() != null && !client.getConnection().getConnection().isMemoryConnection(),
+                    "Remote acceptance must use a real TCP connection");
+            client.level.disconnect(Component.literal("Directory acceptance disconnect"));
+            client.disconnectWithSavingScreen();
+        });
+        context.waitFor(client -> client.level == null, 1200);
+        waitForMarker(context, "GLOBAL");
+        check(context, "remote-disconnected", "GLOBAL", 2);
+        context.setScreen(TitleScreen::new);
+        context.waitForScreen(TitleScreen.class);
+        remoteAccepted = true;
+    }
+
+    private static void connect(ClientGameTestContext context) {
+        String endpoint = System.getProperty("neko.acceptance.remote");
+        context.runOnClient(client -> ConnectScreen.startConnecting(client.gui.screen(), client,
+                ServerAddress.parseString(endpoint), new ServerData("Directory acceptance", endpoint, ServerData.Type.OTHER), false, null));
+    }
+
+    private static void rejected(ClientGameTestContext context, String phase, String expected) throws Exception {
+        context.waitFor(client -> client.level == null && client.gui.screen() instanceof DisconnectedScreen, 1200);
+        String reason = context.computeOnClient(client -> client.gui.screen().getNarrationMessage().getString());
+        require(reason.contains(expected), "Unexpected " + phase + " rejection: " + reason);
+        Files.writeString(OUTPUT.resolve("rejections.jsonl"), JSON.toJson(Map.of("phase", phase, "reason", reason)) + "\n",
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        waitForMarker(context, "GLOBAL");
+    }
+
+    private void request(ClientGameTestContext context, String phase) throws Exception {
+        String token = String.format("%02d", ++remoteRequest);
+        Path folder = OUTPUT.resolve("remote-requests");
+        Files.createDirectories(folder);
+        Path pending = folder.resolve(token + ".tmp");
+        Files.writeString(pending, JSON.toJson(Map.of("phase", phase)), StandardOpenOption.CREATE_NEW);
+        Files.move(pending, folder.resolve(token + ".json"), StandardCopyOption.ATOMIC_MOVE);
+        context.waitFor(client -> Files.isRegularFile(folder.resolve(token + ".ack")), 1200);
+    }
+
     private static void write(Path path, String text) {
         try { Files.createDirectories(path.getParent()); Files.writeString(path, text, StandardCharsets.UTF_8); }
         catch (IOException failure) { throw new UncheckedIOException(failure); }
@@ -211,7 +298,7 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
         row.put("pid", ProcessHandle.current().pid());
         row.put("completed", List.copyOf(completed));
         row.put("failure", failure);
-        row.put("remoteSyncAccepted", false);
+        row.put("remoteSyncAccepted", remoteAccepted);
         row.put("screenshotsReviewed", false);
         write(OUTPUT.resolve("result.json"), JSON.toJson(row) + "\n");
     }
