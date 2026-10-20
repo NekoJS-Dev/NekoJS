@@ -137,6 +137,9 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
             boolean world = expected.equals("A") || expected.equals("B");
             require(ScriptPackRegistry.get().worldPacks().size() == (world ? 1 : 0), "WORLD registry leaked or was absent");
             boolean remote = expected.equals("REMOTE");
+            boolean tcpPlay = client.level != null && client.player != null && client.getConnection() != null
+                    && !client.getConnection().getConnection().isMemoryConnection();
+            require(!remote || tcpPlay, "Accepted remote resources must be checked after TCP PLAY begins");
             require(ScriptPackRegistry.get().serverCachePacks().size() == (remote ? 1 : 0), "Remote activation leaked or was absent");
             require(resources.getResource(Identifier.parse("neko_acceptance:remote-only.txt")).isPresent() == remote,
                     "Native remote resource did not follow activation lifetime");
@@ -166,6 +169,7 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
             result.put("label", label);
             result.put("pid", ProcessHandle.current().pid());
             result.put("marker", expected);
+            result.put("tcpPlay", tcpPlay);
             result.put("stack", bodies);
             result.put("worldPacks", ScriptPackRegistry.get().worldPacks().stream().map(pack -> pack.root().toString()).toList());
             result.put("packs", resources.listPacks().map(PackResources::packId).toList());
@@ -255,8 +259,7 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
         rejected(context, "untrusted", "Run /nekojs trust " + host);
         check(context, "remote-untrusted", "GLOBAL", 2);
         context.runOnClient(client -> PackSyncTrustStore.get().trustServer(host));
-        connect(context);
-        waitForMarker(context, "REMOTE");
+        connectAccepted(context);
         check(context, "remote-valid", "REMOTE", 3);
         context.runOnClient(client -> require(key.get("publicKey").getAsString().equals(
                 PackSyncTrustStore.get().trustedPublicKey(key.get("keyId").getAsString())), "Accepted key was not pinned"));
@@ -264,15 +267,13 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
         rejected(context, "tampered", "signature mismatch for " + key.get("keyId").getAsString());
         check(context, "remote-tampered", "GLOBAL", 2);
         request(context, "restore");
-        connect(context);
-        waitForMarker(context, "REMOTE");
+        connectAccepted(context);
         check(context, "remote-recovered", "REMOTE", 3);
         request(context, "rotated");
         rejected(context, "rotated", "key rotation not accepted");
         check(context, "remote-rotated", "GLOBAL", 2);
         request(context, "restore");
-        connect(context);
-        waitForMarker(context, "REMOTE");
+        connectAccepted(context);
         check(context, "remote-final", "REMOTE", 3);
         context.runOnClient(client -> {
             require(client.getConnection() != null && !client.getConnection().getConnection().isMemoryConnection(),
@@ -292,6 +293,13 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
         String endpoint = System.getProperty("neko.acceptance.remote");
         context.runOnClient(client -> ConnectScreen.startConnecting(ClientScreens.current(client), client,
                 ServerAddress.parseString(endpoint), new ServerData("Directory acceptance", endpoint, ServerData.Type.OTHER), false, null));
+    }
+
+    private static void connectAccepted(ClientGameTestContext context) {
+        connect(context);
+        context.waitFor(client -> client.level != null && client.player != null && client.getConnection() != null
+                && !client.getConnection().getConnection().isMemoryConnection(), 1200);
+        waitForMarker(context, "REMOTE");
     }
 
     private static void rejected(ClientGameTestContext context, String phase, String expected) throws Exception {

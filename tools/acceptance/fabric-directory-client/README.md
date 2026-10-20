@@ -14,6 +14,7 @@
 - 在每个测试世界的真实物品栏保存原生截图。自动模型/资源断言与截图审核分开记录，`screenshotsReviewed=false` 需要实际查看图片后才能补结论。
 - 检查最后退出世界、CLIENT_STOPPING 回调及 launcher exit；超时记录强制终止，只清理带本次唯一 JVM property 的游戏和本次 launcher。
 - `--remote` 另起隔离的服务端 JVM，保持同一客户端使用真实 TCP：未信任拒绝 → 原签名接受 → 已挂载 assets 篡改后重配置拒绝 → 原签名恢复 → 同 keyId 换钥拒绝 → 再次恢复 → 正常断线。每次拒绝匹配原生断线页的具体原因，检查 SERVER_CACHE、资源栈、远端独有文件和语言均撤回。
+- 每次接受连接都要求原生 level、player 和 TCP PLAY listener 就绪，再等待资源应用并发送后续重配置命令；配置期短暂出现资源不计作已进入远端世界。
 
 远端场景使用公开 `ServerPlayNetworking.reconfigure` 重新运行真实配置任务，不直接调用客户端同步 handler。测试密钥在准备进程用既有 Ed25519 签名 API 生成，私钥只写入隔离服务端的 `acceptance-private`，不进入分发包或客户端。客户端从公开 configuration INIT 的 PacketContext 获取实际 TCP 地址，先验证它是 owned loopback/端口，再复用生产地址规范化获取信任身份；本机别名不假定为字面 `127.0.0.1`。先证明该身份未信任并拒绝，再通过既有 API 仅信任此身份，验证首次接受后的公钥 pinning；`allowUnsigned=false` 保持。RCON 密码只留在隔离的 server.properties，不能连同该文件、私钥或信任存储打包公开证据。
 

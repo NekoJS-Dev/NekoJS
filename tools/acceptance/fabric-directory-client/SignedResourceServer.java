@@ -13,6 +13,7 @@ import net.minecraft.network.chat.Component;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.List;
 import java.util.Map;
 
 /** Test-only server commands mutate owned fixtures and request the real Fabric configuration handshake. */
@@ -29,14 +30,29 @@ public final class SignedResourceServer implements ModInitializer {
                 Commands.literal("directoryprobe").then(Commands.argument("phase", StringArgumentType.word())
                         .executes(command -> {
                             String phase = StringArgumentType.getString(command, "phase");
-                            var players = command.getSource().getServer().getPlayerList().getPlayers();
-                            if (!phase.equals("restore") && players.size() != 1) {
-                                throw new AssertionError("Reconfiguration requires exactly one connected acceptance player");
-                            }
-                            try { SignedDirectoryFixture.phase(server, phase); }
-                            catch (Exception failure) { throw new IllegalStateException("Fixture mutation failed", failure); }
-                            if (!phase.equals("restore")) {
-                                for (var player : players) ServerPlayNetworking.reconfigure(player);
+                            // Reconfiguration synchronously removes players from the live player list.
+                            var players = List.copyOf(command.getSource().getServer().getPlayerList().getPlayers());
+                            record(output.resolve("server-requests.jsonl"), Map.of(
+                                    "phase", phase, "players", players.size(), "pid", ProcessHandle.current().pid()));
+                            try {
+                                if (!phase.equals("restore") && players.size() != 1) {
+                                    throw new AssertionError("Reconfiguration requires exactly one connected acceptance player; players=" + players.size());
+                                }
+                                try { SignedDirectoryFixture.phase(server, phase); }
+                                catch (Exception failure) { throw new IllegalStateException("Fixture mutation failed", failure); }
+                                if (!phase.equals("restore")) {
+                                    for (var player : players) ServerPlayNetworking.reconfigure(player);
+                                }
+                            } catch (RuntimeException | Error failure) {
+                                try {
+                                    record(output.resolve("server-errors.jsonl"), Map.of(
+                                            "phase", phase, "players", players.size(), "failure", failure.toString(),
+                                            "cause", failure.getCause() == null ? "" : failure.getCause().toString(),
+                                            "pid", ProcessHandle.current().pid()));
+                                } catch (RuntimeException observationFailure) {
+                                    failure.addSuppressed(observationFailure);
+                                }
+                                throw failure;
                             }
                             record(output.resolve("server-phases.jsonl"), Map.of(
                                     "phase", phase, "players", players.size(), "pid", ProcessHandle.current().pid()));

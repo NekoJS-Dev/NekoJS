@@ -8,6 +8,8 @@
 
 2026-10-20 的[只读刷新](2026-10-20-community-snapshot.json)仍为五项开放、三 PR merged=false，目标 master 及三个 head SHA 均未变化。两 Issue 仍零评论；当前读取未提供新的作者需求确认。没有外部写入，也不将 mergeable=true 或预览 merge_commit_sha 当作已合并。
 
+2026-10-21 的[新快照](2026-10-21-community-snapshot.json)再次确认五项仍开放、三 PR 均未合并，仍指向 master、head SHA 相同，两 Issue 仍零评论。保留开放及下表合同差异的结论不变；没有发送外部回复、改标签或关闭任何事项。
+
 GitHub 连接器于 `2026-10-17T12:16:44.313Z` 读取的[状态快照](2026-10-17-community-snapshot.json)：两项 Issue 均 open，三个 PR 均 open、`merged=false`，目标均为 master。PR 的 `merge_commit_sha` 是预览合并提交，不能据此称已合并。下面标签是本地建议，尚未应用。
 
 | 事项 | stonecutter 已有内容 | 剩余差异与建议 |
@@ -36,3 +38,5 @@ GitHub 连接器于 `2026-10-17T12:16:44.313Z` 读取的[状态快照](2026-10-1
 10-18 增补：[精确语料与完整 common 证据](../architecture-refactor/evidence/2026-10-18-community61-interface/README.md)已通过，测试类 73 tests、0 failures/errors/skipped，完整 common 2376 tests、0 failures/errors、4 skipped。原文“已有 59 项”计数不准确：新增前实际 58 项，新增后 59 项。只改测试，未改生产编译器或声明，未刷新上述 GitHub 状态快照。
 
 后续处理：重新生成并严格消费相关声明；记录 #63 的合同取舍和外部插件集成结论。外部回复、关闭或标签更改需有明确授权和对应结论，不以 stonecutter 已适配作为 master 已合并的依据。
+
+后续定向重生成和严格消费已完成：[最终集中检查](../architecture-refactor/evidence/2026-10-20-fabric-final-checks/README.md)保留 `CommunityProbeTypeScriptFixtureTest` 1 项通过及 `npm run test:community-probe-types` exit 0，使用真实 backend 新生成 fixture，不更新两份既有未提交声明文件。该结果覆盖本地 RPC 泛型正反例，不覆盖原提议的自定义注解、外部 RPC 插件实际注册/运行、master 集成或全部 Probe TypeScript 输出。#63 仍待作者确认 API 取舍与真实插件集成；其余保留 `ready-for-human` 本地建议，不能将本地分支实现等同于原 PR 合并。

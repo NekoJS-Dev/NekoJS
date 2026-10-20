@@ -13,3 +13,7 @@ v3 的源码、结果、资源记录、完整日志和原生物品栏截图在�
 v4（`90225df3`）的全部八个本地阶段已通过：初次加载、A、F3+T、退出 A、B、退出 B、返回同一 A、再次退出，均为同一客户端 PID 13272。主代理查看三张真实物品栏截图，均正常显示自定义物品的钻石贴图；视觉记录与原始 `screenshotsReviewed=false` 分开保存，没有代签人类接受。远端首次连接正确显示未信任拒绝，但观察器预期字面 `127.0.0.1`，实际生产身份为 `kubernetes.docker.internal`，整轮失败且 remote 未通过。外部服务端正常退出，无强制终止。
 
 2026-10-21 后续修正仅在观察器通过公开 configuration INIT 的 PacketContext 获取实际远端 socket，先核对 loopback 与 owned 端口，再复用生产 `normalizeRemoteAddress` 取身份并匹配未信任提示、授权此身份。没有从任意拒绝文本提取待信任域名，也没有改生产地址、信任规则或 wire。v4 的结果、八阶段记录、三截图及失败原因保存在 `v4-evidence.zip`，保持失败状态。
+
+v5（`30a8e711`）的实际 socket 证实为 `127.0.0.1:25893`、规范化身份为本机别名，首次未信任拒绝及随后原签名资源加载已通过；十个资源阶段记录存在。`directoryprobe tampered` 返回 RCON 命令异常，服务端 public marker 已是 `TAMPERED`，但没有 command 完成记录，不能归因为玩家数量检查拒绝或把篡改场景记为通过。控制器按失败路径强制终止 owned 客户端 PID 20336，未生成 accepted 结果；外部服务端仍正常停服。`v5-evidence.zip` 保留错误响应、强制终止记录、真实地址、资源阶段和 mutation 后的公开 marker，后续诊断不覆盖本次失败。
+
+后续源码与 JDK 25 字节码核对发现：测试命令遍历 `PlayerList.getPlayers()` 返回的原始 ArrayList，而 Fabric 重配置同步调用 `switchToConfig` → `removePlayerFromWorld` → `PlayerList.remove`，修改同一列表。唯一元素取出后 cursor 为 1、移除后 size 为 0；`ArrayList.Itr.hasNext()` 判断 `cursor != size`，下一次 `next()` 检查 modCount 并抛出 ConcurrentModificationException。这解释了已完成 mutation 却未写 command 完成行的路径，但 v5 没有捕获异常类型，不能追认其为已观测的堆栈。修复仅将测试命令的玩家列表复制为不可变快照，补充 request/error 记录，并在客户端等到真实 TCP PLAY 才继续；原生签名与资源撤回断言保持。

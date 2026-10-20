@@ -62,4 +62,26 @@ with zipfile.ZipFile(archive) as frozen:
     for row in review['images']:
         name = 'v4/screenshots/' + Path(row['path'].replace('\\', '/')).name
         assert hashlib.sha256(frozen.read(name)).hexdigest() == row['sha256']
-print('PASS: v2/v3/v4 failures retained, complete local v4 phases and primary visual review verified; remote incomplete')
+expected = json.loads((base / 'v5-verification.json').read_text(encoding='utf-8'))
+archive = base / 'v5-evidence.zip'
+assert hashlib.sha256(archive.read_bytes()).hexdigest() == expected['archiveSha256']
+with zipfile.ZipFile(archive) as frozen:
+    for name, digest in expected['files'].items():
+        assert hashlib.sha256(frozen.read(name)).hexdigest() == digest, name
+    assert 'v5/result.json' not in frozen.namelist()
+    rows = [json.loads(line) for line in frozen.read('v5/resources.jsonl').splitlines()]
+    assert len(rows) == 10 and [row['label'] for row in rows[-2:]] == ['remote-untrusted', 'remote-valid']
+    assert {row['pid'] for row in rows} == {20336}
+    address = json.loads(frozen.read('v5/remote-address.json'))
+    assert address['address'] == '127.0.0.1' and address['port'] == 25893 and address['loopback']
+    assert address['initiallyTrusted'] is False and address['normalizedHost'] == 'kubernetes.docker.internal'
+    assert frozen.read('v5/server-marker.txt').decode() == 'TAMPERED'
+    commands = json.loads(frozen.read('v5/remote-commands.json'))
+    assert commands[0]['command'] == 'directoryprobe tampered'
+    assert 'unexpected error' in commands[0]['response'] and commands[-1]['command'] == 'stop'
+    execution = json.loads(frozen.read('v5/execution.json'))[-1]
+    assert execution['stage'] == 'client' and execution['exitCode'] != 0
+    assert execution['forcedOwnedGamePids'] == [20336] and execution['timedOut'] is False
+    assert json.loads(frozen.read('v5/server-result.json')) == dict(
+        normalStop=True, forcedOwnedGamePids=[], launcherExitCode=0)
+print('PASS: v2-v5 failures retained; local phases, real TCP identity and failed mutation boundary verified')
