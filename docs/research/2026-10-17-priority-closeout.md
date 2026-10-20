@@ -2,6 +2,21 @@
 
 用户确认按以下顺序推进；实现、测试及提交由主代理完成，Luna xhigh 仅作明确范围内的只读调查。不创建 PR，不创建新 Issue，保留其他贡献者的工作区改动。
 
+## 当前交付状态（2026-10-21）
+
+生产实现已收口；下文各日期记录保留当时结果，旧失败不覆盖或改判。当前有效结论如下。
+
+| 目标 | 当前结果 | 证据与边界 |
+| --- | --- | --- |
+| 原门槛重载性能 | PASS：244.4 / 248.2 ms；启动 23117.0 ms | [正式样本与实际 JAR](../architecture-refactor/evidence/2026-10-20-binding-preflight-performance/README.md)。原 sampler、首值和默认 OS 策略保持；之后的生产修改仅为 Fabric SERVER timer 接线，不改变该 NeoForge 测量路径。 |
+| 独立 Context 成本与重复释放 | PASS：1/4/8 包、四包 50 次重载、272/272 退役 Context 观察到回收 | [完整游戏观测](../architecture-refactor/evidence/2026-10-20-pack-game-resources/README.md)。11 组 OS/NMT/heap 样本；解释型 Engine，used heap 稳定但 committed heap 增长，不宣称整个进程内存恒定或已有长期预算。 |
+| 社区五项核对 | 已交付保留开放的逐项结论 | [最新状态与合同差异](2026-10-17-community-closeout.md)。三 PR 目标仍为 master；#63 尚缺作者确认与外部 RPC 插件实际集成，不以 stonecutter 适配等同于原 PR 合并。没有外部写入。 |
+| Fabric 目录资源桥与自动物品模型 | 生产实现完成；两节点构建、服务端与客户端原生验收通过 | [实现范围](2026-10-19-fabric-directory-resource-bridge.md)、[最终构建](../architecture-refactor/evidence/2026-10-20-fabric-final-checks/README.md)、[服务端](../architecture-refactor/evidence/2026-10-20-fabric-directory-server/README.md)、[客户端](../architecture-refactor/evidence/2026-10-21-fabric-directory-client/README.md)。两客户端各 15 阶段：自动模型、资源栈/语言、F3+T、同客户端 A→B→A、真实 TCP 签名拒绝/恢复/撤回；六张截图实际审核，客户端/服务端正常退出，无强制终止。 |
+
+维护者整体接受、人工翻译审核、所有 OS/JDK 与所有五节点图形矩阵、编译型 guest 和长期内存预算没有由代理代签。原有未提交的两份声明、研究目录及图片保持，不包含在本轮提交中。
+
+工程实现、约定的本机自动化/原生验收及社区逐项保留结论已交付；最后两个 Fabric 客户端运行绑定 `5fec3f89`，97 项公开证据的独立 verifier PASS。正式性能之后，NeoForge/common 测量路径无生产源码变化，只有 Fabric end tick 接线增加六行；未因工具/文档收尾重复正式 cohort。没有 PR、外部关闭或 push。
+
 ## 1. 重载性能（当前实现已通过原标准复验）
 
 - 当前测量起点：`f41db5d9819df7f501069163d2cbb7a0397b7d6e`。
