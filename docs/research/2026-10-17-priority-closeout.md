@@ -90,6 +90,8 @@
 
 2026-10-20 完整 Fabric 26.2 服务端成本观测尚未完成：第一次因可选 VM 选项读取失败中止，第二次首包 COMMIT 成功后发现 `setImmediate` 不执行。原生 end tick 缺少 SERVER 定时器冲刷，现已在现有 root 入口补齐并编写接线回归；按用户要求先完成实现，尚未运行修复后测试或游戏。[两次失败、修复范围和后续验收](../architecture-refactor/evidence/2026-10-20-fabric-server-timers/README.md)均保留，不能用唯一 legacy 内存点宣告多包成本或五十次替换通过。TEST 调度、NeoForge 与原正式性能路径未改。
 
+随后 `cc55c4ce` 的[两 Fabric 节点集中检查](../architecture-refactor/evidence/2026-10-20-fabric-final-checks/README.md)通过；修复后完整游戏 v3 的 1/4/8/4 阶段及前三个重复重载采样通过。window40 失败时原版已因空服 60 秒暂停，tick 计数固定而 RCON 仍执行重载；该次 44 个 COMMIT、八组内存样本、正常退出与失败均[冻结保留](../architecture-refactor/evidence/2026-10-20-pack-game-pause/README.md)。下一次仅修正 owned 测试服的暂停配置并加强诊断，不调整生产暂停行为，不改写本次失败。
+
 ## 3. 社区事项收尾（本地核对已完成，外部收尾未完成）
 
 逐项核对 #60、#63 和 PR #61/#65/#66 的当前正文、讨论、提案差异及 stonecutter 实现，记录关闭或保留的依据。它们目标为 master；适配到 stonecutter 不等于原 PR 已合并。外部评论属于向他人发送消息，需要用户明确授权；可以先完成本地核对与结论。

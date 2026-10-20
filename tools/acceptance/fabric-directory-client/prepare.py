@@ -53,6 +53,8 @@ write('options.txt', 'lang:en_us\nrenderDistance:2\nsimulationDistance:2\nmaxFps
 
 for name in ('FabricDirectoryClientAcceptance.java', 'SignedDirectoryFixture.java', 'SignedResourceServer.java', 'prepare.py', 'run.py'):
     (output / name).write_bytes((Path(__file__).parent / name).read_bytes())
+screen_node = '26.1.2' if args.node == '26.1.2-fabric' else '26.2'
+(output / 'ClientScreens.java').write_bytes((Path(__file__).parent / screen_node / 'ClientScreens.java').read_bytes())
 
 init = """gradle.projectsEvaluated {
     def target = gradle.rootProject.findProject(':%s')
@@ -112,7 +114,7 @@ source_hashes = {name: hashlib.sha256((repo / name).read_bytes()).hexdigest() fo
     'gradleHome': str(args.gradle_home.resolve()), 'revision': revision, 'sources': source_hashes,
     'entrypointSha256': hashlib.sha256((output / 'FabricDirectoryClientAcceptance.java').read_bytes()).hexdigest(),
     'testSources': {name: hashlib.sha256((output / name).read_bytes()).hexdigest()
-                    for name in ('FabricDirectoryClientAcceptance.java', 'SignedDirectoryFixture.java', 'SignedResourceServer.java')},
+                    for name in ('FabricDirectoryClientAcceptance.java', 'SignedDirectoryFixture.java', 'SignedResourceServer.java', 'ClientScreens.java')},
     'preparedOnly': True, 'remote': args.remote,
 }, indent=2) + '\n', encoding='utf-8')
 print(f'Prepared only: {output}')

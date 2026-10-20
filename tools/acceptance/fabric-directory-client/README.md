@@ -16,7 +16,7 @@
 
 远端场景使用公开 `ServerPlayNetworking.reconfigure` 重新运行真实配置任务，不直接调用客户端同步 handler。测试密钥在准备进程用既有 Ed25519 签名 API 生成，私钥只写入隔离服务端的 `acceptance-private`，不进入分发包或客户端。客户端先证明未信任拒绝，再通过既有 API 仅信任 owned 的 `127.0.0.1`，验证首次接受后的公钥 pinning；`allowUnsigned=false` 保持。RCON 密码只留在隔离的 server.properties，不能连同该文件、私钥或信任存储打包公开证据。
 
-不启用 `--remote` 时仅跑本地场景，`remoteSyncAccepted=false` 保留。所有模式的资源检查均不等于视觉审核、全部平台验收或维护者接受。它使用开发 `runClient` / `runServer` 的真实 loader/生产类，不证明发行 JAR 安装启动。客户端测试开启 Fabric 的实验性 `fabric-client-gametest` 接口；目前已核对 26.2 的接口，另一节点仍需独立核对和执行，不成为生产依赖扩展。
+不启用 `--remote` 时仅跑本地场景，`remoteSyncAccepted=false` 保留。所有模式的资源检查均不等于视觉审核、全部平台验收或维护者接受。它使用开发 `runClient` / `runServer` 的真实 loader/生产类，不证明发行 JAR 安装启动。客户端测试开启 Fabric 的实验性 `fabric-client-gametest` 接口；已只读核对两节点锁定 API，准备时选择对应 `ClientScreens` 源文件来适配原生屏幕访问差异。两个节点仍需分别编译和执行，不成为生产依赖扩展。
 
 ## 分开准备与执行
 
@@ -38,4 +38,4 @@ python build/priority-closeout/fabric-client-final-v1/run.py `
   D:/mcmodDemo/NekoJS-mult/build/priority-closeout/fabric-client-final-v1
 ```
 
-另一 Fabric 节点必须先核对实验性接口，再用新的输出目录单独执行。准备脚本不复制旧 world 或使用已有账号，游戏需要本机图形环境。远端 fixture 绑定本机 25893/25894，仅供这对进程使用；执行时监控服务器就绪和客户端阶段请求，结束后 RCON 正常停服，失败与强制终止均单列记录。不要与正式性能组并行运行，也不要因为组件通过而改写性能成绩。
+另一 Fabric 节点用新的输出目录单独执行，已核对的接口仍需实际编译与运行确认。准备脚本不复制旧 world 或使用已有账号，游戏需要本机图形环境。远端 fixture 绑定本机 25893/25894，仅供这对进程使用；执行时监控服务器就绪和客户端阶段请求，结束后 RCON 正常停服，失败与强制终止均单列记录。不要与正式性能组并行运行，也不要因为组件通过而改写性能成绩。

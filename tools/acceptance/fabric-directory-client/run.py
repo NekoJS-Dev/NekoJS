@@ -106,7 +106,7 @@ classpath = os.pathsep.join([str(repo / 'common/build/classes/java/main'),
                             str(repo / f'versions/{node}/build/classes/java/main'),
                             (output / 'compile-classpath.txt').read_text()])
 execute('compile', [str(java / 'javac.exe'), '-encoding', 'UTF-8', '-cp', classpath, '-d', str(compiled)] +
-        [str(output / name) for name in ('FabricDirectoryClientAcceptance.java', 'SignedDirectoryFixture.java', 'SignedResourceServer.java')], 120)
+        [str(output / name) for name in ('FabricDirectoryClientAcceptance.java', 'SignedDirectoryFixture.java', 'SignedResourceServer.java', 'ClientScreens.java')], 120)
 mod = output / 'game/mods/neko-directory-client-acceptance.jar'
 with zipfile.ZipFile(mod, 'x', zipfile.ZIP_DEFLATED) as archive:
     archive.writestr('fabric.mod.json', json.dumps({

@@ -47,3 +47,5 @@
 客户端补验入口已实现于 [tools/acceptance/fabric-directory-client](../../tools/acceptance/fabric-directory-client/README.md)：使用锁定 Fabric Client GameTest 的公开创建/重开存档、输入与截图接口，独立准备和执行；覆盖初次自动模型、资源栈/语言、真实 F3+T 输入和同客户端 A→B→A，并为截图审核及远端网络保留独立状态。源码与生产类有摘要绑定，失败不覆盖旧目录。按本轮实现优先要求，尚未编译或运行，不当作客户端通过证据；不依赖 MCP 接管，也没有改变其控制权限。
 
 随后补齐该入口的可选 `--remote` 场景：独立服务端 JVM、真实 TCP、owned 地址的先拒绝后信任、签名 assets 接受，以及在已挂载资源时通过 Fabric 公开 reconfigure 重新握手，分别检查篡改/换钥拒绝、恢复和正常断线撤回。拒绝需匹配原生 narration 中的具体原因；私钥仅位于隔离服务端，未放宽 `allowUnsigned`，没有直接调用接收 handler。它仍是未执行的验收实现，不能作为远端客户端通过证据。
+
+最终实现的[集中检查](../architecture-refactor/evidence/2026-10-20-fabric-final-checks/README.md)已通过：两 Fabric 节点完整 build、产物检查及 guardLint，824 项节点/平台测试、0 failures/errors、74 skipped，新增 SERVER 计时器接线回归均执行。另有 1 项社区声明 fixture 与严格消费者通过；既有未提交声明摘要保持。完整游戏成本观测的 v3 在原版空服 60 秒暂停后中止，失败与直接日志见[暂停记录](../architecture-refactor/evidence/2026-10-20-pack-game-pause/README.md)，不能计作五十次重载通过。客户端只读兼容性复查发现两节点原生 screen 访问差异，现由测试入口中的两个节点源码适配，生产代码未改；客户端实机仍未运行。

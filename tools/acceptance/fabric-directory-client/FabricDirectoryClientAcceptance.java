@@ -260,13 +260,13 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
 
     private static void connect(ClientGameTestContext context) {
         String endpoint = System.getProperty("neko.acceptance.remote");
-        context.runOnClient(client -> ConnectScreen.startConnecting(client.gui.screen(), client,
+        context.runOnClient(client -> ConnectScreen.startConnecting(ClientScreens.current(client), client,
                 ServerAddress.parseString(endpoint), new ServerData("Directory acceptance", endpoint, ServerData.Type.OTHER), false, null));
     }
 
     private static void rejected(ClientGameTestContext context, String phase, String expected) throws Exception {
-        context.waitFor(client -> client.level == null && client.gui.screen() instanceof DisconnectedScreen, 1200);
-        String reason = context.computeOnClient(client -> client.gui.screen().getNarrationMessage().getString());
+        context.waitFor(client -> client.level == null && ClientScreens.current(client) instanceof DisconnectedScreen, 1200);
+        String reason = context.computeOnClient(client -> ClientScreens.current(client).getNarrationMessage().getString());
         require(reason.contains(expected), "Unexpected " + phase + " rejection: " + reason);
         Files.writeString(OUTPUT.resolve("rejections.jsonl"), JSON.toJson(Map.of("phase", phase, "reason", reason)) + "\n",
                 StandardOpenOption.CREATE, StandardOpenOption.APPEND);
