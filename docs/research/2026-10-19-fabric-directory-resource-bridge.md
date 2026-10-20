@@ -39,3 +39,5 @@
 随后在 `4dcfe604` 完成[集中检查](../architecture-refactor/evidence/2026-10-19-implementation-checks/README.md)：定向 131 项全部执行并通过；完整 common isolation/check、处理器测试、guardLint、五节点 build/平台门禁及四项 CI 一致性 gate 均通过，全量 5,020 次测试执行、0 failures/errors、271 skipped。五节点配方 JSON 隔离、Fabric 注册完成门控及 receipt 回归已执行；没有修改 golden 或放宽门禁。
 
 实机集中验收仍未运行：Mixin 实际应用、初次客户端模型、GLOBAL/WORLD 资源与配方、原版标签/语言实际合并、A→B→A、远端授权/拒绝/断线资源撤回、原版 `/reload` 与 F3+T。当前 `4dcfe604` 已按[原性能标准复验](../architecture-refactor/evidence/2026-10-19-preflight-performance/README.md)，重载 285.8 / 286.6 ms 均 FAIL、启动 24250.4 ms PASS；不以本功能测试通过代替性能通过。
+
+2026-10-20 补验：两个 Fabric 真实服务端均完成[目录资源原生验收](../architecture-refactor/evidence/2026-10-20-fabric-directory-server/README.md)，初次 WORLD data/脚本配方均存在于原生 RecipeManager；GLOBAL/WORLD 覆盖、block tag 合并、原版 reload、禁用回退与恢复均通过。每节点三次脚本 COMMIT / no errors、三次资源重载，正常停服。两个准备/观察器失败完整保留，实际生产类与封存 JAR 一致，没有生产源码修改。客户端模型、语言合并、F3+T、Fabric 双世界及远端资源撤回仍未验收，不能标为本功能全部完成。同期当前性能源码 `26844b7e` 的原门槛正式三组已 [PASS](../architecture-refactor/evidence/2026-10-20-binding-preflight-performance/README.md)。

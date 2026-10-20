@@ -1,0 +1,30 @@
+{
+  "revision": "acdad763a1133cef475eecf5983e9c1a42da1436",
+  "sha256": "fb18cbbf78f53c9dd8a26d6fd6396def32cb034f588ec58518f065517dc9dc5e",
+  "bytes": 34008000,
+  "entries": 48,
+  "results": {
+    "26.1.2-fabric": {
+      "node": "26.1.2-fabric",
+      "ready": true,
+      "accepted": true,
+      "normalStop": true,
+      "revision": "acdad763a1133cef475eecf5983e9c1a42da1436",
+      "launcherExitCode": 0,
+      "seconds": 84.92605859999992,
+      "diagnosticOnly": false,
+      "clientAssetsAccepted": false
+    },
+    "26.2.0-fabric": {
+      "node": "26.2.0-fabric",
+      "ready": true,
+      "accepted": true,
+      "normalStop": true,
+      "revision": "acdad763a1133cef475eecf5983e9c1a42da1436",
+      "launcherExitCode": 0,
+      "seconds": 87.84102329999996,
+      "diagnosticOnly": false,
+      "clientAssetsAccepted": false
+    }
+  }
+}
