@@ -35,7 +35,7 @@ public final class SignedDirectoryFixture {
         }
         phase(server, "restore");
         Files.writeString(output.resolve("remote-fixture.json"), new Gson().toJson(Map.of(
-                "host", "127.0.0.1", "keyId", keyId(server),
+                "connectHost", "127.0.0.1", "port", 25893, "keyId", keyId(server),
                 "publicKey", PackSigner.encodePublicKey(key(server, "original").getPublic()),
                 "privateKeyDistributed", false)) + "\n", StandardOpenOption.CREATE_NEW);
     }

@@ -4,11 +4,15 @@ import com.google.gson.Gson;
 import com.tkisor.nekojs.core.pack.ScriptPackRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.pack.sync.PackSyncTrustStore;
+import com.tkisor.nekojs.core.pack.sync.PackSyncClient;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldSave;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.context.PacketContext;
+import net.fabricmc.fabric.api.networking.v1.context.PacketContextProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.ConnectScreen;
@@ -32,6 +36,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.StandardCopyOption;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,6 +52,7 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
     private final List<String> completed = new ArrayList<>();
     private boolean remoteAccepted;
     private int remoteRequest;
+    private volatile String remoteHost;
 
     @Override
     public void runTest(ClientGameTestContext context) {
@@ -223,10 +229,29 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
         require(NekoJSPaths.get().root().toAbsolutePath().normalize().equals(GAME.resolve("nekojs").toAbsolutePath().normalize()),
                 "Trust configuration escaped the isolated client");
         var key = com.google.gson.JsonParser.parseString(Files.readString(OUTPUT.resolve("remote-fixture.json"))).getAsJsonObject();
-        String host = key.get("host").getAsString();
-        String bucket = PackSyncTrustStore.bucketFor(host);
-        context.runOnClient(client -> require(!PackSyncTrustStore.get().isServerTrusted(bucket), "Fixture host was already trusted"));
+        require(key.get("connectHost").getAsString().equals("127.0.0.1") && key.get("port").getAsInt() == 25893,
+                "Remote fixture must target the owned loopback server");
+        // Fabric normalizes the connection hostname, which can be a local alias for the numeric target.
+        context.runOnClient(client -> ClientConfigurationConnectionEvents.INIT.register((handler, ignored) -> {
+            var connection = ((PacketContextProvider) handler).getPacketContext().get(PacketContext.CONNECTION);
+            require(connection != null && !connection.isMemoryConnection(), "Remote configuration must use TCP");
+            require(connection.getRemoteAddress() instanceof InetSocketAddress, "Remote socket address was absent");
+            var address = (InetSocketAddress) connection.getRemoteAddress();
+            require(address.getAddress() != null && address.getAddress().isLoopbackAddress() && address.getPort() == 25893,
+                    "Remote configuration escaped the owned loopback endpoint");
+            String observed = PackSyncClient.normalizeRemoteAddress(address);
+            if (remoteHost == null) {
+                require(!PackSyncTrustStore.get().isServerTrusted(PackSyncTrustStore.bucketFor(observed)),
+                        "Actual fixture host was already trusted");
+                remoteHost = observed;
+                write(OUTPUT.resolve("remote-address.json"), JSON.toJson(Map.of(
+                        "normalizedHost", observed, "address", address.getAddress().getHostAddress(),
+                        "port", address.getPort(), "loopback", true, "initiallyTrusted", false)) + "\n");
+            } else require(remoteHost.equals(observed), "Owned server identity changed between configurations");
+        }));
         connect(context);
+        context.waitFor(client -> remoteHost != null, 1200);
+        String host = remoteHost;
         rejected(context, "untrusted", "Run /nekojs trust " + host);
         check(context, "remote-untrusted", "GLOBAL", 2);
         context.runOnClient(client -> PackSyncTrustStore.get().trustServer(host));

@@ -2,7 +2,7 @@
 
 仅在新的 `build/priority-closeout` 子目录中运行，依赖本机已缓存的 Fabric/MC、JDK 25、Python 和 Gradle 依赖。它是测试 mod，生产构建不加载此入口；不安装 MCP、不改其接管权限，也不修改玩家原有存档、资源包或信任数据。
 
-本入口尚未编译或运行。按“先完成实现，再集中测试”的顺序提交，不能据此宣布客户端验收通过。
+本目录是独立验收入口，工具存在或编译成功不等于客户端通过；实际通过、失败与未执行范围由各轮证据单独记录。
 
 ## 覆盖范围
 
@@ -15,7 +15,7 @@
 - 检查最后退出世界、CLIENT_STOPPING 回调及 launcher exit；超时记录强制终止，只清理带本次唯一 JVM property 的游戏和本次 launcher。
 - `--remote` 另起隔离的服务端 JVM，保持同一客户端使用真实 TCP：未信任拒绝 → 原签名接受 → 已挂载 assets 篡改后重配置拒绝 → 原签名恢复 → 同 keyId 换钥拒绝 → 再次恢复 → 正常断线。每次拒绝匹配原生断线页的具体原因，检查 SERVER_CACHE、资源栈、远端独有文件和语言均撤回。
 
-远端场景使用公开 `ServerPlayNetworking.reconfigure` 重新运行真实配置任务，不直接调用客户端同步 handler。测试密钥在准备进程用既有 Ed25519 签名 API 生成，私钥只写入隔离服务端的 `acceptance-private`，不进入分发包或客户端。客户端先证明未信任拒绝，再通过既有 API 仅信任 owned 的 `127.0.0.1`，验证首次接受后的公钥 pinning；`allowUnsigned=false` 保持。RCON 密码只留在隔离的 server.properties，不能连同该文件、私钥或信任存储打包公开证据。
+远端场景使用公开 `ServerPlayNetworking.reconfigure` 重新运行真实配置任务，不直接调用客户端同步 handler。测试密钥在准备进程用既有 Ed25519 签名 API 生成，私钥只写入隔离服务端的 `acceptance-private`，不进入分发包或客户端。客户端从公开 configuration INIT 的 PacketContext 获取实际 TCP 地址，先验证它是 owned loopback/端口，再复用生产地址规范化获取信任身份；本机别名不假定为字面 `127.0.0.1`。先证明该身份未信任并拒绝，再通过既有 API 仅信任此身份，验证首次接受后的公钥 pinning；`allowUnsigned=false` 保持。RCON 密码只留在隔离的 server.properties，不能连同该文件、私钥或信任存储打包公开证据。
 
 不启用 `--remote` 时仅跑本地场景，`remoteSyncAccepted=false` 保留。所有模式的资源检查均不等于视觉审核、全部平台验收或维护者接受。它使用开发 `runClient` / `runServer` 的真实 loader/生产类，不证明发行 JAR 安装启动。客户端测试开启 Fabric 的实验性 `fabric-client-gametest` 接口；已只读核对两节点锁定 API，准备时选择对应 `ClientScreens` 源文件来适配原生屏幕访问差异。两个节点仍需分别编译和执行，不成为生产依赖扩展。
 
