@@ -537,7 +537,28 @@ declare module "java:java/util" {
     }
 
     export interface $SequencedSet<E> extends $SequencedCollection<E>, $Set<E> {
+        addAll(arg0: E[]): boolean;
+        add(arg0: E): boolean;
+        clear(): void;
+        containsAll(arg0: any[]): boolean;
+        contains(arg0: object): boolean;
+        equals(arg0: object): boolean;
+        forEach(arg0: $Consumer_<E, E>): void;
+        hashCode(): number;
+        isEmpty(): boolean;
+        iterator(): $Iterator<E>;
+        parallelStream(): $Stream<E>;
+        removeAll(arg0: any[]): boolean;
+        removeIf(arg0: $Predicate_<E, E, boolean>): boolean;
+        remove(arg0: object): boolean;
+        retainAll(arg0: any[]): boolean;
         reversed(): $SequencedSet<E>;
+        size(): number;
+        spliterator(): $Spliterator<E>;
+        stream(): $Stream<E>;
+        toArray<T>(arg0: T[]): T[];
+        toArray<T>(arg0: $IntFunction_<T[], number, T[]>): T[];
+        toArray(): object[];
     }
 
     export interface $Set<E> extends $Collection<E> {

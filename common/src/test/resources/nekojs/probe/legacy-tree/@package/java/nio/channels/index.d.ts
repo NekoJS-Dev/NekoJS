@@ -127,6 +127,8 @@ declare module "java:java/nio/channels" {
     }
 
     export interface $ByteChannel extends $ReadableByteChannel, $WritableByteChannel {
+        close(): void;
+        isOpen(): boolean;
     }
 
     export interface $InterruptibleChannel extends $Channel {

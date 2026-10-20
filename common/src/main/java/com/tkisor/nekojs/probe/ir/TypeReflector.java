@@ -204,14 +204,26 @@ public final class TypeReflector {
         methods.sort(TypeReflector::compareCandidates);
         if (cls.isInterface()) {
             // A child interface's own overload hides the parent's overload set in TypeScript.
-            // Re-emit only actual inherited instance overloads of declared names, with contextual types.
+            // Re-emit actual inherited instance overloads with contextual types.
             Set<String> names = methods.stream()
                     .filter(method -> Modifier.isPublic(method.getModifiers()) && !Modifier.isStatic(method.getModifiers()))
                     .map(TypeReflector::jsName).filter(name -> name != null).collect(java.util.stream.Collectors.toSet());
-            Arrays.stream(cls.getMethods())
+            // TypeScript also requires an explicit member when multiple parents inherit different contracts.
+            Set<String> inheritedNames = new HashSet<>();
+            for (Class<?> parent : cls.getInterfaces()) {
+                Set<String> parentNames = Arrays.stream(parent.getMethods())
+                        .filter(method -> !Modifier.isStatic(method.getModifiers()))
+                        .map(TypeReflector::jsName).filter(name -> name != null)
+                        .collect(java.util.stream.Collectors.toSet());
+                for (String name : parentNames) {
+                    if (!inheritedNames.add(name)) names.add(name);
+                }
+            }
+            List<Method> inherited = Arrays.stream(cls.getMethods())
                     .filter(method -> method.getDeclaringClass() != cls && !Modifier.isStatic(method.getModifiers())
-                            && names.contains(jsName(method)))
-                    .sorted(TypeReflector::compareCandidates).forEach(methods::add);
+                            && !method.isSynthetic() && !method.isBridge() && names.contains(jsName(method)))
+                    .sorted(TypeReflector::compareCandidates).toList();
+            methods.addAll(covariantInterfaceMethods(cls, inherited));
         } else if (!cls.isEnum()) {
             // TypeScript implements clauses do not inherit Java's default interface methods or overloads.
             // Keep declared accessor precedence; getMethods selects actual overrides and excludes private members.
@@ -280,6 +292,37 @@ public final class TypeReflector {
             methods.addAll(inherited);
         }
         return methods;
+    }
+
+    private record InterfaceMethodKey(String name, List<Type> parameters) {}
+
+    /** Keeps actual overloads while selecting the most specific inherited covariant result. */
+    private static List<Method> covariantInterfaceMethods(Class<?> cls, List<Method> candidates) {
+        var groups = new java.util.LinkedHashMap<InterfaceMethodKey, List<Method>>();
+        for (Method candidate : candidates) {
+            var signature = inheritedSignature(cls, candidate);
+            // Retain Java identities: distinct remapped methods and method variables with different
+            // bounds are overloads, even when their exposed names or rendered parameter names coincide.
+            var key = new InterfaceMethodKey(candidate.getName(), signature.parameterTypes());
+            List<Method> group = groups.computeIfAbsent(key, ignored -> new ArrayList<>());
+            Class<?> result = FunctionalInterfaceResolver.rawClass(signature.returnType());
+            boolean covered = false;
+            for (var iterator = group.iterator(); iterator.hasNext();) {
+                Method previous = iterator.next();
+                Type previousType = inheritedSignature(cls, previous).returnType();
+                Class<?> previousResult = FunctionalInterfaceResolver.rawClass(previousType);
+                if (previousType.equals(signature.returnType())
+                        || result != null && previousResult != null && result != previousResult
+                        && result.isAssignableFrom(previousResult)) {
+                    covered = true;
+                    break;
+                }
+                if (result != null && previousResult != null && result != previousResult
+                        && previousResult.isAssignableFrom(result)) iterator.remove();
+            }
+            if (!covered) group.add(candidate);
+        }
+        return groups.values().stream().flatMap(List::stream).toList();
     }
 
     private MethodDecl reflectClassMethod(Class<?> cls, Method method) {
