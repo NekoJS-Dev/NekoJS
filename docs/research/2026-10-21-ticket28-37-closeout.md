@@ -26,3 +26,9 @@
 阶段检查：`:common:check :common-api-processor:test guardLint` 通过，共 common 2395 tests（4 skipped）和 processor 13 tests，零失败/错误，common isolation 通过，guard 零警告；完整定向声明消费链 `npm run test:probe-types` 通过。首次 Probe 相关测试有两个预期 golden 失败，随后只通过 `:common:regenerateGoldens --tests com.tkisor.nekojs.probe.LegacyProbeTreeTest` 更新 canonical legacy tree；`ByteChannel` 与 `SequencedSet` 两文件共增加 23 行实际继承方法，未手改快照。两份既有修改声明的 SHA256 保持原值。
 
 这些结果不代表完整生产声明图已通过；十入口默认 TSC 尚待新制品重新生成和测量，6867 仍仅是旧归档数字。原始阶段日志和 XML 暂存 `build/priority-closeout/interface-merge-verification` 与同级 `interface-merge-*` 文件，最终交付时再封存与候选绑定。
+
+## 实施记录：动态物品 wire 属性校验
+
+NeoForge 26.x 的实际 Adapter 不再把非法 `fireResistant` 文本通过 `Boolean.parseBoolean` 静默转为 false。只接受 builder 规范化的 `true` / `false`；缺省 false 保持。错误包含稳定 `NEKO-4050`、物品 id 和 owner。正常 payload/schema/id/编码以及默认关闭的 activation gate 不变。开启 gate 的隔离用例经实际 codec 和 client participant 到实际 Adapter 验证 PREPARE 拒绝且不能 COMMIT、STATE_SYNC 拒绝、合法值和缺省值的 inert prepare；不把这组组件检查当作真实 TCP 或 registry surgery 验收。
+
+红测六例中五例失败，保留于 `build/priority-closeout/dynamic-boolean-red*`。修复后两个 NeoForge 26.x 节点的六例与既有 wire golden 检查通过，common 动态注册表相关用例通过，详见 `dynamic-boolean-green.log` 和对应 XML。另修正了初次收集在已绑定生产引擎时仍声称“未接线/inert only”的过时说明与日志：只报告计划已提交及 activation 已交由事务 gate，不在 ACK 前声称完成激活。完整节点构建与多人原生验证仍待后续集中执行。

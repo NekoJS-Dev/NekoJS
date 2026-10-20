@@ -208,7 +208,15 @@ final class NeoForgeDynamicRegistryAdapter implements DynamicRegistryAdapter {
     }
 
     private static boolean fireResistantOf(DynamicAdapterRequest request) {
-        return Boolean.parseBoolean(readingsOf(request).getOrDefault("fireResistant", "false"));
+        String value = readingsOf(request).getOrDefault("fireResistant", "false");
+        return switch (value) {
+            case "true" -> true;
+            case "false" -> false;
+            default -> throw new IllegalArgumentException(
+                    "[NEKO-4050] Dynamic item activation rejected: property 'fireResistant' of '"
+                            + request.id() + "' (owner " + request.ownerScriptId()
+                            + ") must be true or false; got '" + value + "'");
+        };
     }
 
     private static Float fixedRangeOf(DynamicAdapterRequest request, Identifier id) {

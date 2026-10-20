@@ -127,8 +127,8 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
      * declaration batch is also staged for the batch transaction
      * (preflight → server prepare → client prepare/ack → controlled commit through
      * the Adapter/Transport seams). Without one the runtime stays exactly the
-     * ticket 16 inert-local-plan surface. Production binding happens in the platform
-     * assembly (currently not wired — activation stays gated); tests bind fakes.
+     * ticket 16 inert-local-plan surface. The platform assembly binds the production
+     * engine only when the dynamic registry configuration gate is enabled.
      */
     public synchronized void bindActivationEngine(
             DynamicRegistryAdapter adapter, DynamicSyncTransport transport,
@@ -229,9 +229,10 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
         }
         plan.publish();
         NekoJS.LOGGER.info(
-                "DynamicRegistry inert candidate batch {} committed (trigger '{}', {} definition(s));"
-                        + " inert local plan only — activation is gated by the transaction/sync gate",
-                plan.generation(), trigger, plan.definitions().size());
+                "DynamicRegistry candidate batch {} committed (trigger '{}', {} definition(s)); {}",
+                plan.generation(), trigger, plan.definitions().size(), activationEngine == null
+                        ? "local plan retained without an activation engine"
+                        : "activation queued for the transaction/sync gate");
         lastOutcome = CollectionOutcome.success(trigger, plan);
         // Initial collection runs on the owner thread outside any reload commit lock,
         // so the activation transaction may start immediately (zero participants at
