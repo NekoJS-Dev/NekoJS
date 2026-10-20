@@ -69,6 +69,25 @@ class FabricWorldPackStatusTest {
     }
 
     @Test
+    void fabricServerTickRoutesTimersThroughTheRootIncludingIndependentPackages() {
+        String lifecycle = codeLinesOnly(read(repoRoot().resolve(
+                "src/fabric/java/com/tkisor/nekojs/fabric/event/FabricServerEventBindings.java")));
+        int tickStart = lifecycle.indexOf("ServerTickEvents.END_SERVER_TICK.register(server -> {");
+        int tickEnd = lifecycle.indexOf("\n        });", tickStart);
+        assertTrue(tickStart >= 0 && tickEnd > tickStart, "server timer work belongs to the native end tick");
+        String tick = lifecycle.substring(tickStart, tickEnd);
+        int rootLookup = tick.indexOf("var root = rootSupplier.get();");
+        int serverFlush = tick.indexOf("root.flushReadyNodeTimers(ScriptType.SERVER);");
+        int guard = tick.indexOf("if (root != null && root.hasScriptType(ScriptType.SERVER)) {");
+        assertTrue(rootLookup >= 0 && guard > rootLookup,
+                "native ticks must skip a missing or closed runtime");
+        assertTrue(serverFlush > guard && serverFlush < tick.indexOf("TICK_POST.post("),
+                "the root must drain legacy and package timers before script tick listeners");
+        assertFalse(tick.contains("ScriptType.TEST"), "TEST timers keep their explicit test-run drain");
+        assertFalse(tick.contains("scriptManagerOf("), "a single manager would omit independent package timers");
+    }
+
+    @Test
     void worldDiscoveryIsLimitedToLifecycleAndRepositoryPreview() {
         List<Path> roots = List.of(
                 repoRoot().resolve("src/main/java"),

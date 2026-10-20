@@ -88,6 +88,8 @@
 
 实机补验中另修复了 NeoForge 世界包 CLIENT 未随登录自动加载的缺口：[源码、red/green 和实际客户端证据](../architecture-refactor/evidence/2026-10-18-client-world-login/README.md)。共享 26.x 与 1.21.1 仅对本地连接且存在世界包触发已有 CLIENT 事务重载，三节点 build / guardLint 与四项 CI gate 均通过。随后在人工接管已激活的同一 PID 25128 完成 A→B→A，双方自动 entry/私有状态与 capability 正确；真实签名连接、未信任/内容篡改/换钥拒绝及恢复重连通过，六个退出 quiet 窗口均通过。九组完整游戏/GraalMC OS/NMT 点和独立复核器已冻结于[实机验收证据](../architecture-refactor/evidence/2026-10-18-pack-live-acceptance/README.md)。MCP 测试工具阻止无辅助 JVM 退出，关闭 owned HTTP executor 后才正常结束；未通过游戏授权命令路径，未验证游戏内 1/4/8 包内存预算或长期稳定性，维护者接受仍未收到。准备失败与全部限制见[客户端记录](2026-10-18-pack-client-acceptance.md)。
 
+2026-10-20 完整 Fabric 26.2 服务端成本观测尚未完成：第一次因可选 VM 选项读取失败中止，第二次首包 COMMIT 成功后发现 `setImmediate` 不执行。原生 end tick 缺少 SERVER 定时器冲刷，现已在现有 root 入口补齐并编写接线回归；按用户要求先完成实现，尚未运行修复后测试或游戏。[两次失败、修复范围和后续验收](../architecture-refactor/evidence/2026-10-20-fabric-server-timers/README.md)均保留，不能用唯一 legacy 内存点宣告多包成本或五十次替换通过。TEST 调度、NeoForge 与原正式性能路径未改。
+
 ## 3. 社区事项收尾（本地核对已完成，外部收尾未完成）
 
 逐项核对 #60、#63 和 PR #61/#65/#66 的当前正文、讨论、提案差异及 stonecutter 实现，记录关闭或保留的依据。它们目标为 master；适配到 stonecutter 不等于原 PR 已合并。外部评论属于向他人发送消息，需要用户明确授权；可以先完成本地核对与结论。

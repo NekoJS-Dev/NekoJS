@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.fabric.event;
 
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.event.player.PlayerCloneEventJS;
@@ -219,6 +220,11 @@ public final class FabricServerEventBindings {
             }
         });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
+            var root = rootSupplier.get();
+            if (root != null && root.hasScriptType(ScriptType.SERVER)) {
+                // The root flushes the legacy manager and every active package on the server thread.
+                root.flushReadyNodeTimers(ScriptType.SERVER);
+            }
             drainPendingLogins();
             TICK_POST.post(new ServerTickEventJS(server));
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
