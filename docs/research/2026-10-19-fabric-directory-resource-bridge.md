@@ -43,3 +43,5 @@
 2026-10-20 补验：两个 Fabric 真实服务端均完成[目录资源原生验收](../architecture-refactor/evidence/2026-10-20-fabric-directory-server/README.md)，初次 WORLD data/脚本配方均存在于原生 RecipeManager；GLOBAL/WORLD 覆盖、block tag 合并、原版 reload、禁用回退与恢复均通过。每节点三次脚本 COMMIT / no errors、三次资源重载，正常停服。两个准备/观察器失败完整保留，实际生产类与封存 JAR 一致，没有生产源码修改。客户端模型、语言合并、F3+T、Fabric 双世界及远端资源撤回仍未验收，不能标为本功能全部完成。同期当前性能源码 `26844b7e` 的原门槛正式三组已 [PASS](../architecture-refactor/evidence/2026-10-20-binding-preflight-performance/README.md)。
 
 后续完整游戏资源观测发现另一处平台接线遗漏：[Fabric SERVER 定时器未被原生 tick 冲刷](../architecture-refactor/evidence/2026-10-20-fabric-server-timers/README.md)。已在现有 end tick 接回 root 的 SERVER 冲刷入口，使旧目录脚本和独立包共用相同调度；不改 TEST 或 CLIENT 调度。修复后检查尚未运行。上述 data/配方证据仍是对应旧源码的通过记录，未覆盖定时器行为。
+
+客户端补验入口已实现于 [tools/acceptance/fabric-directory-client](../../tools/acceptance/fabric-directory-client/README.md)：使用锁定 Fabric Client GameTest 的公开创建/重开存档、输入与截图接口，独立准备和执行；覆盖初次自动模型、资源栈/语言、真实 F3+T 输入和同客户端 A→B→A，并为截图审核及远端网络保留独立状态。源码与生产类有摘要绑定，失败不覆盖旧目录。按本轮实现优先要求，尚未编译或运行，不当作客户端通过证据；不依赖 MCP 接管，也没有改变其控制权限。
