@@ -257,6 +257,17 @@ public void registerTypeDocs(TypeDocsRegister docs) {
 
 **`TypeDocsRegister` is the single source of truth**. Manual declaration registration for built-in wrappers/helpers is centralized in `NekoCommonManualDeclarations`.
 
+When a global authored declaration uses a Java type, associate its type name explicitly with `withReferences`. A Binding with the same name does not automatically declare a type. For example:
+
+```java
+docs.registerManualDeclaration(ManualDeclarationCatalogEntry.of(
+        "example:stack", "type ExampleStack = StackValue;", "A script-visible item stack.", List.of())
+        .withReferences(Map.of("StackValue",
+                ManualDeclarationCatalogEntry.TypeReference.host(ItemStack.class))));
+```
+
+`host` retains host members; `input` uses the same Java type's registered input adapter. Dependencies are added to TS declarations without changing the primary scan configuration. Hidden, excluded, or unavailable explicit dependencies reject generation with `NEKO-4033`; conflicting types or input modes for one global alias reject it with `NEKO-4051`. The generator uses inline imports in `@manual/references.d.ts`, keeping existing global declarations out of module scope. The existing six-argument constructor remains available, and declarations without references keep their previous output. This only affects TypeScript and grants no additional runtime permissions.
+
 To express TypeScript inference that Java reflection cannot represent, register an authored class declaration:
 
 ```java

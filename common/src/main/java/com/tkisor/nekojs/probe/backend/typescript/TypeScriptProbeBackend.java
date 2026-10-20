@@ -124,6 +124,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             indexFileGenerator.setHiddenClasses(hiddenFqns);
             TypeScriptDeclarationClosure declarations = new TypeScriptDeclarationClosure(ctx, indexFileGenerator,
                     reflectionLoader(ctx));
+            ManualDeclarationReferences manualReferences = ManualDeclarationReferences.prepare(
+                    ctx, classesToGenerate, declarations);
             for (String dependency : bindingGenerator.referencedClasses(snapshot.bindings().stream()
                     .filter(BindingCatalogEntry::emit).toList())) {
                 declarations.includeReference(classesToGenerate, dependency);
@@ -148,6 +150,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 declarations.expand(classesToGenerate);
                 closureChanged = classesToGenerate.size() != previousSize;
             } while (closureChanged);
+
+            manualReferences.validateGeneratedTypes(indexFileGenerator);
 
             Map<String, String> unavailable = new TreeMap<>(declarations.unavailable());
             Map<String, Object> dependencyReport = new LinkedHashMap<>();
@@ -203,6 +207,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
             // 8. 渲染 @manual 手动声明（node:xxx 模块、helper 类型、插件模块）
             renderManualDeclarations(snapshot, files);
+            String referenceTypes = manualReferences.render(aliasRegistry);
+            if (!referenceTypes.isEmpty()) files.put("@manual/references.d.ts", referenceTypes);
 
             // 9. 渲染 managed declarations
             renderManagedDeclarations(snapshot, files);

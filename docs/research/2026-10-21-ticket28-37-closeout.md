@@ -32,3 +32,11 @@
 NeoForge 26.x 的实际 Adapter 不再把非法 `fireResistant` 文本通过 `Boolean.parseBoolean` 静默转为 false。只接受 builder 规范化的 `true` / `false`；缺省 false 保持。错误包含稳定 `NEKO-4050`、物品 id 和 owner。正常 payload/schema/id/编码以及默认关闭的 activation gate 不变。开启 gate 的隔离用例经实际 codec 和 client participant 到实际 Adapter 验证 PREPARE 拒绝且不能 COMMIT、STATE_SYNC 拒绝、合法值和缺省值的 inert prepare；不把这组组件检查当作真实 TCP 或 registry surgery 验收。
 
 红测六例中五例失败，保留于 `build/priority-closeout/dynamic-boolean-red*`。修复后两个 NeoForge 26.x 节点的六例与既有 wire golden 检查通过，common 动态注册表相关用例通过，详见 `dynamic-boolean-green.log` 和对应 XML。另修正了初次收集在已绑定生产引擎时仍声称“未接线/inert only”的过时说明与日志：只报告计划已提交及 activation 已交由事务 gate，不在 ACK 前声称完成激活。完整节点构建与多人原生验证仍待后续集中执行。
+
+## 实施记录：显式手写声明依赖
+
+`ManualDeclarationCatalogEntry` 增加显式全局别名 → Java Class / host 或 input 的引用记录，保留原六参数构造和无引用时的输出。record 的组件列表增加 `references`；需要按六组件解构的插件源码应改为访问器或新组件列表，不能据保留构造函数宣称所有 record 元数据兼容。依赖只进入 TS 的声明闭包，不改变主扫描、runtime 权限、wire 或 Python。已有 TypeDocs Point 原样收集，无新增 Point。内置 NeoForge 声明由版本层提供实际类，保持当前三种 NeoForge 的 side 范围，不把 Fluid 或 Ingredient 的 NeoForge API 注入 Fabric。
+
+生成的 `@manual/references.d.ts` 用内联 import 保留全局作用域、真实宿主成员及输入适配器；raw 泛型 Class 引用沿用擦除实参规则，数组补齐元素类，不生成虚假的 Java 数组类。显式依赖被 hide/exclude 或不可生成时以 `NEKO-4033` 失败；同一全局别名的不一致引用以 `NEKO-4051` 失败。保留编辑后 IR 与 canonical Java 导出，未用空类型或全图 any 消除错误。
+
+手写依赖与泛型数组各有先失败后通过记录；另有输入转换、hide/exclude、编辑/重命名和冲突用例。common Probe 相关测试、三个 NeoForge 节点的实际贡献映射，以及 `npm run test:probe-types` 的全部严格消费链通过。中英文插件文档配对更新并只 stamp 该主题，保持 draft/pending；结构检查零问题，整库严格文档检查仍失败 12 项，不代签其他主题。阶段材料位于 `build/priority-closeout/manual-reference-*`；完整 common/check、五节点制品与生产声明图仍待本轮实现集中收口后执行。

@@ -89,6 +89,10 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.fluids.FluidStack;
 import java.util.List;
+import java.util.Map;
+
+import static com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry.TypeReference.host;
+import static com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry.TypeReference.input;
 
 @RegisterNekoJSPlugin(priority = NekoJSPlugin.CORE_PRIORITY)
 public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.plugin.BindingsPoint.Contributor, com.tkisor.nekojs.core.plugin.TypeDocsPoint.Contributor, com.tkisor.nekojs.core.plugin.NodeTypeDocsPoint.Contributor, com.tkisor.nekojs.core.plugin.EventsPoint.Contributor, com.tkisor.nekojs.core.plugin.ClientEventsPoint.Contributor, com.tkisor.nekojs.core.plugin.AdaptersPoint.Contributor, com.tkisor.nekojs.core.plugin.RecipeNamespacesPoint.Contributor {
@@ -311,7 +315,18 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "RegistryEvents", null, "Startup-side registry builders, including scripted entity types.", List.of("RegistryEvents.register(event => event.entityType('mymod:cat', b => { }))")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "GoalEvents", null, "Startup-side goal registration for existing or scripted entity types.", List.of("GoalEvents.register(event => { })")));
 
-        NekoCommonManualDeclarations.register(registry);
+        NekoCommonManualDeclarations.register(registry, Map.ofEntries(
+                Map.entry("JsonObject", host(com.google.gson.JsonObject.class)),
+                Map.entry("JsonArray", host(com.google.gson.JsonArray.class)),
+                Map.entry("SizedIngredientJS", host(com.tkisor.nekojs.wrapper.item.SizedIngredientJS.class)),
+                Map.entry("ItemStack", host(ItemStack.class)),
+                Map.entry("FluidStack", host(FluidStack.class)),
+                Map.entry("FluidIngredientJS", host(com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS.class)),
+                Map.entry("SizedFluidIngredient", host(net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient.class)),
+                Map.entry("IngredientInput", input(net.minecraft.world.item.crafting.Ingredient.class)),
+                Map.entry("Ingredient", host(net.minecraft.world.item.crafting.Ingredient.class)),
+                Map.entry("CompoundTag", host(CompoundTag.class)),
+                Map.entry("EntityType", host(EntityType.class))));
     }
 
 }

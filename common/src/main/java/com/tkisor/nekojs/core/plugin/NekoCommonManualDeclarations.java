@@ -4,6 +4,8 @@ import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.ScriptType;
 
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 /**
  * Common manual type declarations shared by all platforms (registered via
@@ -14,13 +16,21 @@ public final class NekoCommonManualDeclarations {
     private NekoCommonManualDeclarations() {}
 
     public static void register(com.tkisor.nekojs.core.plugin.TypeDocsRegister registry) {
+        register(registry, Map.of());
+    }
+
+    /** Platform-owned classes remain outside common; the caller supplies their explicit declaration references. */
+    public static void register(TypeDocsRegister registry,
+                                Map<String, ManualDeclarationCatalogEntry.TypeReference> references) {
         registry.registerManualDeclaration(ManualDeclarationCatalogEntry.of(
                 "nekojs.recipe-json-value",
                 "type RecipeJsonValue = null | boolean | number | string | JsonObject | JsonArray "
                         + "| IngredientFactory | SizedIngredientJS | ItemStack | FluidStack "
                         + "| FluidIngredientJS | SizedFluidIngredient;",
                 "RecipeJsonValue boundary accepted by recipe builder/custom/path APIs.",
-                List.of("builder.property('ingredients', [Ingredient.of('minecraft:stone')])")));
+                List.of("builder.property('ingredients', [Ingredient.of('minecraft:stone')])"))
+                .withReferences(select(references, "JsonObject", "JsonArray", "SizedIngredientJS", "ItemStack",
+                        "FluidStack", "FluidIngredientJS", "SizedFluidIngredient")));
 
         registry.registerManualDeclaration(ManualDeclarationCatalogEntry.of(
                 "nekojs.recipe-filter",
@@ -43,7 +53,8 @@ public final class NekoCommonManualDeclarations {
                         + "withCount(count: number): SizedIngredientJS; "
                         + "unwrap(): Ingredient; }",
                 "Script wrapper returned by Ingredient helper methods.",
-                List.of("Ingredient.of('minecraft:stone').withCount(3)")));
+                List.of("Ingredient.of('minecraft:stone').withCount(3)"))
+                .withReferences(select(references, "IngredientInput", "ItemStack", "SizedIngredientJS", "Ingredient")));
 
         registry.registerManualDeclaration(ManualDeclarationCatalogEntry.of(
                 "nekojs.recipe-json-builder",
@@ -60,7 +71,8 @@ public final class NekoCommonManualDeclarations {
                         + "json(): JsonObject; validate(): RecipeJsonBuilder; }",
                 "JSON-first recipe builder with RecipeJsonValue boundary.",
                 List.of("event.builder('minecraft:crafting_shapeless').property('ingredients', "
-                        + "[Ingredient.of('minecraft:stone')])")));
+                        + "[Ingredient.of('minecraft:stone')])"))
+                .withReferences(select(references, "JsonObject")));
 
         registry.registerManualDeclaration(ManualDeclarationCatalogEntry.of(
                 ScriptType.SERVER,
@@ -136,7 +148,8 @@ public final class NekoCommonManualDeclarations {
                         + "markDirty(): PersistentDataJS; sync(): PersistentDataJS; "
                         + "get(key: string): unknown; }",
                 "Typed CompoundTag wrapper returned by entity/player pdata() and related helpers.",
-                List.of("player.pdata().putInt('nekojs:hits', 1).sync()")));
+                List.of("player.pdata().putInt('nekojs:hits', 1).sync()"))
+                .withReferences(select(references, "CompoundTag")));
 
         registry.registerManualDeclaration(ManualDeclarationCatalogEntry.of(
                 ScriptType.STARTUP,
@@ -181,6 +194,16 @@ public final class NekoCommonManualDeclarations {
                         "RegistryEvents.entityType(event => event.create('nekojs:test_mob', "
                                 + "builder => builder.goals(goals => goals.floatInWater())))",
                         "GoalEvents.register(event => event.forType('minecraft:pig', "
-                                + "goals => goals.randomStroll(6, 0.8)))")));
+                                + "goals => goals.randomStroll(6, 0.8)))"))
+                .withReferences(select(references, "EntityType")));
+    }
+
+    private static Map<String, ManualDeclarationCatalogEntry.TypeReference> select(
+            Map<String, ManualDeclarationCatalogEntry.TypeReference> available, String... names) {
+        var selected = new LinkedHashMap<String, ManualDeclarationCatalogEntry.TypeReference>();
+        for (String name : names) {
+            if (available.containsKey(name)) selected.put(name, available.get(name));
+        }
+        return selected;
     }
 }

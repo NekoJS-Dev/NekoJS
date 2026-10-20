@@ -256,6 +256,17 @@ public void registerTypeDocs(TypeDocsRegister docs) {
 
 **单一真相源是 `TypeDocsRegister`**。内置 wrapper/helper 的人工声明注册收敛在 `NekoCommonManualDeclarations`。
 
+全局手写声明使用 Java 类型时，通过 `withReferences` 显式关联类型名，不能假定同名 Binding 同时是类型。例如：
+
+```java
+docs.registerManualDeclaration(ManualDeclarationCatalogEntry.of(
+        "example:stack", "type ExampleStack = StackValue;", "A script-visible item stack.", List.of())
+        .withReferences(Map.of("StackValue",
+                ManualDeclarationCatalogEntry.TypeReference.host(ItemStack.class))));
+```
+
+`host` 保留宿主成员；`input` 使用同一 Java 类型已注册的输入适配器。依赖会补入 TS 声明，主扫描配置不变；隐藏、排除或不可生成的显式依赖以 `NEKO-4033` 拒绝，同一全局别名指向不同类型或不同输入方式以 `NEKO-4051` 拒绝。生成器在 `@manual/references.d.ts` 使用内联 import，不把原有全局声明转成模块。已有六参数构造函数继续可用；无引用的声明保持原样。此机制只影响 TypeScript，不开放额外运行时权限。
+
 当 Java 反射无法表达 TypeScript 的推导关系时，可以注册手写类声明：
 
 ```java
