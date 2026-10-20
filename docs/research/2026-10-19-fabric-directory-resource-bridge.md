@@ -49,3 +49,5 @@
 随后补齐该入口的可选 `--remote` 场景：独立服务端 JVM、真实 TCP、owned 地址的先拒绝后信任、签名 assets 接受，以及在已挂载资源时通过 Fabric 公开 reconfigure 重新握手，分别检查篡改/换钥拒绝、恢复和正常断线撤回。拒绝需匹配原生 narration 中的具体原因；私钥仅位于隔离服务端，未放宽 `allowUnsigned`，没有直接调用接收 handler。它仍是未执行的验收实现，不能作为远端客户端通过证据。
 
 最终实现的[集中检查](../architecture-refactor/evidence/2026-10-20-fabric-final-checks/README.md)已通过：两 Fabric 节点完整 build、产物检查及 guardLint，824 项节点/平台测试、0 failures/errors、74 skipped，新增 SERVER 计时器接线回归均执行。另有 1 项社区声明 fixture 与严格消费者通过；既有未提交声明摘要保持。完整游戏成本观测的 v3 在原版空服 60 秒暂停后中止，失败与直接日志见[暂停记录](../architecture-refactor/evidence/2026-10-20-pack-game-pause/README.md)，不能计作五十次重载通过。客户端只读兼容性复查发现两节点原生 screen 访问差异，现由测试入口中的两个节点源码适配，生产代码未改；客户端实机仍未运行。
+
+后续[完整游戏成本与释放观测](../architecture-refactor/evidence/2026-10-20-pack-game-resources/README.md)已通过，原暂停失败保留。客户端已编译并开始原生执行：缺资源缓存的 v2、在退出 A 时未等待原版异步语言 apply 的 v3 均[保留原始失败](../architecture-refactor/evidence/2026-10-20-fabric-client-preparation/README.md)。v3 的初次模型、WORLD A 与 F3+T 通过，一张真实物品栏截图已由主代理查看；整轮失败，不能当作 B/返回 A、远端或全客户端接受。后续仅补观察器的原生完成等待，不强制额外 reload、不修改生产资源桥；两版所需对象按锁定清单校验后补齐。

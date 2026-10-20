@@ -121,3 +121,5 @@ Copy-Item -LiteralPath build/script-pack-native-final/clipack-neoforge-261-start
 维护者接受记录：目前只收到加载器继续/本地连接操作完成的回复，尚无整体验收结论。工程实现、自动门禁和上述本地运行证据已交付。
 
 2026-10-18 实机补验：[同一客户端 A→B→A 与签名网络冻结证据](../architecture-refactor/evidence/2026-10-18-pack-live-acceptance/README.md)已完成此前缺少的 NeoForge 26.2 双世界切换，以及未信任拒绝、原签名通过、内容篡改/同 keyId 换钥拒绝、恢复重连与断线回调撤回。另修复 CLIENT 登录后未自动加载世界包的产品缺口（`32504630`），三 NeoForge 节点构建及四项 CI gate 通过。已补九组实际游戏/GraalMC 内存快照；长期稳定性与完整游戏内每包 Context 成本预算仍未验证。MCP 游戏 trust 命令不兼容，使用现有 API 授权 owned 来源；客户端无辅助 JVM 退出因 MCP HTTP executor 遗留失败，关闭该 owned executor 后 Gradle exit 0。人工回复仅确认接管按钮点击，不能代签维护者整体接受。Fabric 目录资源桥及其他节点图形验收仍未完成。
+
+2026-10-20 补齐[完整 Fabric 26.2 游戏的包资源与成本观测](../architecture-refactor/evidence/2026-10-20-pack-game-resources/README.md)：1/4/8 个独立包、四包连续 50 次重载和最后禁用均通过，55 次 COMMIT/no errors，272/272 退役 Context 观察到回收，旧 scheduler、timer、manager 与 metadata 释放，正常停服退出。11 组实际 OS/NMT/heap 样本完整保留；原版空服暂停导致的上一失败也保留，后续只关闭 owned 观测服的暂停。实际 Engine 为解释执行且不支持 compilation；四包 used heap 稳定，但 JVM heap committed 从 416 升至 640 MiB，private commit 随之增长，不能宣称整个进程内存不增长，也不移用 common 32 MiB 门槛。长期预算、编译型 guest、全节点图形矩阵与维护者整体接受仍需独立结论。

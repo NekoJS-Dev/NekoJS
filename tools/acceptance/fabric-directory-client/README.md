@@ -10,6 +10,7 @@
 - ROOT/GLOBAL/WORLD 的同名文件覆盖、完整资源栈及 LanguageManager/I18n 合并结果。
 - Fabric Client GameTest API 在同一客户端创建 A、创建 B、重开同一 A 存档；每次进入和退出都等待真实资源变化，不主动强制 reload 来掩盖连接事件漏发。
 - 修改 GLOBAL assets 后通过测试输入按下 F3+T，等待语言和文件内容更新。
+- 等待正常请求触发的原生异步重载：文件赢家、语言赢家及 loading overlay 完成同时满足后，再核对完整资源栈、模型与旧语言撤回；不通过额外 reload 推动被测流程。
 - 在每个测试世界的真实物品栏保存原生截图。自动模型/资源断言与截图审核分开记录，`screenshotsReviewed=false` 需要实际查看图片后才能补结论。
 - 检查最后退出世界、CLIENT_STOPPING 回调及 launcher exit；超时记录强制终止，只清理带本次唯一 JVM property 的游戏和本次 launcher。
 - `--remote` 另起隔离的服务端 JVM，保持同一客户端使用真实 TCP：未信任拒绝 → 原签名接受 → 已挂载 assets 篡改后重配置拒绝 → 原签名恢复 → 同 keyId 换钥拒绝 → 再次恢复 → 正常断线。每次拒绝匹配原生断线页的具体原因，检查 SERVER_CACHE、资源栈、远端独有文件和语言均撤回。

@@ -10,4 +10,8 @@ final class ClientScreens {
     static Screen current(Minecraft client) {
         return client.gui.screen();
     }
+
+    static boolean hasOverlay(Minecraft client) {
+        return client.gui.overlay() != null;
+    }
 }

@@ -49,7 +49,7 @@ RegistryEvents.register(event => {
     });
 });
 '''.lstrip())
-write('options.txt', 'lang:en_us\nrenderDistance:2\nsimulationDistance:2\nmaxFps:60\n')
+write('options.txt', 'lang:en_us\nrenderDistance:2\nsimulationDistance:5\nmaxFps:60\n')
 
 for name in ('FabricDirectoryClientAcceptance.java', 'SignedDirectoryFixture.java', 'SignedResourceServer.java', 'prepare.py', 'run.py'):
     (output / name).write_bytes((Path(__file__).parent / name).read_bytes())

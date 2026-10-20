@@ -92,6 +92,8 @@
 
 随后 `cc55c4ce` 的[两 Fabric 节点集中检查](../architecture-refactor/evidence/2026-10-20-fabric-final-checks/README.md)通过；修复后完整游戏 v3 的 1/4/8/4 阶段及前三个重复重载采样通过。window40 失败时原版已因空服 60 秒暂停，tick 计数固定而 RCON 仍执行重载；该次 44 个 COMMIT、八组内存样本、正常退出与失败均[冻结保留](../architecture-refactor/evidence/2026-10-20-pack-game-pause/README.md)。下一次仅修正 owned 测试服的暂停配置并加强诊断，不调整生产暂停行为，不改写本次失败。
 
+v4 已完成[完整游戏资源观测](../architecture-refactor/evidence/2026-10-20-pack-game-resources/README.md)：1/4/8/4 扩缩容、连续 50 次四包重载、禁用通过；55 次提交、272 个旧 Context 全部观察到回收，729 个被检查 tick 无错误归属，11 组实际内存样本，正常退出。used heap 与 JVM 提交容量、进程 private commit 分别报告，未声称整个进程内存恒定或编译型 guest 通过。此轮不属于正式性能组，原标准性能结果保持；维护者整体接受仍未补签。
+
 ## 3. 社区事项收尾（本地核对已完成，外部收尾未完成）
 
 逐项核对 #60、#63 和 PR #61/#65/#66 的当前正文、讨论、提案差异及 stonecutter 实现，记录关闭或保留的依据。它们目标为 master；适配到 stonecutter 不等于原 PR 已合并。外部评论属于向他人发送消息，需要用户明确授权；可以先完成本地核对与结论。

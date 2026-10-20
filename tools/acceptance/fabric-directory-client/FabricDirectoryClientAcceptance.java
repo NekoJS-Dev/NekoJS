@@ -103,7 +103,9 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
 
     private static void waitForMarker(ClientGameTestContext context, String expected) {
         // Wait through the normal queued adapter refresh; forcing a reload here would hide a missing request.
-        context.waitFor(client -> expected.equals(readMarker(client)), 1200);
+        // Resource files switch before asynchronous language/model listeners finish applying.
+        context.waitFor(client -> expected.equals(readMarker(client))
+                && I18n.get("neko.acceptance.shared").equals(expected) && !ClientScreens.hasOverlay(client), 1200);
         context.waitTicks(5);
     }
 
@@ -123,7 +125,9 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
             require(expected.equals(readMarker(client)), "Native winner changed: " + label);
             require(I18n.get("neko.acceptance.root").equals("ROOT"), "Root translation was lost");
             require(I18n.get("neko.acceptance.global").equals("GLOBAL"), "Global translation was lost");
-            require(I18n.get("neko.acceptance.shared").equals(expected), "Translation precedence changed");
+            require(I18n.get("neko.acceptance.shared").equals(expected),
+                    "Translation precedence changed at " + label + ": expected=" + expected
+                            + " actual=" + I18n.get("neko.acceptance.shared"));
             boolean world = expected.equals("A") || expected.equals("B");
             require(ScriptPackRegistry.get().worldPacks().size() == (world ? 1 : 0), "WORLD registry leaked or was absent");
             boolean remote = expected.equals("REMOTE");
@@ -194,7 +198,8 @@ public final class FabricDirectoryClientAcceptance implements FabricClientGameTe
         } finally {
             context.getInput().releaseKey(GLFW.GLFW_KEY_F3);
         }
-        context.waitFor(client -> I18n.get("neko.acceptance.reload").equals("UPDATED"), 1200);
+        context.waitFor(client -> I18n.get("neko.acceptance.reload").equals("UPDATED")
+                && !ClientScreens.hasOverlay(client), 1200);
         context.runOnClient(client -> {
             try (var reader = client.getResourceManager().getResource(Identifier.parse("neko_acceptance:reload.txt"))
                     .orElseThrow().openAsReader()) {
