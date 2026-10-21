@@ -56,3 +56,9 @@ Standards：Luna xhigh 只读审查最初报告无硬违规、无值得改动的
 Spec：独立 Luna xhigh 只读审查无 findings，认为接口方法合并、显式 host/input 依赖和布尔拒绝符合本阶段规格；明确完整 TSC、PostEffects、多节点 TCP 和最终候选仍开放。这是源码审查，不代表运行验收或维护者接受。
 
 两轴原报告 findings 均 0；主代理额外发现 Standards 文档遗漏 1 项，已修复，Spec 0 项。没有把两个轴合并排序，也没有据此关闭整票。
+
+## 完整生产声明新测量
+
+`dd15186c` 五节点十入口的默认严格 TSC 已完成，全部 exitCode=2，无 checker crash。总数 6867 → 6523；以文件、错误码、首行消息的多重集比较移除 344 / 新增 0，其中 TS2320 的 218 条全部消失，NeoForge 手写引用再移除 126 条。所有 1609 个实际 Python stub 的默认 Pyright 为 0 errors / warnings。完整 TSC 仍失败，不因诊断减少、收集脚本 exit0 或定向消费链通过而关闭门禁。
+
+已封存于 [证据报告](../architecture-refactor/evidence/2026-10-21-probe-closeout/README.md)，包含 4935 项原始证据、完整声明、前后诊断、XML、安装日志、源码/class/JAR 绑定与验证工具。`verify.py` 实际重算 XML、五节点正常退出、Pyright 文件数和诊断差异，通过并保留完整 TSC 的失败结论。
