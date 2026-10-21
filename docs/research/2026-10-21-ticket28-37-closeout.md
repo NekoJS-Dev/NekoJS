@@ -143,3 +143,5 @@ fallback 阶段初次 Probe 检查仅两项 canonical 比对失败；既有再�
 26.1.2 的独立 ModDev 工程只注册验收 helper 为 source mod，NekoJS 从安装的 `d91ca974` 生产 JAR 加载；ModList 文件路径、实际 CodeSource、class resource URL 和字节摘要均相符。原生 debug 资源重载、拒绝候选后未再次 set 的画面保留、恢复共七张世界目标图由主代理逐张查看，客户端/服务器正常退出 0。该工程仍用开发启动器，不称为外部正式安装器或物理键盘/present/人工签字。首轮因复用的历史 `.js.rejected` 文件名与本轮 rename 冲突，在五帧后中止；两进程正常退出且判 NOT GREEN。第二轮在新目录/新世界、同一冻结 JAR 上用独立退役文件名完成七阶段，旧失败材料保留。原始记录在 `build/priority-closeout/posteffects-261-installed-d91ca974[-v2]`，后续封存后再更新票据交接链接。
 
 `d91ca974...dae6ef6d` 的 Standards 复审为 0 hard breach / 0 smell；Spec 发现参数编辑目标不存在时仍标记继承副本，可能遮蔽父类有效编辑。主代理补入越界/缺失参数选择器，实际严格消费再次复现 TS2339 / TS2578，再将标记限定为匹配到真实目标，保留原验证调用和类级 touched 行为。新增独立子类按参数名改型，证明合法的继承参数编辑仍优先，未改型的自有 overload 保持。408 项 Probe 和完整严格消费链通过，golden 未变化。`dae6ef6d` 自身完整 common/check 已通过（3m07s）；后续 no-op 修复须另记录完整 common/check，不冒充旧检查已经覆盖。
+
+最终源码 `ad4d3750` 的 common/check 已通过（3m23s，2411 tests / 4 skipped / 0 failures or errors，含 isolation）；两轴最终复审均无剩余源码 findings。上述构建、三批安装尝试、完整声明诊断和安装客户端原图现已[独立封存](../architecture-refactor/evidence/2026-10-22-static-inheritance/README.md)，6738 项 / 14,920,619 bytes，逐项摘要只读 verifier 通过。已测中间 JAR 与后续源码仍分别绑定，最终五节点制品、完整严格 IDE 和发布相关验收不因归档而判绿。

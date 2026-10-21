@@ -36,6 +36,8 @@
 
 ## Sources
 
+2026-10-22 [安装 JAR 客户端补验](../evidence/2026-10-22-static-inheritance/README.md)：26.1.2 独立 ModDev 启动器只把 helper 作为 source mod，NekoJS 的 ModList、CodeSource、resource URL 和 class 字节明确绑定安装 `d91ca974` JAR。七张世界目标原图、三次原生 debug 资源重载、候选拒绝后未再次 set 的保持、恢复及两进程正常 exit0 均通过。首次历史退役文件名碰撞的中止结果保留且不计通过。该候选与后续 Probe 源码分开；其他两节点仍是先前开发客户端 class 绑定证据，整票/最终候选条件继续开放，不代签人工验收。
+
 2026-10-16 主代理补充 [26.2 首帧像素验收](../evidence/2026-10-16-followup-acceptance/FRAME.md)：官方 JAR 绑定 `0965e29b` 生产源码，精确 .75 字节码确认 Post 在 render 后、present 前同步发布；七张世界帧覆盖资源重载前后、失败候选后未再次 set 的保留画面及恢复。set/clear 首个 Post 帧的 ROI 与实际图片通过，客户端/服务器正常退出。早期禁用类、无资源 id 与加载遮罩的无效试验保留并排除；不是屏幕 present 验收，不外推到其他节点或任意新 inline id，不据此勾选跨节点整体条件。
 
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)

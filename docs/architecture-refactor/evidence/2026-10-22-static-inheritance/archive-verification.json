@@ -1,0 +1,1 @@
+{"archive": "PASS", "entries": 6738, "candidateTests": 5066, "sourceFollowupCommonTests": {"tests": 2411, "skipped": 4, "failures": 0, "errors": 0}, "installedNodes": 5, "fullTypeScript": "FAIL: 5867 diagnostics; 594 removed / 8 added", "nativeInstalledFrames": 7}
