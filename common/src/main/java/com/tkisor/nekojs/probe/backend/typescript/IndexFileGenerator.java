@@ -347,14 +347,11 @@ public final class IndexFileGenerator {
         String alias = switch (fullName) {
             case "java.util.List", "java.util.Collection", "java.util.Set", "java.lang.Iterable",
                  "java.util.Map" -> "COLLECTION_INPUT";
-            case "java.util.ArrayList", "java.util.LinkedList", "java.util.SequencedCollection" ->
-                    "{0}[]";
-            case "java.util.HashSet", "java.util.TreeSet",
-                 "java.util.LinkedHashSet", "java.util.SequencedSet" ->
-                    "{0}[]";
-            case "java.util.HashMap", "java.util.TreeMap",
-                 "java.util.LinkedHashMap", "java.util.SortedMap", "java.util.SequencedMap" ->
-                    "{ [key: string]: {1} }";
+            // Native List/Collection/Map conversions do not extend to concrete classes or subinterfaces.
+            case "java.util.ArrayList", "java.util.LinkedList", "java.util.SequencedCollection",
+                 "java.util.HashSet", "java.util.TreeSet", "java.util.LinkedHashSet", "java.util.SequencedSet",
+                 "java.util.HashMap", "java.util.TreeMap", "java.util.LinkedHashMap",
+                 "java.util.SortedMap", "java.util.SequencedMap" -> "HOST_INPUT";
             case "java.util.Optional" ->
                     "{0} | null";
             case "java.util.Iterator", "java.util.Spliterator",
@@ -394,10 +391,12 @@ public final class IndexFileGenerator {
         }
 
         // 替换模板中的占位符
-        String result = alias.equals("COLLECTION_INPUT")
-                ? adapterAliasGenerator.aliasRegistry().getCollectionAlias(fullName,
-                        Arrays.stream(typeParams).map(TypeVariable::getName).toArray(String[]::new))
-                : alias;
+        String result = switch (alias) {
+            case "COLLECTION_INPUT" -> adapterAliasGenerator.aliasRegistry().getCollectionAlias(fullName,
+                    Arrays.stream(typeParams).map(TypeVariable::getName).toArray(String[]::new));
+            case "HOST_INPUT" -> "$" + simpleName + "<" + paramJoiner + ">";
+            default -> alias;
+        };
         for (int i = 0; i < typeParams.length; i++) {
             result = result.replace("{" + i + "}", typeParams[i].getName());
         }

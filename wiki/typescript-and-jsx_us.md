@@ -55,7 +55,7 @@ The TypeScript frontend erases types but does not check them. To enable type che
 
 Or use a `.ts` file, where the IDE (VS Code) checks against the type declarations provided by `.neko_probe`.
 
-Java `Object` values can be numbers, strings, booleans or null, so declarations use `unknown`; narrow the value before accessing specific members. Default `List`, `Collection` and `Iterable` parameters accept their Java host containers or arrays, preserving host generic arguments separately from converted element inputs. Default `Set` parameters require a Java Set rather than an array; additional plugin adapters follow their declared input shapes. Map host types and record inputs remain separate, with records restricted to convertible property keys and corresponding values.
+Java `Object` values can be numbers, strings, booleans or null, so declarations use `unknown`; narrow the value before accessing specific members. Default `List`, `Collection` and `Iterable` parameters accept their Java host containers or arrays, preserving host generic arguments separately from converted element inputs. Default `Set` parameters require a Java Set rather than an array; additional plugin adapters follow their declared input shapes. Map host types and record inputs remain separate, with records restricted to convertible property keys and corresponding values. These conversions do not automatically extend to concrete classes such as `ArrayList` or subinterfaces such as `SequencedCollection`, `SequencedSet`, `SortedMap` and `SequencedMap`; their exported input aliases retain Java host container types.
 
 <a id="wiki-section-6"></a>
 ### Practical examples

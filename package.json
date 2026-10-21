@@ -14,7 +14,7 @@
     "test:probe-character-projection": "tsc -p common/build/probe-ts-character-projection/tsconfig.json",
     "test:probe-interface-merge": "tsc -p common/build/probe-ts-interface-merge/tsconfig.json",
     "test:probe-object-projection": "tsc -p common/build/probe-ts-object-projection/tsconfig.json",
-    "test:probe-collection-input": "tsc -p common/build/probe-ts-collection-input/tsconfig.json",
+    "test:probe-collection-input": "tsc -p common/build/probe-ts-collection-input/tsconfig.json && tsc -p common/build/probe-ts-collection-input/fallback/tsconfig.json",
     "test:probe-manual-references": "tsc -p common/build/probe-ts-manual-references/tsconfig.json && tsc -p common/build/probe-ts-manual-array-references/tsconfig.json",
     "test:community-probe-types": "tsc -p common/src/test/probe-ts/tsconfig.community.json --noEmit",
     "check:wiki": "node scripts/wiki-docs.mjs check --strict",

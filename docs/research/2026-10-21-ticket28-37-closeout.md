@@ -105,3 +105,15 @@ Set 的旧数组输入声明与实际运行不符：生产 NekoSharedHostAccess 
 新 Map 负例还复现了 TS 5.8.3 的具体边界：将 Partial<Record<...>> 放在具体 key 的 conditional true 分支中，会丢失索引签名并意外接受 boolean 值。原负例的 @ts-expect-error 因此报 TS2578。把 PropertyKey 判定保留为 unknown/never 的交集门禁、record 放在条件外后，合法记录保持可用，错误值及不可转换 host key 的 record 均被严格消费拒绝；未用 any 或空类型压掉门禁。完整生产声明、五节点和最终候选验收仍待集中运行。
 
 集合阶段初次 Probe 检查 403 tests / 2 skipped，两个 canonical golden 比对和一个旧回调结果断言按预期失败。canonical 任务再生成 16 个文件、87 行配对变化，保留 host 分支、Set 真实输入、Map key 门禁与转换元素；回调断言改为同时保留 host List 和数组的实际结果类型。修复后 403 tests / 2 skipped 零失败，完整 `npm run test:probe-types` 通过。中英文类型指南同步，仅 stamp typescript-and-jsx 并保留 draft/pending；结构检查 26 topics / 0 problems，整库严格文档检查仍失败其他主题的 10 项。两份起点既有修改声明未变。
+
+## 集合别名复审与后续候选
+
+固定 `6297761d...99677b0f` 的 Standards 为 0 hard breach / 0 smell；Spec 指出 fallback 的 SequencedSet / SortedMap 等仍错误承诺数组或 record 输入。主代理核对同一生成分支后，把既有具体集合类及 Collection/Set/Map 子接口的 fallback 输入别名改为各自 host 类型；普通参数原本已使用这些 host 类型。List/Collection/Iterable/Map 本身的原生转换规则、显式插件适配器优先级、其他 Iterator/Stream 别名和运行时均未改动。
+
+生产 HostAccess 实测 ArrayList、SequencedCollection、SequencedSet、SortedMap、SequencedMap 的真实容器可用，相应数组/record 在实际执行集合操作时失败。新增严格消费覆盖十二种既有 fallback 别名，先复现宿主容器被拒绝和非法数组/record 被接受，再修复；夹具仍只补入区分容器所需的 host 操作，不冒充完整 JDK 声明验收。
+
+这次还明确了 Set 的延迟代理边界：Graal 可以先构造 Set 接口代理，`Collections.unmodifiableSet(array)` 单独返回不证明转换可用，调用 `size()` 才失败。新增真实 HostAccess 回归同时验证代理可构造和操作被拒绝。安装测试的第一轮错误地只检查包装调用，导致脚本候选失败；完整失败日志和五进程正常退出保留于 `build/closeout-99677b0f-installed`，不计为通过。第二轮使用同一批冻结 JAR、独立新目录与修正后的操作断言，测试结果单独记录；输出标记只匹配真实日志事件，不能把异常堆栈中的脚本源码行计为通过。
+
+前一源码 `99677b0f` 的完整 common/check、处理器、guard 与五节点 build 已通过：8m16s，106 tasks / 45 executed，5062 tests / 271 skipped / 0 failures or errors，含五节点 platform gate。XML 与完整日志在 `build/priority-closeout/99677b0f-matrix` 冻结；安装 JAR 的全部 common/node class 与对应构建逐字节绑定。该结果不覆盖本节 fallback 后续源码，也不代表完整严格 TSC 已通过。
+
+fallback 阶段初次 Probe 检查仅两项 canonical 比对失败；既有再生成任务只改变 java.util golden 的四行输入别名。最终 Probe 检查 404 tests / 2 skipped / 0 failures or errors（其中集合四例），完整 `npm run test:probe-types` 通过。中英文指南已配对更新，结构检查 26 topics / 0 problems。两份起点既有声明摘要保持原值。修正夹具后的 `99677b0f` 五节点安装运行全部通过，五进程均正常退出 0；严格 TSC 仍按实际结果保留失败状态，完整计数和差异后续封存。

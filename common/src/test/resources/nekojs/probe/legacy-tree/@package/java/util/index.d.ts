@@ -830,10 +830,10 @@ declare module "java:java/util" {
     export type $Locale$IsoCountryCode_ = $Locale$IsoCountryCode | "PART1_ALPHA2" | "PART1_ALPHA3" | "PART3";
     export type $Map_<K, V> = ($Map<K, V> | (([K] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<K, PropertyKey>, V>>));
     export type $Optional_<T> = T | null;
-    export type $SequencedCollection_<E> = E[];
-    export type $SequencedMap_<K, V> = { [key: string]: V };
-    export type $SequencedSet_<E> = E[];
+    export type $SequencedCollection_<E> = $SequencedCollection<E>;
+    export type $SequencedMap_<K, V> = $SequencedMap<K, V>;
+    export type $SequencedSet_<E> = $SequencedSet<E>;
     export type $Set_<E> = $Set<E>;
-    export type $SortedMap_<K, V> = { [key: string]: V };
+    export type $SortedMap_<K, V> = $SortedMap<K, V>;
     export type $Spliterator_<T> = T[];
 }
