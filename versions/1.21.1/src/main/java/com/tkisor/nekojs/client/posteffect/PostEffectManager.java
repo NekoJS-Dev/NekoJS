@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -48,6 +49,11 @@ public final class PostEffectManager {
 
     /** 1.21.1 无公开的 current effect getter，运行时用最后一次 set 的 id 记账。 */
     private static volatile ResourceLocation lastSetId;
+
+    private static long selectionRevision;
+
+    /** Renderer-owned chain identity; this reference does not extend its lifetime. */
+    private static WeakReference<PostChain> selectedChain = new WeakReference<>(null);
 
     private PostEffectManager() {
     }
@@ -98,7 +104,11 @@ public final class PostEffectManager {
         ACTIVE_GENERATION = generation;
         boolean activeRetired = lastSetId != null && removed.contains(lastSetId);
         if (activeRetired) {
-            clear();
+            if (current() != null) {
+                clear();
+            } else {
+                forgetSelection();
+            }
         }
         LOGGER.info("Installed client post-effect generation {} ({} definition(s), {} removed)",
                 generation, definitions.size(), removed.size());
@@ -180,15 +190,26 @@ public final class PostEffectManager {
         }
         ResourceLocation location = chainLocation(id);
         lastSetId = id;
-        Minecraft.getInstance().execute(() -> Minecraft.getInstance().gameRenderer.loadEffect(location));
+        selectionRevision++;
+        Minecraft.getInstance().execute(() -> {
+            Minecraft.getInstance().gameRenderer.loadEffect(location);
+            selectedChain = new WeakReference<>(Minecraft.getInstance().gameRenderer.currentEffect());
+        });
         return true;
     }
 
     /** Deactivates any active post effect. */
     public static boolean clear() {
-        lastSetId = null;
+        forgetSelection();
         Minecraft.getInstance().execute(() -> Minecraft.getInstance().gameRenderer.shutdownEffect());
         return true;
+    }
+
+    /** Cancels a pending resource restoration without touching a renderer-owned replacement. */
+    private static void forgetSelection() {
+        lastSetId = null;
+        selectionRevision++;
+        selectedChain.clear();
     }
 
     /**
@@ -206,7 +227,8 @@ public final class PostEffectManager {
     @Nullable
     public static ResourceLocation current() {
         if (lastSetId == null) return null;
-        return Minecraft.getInstance().gameRenderer.currentEffect() != null ? lastSetId : null;
+        PostChain chain = Minecraft.getInstance().gameRenderer.currentEffect();
+        return chain != null && chain == selectedChain.get() ? lastSetId : null;
     }
 
     /**
@@ -214,6 +236,7 @@ public final class PostEffectManager {
      * {@code GameRenderer} field (no public getter), read via reflection.
      */
     public static boolean isActive() {
+        if (Minecraft.getInstance().gameRenderer.currentEffect() == null) return false;
         Object gameRenderer = Minecraft.getInstance().gameRenderer;
         try {
             Field field = gameRenderer.getClass().getDeclaredField("effectActive");
@@ -223,6 +246,32 @@ public final class PostEffectManager {
             LOGGER.debug("Could not read GameRenderer.effectActive", e);
             return Minecraft.getInstance().gameRenderer.currentEffect() != null;
         }
+    }
+
+    /**
+     * Captures the currently rendered NekoJS selection before vanilla reloads its shaders.
+     * Vanilla closes the old chain even when the CLIENT candidate is rejected. The completion
+     * callback rebuilds that selection from the new resources, unless a set, clear, retirement,
+     * or world change superseded it. It never reuses a chain whose GPU resources were closed.
+     * The caller captures and runs this callback on the client thread.
+     */
+    @Nullable
+    public static Runnable captureResourceReloadRestoration() {
+        Minecraft minecraft = Minecraft.getInstance();
+        ResourceLocation selected = current();
+        if (selected == null || minecraft.level == null) return null;
+        if (minecraft.gameRenderer.currentEffect() != selectedChain.get()) return null;
+        long revision = selectionRevision;
+        var level = minecraft.level;
+        boolean active = isActive();
+        return () -> {
+            if (minecraft.level != level || selectionRevision != revision || !selected.equals(lastSetId)) return;
+            if (minecraft.gameRenderer.currentEffect() != null) return;
+            if (!isResourceAvailable(selected)) return;
+            minecraft.gameRenderer.loadEffect(chainLocation(selected));
+            selectedChain = new WeakReference<>(minecraft.gameRenderer.currentEffect());
+            if (!active && isActive()) minecraft.gameRenderer.togglePostEffect();
+        };
     }
 
     /** True when the effect exists as a {@code shaders/post} resource in the active packs. */

@@ -21,7 +21,9 @@
     "inject.MixinMutableComponent",
     "inject.MixinPlayer"
   ],
-  "client": [],
+  "client": [
+    "PostEffectResourceReloadMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   },

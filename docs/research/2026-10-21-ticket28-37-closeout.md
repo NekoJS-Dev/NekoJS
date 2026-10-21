@@ -62,3 +62,21 @@ Spec：独立 Luna xhigh 只读审查无 findings，认为接口方法合并、�
 `dd15186c` 五节点十入口的默认严格 TSC 已完成，全部 exitCode=2，无 checker crash。总数 6867 → 6523；以文件、错误码、首行消息的多重集比较移除 344 / 新增 0，其中 TS2320 的 218 条全部消失，NeoForge 手写引用再移除 126 条。所有 1609 个实际 Python stub 的默认 Pyright 为 0 errors / warnings。完整 TSC 仍失败，不因诊断减少、收集脚本 exit0 或定向消费链通过而关闭门禁。
 
 已封存于 [证据报告](../architecture-refactor/evidence/2026-10-21-probe-closeout/README.md)，包含 4935 项原始证据、完整声明、前后诊断、XML、安装日志、源码/class/JAR 绑定与验证工具。`verify.py` 实际重算 XML、五节点正常退出、Pyright 文件数和诊断差异，通过并保留完整 TSC 的失败结论。
+
+
+## 实施记录：legacy 原生资源重载与画面所有权
+
+26.1.2 的隔离开发客户端先完成七阶段 API 资源重载和七阶段原生键盘处理链，生产 class 与已安装 `dd15186c` 候选逐项匹配。后者通过测试 mod 暂时提供 F3 状态、刷新缓存键位并调用 Minecraft 的 T 按键处理器，确实进入原生 debug 资源重载；不称为物理键盘或 GLFW 回调输入。首个 RenderFrameEvent.Post 在 set/clear 返回后消费 arm 并读取主 render target，遮罩存在时不截图；七张原图由主代理查看，固定墙区域清晰梯度约 338、模糊约 12.9，候选拒绝后未再次 set 仍保留模糊。客户端和服务器均正常退出。
+
+1.21.1 的首轮原生资源验证发现真实失败：声明 generation 保持，候选拒绝后画面却恢复清晰。`GameRenderer` 的 shader reload apply 会关闭旧 PostChain，随后重新检查原版实体效果；旧链已关闭，不能仅靠脚本 generation 回滚保住画面。读取已保存图片的比较脚本先确认 retained 与 clear 的差异约 0.13、与 invert 约 74.91；该轮机械记录曾为 PASS，但图像复核明确判 FAIL，原记录不覆盖。
+
+节点专用 mixin 现在在原生资源重载前捕获实际 NekoJS 选择，并在完成后用新资源重建链。弱引用只用于识别 renderer 所有的链，不延长其生命或复用已关闭的 GPU 资源；set/clear/retirement 和 world identity 可取消旧恢复，关闭状态保持。`current()` 不再把原版接管的链误报成旧 NekoJS id，`isActive()` 在没有实际链时返回 false。恢复任务包含在返回的异步结果中，仍在 Minecraft owner executor 执行；没有新增 Script member、wire、配置、持久格式或 inline shader 能力。
+
+Standards 的两项边界发现均已处理：完成时若 renderer 已有其他链就不覆盖；返回的重载结果包含恢复完成。Spec 另发现退役使用 stale lastSetId 会关闭原版接管的链，四阶段原生红测通过实际 Adapter 复现 active=false 后，再修复为仅清理仍由 NekoJS 选择的链，否则只取消账本/恢复请求。两轴最后均无剩余源码 findings；早期审查中的 runtime pending 不能代替后续执行结论。
+
+最终 `posteffects-121-f3t-final` 十六阶段实际运行和逐图复核通过，七次原生 T 处理、资源重载前后、候选拒绝保留、恢复、重载期间显式 clear、声明退役、关闭效果的保持、原版 creeper 链接管及接管后的实际 Adapter 退役均有观察。最后一项有意直接验证生产 Adapter，不冒充又一次脚本事务：definition 消失、renderer 仍 active，两张绿画面 ROI 相同。所有帧都在 owner thread 且无加载遮罩，两个进程正常 exit0。中间十一/十五阶段结果、最初图片失败和四阶段原生红测均保留。world identity 取消目前是源码守卫，未另做此效果重载期间切世界的原生用例；此前脚本包 A/B/A 不替代此项。
+
+原始材料暂存 `build/priority-closeout/posteffects-*`。本阶段只修改 legacy 节点；common 和其余节点生产源码未改，集中五节点证据继续绑定上一阶段 `dd15186c`。完成本阶段构建、制品/class 绑定和独立归档后，再更新对应票据；不据目前结果提前关闭票 28 或发布交接。
+
+
+最终 legacy 源码的 `:1.21.1:build guardLint` 通过，1m08s / 37 tasks（9 executed），普通测试 444 / 31 skipped、platform gate 3 / 0，零失败/错误；runtime artifact 与 legacy server artifact 门禁通过，guard 380 blocks / 561 files / 0 warnings。新增 helper test mod 仅在隔离 init 中加载，不进入生产 JAR。前一阶段 common/check 与其他四节点未因这一节点专属改动重复执行；它们仍绑定原 `dd15186c` 证据，不能冒充本阶段新测量。
