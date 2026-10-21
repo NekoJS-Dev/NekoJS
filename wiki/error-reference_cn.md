@@ -113,6 +113,8 @@
 | `NEKO-4046` | Villager trade pool replacement failed | 静态交易池替换失败，不能报告成功 |
 | `NEKO-4047` | TypeScript Bean alias exclusion registration rejected | TypeScript Bean 派生属性排除条目无效或收集器不支持 |
 | `NEKO-4048` | Probe TypeScript dependency closure incomplete | 必需类型被排除、隐藏或无法反射；详见 `@special/dependencies.json`。生成文件不代表完整 IDE 检查通过。 |
+| `NEKO-4050` | Dynamic item fire resistance value rejected before activation | 动态物品火抗值不是规范的 `true` / `false`，激活前拒绝 |
+| `NEKO-4051` | Manual declaration type reference rejected | 手写声明的类型引用别名无效，或同名别名的目标类型、输入模式冲突 |
 
 <a id="wiki-section-6"></a>
 ## 配方与数据

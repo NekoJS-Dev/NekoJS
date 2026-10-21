@@ -40,3 +40,19 @@ NeoForge 26.x 的实际 Adapter 不再把非法 `fireResistant` 文本通过 `Bo
 生成的 `@manual/references.d.ts` 用内联 import 保留全局作用域、真实宿主成员及输入适配器；raw 泛型 Class 引用沿用擦除实参规则，数组补齐元素类，不生成虚假的 Java 数组类。显式依赖被 hide/exclude 或不可生成时以 `NEKO-4033` 失败；同一全局别名的不一致引用以 `NEKO-4051` 失败。保留编辑后 IR 与 canonical Java 导出，未用空类型或全图 any 消除错误。
 
 手写依赖与泛型数组各有先失败后通过记录；另有输入转换、hide/exclude、编辑/重命名和冲突用例。common Probe 相关测试、三个 NeoForge 节点的实际贡献映射，以及 `npm run test:probe-types` 的全部严格消费链通过。中英文插件文档配对更新并只 stamp 该主题，保持 draft/pending；结构检查零问题，整库严格文档检查仍失败 12 项，不代签其他主题。阶段材料位于 `build/priority-closeout/manual-reference-*`；完整 common/check、五节点制品与生产声明图仍待本轮实现集中收口后执行。
+
+## 集中构建与安装候选：dd15186c
+
+完整命令 `:common:check :common-api-processor:test guardLint :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build` 在离线缓存、JDK 25 Gradle JVM 和节点既定 toolchain 下通过，8m35s，106 tasks（42 executed）。common 2400 tests / 4 skipped，processor 13 / 0；节点普通测试依次 444 / 31、683 / 81、683 / 81、409 / 37、409 / 37，另五节点 platform gate 各 3 / 0；所列检查均零失败/错误。common isolation、guardLint（380 blocks / 561 files / 0 warnings）、三个 NeoForge runtime artifact、两个 Fabric runtime artifact 与 legacy server artifact 门禁通过。归档 XML 中其他 suite 来自已有构建目录，不计作本次执行结果。首次错误调用不存在的 `verifyModArtifact` 任务在执行前失败，原日志保留；没有修改或绕过门禁。
+
+`build/priority-closeout/dd15186c-full-verification` 冻结 XML，`dd15186c-final-build-v2.log` 为正式构建日志。新 JAR 安装到全新 `build/closeout-dd15186c-installed`，只读复用已缓存 loader libraries，所有 common / 节点生产 class 字节逐项匹配；记录源码摘要、JAR SHA256 和 class 摘要。两份原有修改声明 SHA256 仍与起点一致。
+
+五个独立已安装服务端均完成注册回调、实际物品/方块/流体适用项、重载、声明生成与 Python AST 检查；NeoForge 另验证实际交易池生命周期，两个 26.x 节点验证空动态 generation 保留物理效果。五进程均由 RCON 正常 stop 并 exitCode=0。此项不替代多人 TCP 动态注册表或客户端 PostEffects 证据。完整严格 TSC / Pyright 测量随后单独记录。
+
+## 分轴审查：495d9cb8...dd15186c
+
+Standards：Luna xhigh 只读审查最初报告无硬违规、无值得改动的 smell。主代理复核发现 `coding.md` 要求的新诊断码登记遗漏，已补齐中英文 `error-reference` 的 `NEKO-4050` / `NEKO-4051`；只 stamp 该主题，结构检查 26 topics / 0 problems，保留 draft/pending。原审查结论与这一主代理补查分开记录。
+
+Spec：独立 Luna xhigh 只读审查无 findings，认为接口方法合并、显式 host/input 依赖和布尔拒绝符合本阶段规格；明确完整 TSC、PostEffects、多节点 TCP 和最终候选仍开放。这是源码审查，不代表运行验收或维护者接受。
+
+两轴原报告 findings 均 0；主代理额外发现 Standards 文档遗漏 1 项，已修复，Spec 0 项。没有把两个轴合并排序，也没有据此关闭整票。
