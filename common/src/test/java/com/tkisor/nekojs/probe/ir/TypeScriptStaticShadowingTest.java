@@ -45,6 +45,10 @@ class TypeScriptStaticShadowingTest {
         public static int TOKEN = 9;
         public static String choose(String value) { return value; }
     }
+    public static class ParameterChild extends Parent<String> {
+        public static int TOKEN = 11;
+        public static String choose(String text) { return text; }
+    }
     public static class GrandParent {
         public static String TOKEN = "grand";
         public static boolean choose(boolean value) { return value; }
@@ -99,12 +103,18 @@ class TypeScriptStaticShadowingTest {
     @Test
     void editedParentsRetainRenamesHiddenMethodsAndModuleLocalReferences() throws Exception {
         var declarations = List.of(new TypeReflector().reflect(Child.class),
-                new TypeReflector().reflect(ExplicitChild.class), new TypeReflector().reflect(Parent.class));
+                new TypeReflector().reflect(ExplicitChild.class), new TypeReflector().reflect(ParameterChild.class),
+                new TypeReflector().reflect(Parent.class));
         var edits = new ProbeModifyTypeEventJS(Map.of(declarations.getFirst().fqn, declarations.getFirst(),
                 declarations.get(1).fqn, declarations.get(1),
+                declarations.get(2).fqn, declarations.get(2),
                 declarations.getLast().fqn, declarations.getLast()));
-        edits.forClass(Child.class.getName()).renameClass("ProjectedChild").removeParam("altered", 0);
+        edits.forClass(Child.class.getName()).renameClass("ProjectedChild").removeParam("altered", 0)
+                .removeParam("choose", 99).changeParamType("choose", -1, "boolean")
+                .changeParamType("choose", "missing", "boolean").renameParam("choose", "missing", "renamed")
+                .markOptional("choose", "missing");
         edits.forClass(ExplicitChild.class.getName()).renameMethod("choose", "localChoice");
+        edits.forClass(ParameterChild.class.getName()).changeParamType("choose", "value", "boolean");
         edits.forClass(Parent.class.getName()).renameClass("StaticShadowingValue")
                 .renameMethod("onlyParent", "renamedParent").changeReturnType("onlyParent", "boolean")
                 .renameMethod("choose", "parentChoice").changeReturnType("choose", "boolean")
@@ -112,7 +122,7 @@ class TypeScriptStaticShadowingTest {
         var backend = new TypeScriptProbeBackend();
         Path edited = generate("edited", declarations, backend);
         Files.writeString(edited.resolve("exercise.ts"), """
-                import { $TypeScriptStaticShadowingTest$Child as Child, $ProjectedChild, $TypeScriptStaticShadowingTest$Parent as Parent, $TypeScriptStaticShadowingTest$ExplicitChild as ExplicitChild } from 'java:com/tkisor/nekojs/probe/ir';
+                import { $TypeScriptStaticShadowingTest$Child as Child, $ProjectedChild, $TypeScriptStaticShadowingTest$Parent as Parent, $TypeScriptStaticShadowingTest$ExplicitChild as ExplicitChild, $TypeScriptStaticShadowingTest$ParameterChild as ParameterChild } from 'java:com/tkisor/nekojs/probe/ir';
                 const value: Parent<string> = new $ProjectedChild();
                 const alias: Child = new $ProjectedChild();
                 const renamed: boolean = Child.renamedParent();
@@ -122,6 +132,10 @@ class TypeScriptStaticShadowingTest {
                 const childOverload: string = Child.choose('value');
                 const explicitlyEditedParent: number = ExplicitChild.localChoice(7);
                 const explicitlyEditedChild: string = ExplicitChild.localChoice('value');
+                const editedParentParameter: number = ParameterChild.choose(true);
+                const uneditedOwnParameter: string = ParameterChild.choose('value');
+                // @ts-expect-error A valid parameter edit replaces only the matching inherited parameter.
+                ParameterChild.choose(7);
                 // @ts-expect-error An unedited inherited copy must follow the parent's rename.
                 Child.choose(7);
                 // @ts-expect-error Explicit child edits take precedence over the same parent signature.
@@ -136,10 +150,11 @@ class TypeScriptStaticShadowingTest {
         edits.forClass(Parent.class.getName()).hideMethod("onlyParent").hideMethod("choose");
         Path hidden = generate("hidden", declarations, backend);
         Files.writeString(hidden.resolve("exercise.ts"), """
-                import { $TypeScriptStaticShadowingTest$Child as Child, $TypeScriptStaticShadowingTest$ExplicitChild as ExplicitChild } from 'java:com/tkisor/nekojs/probe/ir';
+                import { $TypeScriptStaticShadowingTest$Child as Child, $TypeScriptStaticShadowingTest$ExplicitChild as ExplicitChild, $TypeScriptStaticShadowingTest$ParameterChild as ParameterChild } from 'java:com/tkisor/nekojs/probe/ir';
                 const imported: number = Child.extra().number;
                 const childOverload: string = Child.choose('value');
                 const explicitOverload: number = ExplicitChild.localChoice(7);
+                const editedOverload: number = ParameterChild.choose(true);
                 // @ts-expect-error Hidden parent overloads must not survive in an unedited child copy.
                 Child.choose(7);
                 // @ts-expect-error Hidden renamed parent overloads must not reappear.
@@ -167,7 +182,7 @@ class TypeScriptStaticShadowingTest {
     }
 
     private Path generate(String scenario, List<TypeDecl> declarations, TypeScriptProbeBackend backend) throws Exception {
-        return generate(scenario, List.of(Child.class, ExplicitChild.class), declarations, backend);
+        return generate(scenario, List.of(Child.class, ExplicitChild.class, ParameterChild.class), declarations, backend);
     }
 
     private Path generate(String scenario, List<Class<?>> roots, List<TypeDecl> declarations,

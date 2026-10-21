@@ -9,6 +9,7 @@ import com.tkisor.nekojs.probe.ir.TypeSlot;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * {@code probe.modify_type} 事件中针对单个 {@link TypeDecl} 的链式编辑器。由
@@ -95,7 +96,7 @@ public final class ClassEditor {
 
     /** 按下标改方法参数类型（作用于每个有该下标参数的同名重载）。 */
     public ClassEditor changeParamType(String name, int index, Object type) {
-        return editMethods(name, m -> {
+        return editMethods(name, m -> index >= 0 && index < m.params.size(), m -> {
             if (index >= 0 && index < m.params.size()) {
                 var p = m.params.get(index);
                 p.type = ProbeModifyTypeEventJS.override(p.type, type);
@@ -105,7 +106,7 @@ public final class ClassEditor {
 
     /** 按参数名改方法参数类型（所有同名重载中名字匹配的参数）。 */
     public ClassEditor changeParamType(String name, String paramName, Object type) {
-        return editMethods(name, m -> {
+        return editMethods(name, m -> m.params.stream().anyMatch(p -> paramName.equals(p.name)), m -> {
             for (var p : m.params) {
                 if (paramName.equals(p.name)) {
                     p.type = ProbeModifyTypeEventJS.override(p.type, type);
@@ -116,14 +117,14 @@ public final class ClassEditor {
 
     /** 按参数名重命名方法参数。 */
     public ClassEditor renameParam(String name, String paramName, String newName) {
-        return editMethods(name, m -> {
+        return editMethods(name, m -> m.params.stream().anyMatch(p -> paramName.equals(p.name)), m -> {
             for (var p : m.params) if (paramName.equals(p.name)) p.name = newName;
         });
     }
 
     /** 按下标移除方法参数。 */
     public ClassEditor removeParam(String name, int index) {
-        return editMethods(name, m -> {
+        return editMethods(name, m -> index >= 0 && index < m.params.size(), m -> {
             if (index >= 0 && index < m.params.size()) m.params.remove(index);
         });
     }
@@ -134,7 +135,7 @@ public final class ClassEditor {
      * {@link IllegalStateException}（varargs 渲染为 {@code name?: T[]}，同样视为可选）。
      */
     public ClassEditor markOptional(String name, String paramName) {
-        return editMethods(name, m -> {
+        return editMethods(name, m -> m.params.stream().anyMatch(p -> paramName.equals(p.name)), m -> {
             for (var p : m.params) if (paramName.equals(p.name)) p.optional = true;
             validateOptionalParamsTrail(m, "markOptional('" + name + "', '" + paramName + "')");
         });
@@ -256,6 +257,10 @@ public final class ClassEditor {
     }
 
     private ClassEditor editMethods(String name, Consumer<MethodDecl> op) {
+        return editMethods(name, method -> true, op);
+    }
+
+    private ClassEditor editMethods(String name, Predicate<MethodDecl> hasTarget, Consumer<MethodDecl> op) {
         List<MethodDecl> matches = matchingMethods(name);
         if (matches.isEmpty()) {
             NekoJS.LOGGER.debug("probe.modify_type: method '{}' not found in {}", name, decl.fqn);
@@ -263,7 +268,8 @@ public final class ClassEditor {
         }
         touched();
         for (MethodDecl m : matches) {
-            m.explicitlyEdited = true;
+            // Missing parameter selectors remain no-ops, while existing edit validation still runs.
+            if (hasTarget.test(m)) m.explicitlyEdited = true;
             op.accept(m);
         }
         return this;
