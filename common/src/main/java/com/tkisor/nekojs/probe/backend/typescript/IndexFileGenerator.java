@@ -245,7 +245,7 @@ public final class IndexFileGenerator {
         StringJoiner arguments = new StringJoiner(", ", "<", ">");
         for (TypeDecl.TypeParam parameter : declaration.typeParams) {
             String bound = parameter.bound == null ? "" : " extends "
-                    + TypeScriptClassRenderer.renderTypeParameterBound(parameter.bound.ref, parameter.name,
+                    + TypeScriptClassRenderer.renderTypeParameterBound(parameter.bound, parameter.name,
                             aliases, new LinkedHashSet<>());
             parameters.add(parameter.name + bound);
             arguments.add(parameter.name);

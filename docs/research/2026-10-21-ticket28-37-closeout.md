@@ -90,3 +90,5 @@ TS-only 投影仅在未编辑 Java 来源确定为 `Object` 的位置输出 `unk
 三个回归中最初两个 Java 断言失败，严格 TS 复现 17 条诊断；生产 NekoSharedHostAccess 已实际验证 Object 接受/返回数字、字符串、布尔、null、回调和字段。第一版修复后追加泛型边界用例又复现 TS2345 / TS2344，再修复共同投影位置。初次 Probe 检查 400 tests / 2 skipped，仅两个 canonical legacy tree 比对按预期失败；通过现有 `:common:regenerateGoldens --tests com.tkisor.nekojs.probe.LegacyProbeTreeTest` 生成 26 文件、300 行 object→unknown 的预期变化，未手改产物。严格消费链和最终集中构建随后执行，完整生产声明图不因最小用例通过而提前判绿。
 
 Object 修复后的 Probe 定向检查实际通过，400 tests / 2 skipped、零失败/错误；`npm run test:probe-types` 全链（含新增 Object 正负例）通过。两份起点既有修改声明摘要保持原值。common/check、处理器与五节点完整构建留到下一批共享声明修复集中执行；全量正式 TSC 结果仍只绑定 dd15186c，当前不作新总量承诺。
+
+Object 阶段分轴审查：固定 `0a96cb3d...d9cd307d`，Standards 0 hard breach / 0 smell；Spec 1 项——重命名 canonical export 仍使用 neutral object 泛型边界。主代理复查还定位到同一 Adapter alias 边界路径，新增重命名+适配器真实生成用例先复现两条 TS2344，然后统一通过保留 TypeSlot 来源的 bound renderer。Object 与 GenericAdapter 定向 Java 检查通过，Object 严格消费和 plain/renamed/edited 三组 GenericAdapter 严格消费通过。原审查与修复后证据分开，未宣称原审查从未发现问题；后续复审仅检查该发现是否消除。

@@ -1,6 +1,9 @@
 package com.tkisor.nekojs.probe.ir;
 
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import com.tkisor.nekojs.api.AdapterInputShape;
+import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
+import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import com.tkisor.nekojs.core.NekoSharedHostAccess;
 import com.tkisor.nekojs.probe.backend.typescript.AdapterAliasGenerator;
 import com.tkisor.nekojs.probe.backend.typescript.IndexFileGenerator;
@@ -12,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,6 +27,7 @@ class TypeScriptObjectProjectionTest {
     public interface GenericMapper<T> { T map(T value); }
     public interface BoundedMapper<T extends Holder<Object>> { T map(T value); }
     public static class Holder<T> { public T value; }
+    public static class Bounded<T extends Holder<Object>> { public T value; }
     public static class Api {
         public Object field;
         public Holder<Object> holder;
@@ -40,13 +45,21 @@ class TypeScriptObjectProjectionTest {
     @Test
     void objectValuesIncludePrimitivesInDirectNestedAndCallbackSignatures() throws Exception {
         var aliases = new TypeAliasRegistry();
-        var generator = new IndexFileGenerator(new TypeScriptClassRenderer(aliases), new AdapterAliasGenerator(aliases));
+        var adapters = new AdapterAliasGenerator(aliases);
+        var generator = new IndexFileGenerator(new TypeScriptClassRenderer(aliases), adapters);
         List<Class<?>> types = List.of(Parent.class, Child.class, Mapper.class, GenericMapper.class,
-                BoundedMapper.class, Holder.class, Api.class);
+                BoundedMapper.class, Holder.class, Bounded.class, Api.class);
         Set<String> names = new LinkedHashSet<>();
         for (Class<?> type : types) names.add(type.getName());
+        List<TypeDecl> declarations = types.stream().map(type -> new TypeReflector().reflect(type)).toList();
+        declarations.stream().filter(declaration -> declaration.sourceClass == Bounded.class).forEach(declaration -> {
+            declaration.renameTo = "ObjectBounded";
+            declaration.mutated = true;
+        });
+        adapters.prepare(List.of(new AdapterCatalogEntry(Bounded.class, List.of(AdapterInputShape.self()),
+                ConversionPrecedence.LOWEST, Optional.empty())), names, declarations);
         generator.prepareFunctionalInterfaceAliases(names, Set.of());
-        for (Class<?> type : types) generator.predeclareClass(type.getName(), new TypeReflector().reflect(type), Set.of());
+        for (TypeDecl declaration : declarations) generator.predeclareClass(declaration.fqn, declaration, Set.of());
         String declaration = generator.generate(Api.class.getPackageName(), types.stream()
                 .map(type -> type.getName().substring(type.getPackageName().length() + 1)).toList(), List.of(), names);
         Path output = Path.of("build/probe-ts-object-projection");
@@ -58,6 +71,9 @@ class TypeScriptObjectProjectionTest {
         Files.writeString(output.resolve("exercise.ts"), """
                 import { $TypeScriptObjectProjectionTest$Api as Api } from 'java:com/tkisor/nekojs/probe/ir';
                 import type { $TypeScriptObjectProjectionTest$Child as Child, $TypeScriptObjectProjectionTest$Parent as Parent } from 'java:com/tkisor/nekojs/probe/ir';
+                import type { $TypeScriptObjectProjectionTest$Bounded as Bounded, $TypeScriptObjectProjectionTest$Bounded_ as BoundedInput, $TypeScriptObjectProjectionTest$Holder as Holder } from 'java:com/tkisor/nekojs/probe/ir';
+                declare const bounded: Bounded<Holder<unknown>>;
+                const boundedInput: BoundedInput<Holder<unknown>> = bounded;
                 declare const child: Child<string>;
                 const parent: Parent = child;
                 const api = new Api(null);

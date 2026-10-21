@@ -287,7 +287,7 @@ public final class TypeScriptClassRenderer {
             boolean covariant = d.kind == TypeDecl.Kind.INTERFACE && !d.mutated
                     && covariantTypeParameters.getOrDefault(d.fqn, Set.of()).contains(tp.name);
             String s = (covariant ? "out " : "") + tp.name;
-            if (tp.bound != null) s += " extends " + renderTypeParameterBound(projectedRef(tp.bound), tp.name, aliases,
+            if (tp.bound != null) s += " extends " + renderTypeParameterBound(tp.bound, tp.name, aliases,
                     new LinkedHashSet<>());
             return s;
         }).collect(Collectors.joining(", ")));
@@ -323,7 +323,7 @@ public final class TypeScriptClassRenderer {
             sb.append("<").append(m.typeParams.stream().map(name -> {
                 List<TypeSlot> bounds = m.typeParameterBounds.getOrDefault(name, List.of());
                 return name + (bounds.isEmpty() ? "" : " extends " + bounds.stream()
-                        .map(bound -> renderTypeParameterBound(projectedRef(bound), name, aliases, new LinkedHashSet<>()))
+                        .map(bound -> renderTypeParameterBound(bound, name, aliases, new LinkedHashSet<>()))
                         .collect(Collectors.joining(" & ")));
             }).collect(Collectors.joining(", "))).append(">");
         }
@@ -479,6 +479,12 @@ public final class TypeScriptClassRenderer {
     }
 
     /** Retains self-comparable Java bounds after boxed values project to JavaScript primitives. */
+    public static String renderTypeParameterBound(TypeSlot slot, String variableName,
+                                                  TypeAliasRegistry aliases, Set<String> expanding) {
+        return renderTypeParameterBound(projectedRef(slot), variableName, aliases, expanding);
+    }
+
+    /** Renders explicit bounds and bounds already contextualized by a functional alias. */
     public static String renderTypeParameterBound(ApiTypeRef ref, String variableName,
                                                   TypeAliasRegistry aliases, Set<String> expanding) {
         String hostType = renderTypeRef(ref, aliases, false, expanding);

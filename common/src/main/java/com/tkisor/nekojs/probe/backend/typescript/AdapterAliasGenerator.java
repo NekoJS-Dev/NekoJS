@@ -140,7 +140,7 @@ public final class AdapterAliasGenerator {
             String declaration = parameter.name;
             if (parameter.bound != null) {
                 declaration += " extends " + TypeScriptClassRenderer.renderTypeParameterBound(
-                        parameter.bound.ref, parameter.name, scopedAliases, new LinkedHashSet<>());
+                        parameter.bound, parameter.name, scopedAliases, new LinkedHashSet<>());
             }
             // Raw Java uses historically accept erased values; explicit arguments still retain their bounds.
             declarations.add(declaration + " = any");
