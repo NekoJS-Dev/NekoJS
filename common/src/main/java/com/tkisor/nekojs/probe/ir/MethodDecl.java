@@ -11,6 +11,8 @@ import java.util.Map;
  * Each backend decides how to represent these aliases alongside real fields and overloads.
  */
 public final class MethodDecl {
+    /** Retains Java declaration identity when edits change parameters or inherited overloads. */
+    public java.lang.reflect.Method sourceMethod;
     public String name;
     public String renameTo;             // null = 用 name
     public final List<MethodParam> params = new ArrayList<>();

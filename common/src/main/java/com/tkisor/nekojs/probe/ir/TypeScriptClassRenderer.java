@@ -27,6 +27,14 @@ public final class TypeScriptClassRenderer {
     private Set<String> interfaceClassBindings = Set.of();
     private Set<BeanAliasExclusionCatalogEntry> beanAliasExclusions = Set.of();
     private Map<String, Set<String>> covariantTypeParameters = Map.of();
+    private TypeScriptStaticInheritance staticInheritance = new TypeScriptStaticInheritance(Map.of());
+
+    /** Uses this render's edited declarations; parent lookups never reflect over hidden or authored types. */
+    public Set<String> setClassDeclarations(Map<String, TypeDecl> declarations) {
+        staticInheritance = new TypeScriptStaticInheritance(declarations);
+        return declarations.values().stream().filter(declaration -> staticInheritance.project(declaration) != null)
+                .map(declaration -> declaration.fqn).collect(Collectors.toUnmodifiableSet());
+    }
 
     /** Records measured result variance for specific library interfaces, without changing input parameters. */
     public void setCovariantTypeParameters(Map<String, Set<String>> parameters) {
@@ -99,7 +107,10 @@ public final class TypeScriptClassRenderer {
         return switch (decl.kind) {
             case INTERFACE -> renderInterface(decl);
             case ENUM -> renderEnum(decl);
-            default -> renderClass(decl);
+            default -> {
+                TypeScriptStaticInheritance.Projection projection = staticInheritance.project(decl);
+                yield projection == null ? renderClass(decl) : renderStaticShadowingClass(decl, projection);
+            }
         };
     }
 
@@ -110,6 +121,7 @@ public final class TypeScriptClassRenderer {
         scoped.interfaceClassBindings = interfaceClassBindings;
         scoped.beanAliasExclusions = beanAliasExclusions;
         scoped.covariantTypeParameters = covariantTypeParameters;
+        scoped.staticInheritance = staticInheritance;
         return scoped.render(decl);
     }
 
@@ -142,6 +154,52 @@ public final class TypeScriptClassRenderer {
         for (FieldDecl f : d.fields) {
             if (!f.hidden && f.isStatic) sb.append(formatField(f, true));
         }
+        appendInstanceFieldsAndBeans(sb, d);
+        for (MethodDecl m : d.methods) {
+            if (m.hidden || m.isConstructor || !m.isStatic) continue;
+            sb.append(formatMethod(m, true));
+        }
+        appendInstanceMethods(sb, d);
+        sb.append("    }\n");
+        return sb.toString();
+    }
+
+    private String renderStaticShadowingClass(TypeDecl d, TypeScriptStaticInheritance.Projection projection) {
+        StringBuilder sb = new StringBuilder();
+        appendDoc(sb, "    ", d.docs);
+        sb.append("    export class $").append(effectiveClassName(d));
+        appendTypeParameters(sb, d);
+        sb.append(" {\n");
+        for (MethodDecl constructor : d.constructors) {
+            if (!constructor.hidden) sb.append(formatConstructor(constructor));
+        }
+        if (d.sourceClass != null && d.constructors.stream().noneMatch(constructor -> !constructor.hidden)) {
+            // A class without an extends clause otherwise acquires an implicit public zero-argument constructor.
+            boolean protectedConstructor = java.util.Arrays.stream(d.sourceClass.getDeclaredConstructors())
+                    .anyMatch(constructor -> java.lang.reflect.Modifier.isProtected(constructor.getModifiers()));
+            sb.append(protectedConstructor ? "        protected constructor();\n" : "        private constructor();\n");
+        }
+        for (FieldDecl field : d.fields) {
+            if (!field.hidden && field.isStatic) sb.append(formatField(field, true));
+        }
+        for (MethodDecl method : projection.methods()) sb.append(formatMethod(method, true));
+        sb.append("    }\n");
+        // Merging retains the instance hierarchy without requiring Java's hidden static fields to be covariant.
+        sb.append("    export interface $").append(effectiveClassName(d));
+        appendTypeParameters(sb, d);
+        List<TypeSlot> parents = new java.util.ArrayList<>();
+        if (d.superType != null) parents.add(d.superType);
+        parents.addAll(d.interfaces);
+        List<String> inherited = renderHeritageEntries(parents);
+        if (!inherited.isEmpty()) sb.append(" extends ").append(String.join(", ", inherited));
+        sb.append(" {\n");
+        appendInstanceFieldsAndBeans(sb, d);
+        appendInstanceMethods(sb, d);
+        sb.append("    }\n");
+        return sb.toString();
+    }
+
+    private void appendInstanceFieldsAndBeans(StringBuilder sb, TypeDecl d) {
         for (FieldDecl f : d.fields) {
             if (f.hidden || f.isStatic) continue;
             MethodDecl getter = d.beanGetterForField(f);
@@ -164,15 +222,13 @@ public final class TypeScriptClassRenderer {
         // Bean aliases supplement the real accessor methods unless an instance member owns the name.
         for (MethodDecl m : d.methods) {
             if (m.hidden || !m.isGetter) continue;
-            // 属性名非合法 TS 标识符（数字开头，如 get2DigitYearStart → 2DigitYearStart）：
-            // 只渲染原方法名（getter 标记使方法段排除它，这里降级补发），脚本仍可调用
+            // Invalid identifiers and occupied property names retain their actual accessor methods.
             if (!isValidTsIdentifier(m.property) || propertyConflicts.contains(m.property) || excludesBeanAlias(d, m)) {
                 sb.append(formatMethod(m, false));
                 continue;
             }
             appendDoc(sb, "        ", m.docs);
-            // getter 覆盖（如 RecipeEventJS.recipes → DocumentedRecipes）：镜像 ClassDeclGenerator，
-            // 命中时只发射 get 行，跳过双发射与 setter
+            // An explicit getter override emits only the read property, preserving the existing contract.
             GetterOverride ov = getterOverrides.getOrDefault(d.fqn, Map.of()).get(m.property);
             if (ov != null) {
                 sb.append("        get ").append(tsMemberName(m.property)).append("(): ").append(ov.returnType()).append(";\n");
@@ -186,18 +242,14 @@ public final class TypeScriptClassRenderer {
                   .append(renderSlot(m.setterParamType, true)).append(");\n");
             }
         }
-        // 静态方法（与旧实现一致：不排除 getter/setter；getter 本就非静态，不会进这里）
-        for (MethodDecl m : d.methods) {
-            if (m.hidden || m.isConstructor || !m.isStatic) continue;
-            sb.append(formatMethod(m, true));
-        }
+    }
+
+    private void appendInstanceMethods(StringBuilder sb, TypeDecl d) {
         // Explicit setters remain callable even when their Bean alias conflicts or no getter exists.
         for (MethodDecl m : d.methods) {
             if (m.hidden || m.isConstructor || m.isStatic || m.isGetter) continue;
             sb.append(formatMethod(m, false));
         }
-        sb.append("    }\n");
-        return sb.toString();
     }
 
     private static Set<String> beanPropertyConflicts(TypeDecl declaration) {

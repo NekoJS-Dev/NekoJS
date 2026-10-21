@@ -451,6 +451,7 @@ public final class TypeReflector {
 
     private MethodDecl reflectMethod(java.lang.reflect.Method method) {
         MethodDecl m = new MethodDecl(method.getName());
+        m.sourceMethod = method;
         // JS 侧方法名（@Remap/@RemapByPrefix）：与运行时 Graal remapper 语义一致，声明/提示
         // 用 remap 名；Java 原名保留在 name（排序/编辑语义），renameTo 为空时渲染回退原名
         String jsName = jsName(method);

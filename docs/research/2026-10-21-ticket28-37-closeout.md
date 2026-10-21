@@ -117,3 +117,17 @@ Set 的旧数组输入声明与实际运行不符：生产 NekoSharedHostAccess 
 前一源码 `99677b0f` 的完整 common/check、处理器、guard 与五节点 build 已通过：8m16s，106 tasks / 45 executed，5062 tests / 271 skipped / 0 failures or errors，含五节点 platform gate。XML 与完整日志在 `build/priority-closeout/99677b0f-matrix` 冻结；安装 JAR 的全部 common/node class 与对应构建逐字节绑定。该结果不覆盖本节 fallback 后续源码，也不代表完整严格 TSC 已通过。
 
 fallback 阶段初次 Probe 检查仅两项 canonical 比对失败；既有再生成任务只改变 java.util golden 的四行输入别名。最终 Probe 检查 404 tests / 2 skipped / 0 failures or errors（其中集合四例），完整 `npm run test:probe-types` 通过。中英文指南已配对更新，结构检查 26 topics / 0 problems。两份起点既有声明摘要保持原值。修正夹具后的 `99677b0f` 五节点安装运行全部通过，五进程均正常退出 0；严格 TSC 仍按实际结果保留失败状态，完整计数和差异后续封存。
+
+`99677b0f...149faa8a` 的两轴只读复审均无新增源码 findings，原 fallback finding 已关闭。它们不替代实机或整票验收。
+
+## 实施记录：Java 静态字段隐藏
+
+完整安装候选 `99677b0f` 的十个默认严格 TSC 入口仍失败，现为 6453 条；相对 `dd15186c` 按文件、代码和首行消息比较移除 70 条、新增 0 条。所有 1609 个 Python stub 的默认 Pyright 仍零错误/警告，Java host stub 字节均不变；全局与事件入口若干文件存在内容/顺序差异，不声称整套 Python 逐字节一致。原始材料在 `build/closeout-99677b0f-installed-v2/ide`，首次失败夹具另存原目录。
+
+下一项共因为 Java 子类合法的同名静态字段与 TypeScript 静态侧继承不兼容，例如 BlockPos/Vec3i 的 CODEC。TS-only 投影只处理完成声明闭包后确认为静态字段隐藏的普通类：class 保留构造器、自身静态字段及可调用静态方法；同名合并 interface 保留编辑后的实例父类型、接口、字段、Bean 读写和方法。其余类与 enum 路径不变，未修改 runtime、Python、公开 Java API、wire、主扫描或 exclude/hide。
+
+实际生产 HostAccess 配合 NekoSandboxFactory 的 Nashorn/foreign-object 选项，验证子类能调用父静态方法和不同参数重载，却不能通过子类 class value 读取父静态字段。早期夹具按纯 Java 继承假设读取该字段和缺少兼容选项读取 Bean 而失败，均保留并修正测试假设；不把它们说成生产 bug。拆分后的声明也不再承诺子类值可读父静态字段，应通过父类读取。实例继承与实际静态调用保持。
+
+继承只使用同轮完成的编辑后 IR；不反射补回被隐藏、排除或手写替换的父类。全部父签名已参与闭包，仅重渲染受影响的缓存，模块局部 import/rename 走现有引用观察器；每轮结束清理投影。新增内部 MethodDecl.sourceMethod 保留 Java 原始方法身份与擦除参数，避免编辑参数后复活已隐藏的父签名；不改变其他后端输出。无公开构造器的拆分类不会获得虚假的公共默认构造器。
+
+最小生成用例先复现单一 TS2417，再修复；真实 Graal 回归验证两个静态字段、继承调用、两种重载、Bean 与私有构造器拒绝。追加构造器和编辑参数负例分别先出现 TS2578，再修复。普通、重命名/跨包碰撞、隐藏父方法和重用 backend 四组严格消费通过；407 项 Probe 检查（2 skipped）通过，既有 golden 无变化。全量 common/check、五节点制品与新生产声明图仍须本阶段集中验证，不外推 `99677b0f` 的测量结果。

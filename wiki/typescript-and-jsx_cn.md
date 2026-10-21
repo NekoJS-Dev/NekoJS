@@ -57,6 +57,8 @@ TypeScript 前端只擦除不检查。要类型检查，在 `.js` 文件顶部�
 
 Java `Object` 的实际值可能是数字、字符串、布尔或 null，生成声明使用 `unknown`，访问具体成员前需要收窄类型。默认 `List`、`Collection`、`Iterable` 参数既接受对应 Java 容器，也接受数组；容器的宿主泛型与元素的可转换输入类型分别保留。默认 `Set` 参数需要实际 Java Set，不能直接传数组；插件提供额外适配器时按其声明的输入形状处理。Map 的宿主类型与 record 输入分开，record 只接受可转换的属性 key 和对应值。这些转换不会自动扩展到 `ArrayList` 等具体类或 `SequencedCollection`、`SequencedSet`、`SortedMap`、`SequencedMap` 等子接口；对应导出输入别名保留 Java 容器类型。
 
+Java 类存在同名静态字段隐藏时，生成器分别声明 class 值和同名实例 interface，保留实例继承、可调用静态方法及重载。Graal 子类值不会自动暴露父类静态字段，应通过声明该字段的父类读取。该表示不改变运行时类或构造器权限。
+
 <a id="wiki-section-6"></a>
 ### 实战示例
 

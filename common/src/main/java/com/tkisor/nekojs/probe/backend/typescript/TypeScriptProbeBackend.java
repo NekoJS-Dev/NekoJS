@@ -151,6 +151,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 closureChanged = classesToGenerate.size() != previousSize;
             } while (closureChanged);
 
+            indexFileGenerator.prepareClassInheritance();
+
             manualReferences.validateGeneratedTypes(indexFileGenerator);
 
             Map<String, String> unavailable = new TreeMap<>(declarations.unavailable());

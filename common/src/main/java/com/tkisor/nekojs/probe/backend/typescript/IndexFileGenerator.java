@@ -560,8 +560,19 @@ public final class IndexFileGenerator {
         return declaration != null && !declaration.isBlank();
     }
 
+    /** Freezes the completed edited IR before re-rendering inheritance-dependent class values. */
+    void prepareClassInheritance() {
+        Map<String, TypeDecl> declarations = Map.copyOf(irCache);
+        Set<String> projected = irRenderer.setClassDeclarations(declarations);
+        // Parent signatures already participated in closure discovery; only affected class caches need rendering again.
+        for (String fqn : new TreeSet<>(projected)) {
+            predeclareClass(fqn, declarations.get(fqn), Set.copyOf(importCache.getOrDefault(fqn, Set.of())));
+        }
+    }
+
     /** Clears the declaration caches after rendering. */
     public void clearCaches() {
+        irRenderer.setClassDeclarations(Map.of());
         classCache.clear();
         declCache.clear();
         importCache.clear();
