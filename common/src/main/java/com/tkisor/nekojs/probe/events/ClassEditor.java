@@ -262,7 +262,10 @@ public final class ClassEditor {
             return this;
         }
         touched();
-        for (MethodDecl m : matches) op.accept(m);
+        for (MethodDecl m : matches) {
+            m.explicitlyEdited = true;
+            op.accept(m);
+        }
         return this;
     }
 

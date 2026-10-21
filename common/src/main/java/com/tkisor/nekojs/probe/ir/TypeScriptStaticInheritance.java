@@ -48,6 +48,10 @@ final class TypeScriptStaticInheritance {
         for (TypeDecl owner : lineage) {
             for (MethodDecl method : owner.methods) {
                 if (!method.isStatic || method.isConstructor) continue;
+                // Unedited reflection copies defer to the declaring parent's edited IR.
+                // A child can still deliberately edit its own inherited overloads.
+                if (method.sourceMethod != null && method.sourceMethod.getDeclaringClass() != owner.sourceClass
+                        && !method.explicitlyEdited) continue;
                 // Hidden declarations still hide the same Java signature on a more distant ancestor.
                 if (seen.add(key(method)) && !method.hidden) methods.add(method);
             }
@@ -73,16 +77,20 @@ final class TypeScriptStaticInheritance {
         return parents;
     }
 
-    private record MethodKey(String name, List<Object> parameters) {}
+    private sealed interface ParameterKey {}
+    private record JavaParameterKey(Class<?> type) implements ParameterKey {}
+    private record SyntheticParameterKey(ApiTypeRef type) implements ParameterKey {}
+    private record MethodKey(String name, List<ParameterKey> parameters) {}
 
     private static MethodKey key(MethodDecl method) {
         if (method.sourceMethod != null) {
             return new MethodKey(method.sourceMethod.getName(),
-                    java.util.Arrays.stream(method.sourceMethod.getParameterTypes()).map(type -> (Object) type).toList());
+                    java.util.Arrays.stream(method.sourceMethod.getParameterTypes())
+                            .<ParameterKey>map(JavaParameterKey::new).toList());
         }
-        return new MethodKey(method.name, method.params.stream().map(parameter -> {
+        return new MethodKey(method.name, method.params.stream().<ParameterKey>map(parameter -> {
             Type source = parameter.type.sourceType;
-            return source == null ? (Object) parameter.type.ref : erased(source);
+            return source == null ? new SyntheticParameterKey(parameter.type.ref) : new JavaParameterKey(erased(source));
         }).toList());
     }
 

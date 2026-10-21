@@ -131,3 +131,13 @@ fallback 阶段初次 Probe 检查仅两项 canonical 比对失败；既有再�
 继承只使用同轮完成的编辑后 IR；不反射补回被隐藏、排除或手写替换的父类。全部父签名已参与闭包，仅重渲染受影响的缓存，模块局部 import/rename 走现有引用观察器；每轮结束清理投影。新增内部 MethodDecl.sourceMethod 保留 Java 原始方法身份与擦除参数，避免编辑参数后复活已隐藏的父签名；不改变其他后端输出。无公开构造器的拆分类不会获得虚假的公共默认构造器。
 
 最小生成用例先复现单一 TS2417，再修复；真实 Graal 回归验证两个静态字段、继承调用、两种重载、Bean 与私有构造器拒绝。追加构造器和编辑参数负例分别先出现 TS2578，再修复。普通、重命名/跨包碰撞、隐藏父方法和重用 backend 四组严格消费通过；407 项 Probe 检查（2 skipped）通过，既有 golden 无变化。全量 common/check、五节点制品与新生产声明图仍须本阶段集中验证，不外推 `99677b0f` 的测量结果。
+
+## 静态投影复审修复与候选实测
+
+`149faa8a...d91ca974` 的 Standards 指出方法签名键混用 `List<Object>` 和测试 setup 重复；Spec 指出 TypeReflector 放进子类的未编辑父重载副本会先占签名键，绕过父类重命名、隐藏或改型。主代理补齐实际 backend 的重载正负例，先复现 TS2339 和 TS2578，再修复：成员记录显式编辑，未编辑继承副本服从声明祖先的编辑后 IR；子类显式编辑的同名继承重载仍优先，隐藏项继续占用原始 Java 签名。键改为明确的 Java / synthetic 两种参数键，测试共用接受 roots 的生成入口。该元数据不改变其他后端输出、Graal 运行时、主扫描、wire 或持久格式。
+
+补充了泛型中间类与祖父类重载，验证祖父改名、最近显式编辑、子类独立重载、子类隐藏与 backend 重用。真实 HostAccess 另验证祖父/父/子三种参数重载；七组严格消费和完整 `npm run test:probe-types` 通过，408 项 Probe 检查（2 skipped）零失败，golden 无变化。完整 `:common:check` 在后续集中执行，不能把仅 Probe 测试当作 isolation 通过。
+
+已冻结的 `d91ca974` 中间候选完整构建通过：8m37s、106 tasks / 41 executed、5066 tests / 271 skipped / 0 failures or errors，含 common isolation、处理器、guard、五节点及各 platform gate。五个新安装服务器全部实际通过、正常退出 0，全部 common/node class 与 JAR 逐字节绑定。1609 个 Python stub 的默认 Pyright 零错误/警告。十入口完整严格 TSC 为 515/516、578/579、569/570、646/647、623/624，共 5867 条；相对 `99677b0f` 移除 594、新增 8。新增均是现代节点 SectionPos 由 class 改为合并 interface 后报告 TS2430；原候选已有 x/y/z Bean 与同名方法不兼容的 TS2416/TS2426，不能称为无新增诊断或完整 IDE 通过。该候选尚不包含本节复审修复，最终候选须另绑定，不沿用旧制品冒充新源码验收。
+
+26.1.2 的独立 ModDev 工程只注册验收 helper 为 source mod，NekoJS 从安装的 `d91ca974` 生产 JAR 加载；ModList 文件路径、实际 CodeSource、class resource URL 和字节摘要均相符。原生 debug 资源重载、拒绝候选后未再次 set 的画面保留、恢复共七张世界目标图由主代理逐张查看，客户端/服务器正常退出 0。该工程仍用开发启动器，不称为外部正式安装器或物理键盘/present/人工签字。首轮因复用的历史 `.js.rejected` 文件名与本轮 rename 冲突，在五帧后中止；两进程正常退出且判 NOT GREEN。第二轮在新目录/新世界、同一冻结 JAR 上用独立退役文件名完成七阶段，旧失败材料保留。原始记录在 `build/priority-closeout/posteffects-261-installed-d91ca974[-v2]`，后续封存后再更新票据交接链接。
