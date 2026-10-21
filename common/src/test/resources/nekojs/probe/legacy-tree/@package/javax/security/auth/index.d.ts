@@ -7,7 +7,7 @@ import { $Callable, $Callable_ } from "java:java/util/concurrent";
 declare module "java:javax/security/auth" {
     export class $Subject implements $Serializable {
         constructor();
-        constructor(arg0: boolean, arg1: $Principal_<string>[], arg2: any[], arg3: any[]);
+        constructor(arg0: boolean, arg1: $Set<$Principal>, arg2: $Set<any>, arg3: $Set<any>);
         get principals(): $Set<$Principal>;
         getPrincipals(): $Set<$Principal>;
         get privateCredentials(): $Set<unknown>;

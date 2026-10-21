@@ -109,7 +109,7 @@ declare module "java:java/lang/constant" {
     export const $MethodTypeDesc: {
         ofDescriptor(arg0: string): $MethodTypeDesc;
         of(arg0: $ClassDesc, arg1?: $ClassDesc[]): $MethodTypeDesc;
-        of(arg0: $ClassDesc, arg1: $ClassDesc[]): $MethodTypeDesc;
+        of(arg0: $ClassDesc, arg1: ($List<$ClassDesc> | ($ClassDesc)[])): $MethodTypeDesc;
         of(arg0: $ClassDesc): $MethodTypeDesc;
     };
 

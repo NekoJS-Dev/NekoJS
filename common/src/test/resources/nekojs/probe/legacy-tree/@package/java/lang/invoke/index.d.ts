@@ -19,7 +19,7 @@ declare module "java:java/lang/invoke" {
         describeConstable(): $Optional<$MethodHandleDesc>;
         invokeExact(arg0?: unknown[]): unknown;
         invokeWithArguments(arg0?: unknown[]): unknown;
-        invokeWithArguments(arg0: any[]): unknown;
+        invokeWithArguments(arg0: ($List<any> | (any)[])): unknown;
         invoke(arg0?: unknown[]): unknown;
         toString(): string;
         type(): $MethodType;
@@ -110,10 +110,10 @@ declare module "java:java/lang/invoke" {
         static methodType(arg0: $Class<any>, arg1: $Class<any>, arg2?: $Class<any>[]): $MethodType;
         static methodType(arg0: $Class<any>, arg1: $Class<any>): $MethodType;
         static methodType(arg0: $Class<any>, arg1: $MethodType): $MethodType;
-        static methodType(arg0: $Class<any>, arg1: $Class<any>[]): $MethodType;
+        static methodType(arg0: $Class<any>, arg1: ($List<$Class<any>> | ($Class<any>)[])): $MethodType;
         static methodType(arg0: $Class<any>): $MethodType;
         appendParameterTypes(arg0?: $Class<any>[]): $MethodType;
-        appendParameterTypes(arg0: $Class<any>[]): $MethodType;
+        appendParameterTypes(arg0: ($List<$Class<any>> | ($Class<any>)[])): $MethodType;
         changeParameterType(arg0: number, arg1: $Class<any>): $MethodType;
         changeReturnType(arg0: $Class<any>): $MethodType;
         describeConstable(): $Optional<$MethodTypeDesc>;
@@ -126,7 +126,7 @@ declare module "java:java/lang/invoke" {
         hasWrappers(): boolean;
         hashCode(): number;
         insertParameterTypes(arg0: number, arg1?: $Class<any>[]): $MethodType;
-        insertParameterTypes(arg0: number, arg1: $Class<any>[]): $MethodType;
+        insertParameterTypes(arg0: number, arg1: ($List<$Class<any>> | ($Class<any>)[])): $MethodType;
         lastParameterType(): $Class<any>;
         parameterArray(): $Class<any>[];
         parameterCount(): number;

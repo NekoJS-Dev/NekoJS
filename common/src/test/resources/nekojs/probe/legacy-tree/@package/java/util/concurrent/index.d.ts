@@ -21,10 +21,10 @@ declare module "java:java/util/concurrent" {
     export interface $ExecutorService extends $Executor, $AutoCloseable {
         awaitTermination(arg0: number, arg1: $TimeUnit_): boolean;
         close(): void;
-        invokeAll<T>(arg0: $Callable_<T, T>[], arg1: number, arg2: $TimeUnit_): $List<$Future<T>>;
-        invokeAll<T>(arg0: $Callable_<T, T>[]): $List<$Future<T>>;
-        invokeAny<T>(arg0: $Callable_<T, T>[], arg1: number, arg2: $TimeUnit_): T;
-        invokeAny<T>(arg0: $Callable_<T, T>[]): T;
+        invokeAll<T>(arg0: ($Collection<$Callable<T>> | ($Callable_<T, T>)[]), arg1: number, arg2: $TimeUnit_): $List<$Future<T>>;
+        invokeAll<T>(arg0: ($Collection<$Callable<T>> | ($Callable_<T, T>)[])): $List<$Future<T>>;
+        invokeAny<T>(arg0: ($Collection<$Callable<T>> | ($Callable_<T, T>)[]), arg1: number, arg2: $TimeUnit_): T;
+        invokeAny<T>(arg0: ($Collection<$Callable<T>> | ($Callable_<T, T>)[])): T;
         isShutdown(): boolean;
         isTerminated(): boolean;
         shutdownNow(): $List<$Runnable>;

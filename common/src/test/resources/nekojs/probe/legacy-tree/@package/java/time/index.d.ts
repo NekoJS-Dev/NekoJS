@@ -254,7 +254,7 @@ declare module "java:java/time" {
         static from(arg0: $TemporalAccessor): $ZoneId;
         static getAvailableZoneIds(): $Set<string>;
         static ofOffset(arg0: string, arg1: $ZoneOffset): $ZoneId;
-        static of(arg0: string, arg1: ($Map<string, string> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string>> : never))): $ZoneId;
+        static of(arg0: string, arg1: ($Map<string, string> | (([string] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<string, PropertyKey>, string>>))): $ZoneId;
         static of(arg0: string): $ZoneId;
         static systemDefault(): $ZoneId;
         equals(arg0: unknown): boolean;
@@ -280,7 +280,7 @@ declare module "java:java/time" {
         static ofHoursMinutes(arg0: number, arg1: number): $ZoneOffset;
         static ofHours(arg0: number): $ZoneOffset;
         static ofTotalSeconds(arg0: number): $ZoneOffset;
-        static of(arg0: string, arg1: ($Map<string, string> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string>> : never))): $ZoneId;
+        static of(arg0: string, arg1: ($Map<string, string> | (([string] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<string, PropertyKey>, string>>))): $ZoneId;
         static of(arg0: string): $ZoneId;
         static of(arg0: string): $ZoneOffset;
         adjustInto(arg0: $Temporal): $Temporal;

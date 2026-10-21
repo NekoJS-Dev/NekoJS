@@ -322,16 +322,16 @@ public final class FunctionalInterfaceAliasGenerator {
             Type[] arguments = declared instanceof ParameterizedType parameterized
                     ? parameterized.getActualTypeArguments() : new Type[0];
             if (arguments.length > 0) {
-                String[] renderedArguments = Arrays.stream(arguments)
-                        .map(argument -> renderJavaTypeInput(argument, registry, expanding))
-                        .toArray(String[]::new);
-                String collectionAlias = registry.getCollectionAlias(raw, renderedArguments);
-                if (collectionAlias != null) return collectionAlias;
-                // An ordinary host container cannot convert its invariant type arguments independently.
-                // Conversion belongs to the outer parameter or callback return, not the container's contents.
                 String[] hostArguments = Arrays.stream(arguments)
                         .map(argument -> TypeScriptClassRenderer.renderTypeRef(hostRefWithRawArguments(argument),
                                 registry, false, expanding)).toArray(String[]::new);
+                String[] renderedArguments = Arrays.stream(arguments)
+                        .map(argument -> renderJavaTypeInput(argument, registry, expanding))
+                        .toArray(String[]::new);
+                String collectionAlias = registry.getCollectionAlias(raw.getName(), hostArguments, renderedArguments);
+                if (collectionAlias != null) return collectionAlias;
+                // An ordinary host container cannot convert its invariant type arguments independently.
+                // Conversion belongs to the outer parameter or callback return, not the container's contents.
                 return registry.reference(raw.getName(), "$" + tsClassName(raw))
                         + "<" + String.join(", ", hostArguments) + ">";
             }

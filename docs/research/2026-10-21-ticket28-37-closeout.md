@@ -92,3 +92,16 @@ TS-only 投影仅在未编辑 Java 来源确定为 `Object` 的位置输出 `unk
 Object 修复后的 Probe 定向检查实际通过，400 tests / 2 skipped、零失败/错误；`npm run test:probe-types` 全链（含新增 Object 正负例）通过。两份起点既有修改声明摘要保持原值。common/check、处理器与五节点完整构建留到下一批共享声明修复集中执行；全量正式 TSC 结果仍只绑定 dd15186c，当前不作新总量承诺。
 
 Object 阶段分轴审查：固定 `0a96cb3d...d9cd307d`，Standards 0 hard breach / 0 smell；Spec 1 项——重命名 canonical export 仍使用 neutral object 泛型边界。主代理复查还定位到同一 Adapter alias 边界路径，新增重命名+适配器真实生成用例先复现两条 TS2344，然后统一通过保留 TypeSlot 来源的 bound renderer。Object 与 GenericAdapter 定向 Java 检查通过，Object 严格消费和 plain/renamed/edited 三组 GenericAdapter 严格消费通过。原审查与修复后证据分开，未宣称原审查从未发现问题；后续复审仅检查该发现是否消除。
+
+
+Object 源码跟进 `d9cd307d...6297761d` 已分轴复审：Standards 0 hard breach / 0 smell，Spec 0 剩余源码 findings。只读审查不替代完整图执行。
+
+## 实施记录：集合输入的宿主身份
+
+默认 List/Collection/Iterable 输入现在保留实际 host 容器，同时允许现有数组转换；修正 Iterable 的 Java 身份为 java.lang.Iterable。host 泛型参数与可转换元素输入分轨，防止元素适配器把 List<Payload> 错写为 List<string>。Map 同样保留 host key/value，record 分支使用可转换输入，非 PropertyKey 的未适配 key 仍只接受 host。显式注册的类适配器继续优先；既有自定义集合 alias 仍按原扩展方法派发。fallback 导出别名从同一 Registry 生成，不再重复默认集合规则。未修改 shared IR、Python、运行时或其他容器别名。
+
+Set 的旧数组输入声明与实际运行不符：生产 NekoSharedHostAccess 实测接收 Java Set，但拒绝 JS 数组。声明据实改为 host Set，避免承诺不存在的转换；这不是新增运行时限制。真实 host List/Collection/Set/Iterable、List/Collection/Iterable 数组、带元素适配器的 host List/Map 和数组/record 输入均通过实际 Graal 运行。初次三个 Java 回归中两个类型断言失败，运行时观察通过；修复后通过。严格类型夹具只提供区分容器与数组所需的 host 操作，API 声明由真实 renderer 生成，不把该夹具称为完整 JDK 声明验收。
+
+新 Map 负例还复现了 TS 5.8.3 的具体边界：将 Partial<Record<...>> 放在具体 key 的 conditional true 分支中，会丢失索引签名并意外接受 boolean 值。原负例的 @ts-expect-error 因此报 TS2578。把 PropertyKey 判定保留为 unknown/never 的交集门禁、record 放在条件外后，合法记录保持可用，错误值及不可转换 host key 的 record 均被严格消费拒绝；未用 any 或空类型压掉门禁。完整生产声明、五节点和最终候选验收仍待集中运行。
+
+集合阶段初次 Probe 检查 403 tests / 2 skipped，两个 canonical golden 比对和一个旧回调结果断言按预期失败。canonical 任务再生成 16 个文件、87 行配对变化，保留 host 分支、Set 真实输入、Map key 门禁与转换元素；回调断言改为同时保留 host List 和数组的实际结果类型。修复后 403 tests / 2 skipped 零失败，完整 `npm run test:probe-types` 通过。中英文类型指南同步，仅 stamp typescript-and-jsx 并保留 draft/pending；结构检查 26 topics / 0 problems，整库严格文档检查仍失败其他主题的 10 项。两份起点既有修改声明未变。

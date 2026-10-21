@@ -543,10 +543,13 @@ public final class TypeScriptClassRenderer {
                         expandingFunctionalAliases);
             }
             if (!ref.arguments().isEmpty()) {
+                String[] hostArgs = ref.arguments().stream()
+                        .map(a -> renderTypeRef(a, aliases, false, expandingFunctionalAliases))
+                        .toArray(String[]::new);
                 String[] renderedArgs = ref.arguments().stream()
                         .map(a -> renderTypeRef(a, aliases, true, expandingFunctionalAliases))
                         .toArray(String[]::new);
-                String alias = aliases.getCollectionAlias(fqn, renderedArgs);
+                String alias = aliases.getCollectionAlias(fqn, hostArgs, renderedArgs);
                 if (alias != null) return alias;
             } else if (aliases.hasAlias(fqn)) {
                 return aliases.getAlias(fqn);

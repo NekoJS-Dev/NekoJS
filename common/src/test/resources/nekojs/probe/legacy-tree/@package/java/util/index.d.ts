@@ -11,20 +11,20 @@ export * as concurrent from "java:java/util/concurrent";
 
 declare module "java:java/util" {
     export interface $Collection<E> extends $Iterable<E> {
-        addAll(arg0: E[]): boolean;
+        addAll(arg0: ($Collection<E> | (E)[])): boolean;
         add(arg0: E): boolean;
         clear(): void;
-        containsAll(arg0: any[]): boolean;
+        containsAll(arg0: ($Collection<any> | (any)[])): boolean;
         contains(arg0: unknown): boolean;
         equals(arg0: unknown): boolean;
         hashCode(): number;
         isEmpty(): boolean;
         iterator(): $Iterator<E>;
         parallelStream(): $Stream<E>;
-        removeAll(arg0: any[]): boolean;
+        removeAll(arg0: ($Collection<any> | (any)[])): boolean;
         removeIf(arg0: $Predicate_<E, E, boolean>): boolean;
         remove(arg0: unknown): boolean;
-        retainAll(arg0: any[]): boolean;
+        retainAll(arg0: ($Collection<any> | (any)[])): boolean;
         size(): number;
         spliterator(): $Spliterator<E>;
         stream(): $Stream<E>;
@@ -108,14 +108,14 @@ declare module "java:java/util" {
     }
 
     export interface $List<E> extends $SequencedCollection<E> {
-        addAll(arg0: number, arg1: E[]): boolean;
-        addAll(arg0: E[]): boolean;
+        addAll(arg0: number, arg1: ($Collection<E> | (E)[])): boolean;
+        addAll(arg0: ($Collection<E> | (E)[])): boolean;
         addFirst(arg0: E): void;
         addLast(arg0: E): void;
         add(arg0: E): boolean;
         add(arg0: number, arg1: E): void;
         clear(): void;
-        containsAll(arg0: any[]): boolean;
+        containsAll(arg0: ($Collection<any> | (any)[])): boolean;
         contains(arg0: unknown): boolean;
         equals(arg0: unknown): boolean;
         getFirst(): E;
@@ -128,13 +128,13 @@ declare module "java:java/util" {
         lastIndexOf(arg0: unknown): number;
         listIterator(arg0: number): $ListIterator<E>;
         listIterator(): $ListIterator<E>;
-        removeAll(arg0: any[]): boolean;
+        removeAll(arg0: ($Collection<any> | (any)[])): boolean;
         removeFirst(): E;
         removeLast(): E;
         remove(arg0: number): E;
         remove(arg0: unknown): boolean;
         replaceAll(arg0: $UnaryOperator_<E, E, E>): void;
-        retainAll(arg0: any[]): boolean;
+        retainAll(arg0: ($Collection<any> | (any)[])): boolean;
         reversed(): $List<E>;
         set(arg0: number, arg1: E): E;
         size(): number;
@@ -146,7 +146,7 @@ declare module "java:java/util" {
         toArray(): unknown[];
     }
     export const $List: {
-        copyOf<E>(arg0: E[]): $List<E>;
+        copyOf<E>(arg0: ($Collection<E> | (E)[])): $List<E>;
         of<E>(arg0?: E[]): $List<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E, arg9: E): $List<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E): $List<E>;
@@ -231,10 +231,10 @@ declare module "java:java/util" {
         getVariant(): string;
         static availableLocales(): $Stream<$Locale>;
         static caseFoldLanguageTag(arg0: string): string;
-        static filterTags(arg0: $Locale$LanguageRange[], arg1: string[], arg2: $Locale$FilteringMode_): $List<string>;
-        static filterTags(arg0: $Locale$LanguageRange[], arg1: string[]): $List<string>;
-        static filter(arg0: $Locale$LanguageRange[], arg1: $Locale[], arg2: $Locale$FilteringMode_): $List<$Locale>;
-        static filter(arg0: $Locale$LanguageRange[], arg1: $Locale[]): $List<$Locale>;
+        static filterTags(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Collection<string> | (string)[]), arg2: $Locale$FilteringMode_): $List<string>;
+        static filterTags(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Collection<string> | (string)[])): $List<string>;
+        static filter(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Collection<$Locale> | ($Locale)[]), arg2: $Locale$FilteringMode_): $List<$Locale>;
+        static filter(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Collection<$Locale> | ($Locale)[])): $List<$Locale>;
         static forLanguageTag(arg0: string): $Locale;
         static getAvailableLocales(): $Locale[];
         static getDefault(arg0: $Locale$Category_): $Locale;
@@ -242,8 +242,8 @@ declare module "java:java/util" {
         static getISOCountries(arg0: $Locale$IsoCountryCode_): $Set<string>;
         static getISOCountries(): string[];
         static getISOLanguages(): string[];
-        static lookupTag(arg0: $Locale$LanguageRange[], arg1: string[]): string;
-        static lookup(arg0: $Locale$LanguageRange[], arg1: $Locale[]): $Locale;
+        static lookupTag(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Collection<string> | (string)[])): string;
+        static lookup(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Collection<$Locale> | ($Locale)[])): $Locale;
         static of(arg0: string, arg1: string, arg2: string): $Locale;
         static of(arg0: string, arg1: string): $Locale;
         static of(arg0: string): $Locale;
@@ -311,8 +311,8 @@ declare module "java:java/util" {
         getRange(): string;
         get weight(): number;
         getWeight(): number;
-        static mapEquivalents(arg0: $Locale$LanguageRange[], arg1: ($Map<string, string[]> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string[]>> : never))): $List<$Locale$LanguageRange>;
-        static parse(arg0: string, arg1: ($Map<string, string[]> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string[]>> : never))): $List<$Locale$LanguageRange>;
+        static mapEquivalents(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Map<string, $List<string>> | (([string] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<string, PropertyKey>, ($List<string> | (string)[])>>))): $List<$Locale$LanguageRange>;
+        static parse(arg0: string, arg1: ($Map<string, $List<string>> | (([string] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<string, PropertyKey>, ($List<string> | (string)[])>>))): $List<$Locale$LanguageRange>;
         static parse(arg0: string): $List<$Locale$LanguageRange>;
         equals(arg0: unknown): boolean;
         hashCode(): number;
@@ -356,7 +356,7 @@ declare module "java:java/util" {
         isEmpty(): boolean;
         keySet(): $Set<K>;
         merge(arg0: K, arg1: V, arg2: $BiFunction_<V, V, V, V, V, V>): V;
-        putAll(arg0: ($Map<K, V> | ([K] extends [PropertyKey] ? Partial<Record<Extract<K, PropertyKey>, V>> : never))): void;
+        putAll(arg0: ($Map<K, V> | (([K] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<K, PropertyKey>, V>>))): void;
         putIfAbsent(arg0: K, arg1: V): V;
         put(arg0: K, arg1: V): V;
         remove(arg0: unknown, arg1: unknown): boolean;
@@ -368,7 +368,7 @@ declare module "java:java/util" {
         values(): $Collection<V>;
     }
     export const $Map: {
-        copyOf<K, V>(arg0: ($Map<K, V> | ([K] extends [PropertyKey] ? Partial<Record<Extract<K, PropertyKey>, V>> : never))): $Map<K, V>;
+        copyOf<K, V>(arg0: ($Map<K, V> | (([K] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<K, PropertyKey>, V>>))): $Map<K, V>;
         entry<K, V>(arg0: K, arg1: V): $Map$Entry<K, V>;
         ofEntries<K, V>(arg0?: $Map$Entry<K, V>[]): $Map<K, V>;
         of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V, arg16: K, arg17: V, arg18: K, arg19: V): $Map<K, V>;
@@ -537,10 +537,10 @@ declare module "java:java/util" {
     }
 
     export interface $SequencedSet<E> extends $SequencedCollection<E>, $Set<E> {
-        addAll(arg0: E[]): boolean;
+        addAll(arg0: ($Collection<E> | (E)[])): boolean;
         add(arg0: E): boolean;
         clear(): void;
-        containsAll(arg0: any[]): boolean;
+        containsAll(arg0: ($Collection<any> | (any)[])): boolean;
         contains(arg0: unknown): boolean;
         equals(arg0: unknown): boolean;
         forEach(arg0: $Consumer_<E, E>): void;
@@ -548,10 +548,10 @@ declare module "java:java/util" {
         isEmpty(): boolean;
         iterator(): $Iterator<E>;
         parallelStream(): $Stream<E>;
-        removeAll(arg0: any[]): boolean;
+        removeAll(arg0: ($Collection<any> | (any)[])): boolean;
         removeIf(arg0: $Predicate_<E, E, boolean>): boolean;
         remove(arg0: unknown): boolean;
-        retainAll(arg0: any[]): boolean;
+        retainAll(arg0: ($Collection<any> | (any)[])): boolean;
         reversed(): $SequencedSet<E>;
         size(): number;
         spliterator(): $Spliterator<E>;
@@ -562,18 +562,18 @@ declare module "java:java/util" {
     }
 
     export interface $Set<E> extends $Collection<E> {
-        addAll(arg0: E[]): boolean;
+        addAll(arg0: ($Collection<E> | (E)[])): boolean;
         add(arg0: E): boolean;
         clear(): void;
-        containsAll(arg0: any[]): boolean;
+        containsAll(arg0: ($Collection<any> | (any)[])): boolean;
         contains(arg0: unknown): boolean;
         equals(arg0: unknown): boolean;
         hashCode(): number;
         isEmpty(): boolean;
         iterator(): $Iterator<E>;
-        removeAll(arg0: any[]): boolean;
+        removeAll(arg0: ($Collection<any> | (any)[])): boolean;
         remove(arg0: unknown): boolean;
-        retainAll(arg0: any[]): boolean;
+        retainAll(arg0: ($Collection<any> | (any)[])): boolean;
         size(): number;
         spliterator(): $Spliterator<E>;
         toArray<T>(arg0: T[]): T[];
@@ -581,7 +581,7 @@ declare module "java:java/util" {
         toArray(): unknown[];
     }
     export const $Set: {
-        copyOf<E>(arg0: E[]): $Set<E>;
+        copyOf<E>(arg0: ($Collection<E> | (E)[])): $Set<E>;
         of<E>(arg0?: E[]): $Set<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E, arg9: E): $Set<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E): $Set<E>;
@@ -750,7 +750,7 @@ declare module "java:java/util" {
         load(arg0: $Reader): void;
         merge(arg0: unknown, arg1: unknown, arg2: $BiFunction_<unknown, unknown, any, unknown, unknown, any>): unknown;
         propertyNames(): $Enumeration<any>;
-        putAll(arg0: ($Map<any, any> | ([any] extends [PropertyKey] ? Partial<Record<Extract<any, PropertyKey>, any>> : never))): void;
+        putAll(arg0: ($Map<any, any> | (([any] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<any, PropertyKey>, any>>))): void;
         putIfAbsent(arg0: unknown, arg1: unknown): unknown;
         put(arg0: unknown, arg1: unknown): unknown;
         remove(arg0: unknown, arg1: unknown): boolean;
@@ -775,7 +775,7 @@ declare module "java:java/util" {
         constructor();
         constructor(arg0: number);
         constructor(arg0: number, arg1: number);
-        constructor(arg0: ($Map<K, V> | ([K] extends [PropertyKey] ? Partial<Record<Extract<K, PropertyKey>, V>> : never)));
+        constructor(arg0: ($Map<K, V> | (([K] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<K, PropertyKey>, V>>)));
         get empty(): boolean;
         isEmpty(): boolean;
         clear(): void;
@@ -796,7 +796,7 @@ declare module "java:java/util" {
         keySet(): $Set<K>;
         keys(): $Enumeration<K>;
         merge(arg0: K, arg1: V, arg2: $BiFunction_<V, V, V, V, V, V>): V;
-        putAll(arg0: ($Map<K, V> | ([K] extends [PropertyKey] ? Partial<Record<Extract<K, PropertyKey>, V>> : never))): void;
+        putAll(arg0: ($Map<K, V> | (([K] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<K, PropertyKey>, V>>))): void;
         putIfAbsent(arg0: K, arg1: V): V;
         put(arg0: K, arg1: V): V;
         remove(arg0: unknown, arg1: unknown): boolean;
@@ -821,19 +821,19 @@ declare module "java:java/util" {
         size(): number;
     }
 
-    export type $Collection_<E> = E[];
+    export type $Collection_<E> = ($Collection<E> | (E)[]);
     export type $Comparator_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = Host0, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($Comparator<Host0> & { readonly [Symbol.hasInstance]?: never });
     export type $Iterator_<E> = E[];
-    export type $List_<E> = E[];
+    export type $List_<E> = ($List<E> | (E)[]);
     export type $Locale$Category_ = $Locale$Category | "DISPLAY" | "FORMAT";
     export type $Locale$FilteringMode_ = $Locale$FilteringMode | "AUTOSELECT_FILTERING" | "EXTENDED_FILTERING" | "IGNORE_EXTENDED_RANGES" | "MAP_EXTENDED_RANGES" | "REJECT_EXTENDED_RANGES";
     export type $Locale$IsoCountryCode_ = $Locale$IsoCountryCode | "PART1_ALPHA2" | "PART1_ALPHA3" | "PART3";
-    export type $Map_<K, V> = { [key: string]: V };
+    export type $Map_<K, V> = ($Map<K, V> | (([K] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<K, PropertyKey>, V>>));
     export type $Optional_<T> = T | null;
     export type $SequencedCollection_<E> = E[];
     export type $SequencedMap_<K, V> = { [key: string]: V };
     export type $SequencedSet_<E> = E[];
-    export type $Set_<E> = E[];
+    export type $Set_<E> = $Set<E>;
     export type $SortedMap_<K, V> = { [key: string]: V };
     export type $Spliterator_<T> = T[];
 }

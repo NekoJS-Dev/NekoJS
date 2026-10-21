@@ -337,10 +337,7 @@ public final class IndexFileGenerator {
         return cls.getPackage().getName().equals(packageName);
     }
 
-    /**
-     * 为已知集合类型生成输入别名。
-     * 例如 List&lt;E&gt; → $List_&lt;E&gt; = E[]
-     */
+    /** Generates fallback aliases, sharing native collection input rules with ordinary parameter rendering. */
     private String generateTypeAlias(String fullName, String simpleName) {
         // C5a：隐藏类的别名不生成（其声明已为空，别名会悬空引用 $Hidden）
         if (hiddenClasses.contains(fullName)) return null;
@@ -348,18 +345,19 @@ public final class IndexFileGenerator {
         // 需要别名的类型：(完整名, 类型参数数量, 别名模板)
         // 别名模板中 {0} = 第一个类型参数, {1} = 第二个类型参数
         String alias = switch (fullName) {
-            case "java.util.List", "java.util.ArrayList", "java.util.LinkedList",
-                 "java.util.Collection", "java.util.SequencedCollection" ->
+            case "java.util.List", "java.util.Collection", "java.util.Set", "java.lang.Iterable",
+                 "java.util.Map" -> "COLLECTION_INPUT";
+            case "java.util.ArrayList", "java.util.LinkedList", "java.util.SequencedCollection" ->
                     "{0}[]";
-            case "java.util.Set", "java.util.HashSet", "java.util.TreeSet",
+            case "java.util.HashSet", "java.util.TreeSet",
                  "java.util.LinkedHashSet", "java.util.SequencedSet" ->
                     "{0}[]";
-            case "java.util.Map", "java.util.HashMap", "java.util.TreeMap",
+            case "java.util.HashMap", "java.util.TreeMap",
                  "java.util.LinkedHashMap", "java.util.SortedMap", "java.util.SequencedMap" ->
                     "{ [key: string]: {1} }";
             case "java.util.Optional" ->
                     "{0} | null";
-            case "java.lang.Iterable", "java.util.Iterator", "java.util.Spliterator",
+            case "java.util.Iterator", "java.util.Spliterator",
                  "java.util.stream.Stream", "java.util.stream.IntStream",
                  "java.util.stream.LongStream", "java.util.stream.DoubleStream" ->
                     "{0}[]";
@@ -396,7 +394,10 @@ public final class IndexFileGenerator {
         }
 
         // 替换模板中的占位符
-        String result = alias;
+        String result = alias.equals("COLLECTION_INPUT")
+                ? adapterAliasGenerator.aliasRegistry().getCollectionAlias(fullName,
+                        Arrays.stream(typeParams).map(TypeVariable::getName).toArray(String[]::new))
+                : alias;
         for (int i = 0; i < typeParams.length; i++) {
             result = result.replace("{" + i + "}", typeParams[i].getName());
         }

@@ -11,7 +11,7 @@ declare module "java:java/time/zone" {
         getTransitions(): $List<$ZoneOffsetTransition>;
         get fixedOffset(): boolean;
         isFixedOffset(): boolean;
-        static of(arg0: $ZoneOffset, arg1: $ZoneOffset, arg2: $ZoneOffsetTransition[], arg3: $ZoneOffsetTransition[], arg4: $ZoneOffsetTransitionRule[]): $ZoneRules;
+        static of(arg0: $ZoneOffset, arg1: $ZoneOffset, arg2: ($List<$ZoneOffsetTransition> | ($ZoneOffsetTransition)[]), arg3: ($List<$ZoneOffsetTransition> | ($ZoneOffsetTransition)[]), arg4: ($List<$ZoneOffsetTransitionRule> | ($ZoneOffsetTransitionRule)[])): $ZoneRules;
         static of(arg0: $ZoneOffset): $ZoneRules;
         equals(arg0: unknown): boolean;
         getDaylightSavings(arg0: $Instant): $Duration;

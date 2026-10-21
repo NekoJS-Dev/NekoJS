@@ -58,7 +58,7 @@ declare module "java:java/time/temporal" {
         isTimeBased(): boolean;
         rangeRefinedBy(arg0: $TemporalAccessor): $ValueRange;
         range(): $ValueRange;
-        resolve(arg0: ($Map<$TemporalField, number> | ([$TemporalField] extends [PropertyKey] ? Partial<Record<Extract<$TemporalField, PropertyKey>, number>> : never)), arg1: $TemporalAccessor, arg2: $ResolverStyle_): $TemporalAccessor;
+        resolve(arg0: ($Map<$TemporalField, number> | (([$TemporalField] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<$TemporalField, PropertyKey>, number>>)), arg1: $TemporalAccessor, arg2: $ResolverStyle_): $TemporalAccessor;
         toString(): string;
     }
 

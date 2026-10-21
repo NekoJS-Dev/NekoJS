@@ -32,10 +32,10 @@ declare module "java:java/text" {
         getAttributes(): $Map<$AttributedCharacterIterator$Attribute, unknown>;
         getAttribute(arg0: $AttributedCharacterIterator$Attribute): unknown;
         getRunLimit(arg0: $AttributedCharacterIterator$Attribute): number;
-        getRunLimit(arg0: $AttributedCharacterIterator$Attribute[]): number;
+        getRunLimit(arg0: $Set<$AttributedCharacterIterator$Attribute>): number;
         getRunLimit(): number;
         getRunStart(arg0: $AttributedCharacterIterator$Attribute): number;
-        getRunStart(arg0: $AttributedCharacterIterator$Attribute[]): number;
+        getRunStart(arg0: $Set<$AttributedCharacterIterator$Attribute>): number;
         getRunStart(): number;
     }
 

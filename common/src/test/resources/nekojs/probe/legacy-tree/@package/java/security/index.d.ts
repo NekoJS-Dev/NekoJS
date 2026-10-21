@@ -134,7 +134,7 @@ declare module "java:java/security" {
         load(arg0: $InputStream): void;
         load(arg0: $Reader): void;
         merge(arg0: unknown, arg1: unknown, arg2: $BiFunction_<unknown, unknown, any, unknown, unknown, any>): unknown;
-        putAll(arg0: ($Map<any, any> | ([any] extends [PropertyKey] ? Partial<Record<Extract<any, PropertyKey>, any>> : never))): void;
+        putAll(arg0: ($Map<any, any> | (([any] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<any, PropertyKey>, any>>))): void;
         putIfAbsent(arg0: unknown, arg1: unknown): unknown;
         put(arg0: unknown, arg1: unknown): unknown;
         remove(arg0: unknown, arg1: unknown): boolean;
@@ -153,7 +153,7 @@ declare module "java:java/security" {
     };
 
     export class $Provider$Service {
-        constructor(arg0: $Provider, arg1: string, arg2: string, arg3: string, arg4: string[], arg5: ($Map<string, string> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string>> : never)));
+        constructor(arg0: $Provider, arg1: string, arg2: string, arg3: string, arg4: ($List<string> | (string)[]), arg5: ($Map<string, string> | (([string] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<string, PropertyKey>, string>>)));
         get algorithm(): string;
         getAlgorithm(): string;
         get className(): string;

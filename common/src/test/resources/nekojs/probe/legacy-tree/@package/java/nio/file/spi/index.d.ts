@@ -27,12 +27,12 @@ declare module "java:java/nio/file/spi" {
         isHidden(arg0: $Path): boolean;
         isSameFile(arg0: $Path, arg1: $Path): boolean;
         move(arg0: $Path, arg1: $Path, arg2?: $CopyOption[]): void;
-        newAsynchronousFileChannel(arg0: $Path, arg1: $OpenOption[], arg2: $ExecutorService, arg3?: $FileAttribute<any>[]): $AsynchronousFileChannel;
-        newByteChannel(arg0: $Path, arg1: $OpenOption[], arg2?: $FileAttribute<any>[]): $SeekableByteChannel;
+        newAsynchronousFileChannel(arg0: $Path, arg1: $Set<$OpenOption>, arg2: $ExecutorService, arg3?: $FileAttribute<any>[]): $AsynchronousFileChannel;
+        newByteChannel(arg0: $Path, arg1: $Set<$OpenOption>, arg2?: $FileAttribute<any>[]): $SeekableByteChannel;
         newDirectoryStream(arg0: $Path, arg1: $DirectoryStream$Filter_<$Path, $Path, boolean>): $DirectoryStream<$Path>;
-        newFileChannel(arg0: $Path, arg1: $OpenOption[], arg2?: $FileAttribute<any>[]): $FileChannel;
-        newFileSystem(arg0: $URI, arg1: ($Map<string, any> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, any>> : never))): $FileSystem;
-        newFileSystem(arg0: $Path, arg1: ($Map<string, any> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, any>> : never))): $FileSystem;
+        newFileChannel(arg0: $Path, arg1: $Set<$OpenOption>, arg2?: $FileAttribute<any>[]): $FileChannel;
+        newFileSystem(arg0: $URI, arg1: ($Map<string, any> | (([string] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<string, PropertyKey>, any>>))): $FileSystem;
+        newFileSystem(arg0: $Path, arg1: ($Map<string, any> | (([string] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<string, PropertyKey>, any>>))): $FileSystem;
         newInputStream(arg0: $Path, arg1?: $OpenOption[]): $InputStream;
         newOutputStream(arg0: $Path, arg1?: $OpenOption[]): $OutputStream;
         readAttributesIfExists<A extends $BasicFileAttributes>(arg0: $Path, arg1: $Class<A>, arg2?: $LinkOption_[]): A;

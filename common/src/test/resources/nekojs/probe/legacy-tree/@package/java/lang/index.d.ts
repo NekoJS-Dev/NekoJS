@@ -683,9 +683,9 @@ declare module "java:java/lang" {
 
     export class $ModuleLayer {
         static boot(): $ModuleLayer;
-        static defineModulesWithManyLoaders(arg0: $Configuration, arg1: $ModuleLayer[], arg2: $ClassLoader): $ModuleLayer$Controller;
-        static defineModulesWithOneLoader(arg0: $Configuration, arg1: $ModuleLayer[], arg2: $ClassLoader): $ModuleLayer$Controller;
-        static defineModules(arg0: $Configuration, arg1: $ModuleLayer[], arg2: $Function_<string, $ClassLoader, string, $ClassLoader>): $ModuleLayer$Controller;
+        static defineModulesWithManyLoaders(arg0: $Configuration, arg1: ($List<$ModuleLayer> | ($ModuleLayer)[]), arg2: $ClassLoader): $ModuleLayer$Controller;
+        static defineModulesWithOneLoader(arg0: $Configuration, arg1: ($List<$ModuleLayer> | ($ModuleLayer)[]), arg2: $ClassLoader): $ModuleLayer$Controller;
+        static defineModules(arg0: $Configuration, arg1: ($List<$ModuleLayer> | ($ModuleLayer)[]), arg2: $Function_<string, $ClassLoader, string, $ClassLoader>): $ModuleLayer$Controller;
         static empty(): $ModuleLayer;
         configuration(): $Configuration;
         defineModulesWithManyLoaders(arg0: $Configuration, arg1: $ClassLoader): $ModuleLayer;
@@ -805,7 +805,7 @@ declare module "java:java/lang" {
         static format(arg0: string, arg1?: unknown[]): string;
         static format(arg0: $Locale, arg1: string, arg2?: unknown[]): string;
         static join(arg0: $CharSequence, arg1?: $CharSequence[]): string;
-        static join(arg0: $CharSequence, arg1: $Iterable<$CharSequence>): string;
+        static join(arg0: $CharSequence, arg1: ($Iterable<$CharSequence> | ($CharSequence)[])): string;
         static valueOf(arg0: boolean): string;
         static valueOf(arg0: string[], arg1: number, arg2: number): string;
         static valueOf(arg0: string[]): string;
@@ -1192,7 +1192,7 @@ declare module "java:java/lang" {
 
     export type $AutoCloseable_ = (() => void) | ($AutoCloseable & { readonly [Symbol.hasInstance]?: never });
     export type $Comparable_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Comparable<Host0> & { readonly [Symbol.hasInstance]?: never });
-    export type $Iterable_<T> = T[];
+    export type $Iterable_<T> = ($Iterable<T> | (T)[]);
     export type $Readable_<CallbackArg0 = $CharBuffer, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Readable & { readonly [Symbol.hasInstance]?: never });
     export type $Runnable_ = (() => void) | ($Runnable & { readonly [Symbol.hasInstance]?: never });
     export type $Thread$State_ = $Thread$State | "BLOCKED" | "NEW" | "RUNNABLE" | "TERMINATED" | "TIMED_WAITING" | "WAITING";

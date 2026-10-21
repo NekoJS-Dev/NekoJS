@@ -6,10 +6,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 类型别名注册表：管理 Java 类型到 TypeScript 输入别名的映射。
- *
- * <p>当 Java 类型用作方法参数时，使用更宽松的 TypeScript 类型（如 List → E[]）。
- * 当用作返回值时，使用完整类型（如 $List）。
+ * Registers TypeScript input aliases for Java conversion boundaries.
+ * Host containers retain their generic arguments; converted inputs use independently rendered element types.
+ * Return values retain their host types rather than accepting input conversions.
  */
 public final class TypeAliasRegistry {
     private final Map<String, String> classAliases = new LinkedHashMap<>();
@@ -55,10 +54,10 @@ public final class TypeAliasRegistry {
         // String → string（已在 TypeConverter 中处理，这里不重复）
 
         // 集合类型别名
-        collectionAliases.put("java.util.List", new CollectionAlias("$List", "[]"));
-        collectionAliases.put("java.util.Collection", new CollectionAlias("$Collection", "[]"));
-        collectionAliases.put("java.util.Set", new CollectionAlias("$Set", "[]"));
-        collectionAliases.put("java.util.Iterable", new CollectionAlias("$Iterable", "[]"));
+        collectionAliases.put("java.util.List", hostCollection("$List", true));
+        collectionAliases.put("java.util.Collection", hostCollection("$Collection", true));
+        collectionAliases.put("java.util.Set", hostCollection("$Set", false));
+        collectionAliases.put("java.lang.Iterable", hostCollection("$Iterable", true));
         collectionAliases.put("java.util.Iterator", new CollectionAlias("$Iterator", ""));
 
         // Host maps accept arbitrary keys; object inputs are limited to TypeScript property keys.
@@ -70,10 +69,16 @@ public final class TypeAliasRegistry {
 
             @Override
             public String getInputType(String[] typeArgs, String hostName) {
-                if (typeArgs.length == 2) {
-                    String host = hostName + "<" + typeArgs[0] + ", " + typeArgs[1] + ">";
-                    return "(" + host + " | ([" + typeArgs[0] + "] extends [PropertyKey] ? Partial<Record<Extract<"
-                            + typeArgs[0] + ", PropertyKey>, " + typeArgs[1] + ">> : never))";
+                return getInputType(typeArgs, typeArgs, hostName);
+            }
+
+            @Override
+            public String getInputType(String[] hostArgs, String[] inputArgs, String hostName) {
+                if (hostArgs.length == 2 && inputArgs.length == 2) {
+                    String host = hostName + "<" + hostArgs[0] + ", " + hostArgs[1] + ">";
+                    // Keep the record outside the conditional: concrete-key narrowing can erase its index signature.
+                    return "(" + host + " | (([" + inputArgs[0] + "] extends [PropertyKey] ? unknown : never)"
+                            + " & Partial<Record<Extract<" + inputArgs[0] + ", PropertyKey>, " + inputArgs[1] + ">>))";
                 }
                 return "{ [key: string]: any }";
             }
@@ -91,6 +96,17 @@ public final class TypeAliasRegistry {
         classAliases.put("java.lang.Character", "string");
         classAliases.put("java.lang.Object", "unknown");
         // UUID, Path and File retain their host identity unless a real adapter supplies an input alias.
+    }
+
+    private static CollectionAlias hostCollection(String name, boolean acceptsArray) {
+        return new CollectionAlias(name, "[]") {
+            @Override
+            public String getInputType(String[] hostArgs, String[] inputArgs, String hostName) {
+                String host = hostName + "<" + (hostArgs.length == 0 ? "any" : hostArgs[0]) + ">";
+                String input = inputArgs.length == 0 ? "any" : inputArgs[0];
+                return acceptsArray ? "(" + host + " | (" + input + ")[])" : host;
+            }
+        };
     }
 
     /**
@@ -177,9 +193,14 @@ public final class TypeAliasRegistry {
      * 语义与 {@link #getCollectionAlias(Class, String[])} 完全一致。
      */
     public String getCollectionAlias(String rawFqn, String[] tsArgs) {
+        return getCollectionAlias(rawFqn, tsArgs, tsArgs);
+    }
+
+    /** Host generic arguments retain identity while converted array/object inputs use their input types. */
+    public String getCollectionAlias(String rawFqn, String[] hostArgs, String[] inputArgs) {
         CollectionAlias alias = collectionAliases.get(rawFqn);
         if (alias == null) return null;
-        return alias.getInputType(tsArgs, reference(rawFqn, alias.baseType));
+        return alias.getInputType(hostArgs, inputArgs, reference(rawFqn, alias.baseType));
     }
 
     /**
@@ -249,6 +270,11 @@ public final class TypeAliasRegistry {
         /** Retains custom conversion implementations while allowing host names to be scoped. */
         public String getInputType(String[] typeArgs, String hostName) {
             return getInputType(typeArgs);
+        }
+
+        /** Existing custom aliases keep their conversion implementation unless they opt into host arguments. */
+        public String getInputType(String[] hostArgs, String[] inputArgs, String hostName) {
+            return getInputType(inputArgs, hostName);
         }
     }
 

@@ -15,7 +15,7 @@ declare module "java:java/nio/channels" {
         get open(): boolean;
         isOpen(): boolean;
         static open(arg0: $Path, arg1?: $OpenOption[]): $AsynchronousFileChannel;
-        static open(arg0: $Path, arg1: $OpenOption[], arg2: $ExecutorService, arg3?: $FileAttribute<any>[]): $AsynchronousFileChannel;
+        static open(arg0: $Path, arg1: $Set<$OpenOption>, arg2: $ExecutorService, arg3?: $FileAttribute<any>[]): $AsynchronousFileChannel;
         close(): void;
         force(arg0: boolean): void;
         lock<A>(arg0: A, arg1: $CompletionHandler<$FileLock, any>): void;
@@ -36,7 +36,7 @@ declare module "java:java/nio/channels" {
         get open(): boolean;
         isOpen(): boolean;
         static open(arg0: $Path, arg1?: $OpenOption[]): $FileChannel;
-        static open(arg0: $Path, arg1: $OpenOption[], arg2?: $FileAttribute<any>[]): $FileChannel;
+        static open(arg0: $Path, arg1: $Set<$OpenOption>, arg2?: $FileAttribute<any>[]): $FileChannel;
         close(): void;
         force(arg0: boolean): void;
         lock(arg0: number, arg1: number, arg2: boolean): $FileLock;

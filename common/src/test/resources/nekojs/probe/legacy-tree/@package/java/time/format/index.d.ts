@@ -58,7 +58,7 @@ declare module "java:java/time/format" {
         withDecimalStyle(arg0: $DecimalStyle): $DateTimeFormatter;
         withLocale(arg0: $Locale): $DateTimeFormatter;
         withResolverFields(arg0?: $TemporalField[]): $DateTimeFormatter;
-        withResolverFields(arg0: $TemporalField[]): $DateTimeFormatter;
+        withResolverFields(arg0: $Set<$TemporalField>): $DateTimeFormatter;
         withResolverStyle(arg0: $ResolverStyle_): $DateTimeFormatter;
         withZone(arg0: $ZoneId): $DateTimeFormatter;
     }

@@ -112,7 +112,7 @@ class FunctionalInterfaceAliasGeneratorTest {
         String method = generator.declaration(GenericMethod.class.getName());
         assertFalse(method.contains("U"), method);
         assertTrue(method.contains("CallbackArg0 = $List<any[]>"), method);
-        assertTrue(method.contains("CallbackResult = any[][]"), method);
+        assertTrue(method.contains("CallbackResult = ($List<any[]> | (any[])[])"), method);
 
         generator.prepare(Set.of(java.util.function.Function.class.getName()), Set.of());
         String raw = generator.declaration(java.util.function.Function.class.getName());

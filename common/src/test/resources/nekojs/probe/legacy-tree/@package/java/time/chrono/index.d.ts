@@ -69,7 +69,7 @@ declare module "java:java/time/chrono" {
         period(arg0: number, arg1: number, arg2: number): $Period;
         prolepticYear(arg0: $Era_<number>, arg1: number): number;
         range(arg0: $ChronoField_): $ValueRange;
-        resolveDate(arg0: ($Map<$TemporalField, number> | ([$TemporalField] extends [PropertyKey] ? Partial<Record<Extract<$TemporalField, PropertyKey>, number>> : never)), arg1: $ResolverStyle_): $LocalDate;
+        resolveDate(arg0: ($Map<$TemporalField, number> | (([$TemporalField] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<$TemporalField, PropertyKey>, number>>)), arg1: $ResolverStyle_): $LocalDate;
         toString(): string;
         zonedDateTime(arg0: $Instant, arg1: $ZoneId): $ZonedDateTime;
         zonedDateTime(arg0: $TemporalAccessor): $ZonedDateTime;
@@ -143,7 +143,7 @@ declare module "java:java/time/chrono" {
         period(arg0: number, arg1: number, arg2: number): $ChronoPeriod;
         prolepticYear(arg0: $Era_<number>, arg1: number): number;
         range(arg0: $ChronoField_): $ValueRange;
-        resolveDate(arg0: ($Map<$TemporalField, number> | ([$TemporalField] extends [PropertyKey] ? Partial<Record<Extract<$TemporalField, PropertyKey>, number>> : never)), arg1: $ResolverStyle_): $ChronoLocalDate;
+        resolveDate(arg0: ($Map<$TemporalField, number> | (([$TemporalField] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<$TemporalField, PropertyKey>, number>>)), arg1: $ResolverStyle_): $ChronoLocalDate;
         toString(): string;
         zonedDateTime(arg0: $Instant, arg1: $ZoneId): $ChronoZonedDateTime<$ChronoLocalDate>;
         zonedDateTime(arg0: $TemporalAccessor): $ChronoZonedDateTime<$ChronoLocalDate>;
@@ -255,7 +255,7 @@ declare module "java:java/time/chrono" {
         period(arg0: number, arg1: number, arg2: number): $ChronoPeriod;
         prolepticYear(arg0: $Era_<number>, arg1: number): number;
         range(arg0: $ChronoField_): $ValueRange;
-        resolveDate(arg0: ($Map<$TemporalField, number> | ([$TemporalField] extends [PropertyKey] ? Partial<Record<Extract<$TemporalField, PropertyKey>, number>> : never)), arg1: $ResolverStyle_): $ChronoLocalDate;
+        resolveDate(arg0: ($Map<$TemporalField, number> | (([$TemporalField] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<$TemporalField, PropertyKey>, number>>)), arg1: $ResolverStyle_): $ChronoLocalDate;
         toString(): string;
         zonedDateTime(arg0: $Instant, arg1: $ZoneId): $ChronoZonedDateTime<$ChronoLocalDate>;
         zonedDateTime(arg0: $TemporalAccessor): $ChronoZonedDateTime<$ChronoLocalDate>;

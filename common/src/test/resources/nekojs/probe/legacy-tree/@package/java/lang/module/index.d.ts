@@ -15,12 +15,12 @@ declare module "java:java/lang/module" {
         get open(): boolean;
         isOpen(): boolean;
         static newAutomaticModule(arg0: string): $ModuleDescriptor$Builder;
-        static newModule(arg0: string, arg1: $ModuleDescriptor$Modifier_[]): $ModuleDescriptor$Builder;
+        static newModule(arg0: string, arg1: $Set<$ModuleDescriptor$Modifier>): $ModuleDescriptor$Builder;
         static newModule(arg0: string): $ModuleDescriptor$Builder;
         static newOpenModule(arg0: string): $ModuleDescriptor$Builder;
-        static read(arg0: $InputStream, arg1: $Supplier_<$Set<string>, string[]>): $ModuleDescriptor;
+        static read(arg0: $InputStream, arg1: $Supplier_<$Set<string>, $Set<string>>): $ModuleDescriptor;
         static read(arg0: $InputStream): $ModuleDescriptor;
-        static read(arg0: $ByteBuffer, arg1: $Supplier_<$Set<string>, string[]>): $ModuleDescriptor;
+        static read(arg0: $ByteBuffer, arg1: $Supplier_<$Set<string>, $Set<string>>): $ModuleDescriptor;
         static read(arg0: $ByteBuffer): $ModuleDescriptor;
         accessFlags(): $Set<$AccessFlag>;
         compareTo(arg0: $ModuleDescriptor): number;
@@ -43,13 +43,13 @@ declare module "java:java/lang/module" {
 
     export class $Configuration {
         static empty(): $Configuration;
-        static resolveAndBind(arg0: $ModuleFinder, arg1: $Configuration[], arg2: $ModuleFinder, arg3: string[]): $Configuration;
-        static resolve(arg0: $ModuleFinder, arg1: $Configuration[], arg2: $ModuleFinder, arg3: string[]): $Configuration;
+        static resolveAndBind(arg0: $ModuleFinder, arg1: ($List<$Configuration> | ($Configuration)[]), arg2: $ModuleFinder, arg3: ($Collection<string> | (string)[])): $Configuration;
+        static resolve(arg0: $ModuleFinder, arg1: ($List<$Configuration> | ($Configuration)[]), arg2: $ModuleFinder, arg3: ($Collection<string> | (string)[])): $Configuration;
         findModule(arg0: string): $Optional<$ResolvedModule>;
         modules(): $Set<$ResolvedModule>;
         parents(): $List<$Configuration>;
-        resolveAndBind(arg0: $ModuleFinder, arg1: $ModuleFinder, arg2: string[]): $Configuration;
-        resolve(arg0: $ModuleFinder, arg1: $ModuleFinder, arg2: string[]): $Configuration;
+        resolveAndBind(arg0: $ModuleFinder, arg1: $ModuleFinder, arg2: ($Collection<string> | (string)[])): $Configuration;
+        resolve(arg0: $ModuleFinder, arg1: $ModuleFinder, arg2: ($Collection<string> | (string)[])): $Configuration;
         toString(): string;
     }
 
@@ -75,24 +75,24 @@ declare module "java:java/lang/module" {
 
     export class $ModuleDescriptor$Builder {
         build(): $ModuleDescriptor;
-        exports(arg0: string, arg1: string[]): $ModuleDescriptor$Builder;
+        exports(arg0: string, arg1: $Set<string>): $ModuleDescriptor$Builder;
         exports(arg0: string): $ModuleDescriptor$Builder;
         exports(arg0: $ModuleDescriptor$Exports): $ModuleDescriptor$Builder;
-        exports(arg0: $ModuleDescriptor$Exports$Modifier_[], arg1: string, arg2: string[]): $ModuleDescriptor$Builder;
-        exports(arg0: $ModuleDescriptor$Exports$Modifier_[], arg1: string): $ModuleDescriptor$Builder;
+        exports(arg0: $Set<$ModuleDescriptor$Exports$Modifier>, arg1: string, arg2: $Set<string>): $ModuleDescriptor$Builder;
+        exports(arg0: $Set<$ModuleDescriptor$Exports$Modifier>, arg1: string): $ModuleDescriptor$Builder;
         mainClass(arg0: string): $ModuleDescriptor$Builder;
-        opens(arg0: string, arg1: string[]): $ModuleDescriptor$Builder;
+        opens(arg0: string, arg1: $Set<string>): $ModuleDescriptor$Builder;
         opens(arg0: string): $ModuleDescriptor$Builder;
         opens(arg0: $ModuleDescriptor$Opens): $ModuleDescriptor$Builder;
-        opens(arg0: $ModuleDescriptor$Opens$Modifier_[], arg1: string, arg2: string[]): $ModuleDescriptor$Builder;
-        opens(arg0: $ModuleDescriptor$Opens$Modifier_[], arg1: string): $ModuleDescriptor$Builder;
-        packages(arg0: string[]): $ModuleDescriptor$Builder;
-        provides(arg0: string, arg1: string[]): $ModuleDescriptor$Builder;
+        opens(arg0: $Set<$ModuleDescriptor$Opens$Modifier>, arg1: string, arg2: $Set<string>): $ModuleDescriptor$Builder;
+        opens(arg0: $Set<$ModuleDescriptor$Opens$Modifier>, arg1: string): $ModuleDescriptor$Builder;
+        packages(arg0: $Set<string>): $ModuleDescriptor$Builder;
+        provides(arg0: string, arg1: ($List<string> | (string)[])): $ModuleDescriptor$Builder;
         provides(arg0: $ModuleDescriptor$Provides): $ModuleDescriptor$Builder;
         requires(arg0: string): $ModuleDescriptor$Builder;
         requires(arg0: $ModuleDescriptor$Requires): $ModuleDescriptor$Builder;
-        requires(arg0: $ModuleDescriptor$Requires$Modifier_[], arg1: string, arg2: $ModuleDescriptor$Version): $ModuleDescriptor$Builder;
-        requires(arg0: $ModuleDescriptor$Requires$Modifier_[], arg1: string): $ModuleDescriptor$Builder;
+        requires(arg0: $Set<$ModuleDescriptor$Requires$Modifier>, arg1: string, arg2: $ModuleDescriptor$Version): $ModuleDescriptor$Builder;
+        requires(arg0: $Set<$ModuleDescriptor$Requires$Modifier>, arg1: string): $ModuleDescriptor$Builder;
         uses(arg0: string): $ModuleDescriptor$Builder;
         version(arg0: string): $ModuleDescriptor$Builder;
         version(arg0: $ModuleDescriptor$Version): $ModuleDescriptor$Builder;
