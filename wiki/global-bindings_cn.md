@@ -346,6 +346,8 @@ ClientEvents.playerTickPost(() => {
 
 注意：相机实体视觉（末影人/蜘蛛/苦力怕）会覆盖或清除脚本设置的效果。
 
+1.21.1 资源重载会用新资源重建仍由 NekoJS 选择的链，并保留关闭状态；期间的显式 clear、声明退役或世界切换会取消过时恢复，原版已接管的链不会被覆盖或随声明退役清除。`current()` 只返回仍对应实际链的 NekoJS id；没有实际链时 `isActive()` 返回 false。
+
 <a id="wiki-section-24"></a>
 ### `once` / `clearOnce`
 

@@ -346,6 +346,8 @@ ClientEvents.playerTickPost(() => {
 
 Note: camera-entity visuals (enderman/spider/creeper) can override or clear script-selected effects.
 
+On 1.21.1, resource reload rebuilds a chain still selected by NekoJS using the new resources and preserves its disabled state. Explicit clear, declaration retirement or a world change cancels stale restoration; a chain taken over by vanilla is neither overwritten nor cleared by declaration retirement. `current()` returns the NekoJS id only while it identifies the actual chain; `isActive()` returns false when no chain exists.
+
 <a id="wiki-section-24"></a>
 ### `once` / `clearOnce`
 

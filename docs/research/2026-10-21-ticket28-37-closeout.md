@@ -80,3 +80,5 @@ Standards 的两项边界发现均已处理：完成时若 renderer 已有其他
 
 
 最终 legacy 源码的 `:1.21.1:build guardLint` 通过，1m08s / 37 tasks（9 executed），普通测试 444 / 31 skipped、platform gate 3 / 0，零失败/错误；runtime artifact 与 legacy server artifact 门禁通过，guard 380 blocks / 561 files / 0 warnings。新增 helper test mod 仅在隔离 init 中加载，不进入生产 JAR。前一阶段 common/check 与其他四节点未因这一节点专属改动重复执行；它们仍绑定原 `dd15186c` 证据，不能冒充本阶段新测量。
+
+三节点 PostEffects 证据现已[独立封存](../architecture-refactor/evidence/2026-10-21-posteffects-native/README.md)：528 项、30 张原图，完整最终 legacy patch、XML、fixture/source/class/JAR 绑定及失败尝试保留；只读 verifier 实际通过。26.2 在 vendor 开发警告页面的隔离开关后七阶段通过，两进程正常退出。其页面阻挡是源码/后续结果支持的推断，未取得该页截图。票 28 的 AC6 节点 smoke 已有实证并勾选，AC9/整票仍保留正式候选安装客户端与最终验收边界；迁移记录与中英文 wiki 同步说明 legacy 所有权修复。

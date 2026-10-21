@@ -2,6 +2,8 @@
 
 日期：2026-09-21　worktree：`D:/mcmodDemo/NekoJS-mult-t28`（分支 `ticket-28-post-effects`）
 
+**2026-10-21 后续状态：** 本文保留初次迁移记录；§3/§4 的旧 wiki 消费者、Fabric capability 记录和三节点渲染缺口已有后续工作，当前以[三节点补验](../../evidence/2026-10-21-posteffects-native/README.md)及中英文 `wiki/global-bindings` 为准。wiki 已使用事件声明，旧调用没有剩余执行消费者。legacy `current()` / `isActive()` 现在回读实际链所有权；资源重载会重建仍归 NekoJS 选择的 resources-only 链，保持关闭状态，显式清除/退役/世界变化取消过时恢复，不覆盖或退役清除原版接管的链。没有新增任意 inline id 激活能力。正式候选安装客户端及发布签收仍未完成。
+
 ## 1. 旧静态路径 → 新路径对照
 
 | 能力 | 旧路径（改造前） | 新路径 | 兼容性 |

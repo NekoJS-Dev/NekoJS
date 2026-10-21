@@ -94,3 +94,5 @@
 同日继续完成 [Character 值类型投影](../evidence/2026-10-17-tsc-closeout/CHARACTER.md)：4952 tests（271 skipped）、五节点新 JAR、全部默认 Pyright 和严格正负例通过，完整 TSC 移除 204 条且没有新增，仍有 6867 条，整体验收未通过。保留原始 IR、Python 和运行时转换，记录泛型擦除与 1.21.1 旧 Guava 谓词限制；首次实机失败、旧 JAR 复现及最终各节点正负能力检查均封存，没有把原有拒绝行为宣称为已修复。不创建 PR，其他发布门禁继续开放。
 
 2026-10-21 [Probe 共享原因与新制品复测](../evidence/2026-10-21-probe-closeout/README.md)：`dd15186c` 完成多父接口继承签名合并、显式手写 host/input 依赖和动态物品布尔输入校验，5056 tests（271 skipped）、五节点新 JAR 实机、1609 个 stub 的默认 Pyright 与定向严格消费链通过。十入口完整严格 TSC 从 6867 降至 6523，按首行诊断多重集移除 344 / 新增 0，所有 TS2320 消失；完整 IDE gate 仍失败。`ManualDeclarationCatalogEntry` 保留旧构造但增加 record 组件，六组件 record pattern 源码需要迁移，已在报告和插件指南记录。本阶段不替代剩余客户端、多客户端动态同步、最终候选性能与分离回退，不代签发布决定。
+
+2026-10-21 [PostEffects 三节点原生补验](../evidence/2026-10-21-posteffects-native/README.md)：legacy 源码 `8798257f` 修复原生资源重载丢失效果及 stale 退役误清原版链，最终节点构建 447 tests / 31 skipped 零失败，三节点 30 张世界目标图与原生 debug 重载通过并逐张复核。legacy 两个实际红测、依赖缺失及开发警告阻挡尝试均保留；现代节点仍绑定 `dd15186c`，开发客户端与安装候选 class 匹配，不冒充正式安装客户端启动。票 28 的节点 smoke 条件已补齐；正式统一候选、多人动态 TCP、完整 TSC、性能和分离回退仍开放，不代签整票或发布验收。

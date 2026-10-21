@@ -1,0 +1,2126 @@
+{
+  "archiveSha256": "bd84632d45dc732618be599186f22be2f53a4d873c16e9cd94d62a70c468d93e",
+  "entries": {
+    "posteffects-121-f3t-final/clear-after.png": {
+      "size": 118997,
+      "sha256": "12cc7721de4dac14444e46dcfe5e2c93ba1ca2c9482b736dcda68392f21d8121"
+    },
+    "posteffects-121-f3t-final/clear-before.png": {
+      "size": 159038,
+      "sha256": "8ce6a20ba3dfcbfc0c7d17cb9fa989e0f2e0f7d1e6993a531f327e595f0ef262"
+    },
+    "posteffects-121-f3t-final/clear-recovered.png": {
+      "size": 103914,
+      "sha256": "b23175eef0f3a261ec19daa97a8eacb8d35f8b6da04d6aef96ee6a7dfff139fc"
+    },
+    "posteffects-121-f3t-final/client.init.gradle": {
+      "size": 1141,
+      "sha256": "bb4e3ca961bd7ddd210febac4233343885937eef01d9053c8a51e5e3cca031e6"
+    },
+    "posteffects-121-f3t-final/commands.jsonl": {
+      "size": 1250,
+      "sha256": "57d8184e000d41184ff04b19a6ec54a99b4ec0114486ee826c6d5ea6303ea65d"
+    },
+    "posteffects-121-f3t-final/compile.log": {
+      "size": 11496,
+      "sha256": "53d9415dd6ddd6d3efb3e57ae37e7d0d02a218e2c60c81e845c91852d881ba30"
+    },
+    "posteffects-121-f3t-final/effect-after.png": {
+      "size": 107600,
+      "sha256": "8f39a6595164825c73cda590c7a174488f46a1f41a875298fae69d62f5dc2a8e"
+    },
+    "posteffects-121-f3t-final/effect-before.png": {
+      "size": 137470,
+      "sha256": "c5e30a16198b899aa7f886119d4df3da8cbac980527486adb13fe231ad19327d"
+    },
+    "posteffects-121-f3t-final/effect-inactive.png": {
+      "size": 99443,
+      "sha256": "023d183002ff5777d6548359cf99b875f249af7d02870ecfe100916477b61206"
+    },
+    "posteffects-121-f3t-final/effect-native-target.png": {
+      "size": 92211,
+      "sha256": "e13b068e8d1b75969f391a0f84c493bf369641b06ba01ca49a43250fe0c36848"
+    },
+    "posteffects-121-f3t-final/effect-recovered.png": {
+      "size": 97356,
+      "sha256": "95e64ba2b1851e0c985003f61b3128b70b09b035621efd10d719bfeb0d56496c"
+    },
+    "posteffects-121-f3t-final/effect-retiring.png": {
+      "size": 92500,
+      "sha256": "9e7dfa84a8cb4e174e11b7ff64f9b556cdd85547c4419b7559ed9f387d17ce9a"
+    },
+    "posteffects-121-f3t-final/manifest.json": {
+      "size": 1932,
+      "sha256": "807f819ddc88c878bd6b8b2c8efd3f2b1d0603a21aa7b35de6133ddd8368d097"
+    },
+    "posteffects-121-f3t-final/pixel-review.json": {
+      "size": 3697,
+      "sha256": "1cafbf032c3fe693f70c2d20d1375c342b2c49e5a1f3c4583bf7b5dd987d1e5e"
+    },
+    "posteffects-121-f3t-final/retained-cleared.png": {
+      "size": 102536,
+      "sha256": "beca8fd1e7bc89c729220710d02faae27fd568bfc50b995675652c469f29e668"
+    },
+    "posteffects-121-f3t-final/retained-inactive.png": {
+      "size": 101960,
+      "sha256": "7416da3334c86c9d57dd589432090c67a1c4e226b6f3dc38ae91ff352bb5800a"
+    },
+    "posteffects-121-f3t-final/retained-native-retired.png": {
+      "size": 30855,
+      "sha256": "48044a89c78ed479d44edbffd3bb96c809ef7f947215e2bc06c5569713793ac1"
+    },
+    "posteffects-121-f3t-final/retained-native.png": {
+      "size": 32102,
+      "sha256": "3fd6cc6c80552f07d68e0bd0f78e28ecd3054ae926b04092ce68dab00ab2caa4"
+    },
+    "posteffects-121-f3t-final/retained-rejected.png": {
+      "size": 98339,
+      "sha256": "bc25a262f1b6f4f39728b9fcf91879113b42898f27357f3b7ec4a9ba77cbdda7"
+    },
+    "posteffects-121-f3t-final/retained-resource.png": {
+      "size": 107922,
+      "sha256": "4aad1ebb18b94e48cfd88ebd126ac60f860b1d73f31dc7db64845a160dba0eee"
+    },
+    "posteffects-121-f3t-final/retained-retired.png": {
+      "size": 101960,
+      "sha256": "7416da3334c86c9d57dd589432090c67a1c4e226b6f3dc38ae91ff352bb5800a"
+    },
+    "posteffects-121-f3t-final/run-result.json": {
+      "size": 8874,
+      "sha256": "29e159c448c295e0a08d21dde816bb52b04de75c48b981ab13b5dee792b4253d"
+    },
+    "posteffects-121-f3t-final/runner.log": {
+      "size": 10793,
+      "sha256": "87915af85e6e7a9cddad9ad6d27586e69199375910a30d9d1ae45288b8d814eb"
+    },
+    "posteffects-121-f3t-final/source-binding.json": {
+      "size": 215317,
+      "sha256": "f8d6609e56329a5abd24819fd53fc05f86af55efec21f9d296c7fe0215a2f9c4"
+    },
+    "posteffects-121-f3t-final/client/stdout.log": {
+      "size": 228662,
+      "sha256": "b214bb98348f646ce0f4c5319d66e4ba978f29334e4003396d55683de36a37e2"
+    },
+    "posteffects-121-f3t-final/client/stderr.log": {
+      "size": 541,
+      "sha256": "b877488b9a1f4f77888758da511a28284599165531740dab8bf61ad4b7cb5cef"
+    },
+    "posteffects-121-f3t-final/client/owned-process.json": {
+      "size": 228,
+      "sha256": "2bb2d978f7c362256e0cc271145b570208326384a28c2763142a204c7c2bd2d9"
+    },
+    "posteffects-121-f3t-final/client/nekojs/client_scripts/frame.js": {
+      "size": 2524,
+      "sha256": "779c02bb2a0f28ca59742fca5c118ae6cff7680af19a77816e712103682d9d4d"
+    },
+    "posteffects-121-f3t-final/client/nekojs/client_scripts/rejected.js.rejected": {
+      "size": 59,
+      "sha256": "21b1a8b9226ffa36880e7d2ba0948b74649d37840d3c506f74de2d3d9b7e83ef"
+    },
+    "posteffects-121-f3t-final/client/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-121-f3t-final/client/nekojs/startup_scripts/frame.js": {
+      "size": 1070,
+      "sha256": "caa451756aa09386c4cb6db9af1e0848a670e5f0407fb7f1dc87da5d7af63a00"
+    },
+    "posteffects-121-f3t-final/client/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-121-f3t-final/client/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-121-f3t-final/server/stdout.log": {
+      "size": 16049,
+      "sha256": "2cd6574f8d066939bc2f79041d5ceb0dce421d2664c637f91aabda6307d279fd"
+    },
+    "posteffects-121-f3t-final/server/stderr.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "posteffects-121-f3t-final/server/owned-process.json": {
+      "size": 235,
+      "sha256": "74df8b4a63e13462486d0f1103cae6d4896878d8244dbe850ab74268003bd59f"
+    },
+    "posteffects-121-f3t-final/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-121-f3t-final/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-121-f3t-final/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-121-f3t-final/testmod/java/nekojs/acceptance/frame/AcceptanceMod.java": {
+      "size": 230,
+      "sha256": "9e73b3c1320f0381af25187f16761800280b3be3ac40c3244f8a619175f876e3"
+    },
+    "posteffects-121-f3t-final/testmod/java/nekojs/acceptance/frame/InputDriver.java": {
+      "size": 1599,
+      "sha256": "6a481928762ff2e787a296dea71eb1cea3ac76f37e3c71faedae35504f6eafaf"
+    },
+    "posteffects-121-f3t-final/testmod/java/nekojs/acceptance/frame/mixin/InputStateMixin.java": {
+      "size": 854,
+      "sha256": "3cb77afe8d81c0a5502df4d9d897063f7a3c7287df9e91f8de180e2ab1f5da71"
+    },
+    "posteffects-121-f3t-final/testmod/resources/META-INF/neoforge.mods.toml": {
+      "size": 212,
+      "sha256": "3da49e5d8c6971f54cb28d1610dc2fca3ac265b12404a4ff0bb6375c8018cf96"
+    },
+    "posteffects-121-f3t-final/testmod/resources/neko-frame-acceptance.mixins.json": {
+      "size": 224,
+      "sha256": "2f475991369eb1fba300491d31bc4de149095b4f937487e0396515a6fce82a25"
+    },
+    "posteffects-121-f3t-v1/clear-after.png": {
+      "size": 118132,
+      "sha256": "c9b80a82bbf0ef5cd0467cabe4cf4e7c96f25a32886b087f7caca6853dfbf8bf"
+    },
+    "posteffects-121-f3t-v1/clear-before.png": {
+      "size": 159923,
+      "sha256": "c2010c8816698c1a78c955d50aaa5fd4610f0bd81bfb7c9cf465d39a707718f6"
+    },
+    "posteffects-121-f3t-v1/clear-recovered.png": {
+      "size": 103960,
+      "sha256": "3198ad39d17b42b6c5157df6d55a8f335ae9d82b6b811db323e3796256e1053d"
+    },
+    "posteffects-121-f3t-v1/client.init.gradle": {
+      "size": 1129,
+      "sha256": "36fd445246ce55d5205cae4b61f0f4a052352e898bdc64d22557cba44c359742"
+    },
+    "posteffects-121-f3t-v1/commands.jsonl": {
+      "size": 1250,
+      "sha256": "57d8184e000d41184ff04b19a6ec54a99b4ec0114486ee826c6d5ea6303ea65d"
+    },
+    "posteffects-121-f3t-v1/compile.log": {
+      "size": 3239,
+      "sha256": "c6a387857bc0f202c7771866c35b321c52800c3dc15563a6593d73bb09821c95"
+    },
+    "posteffects-121-f3t-v1/effect-after.png": {
+      "size": 107390,
+      "sha256": "9cc8f68a071eb01c8314ea80bcec58c4d3ade70b3019615f563fe39789542277"
+    },
+    "posteffects-121-f3t-v1/effect-before.png": {
+      "size": 139487,
+      "sha256": "0957c46e18c4e35bd68633d0cb46569653902d76150a18082a08dfba2c787c02"
+    },
+    "posteffects-121-f3t-v1/effect-recovered.png": {
+      "size": 98301,
+      "sha256": "38c0711ccb8f284a509ac531a8c85648459ef21674feccc0bf2fb646887d9e07"
+    },
+    "posteffects-121-f3t-v1/effect-retiring.png": {
+      "size": 92211,
+      "sha256": "e13b068e8d1b75969f391a0f84c493bf369641b06ba01ca49a43250fe0c36848"
+    },
+    "posteffects-121-f3t-v1/legacy-resource-restoration.patch": {
+      "size": 4685,
+      "sha256": "e0f971b34d59b09f9fbc424907852e7e91ada1e7d1c2cd3b11437a4767b132ac"
+    },
+    "posteffects-121-f3t-v1/manifest.json": {
+      "size": 1375,
+      "sha256": "a1b864e964076db1bfbfad00c317e0d374b65cd69fe3bb1c095f4a5566fd9c59"
+    },
+    "posteffects-121-f3t-v1/pixel-review.json": {
+      "size": 2744,
+      "sha256": "3cf9e21f4665c18fb48b1ad4233197e36ab3e32845a82b8615ef2c6550f0d7bf"
+    },
+    "posteffects-121-f3t-v1/retained-cleared.png": {
+      "size": 104289,
+      "sha256": "b5c871c332664aec06bed142606323360f757dec302eb69b07ce9ff69c4d5f43"
+    },
+    "posteffects-121-f3t-v1/retained-rejected.png": {
+      "size": 98125,
+      "sha256": "99116feb73ddebfcd277871c8a281df464f4939a7a4786b823a7a91f9b98ad43"
+    },
+    "posteffects-121-f3t-v1/retained-resource.png": {
+      "size": 109078,
+      "sha256": "ff8c97c37135e8e7d2b6c914d0aa8ea6825e07959113c3ab7ce3ab1a8a3b71a6"
+    },
+    "posteffects-121-f3t-v1/retained-retired.png": {
+      "size": 104260,
+      "sha256": "6b54fb2e810f2fbc295e578e7775f8f4411d93b5c364f5582347ba4d56d0d83b"
+    },
+    "posteffects-121-f3t-v1/run-result.json": {
+      "size": 5306,
+      "sha256": "9e4d4f7e23fccea40643fb62e2fd4bec2ee5fc0b6c1c5a95d50de8e236803558"
+    },
+    "posteffects-121-f3t-v1/runner.log": {
+      "size": 6178,
+      "sha256": "68b1af066bfc8971a5cd0cede31cb0878f9b9f9f74d26a98e2918307442a13a6"
+    },
+    "posteffects-121-f3t-v1/client/stdout.log": {
+      "size": 213241,
+      "sha256": "6bf338d2233c40bf94409bc689d51671b315eb85b4b84c3d3747eb7064d224cf"
+    },
+    "posteffects-121-f3t-v1/client/stderr.log": {
+      "size": 541,
+      "sha256": "b877488b9a1f4f77888758da511a28284599165531740dab8bf61ad4b7cb5cef"
+    },
+    "posteffects-121-f3t-v1/client/owned-process.json": {
+      "size": 222,
+      "sha256": "acfa1d7e0bdcd85d96581fa17fc0c7b9be59a8a4686fba144543a64a58abf69a"
+    },
+    "posteffects-121-f3t-v1/client/nekojs/client_scripts/frame.js": {
+      "size": 1927,
+      "sha256": "bbd3939c135dd0f8a7196a60f5cd6a92ae06c14159df6618e156bfa1a05d1ef1"
+    },
+    "posteffects-121-f3t-v1/client/nekojs/client_scripts/rejected.js.rejected": {
+      "size": 59,
+      "sha256": "21b1a8b9226ffa36880e7d2ba0948b74649d37840d3c506f74de2d3d9b7e83ef"
+    },
+    "posteffects-121-f3t-v1/client/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-121-f3t-v1/client/nekojs/startup_scripts/frame.js": {
+      "size": 1070,
+      "sha256": "caa451756aa09386c4cb6db9af1e0848a670e5f0407fb7f1dc87da5d7af63a00"
+    },
+    "posteffects-121-f3t-v1/client/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-121-f3t-v1/client/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-121-f3t-v1/server/stdout.log": {
+      "size": 16009,
+      "sha256": "bdb589b44f75af281c25f943fedf70cbc330b2f873300529e696da7edf419b4c"
+    },
+    "posteffects-121-f3t-v1/server/stderr.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "posteffects-121-f3t-v1/server/owned-process.json": {
+      "size": 229,
+      "sha256": "d3db7e43efcbf11e6c1dcd47479faf7f7113dd67ffebb0aafbbd77bf4bf431a4"
+    },
+    "posteffects-121-f3t-v1/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-121-f3t-v1/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-121-f3t-v1/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-121-f3t-v1/testmod/java/nekojs/acceptance/frame/AcceptanceMod.java": {
+      "size": 230,
+      "sha256": "9e73b3c1320f0381af25187f16761800280b3be3ac40c3244f8a619175f876e3"
+    },
+    "posteffects-121-f3t-v1/testmod/java/nekojs/acceptance/frame/InputDriver.java": {
+      "size": 1119,
+      "sha256": "96df5652fa6066a7956d9196c7e1f222d1e9aa33e8255b8e3ca02c82b3eb2ab6"
+    },
+    "posteffects-121-f3t-v1/testmod/java/nekojs/acceptance/frame/mixin/InputStateMixin.java": {
+      "size": 854,
+      "sha256": "3cb77afe8d81c0a5502df4d9d897063f7a3c7287df9e91f8de180e2ab1f5da71"
+    },
+    "posteffects-121-f3t-v1/testmod/resources/META-INF/neoforge.mods.toml": {
+      "size": 212,
+      "sha256": "3da49e5d8c6971f54cb28d1610dc2fca3ac265b12404a4ff0bb6375c8018cf96"
+    },
+    "posteffects-121-f3t-v1/testmod/resources/neko-frame-acceptance.mixins.json": {
+      "size": 224,
+      "sha256": "2f475991369eb1fba300491d31bc4de149095b4f937487e0396515a6fce82a25"
+    },
+    "posteffects-121-f3t-v2/clear-after.png": {
+      "size": 116933,
+      "sha256": "d845fdc48a2671de4e6ba050ac160e211572b5987a53d03a42819ce5f5ec3652"
+    },
+    "posteffects-121-f3t-v2/clear-before.png": {
+      "size": 153549,
+      "sha256": "3da0688b32f8dd13c47569a9cb71625e34ac83f0ba43955b31b3b2b771de3997"
+    },
+    "posteffects-121-f3t-v2/clear-recovered.png": {
+      "size": 103742,
+      "sha256": "fef6036aeb7497a1507a06e33d941c9ef97a415fbba79d8b4a340595a4ad9d28"
+    },
+    "posteffects-121-f3t-v2/client.init.gradle": {
+      "size": 1129,
+      "sha256": "ccc93dad5bb9c35d79e8bf1c2b3269cdeeea002e67afe3dc8a5c73729033d991"
+    },
+    "posteffects-121-f3t-v2/commands.jsonl": {
+      "size": 1250,
+      "sha256": "57d8184e000d41184ff04b19a6ec54a99b4ec0114486ee826c6d5ea6303ea65d"
+    },
+    "posteffects-121-f3t-v2/compile.log": {
+      "size": 11496,
+      "sha256": "12779c2a94a0dd7b172b225fa0e2842632089544d6e36cf3a44c9a2abd12bcb0"
+    },
+    "posteffects-121-f3t-v2/effect-after.png": {
+      "size": 106121,
+      "sha256": "414c13217357996a62a3914dc5c9a432468a6599675d4fad5daf5c3182915680"
+    },
+    "posteffects-121-f3t-v2/effect-before.png": {
+      "size": 129730,
+      "sha256": "35e499948b73e67da59ecefbd1e97466c0382e76bcccb73099ab48bede14b597"
+    },
+    "posteffects-121-f3t-v2/effect-inactive.png": {
+      "size": 99443,
+      "sha256": "023d183002ff5777d6548359cf99b875f249af7d02870ecfe100916477b61206"
+    },
+    "posteffects-121-f3t-v2/effect-native-target.png": {
+      "size": 92211,
+      "sha256": "e13b068e8d1b75969f391a0f84c493bf369641b06ba01ca49a43250fe0c36848"
+    },
+    "posteffects-121-f3t-v2/effect-recovered.png": {
+      "size": 97887,
+      "sha256": "c9965b4f207bb0f987b98d90a69059037ef170a99cccca4059712c68276498c3"
+    },
+    "posteffects-121-f3t-v2/effect-retiring.png": {
+      "size": 92211,
+      "sha256": "e13b068e8d1b75969f391a0f84c493bf369641b06ba01ca49a43250fe0c36848"
+    },
+    "posteffects-121-f3t-v2/manifest.json": {
+      "size": 1423,
+      "sha256": "4401a2da2641c95baf2d4abc571c454a50454b32ef26a1ea03c62c9619c27526"
+    },
+    "posteffects-121-f3t-v2/retained-cleared.png": {
+      "size": 104293,
+      "sha256": "5b17021eb2313273736a82653066eeb31dd6d5d474201f31b99a5adce5a6935c"
+    },
+    "posteffects-121-f3t-v2/retained-inactive.png": {
+      "size": 101960,
+      "sha256": "7416da3334c86c9d57dd589432090c67a1c4e226b6f3dc38ae91ff352bb5800a"
+    },
+    "posteffects-121-f3t-v2/retained-native.png": {
+      "size": 32102,
+      "sha256": "3fd6cc6c80552f07d68e0bd0f78e28ecd3054ae926b04092ce68dab00ab2caa4"
+    },
+    "posteffects-121-f3t-v2/retained-rejected.png": {
+      "size": 97534,
+      "sha256": "5d8e8be7bc80f9a9c306f98c0121c898a09c390cf362a2f4b9d6b93d0c4df860"
+    },
+    "posteffects-121-f3t-v2/retained-resource.png": {
+      "size": 107421,
+      "sha256": "123dada6783256494f894c85e008e9e0d50e53047e9dbee5733f53d2ddb21a3f"
+    },
+    "posteffects-121-f3t-v2/retained-retired.png": {
+      "size": 101960,
+      "sha256": "7416da3334c86c9d57dd589432090c67a1c4e226b6f3dc38ae91ff352bb5800a"
+    },
+    "posteffects-121-f3t-v2/run-result.json": {
+      "size": 7217,
+      "sha256": "a34f93fa7823c766bcfa7972b7a5cb35e1153908141f7473131ba3ee54ef1864"
+    },
+    "posteffects-121-f3t-v2/runner.log": {
+      "size": 8449,
+      "sha256": "51fe7e4c55c9c0b9a12a1c1a93a87246f0ebd1f019c5874cfc66c66ba87af36d"
+    },
+    "posteffects-121-f3t-v2/client/stdout.log": {
+      "size": 221451,
+      "sha256": "b5250e5feb8807eaaf4b0de7157fe6a42d8a34716651e31a5d2e4e53b4cc4afb"
+    },
+    "posteffects-121-f3t-v2/client/stderr.log": {
+      "size": 541,
+      "sha256": "b877488b9a1f4f77888758da511a28284599165531740dab8bf61ad4b7cb5cef"
+    },
+    "posteffects-121-f3t-v2/client/owned-process.json": {
+      "size": 222,
+      "sha256": "b8451c056cbf6174f5a5bbb4aea4b3a0e230123a2aa0ce6462d7bccf32991995"
+    },
+    "posteffects-121-f3t-v2/client/nekojs/client_scripts/frame.js": {
+      "size": 2329,
+      "sha256": "9d9537d84d146cd9fcd22db97b348570a1051d9e79775284d22272e16c2af07b"
+    },
+    "posteffects-121-f3t-v2/client/nekojs/client_scripts/rejected.js.rejected": {
+      "size": 59,
+      "sha256": "21b1a8b9226ffa36880e7d2ba0948b74649d37840d3c506f74de2d3d9b7e83ef"
+    },
+    "posteffects-121-f3t-v2/client/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-121-f3t-v2/client/nekojs/startup_scripts/frame.js": {
+      "size": 1070,
+      "sha256": "caa451756aa09386c4cb6db9af1e0848a670e5f0407fb7f1dc87da5d7af63a00"
+    },
+    "posteffects-121-f3t-v2/client/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-121-f3t-v2/client/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-121-f3t-v2/server/stdout.log": {
+      "size": 16009,
+      "sha256": "b45cbb2581a2b7a0b8acf18a9567c1889a1eda57239d3934543c39257ee01e86"
+    },
+    "posteffects-121-f3t-v2/server/stderr.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "posteffects-121-f3t-v2/server/owned-process.json": {
+      "size": 228,
+      "sha256": "e47416f336a9ed9a56f3d26806920ef341de9692fb4dbcbaabf7739772ee8286"
+    },
+    "posteffects-121-f3t-v2/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-121-f3t-v2/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-121-f3t-v2/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-121-f3t-v2/testmod/java/nekojs/acceptance/frame/AcceptanceMod.java": {
+      "size": 230,
+      "sha256": "9e73b3c1320f0381af25187f16761800280b3be3ac40c3244f8a619175f876e3"
+    },
+    "posteffects-121-f3t-v2/testmod/java/nekojs/acceptance/frame/InputDriver.java": {
+      "size": 1119,
+      "sha256": "96df5652fa6066a7956d9196c7e1f222d1e9aa33e8255b8e3ca02c82b3eb2ab6"
+    },
+    "posteffects-121-f3t-v2/testmod/java/nekojs/acceptance/frame/mixin/InputStateMixin.java": {
+      "size": 854,
+      "sha256": "3cb77afe8d81c0a5502df4d9d897063f7a3c7287df9e91f8de180e2ab1f5da71"
+    },
+    "posteffects-121-f3t-v2/testmod/resources/META-INF/neoforge.mods.toml": {
+      "size": 212,
+      "sha256": "3da49e5d8c6971f54cb28d1610dc2fca3ac265b12404a4ff0bb6375c8018cf96"
+    },
+    "posteffects-121-f3t-v2/testmod/resources/neko-frame-acceptance.mixins.json": {
+      "size": 224,
+      "sha256": "2f475991369eb1fba300491d31bc4de149095b4f937487e0396515a6fce82a25"
+    },
+    "posteffects-121-native-retire-red/clear-before.png": {
+      "size": 153974,
+      "sha256": "23d486d731bc6e762bd18631069382cb68561f3dc5f588eb3a9024bbdb0969d4"
+    },
+    "posteffects-121-native-retire-red/client.init.gradle": {
+      "size": 1173,
+      "sha256": "b9ec2f70941b45a5156f82c8c281ee6c6c7d2e3901893867e16c06dbfc0ed9ad"
+    },
+    "posteffects-121-native-retire-red/commands.jsonl": {
+      "size": 1250,
+      "sha256": "57d8184e000d41184ff04b19a6ec54a99b4ec0114486ee826c6d5ea6303ea65d"
+    },
+    "posteffects-121-native-retire-red/compile.log": {
+      "size": 3261,
+      "sha256": "5dd5710090b6acbe7a1e3db04c8df25ae79e7ec765971860f69bb470bbfaeeb0"
+    },
+    "posteffects-121-native-retire-red/effect-before.png": {
+      "size": 129615,
+      "sha256": "3120f6de08916a5a984789de7dd3735cc08b08b0f2b4981dd0fd491abe80ba2c"
+    },
+    "posteffects-121-native-retire-red/manifest.json": {
+      "size": 2030,
+      "sha256": "d38c7f2f6db023e410f3d410bbcaefb76bde5af3e71156b257f5c0a12d540ba7"
+    },
+    "posteffects-121-native-retire-red/retained-native-retired.png": {
+      "size": 117396,
+      "sha256": "c6c5a6cf75d71e7afcb13deb8635724c151e7b4d5b260cc872d56b2fbc10cc41"
+    },
+    "posteffects-121-native-retire-red/retained-native.png": {
+      "size": 45122,
+      "sha256": "d6aeef75cd4a3896a6066a9fa6f42af151a4eb36c73ce0f2d2a973923c8af859"
+    },
+    "posteffects-121-native-retire-red/run-result.json": {
+      "size": 2598,
+      "sha256": "82502b779c32d86acb6f0b4dc032ad49d06c4e9b6c78c928fc7e2aa162740760"
+    },
+    "posteffects-121-native-retire-red/runner.log": {
+      "size": 3302,
+      "sha256": "644ef697c21d587c2b234c82450f2e2e9c06745e4155f47cebf095373e4f357a"
+    },
+    "posteffects-121-native-retire-red/client/stdout.log": {
+      "size": 157812,
+      "sha256": "5a05a5bae10a5f858230ee2bf2d3c5fbebd008055704856a768f6ad40baea0ed"
+    },
+    "posteffects-121-native-retire-red/client/stderr.log": {
+      "size": 541,
+      "sha256": "b877488b9a1f4f77888758da511a28284599165531740dab8bf61ad4b7cb5cef"
+    },
+    "posteffects-121-native-retire-red/client/owned-process.json": {
+      "size": 244,
+      "sha256": "abd9f00fa6d79d5c966b8f600513608f07cc5f7bb444e8c507d19f6aa7449913"
+    },
+    "posteffects-121-native-retire-red/client/nekojs/client_scripts/frame.js": {
+      "size": 2524,
+      "sha256": "779c02bb2a0f28ca59742fca5c118ae6cff7680af19a77816e712103682d9d4d"
+    },
+    "posteffects-121-native-retire-red/client/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-121-native-retire-red/client/nekojs/startup_scripts/frame.js": {
+      "size": 1070,
+      "sha256": "caa451756aa09386c4cb6db9af1e0848a670e5f0407fb7f1dc87da5d7af63a00"
+    },
+    "posteffects-121-native-retire-red/client/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-121-native-retire-red/client/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-121-native-retire-red/server/stdout.log": {
+      "size": 16258,
+      "sha256": "0d83891254b63a1aeb55e3334668c944651a6fcb0e2bfa7454fc55ab75ed19be"
+    },
+    "posteffects-121-native-retire-red/server/stderr.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "posteffects-121-native-retire-red/server/owned-process.json": {
+      "size": 250,
+      "sha256": "4494eef2233a6ef80623106f871b5c2dddd161e05e1e594cf39bcf2b40bf88a1"
+    },
+    "posteffects-121-native-retire-red/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-121-native-retire-red/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-121-native-retire-red/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-121-native-retire-red/testmod/java/nekojs/acceptance/frame/AcceptanceMod.java": {
+      "size": 230,
+      "sha256": "9e73b3c1320f0381af25187f16761800280b3be3ac40c3244f8a619175f876e3"
+    },
+    "posteffects-121-native-retire-red/testmod/java/nekojs/acceptance/frame/InputDriver.java": {
+      "size": 1599,
+      "sha256": "6a481928762ff2e787a296dea71eb1cea3ac76f37e3c71faedae35504f6eafaf"
+    },
+    "posteffects-121-native-retire-red/testmod/java/nekojs/acceptance/frame/mixin/InputStateMixin.java": {
+      "size": 854,
+      "sha256": "3cb77afe8d81c0a5502df4d9d897063f7a3c7287df9e91f8de180e2ab1f5da71"
+    },
+    "posteffects-121-native-retire-red/testmod/resources/META-INF/neoforge.mods.toml": {
+      "size": 212,
+      "sha256": "3da49e5d8c6971f54cb28d1610dc2fca3ac265b12404a4ff0bb6375c8018cf96"
+    },
+    "posteffects-121-native-retire-red/testmod/resources/neko-frame-acceptance.mixins.json": {
+      "size": 224,
+      "sha256": "2f475991369eb1fba300491d31bc4de149095b4f937487e0396515a6fce82a25"
+    },
+    "posteffects-121-v1/client.init.gradle": {
+      "size": 517,
+      "sha256": "72b9521227645365d04a617b01146d12504b7ae89ca0fd4695fed78fa70b4186"
+    },
+    "posteffects-121-v1/commands.jsonl": {
+      "size": 1121,
+      "sha256": "c01e7717747aebcb8b18cc18f1f85e9d900a3ee79223974bc746875b841a96cd"
+    },
+    "posteffects-121-v1/manifest.json": {
+      "size": 825,
+      "sha256": "581c8997c2eeff2d7d70ae17702537764ea6350eaeeaa51f0bd73a02cb51f65f"
+    },
+    "posteffects-121-v1/prepare-missing-client-dependency.log": {
+      "size": 2487,
+      "sha256": "b78a4dfd535d1d8d90c34acb26f1b4b7073013f76a10b196a8b316ba3dda1e0d"
+    },
+    "posteffects-121-v1/run-result.json": {
+      "size": 229,
+      "sha256": "7e013fe8d40c8f2bee4e3952f583215929d491eeb2020366b481fcdc6b97b978"
+    },
+    "posteffects-121-v1/runner.log": {
+      "size": 263,
+      "sha256": "bb23c9f6c3cfad1ee31507df76ba258a85acd46fb38fedd0fdfcd3953d657b1d"
+    },
+    "posteffects-121-v1/source-binding.json": {
+      "size": 213132,
+      "sha256": "b494a0c7b4e6195bf62292c2488da77041250e5362c36411af09f25dba4329a8"
+    },
+    "posteffects-121-v1/client/stdout.log": {
+      "size": 3711,
+      "sha256": "2e57a79de3c8835b2d2ef007db9dc813fdaee587b9d70cf24911d1b73fb3020f"
+    },
+    "posteffects-121-v1/client/stderr.log": {
+      "size": 1210,
+      "sha256": "6c27b30ed7f4a2c1223d73db7a352af63f460b1b27edfc0d57b480d5f28696c9"
+    },
+    "posteffects-121-v1/client/owned-process.json": {
+      "size": 214,
+      "sha256": "b88c5a73c83e6da99ac3398e2b07629c37c804763a8cdcb7a7e491e6c42e2165"
+    },
+    "posteffects-121-v1/client/nekojs/client_scripts/frame.js": {
+      "size": 1724,
+      "sha256": "999eb3f56b9306250ba27ad6c1dba4f7158c5bc03eccf93242e3f334a038120a"
+    },
+    "posteffects-121-v1/client/nekojs/startup_scripts/frame.js": {
+      "size": 1070,
+      "sha256": "caa451756aa09386c4cb6db9af1e0848a670e5f0407fb7f1dc87da5d7af63a00"
+    },
+    "posteffects-121-v1/server/stdout.log": {
+      "size": 15170,
+      "sha256": "d9329f825f528a2548b9d12c5f5a75fb50f4c3037aef5ee906d7e652049cd2bc"
+    },
+    "posteffects-121-v1/server/stderr.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "posteffects-121-v1/server/owned-process.json": {
+      "size": 220,
+      "sha256": "d5f791b6830791834e70a6ec4a3a7d9a95a0643fe12b631b577bd371458a6940"
+    },
+    "posteffects-121-v1/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-121-v1/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-121-v1/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-121-v2/clear-after.png": {
+      "size": 127257,
+      "sha256": "38f2becc524177dfa6e836ee96bdd83c528cae600a751aa4d19a0845d6ea27f5"
+    },
+    "posteffects-121-v2/clear-before.png": {
+      "size": 165150,
+      "sha256": "48d265a10eeb00db4daf00e5566031329a0fe1411e67fe252b48f84ad8bb8e5d"
+    },
+    "posteffects-121-v2/clear-recovered.png": {
+      "size": 100773,
+      "sha256": "4870e868413f3646f8a8e2ead84d354aa16a3500a610bf35c5958ed065e303ab"
+    },
+    "posteffects-121-v2/client.init.gradle": {
+      "size": 517,
+      "sha256": "699cbdeae9561e10000f3366ce9123567e7c1493680dfe55f8ae9518ce27b034"
+    },
+    "posteffects-121-v2/commands.jsonl": {
+      "size": 1250,
+      "sha256": "57d8184e000d41184ff04b19a6ec54a99b4ec0114486ee826c6d5ea6303ea65d"
+    },
+    "posteffects-121-v2/effect-after.png": {
+      "size": 114698,
+      "sha256": "7c345547fec986406f0dd198b556ce33eb17412f4517490b4eb2a89688623efd"
+    },
+    "posteffects-121-v2/effect-before.png": {
+      "size": 144260,
+      "sha256": "dc0e87408b16fa76a3b27bc8d371891317bd839f04c0d914419ab14a7534a2c6"
+    },
+    "posteffects-121-v2/effect-recovered.png": {
+      "size": 93151,
+      "sha256": "139f013759e293fd0cf7fb3bbaa4bf9f5bb04d0b5b974f8f9e18ca3aecf508d5"
+    },
+    "posteffects-121-v2/manifest.json": {
+      "size": 841,
+      "sha256": "b9342995c87796f71274993f7adfc731663222dbd01ff36ffbd2365eb108bccd"
+    },
+    "posteffects-121-v2/retained-rejected.png": {
+      "size": 105467,
+      "sha256": "08eefe3096ba64826d489b895a28091381f1d2b59d00d5a7c1a2c8564424cae1"
+    },
+    "posteffects-121-v2/retention-review.json": {
+      "size": 199,
+      "sha256": "2ab50bc61c97c5ee10bdb6114419d4b6b660f92857021e160852ae9b9f2e1139"
+    },
+    "posteffects-121-v2/run-result.json": {
+      "size": 3406,
+      "sha256": "1475a780783428729d6a3be01c74ff717b6aac6af36e2f422ae301c06b4f442a"
+    },
+    "posteffects-121-v2/runner.log": {
+      "size": 3926,
+      "sha256": "9599ff22dcd20b989992d6c52323892683ad9240c2c2c7883d5c097ce515070b"
+    },
+    "posteffects-121-v2/client/stdout.log": {
+      "size": 190356,
+      "sha256": "ee362e7080656290b96123d63cdecf1b8138803a96c327850640ebd228a3fc93"
+    },
+    "posteffects-121-v2/client/stderr.log": {
+      "size": 541,
+      "sha256": "b877488b9a1f4f77888758da511a28284599165531740dab8bf61ad4b7cb5cef"
+    },
+    "posteffects-121-v2/client/owned-process.json": {
+      "size": 214,
+      "sha256": "9606baded592d69096005eab786d1ad2f76681aeddbc0643366e29aef6b372df"
+    },
+    "posteffects-121-v2/client/nekojs/client_scripts/frame.js": {
+      "size": 1724,
+      "sha256": "999eb3f56b9306250ba27ad6c1dba4f7158c5bc03eccf93242e3f334a038120a"
+    },
+    "posteffects-121-v2/client/nekojs/client_scripts/rejected.js.rejected": {
+      "size": 59,
+      "sha256": "21b1a8b9226ffa36880e7d2ba0948b74649d37840d3c506f74de2d3d9b7e83ef"
+    },
+    "posteffects-121-v2/client/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-121-v2/client/nekojs/startup_scripts/frame.js": {
+      "size": 1070,
+      "sha256": "caa451756aa09386c4cb6db9af1e0848a670e5f0407fb7f1dc87da5d7af63a00"
+    },
+    "posteffects-121-v2/client/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-121-v2/client/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-121-v2/server/stdout.log": {
+      "size": 14319,
+      "sha256": "8126fc87c3d6ed04c0217241dd0abd52e93a680fd7c7f12ec3808d436dcbf626"
+    },
+    "posteffects-121-v2/server/stderr.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "posteffects-121-v2/server/owned-process.json": {
+      "size": 221,
+      "sha256": "b44365b2ac1642e2ff4944d83b230d117d3036c53ec7b74d596f71e0b5926a7d"
+    },
+    "posteffects-121-v2/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-121-v2/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-121-v2/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-261-f3t-v1/clear-after.png": {
+      "size": 277379,
+      "sha256": "8b55d08779fb49952f9e01297efd0ce7613b411471b4a5552fa957a2d101d7a5"
+    },
+    "posteffects-261-f3t-v1/clear-before.png": {
+      "size": 286176,
+      "sha256": "269bded4aa9cb99c6b00924fc7fa479863aeb0712976af3a43d68e3b7b769f34"
+    },
+    "posteffects-261-f3t-v1/clear-recovered.png": {
+      "size": 262146,
+      "sha256": "537a18fe95c4bf216f374b9248f5a01aa37c760d30e48e166e7fa26c733f79b4"
+    },
+    "posteffects-261-f3t-v1/client.init.gradle": {
+      "size": 1129,
+      "sha256": "443720ee2ed3e94f468f78c14cb7f4068cd16cda4e93876b7b32740b2988157a"
+    },
+    "posteffects-261-f3t-v1/commands.jsonl": {
+      "size": 1309,
+      "sha256": "b3651c62d84e0cf1e9743e6bbfbfafea9d57ee6e7ebd5a84c8017b0f4e22b10d"
+    },
+    "posteffects-261-f3t-v1/compile.log": {
+      "size": 3120,
+      "sha256": "d67d9e6d50df9fed3a16f0aa119e41b5d3d7b7db343efab99a914721b85ca5d1"
+    },
+    "posteffects-261-f3t-v1/effect-after.png": {
+      "size": 189431,
+      "sha256": "cd04f962089194830b0fc25d6e23dc61a2f77e7bd761eff0d29710b21f717794"
+    },
+    "posteffects-261-f3t-v1/effect-before.png": {
+      "size": 198287,
+      "sha256": "13b354a3a901ca805603ba03eaed5fa3abd212280c0138464b5939088b667471"
+    },
+    "posteffects-261-f3t-v1/effect-recovered.png": {
+      "size": 174187,
+      "sha256": "9d97a19acc6cf52333fdd48ddf1965b8eaf555a5733cbec70a28b744efcc9c80"
+    },
+    "posteffects-261-f3t-v1/manifest.json": {
+      "size": 1378,
+      "sha256": "02d0327ceb6fdade21ed40220b2d79129492ba8e1a5d0291b160fdc5fcfcf6fc"
+    },
+    "posteffects-261-f3t-v1/pixel-review.json": {
+      "size": 1373,
+      "sha256": "8db4ace09b54898d3e3f9250396c2db1d9cb7d83ff0cefc9f875b22e4626dd5c"
+    },
+    "posteffects-261-f3t-v1/retained-rejected.png": {
+      "size": 178689,
+      "sha256": "db870e598747cbe0664eae16c4a98ee1fe8abe19e3b4a839dad4087c5b5c6b8c"
+    },
+    "posteffects-261-f3t-v1/run-result.json": {
+      "size": 3422,
+      "sha256": "a4ae85f9449272b42b556b053efeae19dec1e716a7885f966b22e1b401685c2e"
+    },
+    "posteffects-261-f3t-v1/runner.log": {
+      "size": 3958,
+      "sha256": "d28612dbf73b118d336cadc8e6ffdab6f088a123a5be78fa47d4a3cac4118497"
+    },
+    "posteffects-261-f3t-v1/source-binding.json": {
+      "size": 225133,
+      "sha256": "09382bde348ca11fc110fddb9cee1d529858aa32dbfba923a077812927aed816"
+    },
+    "posteffects-261-f3t-v1/client/stdout.log": {
+      "size": 140357,
+      "sha256": "1bf6fc89f26a8e377652e04f5a75d19d539a2b344338d9e697341224e18d9b18"
+    },
+    "posteffects-261-f3t-v1/client/stderr.log": {
+      "size": 1180,
+      "sha256": "8ddf542e01f0086e28d7d11ab68b85849b9b291af4bece6b770fc67e4b479f64"
+    },
+    "posteffects-261-f3t-v1/client/owned-process.json": {
+      "size": 221,
+      "sha256": "d751c842b959faac414864dab90f723254dcdf634bfd86a7cbae844948886b97"
+    },
+    "posteffects-261-f3t-v1/client/nekojs/client_scripts/frame.js": {
+      "size": 1807,
+      "sha256": "a7587d98c8a0edab0c11cdfbf53a8a085e443c5c67734839486defbaf00a909f"
+    },
+    "posteffects-261-f3t-v1/client/nekojs/client_scripts/rejected.js.rejected": {
+      "size": 59,
+      "sha256": "21b1a8b9226ffa36880e7d2ba0948b74649d37840d3c506f74de2d3d9b7e83ef"
+    },
+    "posteffects-261-f3t-v1/client/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-261-f3t-v1/client/nekojs/startup_scripts/frame.js": {
+      "size": 1070,
+      "sha256": "caa451756aa09386c4cb6db9af1e0848a670e5f0407fb7f1dc87da5d7af63a00"
+    },
+    "posteffects-261-f3t-v1/client/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-261-f3t-v1/client/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-261-f3t-v1/server/stdout.log": {
+      "size": 16305,
+      "sha256": "e48a4788c422b4f17c071e2d7606e86e8486312d2a0d8c82de7b7816f4187d2f"
+    },
+    "posteffects-261-f3t-v1/server/stderr.log": {
+      "size": 11745,
+      "sha256": "aa2abdc249efa755249b723a3890b53d9366f5e720da3e03e601ce2621121459"
+    },
+    "posteffects-261-f3t-v1/server/owned-process.json": {
+      "size": 227,
+      "sha256": "dd043dfe82fb1f53ccfc2927c485bfb7e691540de832326bd18296cf8a5b5a31"
+    },
+    "posteffects-261-f3t-v1/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-261-f3t-v1/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-261-f3t-v1/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-261-f3t-v1/testmod/java/nekojs/acceptance/frame/AcceptanceMod.java": {
+      "size": 230,
+      "sha256": "9e73b3c1320f0381af25187f16761800280b3be3ac40c3244f8a619175f876e3"
+    },
+    "posteffects-261-f3t-v1/testmod/java/nekojs/acceptance/frame/InputDriver.java": {
+      "size": 1361,
+      "sha256": "c1d276564288e175af3e521f4783642a4f2e2dd054fa6f4507426fd51f550805"
+    },
+    "posteffects-261-f3t-v1/testmod/java/nekojs/acceptance/frame/mixin/InputStateMixin.java": {
+      "size": 898,
+      "sha256": "04c1ceadb377b507b2a69e28e1e347e89b021b70b9fa8dafc6d23f949fefa35f"
+    },
+    "posteffects-261-f3t-v1/testmod/java/nekojs/acceptance/frame/mixin/KeyboardInvoker.java": {
+      "size": 542,
+      "sha256": "c919d1ab2a0281d43538fa4f5ec87e9835dae81729499159af3d50be51c540ba"
+    },
+    "posteffects-261-f3t-v1/testmod/resources/META-INF/neoforge.mods.toml": {
+      "size": 212,
+      "sha256": "3da49e5d8c6971f54cb28d1610dc2fca3ac265b12404a4ff0bb6375c8018cf96"
+    },
+    "posteffects-261-f3t-v1/testmod/resources/neko-frame-acceptance.mixins.json": {
+      "size": 248,
+      "sha256": "02d03d924551b491a87440f06e1e1e1eab88ca56fda1f9154729ee1b47f5f049"
+    },
+    "posteffects-261-v1/client.init.gradle": {
+      "size": 485,
+      "sha256": "d5e424f1f7901f6374a6057ca92fc585c0c9c74d4549b2dd771ebd7a5091b667"
+    },
+    "posteffects-261-v1/commands.jsonl": {
+      "size": 1180,
+      "sha256": "87aa51c1127fcccd9a3b69cbecf12e5e50496fd1aa785f45c431824c5a4227a1"
+    },
+    "posteffects-261-v1/manifest.json": {
+      "size": 656,
+      "sha256": "589c1e329592acd3b39bc388bda23d3dcb7692bdca2c7ad9bdd9c0b1e6e6dda0"
+    },
+    "posteffects-261-v1/run-result.json": {
+      "size": 229,
+      "sha256": "7e013fe8d40c8f2bee4e3952f583215929d491eeb2020366b481fcdc6b97b978"
+    },
+    "posteffects-261-v1/runner.log": {
+      "size": 263,
+      "sha256": "bb23c9f6c3cfad1ee31507df76ba258a85acd46fb38fedd0fdfcd3953d657b1d"
+    },
+    "posteffects-261-v1/client/stdout.log": {
+      "size": 148,
+      "sha256": "9589b8974efe169d1f67d6335f1a0ed3428d3998d3f33910aa2c285ec3032f7e"
+    },
+    "posteffects-261-v1/client/stderr.log": {
+      "size": 1066,
+      "sha256": "9bb91ceb1082599744a90e19fcbd308d2219eb13715be99cbcb5a7c0b64cce9c"
+    },
+    "posteffects-261-v1/client/owned-process.json": {
+      "size": 213,
+      "sha256": "506b92df404cb5401960e485d942d6c14551ae3e0af01ddd643a2e46bc72bf03"
+    },
+    "posteffects-261-v1/client/nekojs/client_scripts/frame.js": {
+      "size": 1724,
+      "sha256": "d6bdef510789a10aca373344c19fbcd6c74eeee3f4b1cc816d54eb812448c9c3"
+    },
+    "posteffects-261-v1/client/nekojs/startup_scripts/frame.js": {
+      "size": 1070,
+      "sha256": "caa451756aa09386c4cb6db9af1e0848a670e5f0407fb7f1dc87da5d7af63a00"
+    },
+    "posteffects-261-v1/server/stdout.log": {
+      "size": 15485,
+      "sha256": "fa427f34fc2a494ecde6533662cc0a7ddde235618c250862560c569d491179de"
+    },
+    "posteffects-261-v1/server/stderr.log": {
+      "size": 11738,
+      "sha256": "ca9b7306be421d328066765376350bf694698b4ab9d6b2c993555b0dcbab8250"
+    },
+    "posteffects-261-v1/server/owned-process.json": {
+      "size": 219,
+      "sha256": "545d832b6a8910bf3c9414e6e58f20dcdec74ae1db37403ff44a1889ce14cb58"
+    },
+    "posteffects-261-v1/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-261-v1/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-261-v1/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-261-v2/client.init.gradle": {
+      "size": 517,
+      "sha256": "192ca0261b5b887649b208aeaae6d0ee6c9ca28c1fa0f652fe115d091ecb3b13"
+    },
+    "posteffects-261-v2/manifest.json": {
+      "size": 700,
+      "sha256": "35c274115f3af98edfc48ffd815e80d6bc1de0f499c4940fec8e5ae86fd68e71"
+    },
+    "posteffects-261-v2/run-result.json": {
+      "size": 182,
+      "sha256": "437fe5b5c8fae80c5afb44fc2a3ca83da99ac1ce611d30467b1414293c89ecc8"
+    },
+    "posteffects-261-v2/runner.log": {
+      "size": 328,
+      "sha256": "1eb07b62be65c134306edf2f02040afbaf42b46b1b16b8281b914f5664a75828"
+    },
+    "posteffects-261-v2/client/nekojs/client_scripts/frame.js": {
+      "size": 1724,
+      "sha256": "d6bdef510789a10aca373344c19fbcd6c74eeee3f4b1cc816d54eb812448c9c3"
+    },
+    "posteffects-261-v2/client/nekojs/startup_scripts/frame.js": {
+      "size": 1070,
+      "sha256": "caa451756aa09386c4cb6db9af1e0848a670e5f0407fb7f1dc87da5d7af63a00"
+    },
+    "posteffects-261-v2/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-261-v2/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-261-v2/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-261-v3/clear-after.png": {
+      "size": 278062,
+      "sha256": "99cffd580836da62c4470cbd33f8de978ba21ccd6687b0de9f8f1f1f7aba5c07"
+    },
+    "posteffects-261-v3/clear-before.png": {
+      "size": 286172,
+      "sha256": "49b7bad07776fe461bad43728490f7cfd9cb0a394b421676f1f1a495191fb634"
+    },
+    "posteffects-261-v3/clear-recovered.png": {
+      "size": 263582,
+      "sha256": "c67cb0013da98508147db0e1b46890567dbb14bf84394b1b09a552bc26199311"
+    },
+    "posteffects-261-v3/client.init.gradle": {
+      "size": 517,
+      "sha256": "ddcc8942aa8a51e410b5ed04e936fd27ca2f63b462a705f6ad92a819a7ff153a"
+    },
+    "posteffects-261-v3/commands.jsonl": {
+      "size": 1309,
+      "sha256": "b3651c62d84e0cf1e9743e6bbfbfafea9d57ee6e7ebd5a84c8017b0f4e22b10d"
+    },
+    "posteffects-261-v3/effect-after.png": {
+      "size": 192643,
+      "sha256": "520f95f2b3abd45b523cc94025415a127956b943cfa6aec63921ff42558d29fc"
+    },
+    "posteffects-261-v3/effect-before.png": {
+      "size": 200274,
+      "sha256": "11c0561315915764713ccf04f2456f2750158bd5c8208715ed345fc61e3093eb"
+    },
+    "posteffects-261-v3/effect-recovered.png": {
+      "size": 178423,
+      "sha256": "0a1abc0f9af0a0b30ef4333bd519114ef74fe4e2b7565a6745296d891fed51aa"
+    },
+    "posteffects-261-v3/manifest.json": {
+      "size": 700,
+      "sha256": "d97320bfd635e2c50849e0b665e4d76801665f0b778c201390cbc7f0882d7b5d"
+    },
+    "posteffects-261-v3/pixel-review.json": {
+      "size": 1424,
+      "sha256": "ccabb1768c1e60312685e6530e6b55d044e3ba41cb813f0c18516ef4aaf3fc51"
+    },
+    "posteffects-261-v3/retained-rejected.png": {
+      "size": 182877,
+      "sha256": "d410a52b431b958f153d77474c7fb703835293d87a478997421564398f2d2707"
+    },
+    "posteffects-261-v3/run-result.json": {
+      "size": 3422,
+      "sha256": "f086e857876e03e1a99c6170c93a220ff20817898af3b6147985575bb857aded"
+    },
+    "posteffects-261-v3/runner.log": {
+      "size": 3958,
+      "sha256": "ddc72601aed7ffd0a81be467fb7753a5c852d40faa428969c8aab11e28851a2d"
+    },
+    "posteffects-261-v3/source-binding.json": {
+      "size": 223395,
+      "sha256": "d6ee5397670c8dcb235d7a9d922db59f2840158dbb9ba67c39dcf6d293b01cd9"
+    },
+    "posteffects-261-v3/client/stdout.log": {
+      "size": 137167,
+      "sha256": "2da8771c87e03a9c69afe482beb6aa41d8e7edacfe0f7a52a14de3c87b0bc3b5"
+    },
+    "posteffects-261-v3/client/stderr.log": {
+      "size": 1684,
+      "sha256": "dba4227726576f90a7da1dc9ba969ab9f6ae65f4453a9003b291fa5145a62004"
+    },
+    "posteffects-261-v3/client/owned-process.json": {
+      "size": 213,
+      "sha256": "76f5e50a1a42cdf53e026315935ce1d4cb7ab2115bc8949f8d412afe175953d0"
+    },
+    "posteffects-261-v3/client/nekojs/client_scripts/frame.js": {
+      "size": 1724,
+      "sha256": "d6bdef510789a10aca373344c19fbcd6c74eeee3f4b1cc816d54eb812448c9c3"
+    },
+    "posteffects-261-v3/client/nekojs/client_scripts/rejected.js.rejected": {
+      "size": 59,
+      "sha256": "21b1a8b9226ffa36880e7d2ba0948b74649d37840d3c506f74de2d3d9b7e83ef"
+    },
+    "posteffects-261-v3/client/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-261-v3/client/nekojs/startup_scripts/frame.js": {
+      "size": 1070,
+      "sha256": "caa451756aa09386c4cb6db9af1e0848a670e5f0407fb7f1dc87da5d7af63a00"
+    },
+    "posteffects-261-v3/client/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-261-v3/client/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-261-v3/server/stdout.log": {
+      "size": 14636,
+      "sha256": "bd6773fbdb8156bd2de73be403542f70565fa84f83cc585cf053429ade21d963"
+    },
+    "posteffects-261-v3/server/stderr.log": {
+      "size": 11741,
+      "sha256": "c25dfb666d66da9287f34dc08e041cdcaff67846fd26fa60e9afefe65a13ada0"
+    },
+    "posteffects-261-v3/server/owned-process.json": {
+      "size": 219,
+      "sha256": "b31603af5d3dbb8b542be29c17f431dca5662e839e474f5f80644a41aa6d5b9e"
+    },
+    "posteffects-261-v3/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-261-v3/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-261-v3/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-262-f3t-v1/client.init.gradle": {
+      "size": 1129,
+      "sha256": "13c435ebd10f90626de83c1bfdb25ff3a0f555265e176f5992c6fe2bb3ae5342"
+    },
+    "posteffects-262-f3t-v1/commands.jsonl": {
+      "size": 1180,
+      "sha256": "87aa51c1127fcccd9a3b69cbecf12e5e50496fd1aa785f45c431824c5a4227a1"
+    },
+    "posteffects-262-f3t-v1/compile.log": {
+      "size": 3217,
+      "sha256": "4d28a83234ed0158534fd9840183d06fcbc4358a5bdbcdfbc80e373e0e346688"
+    },
+    "posteffects-262-f3t-v1/manifest.json": {
+      "size": 1546,
+      "sha256": "fe7e3ddb7fc1ab43813dedf210378b9de1e6cba853e6f310e2174f6d5965cc57"
+    },
+    "posteffects-262-f3t-v1/prepare-missing-client-dependency.log": {
+      "size": 2432,
+      "sha256": "a5c7836e8040de29ccaec247ce831a67a68de859fc111c52f37ba5641b05100f"
+    },
+    "posteffects-262-f3t-v1/run-result.json": {
+      "size": 229,
+      "sha256": "7e013fe8d40c8f2bee4e3952f583215929d491eeb2020366b481fcdc6b97b978"
+    },
+    "posteffects-262-f3t-v1/runner.log": {
+      "size": 263,
+      "sha256": "bb23c9f6c3cfad1ee31507df76ba258a85acd46fb38fedd0fdfcd3953d657b1d"
+    },
+    "posteffects-262-f3t-v1/client/stdout.log": {
+      "size": 3301,
+      "sha256": "447ddd68b5c1519f7839e26b7fb36669d330b9ed8b79f0db5f1ca0228a24370f"
+    },
+    "posteffects-262-f3t-v1/client/stderr.log": {
+      "size": 1209,
+      "sha256": "33a4d44b5f4b3e4f38dcaf814eb6e5c8a737d73f4bf7568f90edfe21fa6f79fd"
+    },
+    "posteffects-262-f3t-v1/client/owned-process.json": {
+      "size": 221,
+      "sha256": "a3a80271b4361ac90fe5a1fef8b49b8441933e0fe7ce2718261c9f1f8587fa9c"
+    },
+    "posteffects-262-f3t-v1/client/nekojs/client_scripts/frame.js": {
+      "size": 1808,
+      "sha256": "3fa9381a41552d00206cb78e6ba3c259a5f0a3ab78d8ff9cf9b5a8f42ab4ebf5"
+    },
+    "posteffects-262-f3t-v1/client/nekojs/startup_scripts/frame.js": {
+      "size": 1082,
+      "sha256": "a5c9cf199c77b8b4a1baa42fd8c596c27b1f060468f12be8c471c07bd9807296"
+    },
+    "posteffects-262-f3t-v1/server/stdout.log": {
+      "size": 24570,
+      "sha256": "16d102fd16e00c6ea2c754b0726ab5cda9ab588045bc1705466b626374385b11"
+    },
+    "posteffects-262-f3t-v1/server/stderr.log": {
+      "size": 11699,
+      "sha256": "b9dd2a55f6e18a32c83a6b9c783ca2f0d7c1db126df1f761457063ed88f8c46e"
+    },
+    "posteffects-262-f3t-v1/server/owned-process.json": {
+      "size": 227,
+      "sha256": "cb04172b1b30c35cdd1d807439d35e76e071c93c493381b4fb91d391ad4a73e5"
+    },
+    "posteffects-262-f3t-v1/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-262-f3t-v1/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-262-f3t-v1/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-262-f3t-v1/testmod/java/nekojs/acceptance/frame/AcceptanceMod.java": {
+      "size": 230,
+      "sha256": "9e73b3c1320f0381af25187f16761800280b3be3ac40c3244f8a619175f876e3"
+    },
+    "posteffects-262-f3t-v1/testmod/java/nekojs/acceptance/frame/InputDriver.java": {
+      "size": 1361,
+      "sha256": "c1d276564288e175af3e521f4783642a4f2e2dd054fa6f4507426fd51f550805"
+    },
+    "posteffects-262-f3t-v1/testmod/java/nekojs/acceptance/frame/mixin/InputStateMixin.java": {
+      "size": 898,
+      "sha256": "04c1ceadb377b507b2a69e28e1e347e89b021b70b9fa8dafc6d23f949fefa35f"
+    },
+    "posteffects-262-f3t-v1/testmod/java/nekojs/acceptance/frame/mixin/KeyboardInvoker.java": {
+      "size": 542,
+      "sha256": "c919d1ab2a0281d43538fa4f5ec87e9835dae81729499159af3d50be51c540ba"
+    },
+    "posteffects-262-f3t-v1/testmod/resources/META-INF/neoforge.mods.toml": {
+      "size": 212,
+      "sha256": "3da49e5d8c6971f54cb28d1610dc2fca3ac265b12404a4ff0bb6375c8018cf96"
+    },
+    "posteffects-262-f3t-v1/testmod/resources/neko-frame-acceptance.mixins.json": {
+      "size": 248,
+      "sha256": "02d03d924551b491a87440f06e1e1e1eab88ca56fda1f9154729ee1b47f5f049"
+    },
+    "posteffects-262-f3t-v2/client.init.gradle": {
+      "size": 1129,
+      "sha256": "98b3525ef5a17f50c66b276f699377b983df6728d9535008793db704861dd417"
+    },
+    "posteffects-262-f3t-v2/commands.jsonl": {
+      "size": 1180,
+      "sha256": "87aa51c1127fcccd9a3b69cbecf12e5e50496fd1aa785f45c431824c5a4227a1"
+    },
+    "posteffects-262-f3t-v2/manifest.json": {
+      "size": 1594,
+      "sha256": "83da200f5fd152d99690d11e570faec9668626032c1f99a6025e412bb4dfe6e1"
+    },
+    "posteffects-262-f3t-v2/run-result.json": {
+      "size": 229,
+      "sha256": "9700532bb255224e444c48c4bb211e790a950b1419db6a4bafccc06ff521f5b2"
+    },
+    "posteffects-262-f3t-v2/runner.log": {
+      "size": 263,
+      "sha256": "d54e85b68f1442103b64442139270fe3af16b18eb13f3bb38354175288b3b296"
+    },
+    "posteffects-262-f3t-v2/source-binding.json": {
+      "size": 224195,
+      "sha256": "76edd1114d62cc8ee4380596c85a8530d96ced25c551903e5282d911e415a9be"
+    },
+    "posteffects-262-f3t-v2/client/stdout.log": {
+      "size": 109776,
+      "sha256": "954fd678a7f8fa9b10b7cf7413f0cbbb7140bc0e1c79318455b38ede36e55224"
+    },
+    "posteffects-262-f3t-v2/client/stderr.log": {
+      "size": 1177,
+      "sha256": "d17173ed399080d296e1fe4614f3df946000a30bf9a4877bf87bde95e8a7663b"
+    },
+    "posteffects-262-f3t-v2/client/owned-process.json": {
+      "size": 222,
+      "sha256": "079b0e0aa2bc4f61c1936ce86189721c695d9b458cfd6ef35282a52bfc5df694"
+    },
+    "posteffects-262-f3t-v2/client/nekojs/client_scripts/frame.js": {
+      "size": 1808,
+      "sha256": "3fa9381a41552d00206cb78e6ba3c259a5f0a3ab78d8ff9cf9b5a8f42ab4ebf5"
+    },
+    "posteffects-262-f3t-v2/client/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-262-f3t-v2/client/nekojs/startup_scripts/frame.js": {
+      "size": 1082,
+      "sha256": "a5c9cf199c77b8b4a1baa42fd8c596c27b1f060468f12be8c471c07bd9807296"
+    },
+    "posteffects-262-f3t-v2/client/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-262-f3t-v2/client/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-262-f3t-v2/server/stdout.log": {
+      "size": 24669,
+      "sha256": "7702e6b090139c63487e8fc9f21c26186ab8cbce1cb38f21affe37dff182fdee"
+    },
+    "posteffects-262-f3t-v2/server/stderr.log": {
+      "size": 11699,
+      "sha256": "ead524eb1c56c21c4402067b8b95890345da1d0878051d1d73f52309db3d5a9d"
+    },
+    "posteffects-262-f3t-v2/server/owned-process.json": {
+      "size": 227,
+      "sha256": "6f4044a308189b9ba8f47c4b05c117e3c31a9df555f8da8f762e3adddbd02baf"
+    },
+    "posteffects-262-f3t-v2/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-262-f3t-v2/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-262-f3t-v2/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-262-f3t-v2/testmod/java/nekojs/acceptance/frame/AcceptanceMod.java": {
+      "size": 230,
+      "sha256": "9e73b3c1320f0381af25187f16761800280b3be3ac40c3244f8a619175f876e3"
+    },
+    "posteffects-262-f3t-v2/testmod/java/nekojs/acceptance/frame/InputDriver.java": {
+      "size": 1361,
+      "sha256": "c1d276564288e175af3e521f4783642a4f2e2dd054fa6f4507426fd51f550805"
+    },
+    "posteffects-262-f3t-v2/testmod/java/nekojs/acceptance/frame/mixin/InputStateMixin.java": {
+      "size": 898,
+      "sha256": "04c1ceadb377b507b2a69e28e1e347e89b021b70b9fa8dafc6d23f949fefa35f"
+    },
+    "posteffects-262-f3t-v2/testmod/java/nekojs/acceptance/frame/mixin/KeyboardInvoker.java": {
+      "size": 542,
+      "sha256": "c919d1ab2a0281d43538fa4f5ec87e9835dae81729499159af3d50be51c540ba"
+    },
+    "posteffects-262-f3t-v2/testmod/resources/META-INF/neoforge.mods.toml": {
+      "size": 212,
+      "sha256": "3da49e5d8c6971f54cb28d1610dc2fca3ac265b12404a4ff0bb6375c8018cf96"
+    },
+    "posteffects-262-f3t-v2/testmod/resources/neko-frame-acceptance.mixins.json": {
+      "size": 248,
+      "sha256": "02d03d924551b491a87440f06e1e1e1eab88ca56fda1f9154729ee1b47f5f049"
+    },
+    "posteffects-262-f3t-v3/clear-after.png": {
+      "size": 278010,
+      "sha256": "1b0e6a8834254eab98289b2b18198665d8cb24f419561a836b737708a300c592"
+    },
+    "posteffects-262-f3t-v3/clear-before.png": {
+      "size": 288569,
+      "sha256": "bae525211aaa6d9c6dae15f99d76255acb412dbbaae9225b9fc5f5ba696a302c"
+    },
+    "posteffects-262-f3t-v3/clear-recovered.png": {
+      "size": 261995,
+      "sha256": "6cfd140454388e77393f2ca842581eb62d781581a683c8e0e7d5ab1f657f48d7"
+    },
+    "posteffects-262-f3t-v3/client.init.gradle": {
+      "size": 1197,
+      "sha256": "643653f39d292b749aa0b9386da533c5124a5f0fe058259b48579c4e4b2dd3ae"
+    },
+    "posteffects-262-f3t-v3/commands.jsonl": {
+      "size": 1309,
+      "sha256": "b3651c62d84e0cf1e9743e6bbfbfafea9d57ee6e7ebd5a84c8017b0f4e22b10d"
+    },
+    "posteffects-262-f3t-v3/effect-after.png": {
+      "size": 189972,
+      "sha256": "b9d3209d7e1417c741ecae3d47754a687d4861f505438061d428973b491d72aa"
+    },
+    "posteffects-262-f3t-v3/effect-before.png": {
+      "size": 192994,
+      "sha256": "1822d26d387496982a95b78048c135e6ac1624e78648cbf01abc4e39648d016b"
+    },
+    "posteffects-262-f3t-v3/effect-recovered.png": {
+      "size": 173844,
+      "sha256": "7dffc645768705544ff866d08771daf5bcb454f17f3b678f33b91f929ce6b483"
+    },
+    "posteffects-262-f3t-v3/manifest.json": {
+      "size": 1780,
+      "sha256": "1f5d7f94928400942a3655262ef00809f8f183c8d48ee3576f4cbf11d650c2e1"
+    },
+    "posteffects-262-f3t-v3/pixel-review.json": {
+      "size": 1372,
+      "sha256": "19babd74b0f0d130dc8f16cca05ae7510cdfd287f880ad1ec3e5ae86f54a4ab8"
+    },
+    "posteffects-262-f3t-v3/retained-rejected.png": {
+      "size": 179057,
+      "sha256": "e8d75b9ec1b0bb9bd40c30090f1235a46c7667855307e04739e6e4ed6770958b"
+    },
+    "posteffects-262-f3t-v3/run-result.json": {
+      "size": 3422,
+      "sha256": "3e7b45e8fd3bd23fcf16e46c5eb1c7d10d70877a4495cd561c1382a81a7f623e"
+    },
+    "posteffects-262-f3t-v3/runner.log": {
+      "size": 3958,
+      "sha256": "2d67e6a953f28fe51108a1034ed3058ce05397b3db16df0557012162628ee083"
+    },
+    "posteffects-262-f3t-v3/source-binding.json": {
+      "size": 225543,
+      "sha256": "455985a7763e7546312974e6abc3451b0e6345e1710ebd618c6553ff403633c5"
+    },
+    "posteffects-262-f3t-v3/client/stdout.log": {
+      "size": 184776,
+      "sha256": "c9639716637c9a420eb35c2ed8bc080a01c43f0ca0b15731c00cfab06ff055b6"
+    },
+    "posteffects-262-f3t-v3/client/stderr.log": {
+      "size": 1177,
+      "sha256": "c96897e6e1298996921a8a1bf78c536ad658bba4ce503101e7058bd64c5b94a7"
+    },
+    "posteffects-262-f3t-v3/client/owned-process.json": {
+      "size": 221,
+      "sha256": "84eac11163b7cadac0223b5fa78e918610e35e25762b2fb90a4c2ffcf76a7728"
+    },
+    "posteffects-262-f3t-v3/client/nekojs/client_scripts/frame.js": {
+      "size": 1808,
+      "sha256": "3fa9381a41552d00206cb78e6ba3c259a5f0a3ab78d8ff9cf9b5a8f42ab4ebf5"
+    },
+    "posteffects-262-f3t-v3/client/nekojs/client_scripts/rejected.js.rejected": {
+      "size": 59,
+      "sha256": "21b1a8b9226ffa36880e7d2ba0948b74649d37840d3c506f74de2d3d9b7e83ef"
+    },
+    "posteffects-262-f3t-v3/client/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-262-f3t-v3/client/nekojs/startup_scripts/frame.js": {
+      "size": 1082,
+      "sha256": "a5c9cf199c77b8b4a1baa42fd8c596c27b1f060468f12be8c471c07bd9807296"
+    },
+    "posteffects-262-f3t-v3/client/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-262-f3t-v3/client/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-262-f3t-v3/server/stdout.log": {
+      "size": 25358,
+      "sha256": "78a41b0c9717756dde06de3d40760c795b5a0542562719a50e930ecc1ee4d9c6"
+    },
+    "posteffects-262-f3t-v3/server/stderr.log": {
+      "size": 11699,
+      "sha256": "5d22130365b80d52327a18ed956f7ca1b31c762eec2b3252f5dcd21f28c8be32"
+    },
+    "posteffects-262-f3t-v3/server/owned-process.json": {
+      "size": 228,
+      "sha256": "86f700c1ffa3df21f2d2e00a3d7ddc50a681fdfde140de7f53d301aec49f32de"
+    },
+    "posteffects-262-f3t-v3/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "posteffects-262-f3t-v3/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "posteffects-262-f3t-v3/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "posteffects-262-f3t-v3/testmod/java/nekojs/acceptance/frame/AcceptanceMod.java": {
+      "size": 230,
+      "sha256": "9e73b3c1320f0381af25187f16761800280b3be3ac40c3244f8a619175f876e3"
+    },
+    "posteffects-262-f3t-v3/testmod/java/nekojs/acceptance/frame/InputDriver.java": {
+      "size": 1361,
+      "sha256": "c1d276564288e175af3e521f4783642a4f2e2dd054fa6f4507426fd51f550805"
+    },
+    "posteffects-262-f3t-v3/testmod/java/nekojs/acceptance/frame/mixin/InputStateMixin.java": {
+      "size": 898,
+      "sha256": "04c1ceadb377b507b2a69e28e1e347e89b021b70b9fa8dafc6d23f949fefa35f"
+    },
+    "posteffects-262-f3t-v3/testmod/java/nekojs/acceptance/frame/mixin/KeyboardInvoker.java": {
+      "size": 542,
+      "sha256": "c919d1ab2a0281d43538fa4f5ec87e9835dae81729499159af3d50be51c540ba"
+    },
+    "posteffects-262-f3t-v3/testmod/resources/META-INF/neoforge.mods.toml": {
+      "size": 212,
+      "sha256": "3da49e5d8c6971f54cb28d1610dc2fca3ac265b12404a4ff0bb6375c8018cf96"
+    },
+    "posteffects-262-f3t-v3/testmod/resources/neko-frame-acceptance.mixins.json": {
+      "size": 248,
+      "sha256": "02d03d924551b491a87440f06e1e1e1eab88ca56fda1f9154729ee1b47f5f049"
+    },
+    "tooling/capture-native-posteffect-bytecode.py": {
+      "size": 1041,
+      "sha256": "68fb0f9cd30af2d9cc48cfd3cc6b0f664b1f581d518734fdee63511895154e6c"
+    },
+    "tooling/check-121-retention.py": {
+      "size": 736,
+      "sha256": "fecdc34684b76904f9cf87b1125db8bf0897c373900a5ec78ae3e50802782416"
+    },
+    "tooling/legacy-posteffect-final-build.log": {
+      "size": 3927,
+      "sha256": "d24e2ba9202c829fa189c2cfc5181a3b1ea4bec8b358420019d17f522142121d"
+    },
+    "tooling/legacy-posteffect-fix-build.log": {
+      "size": 3949,
+      "sha256": "0b218189686bbf6aa110a82eb8aaa69d8f17dffdf72fca85f9c3c7660e2eab86"
+    },
+    "tooling/legacy-posteffect-fix-focused.log": {
+      "size": 11746,
+      "sha256": "15f944d57976fca332f4e8d97cc352e6803428cd3dc2c50ab4f447425e8e7f62"
+    },
+    "tooling/prepare-121-f3t-final.py": {
+      "size": 2761,
+      "sha256": "bdfcb4625fc4fcdbc824e3d19872dcddab57a56ca4c39facefec04f5912dd624"
+    },
+    "tooling/prepare-121-f3t-v1.py": {
+      "size": 5067,
+      "sha256": "42d714e0c7118caa01c28a24db69a8bfaab056895b048b45eaf037ba0bff2e3c"
+    },
+    "tooling/prepare-121-f3t-v2.py": {
+      "size": 3351,
+      "sha256": "c2421ac84c8a79a91c93a494769f5b4fc1ec3dbc6d8bf4eacbb0bdb47ffc7826"
+    },
+    "tooling/prepare-121-native-retire-red.py": {
+      "size": 3856,
+      "sha256": "53399ad20be5a40debece4a4f6538c82154e94254bd9112dcba252b1012c9f64"
+    },
+    "tooling/prepare-262-f3t-v1.py": {
+      "size": 2137,
+      "sha256": "b565c659a57719f76855ede3f826226abfb53d69373355986b4c43e56bbda5c7"
+    },
+    "tooling/prepare-262-f3t-v2.py": {
+      "size": 2283,
+      "sha256": "754c4f8db91e6afde24a259c1729b63ce5620a9cd92f0e391398d9034b79e62e"
+    },
+    "tooling/prepare-262-f3t-v3.py": {
+      "size": 2640,
+      "sha256": "d71734beacafbc057d722cfd14ae0be023a85e8029b128f0af845e5cb05bd91f"
+    },
+    "tooling/review-121-f3t-final.py": {
+      "size": 1893,
+      "sha256": "a666a07f590b6fb77e21d700b6ca214d45ce521457c36d9e6007e3aa76f28ee2"
+    },
+    "tooling/review-121-f3t.py": {
+      "size": 1382,
+      "sha256": "5d773f75a248d9418573a9f27dbb44b51dd72b2ab02c55c431b687fdf6b2dd31"
+    },
+    "tooling/review-261-f3t.py": {
+      "size": 2493,
+      "sha256": "42749d3c931175fd12e0b502d090c341cc7c757278f17ff3034ef6349f75098e"
+    },
+    "tooling/review-262-f3t.py": {
+      "size": 1089,
+      "sha256": "0735680d116f7c5db2a5fdbf24a737f0e1526191b39e3830387347f1020992ba"
+    },
+    "tooling/run-posteffects-121-f3t-final.py": {
+      "size": 10853,
+      "sha256": "345ea786d5d11989ad917a6b7abd8374b8890d47b27977926174a55feb3e9bc3"
+    },
+    "tooling/run-posteffects-121-f3t-v1.py": {
+      "size": 9638,
+      "sha256": "5af0e596fdfbaa27a222eef224828bc9a792d315fddcc73e3adb663a99ca5d0b"
+    },
+    "tooling/run-posteffects-121-f3t-v2.py": {
+      "size": 10499,
+      "sha256": "53dcd6141b64985669ed654f06f276a71afa41f48c5947f2f7285281bef535b0"
+    },
+    "tooling/run-posteffects-121-native-retire-red.py": {
+      "size": 8102,
+      "sha256": "7c40b33caf4ce22768ab1bc352ad234dcf89f9434c71bf535fba9acf48606091"
+    },
+    "tooling/run-posteffects-121-v1.py": {
+      "size": 8735,
+      "sha256": "b317bcf68bf903f7bbbf0b5dd8120b349af1dc7d2af6296c716ae9bc65a14fee"
+    },
+    "tooling/run-posteffects-121-v2.py": {
+      "size": 8735,
+      "sha256": "7b97de4176d1592c2dcae3b80e652cc4634a5da3c82fcb0749a113e0a135baf0"
+    },
+    "tooling/run-posteffects-261-f3t-v1.py": {
+      "size": 8743,
+      "sha256": "505d1371aad974b2be31580c0423ac94b051110ec4a3dee766fa9ca1f62cd480"
+    },
+    "tooling/run-posteffects-261-v1.py": {
+      "size": 8522,
+      "sha256": "c2215161f25fd5da00c431827ae7b0a6fbb5a2b6bd2731b65ecf1ddcc53decfd"
+    },
+    "tooling/run-posteffects-261-v2.py": {
+      "size": 8691,
+      "sha256": "076fb880810e634dee8762ef0f0c4f180571286dbd36ad15a3061a7024c069e9"
+    },
+    "tooling/run-posteffects-261-v3.py": {
+      "size": 8735,
+      "sha256": "46fffbf108a095f49feaec529fb65c68dc610be98d0b22fd9037ba9fb4d589a7"
+    },
+    "tooling/run-posteffects-262-f3t-v1.py": {
+      "size": 8743,
+      "sha256": "e4afdc59413dbba2e7623f1cf2c76f7313f50c04d650f4c3e106c4bc0957e853"
+    },
+    "tooling/run-posteffects-262-f3t-v2.py": {
+      "size": 8814,
+      "sha256": "5edd0ee66380e050dd45e356c7be8de1fc364c11ad1e0df59d5ae5972b3dbb03"
+    },
+    "tooling/run-posteffects-262-f3t-v3.py": {
+      "size": 8814,
+      "sha256": "1c39c5893f2e29dbe26ce86059f06738afcdca01ef7d474f52312bb3cb8ac987"
+    },
+    "tooling/seal-posteffects.py": {
+      "size": 5152,
+      "sha256": "9bbd4932816346cc7f40284d4c8e882528ab75b833c4e3519abf6b24eec4d1a7"
+    },
+    "native-posteffect-bytecode/1.21.1/InputConstants.txt": {
+      "size": 16241,
+      "sha256": "1349876de57805d2f6a66d6c13691bff1cfed41aec5f454dba82483ff5c24333"
+    },
+    "native-posteffect-bytecode/1.21.1/KeyboardHandler.txt": {
+      "size": 104904,
+      "sha256": "3768380bbf5ce04645a3e536f2b7e8a9bc5c6a331d2c6c17a0ac4887b9e5a4e0"
+    },
+    "native-posteffect-bytecode/1.21.1/KeyMapping.txt": {
+      "size": 43892,
+      "sha256": "b906883a8d44a5e1955702ffd2e292937911f8cbf4a410f4309595b875fef85d"
+    },
+    "native-posteffect-bytecode/1.21.1/Minecraft.txt": {
+      "size": 520105,
+      "sha256": "07016075cbd2273ca43201aeb03b9d27856bec1052aa4a8a6a7565fee85ecf1b"
+    },
+    "native-posteffect-bytecode/1.21.1/Screenshot.txt": {
+      "size": 20356,
+      "sha256": "0c58069b5e01279a14f37914ba39c820775f551bd89d625c1d5876b96744d6ec"
+    },
+    "native-posteffect-bytecode/1.21.1/ShaderReload.txt": {
+      "size": 10096,
+      "sha256": "e3051136488bc68d789e03c04970553678223cc98155d2c293539f8c8807baf8"
+    },
+    "native-posteffect-bytecode/26.1.2/InputConstants.txt": {
+      "size": 15914,
+      "sha256": "2fee0635bbc623c808f8c430410a75df0189f3cc1c3483e018d0bc1306ef4b83"
+    },
+    "native-posteffect-bytecode/26.1.2/KeyboardHandler.txt": {
+      "size": 132667,
+      "sha256": "7fb411039b13100dbe7e4c1b0bc71224b129692c32c17af6e8cb311483cd5c15"
+    },
+    "native-posteffect-bytecode/26.1.2/KeyMapping.txt": {
+      "size": 44299,
+      "sha256": "3d5bea64fadd98a92a15e2ee14b3dcc7f6a7543d843ca756b6a9b74aaa8334c7"
+    },
+    "native-posteffect-bytecode/26.1.2/Minecraft.txt": {
+      "size": 537114,
+      "sha256": "724aed3e62437d8408234702f36feb317f32fd7de26c2178ef4f01fc56a348b6"
+    },
+    "native-posteffect-bytecode/26.1.2/Screenshot.txt": {
+      "size": 22372,
+      "sha256": "fba4ce6705816a3023fc4c0531995ba2f6cd6bc1ee6542c049bee8dc7e4fc16a"
+    },
+    "native-posteffect-bytecode/26.2.0/InputConstants.txt": {
+      "size": 15914,
+      "sha256": "2fee0635bbc623c808f8c430410a75df0189f3cc1c3483e018d0bc1306ef4b83"
+    },
+    "native-posteffect-bytecode/26.2.0/KeyboardHandler.txt": {
+      "size": 128068,
+      "sha256": "09028250e61323396567e12e3d7f48e49737b61da789509226f24b45827d7941"
+    },
+    "native-posteffect-bytecode/26.2.0/KeyMapping.txt": {
+      "size": 44692,
+      "sha256": "cb3a53cb3278e8ecb2b1e94d4e8716982523b607551189df266e43882c335605"
+    },
+    "native-posteffect-bytecode/26.2.0/Minecraft.txt": {
+      "size": 546742,
+      "sha256": "10a7dc89462b93961fd0ab71027d11635e94df4d47688746b9fcb395d3fc2349"
+    },
+    "native-posteffect-bytecode/26.2.0/Screenshot.txt": {
+      "size": 24165,
+      "sha256": "cf04c0b5cc3782a65abd903ef4f3a91c987c17b84ac3fc5ccfbba0062cf63286"
+    },
+    "checks/xml/platformGateTest/TEST-com.tkisor.nekojs.platform.DeclaredEventSurfaceGoldenTest.xml": {
+      "size": 587,
+      "sha256": "b273065e00de6ef55f5f9d880ebe1838c0566631e82ce4b1b1be11414f499862"
+    },
+    "checks/xml/platformGateTest/TEST-com.tkisor.nekojs.platform.EventSurfaceDomainGateTest.xml": {
+      "size": 496,
+      "sha256": "0d8126693bc1e303fa8ebfec0250af968e8746b8879fd861c77203f11a9dbea7"
+    },
+    "checks/xml/platformGateTest/TEST-com.tkisor.nekojs.platform.PlatformSpecContractGateTest.xml": {
+      "size": 498,
+      "sha256": "5cd99a328e0b1a0dd26844e2d027f70469e04b379b3bc3365948b2f4f82bc99a"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.api.event.EventBusForgeBridgeCancelActionTest.xml": {
+      "size": 946,
+      "sha256": "3f1de2b0e0c00c854833ce0df4c45cd7b2a389b08420cc23b4d25311bb6ef140"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.api.event.EventBusForgeBridgeSideFilterTest.xml": {
+      "size": 655,
+      "sha256": "493b852a596862d7dafedb12de927cdbcd14cb92416bb44d1cd8f10e7543e0ad"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.api.event.EventBusForgeBridgeTest.xml": {
+      "size": 907,
+      "sha256": "db0fb973f812c4776cde1914c76487bd05822291db6cbb5f4af3cde830ef9eb0"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.api.inject.PDataJoinWindowResolutionTraceTest.xml": {
+      "size": 1041,
+      "sha256": "94d438614d0e7bcf655a898c2bb541d694411065cc8cee58a2101d4c1a16748c"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest.xml": {
+      "size": 1046,
+      "sha256": "3a21c8fee87f4ad3523a896505c8bc46e519f140290e87162ec4f317b8f54b4a"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.event.EventApiSurfaceGoldenTest.xml": {
+      "size": 487,
+      "sha256": "970a043942196cf51455c8e076ddf1d2af9b09ea0387e19a80202a43467464fb"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.event.EventSurfaceOwnershipTest.xml": {
+      "size": 816,
+      "sha256": "4e44baf7258a12c7b276a989ad8617b06672a65f3007c32655f98d7a55025daf"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.event.NativeEventsLegacyTierCharacterizationTest.xml": {
+      "size": 876,
+      "sha256": "42a9a09bf953980299f521ce523e91497b21f86ad40d06e2638b6ada4800bb90"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24DamagePreCancelSemanticsTest.xml": {
+      "size": 710,
+      "sha256": "6b7635a1c85f8676043b8a366794b848b3027cce5c4ae16ba5b4df3da9974a2d"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayEventCatalogTest.xml": {
+      "size": 684,
+      "sha256": "0a519074dee7ea6ee8d84536503b6c5a77c79e1100c173c6db7f1a83470e4a4d"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayEventPhaseTraceTest.xml": {
+      "size": 1383,
+      "sha256": "42ca0e69c87ea60840bd00897c4fc84972e29a9229730135e3eafd2285cb0482"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayEventReloadLifecycleTest.xml": {
+      "size": 42958,
+      "sha256": "f9a1edf8e111a635e36d27fad361f16c2f4948e350081c46e08e6b8befc58eef"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayFamilyBusBehaviorTest.xml": {
+      "size": 2089,
+      "sha256": "021ca316a9143001e3669a1c20432b3cd0e5107433df0047400f83d1276ef822"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.query.DataMapQueryBindingTest.xml": {
+      "size": 798,
+      "sha256": "4c83d7e73f87e115e492ba50c52f5148f0bb56d607045db13e26c825724c5650"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.query.EntitySelectorsQueryBindingTest.xml": {
+      "size": 1420,
+      "sha256": "93f1c2960a0d270e7be69a03cd42e443563d824b96f9cfa2725ed7e636160af4"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolCapabilityMatrixTest.xml": {
+      "size": 493,
+      "sha256": "aa7855bc3969765b42f3851a52fb519b1cb08910de2d20a99ffad3f2133e2908"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolContractClassificationTest.xml": {
+      "size": 1253,
+      "sha256": "783f5620385dfa5d9890ffcc5cf4c915239f3f98dd4945ed8398c15821600b64"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolDeclarationParityTest.xml": {
+      "size": 1697,
+      "sha256": "6b590e2bed2a0dbced0b69af9f5cc32fc449d4edb560061044afbf497d2314e0"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.bindings.recipe.Ticket23RecipeDataPhaseTraceTest.xml": {
+      "size": 1886,
+      "sha256": "d59458c3ffb6b242d7873ac2d1c7da7995e3dd4a6ba09e4452e7d20205ed3b2d"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardLayoutTest.xml": {
+      "size": 1103,
+      "sha256": "1aec337269a4fc255db93c6f759af4670009086f803b84194bf65833f19d4e74"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardTextTest.xml": {
+      "size": 983,
+      "sha256": "a26aecd3c4421e62ff8dd70c85431c8f5b12516ea9a64765542bde7f7de6dbcd"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardViewTest.xml": {
+      "size": 2268,
+      "sha256": "c9aa715bb7e458d4c934228591e2683d37aec5fa7fe90a7a8bf7db719d35df7d"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectDeclarationLifecycleTest.xml": {
+      "size": 98674,
+      "sha256": "1857f0995751c572bfa4fb3d5a58b7c8ac15453fd137b19cfd6ff2820bedc36d"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectDeclarationParityTest.xml": {
+      "size": 1016,
+      "sha256": "54a6d4191d962d119b6e8c67d84557b9a09bd59b32f57c735b66e337f955f475"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectDeclarationSurfaceTest.xml": {
+      "size": 1024,
+      "sha256": "c04595a2335c64408bd7b49cd02ccf9f08e9089140f41965b242bea00f71ffda"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectGenerationInvalidationTest.xml": {
+      "size": 2458,
+      "sha256": "7b968b920c0851752fb20a119852b3b22b29054592dda26772b157402e70f0d1"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.client.render.Ticket26ColorParameterSurfaceTest.xml": {
+      "size": 818,
+      "sha256": "ccd60f10bddb88c642fdec79b5f9b75b2bcdf676ea66a1c0bab72a7ddd47cf56"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.client.renderer.EntityRendererConfigurationTest.xml": {
+      "size": 1003,
+      "sha256": "efee0787295817dd0d95a89b5752dd1c7d0c0640a145859e8644416037295031"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.command.AddressArgumentSerializationRegistrationTest.xml": {
+      "size": 677,
+      "sha256": "a02ed87f845b99f5c7d50f2ec2ad972fd716b742d0405b2eb22a76d13e6ba33e"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.command.AddressArgumentTest.xml": {
+      "size": 851,
+      "sha256": "730fb10457dcbf9622c2d0a4fcccd06f2f668ccf334edcf5c130710714f6e13a"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.command.NekoJSCommandsEditorRemovalTest.xml": {
+      "size": 1349,
+      "sha256": "6cfb83be9ee3a3fdbeb560a27491eda059b4f7962fe5dc76b384c88a144434bf"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.command.NekoJSCommandsTrustArgumentAndUsageTest.xml": {
+      "size": 525,
+      "sha256": "7f456a098774272add62e97a31b6ea0de7ded6a0a82e1602428df262f270d327"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.command.RuntimeCommandLifecycleSourceTraceTest.xml": {
+      "size": 1043,
+      "sha256": "346e4cec03f9350e6ece8b7c690a96598bb4cd8b1cde30e041e3fc1768b30445"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.core.CoreBindingsGlobalsTest.xml": {
+      "size": 599,
+      "sha256": "1341e6f6f9b6956231da6f9455170841161a6dcbeb51a1954b5e0324d419ff8c"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.core.Ticket08LoaderDiscoveryTest.xml": {
+      "size": 790,
+      "sha256": "98f3a75d9d7dae2bd12b8df985ddf0b996b3c29243a741b4e50b8f8e8c81fd93"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.core.Ticket29AssetsAbsentOn1211Test.xml": {
+      "size": 488,
+      "sha256": "1fb7f2df25f138014035e08040192ac616dc0270a767d8b5e1631005cea4eb8d"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.js.type_adapter.BlockPosAdapterTest.xml": {
+      "size": 4421,
+      "sha256": "7772799052ea5033bc0188aefd899c3162d0dfead5ca349cc565909261197fa7"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.js.type_adapter.RecipeFilterAdapterTest.xml": {
+      "size": 10814,
+      "sha256": "c3e3ba18f93366ccacf150a36355c46c4cf52d8d0a7438f7eabdfacc16da0f4b"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.js.type_adapter.Vec3AdapterTest.xml": {
+      "size": 4398,
+      "sha256": "367f1ffdcf6d539ebb2de99148de93c0510e9e38f711198dad7ea489594c8370"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.mixin.BlockRandomTickInjectionSiteTest.xml": {
+      "size": 839,
+      "sha256": "8b035e057f54d06065a7cbafc8023f524f1cd13cc234129095a67915e7e0535c"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.network.LegacyNetworkRegistrationGeneratedSourceTest.xml": {
+      "size": 534,
+      "sha256": "9b723d51ac5a63b3bf00ec69283d09f0694d19a8df47051e2e26b739fb52bc78"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.network.NekoScriptPayloadChannelValidationTest.xml": {
+      "size": 906,
+      "sha256": "7784d007eeacaeb1b3275755206bb8967e451b6b631723745ad8be31fe210a10"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.network.NetworkGenerationRoutingTest.xml": {
+      "size": 25031,
+      "sha256": "d96c4d7acb067db3d9c285a52d54c2aba75f7f075bffbceac262ea2d0f4b1a1d"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.network.NetworkPayloadDefenseLineTest.xml": {
+      "size": 2126,
+      "sha256": "bf4e18d4da3921f43779a730a6236ba4115d5dd2efa51e83468be4fb5ef8db03"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.network.NetworkRegistrationSourceTraceTest.xml": {
+      "size": 1795,
+      "sha256": "32c107c049dd5a045f9296d9e875c20c481e00a607f6fe19fd5f7a013e7c3523"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.network.PackSyncBridgeSourceTraceTest.xml": {
+      "size": 1790,
+      "sha256": "add82e442eae615d7be15a74c5a011a91749ddd8462d4549750effdfb9fec08f"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.network.PayloadWireFormatGoldenTest.xml": {
+      "size": 2216,
+      "sha256": "2a08db337b50190f1e1d7187e940aa2f8600990d61aec2f7d9dc1f8cc0112676"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.network.ShowErrorListPacketReadOnlyContractTest.xml": {
+      "size": 691,
+      "sha256": "82db869d0b6b46a3341e51d32f28186553eb4b9749d708bebde8ca6cba647853"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.pack.FabricWorldPackStatusTest.xml": {
+      "size": 1131,
+      "sha256": "08dea12327ebc2029c5be57ee3fc5275ee3cbfc4d361afac1fdc77dcd06bbac1"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.platform.compat.McClientCompatWiringTest.xml": {
+      "size": 493,
+      "sha256": "16c400ca3a7548f373b634f6742756235f33563ac93e3308052134d78cad73d8"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.platform.ExtensionCoverageTest.xml": {
+      "size": 484,
+      "sha256": "baf08548ead63f74f3a733db46de4d5e76bdbaad9f146153bfbdb11068811b30"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.platform.ItemStackExtensionContractTest.xml": {
+      "size": 794,
+      "sha256": "bff197b822bc4583b2c546e144abf5444563bc0d0b09dfd6e8d7c271f8eeb11b"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.platform.MixinConfigIntegrityTest.xml": {
+      "size": 483,
+      "sha256": "729523f48c927f4a37debc88b9901befc9fe2d035321bd30993901c76278a310"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.platform.MixinTargetResolutionTest.xml": {
+      "size": 478,
+      "sha256": "0e94ce4ca8eef7e97193430aad66b91c7e5116ed6e5da47a9f5c539244645b27"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.platform.nbt.NeoForgeNbtBinaryCodecTest.xml": {
+      "size": 1575,
+      "sha256": "394e8d63018808ea67197e387265d6560031f56d58d219545d745c60d9c6e8b3"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.probe.MinecraftTypeDocsPluginTest.xml": {
+      "size": 502,
+      "sha256": "4af7eefedf32187be02c4be6013a056885a1e82c2322a22d0c9b9c36e2b6dc6c"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.probe.NeoForgeManualTypeReferencesTest.xml": {
+      "size": 531,
+      "sha256": "25ab6da12113188d116e88c1dcbb8bb3e4e48e9422d4679ce74062d08255f8fa"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.resource.ScriptPackModDataMountTest.xml": {
+      "size": 497,
+      "sha256": "cf0dbbaf6533d3b361d26d67f5d1d44c09010d64c73b0ad06f63f2ccc4e65697"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.ui.Ticket44ResourceIdParityTest.xml": {
+      "size": 752,
+      "sha256": "3e37d71bfbd73a7da2b80b0adebea0cc198fbe55e90096fe03a2dc0a47d9dcdf"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.client.PainterJSScriptColorBoundaryTest.xml": {
+      "size": 10970,
+      "sha256": "766798babbe1af3f83e403496d3581dab3638015241d487b23d4af0dcce456b1"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.client.PainterJSTextMembersTest.xml": {
+      "size": 941,
+      "sha256": "9875ec8e3600ad28d19234d22fb3653495f15819ee7555b3d1d34bea8980b7fc"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.clientdata.ClientDataReceiveHandlerTest.xml": {
+      "size": 995,
+      "sha256": "62adbf3c3e220b460e4cd67583efbf167289cccef380d706727d71db4b72d270"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncDomainTest.xml": {
+      "size": 1238,
+      "sha256": "1a022ebd467c556e7bcadd6bd7b2830b7b067036518b928dfff9f294747c5e88"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.DataSyncGenerationBoundaryTest.xml": {
+      "size": 36994,
+      "sha256": "4f7dc424f0b937ac7c7a86b5547752942ecf3184cfa87a6884d2855408c3ef97"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.entity.GoalRegistryApiTest.xml": {
+      "size": 4705,
+      "sha256": "80305bbb8f7636a1470e870ab14c905299b95ddfafacbc4d444dae42c21fcb06"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.registry.CapabilityRegistryEventJSTest.xml": {
+      "size": 3947,
+      "sha256": "5fcd4c530ec81fd06be6e39bca549ee8d3b4bc6af0ca533b252aeb47995d8f5c"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest.xml": {
+      "size": 4426,
+      "sha256": "aeeaf24bb2beac4c245dd45252b79917143468f483058eb5e743abcb4b247f0f"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.LootTableEventJSJsonSurfaceTest.xml": {
+      "size": 1241,
+      "sha256": "86c6dfcf8ab3a7d32eb69c1e50261d953f7e3f39cee01f68ae2461daab6188a9"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.LootTableEventJSLegacySourceTest.xml": {
+      "size": 542,
+      "sha256": "61220fa9b316a1e7e70eb7d85392e86506cbd6602039a20e00eb2d49a9a74491"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationFloatCoercionBoundaryTest.xml": {
+      "size": 19367,
+      "sha256": "d7c81bc18af964c4e44836ce796f52fb1e091ed45c63392ba50b9992da19491c"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest.xml": {
+      "size": 6335,
+      "sha256": "073d028b33a1060e2a4b0a9a158a1940c1388aa972375ad9c7974ec47cdda26d"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationSetterPropertyParityTest.xml": {
+      "size": 25615,
+      "sha256": "29ca93864d0ba9ad83ba04efe16b425c42da9ab3fdc65c777f7dbb6ec956e37d"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.RecipeEventJSBaselineIsolationTest.xml": {
+      "size": 719,
+      "sha256": "7223ffd4a6d7c9aacc6549d91493592e7954faef524d361f5a7edc6a61d5ba40"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.RecipeEventJSGeneratedIdTest.xml": {
+      "size": 677,
+      "sha256": "b1c079277163e37a22c4ad9364c224062264326b968913a09c374e199e3da40c"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.RecipeEventJSJsonContractTest.xml": {
+      "size": 1676,
+      "sha256": "35da84485b21785d51ed42bad35ed64b45a70edc120ebbd63e4329e07fd51ab4"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.TagEventJSApplyContractTest.xml": {
+      "size": 1194,
+      "sha256": "68583e8631c0e02c6a8a32bcd2f1aa108f2ddf10e449a1966d9ac67bbd218c9d"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest.xml": {
+      "size": 4358,
+      "sha256": "b758fc8f72cbe76eb2dc48c84548c70f0d18ffbe22fdc6de396178b7b75b7dd8"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest.xml": {
+      "size": 19149,
+      "sha256": "f87520b92d99e48f346ea0ee6700a7d703e4a6dcc570aec7ea411be5a9c33021"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationEventSurfaceTest.xml": {
+      "size": 733,
+      "sha256": "78f5865dea31dddf4827a9f8c7a1f43722351ddfddeeff9bb2c92dfed25a0c79"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationOwnershipTest.xml": {
+      "size": 1190,
+      "sha256": "4c7e2fe315ace75aabde703dc9edbe2517f4467f877c15a4bcaca520b5d87477"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest.xml": {
+      "size": 6256,
+      "sha256": "c37db3a3a21c01bb86a1d3a91436a2c2bfd06e0b23f41154b4195254bbc8ba6a"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest.xml": {
+      "size": 1364,
+      "sha256": "f1e6ccace1cff8fcedf1668cbde8f90d291d7a4f1ef6c44b2a83b7e69497828a"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39UnsupportedBlockTest.xml": {
+      "size": 521,
+      "sha256": "1aa286894ba0eee43b026f407e73203e99b77ed16ea0a2710f295667aee62012"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.event.server.VillagerTradeLifecycleSourceTraceTest.xml": {
+      "size": 743,
+      "sha256": "092784747d5ce58cb485ffe6cc20f38115a8d3d5418576ffc50acdbf59c2bf90"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.pdata.ItemStackPersistentDataTest.xml": {
+      "size": 1315,
+      "sha256": "e479e3945da3d0f25b4295a4811251e10bd75cc617d72bd3060ba7b60168f9a5"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest.xml": {
+      "size": 4097,
+      "sha256": "89ff3a45fe75b12b870f3f0937426be7c6a001cc76ab3884a895603472ebe4b7"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataSnapshotBehaviorTest.xml": {
+      "size": 940,
+      "sha256": "296e174b35abfed4649db2e258d9b6c5fd49081b11bad9504e4aa1bc1c3f0702"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataSyncAcceptTest.xml": {
+      "size": 1192,
+      "sha256": "9e102a2d8094daef852994d93d3a7a51d9c8fd39023948d407c3fdb96db63b15"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.pdata.PersistentDataJSTest.xml": {
+      "size": 1388,
+      "sha256": "4857b8bac33c99d142cdf49603e94edb4a5fc286f5c987f628a38c0fbd362fbe"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.registry.BuilderFloatCoercionBoundaryTest.xml": {
+      "size": 9105,
+      "sha256": "8de9a5064dae04f3e89b3910180415779594cb77f6c501e318e017378aefae07"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.registry.BuilderSetterPropertyParityTest.xml": {
+      "size": 24080,
+      "sha256": "5777c63d19ae1ff2e696c33db3cbf6ccb28fb4b7ae3ce2c8db7ad4dd807f9464"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityGoalRegistrationContractTest.xml": {
+      "size": 904,
+      "sha256": "cfdf06ddf6c4a38a30e4f3b052d30ef333e4304a45c499e3faf289c9198b7bcf"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest.xml": {
+      "size": 4458,
+      "sha256": "74ca760173ae034cdb85dd6de69df3df35855f3eae43a030956901f522d8d8ae"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationSafetyTest.xml": {
+      "size": 4223,
+      "sha256": "45661c5375943eab5029fde2da8fda36578bf8a3ae4f611b1524b397e3c3294f"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.ItemBuilderIssue36Test.xml": {
+      "size": 13904,
+      "sha256": "11cae251465f7baaa8302999a1a4f08a66155755f389ba578cd1ce71677633c3"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryBuilderNameCollisionTest.xml": {
+      "size": 544,
+      "sha256": "2b8d4c7e6f399b44bcd33848f65e57c8674123ee7921e33dd098f99e611ab81a"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryBuilderSurfaceGoldenTest.xml": {
+      "size": 2987,
+      "sha256": "55798e0db245f031bc7352a00557567defdfc6f6ed914ff43ea69d34a359ed0a"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryStartupMinimalExampleTest.xml": {
+      "size": 2121,
+      "sha256": "073efd2b5f07b293d5b9f91d11068aa4a9594db27c439814902ba74625c5e892"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryDefaultDeclarationsTest.xml": {
+      "size": 6724,
+      "sha256": "59d3874d8eae26d83a1574be32c41e1a70e85f64a3acf1bbc303ee1a434e348e"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryEpochNegativesTest.xml": {
+      "size": 4388,
+      "sha256": "0d897bf79a7777efc0678d517c61a01c8f6e4e45cb64d1841c3fc121c6ad5097"
+    },
+    "checks/xml/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryRuntimeEndToEndTest.xml": {
+      "size": 11464,
+      "sha256": "d7baeb740c39d61c729c3b638b85bd39c1799c1bb6664ca4406b94a55a1f5c82"
+    },
+    "source/versions/1.21.1/src/main/java/com/tkisor/nekojs/client/posteffect/PostEffectManager.java": {
+      "size": 13640,
+      "sha256": "34b8dacd5a1e0862ad657681e28ef8ec6de48449bf1104633e45bb43f7c13380"
+    },
+    "source/versions/1.21.1/src/main/java/com/tkisor/nekojs/mixin/PostEffectResourceReloadMixin.java": {
+      "size": 979,
+      "sha256": "833e01ec8ee4809068e0dfa355ba41d4330c65491899108e5796fecfcb139508"
+    },
+    "source/src/main/resources-legacy/nekojs.mixins.json": {
+      "size": 757,
+      "sha256": "22f8405e3df6e3dc1d2c9c9afc9b3260f5010613a23049aee129415af7ef81f1"
+    },
+    "source/671a75e1-to-8798257f.patch": {
+      "size": 7494,
+      "sha256": "481823334f88f201c3d35728332bd59c0f724caeb4b12818dab5f7ecbd44867f"
+    }
+  },
+  "legacyRevision": "8798257f",
+  "modernRevision": "dd15186c",
+  "exclusions": [
+    "worlds",
+    "JARs and cached libraries",
+    "server.properties and launch argument files",
+    "configuration and user profiles",
+    "generated Probe outputs"
+  ]
+}
