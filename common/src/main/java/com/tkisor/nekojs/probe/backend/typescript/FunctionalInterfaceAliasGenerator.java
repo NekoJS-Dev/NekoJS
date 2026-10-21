@@ -107,7 +107,8 @@ public final class FunctionalInterfaceAliasGenerator {
         for (int index = 0; index < variables.length; index++) {
             String hostName = "Host" + index;
             List<String> bounds = Arrays.stream(variables[index].getBounds()).filter(bound -> bound != Object.class)
-                    .map(TypeReflector::toRef).map(bound -> renameBoundVariables(bound, boundVariables))
+                    .map(bound -> JavaObjectTypeProjection.project(bound, TypeReflector.toRef(bound)))
+                    .map(bound -> renameBoundVariables(bound, boundVariables))
                     .map(bound -> TypeScriptClassRenderer.renderTypeParameterBound(bound, hostName, registry,
                             declarationExpansionPath(cls))).toList();
             typeParameters.add(hostName + (bounds.isEmpty() ? "" : " extends " + String.join(" & ", bounds))
@@ -363,7 +364,7 @@ public final class FunctionalInterfaceAliasGenerator {
                     : ((Class<?>) declared).getComponentType();
             return ApiTypeRef.array(hostRefWithRawArguments(component));
         }
-        return reference;
+        return JavaObjectTypeProjection.project(declared, reference);
     }
 
     private static String renderCallbackResult(ApiTypeRef result, TypeAliasRegistry registry, Set<String> expanding) {

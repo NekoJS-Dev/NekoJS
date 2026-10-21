@@ -27,7 +27,7 @@ declare module "java:java/nio/file/attribute" {
 
     export interface $BasicFileAttributes {
         creationTime(): $FileTime;
-        fileKey(): object;
+        fileKey(): unknown;
         isDirectory(): boolean;
         isOther(): boolean;
         isRegularFile(): boolean;
@@ -47,7 +47,7 @@ declare module "java:java/nio/file/attribute" {
         static from(arg0: $Instant): $FileTime;
         static from(arg0: number, arg1: $TimeUnit_): $FileTime;
         compareTo(arg0: $FileTime): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         toInstant(): $Instant;
         toMillis(): number;

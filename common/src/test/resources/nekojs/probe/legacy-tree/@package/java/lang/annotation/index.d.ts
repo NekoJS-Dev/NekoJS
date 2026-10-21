@@ -3,7 +3,7 @@ import { $Class } from "java:java/lang";
 declare module "java:java/lang/annotation" {
     export interface $Annotation {
         annotationType(): $Class<$Annotation>;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         toString(): string;
     }

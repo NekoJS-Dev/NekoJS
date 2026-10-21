@@ -35,7 +35,7 @@ declare module "java:java/lang" {
         append(arg0: number): $AbstractStringBuilder;
         append(arg0: $CharSequence, arg1: number, arg2: number): $AbstractStringBuilder;
         append(arg0: $CharSequence): $AbstractStringBuilder;
-        append(arg0: object): $AbstractStringBuilder;
+        append(arg0: unknown): $AbstractStringBuilder;
         append(arg0: $StringBuffer): $AbstractStringBuilder;
         append(arg0: string): $AbstractStringBuilder;
         append(arg0: number): $AbstractStringBuilder;
@@ -61,7 +61,7 @@ declare module "java:java/lang" {
         insert(arg0: number, arg1: number): $AbstractStringBuilder;
         insert(arg0: number, arg1: $CharSequence, arg2: number, arg3: number): $AbstractStringBuilder;
         insert(arg0: number, arg1: $CharSequence): $AbstractStringBuilder;
-        insert(arg0: number, arg1: object): $AbstractStringBuilder;
+        insert(arg0: number, arg1: unknown): $AbstractStringBuilder;
         insert(arg0: number, arg1: string): $AbstractStringBuilder;
         insert(arg0: number, arg1: number): $AbstractStringBuilder;
         lastIndexOf(arg0: string, arg1: number): number;
@@ -268,7 +268,7 @@ declare module "java:java/lang" {
         charValue(): string;
         compareTo(arg0: string): number;
         describeConstable(): $Optional<$DynamicConstantDesc<string>>;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         toString(): string;
     }
@@ -339,8 +339,8 @@ declare module "java:java/lang" {
         getProtectionDomain(): $ProtectionDomain;
         get recordComponents(): $RecordComponent[];
         getRecordComponents(): $RecordComponent[];
-        get signers(): object[];
-        getSigners(): object[];
+        get signers(): unknown[];
+        getSigners(): unknown[];
         get simpleName(): string;
         getSimpleName(): string;
         get superclass(): $Class<any>;
@@ -381,7 +381,7 @@ declare module "java:java/lang" {
         accessFlags(): $Set<$AccessFlag>;
         arrayType(): $Class<any>;
         asSubclass<U>(arg0: $Class<U>): $Class<U>;
-        cast(arg0: object): T;
+        cast(arg0: unknown): T;
         componentType(): $Class<any>;
         describeConstable(): $Optional<$ClassDesc>;
         descriptorString(): string;
@@ -400,7 +400,7 @@ declare module "java:java/lang" {
         getResource(arg0: string): $URL;
         isAnnotationPresent(arg0: $Class<$Annotation>): boolean;
         isAssignableFrom(arg0: $Class<any>): boolean;
-        isInstance(arg0: object): boolean;
+        isInstance(arg0: unknown): boolean;
         isNestmateOf(arg0: $Class<any>): boolean;
         newInstance(): T;
         toGenericString(): string;
@@ -481,7 +481,7 @@ declare module "java:java/lang" {
         compareTo(arg0: number): number;
         describeConstable(): $Optional<number>;
         doubleValue(): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         floatValue(): number;
         hashCode(): number;
         intValue(): number;
@@ -497,7 +497,7 @@ declare module "java:java/lang" {
         static valueOf<T extends $Enum<T>>(arg0: $Class<T>, arg1: string): T;
         compareTo(arg0: E): number;
         describeConstable(): $Optional<$Enum$EnumDesc<E>>;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         name(): string;
         ordinal(): number;
@@ -506,7 +506,7 @@ declare module "java:java/lang" {
 
     export class $Enum$EnumDesc<E extends $Enum<E>> extends $DynamicConstantDesc<E> {
         static of<E extends $Enum<E>>(arg0: $ClassDesc, arg1: string): $Enum$EnumDesc<E>;
-        static of<T>(arg0: $DirectMethodHandleDesc, arg1?: $ConstantDesc_<$MethodHandles$Lookup, object>[]): $DynamicConstantDesc<T>;
+        static of<T>(arg0: $DirectMethodHandleDesc, arg1?: $ConstantDesc_<$MethodHandles$Lookup, unknown>[]): $DynamicConstantDesc<T>;
         static of<T>(arg0: $DirectMethodHandleDesc): $DynamicConstantDesc<T>;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): E;
         toString(): string;
@@ -565,7 +565,7 @@ declare module "java:java/lang" {
         compareTo(arg0: number): number;
         describeConstable(): $Optional<number>;
         doubleValue(): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         floatValue(): number;
         hashCode(): number;
         intValue(): number;
@@ -633,7 +633,7 @@ declare module "java:java/lang" {
         compareTo(arg0: number): number;
         describeConstable(): $Optional<number>;
         doubleValue(): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         floatValue(): number;
         hashCode(): number;
         intValue(): number;
@@ -772,7 +772,7 @@ declare module "java:java/lang" {
         getModuleVersion(): string;
         get nativeMethod(): boolean;
         isNativeMethod(): boolean;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         toString(): string;
     }
@@ -802,8 +802,8 @@ declare module "java:java/lang" {
         isEmpty(): boolean;
         static copyValueOf(arg0: string[], arg1: number, arg2: number): string;
         static copyValueOf(arg0: string[]): string;
-        static format(arg0: string, arg1?: object[]): string;
-        static format(arg0: $Locale, arg1: string, arg2?: object[]): string;
+        static format(arg0: string, arg1?: unknown[]): string;
+        static format(arg0: $Locale, arg1: string, arg2?: unknown[]): string;
         static join(arg0: $CharSequence, arg1?: $CharSequence[]): string;
         static join(arg0: $CharSequence, arg1: $Iterable<$CharSequence>): string;
         static valueOf(arg0: boolean): string;
@@ -813,7 +813,7 @@ declare module "java:java/lang" {
         static valueOf(arg0: number): string;
         static valueOf(arg0: number): string;
         static valueOf(arg0: number): string;
-        static valueOf(arg0: object): string;
+        static valueOf(arg0: unknown): string;
         static valueOf(arg0: number): string;
         charAt(arg0: number): string;
         chars(): $IntStream;
@@ -830,8 +830,8 @@ declare module "java:java/lang" {
         describeConstable(): $Optional<string>;
         endsWith(arg0: string): boolean;
         equalsIgnoreCase(arg0: string): boolean;
-        equals(arg0: object): boolean;
-        formatted(arg0?: object[]): string;
+        equals(arg0: unknown): boolean;
+        formatted(arg0?: unknown[]): string;
         getBytes(arg0: number, arg1: number, arg2: number[], arg3: number): void;
         getBytes(arg0: string): number[];
         getBytes(arg0: $Charset): number[];
@@ -901,7 +901,7 @@ declare module "java:java/lang" {
         append(arg0: number): $StringBuffer;
         append(arg0: $CharSequence, arg1: number, arg2: number): $StringBuffer;
         append(arg0: $CharSequence): $StringBuffer;
-        append(arg0: object): $StringBuffer;
+        append(arg0: unknown): $StringBuffer;
         append(arg0: $StringBuffer): $StringBuffer;
         append(arg0: string): $StringBuffer;
         append(arg0: number): $StringBuffer;
@@ -926,7 +926,7 @@ declare module "java:java/lang" {
         insert(arg0: number, arg1: number): $StringBuffer;
         insert(arg0: number, arg1: $CharSequence, arg2: number, arg3: number): $StringBuffer;
         insert(arg0: number, arg1: $CharSequence): $StringBuffer;
-        insert(arg0: number, arg1: object): $StringBuffer;
+        insert(arg0: number, arg1: unknown): $StringBuffer;
         insert(arg0: number, arg1: string): $StringBuffer;
         insert(arg0: number, arg1: number): $StringBuffer;
         lastIndexOf(arg0: string, arg1: number): number;
@@ -963,7 +963,7 @@ declare module "java:java/lang" {
         append(arg0: number): $StringBuilder;
         append(arg0: $CharSequence, arg1: number, arg2: number): $StringBuilder;
         append(arg0: $CharSequence): $StringBuilder;
-        append(arg0: object): $StringBuilder;
+        append(arg0: unknown): $StringBuilder;
         append(arg0: $StringBuffer): $StringBuilder;
         append(arg0: string): $StringBuilder;
         append(arg0: number): $StringBuilder;
@@ -981,7 +981,7 @@ declare module "java:java/lang" {
         insert(arg0: number, arg1: number): $StringBuilder;
         insert(arg0: number, arg1: $CharSequence, arg2: number, arg3: number): $StringBuilder;
         insert(arg0: number, arg1: $CharSequence): $StringBuilder;
-        insert(arg0: number, arg1: object): $StringBuilder;
+        insert(arg0: number, arg1: unknown): $StringBuilder;
         insert(arg0: number, arg1: string): $StringBuilder;
         insert(arg0: number, arg1: number): $StringBuilder;
         lastIndexOf(arg0: string, arg1: number): number;
@@ -1075,7 +1075,7 @@ declare module "java:java/lang" {
         static enumerate(arg0: $Thread[]): number;
         static getAllStackTraces(): $Map<$Thread, $StackTraceElement[]>;
         static getDefaultUncaughtExceptionHandler(): $Thread$UncaughtExceptionHandler;
-        static holdsLock(arg0: object): boolean;
+        static holdsLock(arg0: unknown): boolean;
         static interrupted(): boolean;
         static ofPlatform(): $Thread$Builder$OfPlatform;
         static ofVirtual(): $Thread$Builder$OfVirtual;

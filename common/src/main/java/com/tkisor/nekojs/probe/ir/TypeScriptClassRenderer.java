@@ -4,6 +4,7 @@ import com.google.gson.JsonPrimitive;
 import com.tkisor.nekojs.api.catalog.BeanAliasExclusionCatalogEntry;
 import com.tkisor.nekojs.probe.backend.typescript.IndexFileGenerator;
 import com.tkisor.nekojs.probe.backend.typescript.FunctionalInterfaceAliasGenerator;
+import com.tkisor.nekojs.probe.backend.typescript.JavaObjectTypeProjection;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 
@@ -286,7 +287,7 @@ public final class TypeScriptClassRenderer {
             boolean covariant = d.kind == TypeDecl.Kind.INTERFACE && !d.mutated
                     && covariantTypeParameters.getOrDefault(d.fqn, Set.of()).contains(tp.name);
             String s = (covariant ? "out " : "") + tp.name;
-            if (tp.bound != null) s += " extends " + renderTypeParameterBound(tp.bound.ref, tp.name, aliases,
+            if (tp.bound != null) s += " extends " + renderTypeParameterBound(projectedRef(tp.bound), tp.name, aliases,
                     new LinkedHashSet<>());
             return s;
         }).collect(Collectors.joining(", ")));
@@ -322,7 +323,7 @@ public final class TypeScriptClassRenderer {
             sb.append("<").append(m.typeParams.stream().map(name -> {
                 List<TypeSlot> bounds = m.typeParameterBounds.getOrDefault(name, List.of());
                 return name + (bounds.isEmpty() ? "" : " extends " + bounds.stream()
-                        .map(bound -> renderTypeParameterBound(bound.ref, name, aliases, new LinkedHashSet<>()))
+                        .map(bound -> renderTypeParameterBound(projectedRef(bound), name, aliases, new LinkedHashSet<>()))
                         .collect(Collectors.joining(" & ")));
             }).collect(Collectors.joining(", "))).append(">");
         }
@@ -420,7 +421,7 @@ public final class TypeScriptClassRenderer {
      */
     private static boolean isTsPrimitiveKeyword(String tsType) {
         return switch (tsType) {
-            case "number", "string", "boolean", "void", "object", "any" -> true;
+            case "number", "string", "boolean", "void", "object", "unknown", "any" -> true;
             default -> false;
         };
     }
@@ -464,7 +465,12 @@ public final class TypeScriptClassRenderer {
             return FunctionalInterfaceAliasGenerator.renderJavaTypeInput(
                     slot.sourceType, aliases, new LinkedHashSet<>());
         }
-        return renderTypeRef(slot.ref, aliases, input);
+        return renderTypeRef(projectedRef(slot), aliases, input);
+    }
+
+    private static ApiTypeRef projectedRef(TypeSlot slot) {
+        return !slot.overridden && slot.sourceType != null && slot.ref != null
+                ? JavaObjectTypeProjection.project(slot.sourceType, slot.ref) : slot.ref;
     }
 
     /** 简单 ApiTypeRef → TS（无别名表；probe.add_global 的全局声明类型等声明位使用）。 */
@@ -589,6 +595,7 @@ public final class TypeScriptClassRenderer {
             case "char", "string" -> "string";
             case "void" -> "void";
             case "object" -> "object";
+            case "unknown" -> "unknown";
             default -> "any";
         };
     }

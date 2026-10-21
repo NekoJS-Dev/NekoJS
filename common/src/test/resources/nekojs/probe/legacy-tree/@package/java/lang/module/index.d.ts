@@ -24,7 +24,7 @@ declare module "java:java/lang/module" {
         static read(arg0: $ByteBuffer): $ModuleDescriptor;
         accessFlags(): $Set<$AccessFlag>;
         compareTo(arg0: $ModuleDescriptor): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         exports(): $Set<$ModuleDescriptor$Exports>;
         hashCode(): number;
         mainClass(): $Optional<string>;
@@ -65,7 +65,7 @@ declare module "java:java/lang/module" {
 
     export class $ResolvedModule {
         configuration(): $Configuration;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         name(): string;
         reads(): $Set<$ResolvedModule>;
@@ -103,7 +103,7 @@ declare module "java:java/lang/module" {
         isQualified(): boolean;
         accessFlags(): $Set<$AccessFlag>;
         compareTo(arg0: $ModuleDescriptor$Exports): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         modifiers(): $Set<$ModuleDescriptor$Exports$Modifier>;
         source(): string;
@@ -129,7 +129,7 @@ declare module "java:java/lang/module" {
         isQualified(): boolean;
         accessFlags(): $Set<$AccessFlag>;
         compareTo(arg0: $ModuleDescriptor$Opens): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         modifiers(): $Set<$ModuleDescriptor$Opens$Modifier>;
         source(): string;
@@ -139,7 +139,7 @@ declare module "java:java/lang/module" {
 
     export class $ModuleDescriptor$Provides implements $Comparable<$ModuleDescriptor$Provides> {
         compareTo(arg0: $ModuleDescriptor$Provides): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         providers(): $List<string>;
         service(): string;
@@ -150,7 +150,7 @@ declare module "java:java/lang/module" {
         accessFlags(): $Set<$AccessFlag>;
         compareTo(arg0: $ModuleDescriptor$Requires): number;
         compiledVersion(): $Optional<$ModuleDescriptor$Version>;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         modifiers(): $Set<$ModuleDescriptor$Requires$Modifier>;
         name(): string;
@@ -161,7 +161,7 @@ declare module "java:java/lang/module" {
     export class $ModuleDescriptor$Version implements $Comparable<$ModuleDescriptor$Version> {
         static parse(arg0: string): $ModuleDescriptor$Version;
         compareTo(arg0: $ModuleDescriptor$Version): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         toString(): string;
     }

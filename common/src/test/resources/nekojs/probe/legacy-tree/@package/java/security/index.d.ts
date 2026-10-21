@@ -19,7 +19,7 @@ declare module "java:java/security" {
         getCodeSigners(): $CodeSigner[];
         get location(): $URL;
         getLocation(): $URL;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         implies(arg0: $CodeSource): boolean;
         toString(): string;
@@ -31,8 +31,8 @@ declare module "java:java/security" {
         getActions(): string;
         get name(): string;
         getName(): string;
-        checkGuard(arg0: object): void;
-        equals(arg0: object): boolean;
+        checkGuard(arg0: unknown): void;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         implies(arg0: $Permission): boolean;
         newPermissionCollection(): $PermissionCollection;
@@ -52,7 +52,7 @@ declare module "java:java/security" {
     }
 
     export interface $Principal {
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         getName(): string;
         hashCode(): number;
         implies(arg0: $Subject): boolean;
@@ -81,7 +81,7 @@ declare module "java:java/security" {
         getSignerCertPath(): $CertPath;
         get timestamp(): $Timestamp;
         getTimestamp(): $Timestamp;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         toString(): string;
     }
@@ -92,13 +92,13 @@ declare module "java:java/security" {
         getSignerCertPath(): $CertPath;
         get timestamp(): $Date;
         getTimestamp(): $Date;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         toString(): string;
     }
 
     export interface $Guard {
-        checkGuard(arg0: object): void;
+        checkGuard(arg0: unknown): void;
     }
 
     export class $Provider extends $Properties {
@@ -115,35 +115,35 @@ declare module "java:java/security" {
         get configured(): boolean;
         isConfigured(): boolean;
         clear(): void;
-        computeIfAbsent(arg0: object, arg1: $Function_<object, any, object, any>): object;
-        computeIfPresent(arg0: object, arg1: $BiFunction_<object, object, any, object, object, any>): object;
-        compute(arg0: object, arg1: $BiFunction_<object, object, any, object, object, any>): object;
+        computeIfAbsent(arg0: unknown, arg1: $Function_<unknown, any, unknown, any>): unknown;
+        computeIfPresent(arg0: unknown, arg1: $BiFunction_<unknown, unknown, any, unknown, unknown, any>): unknown;
+        compute(arg0: unknown, arg1: $BiFunction_<unknown, unknown, any, unknown, unknown, any>): unknown;
         configure(arg0: string): $Provider;
-        elements(): $Enumeration<object>;
-        entrySet(): $Set<$Map$Entry<object, object>>;
-        equals(arg0: object): boolean;
-        forEach(arg0: $BiConsumer_<object, object, object, object>): void;
-        getOrDefault(arg0: object, arg1: object): object;
+        elements(): $Enumeration<unknown>;
+        entrySet(): $Set<$Map$Entry<unknown, unknown>>;
+        equals(arg0: unknown): boolean;
+        forEach(arg0: $BiConsumer_<unknown, unknown, unknown, unknown>): void;
+        getOrDefault(arg0: unknown, arg1: unknown): unknown;
         getProperty(arg0: string, arg1: string): string;
         getProperty(arg0: string): string;
         getService(arg0: string, arg1: string): $Provider$Service;
-        get(arg0: object): object;
+        get(arg0: unknown): unknown;
         hashCode(): number;
-        keySet(): $Set<object>;
-        keys(): $Enumeration<object>;
+        keySet(): $Set<unknown>;
+        keys(): $Enumeration<unknown>;
         load(arg0: $InputStream): void;
         load(arg0: $Reader): void;
-        merge(arg0: object, arg1: object, arg2: $BiFunction_<object, object, any, object, object, any>): object;
+        merge(arg0: unknown, arg1: unknown, arg2: $BiFunction_<unknown, unknown, any, unknown, unknown, any>): unknown;
         putAll(arg0: ($Map<any, any> | ([any] extends [PropertyKey] ? Partial<Record<Extract<any, PropertyKey>, any>> : never))): void;
-        putIfAbsent(arg0: object, arg1: object): object;
-        put(arg0: object, arg1: object): object;
-        remove(arg0: object, arg1: object): boolean;
-        remove(arg0: object): object;
-        replaceAll(arg0: $BiFunction_<object, object, any, object, object, any>): void;
-        replace(arg0: object, arg1: object, arg2: object): boolean;
-        replace(arg0: object, arg1: object): object;
+        putIfAbsent(arg0: unknown, arg1: unknown): unknown;
+        put(arg0: unknown, arg1: unknown): unknown;
+        remove(arg0: unknown, arg1: unknown): boolean;
+        remove(arg0: unknown): unknown;
+        replaceAll(arg0: $BiFunction_<unknown, unknown, any, unknown, unknown, any>): void;
+        replace(arg0: unknown, arg1: unknown, arg2: unknown): boolean;
+        replace(arg0: unknown, arg1: unknown): unknown;
         toString(): string;
-        values(): $Collection<object>;
+        values(): $Collection<unknown>;
     }
 
     export interface $PublicKey extends $Key {
@@ -163,8 +163,8 @@ declare module "java:java/security" {
         get type(): string;
         getType(): string;
         getAttribute(arg0: string): string;
-        newInstance(arg0: object): object;
-        supportsParameter(arg0: object): boolean;
+        newInstance(arg0: unknown): unknown;
+        supportsParameter(arg0: unknown): boolean;
         toString(): string;
     }
 
@@ -183,7 +183,7 @@ declare module "java:java/security" {
         get domainCombiner(): $DomainCombiner;
         getDomainCombiner(): $DomainCombiner;
         checkPermission(arg0: $Permission): void;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
     }
 
@@ -200,7 +200,7 @@ declare module "java:java/security" {
     }
 
     export type $Principal_<CallbackResult = string> = (() => CallbackResult) | ($Principal & { readonly [Symbol.hasInstance]?: never });
-    export type $Guard_<CallbackArg0 = object> = ((arg0: CallbackArg0) => void) | ($Guard & { readonly [Symbol.hasInstance]?: never });
+    export type $Guard_<CallbackArg0 = unknown> = ((arg0: CallbackArg0) => void) | ($Guard & { readonly [Symbol.hasInstance]?: never });
     export type $PrivilegedAction_<Host0 = any, CallbackResult = Host0> = (() => CallbackResult) | ($PrivilegedAction<Host0> & { readonly [Symbol.hasInstance]?: never });
     export type $PrivilegedExceptionAction_<Host0 = any, CallbackResult = Host0> = (() => CallbackResult) | ($PrivilegedExceptionAction<Host0> & { readonly [Symbol.hasInstance]?: never });
     export type $DomainCombiner_<CallbackArg0 = $ProtectionDomain[], CallbackArg1 = $ProtectionDomain[], CallbackResult = $ProtectionDomain[]> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($DomainCombiner & { readonly [Symbol.hasInstance]?: never });

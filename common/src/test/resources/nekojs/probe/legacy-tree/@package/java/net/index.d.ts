@@ -8,7 +8,7 @@ declare module "java:java/net" {
         constructor(arg0: $Proxy$Type_, arg1: $SocketAddress);
         static NO_PROXY: $Proxy;
         address(): $SocketAddress;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         toString(): string;
         type(): $Proxy$Type;
@@ -56,7 +56,7 @@ declare module "java:java/net" {
         isOpaque(): boolean;
         static create(arg0: string): $URI;
         compareTo(arg0: $URI): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         normalize(): $URI;
         parseServerAuthority(): $URI;
@@ -77,8 +77,8 @@ declare module "java:java/net" {
         constructor(arg0: $URL, arg1: string, arg2: $URLStreamHandler);
         get authority(): string;
         getAuthority(): string;
-        get content(): object;
-        getContent(): object;
+        get content(): unknown;
+        getContent(): unknown;
         get defaultPort(): number;
         getDefaultPort(): number;
         get file(): string;
@@ -99,8 +99,8 @@ declare module "java:java/net" {
         getUserInfo(): string;
         static of(arg0: $URI, arg1: $URLStreamHandler): $URL;
         static setURLStreamHandlerFactory(arg0: $URLStreamHandlerFactory_<string, $URLStreamHandler>): void;
-        equals(arg0: object): boolean;
-        getContent(arg0: $Class<any>[]): object;
+        equals(arg0: unknown): boolean;
+        getContent(arg0: $Class<any>[]): unknown;
         hashCode(): number;
         openConnection(arg0: $Proxy): $URLConnection;
         openConnection(): $URLConnection;
@@ -126,8 +126,8 @@ declare module "java:java/net" {
         getContentLength(): number;
         get contentType(): string;
         getContentType(): string;
-        get content(): object;
-        getContent(): object;
+        get content(): unknown;
+        getContent(): unknown;
         get date(): number;
         getDate(): number;
         get defaultUseCaches(): boolean;
@@ -177,7 +177,7 @@ declare module "java:java/net" {
         static setFileNameMap(arg0: $FileNameMap_<string, string>): void;
         addRequestProperty(arg0: string, arg1: string): void;
         connect(): void;
-        getContent(arg0: $Class<any>[]): object;
+        getContent(arg0: $Class<any>[]): unknown;
         getHeaderFieldDate(arg0: string, arg1: number): number;
         getHeaderFieldInt(arg0: string, arg1: number): number;
         getHeaderFieldKey(arg0: number): string;
@@ -231,8 +231,8 @@ declare module "java:java/net" {
 
     export class $ContentHandler {
         constructor();
-        getContent(arg0: $URLConnection, arg1: $Class<any>[]): object;
-        getContent(arg0: $URLConnection): object;
+        getContent(arg0: $URLConnection, arg1: $Class<any>[]): unknown;
+        getContent(arg0: $URLConnection): unknown;
     }
 
     export type $URLStreamHandlerFactory_<CallbackArg0 = string, CallbackResult = $URLStreamHandler> = ((arg0: CallbackArg0) => CallbackResult) | ($URLStreamHandlerFactory & { readonly [Symbol.hasInstance]?: never });

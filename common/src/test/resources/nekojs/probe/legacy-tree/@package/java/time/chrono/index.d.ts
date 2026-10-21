@@ -10,7 +10,7 @@ declare module "java:java/time/chrono" {
         adjustInto(arg0: $Temporal): $Temporal;
         atTime(arg0: $LocalTime): $ChronoLocalDateTime<any>;
         compareTo(arg0: $ChronoLocalDate): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         format(arg0: $DateTimeFormatter): string;
         getChronology(): $Chronology;
         getEra(): $Era;
@@ -59,7 +59,7 @@ declare module "java:java/time/chrono" {
         date(arg0: $TemporalAccessor): $LocalDate;
         epochSecond(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: $ZoneOffset): number;
         epochSecond(arg0: $Era_<number>, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: number, arg7: $ZoneOffset): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         eraOf(arg0: number): $IsoEra;
         eras(): $List<$Era>;
         getDisplayName(arg0: $TextStyle_, arg1: $Locale): string;
@@ -90,7 +90,7 @@ declare module "java:java/time/chrono" {
         adjustInto(arg0: $Temporal): $Temporal;
         atZone(arg0: $ZoneId): $ChronoZonedDateTime<D>;
         compareTo(arg0: $ChronoLocalDateTime<any>): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         format(arg0: $DateTimeFormatter): string;
         getChronology(): $Chronology;
         hashCode(): number;
@@ -130,7 +130,7 @@ declare module "java:java/time/chrono" {
         date(arg0: $TemporalAccessor): $ChronoLocalDate;
         epochSecond(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: $ZoneOffset): number;
         epochSecond(arg0: $Era_<number>, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: number, arg7: $ZoneOffset): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         eraOf(arg0: number): $Era;
         eras(): $List<$Era>;
         getCalendarType(): string;
@@ -157,7 +157,7 @@ declare module "java:java/time/chrono" {
 
     export interface $ChronoPeriod extends $TemporalAmount {
         addTo(arg0: $Temporal): $Temporal;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         getChronology(): $Chronology;
         getUnits(): $List<$TemporalUnit>;
         get(arg0: $TemporalUnit): number;
@@ -178,7 +178,7 @@ declare module "java:java/time/chrono" {
 
     export interface $ChronoZonedDateTime<D extends $ChronoLocalDate> extends $Temporal, $Comparable<$ChronoZonedDateTime<any>> {
         compareTo(arg0: $ChronoZonedDateTime<any>): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         format(arg0: $DateTimeFormatter): string;
         getChronology(): $Chronology;
         getLong(arg0: $TemporalField): number;
@@ -245,7 +245,7 @@ declare module "java:java/time/chrono" {
         date(arg0: $TemporalAccessor): $ChronoLocalDate;
         epochSecond(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: $ZoneOffset): number;
         epochSecond(arg0: $Era_<number>, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: number, arg7: $ZoneOffset): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         eraOf(arg0: number): $Era;
         eras(): $List<$Era>;
         getDisplayName(arg0: $TextStyle_, arg1: $Locale): string;

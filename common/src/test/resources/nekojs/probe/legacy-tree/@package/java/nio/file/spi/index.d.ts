@@ -37,9 +37,9 @@ declare module "java:java/nio/file/spi" {
         newOutputStream(arg0: $Path, arg1?: $OpenOption[]): $OutputStream;
         readAttributesIfExists<A extends $BasicFileAttributes>(arg0: $Path, arg1: $Class<A>, arg2?: $LinkOption_[]): A;
         readAttributes<A extends $BasicFileAttributes>(arg0: $Path, arg1: $Class<A>, arg2?: $LinkOption_[]): A;
-        readAttributes(arg0: $Path, arg1: string, arg2?: $LinkOption_[]): $Map<string, object>;
+        readAttributes(arg0: $Path, arg1: string, arg2?: $LinkOption_[]): $Map<string, unknown>;
         readSymbolicLink(arg0: $Path): $Path;
-        setAttribute(arg0: $Path, arg1: string, arg2: object, arg3?: $LinkOption_[]): void;
+        setAttribute(arg0: $Path, arg1: string, arg2: unknown, arg3?: $LinkOption_[]): void;
     }
 
 }

@@ -260,7 +260,7 @@ declare module "java:java/util/stream" {
         sorted(): $Stream<T>;
         takeWhile(arg0: $Predicate_<T, T, boolean>): $Stream<T>;
         toArray<A>(arg0: $IntFunction_<A[], number, A[]>): A[];
-        toArray(): object[];
+        toArray(): unknown[];
         toList(): $List<T>;
     }
     export const $Stream: {

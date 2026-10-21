@@ -12,7 +12,7 @@ declare module "java:java/nio" {
         get readOnly(): boolean;
         isReadOnly(): boolean;
         arrayOffset(): number;
-        array(): object;
+        array(): unknown;
         capacity(): number;
         clear(): $Buffer;
         duplicate(): $Buffer;
@@ -65,7 +65,7 @@ declare module "java:java/nio" {
         compact(): $ByteBuffer;
         compareTo(arg0: $ByteBuffer): number;
         duplicate(): $ByteBuffer;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         flip(): $ByteBuffer;
         getChar(arg0: number): string;
         getDouble(arg0: number): number;
@@ -146,7 +146,7 @@ declare module "java:java/nio" {
         compact(): $CharBuffer;
         compareTo(arg0: $CharBuffer): number;
         duplicate(): $CharBuffer;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         flip(): $CharBuffer;
         get(arg0: string[], arg1: number, arg2: number): $CharBuffer;
         get(arg0: string[]): $CharBuffer;
@@ -196,7 +196,7 @@ declare module "java:java/nio" {
         compact(): $DoubleBuffer;
         compareTo(arg0: $DoubleBuffer): number;
         duplicate(): $DoubleBuffer;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         flip(): $DoubleBuffer;
         get(arg0: number[], arg1: number, arg2: number): $DoubleBuffer;
         get(arg0: number[]): $DoubleBuffer;
@@ -241,7 +241,7 @@ declare module "java:java/nio" {
         compact(): $FloatBuffer;
         compareTo(arg0: $FloatBuffer): number;
         duplicate(): $FloatBuffer;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         flip(): $FloatBuffer;
         get(arg0: number[], arg1: number, arg2: number): $FloatBuffer;
         get(arg0: number[]): $FloatBuffer;
@@ -286,7 +286,7 @@ declare module "java:java/nio" {
         compact(): $IntBuffer;
         compareTo(arg0: $IntBuffer): number;
         duplicate(): $IntBuffer;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         flip(): $IntBuffer;
         get(arg0: number[], arg1: number, arg2: number): $IntBuffer;
         get(arg0: number[]): $IntBuffer;
@@ -331,7 +331,7 @@ declare module "java:java/nio" {
         compact(): $LongBuffer;
         compareTo(arg0: $LongBuffer): number;
         duplicate(): $LongBuffer;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         flip(): $LongBuffer;
         get(arg0: number, arg1: number[], arg2: number, arg3: number): $LongBuffer;
         get(arg0: number, arg1: number[]): $LongBuffer;
@@ -376,7 +376,7 @@ declare module "java:java/nio" {
         compact(): $ShortBuffer;
         compareTo(arg0: $ShortBuffer): number;
         duplicate(): $ShortBuffer;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         flip(): $ShortBuffer;
         get(arg0: number, arg1: number[], arg2: number, arg3: number): $ShortBuffer;
         get(arg0: number, arg1: number[]): $ShortBuffer;

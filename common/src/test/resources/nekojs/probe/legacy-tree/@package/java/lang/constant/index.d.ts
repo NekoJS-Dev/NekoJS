@@ -9,7 +9,7 @@ declare module "java:java/lang/constant" {
         componentType(): $ClassDesc;
         descriptorString(): string;
         displayName(): string;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         isArray(): boolean;
         isClassOrInterface(): boolean;
         isPrimitive(): boolean;
@@ -30,7 +30,7 @@ declare module "java:java/lang/constant" {
     }
 
     export interface $ConstantDesc {
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
+        resolveConstantDesc(arg0: $MethodHandles$Lookup): unknown;
     }
 
     export interface $DirectMethodHandleDesc extends $MethodHandleDesc {
@@ -63,16 +63,16 @@ declare module "java:java/lang/constant" {
     export interface $DirectMethodHandleDesc$Kind extends $Enum<$DirectMethodHandleDesc$Kind> {}
 
     export class $DynamicConstantDesc<T> implements $ConstantDesc {
-        static ofCanonical<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3: $ConstantDesc_<$MethodHandles$Lookup, object>[]): $ConstantDesc;
-        static ofNamed<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3?: $ConstantDesc_<$MethodHandles$Lookup, object>[]): $DynamicConstantDesc<T>;
-        static of<T>(arg0: $DirectMethodHandleDesc, arg1?: $ConstantDesc_<$MethodHandles$Lookup, object>[]): $DynamicConstantDesc<T>;
+        static ofCanonical<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3: $ConstantDesc_<$MethodHandles$Lookup, unknown>[]): $ConstantDesc;
+        static ofNamed<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3?: $ConstantDesc_<$MethodHandles$Lookup, unknown>[]): $DynamicConstantDesc<T>;
+        static of<T>(arg0: $DirectMethodHandleDesc, arg1?: $ConstantDesc_<$MethodHandles$Lookup, unknown>[]): $DynamicConstantDesc<T>;
         static of<T>(arg0: $DirectMethodHandleDesc): $DynamicConstantDesc<T>;
         bootstrapArgsList(): $List<$ConstantDesc>;
         bootstrapArgs(): $ConstantDesc[];
         bootstrapMethod(): $DirectMethodHandleDesc;
         constantName(): string;
         constantType(): $ClassDesc;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): T;
         toString(): string;
@@ -80,7 +80,7 @@ declare module "java:java/lang/constant" {
 
     export interface $MethodHandleDesc extends $ConstantDesc {
         asType(arg0: $MethodTypeDesc): $MethodHandleDesc;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         invocationType(): $MethodTypeDesc;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): $MethodHandle;
     }
@@ -97,7 +97,7 @@ declare module "java:java/lang/constant" {
         descriptorString(): string;
         displayDescriptor(): string;
         dropParameterTypes(arg0: number, arg1: number): $MethodTypeDesc;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         insertParameterTypes(arg0: number, arg1?: $ClassDesc[]): $MethodTypeDesc;
         parameterArray(): $ClassDesc[];
         parameterCount(): number;
@@ -114,6 +114,6 @@ declare module "java:java/lang/constant" {
     };
 
     export type $Constable_<CallbackResult = $Optional<$ConstantDesc>> = (() => CallbackResult) | ($Constable & { readonly [Symbol.hasInstance]?: never });
-    export type $ConstantDesc_<CallbackArg0 = $MethodHandles$Lookup, CallbackResult = object> = ((arg0: CallbackArg0) => CallbackResult) | ($ConstantDesc & { readonly [Symbol.hasInstance]?: never });
+    export type $ConstantDesc_<CallbackArg0 = $MethodHandles$Lookup, CallbackResult = unknown> = ((arg0: CallbackArg0) => CallbackResult) | ($ConstantDesc & { readonly [Symbol.hasInstance]?: never });
     export type $DirectMethodHandleDesc$Kind_ = $DirectMethodHandleDesc$Kind | "CONSTRUCTOR" | "GETTER" | "INTERFACE_SPECIAL" | "INTERFACE_STATIC" | "INTERFACE_VIRTUAL" | "SETTER" | "SPECIAL" | "STATIC" | "STATIC_GETTER" | "STATIC_SETTER" | "VIRTUAL";
 }

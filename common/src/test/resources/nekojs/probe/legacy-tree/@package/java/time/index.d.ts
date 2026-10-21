@@ -43,7 +43,7 @@ declare module "java:java/time" {
         compareTo(arg0: $Duration): number;
         dividedBy(arg0: $Duration): number;
         dividedBy(arg0: number): $Duration;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         get(arg0: $TemporalUnit): number;
         hashCode(): number;
         minusDays(arg0: number): $Duration;
@@ -102,7 +102,7 @@ declare module "java:java/time" {
         atOffset(arg0: $ZoneOffset): $OffsetDateTime;
         atZone(arg0: $ZoneId): $ZonedDateTime;
         compareTo(arg0: $Instant): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         getLong(arg0: $TemporalField): number;
         get(arg0: $TemporalField): number;
         hashCode(): number;
@@ -142,7 +142,7 @@ declare module "java:java/time" {
         static tickMinutes(arg0: $ZoneId): $Clock;
         static tickSeconds(arg0: $ZoneId): $Clock;
         static tick(arg0: $Clock, arg1: $Duration): $Clock;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         instant(): $Instant;
         millis(): number;
@@ -189,7 +189,7 @@ declare module "java:java/time" {
         atZoneSameInstant(arg0: $ZoneId): $ZonedDateTime;
         atZoneSimilarLocal(arg0: $ZoneId): $ZonedDateTime;
         compareTo(arg0: $OffsetDateTime): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         format(arg0: $DateTimeFormatter): string;
         getLong(arg0: $TemporalField): number;
         get(arg0: $TemporalField): number;
@@ -257,7 +257,7 @@ declare module "java:java/time" {
         static of(arg0: string, arg1: ($Map<string, string> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string>> : never))): $ZoneId;
         static of(arg0: string): $ZoneId;
         static systemDefault(): $ZoneId;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         getDisplayName(arg0: $TextStyle_, arg1: $Locale): string;
         hashCode(): number;
         normalized(): $ZoneId;
@@ -285,7 +285,7 @@ declare module "java:java/time" {
         static of(arg0: string): $ZoneOffset;
         adjustInto(arg0: $Temporal): $Temporal;
         compareTo(arg0: $ZoneOffset): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         getLong(arg0: $TemporalField): number;
         get(arg0: $TemporalField): number;
         hashCode(): number;
@@ -337,7 +337,7 @@ declare module "java:java/time" {
         static parse(arg0: $CharSequence, arg1: $DateTimeFormatter): $ZonedDateTime;
         static parse(arg0: $CharSequence): $ZonedDateTime;
         compareTo(arg0: $ChronoZonedDateTime<any>): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         format(arg0: $DateTimeFormatter): string;
         getLong(arg0: $TemporalField): number;
         get(arg0: $TemporalField): number;
@@ -467,7 +467,7 @@ declare module "java:java/time" {
         compareTo(arg0: $ChronoLocalDate): number;
         datesUntil(arg0: $LocalDate, arg1: $Period): $Stream<$LocalDate>;
         datesUntil(arg0: $LocalDate): $Stream<$LocalDate>;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         format(arg0: $DateTimeFormatter): string;
         getLong(arg0: $TemporalField): number;
         get(arg0: $TemporalField): number;
@@ -550,7 +550,7 @@ declare module "java:java/time" {
         atOffset(arg0: $ZoneOffset): $OffsetDateTime;
         atZone(arg0: $ZoneId): $ZonedDateTime;
         compareTo(arg0: $ChronoLocalDateTime<any>): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         format(arg0: $DateTimeFormatter): string;
         getLong(arg0: $TemporalField): number;
         get(arg0: $TemporalField): number;
@@ -630,7 +630,7 @@ declare module "java:java/time" {
         atDate(arg0: $LocalDate): $LocalDateTime;
         atOffset(arg0: $ZoneOffset): $OffsetTime;
         compareTo(arg0: $LocalTime): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         format(arg0: $DateTimeFormatter): string;
         getLong(arg0: $TemporalField): number;
         get(arg0: $TemporalField): number;
@@ -713,7 +713,7 @@ declare module "java:java/time" {
         adjustInto(arg0: $Temporal): $Temporal;
         atDate(arg0: $LocalDate): $OffsetDateTime;
         compareTo(arg0: $OffsetTime): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         format(arg0: $DateTimeFormatter): string;
         getLong(arg0: $TemporalField): number;
         get(arg0: $TemporalField): number;
@@ -777,7 +777,7 @@ declare module "java:java/time" {
         static of(arg0: number, arg1: number, arg2: number): $Period;
         static parse(arg0: $CharSequence): $Period;
         addTo(arg0: $Temporal): $Temporal;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         get(arg0: $TemporalUnit): number;
         hashCode(): number;
         minusDays(arg0: number): $Period;

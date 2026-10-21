@@ -10,7 +10,7 @@ declare module "java:java/security/cert" {
         getPublicKey(): $PublicKey;
         get type(): string;
         getType(): string;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         toString(): string;
         verify(arg0: $PublicKey, arg1: string): void;
@@ -27,7 +27,7 @@ declare module "java:java/security/cert" {
         getEncodings(): $Iterator<string>;
         get type(): string;
         getType(): string;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         getEncoded(arg0: string): number[];
         hashCode(): number;
         toString(): string;

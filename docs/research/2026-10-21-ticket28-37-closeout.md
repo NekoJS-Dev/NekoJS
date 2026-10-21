@@ -82,3 +82,11 @@ Standards 的两项边界发现均已处理：完成时若 renderer 已有其他
 最终 legacy 源码的 `:1.21.1:build guardLint` 通过，1m08s / 37 tasks（9 executed），普通测试 444 / 31 skipped、platform gate 3 / 0，零失败/错误；runtime artifact 与 legacy server artifact 门禁通过，guard 380 blocks / 561 files / 0 warnings。新增 helper test mod 仅在隔离 init 中加载，不进入生产 JAR。前一阶段 common/check 与其他四节点未因这一节点专属改动重复执行；它们仍绑定原 `dd15186c` 证据，不能冒充本阶段新测量。
 
 三节点 PostEffects 证据现已[独立封存](../architecture-refactor/evidence/2026-10-21-posteffects-native/README.md)：528 项、30 张原图，完整最终 legacy patch、XML、fixture/source/class/JAR 绑定及失败尝试保留；只读 verifier 实际通过。26.2 在 vendor 开发警告页面的隔离开关后七阶段通过，两进程正常退出。其页面阻挡是源码/后续结果支持的推断，未取得该页截图。票 28 的 AC6 节点 smoke 已有实证并勾选，AC9/整票仍保留正式候选安装客户端与最终验收边界；迁移记录与中英文 wiki 同步说明 legacy 所有权修复。
+
+## 实施记录：Java Object 的 TS 值边界
+
+TS-only 投影仅在未编辑 Java 来源确定为 `Object` 的位置输出 `unknown`，包含返回/字段、数组、嵌套 host 泛型、类/方法/SAM 泛型边界与 SAM 参数/结果；默认 Object 输入 alias 同步为 unknown，显式适配器仍优先。共享 TypeReflector IR 的 primitive object、Python 和运行时不变，显式编辑/合成的结构化 object 保留。未知值仍须收窄才能访问成员或赋为具体类型，没有全图 any 或删除成员。
+
+三个回归中最初两个 Java 断言失败，严格 TS 复现 17 条诊断；生产 NekoSharedHostAccess 已实际验证 Object 接受/返回数字、字符串、布尔、null、回调和字段。第一版修复后追加泛型边界用例又复现 TS2345 / TS2344，再修复共同投影位置。初次 Probe 检查 400 tests / 2 skipped，仅两个 canonical legacy tree 比对按预期失败；通过现有 `:common:regenerateGoldens --tests com.tkisor.nekojs.probe.LegacyProbeTreeTest` 生成 26 文件、300 行 object→unknown 的预期变化，未手改产物。严格消费链和最终集中构建随后执行，完整生产声明图不因最小用例通过而提前判绿。
+
+Object 修复后的 Probe 定向检查实际通过，400 tests / 2 skipped、零失败/错误；`npm run test:probe-types` 全链（含新增 Object 正负例）通过。两份起点既有修改声明摘要保持原值。common/check、处理器与五节点完整构建留到下一批共享声明修复集中执行；全量正式 TSC 结果仍只绑定 dd15186c，当前不作新总量承诺。

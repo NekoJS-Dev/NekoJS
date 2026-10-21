@@ -103,7 +103,7 @@ declare module "java:java/time/format" {
         static getAvailableLocales(): $Set<$Locale>;
         static ofDefaultLocale(): $DecimalStyle;
         static of(arg0: $Locale): $DecimalStyle;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         toString(): string;
         withDecimalSeparator(arg0: string): $DecimalStyle;

@@ -14,7 +14,7 @@ declare module "java:java/nio/file" {
         compareTo(arg0: $Path): number;
         endsWith(arg0: string): boolean;
         endsWith(arg0: $Path): boolean;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         getFileName(): $Path;
         getFileSystem(): $FileSystem;
         getNameCount(): number;
@@ -117,7 +117,7 @@ declare module "java:java/nio/file" {
         getUsableSpace(): number;
         get readOnly(): boolean;
         isReadOnly(): boolean;
-        getAttribute(arg0: string): object;
+        getAttribute(arg0: string): unknown;
         getFileStoreAttributeView<V extends $FileStoreAttributeView>(arg0: $Class<V>): V;
         name(): string;
         supportsFileAttributeView(arg0: $Class<$FileAttributeView>): boolean;

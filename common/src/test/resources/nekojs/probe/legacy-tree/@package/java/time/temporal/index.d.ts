@@ -84,7 +84,7 @@ declare module "java:java/time/temporal" {
         static of(arg0: number, arg1: number): $ValueRange;
         checkValidIntValue(arg0: number, arg1: $TemporalField): number;
         checkValidValue(arg0: number, arg1: $TemporalField): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         isValidIntValue(arg0: number): boolean;
         isValidValue(arg0: number): boolean;

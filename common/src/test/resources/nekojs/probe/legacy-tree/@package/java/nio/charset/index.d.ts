@@ -20,7 +20,7 @@ declare module "java:java/nio/charset" {
         displayName(): string;
         encode(arg0: string): $ByteBuffer;
         encode(arg0: $CharBuffer): $ByteBuffer;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         name(): string;
         newDecoder(): $CharsetDecoder;

@@ -174,7 +174,7 @@ declare module "java:java/util/function" {
         test(arg0: T): boolean;
     }
     export const $Predicate: {
-        isEqual<T>(arg0: object): $Predicate<T>;
+        isEqual<T>(arg0: unknown): $Predicate<T>;
         not<T>(arg0: $Predicate_<T, T, boolean>): $Predicate<T>;
     };
 

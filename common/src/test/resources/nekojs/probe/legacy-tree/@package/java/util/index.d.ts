@@ -15,27 +15,27 @@ declare module "java:java/util" {
         add(arg0: E): boolean;
         clear(): void;
         containsAll(arg0: any[]): boolean;
-        contains(arg0: object): boolean;
-        equals(arg0: object): boolean;
+        contains(arg0: unknown): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         isEmpty(): boolean;
         iterator(): $Iterator<E>;
         parallelStream(): $Stream<E>;
         removeAll(arg0: any[]): boolean;
         removeIf(arg0: $Predicate_<E, E, boolean>): boolean;
-        remove(arg0: object): boolean;
+        remove(arg0: unknown): boolean;
         retainAll(arg0: any[]): boolean;
         size(): number;
         spliterator(): $Spliterator<E>;
         stream(): $Stream<E>;
         toArray<T>(arg0: T[]): T[];
         toArray<T>(arg0: $IntFunction_<T[], number, T[]>): T[];
-        toArray(): object[];
+        toArray(): unknown[];
     }
 
     export interface $Comparator<T> {
         compare(arg0: T, arg1: T): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         reversed(): $Comparator<T>;
         thenComparingDouble(arg0: $ToDoubleFunction_<T, T, number>): $Comparator<T>;
         thenComparingInt(arg0: $ToIntFunction_<T, T, number>): $Comparator<T>;
@@ -116,23 +116,23 @@ declare module "java:java/util" {
         add(arg0: number, arg1: E): void;
         clear(): void;
         containsAll(arg0: any[]): boolean;
-        contains(arg0: object): boolean;
-        equals(arg0: object): boolean;
+        contains(arg0: unknown): boolean;
+        equals(arg0: unknown): boolean;
         getFirst(): E;
         getLast(): E;
         get(arg0: number): E;
         hashCode(): number;
-        indexOf(arg0: object): number;
+        indexOf(arg0: unknown): number;
         isEmpty(): boolean;
         iterator(): $Iterator<E>;
-        lastIndexOf(arg0: object): number;
+        lastIndexOf(arg0: unknown): number;
         listIterator(arg0: number): $ListIterator<E>;
         listIterator(): $ListIterator<E>;
         removeAll(arg0: any[]): boolean;
         removeFirst(): E;
         removeLast(): E;
         remove(arg0: number): E;
-        remove(arg0: object): boolean;
+        remove(arg0: unknown): boolean;
         replaceAll(arg0: $UnaryOperator_<E, E, E>): void;
         retainAll(arg0: any[]): boolean;
         reversed(): $List<E>;
@@ -143,7 +143,7 @@ declare module "java:java/util" {
         subList(arg0: number, arg1: number): $List<E>;
         toArray<T>(arg0: T[]): T[];
         toArray<T>(arg0: $IntFunction_<T[], number, T[]>): T[];
-        toArray(): object[];
+        toArray(): unknown[];
     }
     export const $List: {
         copyOf<E>(arg0: E[]): $List<E>;
@@ -249,8 +249,8 @@ declare module "java:java/util" {
         static of(arg0: string): $Locale;
         static setDefault(arg0: $Locale$Category_, arg1: $Locale): void;
         static setDefault(arg0: $Locale): void;
-        clone(): object;
-        equals(arg0: object): boolean;
+        clone(): unknown;
+        equals(arg0: unknown): boolean;
         getDisplayCountry(arg0: $Locale): string;
         getDisplayLanguage(arg0: $Locale): string;
         getDisplayName(arg0: $Locale): string;
@@ -314,7 +314,7 @@ declare module "java:java/util" {
         static mapEquivalents(arg0: $Locale$LanguageRange[], arg1: ($Map<string, string[]> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string[]>> : never))): $List<$Locale$LanguageRange>;
         static parse(arg0: string, arg1: ($Map<string, string[]> | ([string] extends [PropertyKey] ? Partial<Record<Extract<string, PropertyKey>, string[]>> : never))): $List<$Locale$LanguageRange>;
         static parse(arg0: string): $List<$Locale$LanguageRange>;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         toString(): string;
     }
@@ -345,13 +345,13 @@ declare module "java:java/util" {
         computeIfAbsent(arg0: K, arg1: $Function_<K, V, K, V>): V;
         computeIfPresent(arg0: K, arg1: $BiFunction_<K, V, V, K, V, V>): V;
         compute(arg0: K, arg1: $BiFunction_<K, V, V, K, V, V>): V;
-        containsKey(arg0: object): boolean;
-        containsValue(arg0: object): boolean;
+        containsKey(arg0: unknown): boolean;
+        containsValue(arg0: unknown): boolean;
         entrySet(): $Set<$Map$Entry<K, V>>;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         forEach(arg0: $BiConsumer_<K, V, K, V>): void;
-        getOrDefault(arg0: object, arg1: V): V;
-        get(arg0: object): V;
+        getOrDefault(arg0: unknown, arg1: V): V;
+        get(arg0: unknown): V;
         hashCode(): number;
         isEmpty(): boolean;
         keySet(): $Set<K>;
@@ -359,8 +359,8 @@ declare module "java:java/util" {
         putAll(arg0: ($Map<K, V> | ([K] extends [PropertyKey] ? Partial<Record<Extract<K, PropertyKey>, V>> : never))): void;
         putIfAbsent(arg0: K, arg1: V): V;
         put(arg0: K, arg1: V): V;
-        remove(arg0: object, arg1: object): boolean;
-        remove(arg0: object): V;
+        remove(arg0: unknown, arg1: unknown): boolean;
+        remove(arg0: unknown): V;
         replaceAll(arg0: $BiFunction_<K, V, V, K, V, V>): void;
         replace(arg0: K, arg1: V, arg2: V): boolean;
         replace(arg0: K, arg1: V): V;
@@ -385,7 +385,7 @@ declare module "java:java/util" {
     };
 
     export interface $Map$Entry<K, V> {
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         getKey(): K;
         getValue(): V;
         hashCode(): number;
@@ -407,7 +407,7 @@ declare module "java:java/util" {
         static empty<T>(): $Optional<T>;
         static ofNullable<T>(arg0: T): $Optional<T>;
         static of<T>(arg0: T): $Optional<T>;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         filter(arg0: $Predicate_<T, T, boolean>): $Optional<T>;
         flatMap<U>(arg0: $Function_<T, $Optional<U>, T, $Optional<U>>): $Optional<U>;
         get(): T;
@@ -433,7 +433,7 @@ declare module "java:java/util" {
         isPresent(): boolean;
         static empty(): $OptionalDouble;
         static of(arg0: number): $OptionalDouble;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         ifPresentOrElse(arg0: $DoubleConsumer_<number>, arg1: $Runnable_): void;
         ifPresent(arg0: $DoubleConsumer_<number>): void;
@@ -454,7 +454,7 @@ declare module "java:java/util" {
         isPresent(): boolean;
         static empty(): $OptionalInt;
         static of(arg0: number): $OptionalInt;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         ifPresentOrElse(arg0: $IntConsumer_<number>, arg1: $Runnable_): void;
         ifPresent(arg0: $IntConsumer_<number>): void;
@@ -475,7 +475,7 @@ declare module "java:java/util" {
         isPresent(): boolean;
         static empty(): $OptionalLong;
         static of(arg0: number): $OptionalLong;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         ifPresentOrElse(arg0: $LongConsumer_<number>, arg1: $Runnable_): void;
         ifPresent(arg0: $LongConsumer_<number>): void;
@@ -541,8 +541,8 @@ declare module "java:java/util" {
         add(arg0: E): boolean;
         clear(): void;
         containsAll(arg0: any[]): boolean;
-        contains(arg0: object): boolean;
-        equals(arg0: object): boolean;
+        contains(arg0: unknown): boolean;
+        equals(arg0: unknown): boolean;
         forEach(arg0: $Consumer_<E, E>): void;
         hashCode(): number;
         isEmpty(): boolean;
@@ -550,7 +550,7 @@ declare module "java:java/util" {
         parallelStream(): $Stream<E>;
         removeAll(arg0: any[]): boolean;
         removeIf(arg0: $Predicate_<E, E, boolean>): boolean;
-        remove(arg0: object): boolean;
+        remove(arg0: unknown): boolean;
         retainAll(arg0: any[]): boolean;
         reversed(): $SequencedSet<E>;
         size(): number;
@@ -558,7 +558,7 @@ declare module "java:java/util" {
         stream(): $Stream<E>;
         toArray<T>(arg0: T[]): T[];
         toArray<T>(arg0: $IntFunction_<T[], number, T[]>): T[];
-        toArray(): object[];
+        toArray(): unknown[];
     }
 
     export interface $Set<E> extends $Collection<E> {
@@ -566,19 +566,19 @@ declare module "java:java/util" {
         add(arg0: E): boolean;
         clear(): void;
         containsAll(arg0: any[]): boolean;
-        contains(arg0: object): boolean;
-        equals(arg0: object): boolean;
+        contains(arg0: unknown): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         isEmpty(): boolean;
         iterator(): $Iterator<E>;
         removeAll(arg0: any[]): boolean;
-        remove(arg0: object): boolean;
+        remove(arg0: unknown): boolean;
         retainAll(arg0: any[]): boolean;
         size(): number;
         spliterator(): $Spliterator<E>;
         toArray<T>(arg0: T[]): T[];
         toArray<T>(arg0: $IntFunction_<T[], number, T[]>): T[];
-        toArray(): object[];
+        toArray(): unknown[];
     }
     export const $Set: {
         copyOf<E>(arg0: E[]): $Set<E>;
@@ -701,9 +701,9 @@ declare module "java:java/util" {
         static parse(arg0: string): number;
         after(arg0: $Date): boolean;
         before(arg0: $Date): boolean;
-        clone(): object;
+        clone(): unknown;
         compareTo(arg0: $Date): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         setDate(arg0: number): void;
         setHours(arg0: number): void;
@@ -718,48 +718,48 @@ declare module "java:java/util" {
         toString(): string;
     }
 
-    export class $Properties extends $Hashtable<object, object> {
+    export class $Properties extends $Hashtable<unknown, unknown> {
         constructor();
         constructor(arg0: number);
         constructor(arg0: $Properties);
         get empty(): boolean;
         isEmpty(): boolean;
         clear(): void;
-        clone(): object;
-        computeIfAbsent(arg0: object, arg1: $Function_<object, any, object, any>): object;
-        computeIfPresent(arg0: object, arg1: $BiFunction_<object, object, any, object, object, any>): object;
-        compute(arg0: object, arg1: $BiFunction_<object, object, any, object, object, any>): object;
-        containsKey(arg0: object): boolean;
-        containsValue(arg0: object): boolean;
-        contains(arg0: object): boolean;
-        elements(): $Enumeration<object>;
-        entrySet(): $Set<$Map$Entry<object, object>>;
-        equals(arg0: object): boolean;
-        forEach(arg0: $BiConsumer_<object, object, object, object>): void;
-        getOrDefault(arg0: object, arg1: object): object;
+        clone(): unknown;
+        computeIfAbsent(arg0: unknown, arg1: $Function_<unknown, any, unknown, any>): unknown;
+        computeIfPresent(arg0: unknown, arg1: $BiFunction_<unknown, unknown, any, unknown, unknown, any>): unknown;
+        compute(arg0: unknown, arg1: $BiFunction_<unknown, unknown, any, unknown, unknown, any>): unknown;
+        containsKey(arg0: unknown): boolean;
+        containsValue(arg0: unknown): boolean;
+        contains(arg0: unknown): boolean;
+        elements(): $Enumeration<unknown>;
+        entrySet(): $Set<$Map$Entry<unknown, unknown>>;
+        equals(arg0: unknown): boolean;
+        forEach(arg0: $BiConsumer_<unknown, unknown, unknown, unknown>): void;
+        getOrDefault(arg0: unknown, arg1: unknown): unknown;
         getProperty(arg0: string, arg1: string): string;
         getProperty(arg0: string): string;
-        get(arg0: object): object;
+        get(arg0: unknown): unknown;
         hashCode(): number;
-        keySet(): $Set<object>;
-        keys(): $Enumeration<object>;
+        keySet(): $Set<unknown>;
+        keys(): $Enumeration<unknown>;
         list(arg0: $PrintStream): void;
         list(arg0: $PrintWriter): void;
         loadFromXML(arg0: $InputStream): void;
         load(arg0: $InputStream): void;
         load(arg0: $Reader): void;
-        merge(arg0: object, arg1: object, arg2: $BiFunction_<object, object, any, object, object, any>): object;
+        merge(arg0: unknown, arg1: unknown, arg2: $BiFunction_<unknown, unknown, any, unknown, unknown, any>): unknown;
         propertyNames(): $Enumeration<any>;
         putAll(arg0: ($Map<any, any> | ([any] extends [PropertyKey] ? Partial<Record<Extract<any, PropertyKey>, any>> : never))): void;
-        putIfAbsent(arg0: object, arg1: object): object;
-        put(arg0: object, arg1: object): object;
-        remove(arg0: object, arg1: object): boolean;
-        remove(arg0: object): object;
-        replaceAll(arg0: $BiFunction_<object, object, any, object, object, any>): void;
-        replace(arg0: object, arg1: object, arg2: object): boolean;
-        replace(arg0: object, arg1: object): object;
+        putIfAbsent(arg0: unknown, arg1: unknown): unknown;
+        put(arg0: unknown, arg1: unknown): unknown;
+        remove(arg0: unknown, arg1: unknown): boolean;
+        remove(arg0: unknown): unknown;
+        replaceAll(arg0: $BiFunction_<unknown, unknown, any, unknown, unknown, any>): void;
+        replace(arg0: unknown, arg1: unknown, arg2: unknown): boolean;
+        replace(arg0: unknown, arg1: unknown): unknown;
         save(arg0: $OutputStream, arg1: string): void;
-        setProperty(arg0: string, arg1: string): object;
+        setProperty(arg0: string, arg1: string): unknown;
         size(): number;
         storeToXML(arg0: $OutputStream, arg1: string, arg2: string): void;
         storeToXML(arg0: $OutputStream, arg1: string, arg2: $Charset): void;
@@ -768,7 +768,7 @@ declare module "java:java/util" {
         store(arg0: $Writer, arg1: string): void;
         stringPropertyNames(): $Set<string>;
         toString(): string;
-        values(): $Collection<object>;
+        values(): $Collection<unknown>;
     }
 
     export class $Hashtable<K, V> extends $Dictionary<K, V> implements $Map<K, V>, $Cloneable, $Serializable {
@@ -779,19 +779,19 @@ declare module "java:java/util" {
         get empty(): boolean;
         isEmpty(): boolean;
         clear(): void;
-        clone(): object;
+        clone(): unknown;
         computeIfAbsent(arg0: K, arg1: $Function_<K, V, K, V>): V;
         computeIfPresent(arg0: K, arg1: $BiFunction_<K, V, V, K, V, V>): V;
         compute(arg0: K, arg1: $BiFunction_<K, V, V, K, V, V>): V;
-        containsKey(arg0: object): boolean;
-        containsValue(arg0: object): boolean;
-        contains(arg0: object): boolean;
+        containsKey(arg0: unknown): boolean;
+        containsValue(arg0: unknown): boolean;
+        contains(arg0: unknown): boolean;
         elements(): $Enumeration<V>;
         entrySet(): $Set<$Map$Entry<K, V>>;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         forEach(arg0: $BiConsumer_<K, V, K, V>): void;
-        getOrDefault(arg0: object, arg1: V): V;
-        get(arg0: object): V;
+        getOrDefault(arg0: unknown, arg1: V): V;
+        get(arg0: unknown): V;
         hashCode(): number;
         keySet(): $Set<K>;
         keys(): $Enumeration<K>;
@@ -799,8 +799,8 @@ declare module "java:java/util" {
         putAll(arg0: ($Map<K, V> | ([K] extends [PropertyKey] ? Partial<Record<Extract<K, PropertyKey>, V>> : never))): void;
         putIfAbsent(arg0: K, arg1: V): V;
         put(arg0: K, arg1: V): V;
-        remove(arg0: object, arg1: object): boolean;
-        remove(arg0: object): V;
+        remove(arg0: unknown, arg1: unknown): boolean;
+        remove(arg0: unknown): V;
         replaceAll(arg0: $BiFunction_<K, V, V, K, V, V>): void;
         replace(arg0: K, arg1: V, arg2: V): boolean;
         replace(arg0: K, arg1: V): V;
@@ -814,10 +814,10 @@ declare module "java:java/util" {
         get empty(): boolean;
         isEmpty(): boolean;
         elements(): $Enumeration<V>;
-        get(arg0: object): V;
+        get(arg0: unknown): V;
         keys(): $Enumeration<K>;
         put(arg0: K, arg1: V): V;
-        remove(arg0: object): V;
+        remove(arg0: unknown): V;
         size(): number;
     }
 

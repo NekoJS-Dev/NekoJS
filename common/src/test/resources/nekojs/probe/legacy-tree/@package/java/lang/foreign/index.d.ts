@@ -40,7 +40,7 @@ declare module "java:java/lang/foreign" {
         byteSize(): number;
         copyFrom(arg0: $MemorySegment): $MemorySegment;
         elements(arg0: $MemoryLayout): $Stream<$MemorySegment>;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         fill(arg0: number): $MemorySegment;
         force(): void;
         getAtIndex(arg0: $AddressLayout, arg1: number): $MemorySegment;
@@ -63,7 +63,7 @@ declare module "java:java/lang/foreign" {
         get(arg0: $ValueLayout$OfLong, arg1: number): number;
         get(arg0: $ValueLayout$OfShort, arg1: number): number;
         hashCode(): number;
-        heapBase(): $Optional<object>;
+        heapBase(): $Optional<unknown>;
         isAccessibleBy(arg0: $Thread): boolean;
         isLoaded(): boolean;
         isMapped(): boolean;
@@ -106,8 +106,8 @@ declare module "java:java/lang/foreign" {
         unload(): void;
     }
     export const $MemorySegment: {
-        copy(arg0: object, arg1: number, arg2: $MemorySegment, arg3: $ValueLayout, arg4: number, arg5: number): void;
-        copy(arg0: $MemorySegment, arg1: $ValueLayout, arg2: number, arg3: object, arg4: number, arg5: number): void;
+        copy(arg0: unknown, arg1: number, arg2: $MemorySegment, arg3: $ValueLayout, arg4: number, arg5: number): void;
+        copy(arg0: $MemorySegment, arg1: $ValueLayout, arg2: number, arg3: unknown, arg4: number, arg5: number): void;
         copy(arg0: $MemorySegment, arg1: $ValueLayout, arg2: number, arg3: $MemorySegment, arg4: $ValueLayout, arg5: number, arg6: number): void;
         copy(arg0: $MemorySegment, arg1: number, arg2: $MemorySegment, arg3: number, arg4: number): void;
         mismatch(arg0: $MemorySegment, arg1: number, arg2: number, arg3: $MemorySegment, arg4: number, arg5: number): number;
@@ -138,7 +138,7 @@ declare module "java:java/lang/foreign" {
         byteOffsetHandle(arg0?: $MemoryLayout$PathElement[]): $MethodHandle;
         byteOffset(arg0?: $MemoryLayout$PathElement[]): number;
         byteSize(): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         name(): $Optional<string>;
         select(arg0?: $MemoryLayout$PathElement[]): $MemoryLayout;
@@ -158,7 +158,7 @@ declare module "java:java/lang/foreign" {
     };
 
     export interface $MemorySegment$Scope {
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         isAlive(): boolean;
     }

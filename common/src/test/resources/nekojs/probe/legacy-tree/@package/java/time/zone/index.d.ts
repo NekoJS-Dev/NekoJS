@@ -13,7 +13,7 @@ declare module "java:java/time/zone" {
         isFixedOffset(): boolean;
         static of(arg0: $ZoneOffset, arg1: $ZoneOffset, arg2: $ZoneOffsetTransition[], arg3: $ZoneOffsetTransition[], arg4: $ZoneOffsetTransitionRule[]): $ZoneRules;
         static of(arg0: $ZoneOffset): $ZoneRules;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         getDaylightSavings(arg0: $Instant): $Duration;
         getOffset(arg0: $Instant): $ZoneOffset;
         getOffset(arg0: $LocalDateTime): $ZoneOffset;
@@ -47,7 +47,7 @@ declare module "java:java/time/zone" {
         isOverlap(): boolean;
         static of(arg0: $LocalDateTime, arg1: $ZoneOffset, arg2: $ZoneOffset): $ZoneOffsetTransition;
         compareTo(arg0: $ZoneOffsetTransition): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         isValidOffset(arg0: $ZoneOffset): boolean;
         toEpochSecond(): number;
@@ -75,7 +75,7 @@ declare module "java:java/time/zone" {
         isMidnightEndOfDay(): boolean;
         static of(arg0: $Month_, arg1: number, arg2: $DayOfWeek_, arg3: $LocalTime, arg4: boolean, arg5: $ZoneOffsetTransitionRule$TimeDefinition_, arg6: $ZoneOffset, arg7: $ZoneOffset, arg8: $ZoneOffset): $ZoneOffsetTransitionRule;
         createTransition(arg0: number): $ZoneOffsetTransition;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         toString(): string;
     }

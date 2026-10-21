@@ -4,12 +4,12 @@ import { $Map, $Set } from "java:java/util";
 
 declare module "java:java/text" {
     export class $Format implements $Serializable, $Cloneable {
-        clone(): object;
-        formatToCharacterIterator(arg0: object): $AttributedCharacterIterator;
-        format(arg0: object, arg1: $StringBuffer, arg2: $FieldPosition): $StringBuffer;
-        format(arg0: object): string;
-        parseObject(arg0: string, arg1: $ParsePosition): object;
-        parseObject(arg0: string): object;
+        clone(): unknown;
+        formatToCharacterIterator(arg0: unknown): $AttributedCharacterIterator;
+        format(arg0: unknown, arg1: $StringBuffer, arg2: $FieldPosition): $StringBuffer;
+        format(arg0: unknown): string;
+        parseObject(arg0: string, arg1: $ParsePosition): unknown;
+        parseObject(arg0: string): unknown;
     }
 
     export class $ParsePosition {
@@ -20,7 +20,7 @@ declare module "java:java/text" {
         get index(): number;
         getIndex(): number;
         set index(value: number);
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         setErrorIndex(arg0: number): void;
         setIndex(arg0: number): void;
@@ -29,8 +29,8 @@ declare module "java:java/text" {
 
     export interface $AttributedCharacterIterator extends $CharacterIterator {
         getAllAttributeKeys(): $Set<$AttributedCharacterIterator$Attribute>;
-        getAttributes(): $Map<$AttributedCharacterIterator$Attribute, object>;
-        getAttribute(arg0: $AttributedCharacterIterator$Attribute): object;
+        getAttributes(): $Map<$AttributedCharacterIterator$Attribute, unknown>;
+        getAttribute(arg0: $AttributedCharacterIterator$Attribute): unknown;
         getRunLimit(arg0: $AttributedCharacterIterator$Attribute): number;
         getRunLimit(arg0: $AttributedCharacterIterator$Attribute[]): number;
         getRunLimit(): number;
@@ -53,7 +53,7 @@ declare module "java:java/text" {
         getFieldAttribute(): $Format$Field;
         get field(): number;
         getField(): number;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         setBeginIndex(arg0: number): void;
         setEndIndex(arg0: number): void;
@@ -64,13 +64,13 @@ declare module "java:java/text" {
         static INPUT_METHOD_SEGMENT: $AttributedCharacterIterator$Attribute;
         static LANGUAGE: $AttributedCharacterIterator$Attribute;
         static READING: $AttributedCharacterIterator$Attribute;
-        equals(arg0: object): boolean;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         toString(): string;
     }
 
     export interface $CharacterIterator extends $Cloneable {
-        clone(): object;
+        clone(): unknown;
         current(): string;
         first(): string;
         getBeginIndex(): number;
