@@ -176,3 +176,8 @@ fallback 阶段初次 Probe 检查仅两项 canonical 比对失败；既有再�
 
 
 2026-10-23 [重载节奏诊断](../architecture-refactor/evidence/2026-10-23-reload-cadence-diagnostic/README.md)已封存：启动即录制 JFR，Done 后按 3 秒间隔执行 5 次真实重载；只统计命令窗口，入口预检合计 2.92 ms、模块求值 53.21 ms、配方条件过滤 1.69 ms、配方解码 59.86 ms，root 103.21 ms、命令 172.23 ms。此为有诊断开销的阶段测量，不能替代正式 340.0 / 292.8 ms 的失败。15 个 root / 17 个配方执行样本不足以锁定单一叶函数；未跳过当前授权、schema、插件事件或配方解码。纯编译 Source 实验的中位收益仅约 3 ms，未据此改变 CommonJS 语义。两次诊断启动失败保留，成功运行正常 RCON 退出，五处临时源码恢复后 1640 个类和 JAR 与正式候选逐字节一致。完整五节点构建后续另记，不外推旧制品。
+
+
+## 同名成员投影的运行时反例
+
+2026-10-23 [实际 Minecraft 类诊断](../architecture-refactor/evidence/2026-10-23-bean-member-semantics/README.md)确认：Fabric 26.1.2 的未变换 Vec3 / SectionPos 类，配合生产 HostAccess 与相同相关 JS 选项，读取 x 为数字、直接 x() 成功，但读取到局部变量再调用失败。严格 TS 的 number 与可调用类型交叉会接受最后一种无效调用，不能直接作为修复。夹具、宿主实现与实际 Minecraft/Graal JAR 摘要及严格编译反例均封存；独立 JVM 未应用 Mixin，不称为五节点安装验收。没有删除或隐藏其他公开成员，没有扩大此前五处 Entity 迁移的批准范围。完整声明投影仍须解决宿主读/调用差异、继承和 Position 接口视图，不能以单一交叉类型能编译判绿。
