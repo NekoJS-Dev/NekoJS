@@ -32,7 +32,7 @@ public class BlockStateAdapter extends AbstractJSTypeAdapter<BlockState> {
         return List.of(
                 self(),
                 string(),
-                registry("BlockState"),
+                registry("Block"),
                 host(Block.class));
     }
 

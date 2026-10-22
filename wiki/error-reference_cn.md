@@ -115,6 +115,7 @@
 | `NEKO-4048` | Probe TypeScript dependency closure incomplete | 必需类型被排除、隐藏或无法反射；详见 `@special/dependencies.json`。生成文件不代表完整 IDE 检查通过。 |
 | `NEKO-4050` | Dynamic item fire resistance value rejected before activation | 动态物品火抗值不是规范的 `true` / `false`，激活前拒绝 |
 | `NEKO-4051` | Manual declaration type reference rejected | 手写声明的类型引用别名无效，或同名别名的目标类型、输入模式冲突 |
+| `NEKO-4052` | Registry type catalog rejected conflicting sources or symbols | 注册表类型目录存在同名异来源，或与标签/命名空间类型名冲突 |
 
 <a id="wiki-section-6"></a>
 ## 配方与数据

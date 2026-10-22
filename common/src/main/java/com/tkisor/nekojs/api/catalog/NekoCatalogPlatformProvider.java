@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.catalog;
 
+import com.tkisor.nekojs.api.JSTypeAdapter;
 import java.util.Collection;
 import java.util.List;
 
@@ -25,6 +26,14 @@ public interface NekoCatalogPlatformProvider {
      */
     default Collection<RegistryTypeCatalogEntry> registryTypes() {
         return List.of();
+    }
+
+    /**
+     * Collects live registry metadata for the adapters published by the same Plugin Runtime.
+     * Providers may inspect the read-only adapter list; the default preserves existing providers.
+     */
+    default Collection<RegistryTypeCatalogEntry> registryTypes(List<JSTypeAdapter<?>> adapters) {
+        return registryTypes();
     }
 
     /**

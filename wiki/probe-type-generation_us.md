@@ -380,6 +380,10 @@ The snapshot contains:
 
 `NekoCatalogPlatformProvider.registryTypes()` supplies registry id lists. Probe generates `@special/types/index.d.ts`, including string literal unions of all item ids, so values such as `'minecraft:stone'` have completion.
 
+Snapshots call `registryTypes(List<JSTypeAdapter<?>>)` once with the adapters published by the same Plugin Runtime. Its default delegates to the existing no-argument method, preserving providers that only implement that method. Built-in providers also call existing no-argument overrides, retain their explicit metadata, and add missing aliases from the actual registry sources held by published `SimpleRegistryBasedAdapter` instances. Values and tags are read at snapshot time, without another registry scan or retained catalog cache. Both TypeScript and Python consume this metadata.
+
+Known physical sources may reuse an alias only for the same Registry object. Different known Registry objects sharing an alias, conflicting explicit metadata, or names colliding with generated `Tag` / `Namespace` symbols reject generation with `NEKO-4052`. Legacy explicit metadata carries no physical source identity; its provider remains responsible for matching its declared aliases to adapters. Custom adapters that declare other registry names still need matching provider metadata; this does not discover registries absent from the published adapters. BlockState completion uses the Block registry and retains strings such as `'minecraft:oak_log[axis=x]'`.
+
 Each registry also gets a tag union:
 
 - `RegistryTypes.<名字>Tag`, such as `RegistryTypes.ItemTag`, contains tags bound in that registry at probe time. Adapters wrap it with `template("#", registryTag("Item"))` as <code>\`#${RegistryTypes.ItemTag}\`</code>, providing completion for `'#minecraft:planks'`. Empty sets, whether because the platform lacks tags or probe ran before tag binding, fall back to `string` to avoid template types becoming `never` and producing false errors.

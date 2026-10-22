@@ -41,6 +41,14 @@ public class SimpleRegistryBasedAdapter<T> extends AbstractJSTypeAdapter<T> {
         return targetType;
     }
 
+    Registry<T> sourceRegistry() {
+        return registry;
+    }
+
+    String registryTypeName() {
+        return registryName;
+    }
+
     @Override
     public List<AdapterInputShape> inputShapes() {
         return List.of(

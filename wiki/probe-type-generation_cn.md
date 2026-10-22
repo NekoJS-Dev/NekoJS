@@ -374,6 +374,10 @@ snapshot 包含：
 
 通过 `NekoCatalogPlatformProvider.registryTypes()` 提供注册表 id 列表，probe 生成 `@special/types/index.d.ts`（如所有物品 id 的字符串字面量 union），让脚本里 `'minecraft:stone'` 有补全。
 
+快照通过 `registryTypes(List<JSTypeAdapter<?>>)` 一次采集同一 Plugin Runtime 已发布适配器对应的目录；默认实现委托旧无参方法，仅实现旧方法的 provider 继续可用。内置 provider 也会调用已有无参覆盖方法，保留其显式元数据，并追加已发布 `SimpleRegistryBasedAdapter` 实际持有的注册表来源中缺少的别名。条目和标签在快照时读取，不增加第二次注册表扫描或保留目录缓存。TypeScript 和 Python 都使用这份元数据。
+
+已知实际来源的同一别名只能复用同一个 Registry 对象；已知来源同名不同 Registry、显式元数据冲突，或与生成的 `Tag` / `Namespace` 类型名冲突时，以 `NEKO-4052` 拒绝生成。旧式显式元数据不携带实际来源标识，provider 仍须负责其声明别名与适配器匹配。自定义适配器声明其他注册表名称时，仍须由 provider 提供匹配目录；本机制不发现未出现在已发布适配器中的注册表。BlockState 的补全使用 Block 注册表，并保留 `'minecraft:oak_log[axis=x]'` 等字符串语法。
+
 每个注册表还额外生成一个标签联合：
 
 - `RegistryTypes.<名字>Tag`（如 `RegistryTypes.ItemTag`）——probe 运行时该注册表已绑定的标签。适配器用 `template("#", registryTag("Item"))` 包成 <code>\`#${RegistryTypes.ItemTag}\`</code>，于是 `'#minecraft:planks'` 也有补全。为空（平台没有标签系统，或 probe 在标签绑定前运行）时回退成 `string`，避免模板类型退化成 `never` 而误报。

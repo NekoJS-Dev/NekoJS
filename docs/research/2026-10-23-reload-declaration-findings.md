@@ -49,3 +49,16 @@ JDK 的 `Constable.describeConstable()` 返回 `Optional<? extends ConstantDesc>
 现有 RegistryInfos/RegistryTypes Point 服务于 builder，不是实时 Probe 目录；不能借它们猜测已加载注册表。接下来的实现应以现有 AdaptersPoint 已发布的实际 SimpleRegistryBasedAdapter 为来源，复用其持有的 Registry，快照时读取当前条目/标签；保留平台已有十项及手写适配器优先级。通过现有平台目录 provider 的兼容扩展传入实际适配器，不新增第二次反射扫描、全局缓存或独立贡献 Point。共享 Minecraft 层合并真实来源，并显式拒绝同名异来源，而非补十二个硬编码名称或静默合并。标签跨版本读取沿版本 facade/既有节点分割实现。
 
 回归需覆盖未生成/空注册表、快照前后新增条目、手写覆盖、相同来源去重与同名不同来源拒绝、两种快照入口和现有 provider 兼容；以公开 backend 输出严格消费 registry 值/标签与 BlockState 语法。该方案只保证实际发布适配器与目录的一致性，不声称发现 bootstrap 之后才出现、从未发布适配器的全部注册表。五节点构建/实际安装声明随后绑定新源码验证。
+
+
+## 注册表目录实施与兼容复审
+
+主代理已实现 adapter-aware 目录采集：NekoScriptCatalog 每次快照仅取一次实际已发布适配器和 registry 元数据，临时/最终快照共用；旧 provider 默认方法继续委托原入口。两个内置 provider 共用 Minecraft 层 RegistryTypeCatalogs 的十项平台来源，追加实际 SimpleRegistryBasedAdapter 持有的缺少别名。每次读取当前值/标签，排序、去重并返回不可变快照；不新增 Point、反射扫描或缓存。BlockState 输入形状改用 Block 注册表，保留 string 和其他原分支，解析行为未改。
+
+先红后绿覆盖 full/server 公开 TypeScript backend 输出与严格 TS 正负例；同一元数据的 Python Literal 也验证。真实 MappedRegistry 测试覆盖后续新增、旧快照不变、相同来源去重、空集合、排序、同名异来源及 Tag/Namespace 冲突。新增 NEKO-4052 与中英文说明。初次 fixture 抽象方法缺失、Python 未传共享 IR、Fabric 整文件守卫未注释的编译失败分别保留，未当作功能回归红测。
+
+Spec 复审发现新 overload 绕过内置 provider 子类的旧无参覆盖方法；独立回归真实复现绕过后触发 BuiltInRegistries 初始化错误，而非期望的覆盖入口哨兵。修复后先虚调用旧入口，保留显式 metadata，再补 adapter 缺少别名。已知 Registry 对象来源按身份验证；旧式 metadata 不含物理来源信息，不能声称验证了它的 Registry 身份，匹配责任仍由 provider 承担。显式 metadata 自身冲突和生成符号冲突仍拒绝。Standards 提出的重复十项平台映射也已集中到共享 helper。完整检查与新安装测量随后独立绑定，不外推前一源码结果。
+
+## 同名成员的显式 this 假设：否决
+
+主代理补做严格 TypeScript throwaway 实验：把直接 callable 交叉改为带显式 this 的调用签名，会阻止裸提取后直接调用，但仍允许赋给普通无参函数及通过 .call(receiver) 调用。实际宿主前置观察的提取结果是 number，后者依然是假阳性；两条 @ts-expect-error 未生效产生 TS2578。初次命令误指定 node 类型包的 TS2688 单独保留，正确严格配置的失败另存。只执行 .call，未声称 .apply/.bind 也做过实测。该假设未进入生产，成员删除范围没有扩大。

@@ -8,13 +8,13 @@ import com.tkisor.nekojs.api.catalog.RegistryTypeCatalogEntry;
 import com.tkisor.nekojs.api.catalog.SnippetCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeOutputLayout;
 import com.tkisor.nekojs.api.inject.*;
+import com.tkisor.nekojs.js.type_adapter.RegistryTypeCatalogs;
 import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.api.ScriptType;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Registry;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -30,7 +30,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -68,27 +67,14 @@ public class NeoForgeCatalogPlatformProvider implements NekoCatalogPlatformProvi
 
     @Override
     public Collection<RegistryTypeCatalogEntry> registryTypes() {
-        List<RegistryTypeCatalogEntry> entries = new ArrayList<>();
-        entries.add(registry("Item", BuiltInRegistries.ITEM));
-        entries.add(registry("Block", BuiltInRegistries.BLOCK));
-        entries.add(registry("Fluid", BuiltInRegistries.FLUID));
-        entries.add(registry("EntityType", BuiltInRegistries.ENTITY_TYPE));
-        entries.add(registry("MobEffect", BuiltInRegistries.MOB_EFFECT));
-        entries.add(registry("Potion", BuiltInRegistries.POTION));
-        entries.add(registry("SoundEvent", BuiltInRegistries.SOUND_EVENT));
-        entries.add(registry("ParticleType", BuiltInRegistries.PARTICLE_TYPE));
-        entries.add(registry("BlockEntityType", BuiltInRegistries.BLOCK_ENTITY_TYPE));
-        entries.add(registry("CreativeModeTab", BuiltInRegistries.CREATIVE_MODE_TAB));
-        return entries;
+        return RegistryTypeCatalogs.snapshot(RegistryTypeCatalogs.builtInSources(), List.of(), NeoForgeCatalogPlatformProvider::tagIds);
     }
 
-    private static <T> RegistryTypeCatalogEntry registry(String typeName, net.minecraft.core.Registry<T> registry) {
-        List<String> ids = new ArrayList<>();
-        registry.keySet().stream()
-                .map(Identifier::toString)
-                .sorted()
-                .forEach(ids::add);
-        return new RegistryTypeCatalogEntry(typeName, ids, tagIds(registry));
+    @Override
+    public Collection<RegistryTypeCatalogEntry> registryTypes(List<JSTypeAdapter<?>> adapters) {
+        Collection<RegistryTypeCatalogEntry> provided = registryTypes();
+        return RegistryTypeCatalogs.append(provided, RegistryTypeCatalogs.builtInSources(), adapters,
+                NeoForgeCatalogPlatformProvider::tagIds);
     }
 
     /**

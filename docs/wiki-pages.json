@@ -172,8 +172,8 @@
       "legacy": "en_us/Error-Reference.md",
       "sourceLocale": "us",
       "legacyDigest": "d655593a3910daa974f0cc8410ad608cb0fb8c8850922ee4fc61314b1ee57e3c",
-      "sourceDigest": "b89b00789b497f361b7023ba7c425ec1dc5fbbd6695c11a278172c35c9033025",
-      "translationDigest": "0ba5be612bde1891d596863fbedb44d21da6ef26640de3f28e5376521dfb382d",
+      "sourceDigest": "b407caaea76392eb735d432686e3025b97924127ff7245bbcdc6b5ef13d28019",
+      "translationDigest": "4bf959cf1422c5557cdb2cd6323137b35cafa2b296636b319dbfadbddb328116",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -327,8 +327,8 @@
       "us": "Probe type generation",
       "legacy": "Probe-类型生成.md",
       "legacyDigest": "e04220b9b877582ad6ba0a05d95573c1ed3945c00cbccf36bc79e899bd1a3cab",
-      "sourceDigest": "621640c8988a6001c26b24547a39c14b3754fa4bd246cf185876749e2681ca28",
-      "translationDigest": "0047f08fdfba22af65f0a91764f57620afb123837d81ff31a71e1d6872cadbea",
+      "sourceDigest": "712c6225e35092a1cb2a0264b9eb7d0f2cdd209cc23b1ba1e2cb0121e5ed9a7e",
+      "translationDigest": "56f8988a932b252d2fb9ec3aad2668d287da066dc070bfcef8b1958f9dbd4464",
       "translationStatus": "draft",
       "humanReview": "pending"
     },

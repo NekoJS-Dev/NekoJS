@@ -33,7 +33,9 @@ public final class NekoScriptCatalog {
     public static NekoScriptCatalogSnapshot snapshot(IPluginRuntime runtime) {
         List<BindingCatalogEntry> allBindings = bindings(runtime);
         List<EventCatalogEntry> allEvents = events(runtime);
-        List<AdapterCatalogEntry> allAdapters = adapters(runtime);
+        List<JSTypeAdapter<?>> publishedAdapters = runtime.adapters();
+        List<AdapterCatalogEntry> allAdapters = adapters(publishedAdapters);
+        List<RegistryTypeCatalogEntry> registryTypes = List.copyOf(platformProvider.registryTypes(publishedAdapters));
         List<HostExtensionCatalogEntry> allHostExtensions = hostExtensions();
 
         NekoScriptCatalogSnapshot temp = new NekoScriptCatalogSnapshot(
@@ -48,7 +50,7 @@ public final class NekoScriptCatalog {
                 runtime.manualDeclarations(),
                 runtime.classDeclarations(),
                 runtime.registryBuilderSurfaces(),
-                List.copyOf(platformProvider.registryTypes()),
+                registryTypes,
                 modIds(),
                 platformProvider.outputLayout(),
                 Map.of(),
@@ -71,7 +73,7 @@ public final class NekoScriptCatalog {
                 runtime.manualDeclarations(),
                 runtime.classDeclarations(),
                 runtime.registryBuilderSurfaces(),
-                List.copyOf(platformProvider.registryTypes()),
+                registryTypes,
                 modIds(),
                 platformProvider.outputLayout(),
                 managedApis,
@@ -84,12 +86,15 @@ public final class NekoScriptCatalog {
         List<BindingCatalogEntry> typeBindings = bindings(runtime, scriptType);
         List<EventCatalogEntry> typeEvents = events(runtime, scriptType);
         List<HostExtensionCatalogEntry> typeHostExtensions = hostExtensions(scriptType);
+        List<JSTypeAdapter<?>> publishedAdapters = runtime.adapters();
+        List<AdapterCatalogEntry> typeAdapters = adapters(publishedAdapters);
+        List<RegistryTypeCatalogEntry> registryTypes = List.copyOf(platformProvider.registryTypes(publishedAdapters));
 
         NekoScriptCatalogSnapshot temp = new NekoScriptCatalogSnapshot(
                 List.of(scriptType),
                 typeBindings,
                 typeEvents,
-                adapters(runtime),
+                typeAdapters,
                 recipeNamespaces(),
                 typeHostExtensions,
                 snippets(scriptType),
@@ -97,7 +102,7 @@ public final class NekoScriptCatalog {
                 runtime.manualDeclarations().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
                 runtime.classDeclarations(),
                 runtime.registryBuilderSurfaces(),
-                List.copyOf(platformProvider.registryTypes()),
+                registryTypes,
                 modIds(),
                 platformProvider.outputLayout(),
                 Map.of(),
@@ -112,7 +117,7 @@ public final class NekoScriptCatalog {
                 List.of(scriptType),
                 typeBindings,
                 typeEvents,
-                adapters(runtime),
+                typeAdapters,
                 recipeNamespaces(),
                 typeHostExtensions,
                 snippets(scriptType),
@@ -120,7 +125,7 @@ public final class NekoScriptCatalog {
                 runtime.manualDeclarations().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
                 runtime.classDeclarations(),
                 runtime.registryBuilderSurfaces(),
-                List.copyOf(platformProvider.registryTypes()),
+                registryTypes,
                 modIds(),
                 platformProvider.outputLayout(),
                 managedApis,
@@ -260,8 +265,12 @@ public final class NekoScriptCatalog {
     }
 
     public static List<AdapterCatalogEntry> adapters(IPluginRuntime runtime) {
+        return adapters(runtime.adapters());
+    }
+
+    private static List<AdapterCatalogEntry> adapters(List<JSTypeAdapter<?>> adapters) {
         List<AdapterCatalogEntry> entries = new ArrayList<>();
-        for (var adapter : runtime.adapters()) {
+        for (var adapter : adapters) {
             entries.add(adapterEntry(adapter));
         }
         return List.copyOf(entries);
