@@ -1,5 +1,7 @@
 # 票 28 / 37 后续工程收尾
 
+2026-10-23 后续修复 `c0bc2dbe` 的[raw 泛型 TS 输出](../architecture-refactor/evidence/2026-10-23-raw-generic-output/README.md)通过先红后绿回归、三模式严格消费、完整定向 TS 链与 common/check（2420 tests / 4 skipped / 零失败错误，含 isolation）；guard 零警告，两轴审查无剩余项。五节点新安装全图声明与性能尚未据此重测，保持旧完整 TSC 和性能失败结论；下一项为实际适配器与 RegistryTypes 目录的遗漏/名称不一致，见[共享原因与实现范围](2026-10-23-reload-declaration-findings.md)。
+
 2026-10-23 生产修复 `b47734c6` 已完成本项工程复验：[失败注册的 intrusive holder 清理](../architecture-refactor/evidence/2026-10-23-intrusive-holder-fix/README.md)保留旧 pending、清理本次新增未绑定 identity，保留 null/frozen 与异常归因。旧实现真实 refreeze 4 中 3 fail；四现代节点 16 回归全过，guard 零警告，两轴审查无剩余项。[四节点完整 build](../architecture-refactor/evidence/2026-10-23-holder-modern-builds/README.md)通过（2212 tests / 236 skipped / 零失败错误）。确切同批 JAR 的[两节点真实 TCP 七阶段](../architecture-refactor/evidence/2026-10-23-dynamic-commit-recovery/README.md)全过、六进程正常退出，覆盖原故障点、断线、持续故障重连拒绝、移除故障同进程恢复及再次双提交。完整 TSC、重载性能与最终统一候选验收仍开放，票保持 in-progress。
 
 2026-10-23 事件依赖版本 `1f877b0f` 的[五节点新安装与完整 IDE](../architecture-refactor/evidence/2026-10-23-event-installed/README.md)已封存：五服务器全部行为 PASS、正常退出 0，1609 个新 stub 的默认 Pyright 全通过；十入口完整严格 TSC 为 5857（旧版 5867），均 exit2、无崩溃，继续 FAIL。此批制品在 holder 修复前独立冻结，不冒充随后新源码的最终统一候选。
