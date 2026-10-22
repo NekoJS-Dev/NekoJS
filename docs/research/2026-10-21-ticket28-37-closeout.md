@@ -1,5 +1,7 @@
 # 票 28 / 37 后续工程收尾
 
+2026-10-23 真实 TCP 新发现：`1f877b0f` 的 26.1.2 在 COMMIT 后单客户端物理激活失败、在线 STATE_SYNC 再次失败时保留旧条目；但随后断线因两个未清理的 intrusive holder 崩溃。[失败证据](../architecture-refactor/evidence/2026-10-23-dynamic-commit-red/README.md)保留前三次尝试，结果 NOT GREEN；主代理正修共享 `RegistrySurgery` 生命周期边界，恢复三阶段及 26.2.0 未完成。事件依赖的[五节点普通 platform gate 与两个现代 NeoForge 构建](../architecture-refactor/evidence/2026-10-23-event-node-followup/README.md)已通过，派生十文件只增加实际交易事件 import，提交 `a494da3a`；不将构建通过外推为联网或整票通过。
+
 2026-10-23 后续局部修复 `1f877b0f`：[实际事件签名依赖](../architecture-refactor/evidence/2026-10-23-event-dependencies/README.md)交给现有 TS 闭包，保持 exclude/hide，不收集未输出的 dispatch key。两项回归先红后绿；最终 common/check、隔离及 guard 通过（2416 tests / 4 skipped / 零失败），完整定向 `test:probe-types` 通过；两轴复审最终零未解决项。新源码尚未重新绑定五节点完整安装 IDE、正式性能或最终客户端/TCP/回退，票仍 in-progress。[加载细分诊断](../architecture-refactor/evidence/2026-10-23-loader-preparation-diagnostic/README.md)完成两轮十次 COMMIT 与正常停止，未据小占比缓存或改变初始化次序换取通过。
 
 2026-10-23 当前生产源码 `7bea6d6d` 的[完整新候选检查](../architecture-refactor/evidence/2026-10-23-current-candidate-checks/README.md)已完成：common/check、处理器、guard 与五节点构建通过，5070 tests / 271 skipped / 零失败；五个新安装服务端实际运行全部通过并正常退出 0，包含 26.1.2 实体查询及重载前后效果。测试服显式禁用空服暂停，旧候选首次失败仍未确诊。全部 1609 个新 stub 的默认 Pyright 通过；十入口新生成声明的完整严格 TSC 仍为 5867 条、无崩溃，继续 FAIL。[确切同一 26.1.2 JAR 的正式性能](../architecture-refactor/evidence/2026-10-22-source-facts-performance/README.md)仍为重载 340.0 / 292.8 ms 失败、启动 33486.6 ms 通过。后续最终候选的客户端/TCP/分离回退和真实维护者结论保持各自范围，未因本轮构建及服务器成功而关闭。
