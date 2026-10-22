@@ -1,5 +1,7 @@
 # 28: PostEffects 声明事件与运行 binding 分离
 
+2026-10-22 统一候选补验：[最新三节点安装渲染](../evidence/2026-10-22-unified-client-native/README.md)全部绑定 `4405b0b0`，合计 30 张原图、13 次 native F3+T 调度及六个游戏进程正常退出；modern 的实际安装来源和各 1638 个生产 class 摘要核对通过。节点工程检查与独立安装渲染路径已补齐，完整 IDE、性能和整票维护者结论仍按票 37 保留。
+
 2026-10-22 legacy 独立安装补验：[完整记录](../evidence/2026-10-22-posteffects-legacy-installed/README.md)以最新候选 `4405b0b0` 的客户端普通 JAR/专服分类 JAR 完成 16 阶段、七次原生 F3+T、失败候选/清除/退役/未激活状态和原版链所有权检查；16 张原图逐张复核，两个进程正常退出。首轮误用专服 JAR 导致 ICU 模块重复的失败也完整保留。它补齐 legacy 安装路径；整票、完整 IDE、最终性能与分离回退未因此自动通过。
 
 2026-10-22 安装补验：[26.2 冻结生产 JAR 七阶段](../evidence/2026-10-22-posteffects-262-installed/README.md)通过，包括三次原生 F3+T 调度、失败候选保留与恢复，七张原图逐张复核及 ROI 测量通过，两个进程正常退出 0；安装来源与全部 1635 个 packaged class 摘要绑定。独立开发启动器只将 helper 作为 source mod，不冒充官方安装器或物理键盘/显示器验收。legacy 独立安装、最终统一候选与整票维护者结论仍开放。

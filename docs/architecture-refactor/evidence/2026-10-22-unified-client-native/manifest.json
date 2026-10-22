@@ -1,0 +1,366 @@
+{
+  "entries": {
+    "261/artifact-manifest.json": {
+      "size": 223711,
+      "sha256": "ab9a7a13000c1e966e70447cf61e75bed6afedc0c8a2db7c99c51e0dbae5018e"
+    },
+    "261/build.gradle": {
+      "size": 854,
+      "sha256": "d1e84bc5fa4977e9d80a579fc8e54c312a92a38780e1dc94f270089d74aa6ec1"
+    },
+    "261/clear-after.png": {
+      "size": 274029,
+      "sha256": "8314952f61a82be29d456987d09e69a146dc96298f55bcf7222ab24d40893240"
+    },
+    "261/clear-before.png": {
+      "size": 285302,
+      "sha256": "ae64ade32fc7ab54559b55c1368a660a0f8bba41150b826d4ac068cca0e5bc6b"
+    },
+    "261/clear-recovered.png": {
+      "size": 262018,
+      "sha256": "b1f81ae1acc88698802bc5fb5c63e920c5cab60fc4a7fabe183304ee723b4ac0"
+    },
+    "261/commands.jsonl": {
+      "size": 1309,
+      "sha256": "b3651c62d84e0cf1e9743e6bbfbfafea9d57ee6e7ebd5a84c8017b0f4e22b10d"
+    },
+    "261/effect-after.png": {
+      "size": 186111,
+      "sha256": "75f8d94f3c93860b7731bfb702e9a39ba7456a37315be0e5c95473abd724e698"
+    },
+    "261/effect-before.png": {
+      "size": 198907,
+      "sha256": "96e637b73f6b31e31e992b763646f306721e0f9dd030ed1e9a7968498b9f4572"
+    },
+    "261/effect-recovered.png": {
+      "size": 178102,
+      "sha256": "61dd06a7185f1b659ffa5f0d12cbe6d69f9356be4abb780b6d42653fccea2ee8"
+    },
+    "261/pixel-review.json": {
+      "size": 1629,
+      "sha256": "e4de177077a2e3d81b0b931fa0b7b580435924c58d8707be72ee16c5bdd2a98d"
+    },
+    "261/preparation.json": {
+      "size": 277,
+      "sha256": "2cbd21023e858fb8c54f6e6382dd7b3edca69b45154562c96894002420f8205b"
+    },
+    "261/retained-rejected.png": {
+      "size": 179067,
+      "sha256": "dcdb52261c33dec0aad1cf55f2f3ec396512e92775a551be1191a09103ada4a1"
+    },
+    "261/run-result.json": {
+      "size": 3423,
+      "sha256": "6c291915b83e743430abfbb060170e7676cc588e2bdd618dd1ab96bd1c66fde9"
+    },
+    "261/settings.gradle": {
+      "size": 447,
+      "sha256": "6867d7aee6865263f3f369586573073e2eef5ef1404b889c49c9334b829eced3"
+    },
+    "261/src/main/java/nekojs/acceptance/frame/AcceptanceMod.java": {
+      "size": 3245,
+      "sha256": "31389e2397870b017650113c265080e006b9511db67325e839f9e016744ecfc1"
+    },
+    "261/src/main/java/nekojs/acceptance/frame/InputDriver.java": {
+      "size": 1361,
+      "sha256": "c1d276564288e175af3e521f4783642a4f2e2dd054fa6f4507426fd51f550805"
+    },
+    "261/src/main/java/nekojs/acceptance/frame/mixin/InputStateMixin.java": {
+      "size": 898,
+      "sha256": "04c1ceadb377b507b2a69e28e1e347e89b021b70b9fa8dafc6d23f949fefa35f"
+    },
+    "261/src/main/java/nekojs/acceptance/frame/mixin/KeyboardInvoker.java": {
+      "size": 542,
+      "sha256": "c919d1ab2a0281d43538fa4f5ec87e9835dae81729499159af3d50be51c540ba"
+    },
+    "261/src/main/resources/META-INF/neoforge.mods.toml": {
+      "size": 212,
+      "sha256": "3da49e5d8c6971f54cb28d1610dc2fca3ac265b12404a4ff0bb6375c8018cf96"
+    },
+    "261/src/main/resources/neko-frame-acceptance.mixins.json": {
+      "size": 248,
+      "sha256": "02d03d924551b491a87440f06e1e1e1eab88ca56fda1f9154729ee1b47f5f049"
+    },
+    "261/client/stdout.log": {
+      "size": 54380,
+      "sha256": "00cc5c3b5e384348a93c33714e0de8faf52be8319464b29765dc58e7d2f18992"
+    },
+    "261/client/stderr.log": {
+      "size": 1142,
+      "sha256": "052a5afccfb0d87ffc19fa71d6a8779645b80aff9b3b8ba0fb1a1872166a3b2a"
+    },
+    "261/client/installed-source.json": {
+      "size": 1565,
+      "sha256": "617f2a4e40b864add836bf3346243b1b19b055e65027379242269e41a1b322ad"
+    },
+    "261/client/owned-process.json": {
+      "size": 252,
+      "sha256": "b8f6b970091d11d2f3da0d63a1db4e6a26d2027977609bb1d2c88388b2602391"
+    },
+    "261/client/nekojs/client_scripts/frame.js": {
+      "size": 1807,
+      "sha256": "a7587d98c8a0edab0c11cdfbf53a8a085e443c5c67734839486defbaf00a909f"
+    },
+    "261/client/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "261/client/nekojs/config/engine.toml": {
+      "size": 2953,
+      "sha256": "ea9354d10042b92a9e9784497870b03bff374efd5406fbe729b7dd15417e89e7"
+    },
+    "261/client/nekojs/config/probe.toml": {
+      "size": 3094,
+      "sha256": "372500ea725d8a2b4fbe025c910f78fd5c6e7cd489ffb75e785e1078db0c2ebd"
+    },
+    "261/client/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "261/client/nekojs/startup_scripts/frame.js": {
+      "size": 1070,
+      "sha256": "caa451756aa09386c4cb6db9af1e0848a670e5f0407fb7f1dc87da5d7af63a00"
+    },
+    "261/client/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "261/server/stdout.log": {
+      "size": 15627,
+      "sha256": "eaad29d373a77c6cb500ec3701e456114ade2860b28ebb839e27fd237de637bd"
+    },
+    "261/server/stderr.log": {
+      "size": 11760,
+      "sha256": "55e1843d1bd58dfe2d4f16e252285ebd85dfd343530e96cf9c00b81579471b2f"
+    },
+    "261/server/owned-process.json": {
+      "size": 258,
+      "sha256": "ee2820a4e21a018200fe3358b0ab274fed74286aca7aab2ea537523ed25affa6"
+    },
+    "261/server/thread-startup-observation.txt": {
+      "size": 22582,
+      "sha256": "cf71efbbcc62a0645e5478cec2897a05c37b1dacb58c7ae279b33c39897f45e5"
+    },
+    "261/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "261/server/nekojs/config/engine.toml": {
+      "size": 2953,
+      "sha256": "ea9354d10042b92a9e9784497870b03bff374efd5406fbe729b7dd15417e89e7"
+    },
+    "261/server/nekojs/config/probe.toml": {
+      "size": 3094,
+      "sha256": "372500ea725d8a2b4fbe025c910f78fd5c6e7cd489ffb75e785e1078db0c2ebd"
+    },
+    "261/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "261/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "tooling/run-posteffects-261-4405b0b0.py": {
+      "size": 8871,
+      "sha256": "057145af11f37c5629a152c994065185ae6c95eded67ddc916e62d7813417c2c"
+    },
+    "tooling/review-261-4405b0b0.py": {
+      "size": 2766,
+      "sha256": "fbdcf82bf2373a12495c9a0dbb8dd0bf9e0fe04bf59d4d50620a6aa44830481c"
+    },
+    "tooling/261-4405b0b0-native-run.log": {
+      "size": 3960,
+      "sha256": "d54ebdb4b000ed35335208ac94ec14f1a3b051175a0221587b44e5d49fd534f8"
+    },
+    "262/artifact-manifest.json": {
+      "size": 223711,
+      "sha256": "92a01bee65a26bca4e10fe7ad58314317a80cf19f5e4ff616e591bfbf08c11de"
+    },
+    "262/build.gradle": {
+      "size": 926,
+      "sha256": "2aab36cccf881ecf9af2ea9ccaf3b1063024e12dde674082fd635a88dcedfffe"
+    },
+    "262/clear-after.png": {
+      "size": 274752,
+      "sha256": "844b1111ceeb4faf57573295a64ad30d445f11ed2d4d7fa14d5eece082af2ea0"
+    },
+    "262/clear-before.png": {
+      "size": 287852,
+      "sha256": "04d0e5d5d732c27482e87c793664953e9b704088eb6820b3ebbe1aaf10d4dbaa"
+    },
+    "262/clear-recovered.png": {
+      "size": 261250,
+      "sha256": "eaaa9bf4759edc9fd655e5e3b3f7bcd8d375ba25f1ba30d851c4024a21d4337c"
+    },
+    "262/commands.jsonl": {
+      "size": 1309,
+      "sha256": "b3651c62d84e0cf1e9743e6bbfbfafea9d57ee6e7ebd5a84c8017b0f4e22b10d"
+    },
+    "262/effect-after.png": {
+      "size": 188626,
+      "sha256": "dcda50cf85ad5d864202d555060fab68f27b98a98eb3ef2c6516ac9bdca77293"
+    },
+    "262/effect-before.png": {
+      "size": 199809,
+      "sha256": "9b68d6880b9d191dc3f0db76480b0d9ea7de33c0d7645c087460b3d0f695259c"
+    },
+    "262/effect-recovered.png": {
+      "size": 173744,
+      "sha256": "f75c7f82761eefdaa63fb210f68e741452701f47a543949b742e305cd52bc070"
+    },
+    "262/pixel-review.json": {
+      "size": 1631,
+      "sha256": "42020a5426be97aa23a7da3c9966b52398a153fd0d6f37099f9006ee747b685f"
+    },
+    "262/preparation.json": {
+      "size": 277,
+      "sha256": "ebb12d2cc1baafb8bba21c9d171bfca4f71a43ad0a18d4196d3da13164ea1482"
+    },
+    "262/retained-rejected.png": {
+      "size": 179975,
+      "sha256": "6346e9993951c7aa9e54ea4d386b30ccc6fdca042ea876c21de56a3b4056c914"
+    },
+    "262/run-result.json": {
+      "size": 3422,
+      "sha256": "b26c842057979a04051d89f681943c9ad8f2f5ff58a25d36835212624163ec5f"
+    },
+    "262/settings.gradle": {
+      "size": 447,
+      "sha256": "6867d7aee6865263f3f369586573073e2eef5ef1404b889c49c9334b829eced3"
+    },
+    "262/src/main/java/nekojs/acceptance/frame/AcceptanceMod.java": {
+      "size": 3245,
+      "sha256": "31389e2397870b017650113c265080e006b9511db67325e839f9e016744ecfc1"
+    },
+    "262/src/main/java/nekojs/acceptance/frame/InputDriver.java": {
+      "size": 1361,
+      "sha256": "c1d276564288e175af3e521f4783642a4f2e2dd054fa6f4507426fd51f550805"
+    },
+    "262/src/main/java/nekojs/acceptance/frame/mixin/InputStateMixin.java": {
+      "size": 898,
+      "sha256": "04c1ceadb377b507b2a69e28e1e347e89b021b70b9fa8dafc6d23f949fefa35f"
+    },
+    "262/src/main/java/nekojs/acceptance/frame/mixin/KeyboardInvoker.java": {
+      "size": 542,
+      "sha256": "c919d1ab2a0281d43538fa4f5ec87e9835dae81729499159af3d50be51c540ba"
+    },
+    "262/src/main/resources/META-INF/neoforge.mods.toml": {
+      "size": 212,
+      "sha256": "3da49e5d8c6971f54cb28d1610dc2fca3ac265b12404a4ff0bb6375c8018cf96"
+    },
+    "262/src/main/resources/neko-frame-acceptance.mixins.json": {
+      "size": 248,
+      "sha256": "02d03d924551b491a87440f06e1e1e1eab88ca56fda1f9154729ee1b47f5f049"
+    },
+    "262/client/stdout.log": {
+      "size": 64379,
+      "sha256": "45ee985fe7e292af549ad991b85ffefb86ee432521a2f90a64bc7c17955ab2ac"
+    },
+    "262/client/stderr.log": {
+      "size": 1142,
+      "sha256": "b7c14f9c0ae89ca17d4e29596979833e1bb6b3afc195b41267a91c09985c292a"
+    },
+    "262/client/installed-source.json": {
+      "size": 1565,
+      "sha256": "079f6084aff26042946fd908889745a40a6bdc3cc878297c3882dc22fca4f8cc"
+    },
+    "262/client/owned-process.json": {
+      "size": 252,
+      "sha256": "319c16638d4ae50e98d6e2434de4be9edc37a1dc156e146cf902f03cdefb5612"
+    },
+    "262/client/nekojs/client_scripts/frame.js": {
+      "size": 1808,
+      "sha256": "3fa9381a41552d00206cb78e6ba3c259a5f0a3ab78d8ff9cf9b5a8f42ab4ebf5"
+    },
+    "262/client/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "262/client/nekojs/config/engine.toml": {
+      "size": 2953,
+      "sha256": "ea9354d10042b92a9e9784497870b03bff374efd5406fbe729b7dd15417e89e7"
+    },
+    "262/client/nekojs/config/probe.toml": {
+      "size": 3094,
+      "sha256": "372500ea725d8a2b4fbe025c910f78fd5c6e7cd489ffb75e785e1078db0c2ebd"
+    },
+    "262/client/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "262/client/nekojs/startup_scripts/frame.js": {
+      "size": 1082,
+      "sha256": "a5c9cf199c77b8b4a1baa42fd8c596c27b1f060468f12be8c471c07bd9807296"
+    },
+    "262/client/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "262/server/stdout.log": {
+      "size": 24585,
+      "sha256": "b58c700b0e1e431e27f04299ae76a684905859770fe80fabfff54d96f52f57f4"
+    },
+    "262/server/stderr.log": {
+      "size": 11714,
+      "sha256": "73590a8bd02cad0356870f6e031454a01aee1bfeb992fe6a2290656a50591e9a"
+    },
+    "262/server/owned-process.json": {
+      "size": 258,
+      "sha256": "4af1cb36d0cd82b4987089b53838897aba3dfb512f92fa411a5e8eeab154428d"
+    },
+    "262/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "262/server/nekojs/config/engine.toml": {
+      "size": 2953,
+      "sha256": "ea9354d10042b92a9e9784497870b03bff374efd5406fbe729b7dd15417e89e7"
+    },
+    "262/server/nekojs/config/probe.toml": {
+      "size": 3094,
+      "sha256": "372500ea725d8a2b4fbe025c910f78fd5c6e7cd489ffb75e785e1078db0c2ebd"
+    },
+    "262/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "262/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "tooling/run-posteffects-262-4405b0b0.py": {
+      "size": 8875,
+      "sha256": "c5ab373198b4c509d2231e97bc6f144e96d4382b3ecd23fafacffb0b43314fa0"
+    },
+    "tooling/review-262-4405b0b0.py": {
+      "size": 2766,
+      "sha256": "9c33d6b006b2a31ab16a0b1ee420a7a5f524cf1cca2842aa655c93b1a70ec0e6"
+    },
+    "tooling/262-4405b0b0-native-run.log": {
+      "size": 3958,
+      "sha256": "6c23635c693b664ac1a3fbee491bbba57349e7137e6360057f569a64e3285ff5"
+    },
+    "tooling/prepare-modern-4405b0b0-native.py": {
+      "size": 2691,
+      "sha256": "9ceee7bad8989472c807ef41a61783d4a8a3820e2d97652ce7a9a7404c9dac72"
+    },
+    "tooling/run-modern-4405b0b0-native.py": {
+      "size": 707,
+      "sha256": "1b517879c23ec15885c3f54c5a2912bc77e738e3b8fe43134441ad0a630309bd"
+    },
+    "tooling/4405b0b0-runtime-class-reuse.json": {
+      "size": 3934,
+      "sha256": "8336ae5daccdeaceeb64004fada94b3ef3b6021fb55f6c4a7e9e52ccdf3ee0ef"
+    },
+    "tooling/seal-latest-modern-native.py": {
+      "size": 2718,
+      "sha256": "eab29b1d06d21d3d1171a24587523de4d8f6858b67d466c071a232baabf5b62c"
+    }
+  },
+  "archiveSha256": "7c195fd21a99098694ba6e8793ac2c9520cc3e968df87c5114056c7d9226eb6b",
+  "sourceRevision": "4405b0b0ba8e4d1665c6e1d92d1b172cc4f18349",
+  "references": {
+    "2026-10-22-posteffects-legacy-installed": "9e1463536f9873ecbe5a7cdb73e776d0148265de4b98dc04543126b7b1ab7cca",
+    "2026-10-22-dynamic-tcp": "d698311b50cf96a777ee0802ca9f963a1a268f33ee44ca742e0b0cba4ed61932"
+  }
+}

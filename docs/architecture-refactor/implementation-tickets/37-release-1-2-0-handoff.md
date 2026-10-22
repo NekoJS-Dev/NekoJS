@@ -1,5 +1,7 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-22 后续：[最新统一候选三节点安装客户端](../evidence/2026-10-22-unified-client-native/README.md)完成 30 图和六次正常退出；[制品/数据分离回退](../evidence/2026-10-22-candidate-rollback/README.md)完成已知 `d91ca974 → 4405b0b0 → d91ca974` 与停服备份恢复四阶段、四次正常退出。换旧 JAR 保留推进数据，恢复备份才回到旧值，范围仅该已知候选对和完整世界夹具。五节点首轮安装运行四过一未过（26.1.2 召唤后实体查询未成功），该失败与后续控制实验分别保留；不能用正常退出或构建通过覆盖验收失败。最新默认完整 TSC 仍失败 5867 条；Python 默认检查仍通过。性能与最终维护者结论继续开放。
+
 2026-10-22 最新候选 `4405b0b0` 全量矩阵通过：11m41s，106 tasks / 40 executed，5067 tests / 271 skipped / 0 failures or errors，含 common 隔离、处理器、guard、五节点 build/platform gate；矩阵 XML 与生产 class/JAR 绑定在本地冻结。另有 [legacy 安装客户端 16 阶段](../evidence/2026-10-22-posteffects-legacy-installed/README.md)通过，实际使用普通 client JAR 与 server 分类 JAR。五节点安装运行、完整 IDE、原门槛性能及分离回退仍按各自结果记录，不能用构建通过代替。
 
 2026-10-22 补充：[双节点真实 TCP 验收](../evidence/2026-10-22-dynamic-tcp/README.md)以冻结安装候选 `d91ca974` 在 26.1.2/26.2.0 完成各八阶段、八个进程正常退出，覆盖真实双 ACK/NACK、配置补同步、超时与迟到 ACK、准备中断线和重连后的实际注册表。它不替代后续源码的统一候选、COMMIT 后激活失败、完整 TSC、最终性能、分离回退或维护者结论；失败尝试及外部清理记录已封存。

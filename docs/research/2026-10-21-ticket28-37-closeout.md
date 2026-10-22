@@ -1,5 +1,7 @@
 # 票 28 / 37 后续工程收尾
 
+2026-10-22 最新候选 `4405b0b0`：全量 5067 tests / 271 skipped / 0 failures or errors；[统一三节点安装客户端](../architecture-refactor/evidence/2026-10-22-unified-client-native/README.md)完成 30 图及六次正常退出；[制品/世界数据分离回退](../architecture-refactor/evidence/2026-10-22-candidate-rollback/README.md)完成四阶段。五节点安装首轮仍有 26.1.2 实体查询未过，保持 NOT GREEN 并单独运行控制实验；完整 TSC 仍失败，性能和维护者结论未因此通过。
+
 2026-10-22 追加：[真实 TCP 封存](../architecture-refactor/evidence/2026-10-22-dynamic-tcp/README.md)完成 `d91ca974` 的 26.1.2/26.2.0 两节点、各八阶段及八次正常进程退出；含真实 ACK/NACK、配置补同步、超时/迟到 ACK、准备断线和重连后注册表正负结果。历史失败夹具及一次精确强制清理完整保留，成功运行均无强制清理。后续源码的统一候选、COMMIT 后激活失败、完整 TSC、最终性能和分离回退仍需完成。
 
 用户于 2026-10-21 授权尽可能完成剩余项。起点为 stonecutter `495d9cb8`；主代理实现、测试、游戏验证与提交，Luna xhigh 只读调查，不创建 PR、不推送或正式发布。保留工作区既有两份修改声明与其他无关文件。
