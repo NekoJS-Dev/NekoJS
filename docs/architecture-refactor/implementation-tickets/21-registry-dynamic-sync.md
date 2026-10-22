@@ -84,3 +84,7 @@
 第一天钉住（`DynamicSyncPayloadWireFormatTest`，26.1.2 实测 hex）。证据与裁决事项见
 `evidence/2026-09-29-ticket21-wire-prep/REPORT.md`。AC8/AC10 的平台接线缺口以此 pack
 的维护者裁决 + 真机 smoke（owner 34）为闭环路径；裁决前本票注记与能力表口径不变。
+
+## 后续真实 TCP 补验（2026-10-22）
+
+[双节点完整证据](../evidence/2026-10-22-dynamic-tcp/README.md)：冻结安装候选 `d91ca974` 在 NeoForge 26.1.2/26.2.0 各完成八阶段真实服务器与两个客户端 TCP 验收，包括 PREPARE NACK、双 participant ACK、配置阶段 STATE_SYNC、原 10 秒超时与迟到 ACK、准备中断线及重连。实际注册表正负结果、安装来源和八个进程正常退出均通过，离线 archive verifier 通过。早期两次失败夹具及一次精确外部强制清理如实保留；后续通过运行均无强制清理。该补验不改写历史交付，也不等于最终统一候选、COMMIT 后激活失败、Fabric 或维护者发布结论。
