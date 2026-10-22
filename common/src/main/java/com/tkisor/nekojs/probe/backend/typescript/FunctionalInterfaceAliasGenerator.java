@@ -1,10 +1,10 @@
 package com.tkisor.nekojs.probe.backend.typescript;
 
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
-import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
+import com.tkisor.nekojs.probe.ir.TypeSlot;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 
@@ -107,8 +107,7 @@ public final class FunctionalInterfaceAliasGenerator {
         for (int index = 0; index < variables.length; index++) {
             String hostName = "Host" + index;
             List<String> bounds = Arrays.stream(variables[index].getBounds()).filter(bound -> bound != Object.class)
-                    .map(bound -> JavaObjectTypeProjection.project(bound, TypeReflector.toRef(bound)))
-                    .map(bound -> renameBoundVariables(bound, boundVariables))
+                    .map(bound -> TypeSlot.of(bound, renameBoundVariables(TypeReflector.toRef(bound), boundVariables)))
                     .map(bound -> TypeScriptClassRenderer.renderTypeParameterBound(bound, hostName, registry,
                             declarationExpansionPath(cls))).toList();
             typeParameters.add(hostName + (bounds.isEmpty() ? "" : " extends " + String.join(" & ", bounds))
@@ -342,29 +341,7 @@ public final class FunctionalInterfaceAliasGenerator {
     // Erasure belongs to actual raw Java use sites, including nested invariant arguments. The shared IR,
     // edited slots and class declarations keep their original facts; input conversions still occur outside.
     private static ApiTypeRef hostRefWithRawArguments(Type declared) {
-        if (declared instanceof WildcardType wildcard) {
-            Type[] upper = wildcard.getUpperBounds();
-            return upper.length > 0 && upper[0] != Object.class ? hostRefWithRawArguments(upper[0])
-                    : TypeReflector.toRef(declared);
-        }
-        ApiTypeRef reference = TypeReflector.toRef(declared);
-        if (reference.kind() == ApiTypeRef.Kind.SYMBOL) {
-            if (declared instanceof Class<?> cls && cls.getTypeParameters().length > 0) {
-                return ApiTypeRef.symbol(new ApiSymbolId("java", cls.getName()),
-                        Collections.nCopies(cls.getTypeParameters().length, ApiTypeRef.primitive("any")));
-            }
-            if (declared instanceof ParameterizedType parameterized) {
-                return ApiTypeRef.symbol(new ApiSymbolId("java", FunctionalInterfaceResolver.rawClass(declared).getName()),
-                        Arrays.stream(parameterized.getActualTypeArguments())
-                                .map(FunctionalInterfaceAliasGenerator::hostRefWithRawArguments).toList());
-            }
-        }
-        if (reference.kind() == ApiTypeRef.Kind.ARRAY) {
-            Type component = declared instanceof GenericArrayType array ? array.getGenericComponentType()
-                    : ((Class<?>) declared).getComponentType();
-            return ApiTypeRef.array(hostRefWithRawArguments(component));
-        }
-        return JavaObjectTypeProjection.project(declared, reference);
+        return JavaTypeScriptProjection.project(declared, TypeReflector.toRef(declared));
     }
 
     private static String renderCallbackResult(ApiTypeRef result, TypeAliasRegistry registry, Set<String> expanding) {

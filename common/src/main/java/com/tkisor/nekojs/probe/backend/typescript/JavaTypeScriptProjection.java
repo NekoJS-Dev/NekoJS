@@ -7,13 +7,14 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.WildcardType;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-/** Projects Java Object values without changing explicit structured-object IR or the shared reflection model. */
-public final class JavaObjectTypeProjection {
-    private JavaObjectTypeProjection() {}
+/** Projects Java Object values and raw generic use sites without changing shared or explicitly edited IR. */
+public final class JavaTypeScriptProjection {
+    private JavaTypeScriptProjection() {}
 
-    /** Applies only where the original Java type still identifies Object, including nested host arguments. */
+    /** Uses source types only for unedited slots, including nested host arguments and generic bounds. */
     public static ApiTypeRef project(Type source, ApiTypeRef reference) {
         if (source == Object.class && reference.equals(ApiTypeRef.primitive("object"))) {
             // Graal Object values can be primitives or null; TypeScript object excludes both.
@@ -22,6 +23,14 @@ public final class JavaObjectTypeProjection {
         if (source instanceof WildcardType wildcard) {
             Type[] upper = wildcard.getUpperBounds();
             return upper.length > 0 && upper[0] != Object.class ? project(upper[0], reference) : reference;
+        }
+        if (source instanceof Class<?> cls && cls.getTypeParameters().length > 0
+                && reference.kind() == ApiTypeRef.Kind.SYMBOL && reference.arguments().isEmpty()
+                && reference.name().equals("java:" + cls.getName())) {
+            // A raw Java use site erases arguments; the generic declaration itself retains its parameters.
+            return new ApiTypeRef(reference.kind(), reference.name(),
+                    Collections.nCopies(cls.getTypeParameters().length, ApiTypeRef.primitive("any")),
+                    reference.callbackSignature());
         }
         if (reference.kind() == ApiTypeRef.Kind.ARRAY) {
             Type element = source instanceof GenericArrayType array ? array.getGenericComponentType()

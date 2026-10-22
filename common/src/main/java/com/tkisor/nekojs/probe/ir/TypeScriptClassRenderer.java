@@ -4,7 +4,7 @@ import com.google.gson.JsonPrimitive;
 import com.tkisor.nekojs.api.catalog.BeanAliasExclusionCatalogEntry;
 import com.tkisor.nekojs.probe.backend.typescript.IndexFileGenerator;
 import com.tkisor.nekojs.probe.backend.typescript.FunctionalInterfaceAliasGenerator;
-import com.tkisor.nekojs.probe.backend.typescript.JavaObjectTypeProjection;
+import com.tkisor.nekojs.probe.backend.typescript.JavaTypeScriptProjection;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 
@@ -522,7 +522,7 @@ public final class TypeScriptClassRenderer {
 
     private static ApiTypeRef projectedRef(TypeSlot slot) {
         return !slot.overridden && slot.sourceType != null && slot.ref != null
-                ? JavaObjectTypeProjection.project(slot.sourceType, slot.ref) : slot.ref;
+                ? JavaTypeScriptProjection.project(slot.sourceType, slot.ref) : slot.ref;
     }
 
     /** 简单 ApiTypeRef → TS（无别名表；probe.add_global 的全局声明类型等声明位使用）。 */
@@ -533,6 +533,11 @@ public final class TypeScriptClassRenderer {
     /** Retains self-comparable Java bounds after boxed values project to JavaScript primitives. */
     public static String renderTypeParameterBound(TypeSlot slot, String variableName,
                                                   TypeAliasRegistry aliases, Set<String> expanding) {
+        if (!slot.overridden && slot.sourceType == Comparable.class && slot.ref != null
+                && slot.ref.kind() == ApiTypeRef.Kind.SYMBOL
+                && slot.ref.name().equals("java:java.lang.Comparable") && slot.ref.arguments().isEmpty()) {
+            return primitiveComparableBound(renderTypeRef(projectedRef(slot), aliases, false, expanding));
+        }
         return renderTypeParameterBound(projectedRef(slot), variableName, aliases, expanding);
     }
 
@@ -546,10 +551,14 @@ public final class TypeScriptClassRenderer {
             if (argument.kind() == ApiTypeRef.Kind.TYPE_VARIABLE && variableName.equals(argument.name())) {
                 // String, numeric and boolean wrappers all implement Comparable of their own Java type.
                 // Other Comparable bounds retain their exact host constraint.
-                return "(" + hostType + " | string | number | boolean)";
+                return primitiveComparableBound(hostType);
             }
         }
         return hostType;
+    }
+
+    private static String primitiveComparableBound(String hostType) {
+        return "(" + hostType + " | string | number | boolean)";
     }
 
     /**
