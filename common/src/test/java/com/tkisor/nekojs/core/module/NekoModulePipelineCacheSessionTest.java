@@ -120,6 +120,39 @@ class NekoModulePipelineCacheSessionTest {
         }
     }
 
+    @Test
+    void reusedEntryAnalysisNeverSharesGenerationSchemaOrDiagnosticSink() throws Exception {
+        TestPlatformInit.ensureInitialized(gameDir);
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(gameDir);
+        AtomicInteger activeDiagnostics = new AtomicInteger();
+        AtomicInteger candidateDiagnostics = new AtomicInteger();
+        var activeView = new ScriptBindingSchema.View(
+                Map.of("SessionFixture", new ScriptBindingSchema.BindingMembers(Set.of("missing"))),
+                Set.of("console"), diagnostic -> activeDiagnostics.incrementAndGet());
+        var candidateView = new ScriptBindingSchema.View(
+                Map.of("SessionFixture", new ScriptBindingSchema.BindingMembers(Set.of("valid"))),
+                Set.of("console"), diagnostic -> candidateDiagnostics.incrementAndGet());
+        Path entry = paths.serverScripts().resolve("entry-schema.js");
+        String source = "SessionFixture.missing();";
+        try (NekoModulePipelineCache owner = newCache(paths)) {
+            NekoModulePipelineCache active = owner.openSession(activeView);
+            try (NekoModulePipelineCache candidate = owner.openSession(candidateView)) {
+                active.validateEntryBindings(entry, source);
+                candidate.validateEntryBindings(entry, source);
+                candidate.validateEntryBindings(entry, source);
+                assertEquals(0, activeDiagnostics.get());
+                assertEquals(2, candidateDiagnostics.get(), "warm analysis must still report to the current sink");
+                candidate.installBindingSchemaView(activeView);
+                candidate.validateEntryBindings(entry, source);
+                assertEquals(2, candidateDiagnostics.get());
+            }
+            active.validateEntryBindings(entry, source);
+            assertEquals(0, activeDiagnostics.get());
+            active.close();
+            assertThrows(IllegalStateException.class, () -> active.validateEntryBindings(entry, source));
+        }
+    }
+
     private static String sourceMap(String source, String content) {
         return "{\"version\":3,\"sources\":[\"" + source + "\"],"
                 + "\"sourcesContent\":[\"" + content + "\"],\"names\":[],\"mappings\":\"AAAA\"}";

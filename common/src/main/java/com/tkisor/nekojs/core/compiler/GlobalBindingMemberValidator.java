@@ -76,15 +76,15 @@ public final class GlobalBindingMemberValidator {
             return;
         }
 
-        Map<String, String> remap = new HashMap<>();
-        collectRemaps(ast, remap);
+        SourceFacts facts = parsed.bindingFacts(ast);
+        Map<String, String> remap = facts.remap();
 
         // 局部变量类型流：const s = Item.of(x) → s 的后续成员按返回类型检查（两遍传播声明间依赖）
         Map<String, Set<Class<?>>> localTypes = new HashMap<>();
         collectLocalTypes(ast, schema, remap, localTypes);
         collectLocalTypes(ast, schema, remap, localTypes);
 
-        Set<String> known = collectKnownIdentifiers(ast, source, schema, view);
+        Set<String> known = collectKnownIdentifiers(facts, schema, view);
 
         Set<String> reported = new HashSet<>();
         checkBlock(ast, schema, remap, localTypes, known, file, source, reported, view);
@@ -97,12 +97,11 @@ public final class GlobalBindingMemberValidator {
      * 并集只会漏报不会误报）；AST 覆盖不了的声明形态（import/class/catch/解构/for-of）用源级
      * 正则补收——ValParser 是有损解析器，这些语法在 AST 里会碎成无法辨识的片段。
      */
-    private static Set<String> collectKnownIdentifiers(ValNode node, String source,
+    private static Set<String> collectKnownIdentifiers(SourceFacts facts,
                                                         Map<String, ScriptBindingSchema.BindingMembers> schema,
                                                         ScriptBindingSchema.View view) {
         Set<String> known = new HashSet<>(schema.keySet());
-        collectDeclaredNames(node, known);
-        collectSourceLevelNames(source, known);
+        known.addAll(facts.declaredNames());
         Set<String> globals = view == null ? Set.of() : view.knownGlobals();
         if (globals.isEmpty()) {
             // 运行时全局全集未登记：未定义标识符检查无法安全进行，跳过该项（成员检查照常）
@@ -111,6 +110,18 @@ public final class GlobalBindingMemberValidator {
         known.addAll(globals);
         return known;
     }
+
+    /** Pure authored facts; host type flow and known globals remain current-schema work. */
+    static SourceFacts sourceFacts(ValNode.Block ast, String source) {
+        Map<String, String> remap = new HashMap<>();
+        collectRemaps(ast, remap);
+        Set<String> declared = new HashSet<>();
+        collectDeclaredNames(ast, declared);
+        collectSourceLevelNames(source, declared);
+        return new SourceFacts(Map.copyOf(remap), Set.copyOf(declared));
+    }
+
+    record SourceFacts(Map<String, String> remap, Set<String> declaredNames) {}
 
     private static void collectDeclaredNames(ValNode node, Set<String> out) {
         if (node == null) return;

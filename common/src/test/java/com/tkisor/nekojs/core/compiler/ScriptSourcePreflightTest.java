@@ -64,6 +64,43 @@ class ScriptSourcePreflightTest {
     }
 
     @Test
+    void reusableSourceFactsKeepDiagnosticsCurrentAndFileSpecific() {
+        String source = "PreflightFixture.missing(); PreflightFixture.configure(config => config.missing());";
+        try (var cache = new ScriptSourcePreflight.Cache()) {
+            List<Observed> expected = validate(file("cached"), source, true, false);
+            assertFalse(expected.isEmpty());
+            assertEquals(expected, validate(cache, file("cached"), source, false));
+            assertEquals(expected, validate(cache, file("cached"), source, false));
+            String bindingOnly = "PreflightFixture.missing();";
+            assertFalse(validate(cache, file("current"), bindingOnly, false).isEmpty());
+            assertTrue(validate(cache, file("current"), bindingOnly, true).isEmpty());
+            assertFalse(validate(cache, file("current"), bindingOnly, false).isEmpty());
+            assertEquals(validate(file("other"), source, true, false),
+                    validate(cache, file("other"), source, false));
+            assertTrue(validate(cache, file("cached"),
+                    "PreflightFixture.configure(config => config.valid());", false).isEmpty());
+        }
+    }
+
+    @Test
+    void sourceEvictionInvalidationAndCloseNeverSuppressCurrentDiagnostics() {
+        String source = "PreflightFixture.missing();";
+        var cache = new ScriptSourcePreflight.Cache(1, source.length());
+        List<Observed> expected = validate(file("evicted"), source, true, false);
+        assertEquals(expected, validate(cache, file("evicted"), source, false));
+        assertFalse(validate(cache, file("replacement"), source, false).isEmpty());
+        assertEquals(expected, validate(cache, file("evicted"), source, false));
+        cache.invalidate(file("evicted")::equals);
+        assertEquals(expected, validate(cache, file("evicted"), source, false));
+        assertFalse(validate(cache, file("oversized"), source.repeat(2), false).isEmpty());
+        cache.clear();
+        assertTrue(validate(cache, file("evicted"), source, true).isEmpty());
+        cache.close();
+        assertEquals(expected, validate(cache, file("evicted"), source, false));
+        cache.close();
+    }
+
+    @Test
     void sourceChangesAndDifferentFilesRetainTheirOwnDiagnostics() {
         String source = "PreflightFixture.configure(config => config.missing());";
         List<Observed> first = validate(file("first"), source, true, false);
@@ -87,6 +124,16 @@ class ScriptSourcePreflightTest {
     }
 
     private static List<Observed> validate(Path file, String source, boolean combined, boolean allowMissing) {
+        return validate(null, file, source, combined, allowMissing);
+    }
+
+    private static List<Observed> validate(ScriptSourcePreflight.Cache cache, Path file,
+                                           String source, boolean allowMissing) {
+        return validate(cache, file, source, true, allowMissing);
+    }
+
+    private static List<Observed> validate(ScriptSourcePreflight.Cache cache, Path file,
+                                           String source, boolean combined, boolean allowMissing) {
         var diagnostics = new ArrayList<Observed>();
         Set<String> members = allowMissing ? Set.of("configure", "missing") : Set.of("configure");
         var view = new ScriptBindingSchema.View(Map.of("PreflightFixture",
@@ -94,7 +141,9 @@ class ScriptSourcePreflightTest {
                         Set.of(allowMissing ? ExtendedBinding.class : FixtureBinding.class))),
                 Set.of("console"), item -> diagnostics.add(new Observed(
                         item.type(), item.callbackKind(), item.throwable().getMessage())));
-        if (combined) {
+        if (cache != null) {
+            cache.validate(file, source, view);
+        } else if (combined) {
             ScriptSourcePreflight.validate(file, source, view);
         } else {
             GlobalBindingMemberValidator.validate(file, source, view);

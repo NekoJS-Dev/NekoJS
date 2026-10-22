@@ -137,7 +137,7 @@ public final class NekoModulePipeline {
         // JS（# 注释、类型注解、def/class 会被 JS-only 的 ValParser 碎成伪调用 → 'Unknown
         // identifier' 系统性误报），改为在编译后对产物 JS 跑——那才是运行时真正执行的代码。
         if (config.scriptMemberValidation() && rawPreflightApplies(extension)) {
-            ScriptSourcePreflight.validate(file, rawSource, schemaView);
+            validateSource(file, rawSource, schemaView, transforms);
         }
         // Only transformation is reusable. Authorization and current-schema checks remain live.
         NekoPreparedModule prepared = transforms == null
@@ -145,10 +145,16 @@ public final class NekoModulePipeline {
                 : transforms.prepare(file, rawSource, binding,
                         () -> prepareModule(file, rawSource, extension, binding));
         if (config.scriptMemberValidation() && !rawPreflightApplies(extension)) {
-            ScriptSourcePreflight.validate(file, prepared.code(), schemaView);
+            validateSource(file, prepared.code(), schemaView, transforms);
         }
         ensureBindingCurrent(file, binding);
         return prepared;
+    }
+
+    private static void validateSource(Path file, String source, ScriptBindingSchema.View view,
+                                       BuiltinModuleTransformCache transforms) {
+        if (transforms == null) ScriptSourcePreflight.validate(file, source, view);
+        else transforms.validate(file, source, view);
     }
 
     /** Language-frontend diagnostics that carry their authored position. */

@@ -1,7 +1,6 @@
 package com.tkisor.nekojs.script;
 
-import com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator;
-import com.tkisor.nekojs.api.event.ScriptBindingSchema;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 import com.tkisor.nekojs.core.SyncEvalWatchdog;
 import com.tkisor.nekojs.core.config.SandboxConfig;
@@ -45,7 +44,7 @@ public final class ScriptExecutor {
     }
 
     public void executeEntry(Context ctx, ScriptContainer script, NekoNodeRuntime nodeRuntime,
-                             ScriptBindingSchema.View schemaView) {
+                             NekoModulePipelineCache moduleSession) {
         // 票 07 墙钟守卫：语句钩子看不见的空循环（while(true){}）只能靠宿主墙钟 +
         // Context.interrupt 打断。只覆盖本次同步求值段，结束即 disarm，长驻空闲
         // 环境不受影响；触发后走 onContextKilled 的 generation 记账（candidate 丢弃 /
@@ -63,7 +62,7 @@ public final class ScriptExecutor {
                 errorTracker.clear(ctx, script.id);
                 errorTracker.clearByScriptPath(ctx, script.type, relativePath.toString().replace("\\", "/"));
 
-                    validateGlobalBindings(ctx, script, schemaView);
+                validateGlobalBindings(ctx, script, moduleSession);
 
                 JavaClassLoadTelemetry.enter(script.type, script.id.toString());
                 ScriptContextRegistry.switchCurrentScriptId(ctx, script.id.toString());
@@ -123,7 +122,7 @@ public final class ScriptExecutor {
      * 时仍准确反映当前脚本状态 —— 编译时校验（{@code NekoModulePipeline}）受静态缓存限制，这里补足入口脚本。
      */
     private void validateGlobalBindings(Context context, ScriptContainer script,
-                                        ScriptBindingSchema.View schemaView) {
+                                        NekoModulePipelineCache moduleSession) {
         String source;
         try {
             source = Files.readString(script.path);
@@ -132,7 +131,7 @@ public final class ScriptExecutor {
             return;
         }
         try {
-            GlobalBindingMemberValidator.validate(script.path, source, schemaView);
+            moduleSession.validateEntryBindings(script.path, source);
         } catch (Throwable t) {
             // 校验只报告错误，绝不阻塞脚本执行；但校验器自身崩了不能无声吞掉——
             // 进错误面板（recordCallbackError 含里程碑节流），否则该类型的成员校验

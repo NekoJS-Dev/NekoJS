@@ -252,6 +252,13 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         }
     }
 
+    /** Recheck an entry against this generation's schema using only reusable source facts. */
+    public void validateEntryBindings(Path path, String source) {
+        ensureOpen();
+        rootOwner().ensureOpen();
+        builtinTransforms.validateBindings(path, source, bindingSchemaView);
+    }
+
     /**
      * Prepare a JSON source through the same trust boundary as executable modules.
      * JSON has no language compiler, but it is still a resolved module source and must

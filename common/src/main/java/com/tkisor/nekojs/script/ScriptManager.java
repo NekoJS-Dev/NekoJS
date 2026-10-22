@@ -868,7 +868,7 @@ public final class ScriptManager implements AutoCloseable {
                 // 下一个脚本能在自动重建的环境中继续执行，而不是全军覆没。context 与
                 // nodeRuntime 从同一次快照取出，避免读到错配对。
                 RuntimeEnvironment env = getOrCreateEnvironment();
-                scriptExecutor.executeEntry(env.context(), script, env.nodeRuntime(), env.moduleSession().bindingSchemaView());
+                scriptExecutor.executeEntry(env.context(), script, env.nodeRuntime(), env.moduleSession());
             }
             recordExecution(script);
         }
@@ -1352,7 +1352,7 @@ public final class ScriptManager implements AutoCloseable {
                 }
                 boolean killedBefore = this.candidateKilled;
                 scriptExecutor.executeEntry(context, script, nodeRuntime,
-                        this.candidateEnvironment.moduleSession().bindingSchemaView());
+                        this.candidateEnvironment.moduleSession());
                 if (!killedBefore && this.candidateKilled && this.candidateKillScript == null) {
                     this.candidateKillScript = script;
                 }
@@ -1555,7 +1555,7 @@ public final class ScriptManager implements AutoCloseable {
             reportPreloadFailure(script);
             if (script.shouldRun()) {
                 scriptExecutor.executeEntry(ctx, script, this.runtime.nodeRuntime(),
-                        this.runtime.moduleSession().bindingSchemaView());
+                        this.runtime.moduleSession());
             }
             recordExecution(script);
         }
