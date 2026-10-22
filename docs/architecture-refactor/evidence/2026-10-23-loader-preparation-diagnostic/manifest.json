@@ -1,0 +1,309 @@
+{
+  "sourceRevision": "7bea6d6dcc9d0a70be6886f7ee1c79af9a9dae75",
+  "diagnosticOnly": true,
+  "archiveSha256": "fb13c3355e62af467a50d0158d07f2acf680fe99e7803f7486659d1d0d7deddc",
+  "entries": {
+    "7bea6d6d-loader-spans/ReloadStage.java": {
+      "size": 942,
+      "sha256": "44e5c596028bc86844217f59993cca30fa857b31cc8963b379671cef15a51a99"
+    },
+    "7bea6d6d-loader-spans/analysis-0-stderr.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "7bea6d6d-loader-spans/analysis-0.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "7bea6d6d-loader-spans/analysis-1-stderr.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "7bea6d6d-loader-spans/analysis-1.log": {
+      "size": 44,
+      "sha256": "382ac71871fc457968331307ddf89ffd90cfef1664987b5a7522f373046e477a"
+    },
+    "7bea6d6d-loader-spans/analysis.json": {
+      "size": 226201,
+      "sha256": "b29ef65094585887b5aeed085dbbc456df55554896431b92fbee2bdcce64fd9b"
+    },
+    "7bea6d6d-loader-spans/analyze.py": {
+      "size": 1538,
+      "sha256": "e6d530936a3ef454cb7e96f7a7c6dca5a4553d6b5d6d24b068f28fcd24ce15f0"
+    },
+    "7bea6d6d-loader-spans/binding.json": {
+      "size": 2088,
+      "sha256": "469db9e35a0ade59c0ee12a704200e4798465a7bd0b1dbcec638f6484d7b6cb8"
+    },
+    "7bea6d6d-loader-spans/controller-stderr.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "7bea6d6d-loader-spans/controller.log": {
+      "size": 192,
+      "sha256": "e08a87aad5d277206e60c49348726a8121a83eee64f790751d1d30ca5c71c344"
+    },
+    "7bea6d6d-loader-spans/diagnostic.ps1": {
+      "size": 6925,
+      "sha256": "1dea566f6fa7a312eab07892c43a4a80cb0e8e27974f41138898723c20dbbd0d"
+    },
+    "7bea6d6d-loader-spans/exit.json": {
+      "size": 57,
+      "sha256": "0657c3b532bae6f0920d4bffa0da408303862fcd3012f9b81d7a307c478fb3d2"
+    },
+    "7bea6d6d-loader-spans/instrumentation.patch": {
+      "size": 11373,
+      "sha256": "fe017b8a72f7e55edeca127c78c7187e6065cd6becfc9806c905b57bf19e0e68"
+    },
+    "7bea6d6d-loader-spans/jfr-sha256.json": {
+      "size": 96,
+      "sha256": "84cf04915cac0f0eb7a88c335bf356acd4705301ec31d236480d495fd5e5b324"
+    },
+    "7bea6d6d-loader-spans/originals/common/src/main/java/com/tkisor/nekojs/core/module/NekoScriptModuleLoaderHost.java": {
+      "size": 51905,
+      "sha256": "55d8c145f8e78675ae737194c82cfb4f371862a9bce99305eac81e5b352e3833"
+    },
+    "7bea6d6d-loader-spans/originals/common/src/main/java/com/tkisor/nekojs/core/node/NekoNodeModuleInstaller.java": {
+      "size": 7192,
+      "sha256": "3ce7c14a3bd5ced39c8bac6543d36a08095b23f7af71c0495aeddb08c63dc717"
+    },
+    "7bea6d6d-loader-spans/originals/common/src/main/java/com/tkisor/nekojs/script/ScriptExecutor.java": {
+      "size": 10173,
+      "sha256": "6af4ee28a5c69fee6be2e30285095d2fed8c5d4823152514c1e4cfe1333ddaae"
+    },
+    "7bea6d6d-loader-spans/originals/common/src/main/java/com/tkisor/nekojs/script/ScriptManager.java": {
+      "size": 106210,
+      "sha256": "b27a2fd747bec40dd86071b05a5d5cee0d26ce282ca8cd6ededbb4202883c896"
+    },
+    "7bea6d6d-loader-spans/originals/src/main/java/com/tkisor/nekojs/command/NekoJSCommands.java": {
+      "size": 43610,
+      "sha256": "89113fc13fedab6013f83506f010c666ef3fd1b85b9866501e4da66eeed47ee4"
+    },
+    "7bea6d6d-loader-spans/originals/src/main/java/com/tkisor/nekojs/mixin/RecipeManagerMixin.java": {
+      "size": 9520,
+      "sha256": "30be062e37d523fdf498c7bd95ba36363d527bb0371ff7fe4f82567adeb0dff9"
+    },
+    "7bea6d6d-loader-spans/profile.init.gradle": {
+      "size": 466,
+      "sha256": "26ac91fc6df36d3d7e39adaf82a1d33fab5645c2cc26f853684cb60d65fbf302"
+    },
+    "7bea6d6d-loader-spans/reload-only-summary.json": {
+      "size": 3857,
+      "sha256": "c673f29b2afa6af60defbb245618967993834e110376abe72e8c0548e1022c5c"
+    },
+    "7bea6d6d-loader-spans/restoration.json": {
+      "size": 32,
+      "sha256": "03619fef43ba8b53b1ef9fc7b8565004cbaa9bb62caae67085b0fc7d3229f30d"
+    },
+    "7bea6d6d-loader-spans/run.py": {
+      "size": 1089,
+      "sha256": "bb587737522da280a86564076709fa14aadbc9318456194957042b465ef7c544"
+    },
+    "7bea6d6d-loader-spans/session/env-snapshot.txt": {
+      "size": 205,
+      "sha256": "59cc485fb5e8401296c5b2ebf21b23f8011ba87a7ce38da5b5943235effdc010"
+    },
+    "7bea6d6d-loader-spans/session/observations.json": {
+      "size": 1766,
+      "sha256": "bc6d2e1630f1473063cc04366ad0212abf878a006c4022c803c7f4f6710e27b1"
+    },
+    "7bea6d6d-loader-spans/session/owner.json": {
+      "size": 52,
+      "sha256": "83662b6b69f2ef8f5e45bcdee37e81b88f2fd798d72f825863e8d97e39401ffc"
+    },
+    "7bea6d6d-loader-spans/session/session.json": {
+      "size": 286,
+      "sha256": "6d8c75fd435e3eee84f015525cff0c2ef2f300dba878fe5aaa796389fbcd9f1c"
+    },
+    "7bea6d6d-loader-spans/session/stages-stderr.log": {
+      "size": 4250,
+      "sha256": "b049d6a65a06723ad55904bdb29f4b3de93a8e06a7b2ecf586f522c1d6462b58"
+    },
+    "7bea6d6d-loader-spans/session/stages-stdout.log": {
+      "size": 4435390,
+      "sha256": "2325e22de9d1d69142400bef4b58dedb063d7ead565e3a486d9b84e657fb315a"
+    },
+    "7bea6d6d-loader-spans/stage-summary.json": {
+      "size": 12234,
+      "sha256": "36251f9c4ebb3f1130695a26d9ac99013d777cfac012cde4eaa2e545f08bef77"
+    },
+    "7bea6d6d-preparation-spans/ReloadStage.java": {
+      "size": 963,
+      "sha256": "cd5b8f1fcef647407a9207315d0b79bd21e1ee68e1c078bc54de8127d8966f72"
+    },
+    "7bea6d6d-preparation-spans/analysis-0-stderr.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "7bea6d6d-preparation-spans/analysis-0.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "7bea6d6d-preparation-spans/analysis-1-stderr.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "7bea6d6d-preparation-spans/analysis-1.log": {
+      "size": 44,
+      "sha256": "4ff70046a2a6bc681047425f0b20d1890d4be0295f1bc097492917facd376e99"
+    },
+    "7bea6d6d-preparation-spans/analysis-controller.log": {
+      "size": 23376,
+      "sha256": "10c45027f185734886c4f5c4b18abef9c14cd64da3cba22fb2ca93420d5a1b04"
+    },
+    "7bea6d6d-preparation-spans/analysis.json": {
+      "size": 281538,
+      "sha256": "295e0c5cf13cea3e5597c4e0875643598a0244201a02446a60aa066242337a43"
+    },
+    "7bea6d6d-preparation-spans/analyze.py": {
+      "size": 1538,
+      "sha256": "e6d530936a3ef454cb7e96f7a7c6dca5a4553d6b5d6d24b068f28fcd24ce15f0"
+    },
+    "7bea6d6d-preparation-spans/binding.json": {
+      "size": 2390,
+      "sha256": "70045805996603fa2b911358a541a5bd2b06a9b6c014ff608d83f9fddd3b7f3a"
+    },
+    "7bea6d6d-preparation-spans/controller-stderr.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "7bea6d6d-preparation-spans/controller.log": {
+      "size": 193,
+      "sha256": "1322d1e8dffd42128cd6590bf884cd273966e473e35165950cea9ea5299cdd2c"
+    },
+    "7bea6d6d-preparation-spans/diagnostic.ps1": {
+      "size": 6935,
+      "sha256": "a87af97d57b86ead3bdc9a2709f7725f0c543d2082720c936160742b03cd9fae"
+    },
+    "7bea6d6d-preparation-spans/exit.json": {
+      "size": 56,
+      "sha256": "ab4064957ba18008ab6ece1e7a4f9d480e0a10537002c09e5b3d1c7c1594cd4b"
+    },
+    "7bea6d6d-preparation-spans/instrumentation.patch": {
+      "size": 14196,
+      "sha256": "ec8092bc40164c42a0c59ea78d3bc3f8897dbea821bb58c245ad681de811c4e5"
+    },
+    "7bea6d6d-preparation-spans/jfr-sha256.json": {
+      "size": 96,
+      "sha256": "ece60e4620f192f2fcf8e511ca47272db70ea7ce009f014e45b59af38cbb2379"
+    },
+    "7bea6d6d-preparation-spans/originals/common/src/main/java/com/tkisor/nekojs/core/module/NekoModulePipelineCache.java": {
+      "size": 38426,
+      "sha256": "566084e1d42f6e566ba4ebd3b31515042802a8dbc0ab87251c5dfa61c480d0d0"
+    },
+    "7bea6d6d-preparation-spans/originals/common/src/main/java/com/tkisor/nekojs/core/module/NekoScriptModuleLoaderHost.java": {
+      "size": 51905,
+      "sha256": "55d8c145f8e78675ae737194c82cfb4f371862a9bce99305eac81e5b352e3833"
+    },
+    "7bea6d6d-preparation-spans/originals/common/src/main/java/com/tkisor/nekojs/core/node/NekoNodeModuleInstaller.java": {
+      "size": 7192,
+      "sha256": "3ce7c14a3bd5ced39c8bac6543d36a08095b23f7af71c0495aeddb08c63dc717"
+    },
+    "7bea6d6d-preparation-spans/originals/common/src/main/java/com/tkisor/nekojs/script/ScriptExecutor.java": {
+      "size": 10173,
+      "sha256": "6af4ee28a5c69fee6be2e30285095d2fed8c5d4823152514c1e4cfe1333ddaae"
+    },
+    "7bea6d6d-preparation-spans/originals/common/src/main/java/com/tkisor/nekojs/script/ScriptManager.java": {
+      "size": 106210,
+      "sha256": "b27a2fd747bec40dd86071b05a5d5cee0d26ce282ca8cd6ededbb4202883c896"
+    },
+    "7bea6d6d-preparation-spans/originals/src/main/java/com/tkisor/nekojs/command/NekoJSCommands.java": {
+      "size": 43610,
+      "sha256": "89113fc13fedab6013f83506f010c666ef3fd1b85b9866501e4da66eeed47ee4"
+    },
+    "7bea6d6d-preparation-spans/originals/src/main/java/com/tkisor/nekojs/mixin/RecipeManagerMixin.java": {
+      "size": 9520,
+      "sha256": "30be062e37d523fdf498c7bd95ba36363d527bb0371ff7fe4f82567adeb0dff9"
+    },
+    "7bea6d6d-preparation-spans/profile.init.gradle": {
+      "size": 471,
+      "sha256": "cbab5bb0c68de7d9840634bf77e2b1491fe2a440f7b95cc129e6285112a03a18"
+    },
+    "7bea6d6d-preparation-spans/reload-only-summary.json": {
+      "size": 4240,
+      "sha256": "83e81c21876e98b4d25a7cca6f326dadc08cd20e738424d27f3a40bfb0c0d638"
+    },
+    "7bea6d6d-preparation-spans/restoration.json": {
+      "size": 32,
+      "sha256": "03619fef43ba8b53b1ef9fc7b8565004cbaa9bb62caae67085b0fc7d3229f30d"
+    },
+    "7bea6d6d-preparation-spans/restored-build.log": {
+      "size": 3091,
+      "sha256": "83f8d0bd3f88cd54fa25a0558f62faa85cb183752504e72db412636a9b54e410"
+    },
+    "7bea6d6d-preparation-spans/restored-candidate.json": {
+      "size": 198,
+      "sha256": "f5275c406de622cc711ab730ca9929b3f1ae957d72722a787c97912725d6f536"
+    },
+    "7bea6d6d-preparation-spans/run.py": {
+      "size": 1089,
+      "sha256": "bb587737522da280a86564076709fa14aadbc9318456194957042b465ef7c544"
+    },
+    "7bea6d6d-preparation-spans/session/env-snapshot.txt": {
+      "size": 205,
+      "sha256": "5df7ecfe7eed48bbad39e3b63f6ca34d332fcdc37ec22e50c31113c942f0b7d7"
+    },
+    "7bea6d6d-preparation-spans/session/observations.json": {
+      "size": 1754,
+      "sha256": "ac33ab186599bcdcd459ae17e6abaebd1a6d5232fe56dc91bc58339692810524"
+    },
+    "7bea6d6d-preparation-spans/session/owner.json": {
+      "size": 53,
+      "sha256": "942b41608e3e9a7a0f74de412ab9dd9adc7d682a69c960862181780a47039ae3"
+    },
+    "7bea6d6d-preparation-spans/session/session.json": {
+      "size": 286,
+      "sha256": "cfc67fce8f94177e41760c19f231e1ccfe42c070582ce6f472aace53142c0d75"
+    },
+    "7bea6d6d-preparation-spans/session/stages-stderr.log": {
+      "size": 4250,
+      "sha256": "da9c1ae8351db0e9f0051d60002ad9e35486bdb2e4046e22a2483244f47d0f7c"
+    },
+    "7bea6d6d-preparation-spans/session/stages-stdout.log": {
+      "size": 4435379,
+      "sha256": "f44d6da9edc4436444fdd346f9aff1ba2b766a69e9b96f2f38bb4b893d50df0b"
+    },
+    "7bea6d6d-preparation-spans/stage-summary.json": {
+      "size": 15110,
+      "sha256": "7229a3dd014af266e032c20857341e0d98c68a697602b14b47972ca008bbd3bd"
+    },
+    "tools/ReloadStageAnalysis.java": {
+      "size": 4542,
+      "sha256": "d66a7dcd876d460eccf8668ef083fad3d65c4fa0f4488968755062f60645e3f0"
+    },
+    "tools/prepare-7bea6d6d-loader-spans.py": {
+      "size": 8006,
+      "sha256": "daaab716b02d9ec39fadec3d2edf999d7be82500fe15ab27ec61e36eef7ff4d7"
+    },
+    "tools/seal-7bea6d6d-loader-diagnostic.py": {
+      "size": 4949,
+      "sha256": "cd40aaef6c1ec5a4e29af89b3b025fcf1069d6247de2c6ac4a3ea7f91210b788"
+    }
+  },
+  "excluded": [
+    "Raw JFR",
+    "server.properties",
+    "world",
+    "JARs and compiled helpers",
+    "credentials"
+  ],
+  "formalPerformanceStillFailed": true,
+  "restoration": {
+    "classCount": 1640,
+    "allClassesRestored": true,
+    "jarSha256": "d08a8800aca7dfd4374550eeb412c2d1bdfe201e4cf3812542c0aac20c5367c2",
+    "jarByteIdentical": true,
+    "checkoutClean": true
+  },
+  "redactedOriginalSha256": {
+    "7bea6d6d-loader-spans/diagnostic.ps1": "af3d0ad2c03f67862b6c6d4ad6665da29b8a28efa4a6553cb0186c0266c24a2f",
+    "7bea6d6d-loader-spans/session/env-snapshot.txt": "8ead64976fef472120ec9816ffb15cef79c82ba0eae8ec3718ab93941a9db047",
+    "7bea6d6d-loader-spans/session/stages-stderr.log": "be0c4cc5268c8c240c09ef42beebaacffa2d5fb754e9634de5c0b239a3017fb9",
+    "7bea6d6d-loader-spans/session/stages-stdout.log": "ad83384445e30972466d590cc531c192af2c60108deb521fbfdbf3c6656e32d6",
+    "7bea6d6d-preparation-spans/diagnostic.ps1": "d1bba0fd711be700fe4aa9b63ba71d01e3d21b710c8a6b94fd5b57789f6803e0",
+    "7bea6d6d-preparation-spans/restored-build.log": "8f4bb2795aa176ffcf82398a56faf2fc2d1d011c21cecd99e1d516e37179c54a",
+    "7bea6d6d-preparation-spans/session/env-snapshot.txt": "4520cbefd2bc1091d8c859a020b4f4c44a603dde705b470f7469153a2a8c3bc1",
+    "7bea6d6d-preparation-spans/session/stages-stderr.log": "05f5810663a9d1ad826e0febf2ca23e6a37205afe4079a0c3b154583ef3c7380",
+    "7bea6d6d-preparation-spans/session/stages-stdout.log": "5c8d1727d2b485a33d6b3fd942f99dc8505960ce150651e9efbd75a86d143531"
+  }
+}
