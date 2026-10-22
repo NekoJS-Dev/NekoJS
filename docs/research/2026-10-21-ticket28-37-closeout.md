@@ -1,5 +1,7 @@
 # 票 28 / 37 后续工程收尾
 
+2026-10-23 后续局部修复 `1f877b0f`：[实际事件签名依赖](../architecture-refactor/evidence/2026-10-23-event-dependencies/README.md)交给现有 TS 闭包，保持 exclude/hide，不收集未输出的 dispatch key。两项回归先红后绿；最终 common/check、隔离及 guard 通过（2416 tests / 4 skipped / 零失败），完整定向 `test:probe-types` 通过；两轴复审最终零未解决项。新源码尚未重新绑定五节点完整安装 IDE、正式性能或最终客户端/TCP/回退，票仍 in-progress。[加载细分诊断](../architecture-refactor/evidence/2026-10-23-loader-preparation-diagnostic/README.md)完成两轮十次 COMMIT 与正常停止，未据小占比缓存或改变初始化次序换取通过。
+
 2026-10-23 当前生产源码 `7bea6d6d` 的[完整新候选检查](../architecture-refactor/evidence/2026-10-23-current-candidate-checks/README.md)已完成：common/check、处理器、guard 与五节点构建通过，5070 tests / 271 skipped / 零失败；五个新安装服务端实际运行全部通过并正常退出 0，包含 26.1.2 实体查询及重载前后效果。测试服显式禁用空服暂停，旧候选首次失败仍未确诊。全部 1609 个新 stub 的默认 Pyright 通过；十入口新生成声明的完整严格 TSC 仍为 5867 条、无崩溃，继续 FAIL。[确切同一 26.1.2 JAR 的正式性能](../architecture-refactor/evidence/2026-10-22-source-facts-performance/README.md)仍为重载 340.0 / 292.8 ms 失败、启动 33486.6 ms 通过。后续最终候选的客户端/TCP/分离回退和真实维护者结论保持各自范围，未因本轮构建及服务器成功而关闭。
 
 2026-10-22 阶段候选 `4405b0b0`：全量 5067 tests / 271 skipped / 0 failures or errors；[统一三节点安装客户端](../architecture-refactor/evidence/2026-10-22-unified-client-native/README.md)完成 30 图及六次正常退出；[制品/世界数据分离回退](../architecture-refactor/evidence/2026-10-22-candidate-rollback/README.md)完成四阶段。五节点安装首轮仍有 26.1.2 实体查询未过，保持 NOT GREEN 并单独运行控制实验；完整 TSC 仍失败，性能和维护者结论未因此通过。

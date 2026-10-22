@@ -1,5 +1,7 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-23 后续局部修复 `1f877b0f`：[实际事件签名依赖](../evidence/2026-10-23-event-dependencies/README.md)交给现有 TS 闭包，保持 exclude/hide，不收集未输出的 dispatch key。两项回归先红后绿；最终 common/check、隔离及 guard 通过（2416 tests / 4 skipped / 零失败），完整定向 `test:probe-types` 通过；两轴复审最终零未解决项。新源码尚未重新绑定五节点完整安装 IDE、正式性能或最终客户端/TCP/回退，票仍 in-progress。[加载细分诊断](../evidence/2026-10-23-loader-preparation-diagnostic/README.md)完成两轮十次 COMMIT 与正常停止，未据小占比缓存或改变初始化次序换取通过。
+
 2026-10-23 当前生产源码 `7bea6d6d` 的[完整新候选检查](../evidence/2026-10-23-current-candidate-checks/README.md)已完成：common/check、处理器、guard 与五节点构建通过，5070 tests / 271 skipped / 零失败；五个新安装服务端实际运行全部通过并正常退出 0，包含 26.1.2 实体查询及重载前后效果。测试服显式禁用空服暂停，旧候选首次失败仍未确诊。全部 1609 个新 stub 的默认 Pyright 通过；十入口新生成声明的完整严格 TSC 仍为 5867 条、无崩溃，继续 FAIL。[确切同一 26.1.2 JAR 的正式性能](../evidence/2026-10-22-source-facts-performance/README.md)仍为重载 340.0 / 292.8 ms 失败、启动 33486.6 ms 通过。后续最终候选的客户端/TCP/分离回退和真实维护者结论保持各自范围，未因本轮构建及服务器成功而关闭。
 
 2026-10-22 后续：[`4405b0b0` 三节点安装客户端](../evidence/2026-10-22-unified-client-native/README.md)完成 30 图和六次正常退出；[制品/数据分离回退](../evidence/2026-10-22-candidate-rollback/README.md)完成已知 `d91ca974 → 4405b0b0 → d91ca974` 与停服备份恢复四阶段、四次正常退出。换旧 JAR 保留推进数据，恢复备份才回到旧值，范围仅该已知候选对和完整世界夹具。五节点首轮安装运行四过一未过（26.1.2 召唤后实体查询未成功），该失败与后续控制实验分别保留；不能用正常退出或构建通过覆盖验收失败。最新默认完整 TSC 仍失败 5867 条；Python 默认检查仍通过。性能与最终维护者结论继续开放。

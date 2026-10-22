@@ -18,7 +18,7 @@ Luna xhigh 仅只读调查了 `NekoNodeModuleInstaller`、manifest、模块实�
 
 局部修复将实际引用交给既有 TypeScript dependency closure；当前配置的 exclude/hide 保持生效。被排除的类不生成声明，依赖报告明确不完整，不用空声明或 any 遮盖。复审另指出：未启用 dispatch 的 key、脚本自定义事件未输出的 key 不应成为依赖，须与实际签名条件一致。
 
-此变更不移动交易事件类、不绕过默认 core 排除，也不宣称完整安装声明转绿。运行时、公开成员和 wire 均不改变。最终验证及提交见后续交接记录。
+此变更不移动交易事件类、不绕过默认 core 排除，也不宣称完整安装声明转绿。运行时、公开成员和 wire 均不改变。修复已提交为 `1f877b0f`，[验收记录](../architecture-refactor/evidence/2026-10-23-event-dependencies/README.md)包含两项先红后绿回归、2416 项 common 测试、严格定向消费及复审结论；完整安装 IDE 与正式性能未据此改判。
 
 ## Optional 捕获与协变
 
