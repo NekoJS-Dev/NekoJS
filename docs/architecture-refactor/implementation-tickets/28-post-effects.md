@@ -1,5 +1,7 @@
 # 28: PostEffects 声明事件与运行 binding 分离
 
+2026-10-22 安装补验：[26.2 冻结生产 JAR 七阶段](../evidence/2026-10-22-posteffects-262-installed/README.md)通过，包括三次原生 F3+T 调度、失败候选保留与恢复，七张原图逐张复核及 ROI 测量通过，两个进程正常退出 0；安装来源与全部 1635 个 packaged class 摘要绑定。独立开发启动器只将 helper 作为 source mod，不冒充官方安装器或物理键盘/显示器验收。legacy 独立安装、最终统一候选与整票维护者结论仍开放。
+
 **What to build:** 客户端脚本通过现有 ClientEvents 的资源/reload 子事件声明 PostEffects register/unregister，候选定义在 preflight 与资源生成完成后按 generation 提交；set、clear、toggle、current 继续作为运行时 binding/Adapter。资源 reload、失败保留、旧 generation 清理、声明 parity 与平台能力从调用者 Interface 到节点 Adapter 可验证。
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
