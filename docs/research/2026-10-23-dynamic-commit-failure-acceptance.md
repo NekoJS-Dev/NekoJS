@@ -25,3 +25,5 @@
 26.1.2 的第三次真实 TCP 尝试已执行前四阶段并发现断线崩溃，详见[失败材料](../architecture-refactor/evidence/2026-10-23-dynamic-commit-red/README.md)。客户端 COMMIT 和在线 STATE_SYNC 都实际注册失败，服务器仍 COMMITTED、B 正常、A 保留旧条目；随后 kick 时，失败构造留下的两个 intrusive holder 使 NeoForge 重冻注册表崩溃。场景保持 NOT GREEN，三项恢复阶段及 26.2.0 尚待执行。
 
 共享修复点为 `RegistrySurgery.withUnfrozenAndHolders`：保留已有 pending identity，失败时只删除本次新增的未绑定 identity，不重新加入已注册消费的旧 holder。先补真实 `MappedRegistry` 回归，再复验原七阶段，不改变故障注入点回避问题。v1/v2 的夹具启动和观察器失败也保留；没有据计划或四阶段通过关闭票。重载性能、完整严格 TSC、最终客户端/分离回退和维护者结论仍保持各自门禁。
+
+共享修复现已提交 `b47734c6`，[四节点 16 项真实注册表回归与先红后绿记录](../architecture-refactor/evidence/2026-10-23-intrusive-holder-fix/README.md)已封存，guard 零警告，两轴只读审查无剩余项。首次 Fabric 测试的重复 tag 绑定前提已纠正并留证。新源码四节点完整 build 与原故障点的七阶段 TCP 复验另行推进，不把组件检查写成重连通过。

@@ -1,0 +1,85 @@
+{
+  "archiveSha256": "a1aea4c63bce007399a5f24e5b8cada369e5b8d0d238e6740ed9bc44692b89c5",
+  "entries": {
+    "code.patch": {
+      "size": 6866,
+      "sha256": "42b3d133dcc1ba638e07716e5dc8026056e7550571f1c09bd065b514670b1331"
+    },
+    "focused/26.1.2-fabric.xml": {
+      "size": 1047,
+      "sha256": "1f86da118cc708186cb7a983d340014703b2c6790d89bb1c8ba8bfc31de9244f"
+    },
+    "focused/26.1.2.xml": {
+      "size": 1047,
+      "sha256": "aaaed29ed3872545cd386442ced9215ec9c805ea7719061c31bcf92be59b271f"
+    },
+    "focused/26.2.0-fabric.xml": {
+      "size": 1047,
+      "sha256": "04c2716e4a0c6e1ceb5a0a20f1038926c06657089baa731d1d97b6a1c2bfc50c"
+    },
+    "focused/26.2.0.xml": {
+      "size": 1046,
+      "sha256": "75972e408509a0e3cf1ddee6fa5712aa0d6f9adde16a847916c2e838cff64df0"
+    },
+    "focused/summary.json": {
+      "size": 395,
+      "sha256": "6165fd59ac1cc92ffcd8ecbab1f0320646e73484e8f92858c31425bac3ce2a12"
+    },
+    "run/freeze-intrusive-holder-focused.py": {
+      "size": 930,
+      "sha256": "24ce5721091c8545b0fd1a054dc2712d13d713bcf1c6f5f84b199a8b5a5b8f10"
+    },
+    "run/intrusive-holder-261-first-green.xml": {
+      "size": 1045,
+      "sha256": "07e284dde448cee78b090d1269fb0d03e56cde495c7a74f7ac425cd35cfb1f08"
+    },
+    "run/intrusive-holder-262-first-green.xml": {
+      "size": 1047,
+      "sha256": "cee23c528f051b8a86020eccc01a29f6dc49adfac69bccb7416a82d8b6d3ec7a"
+    },
+    "run/intrusive-holder-fabric-first-failure.xml": {
+      "size": 4479,
+      "sha256": "3bdcd0ad3a5ad7818ecee83bd95857a6cd4e685983a6f482d46bf67ea1652a3b"
+    },
+    "run/intrusive-holder-final-focused.log": {
+      "size": 5134,
+      "sha256": "82fbbd1c25f3600a2c416610cebefc6188b4bcfaeaa39bc0aebe4a63a0d91859"
+    },
+    "run/intrusive-holder-green.log": {
+      "size": 10559,
+      "sha256": "fa97953a5f6575919f96c59980346fee5882750ffbd38b72ce9419117fa20c0c"
+    },
+    "run/intrusive-holder-red.log": {
+      "size": 4349,
+      "sha256": "0482c0c934c02685b66760724ca42fd034a037da8f19f5e51945dbe850f84c9b"
+    },
+    "run/intrusive-holder-red.xml": {
+      "size": 4212,
+      "sha256": "0d2f3e4b34a0a2d3d6805e04b81abac3faa7e822fd5249ca46b9c0ea24bdaa60"
+    },
+    "run/intrusive-holder-refreeze-red.log": {
+      "size": 4636,
+      "sha256": "786f0618fbb561ed0ceb7cd58f91dd3aadef42d360ebb797cd0739e90dc2dc24"
+    },
+    "run/intrusive-holder-refreeze-red.xml": {
+      "size": 6760,
+      "sha256": "cb3a94800b47aa49490d6539b78f927f153797172e9fdb68bbb3f57b389b0a23"
+    },
+    "run/seal-intrusive-holder-fix.py": {
+      "size": 2972,
+      "sha256": "3f108e26d5d87a19939c90a72cce22670d42f93b07bd6980d6a7aa60ba178731"
+    },
+    "sources/src/main/java/com/tkisor/nekojs/dynamic/RegistrySurgery.java": {
+      "size": 10250,
+      "sha256": "2f591d9499147b7242826fc757cd008043c9ab805287ba152444be07fd98ef9e"
+    },
+    "sources/src/test/java/com/tkisor/nekojs/dynamic/DynamicIntrusiveHolderRollbackTest.java": {
+      "size": 4485,
+      "sha256": "5509cbca16fc2606aea214ad626fd4d1c0b4fa6f50bb48513022f7cd2101c0da"
+    },
+    "summary.json": {
+      "size": 968,
+      "sha256": "10dbd5e08289d024d372c44a8d5a0e560b29d82ff924c9f56fe50521577c156e"
+    }
+  }
+}

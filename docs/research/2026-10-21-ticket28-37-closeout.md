@@ -1,5 +1,7 @@
 # 票 28 / 37 后续工程收尾
 
+2026-10-23 生产修复 `b47734c6` 已提交：[失败注册的 intrusive holder 清理](../architecture-refactor/evidence/2026-10-23-intrusive-holder-fix/README.md)在共享边界保留旧 pending、清理本次新增未绑定 identity，保留 null/frozen 与异常归因。旧实现真实 refreeze 4 中 3 fail；最终四现代节点 16 回归全过，guard 零警告，两轴审查无剩余项。新制品完整 build 正在运行，原故障点的 TCP 重连恢复仍需复验；票保持 in-progress。
+
 2026-10-23 事件依赖版本 `1f877b0f` 的[五节点新安装与完整 IDE](../architecture-refactor/evidence/2026-10-23-event-installed/README.md)已封存：五服务器全部行为 PASS、正常退出 0，1609 个新 stub 的默认 Pyright 全通过；十入口完整严格 TSC 为 5857（旧版 5867），均 exit2、无崩溃，继续 FAIL。此批制品在 holder 修复前独立冻结，不冒充随后新源码的最终统一候选。
 
 2026-10-23 真实 TCP 新发现：`1f877b0f` 的 26.1.2 在 COMMIT 后单客户端物理激活失败、在线 STATE_SYNC 再次失败时保留旧条目；但随后断线因两个未清理的 intrusive holder 崩溃。[失败证据](../architecture-refactor/evidence/2026-10-23-dynamic-commit-red/README.md)保留前三次尝试，结果 NOT GREEN；主代理正修共享 `RegistrySurgery` 生命周期边界，恢复三阶段及 26.2.0 未完成。事件依赖的[五节点普通 platform gate 与两个现代 NeoForge 构建](../architecture-refactor/evidence/2026-10-23-event-node-followup/README.md)已通过，派生十文件只增加实际交易事件 import，提交 `a494da3a`；不将构建通过外推为联网或整票通过。
