@@ -87,3 +87,11 @@ git diff -- common/src/test/resources/nekojs common/src/test/probe-ts
   （见 `NormativeApiContractOwnerTest`）。
 - 收缩 gate（工单 Work item 7）：只有替代 contract/manifest/Probe/declaration 的 behavior、
   golden 与 trace 均通过且旧路径无调用者后，才移除对应旧生成或观察旁路。
+
+## 2026-10-23：事件签名的真实依赖导入
+
+生产 `EventDeclarationGenerator` 不再用默认主扫描白名单过滤已输出事件签名的依赖，交由现有闭包执行当前 exclude/hide 策略。动态事件 golden 因此仅新增 `$DynamicRegistryEventJS` 的实际 import 及其空行；组名、方法名、参数及回调类型均不变。默认排除 core 的完整输出仍须报告该依赖不可用，没有借此允许 Java.type 或生成被排除的类。
+
+更新前该文件字节与 HEAD 一致（SHA-256 `b9bd89c5e3610f9898ec481e91dd0d5309182282d58dfe5abd72def33903452e`），已保存原字节；本次只运行 `:common:test --tests com.tkisor.nekojs.probe.DynamicRegistryEventsDeclarationGoldenTest.facadeEventDeclarationMatchesGolden -Dnekojs.golden.regenerate=true`，没有运行整树镜像或改动其他 golden。工作树已有其他工作，按用户的保留要求采用单方法生成并逐项核对，不清理工作树。
+
+技术审阅由主代理核对生产生成器、失败差异与生成后的两行增量；Luna xhigh 只读执行规范/规格分轴审查，规格发现的未输出 dispatch-key 依赖已另加回归并修正。后续普通测试不带 regenerate 开关。此记录不是维护者人工验收，也不表示完整严格 TSC 或发布验收通过。

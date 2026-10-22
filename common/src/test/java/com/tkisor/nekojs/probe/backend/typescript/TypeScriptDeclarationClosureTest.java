@@ -136,6 +136,86 @@ class TypeScriptDeclarationClosureTest {
     }
 
     @Test
+    void eventReferencesOutsideDefaultPackagesUseTheCurrentDependencyPolicy(@TempDir Path temp) throws Exception {
+        var snapshot = new NekoScriptCatalogSnapshot(List.of(), List.of(), List.of(com.tkisor.nekojs.api.catalog.EventCatalogEntry.of(
+                "ExternalEvents", "visit", ScriptType.SERVER, othermod.events.EventTypes.Payload.class,
+                othermod.events.EventTypes.Key.class, false, true)),
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), null, Map.of(), List.of());
+        for (boolean excluded : List.of(false, true)) {
+            var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
+                    List.of("unrelated.primary"), List.of(),
+                    excluded ? List.of("othermod.events") : List.of(), List.of(), 1, "SMART"));
+            assertTrue(ProbeCoordinator.collectClasses(snapshot, config).isEmpty());
+            var context = new ProbeContext.Of(snapshot, List.of(), config, NekoJSPaths.fromGameDir(temp),
+                    "typescript", temp.resolve("typescript"), List.of());
+            Map<String, String> files = new TypeScriptProbeBackend().render(context);
+            assertTrue(files.get("@side-only/server/events/index.d.ts").contains(
+                    "import { $EventTypes$Key, $EventTypes$Payload } from \"java:othermod/events\";"));
+            var report = com.google.gson.JsonParser.parseString(files.get("@special/dependencies.json")).getAsJsonObject();
+            assertEquals(!excluded, report.get("complete").getAsBoolean());
+            assertEquals(0, report.get("primaryClassCount").getAsInt());
+            if (excluded) {
+                assertFalse(files.containsKey("@package/othermod/events/index.d.ts"));
+                assertEquals("excluded", report.getAsJsonObject("unavailable")
+                        .get(othermod.events.EventTypes.Payload.class.getName()).getAsString());
+                assertEquals("excluded", report.getAsJsonObject("unavailable")
+                        .get(othermod.events.EventTypes.Key.class.getName()).getAsString());
+            } else {
+                String module = files.get("@package/othermod/events/index.d.ts");
+                assertTrue(module.contains("class $EventTypes$Payload"));
+                assertTrue(module.contains("count: number;"));
+                assertTrue(module.contains("class $EventTypes$Key"));
+                assertTrue(module.contains("name: string;"));
+                Path output = Path.of("build/probe-ts-event-dependencies");
+                for (var entry : files.entrySet()) {
+                    Path file = output.resolve(entry.getKey());
+                    Files.createDirectories(file.getParent());
+                    Files.writeString(file, entry.getValue());
+                }
+                Files.writeString(output.resolve("tsconfig.json"), """
+                        {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"]}},"include":["@package/**/*.d.ts","@side-only/server/events/index.d.ts","exercise.ts"]}
+                        """);
+                Files.writeString(output.resolve("exercise.ts"), """
+                        import type { $EventTypes$Key as Key } from 'java:othermod/events';
+                        declare const key: Key;
+                        ExternalEvents.visit(key, event => {
+                            const count: number = event.count;
+                            // @ts-expect-error Event dependencies retain their actual public members.
+                            const wrong: string = event.count;
+                            // @ts-expect-error Completing the closure does not fabricate extra members.
+                            event.missing;
+                        });
+                        // @ts-expect-error Dispatch keys retain their class shape.
+                        ExternalEvents.visit(12, event => {});
+                        """);
+            }
+        }
+    }
+
+    @Test
+    void unusedEventKeysDoNotBecomeDeclarationDependencies(@TempDir Path temp) {
+        var snapshot = new NekoScriptCatalogSnapshot(List.of(), List.of(), List.of(
+                com.tkisor.nekojs.api.catalog.EventCatalogEntry.of("ExternalEvents", "visit", ScriptType.SERVER,
+                        othermod.events.EventTypes.Payload.class, othermod.events.EventTypes.Key.class, false, false),
+                // A script-defined event returns before dispatch rendering, even with leftover key metadata.
+                com.tkisor.nekojs.api.catalog.EventCatalogEntry.of("ExternalEvents", "custom", ScriptType.SERVER,
+                        null, othermod.events.EventTypes.Key.class, false, true)),
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), null, Map.of(), List.of());
+        var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
+                List.of("unrelated.primary"), List.of(), List.of(othermod.events.EventTypes.Key.class.getName()),
+                List.of(), 1, "SMART"));
+        var context = new ProbeContext.Of(snapshot, List.of(), config, NekoJSPaths.fromGameDir(temp),
+                "typescript", temp.resolve("typescript"), List.of());
+        Map<String, String> files = new TypeScriptProbeBackend().render(context);
+        assertFalse(files.get("@side-only/server/events/index.d.ts").contains("$EventTypes$Key"));
+        var report = com.google.gson.JsonParser.parseString(files.get("@special/dependencies.json")).getAsJsonObject();
+        assertTrue(report.get("complete").getAsBoolean());
+        assertEquals(1, report.get("referencedClassCount").getAsInt());
+    }
+
+    @Test
     void existingEditedIrIsNeverReplacedByReflection(@TempDir Path temp) {
         TypeDecl root = new TypeReflector().reflect(Root.class);
         var slot = root.fields.getFirst().type;

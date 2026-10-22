@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.probe.backend.typescript;
 
-import com.tkisor.nekojs.probe.ProbeConfigLoader;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry.EventPayload;
@@ -198,8 +197,9 @@ public final class EventDeclarationGenerator {
     private Set<String> referencedClasses(List<EventCatalogEntry> events, Map<Class<?>, EventPayload> payloads) {
         Set<String> imports = new LinkedHashSet<>();
         for (EventCatalogEntry event : events) {
+            if (event.scriptDefined()) continue;
             if (event.eventType() != null && !payloads.containsKey(event.eventType())) collectImports(event.eventType(), imports);
-            if (event.dispatchKeyType() != null) collectImports(event.dispatchKeyType(), imports);
+            if (event.dispatchable() && event.dispatchKeyType() != null) collectImports(event.dispatchKeyType(), imports);
         }
         return imports;
     }
@@ -213,15 +213,8 @@ public final class EventDeclarationGenerator {
             return;
         }
 
-        String name = cls.getName();
-        if (!isRelevantClass(name)) return;
-
-        // Event signatures reference only the event and dispatch-key symbols. Their member
-        // dependencies belong to package declarations and the shared bounded scan.
-        imports.add(name);
-    }
-
-    private boolean isRelevantClass(String name) {
-        return ProbeConfigLoader.isRelevantClassDefault(name);
+        // Emitted signatures are dependency roots independently of the primary scan. The
+        // declaration closure applies the current configuration's exclusion and hide policy.
+        imports.add(cls.getName());
     }
 }

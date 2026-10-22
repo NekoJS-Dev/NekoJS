@@ -9,7 +9,7 @@
     "test:probe-bean-exclusion": "tsc -p common/build/probe-ts-bean-exclusion/tsconfig.json",
     "test:probe-wildcard-collection": "tsc -p common/build/probe-ts-wildcard-collection/tsconfig.json",
     "test:probe-constructor-input": "tsc -p common/build/probe-ts-constructor-input/tsconfig.json",
-    "test:probe-dependency-closure": "tsc -p common/build/probe-ts-dependency-closure/tsconfig.json",
+    "test:probe-dependency-closure": "tsc -p common/build/probe-ts-dependency-closure/tsconfig.json && tsc -p common/build/probe-ts-event-dependencies/tsconfig.json",
     "test:probe-result-variance": "tsc -p common/build/probe-ts-result-variance/tsconfig.json",
     "test:probe-character-projection": "tsc -p common/build/probe-ts-character-projection/tsconfig.json",
     "test:probe-interface-merge": "tsc -p common/build/probe-ts-interface-merge/tsconfig.json",
