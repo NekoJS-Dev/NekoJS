@@ -1,8 +1,10 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
-2026-10-22 后续：[最新统一候选三节点安装客户端](../evidence/2026-10-22-unified-client-native/README.md)完成 30 图和六次正常退出；[制品/数据分离回退](../evidence/2026-10-22-candidate-rollback/README.md)完成已知 `d91ca974 → 4405b0b0 → d91ca974` 与停服备份恢复四阶段、四次正常退出。换旧 JAR 保留推进数据，恢复备份才回到旧值，范围仅该已知候选对和完整世界夹具。五节点首轮安装运行四过一未过（26.1.2 召唤后实体查询未成功），该失败与后续控制实验分别保留；不能用正常退出或构建通过覆盖验收失败。最新默认完整 TSC 仍失败 5867 条；Python 默认检查仍通过。性能与最终维护者结论继续开放。
+2026-10-23 当前生产源码 `7bea6d6d` 的[完整新候选检查](../evidence/2026-10-23-current-candidate-checks/README.md)已完成：common/check、处理器、guard 与五节点构建通过，5070 tests / 271 skipped / 零失败；五个新安装服务端实际运行全部通过并正常退出 0，包含 26.1.2 实体查询及重载前后效果。测试服显式禁用空服暂停，旧候选首次失败仍未确诊。全部 1609 个新 stub 的默认 Pyright 通过；十入口新生成声明的完整严格 TSC 仍为 5867 条、无崩溃，继续 FAIL。[确切同一 26.1.2 JAR 的正式性能](../evidence/2026-10-22-source-facts-performance/README.md)仍为重载 340.0 / 292.8 ms 失败、启动 33486.6 ms 通过。后续最终候选的客户端/TCP/分离回退和真实维护者结论保持各自范围，未因本轮构建及服务器成功而关闭。
 
-2026-10-22 最新候选 `4405b0b0` 全量矩阵通过：11m41s，106 tasks / 40 executed，5067 tests / 271 skipped / 0 failures or errors，含 common 隔离、处理器、guard、五节点 build/platform gate；矩阵 XML 与生产 class/JAR 绑定在本地冻结。另有 [legacy 安装客户端 16 阶段](../evidence/2026-10-22-posteffects-legacy-installed/README.md)通过，实际使用普通 client JAR 与 server 分类 JAR。五节点安装运行、完整 IDE、原门槛性能及分离回退仍按各自结果记录，不能用构建通过代替。
+2026-10-22 后续：[`4405b0b0` 三节点安装客户端](../evidence/2026-10-22-unified-client-native/README.md)完成 30 图和六次正常退出；[制品/数据分离回退](../evidence/2026-10-22-candidate-rollback/README.md)完成已知 `d91ca974 → 4405b0b0 → d91ca974` 与停服备份恢复四阶段、四次正常退出。换旧 JAR 保留推进数据，恢复备份才回到旧值，范围仅该已知候选对和完整世界夹具。五节点首轮安装运行四过一未过（26.1.2 召唤后实体查询未成功），该失败与后续控制实验分别保留；不能用正常退出或构建通过覆盖验收失败。最新默认完整 TSC 仍失败 5867 条；Python 默认检查仍通过。性能与最终维护者结论继续开放。
+
+2026-10-22 阶段候选 `4405b0b0` 全量矩阵通过：11m41s，106 tasks / 40 executed，5067 tests / 271 skipped / 0 failures or errors，含 common 隔离、处理器、guard、五节点 build/platform gate；矩阵 XML 与生产 class/JAR 绑定在本地冻结。另有 [legacy 安装客户端 16 阶段](../evidence/2026-10-22-posteffects-legacy-installed/README.md)通过，实际使用普通 client JAR 与 server 分类 JAR。五节点安装运行、完整 IDE、原门槛性能及分离回退仍按各自结果记录，不能用构建通过代替。
 
 2026-10-22 补充：[双节点真实 TCP 验收](../evidence/2026-10-22-dynamic-tcp/README.md)以冻结安装候选 `d91ca974` 在 26.1.2/26.2.0 完成各八阶段、八个进程正常退出，覆盖真实双 ACK/NACK、配置补同步、超时与迟到 ACK、准备中断线和重连后的实际注册表。它不替代后续源码的统一候选、COMMIT 后激活失败、完整 TSC、最终性能、分离回退或维护者结论；失败尝试及外部清理记录已封存。
 
@@ -10,7 +12,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-16：A15/A16/A22 精确删除已批准并验证；完整 IDE、客户端首帧、确切候选性能与回滚验收仍开放）
+**Status:** in-progress（2026-10-23：A15/A16/A22 精确删除已批准并验证；当前五节点构建和新安装服务端通过，完整严格 TSC 与重载性能仍失败；最终候选客户端/TCP/回退及维护者结论保持独立验收范围）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 
@@ -106,7 +108,7 @@
 2026-10-22 [静态继承与安装客户端补验](../evidence/2026-10-22-static-inheritance/README.md)：中间 JAR `d91ca974` 的完整 5066 tests / 271 skipped、五节点新安装运行与全部默认 Pyright 通过；完整 TSC 为 5867 条，移除 594 / 新增 8（SectionPos 既有 Bean/方法冲突改报 TS2430），仍失败。26.1.2 独立开发启动器已确认 NekoJS 从安装生产 JAR 加载，七阶段原图与正常退出通过。后续源码 `ad4d3750` 修复父重载编辑权威及缺失参数选择器的无操作边界，common/check 2411 tests / 4 skipped 与严格定向消费、两轴复审通过；尚未以该源码重建最终五节点候选。其他节点安装客户端、完整 IDE、真实多人动态 TCP、最终性能与分离回退继续开放。
 
 
-2026-10-22 最新统一候选 `4405b0b0` 的[正式性能复验](../evidence/2026-10-22-candidate-performance/README.md)已完成：两组重载均值 348.2 / 332.2 ms，均超过原 285.3 ms 门槛；启动均值 28026.2 ms，通过 41173 ms 门槛。17 条样本有效，9 次会话均正常退出；原采样器、fixture 和门槛不变。归档复核通过只表示原始记录及实际失败可复算，不表示性能验收通过。该结果取代旧候选在本轮交接中的性能状态；仍须定位并修复当前重载超标后按同一标准复验。
+2026-10-22 阶段统一候选 `4405b0b0` 的[正式性能复验](../evidence/2026-10-22-candidate-performance/README.md)已完成：两组重载均值 348.2 / 332.2 ms，均超过原 285.3 ms 门槛；启动均值 28026.2 ms，通过 41173 ms 门槛。17 条样本有效，9 次会话均正常退出；原采样器、fixture 和门槛不变。归档复核通过只表示原始记录及实际失败可复算，不表示性能验收通过。该结果取代旧候选在本轮交接中的性能状态；仍须定位并修复当前重载超标后按同一标准复验。
 
 
 2026-10-22 统一候选 `4405b0b0` 的[完整检查归档](../evidence/2026-10-22-candidate-checks/README.md)：common/check、处理器、guard 和五节点构建通过，5067 tests / 271 skipped / 零失败。安装首轮四节点通过，26.1.2 实体查询未完成；同一 JAR 的独立不暂停控制组严格全链通过，但首次原因未确诊，不能改称首轮五节点全绿。六个服务端均正常退出。1609 个 stub 的默认 Pyright 全通过；十入口默认严格 TSC 仍有 5867 条诊断、无崩溃，完整 IDE gate 继续失败。

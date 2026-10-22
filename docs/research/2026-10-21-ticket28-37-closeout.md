@@ -1,6 +1,8 @@
 # 票 28 / 37 后续工程收尾
 
-2026-10-22 最新候选 `4405b0b0`：全量 5067 tests / 271 skipped / 0 failures or errors；[统一三节点安装客户端](../architecture-refactor/evidence/2026-10-22-unified-client-native/README.md)完成 30 图及六次正常退出；[制品/世界数据分离回退](../architecture-refactor/evidence/2026-10-22-candidate-rollback/README.md)完成四阶段。五节点安装首轮仍有 26.1.2 实体查询未过，保持 NOT GREEN 并单独运行控制实验；完整 TSC 仍失败，性能和维护者结论未因此通过。
+2026-10-23 当前生产源码 `7bea6d6d` 的[完整新候选检查](../architecture-refactor/evidence/2026-10-23-current-candidate-checks/README.md)已完成：common/check、处理器、guard 与五节点构建通过，5070 tests / 271 skipped / 零失败；五个新安装服务端实际运行全部通过并正常退出 0，包含 26.1.2 实体查询及重载前后效果。测试服显式禁用空服暂停，旧候选首次失败仍未确诊。全部 1609 个新 stub 的默认 Pyright 通过；十入口新生成声明的完整严格 TSC 仍为 5867 条、无崩溃，继续 FAIL。[确切同一 26.1.2 JAR 的正式性能](../architecture-refactor/evidence/2026-10-22-source-facts-performance/README.md)仍为重载 340.0 / 292.8 ms 失败、启动 33486.6 ms 通过。后续最终候选的客户端/TCP/分离回退和真实维护者结论保持各自范围，未因本轮构建及服务器成功而关闭。
+
+2026-10-22 阶段候选 `4405b0b0`：全量 5067 tests / 271 skipped / 0 failures or errors；[统一三节点安装客户端](../architecture-refactor/evidence/2026-10-22-unified-client-native/README.md)完成 30 图及六次正常退出；[制品/世界数据分离回退](../architecture-refactor/evidence/2026-10-22-candidate-rollback/README.md)完成四阶段。五节点安装首轮仍有 26.1.2 实体查询未过，保持 NOT GREEN 并单独运行控制实验；完整 TSC 仍失败，性能和维护者结论未因此通过。
 
 2026-10-22 追加：[真实 TCP 封存](../architecture-refactor/evidence/2026-10-22-dynamic-tcp/README.md)完成 `d91ca974` 的 26.1.2/26.2.0 两节点、各八阶段及八次正常进程退出；含真实 ACK/NACK、配置补同步、超时/迟到 ACK、准备断线和重连后注册表正负结果。历史失败夹具及一次精确强制清理完整保留，成功运行均无强制清理。后续源码的统一候选、COMMIT 后激活失败、完整 TSC、最终性能和分离回退仍需完成。
 
@@ -154,7 +156,7 @@ fallback 阶段初次 Probe 检查仅两项 canonical 比对失败；既有再�
 ## 当前候选正式性能结果
 
 
-2026-10-22 最新统一候选 `4405b0b0` 的[正式性能复验](../architecture-refactor/evidence/2026-10-22-candidate-performance/README.md)已完成：两组重载均值 348.2 / 332.2 ms，均超过原 285.3 ms 门槛；启动均值 28026.2 ms，通过 41173 ms 门槛。17 条样本有效，9 次会话均正常退出；原采样器、fixture 和门槛不变。归档复核通过只表示原始记录及实际失败可复算，不表示性能验收通过。该结果取代旧候选在本轮交接中的性能状态；仍须定位并修复当前重载超标后按同一标准复验。
+2026-10-22 阶段统一候选 `4405b0b0` 的[正式性能复验](../architecture-refactor/evidence/2026-10-22-candidate-performance/README.md)已完成：两组重载均值 348.2 / 332.2 ms，均超过原 285.3 ms 门槛；启动均值 28026.2 ms，通过 41173 ms 门槛。17 条样本有效，9 次会话均正常退出；原采样器、fixture 和门槛不变。归档复核通过只表示原始记录及实际失败可复算，不表示性能验收通过。该结果取代旧候选在本轮交接中的性能状态；仍须定位并修复当前重载超标后按同一标准复验。
 
 
 2026-10-22 统一候选 `4405b0b0` 的[完整检查归档](../architecture-refactor/evidence/2026-10-22-candidate-checks/README.md)：common/check、处理器、guard 和五节点构建通过，5067 tests / 271 skipped / 零失败。安装首轮四节点通过，26.1.2 实体查询未完成；同一 JAR 的独立不暂停控制组严格全链通过，但首次原因未确诊，不能改称首轮五节点全绿。六个服务端均正常退出。1609 个 stub 的默认 Pyright 全通过；十入口默认严格 TSC 仍有 5867 条诊断、无崩溃，完整 IDE gate 继续失败。
