@@ -13,7 +13,7 @@
 - 故障须发生在客户端已经通过 PREPARE、服务器已决定 COMMIT 之后。隔离 helper 可使用其自己的受限注入实现，但不能更改生产检查、伪造成功状态或放宽来源断言。
 - 断言来源是公开事务状态、结果/phase log、真实物理注册表和进程退出；保留失败尝试、超时与精确清理记录，不用启动成功代替行为通过。
 
-## 待完成的具体工作
+## 本项已完成的工作
 
 1. 核对实际 COMMIT 失败路径和 degraded 状态的归属、保留范围及重试/重连规则，选出可重复且不污染其他运行的 helper 注入点。
 2. 实现最小真实双客户端夹具：先证明正常提交，再触发单客户端 COMMIT 激活失败；分别核对服务器、故障客户端、正常客户端的实际状态与物理条目。
@@ -26,4 +26,8 @@
 
 共享修复点为 `RegistrySurgery.withUnfrozenAndHolders`：保留已有 pending identity，失败时只删除本次新增的未绑定 identity，不重新加入已注册消费的旧 holder。先补真实 `MappedRegistry` 回归，再复验原七阶段，不改变故障注入点回避问题。v1/v2 的夹具启动和观察器失败也保留；没有据计划或四阶段通过关闭票。重载性能、完整严格 TSC、最终客户端/分离回退和维护者结论仍保持各自门禁。
 
-共享修复现已提交 `b47734c6`，[四节点 16 项真实注册表回归与先红后绿记录](../architecture-refactor/evidence/2026-10-23-intrusive-holder-fix/README.md)已封存，guard 零警告，两轴只读审查无剩余项。首次 Fabric 测试的重复 tag 绑定前提已纠正并留证。新源码四节点完整 build 与原故障点的七阶段 TCP 复验另行推进，不把组件检查写成重连通过。
+共享修复现已提交 `b47734c6`，[四节点 16 项真实注册表回归与先红后绿记录](../architecture-refactor/evidence/2026-10-23-intrusive-holder-fix/README.md)已封存，guard 零警告，两轴只读审查无剩余项。首次 Fabric 测试的重复 tag 绑定前提已纠正并留证。
+
+随后[四现代节点完整 build](../architecture-refactor/evidence/2026-10-23-holder-modern-builds/README.md)通过，2212 tests / 236 skipped / 零失败错误。同一批 NeoForge JAR 的[两节点七阶段真实 TCP 复验](../architecture-refactor/evidence/2026-10-23-dynamic-commit-recovery/README.md)全部通过：故障 A 断线不再崩溃、持续故障时配置同步拒绝、移除故障后同进程恢复，再次双客户端提交成功；六进程正常退出 0，无强制清理。1099 源码、每节点 1640 编译类、各进程五个加载类与确切 JAR 的来源均已独立核对并封存。
+
+这里的实际契约是服务器保持 COMMITTED，A 在线同步失败后仍连接，直到显式 kick；没有全局 DEGRADED 或一律拒绝未来提交的承诺。26.2.0 客户端/服务端 loader 分别为现有缓存 26.2.0.57 / 26.2.0.75。此项补齐旧八阶段材料的 COMMIT 后失败与恢复范围，不代替正式安装器、完整 IDE、性能、最终统一候选客户端/回退或维护者结论。

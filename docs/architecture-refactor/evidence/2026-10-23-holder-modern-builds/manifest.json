@@ -1,0 +1,1881 @@
+{
+  "archiveSha256": "39bd76dfc42d52f20767bad153c90f5b277bfd5b56e12aaaa385ddd6afd24255",
+  "entries": {
+    "bindings/26.1.2-fabric.json": {
+      "size": 211165,
+      "sha256": "599abe3ae5a7f41f340b4c73c7764d8fc0d98829fcbed6d6b6b6d2ed6f4db84d"
+    },
+    "bindings/26.1.2.json": {
+      "size": 218665,
+      "sha256": "4110f1ae43f098d85d1d4a245fffa554e1e257fee18a046740d883fddbe4e5a5"
+    },
+    "bindings/26.2.0-fabric.json": {
+      "size": 211165,
+      "sha256": "b2992c013e3e5a51bbaa7a7995e025253fb3a46ead0f4c8751516961ed3dc395"
+    },
+    "bindings/26.2.0.json": {
+      "size": 218665,
+      "sha256": "95e398b2f9279aeaec2e1e5964b65b669916395b2baa828fb5bdda8bc37fc75c"
+    },
+    "run/build.log": {
+      "size": 11577,
+      "sha256": "54d3fd40f8711e39e24b369f379ff9ebe099067cf13cb12e49a3493d431600ca"
+    },
+    "summary.json": {
+      "size": 1398,
+      "sha256": "6a9d10ccec0040619c4beb5455025d409af58bb09627c1ba856ad2d8e8446b8a"
+    },
+    "tools/freeze-b477-modern-builds.py": {
+      "size": 3149,
+      "sha256": "d56e621b4541acbb72599c6fb162c613ae4ef584a8550b39c2f41d8272e7f2a6"
+    },
+    "xml/26.1.2-fabric/platformGateTest/TEST-com.tkisor.nekojs.platform.DeclaredEventSurfaceGoldenTest.xml": {
+      "size": 494,
+      "sha256": "f50448c3b75b0803af7a316de9760efdd3a3bc7f803d7c555fdeeb2bc46fc912"
+    },
+    "xml/26.1.2-fabric/platformGateTest/TEST-com.tkisor.nekojs.platform.EventSurfaceDomainGateTest.xml": {
+      "size": 496,
+      "sha256": "e1ee599064bd955e3d50ff27b60dbdbce147aadfeb5c24f4b8f1b6535eec526f"
+    },
+    "xml/26.1.2-fabric/platformGateTest/TEST-com.tkisor.nekojs.platform.PlatformSpecContractGateTest.xml": {
+      "size": 498,
+      "sha256": "24672698f44e35dea6853b51bb5b8593b1d58354dc5a08444aa98110974bc797"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.api.inject.EntityPDataStoreTest.xml": {
+      "size": 853,
+      "sha256": "8df0690f292e195c8371fc22ae030d8c15e2cb95b42d3e7c396116146f809c16"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.api.inject.PDataJoinWindowResolutionTraceTest.xml": {
+      "size": 1042,
+      "sha256": "77127e94e099056bb6d73da2fb3fcc8d85460f341b1760c5a7e35aa8e10dc0a1"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24FabricGameplayEventCatalogTest.xml": {
+      "size": 545,
+      "sha256": "d487f2223261cf1170a852608cc9a4d64dca5240ef77b24a34a9f4f93080bb48"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayEventPhaseTraceTest.xml": {
+      "size": 1383,
+      "sha256": "859062fa7b01bb503f110560e4e8a64e534fe6fb6f8a54cbd25232bc4b34b140"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.bindings.query.EntitySelectorsQueryBindingTest.xml": {
+      "size": 1420,
+      "sha256": "2b970ac5f5c8af241613dd56db336371ead8596be4dbfde8f4c67f29896718f3"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolCapabilityMatrixTest.xml": {
+      "size": 493,
+      "sha256": "86b159dea574f8c823c37c20599dff448c57db8de62f81e8717f6bc653e8f474"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolContractClassificationTest.xml": {
+      "size": 1253,
+      "sha256": "a749f455c5c990b8f681472ec25b670cf59ca87b5aa27a60d2dbacdc85eb1c33"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolDeclarationParityTest.xml": {
+      "size": 49293,
+      "sha256": "ffe79b93eb2dee77d9f70e4b9d8b89e3e96e1397595d50041b89a1b68aadc360"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.bindings.recipe.Ticket23RecipeDataPhaseTraceTest.xml": {
+      "size": 1886,
+      "sha256": "edd6c1c12a2adfbc90e4e4f4f5ed342fc8f9511ad24e1c2ef2edec31d08492d9"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.bindings.static_access.BindingHelpersTest.xml": {
+      "size": 2667,
+      "sha256": "505bf838cd9ba5103c6d4280647806c525c1ce1aaeb7362fa9dc9d8a289abe35"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardLayoutTest.xml": {
+      "size": 1105,
+      "sha256": "047d0a38744859fb0b377fc7e9c9df06fcf95be5908ffc74599ad393af93e739"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardTextTest.xml": {
+      "size": 982,
+      "sha256": "68009e43ba4053b5c5858d96ec36337b194ccd93de22b4ba638c9a89dde82596"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardViewTest.xml": {
+      "size": 2268,
+      "sha256": "2b3526808bf58df67433bca2bf440ee5778119ed4f7b147e45e18a352ecc4cd6"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectDeclarationParityTest.xml": {
+      "size": 1421,
+      "sha256": "16669a42a3183766326072586c4505c4327a8d888fdb6d16a88fa176d6da42dd"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.client.render.Ticket26ColorParameterSurfaceTest.xml": {
+      "size": 817,
+      "sha256": "7f57c0c22f5eb9038cdeadc3ece778bbb30c4bd404c2be57404426cf7df698bc"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.client.renderer.EntityRendererConfigurationTest.xml": {
+      "size": 1002,
+      "sha256": "dfc69d751069235892b21885a0820fada3d11fad947e0709c2fad47b17d485ba"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.command.AddressArgumentTest.xml": {
+      "size": 851,
+      "sha256": "7f89ff2c3bc27ee205351b3ad3abaa1a3b2eedb5f8171a2ac91e7dfa72436369"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.command.RuntimeCommandLifecycleSourceTraceTest.xml": {
+      "size": 1042,
+      "sha256": "ac7e5c11b70f1dd01caa0bd708eddda03bc21dc0a1793cec0ad934586e3540c6"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.core.Ticket08LoaderDiscoveryTest.xml": {
+      "size": 790,
+      "sha256": "9322cf564478df9fe9e17b09e1cc01192a50bc009f4a938baf11afd117e82308"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.dynamic.DynamicIntrusiveHolderRollbackTest.xml": {
+      "size": 1047,
+      "sha256": "ac5ce6cbf51e5875d77c1b8a96ab839d1e2a902448cbe6d8269f14d0ba0aab7d"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.dynamic.DynamicItemInitializerRollbackTest.xml": {
+      "size": 709,
+      "sha256": "88c05b2f940c8a67bb3efa57d5e025dd8039bda9cd470769d5fa4b22c7123c4e"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.ClientLevelWatchTest.xml": {
+      "size": 735,
+      "sha256": "eacb6aaa43b27760f2ab204999e822b206876a89a1e27fa936a1c414917c32a0"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricCapabilityLookupTest.xml": {
+      "size": 1612,
+      "sha256": "d80f1084f44cbadc98bf572a16971d8eccd1a3bacf649252d77a85969bb17983"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricClientDataAcceptTest.xml": {
+      "size": 956,
+      "sha256": "c61f43c47a334134afc89f03eea8c462e5479a80572098009e18cf27c62227e8"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricClientPainterBehaviorTest.xml": {
+      "size": 667,
+      "sha256": "2b53aef3df7a6742067c013b97255744640c3c7a6e1f9b72bbea5b30efa72047"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricClientPainterSurfaceTest.xml": {
+      "size": 652,
+      "sha256": "20c23d0a9daf9a968f599c6871f84bbdc34b8fd7f526f451e9c41e7c0a24997d"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricNetworkRegistrationOnceTest.xml": {
+      "size": 510,
+      "sha256": "15bb7feb275cc5c4f3005c9de425c1b0e726b968a69c03df73c1d8ee9c3ad4ac"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricPDataWorldBoundaryTest.xml": {
+      "size": 825,
+      "sha256": "a892414922c456d882fcc77b104aaeabe6008c93b95d0d83496666b6c376f1e9"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricRegistryDrainBehaviorTest.xml": {
+      "size": 2146,
+      "sha256": "9cac188ab0240b1ca6141ff8bd2de86e95b4691fdd347362e5f26518667c5bab"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.capability.FabricEnergyStorageTest.xml": {
+      "size": 959,
+      "sha256": "92e720b693f1350a4de64bf522263b65a8df82a8685552acfbd1b7e3d7be381f"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.capability.FabricStoragePersistenceTest.xml": {
+      "size": 1633,
+      "sha256": "46e2f8776e35ea8483555133b4a3f95a0dffded00ab4c499086bf68be321b4be"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.client.FabricSpawnEggModelTest.xml": {
+      "size": 1612,
+      "sha256": "1d94316ed646a3719093bbe99cff3af4fa9cddfc10071cdce917f2537fb4558c"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.event.FabricEventBusBridgeTest.xml": {
+      "size": 1135,
+      "sha256": "8f050db2a81580a28856c6cb4ab06ec677653ac942e389e7a41c07d4fdb00b2c"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.mixin.NekoEntityPDataSaveShapeTest.xml": {
+      "size": 1336,
+      "sha256": "037c0f6dca1e95f8ce850bee8f58294120e248b7a6c1474c60e80725b99da626"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.fabric.resource.FabricDirectoryPackResourcesTest.xml": {
+      "size": 1102,
+      "sha256": "5a7d8419d556cc4ca30369cded7160c99238863ab58df57cb8855697bff47f39"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.js.type_adapter.BlockPosAdapterTest.xml": {
+      "size": 3025,
+      "sha256": "d606faa9a01952e8ad1bc594719772771373024f0c7f1a9a48c52c32ef0082fc"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.js.type_adapter.HolderAdapterTest.xml": {
+      "size": 1485,
+      "sha256": "932d5ea6c43abcd774d89d54ae84d9f602de1fabfb8b5b5a059118d5ee970a84"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest.xml": {
+      "size": 4600,
+      "sha256": "256fe5b88d369d0999771a13e08c571a0da2e40e73a84792e91aab39204b1cb9"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.js.type_adapter.Vec3AdapterTest.xml": {
+      "size": 2999,
+      "sha256": "2832d4daf232a02cefd1c8a8af4013f237b34befe64786e4e5fb138c1b2decb1"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.mixin.BlockRandomTickInjectionSiteTest.xml": {
+      "size": 838,
+      "sha256": "32a8c10748b10f24d7be7405a1390dc9dce9cec866a4b728eceaec635e09a674"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.network.NetworkGenerationRoutingTest.xml": {
+      "size": 20122,
+      "sha256": "7b61a447b14e8236cc19780ca6ee5ff23ef4dc059f6789b0bdc530a82af81bb4"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.network.NetworkPayloadDefenseLineTest.xml": {
+      "size": 2105,
+      "sha256": "0645ffa727326d9c28fdaf176d4672bef8e1a1e587067edcdd79a46de24f43e5"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.network.NetworkRegistrationSourceTraceTest.xml": {
+      "size": 1794,
+      "sha256": "6402a6041b338d1c748f2801b0565926f4d3040ceb087cbf48317f65e97fcbf2"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.network.PackSyncBridgeSourceTraceTest.xml": {
+      "size": 1790,
+      "sha256": "da099bf8c0c16f9b2c2a58590022ce8c8ad93117bc8eb4e543db4dbfaa20d90a"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.network.PayloadWireFormatGoldenTest.xml": {
+      "size": 2217,
+      "sha256": "9e57dfdc7fc89c2affc64e02237c3ad595170a1114362b897eaf9c7866a8ebe0"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.pack.FabricWorldPackStatusTest.xml": {
+      "size": 1133,
+      "sha256": "b50a98c46df951edf31761be47f869101f2a9267c0c1c1316e1b5e847cf97e7b"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.platform.compat.FabricVersionCompatWiringTest.xml": {
+      "size": 501,
+      "sha256": "e7386b68dab4e8e5a8f874fe8e65804c135f7752b9d7a001d89fb77c1e130a7d"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.probe.MinecraftTypeDocsPluginTest.xml": {
+      "size": 502,
+      "sha256": "eb7d578153fb5f465d3e9de899555a03bbaf0b4a148dd3ade48cf383d86914bd"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.resource.ScriptPackModDataMountTest.xml": {
+      "size": 497,
+      "sha256": "e77ea5bb23dc4405c25a43925910447ff41b21332787762260aa337fe1c047a0"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.DataSyncGenerationBoundaryTest.xml": {
+      "size": 28458,
+      "sha256": "b978cc7ceb0e1ca0390b507dda713b6d4babe0bb70334000cdfc16ca93be5201"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.client.PainterJSScriptColorBoundaryTest.xml": {
+      "size": 6781,
+      "sha256": "f2ef222b3d54f7f671b68261abb8bf347436a389101d1cb762a382bd259f2c28"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.client.PainterJSTextMembersTest.xml": {
+      "size": 941,
+      "sha256": "3f07c537d5997a5e045d0441133f918dda82d5e2f88c0f1cf8ad83bfd2a61b5b"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncDomainTest.xml": {
+      "size": 1239,
+      "sha256": "113d748a0a7e86b62d6e0a880aab64b6cccfc166c7c21d5cdad4fb89cb36a0ba"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.entity.GoalRegistryApiTest.xml": {
+      "size": 2887,
+      "sha256": "c5a831e8e605b04be36208155121520f3a6a7c41ce2720810abbe8a972cacaf1"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationFloatCoercionBoundaryTest.xml": {
+      "size": 11691,
+      "sha256": "a58fd5ef83321177b27c4ff5b3f4a3df9423381109fe123b4501a986f36a1d93"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest.xml": {
+      "size": 4939,
+      "sha256": "32d3e819de9b28b5af36ad47f53aea170b3e13b1a3fc0a44777fc09fa0af6aed"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationSetterPropertyParityTest.xml": {
+      "size": 19151,
+      "sha256": "01c17be51cc491564c8f48c8a37243ae8144a3cdb9299bf5a8fed20c0a8a0a56"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationSyncWireTest.xml": {
+      "size": 517,
+      "sha256": "b9439c7b5811da24d03866134f3e42377eb4a1839ba4ce0c2cb6f1b8050e30a2"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.RecipeEventJSBaselineIsolationTest.xml": {
+      "size": 720,
+      "sha256": "f8164b604117e0617f8b23aba56614a0e01a1559e07399917f7a1cfde761f070"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest.xml": {
+      "size": 4308,
+      "sha256": "796eaf8ebcc325c14d3544e76587719964f2f41e3158027673d4c7085546f656"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest.xml": {
+      "size": 4302,
+      "sha256": "a7cf0da3fd7cc271c71ed8ce152e28cca9745d1668c536e35218dbecdae9bc3f"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest.xml": {
+      "size": 27204,
+      "sha256": "3f0bd34af7298afdfb882ba113f1dd1d4902de5ac94458283b8c8cd61ba5e006"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationEventSurfaceTest.xml": {
+      "size": 735,
+      "sha256": "f7d55df01df2c9a9974ffffff04da75a464cee1cc83f74b1d0e73e1154956bc1"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest.xml": {
+      "size": 4234,
+      "sha256": "3132af5cead1e974fc6f105298058d038269198c8560e2e1cb61033d5dda6e5d"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationOwnershipTest.xml": {
+      "size": 1188,
+      "sha256": "c4f09a354209b133f90e7b45ba9379609e8ae093918cb7d76b48cd5de2ea11ba"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest.xml": {
+      "size": 6256,
+      "sha256": "c71b1ca93daee936e933040a0dd25bbfbce46abf9e02344ae1518d1dc0cca3fa"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest.xml": {
+      "size": 4383,
+      "sha256": "fcec5fb6fdf16b3b992861680eef7632757ca555d712a4ebbb9d70b4777bcf9d"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.VillagerTradeLifecycleSourceTraceTest.xml": {
+      "size": 743,
+      "sha256": "d98c9044b504b381665c916297d36289421175c9a1d44b6bb389c68055ba68a2"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.VillagerTradeRegistryRollbackTest.xml": {
+      "size": 545,
+      "sha256": "b2903849e861dc8b9fdb2642616072ae1dfa1c8accb23ea249b8d9a09f65631b"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.pdata.ItemStackPersistentDataTest.xml": {
+      "size": 1315,
+      "sha256": "d596078fa28680f4330b43d366c87aff677752adf29a4c1f574de0bc5e10395e"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest.xml": {
+      "size": 4099,
+      "sha256": "951b86cd041a767e0baa61fa195ff6563b0b853104f6f9dc86628021a63359dd"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataSnapshotBehaviorTest.xml": {
+      "size": 932,
+      "sha256": "83b7575b933daa41cdf3e9c4157c1bb6637e4a120421223e6151b4198c8ec417"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataSyncAcceptTest.xml": {
+      "size": 1193,
+      "sha256": "d39f618db6f55ef2a7bb2a0085d12dbc44dc5fff990f4e1d127097de6af62d31"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.pdata.PersistentDataJSTest.xml": {
+      "size": 1388,
+      "sha256": "11679ea5a633a2d69742165509190dba9706d1a1850fa58fd74fd5f67c05ca43"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.BuilderFloatCoercionBoundaryTest.xml": {
+      "size": 5615,
+      "sha256": "70e45ef6b5261e3d0e32259246a5390bfb36208d48e12924e6f2d54149bf393c"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.BuilderSetterPropertyParityTest.xml": {
+      "size": 16386,
+      "sha256": "1643923bb043a32a37ff28d5a7c59b1fbfe1377797d360f4673d57df3b246643"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityGoalRegistrationContractTest.xml": {
+      "size": 906,
+      "sha256": "8b95f6d879a0a276d4e327ca343432273d8b4aff782942f8b5cf2b4a9a7f8b8b"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest.xml": {
+      "size": 1089,
+      "sha256": "ff37dc05406d78dfa77b269c733ceaf5995f7e0448e8a78a3f90feb7ddcc2860"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationSafetyTest.xml": {
+      "size": 2827,
+      "sha256": "2d9ae41a392e3e1ead1d40262fd38ab8af87c136fb83f8dfee79f7477fb41ad4"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.ItemBuilderIssue36Test.xml": {
+      "size": 8320,
+      "sha256": "6c1af10560e01485ec9763e572a64d7c53974bf8272e1a74922112ee26b93778"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryBuilderNameCollisionTest.xml": {
+      "size": 544,
+      "sha256": "b6ccc53368e25c66601392c1ee0ce55aec0d228d1320b335c696505c639a47db"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryBuilderSurfaceGoldenTest.xml": {
+      "size": 2112,
+      "sha256": "17213ce953dc6d8a45ca8aebc29d7226e1d038cd2b5550d653c2f5d836333cd8"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryStartupMinimalExampleTest.xml": {
+      "size": 1423,
+      "sha256": "74ae95e5451ec22a05acde79598df4807bb3a229494c1249d87613063266d5e3"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryDefaultDeclarationsTest.xml": {
+      "size": 39933,
+      "sha256": "908a42b148550e959ce7e6b080b2370bf16d3af966c19156381b713c575da7b6"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryEpochNegativesTest.xml": {
+      "size": 2994,
+      "sha256": "b7c9a2b8508d828e97303c389f799f6cc74e91f7745b7b02afd7f93e6ac2efe7"
+    },
+    "xml/26.1.2-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryRuntimeEndToEndTest.xml": {
+      "size": 7277,
+      "sha256": "1760276c37040defaf897c14c4e1634bb0539dbf4d9ae84c96e2ac7b813b0c19"
+    },
+    "xml/26.1.2/platformGateTest/TEST-com.tkisor.nekojs.platform.DeclaredEventSurfaceGoldenTest.xml": {
+      "size": 494,
+      "sha256": "6b8529a86fb6d8bd38ff46ddf6eb0c93131a54322d1799326fba837cf858c004"
+    },
+    "xml/26.1.2/platformGateTest/TEST-com.tkisor.nekojs.platform.EventSurfaceDomainGateTest.xml": {
+      "size": 496,
+      "sha256": "6bf92c5fc4daf0b4f61a50f4dbe31d19db05f889c0b7936770182c24d9d60d7a"
+    },
+    "xml/26.1.2/platformGateTest/TEST-com.tkisor.nekojs.platform.PlatformSpecContractGateTest.xml": {
+      "size": 498,
+      "sha256": "e63d93c37524640b7a3679cf5459bc196b6a82b343bc0a865e95ea32231a7499"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.api.event.EventBusForgeBridgeCancelActionTest.xml": {
+      "size": 853,
+      "sha256": "7570df4384d15194d84298c2c77840d917e29f1f12a69c983c8c552b362c1414"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.api.event.EventBusForgeBridgeSideFilterTest.xml": {
+      "size": 655,
+      "sha256": "19417e12640198d379f863939748c8981a02faec9f76f3dd5476124292f31842"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.api.event.EventBusForgeBridgeTest.xml": {
+      "size": 906,
+      "sha256": "27f151417f30311e3cffdbed30ceb4b2e14e14d7286d77920b82a37e623dff23"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.api.inject.EntityPDataStoreTest.xml": {
+      "size": 853,
+      "sha256": "d55e39b358ad667d715e1376c9477f0b74c53cf268ba99b005f145ae7eb7b18f"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.api.inject.PDataJoinWindowResolutionTraceTest.xml": {
+      "size": 1042,
+      "sha256": "17c6ecdf199d749e8314c2c1d79c10f4bea9c5d1a504836520d1b285e149bc7f"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest.xml": {
+      "size": 1414,
+      "sha256": "a9bf9e26c14a4c1d8f30a6943713bc867fd85c0d3347e9b72629e378d75607a9"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest.xml": {
+      "size": 1046,
+      "sha256": "15a3fb59fd298a1a051fc29a92ac04dd35cc8cfa7a030591b7757f8cc59d199c"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.event.EventApiSurfaceGoldenTest.xml": {
+      "size": 487,
+      "sha256": "7cda2667950b5391bf9aa53a054e08751bdbe3e760615403caeb23baef84c109"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.event.EventSurfaceOwnershipTest.xml": {
+      "size": 816,
+      "sha256": "1aa54737587998a21f67754a86b518e40ae6144ace92b25265ee94fc3c6b91b4"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.event.NativeEventsLegacyTierCharacterizationTest.xml": {
+      "size": 876,
+      "sha256": "9d4b9db2674d95e82b628f3e244682cf13e0ae5d4f1d791ef7487d99b878746e"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24DamagePreCancelSemanticsTest.xml": {
+      "size": 710,
+      "sha256": "1a9ced0750d2372b44a70dc51df22dc2ca4d8bcb4b38b2d37b59f0e66cd09182"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayEventCatalogTest.xml": {
+      "size": 684,
+      "sha256": "f26d983f71d542d4e0b99097123ca9712f327fbd9837c4c114d719deb9d6f153"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayEventPhaseTraceTest.xml": {
+      "size": 1383,
+      "sha256": "89e5d57ed82ab71295b19f621d584915cde6843941fefd79e58faefc9c439439"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayEventReloadLifecycleTest.xml": {
+      "size": 32799,
+      "sha256": "f6108213a57a0bc994ec92eff61f7a180822829b053d0fd08f445d9ddf8faba5"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayFamilyBusBehaviorTest.xml": {
+      "size": 2090,
+      "sha256": "21be3bd652acd2284b875b7b0f39a05ae3e01d61246938c6e2fe724e042852f6"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.event.client.KeyBindEventsTest.xml": {
+      "size": 1833,
+      "sha256": "1f610f2a5b37d6ed41a6b0423eedcb36eee547cff6516cee1cf666a632bb4719"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.query.DataMapQueryBindingTest.xml": {
+      "size": 798,
+      "sha256": "bc23d9bcc4d737d70651ec69989b07f395068d3849fd6d335e2955a92391279f"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.query.EntitySelectorsQueryBindingTest.xml": {
+      "size": 1420,
+      "sha256": "9ec6681410b60d8a9d461fa03a8b12660361a723c19e61d985c9498ea1ec314d"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolCapabilityMatrixTest.xml": {
+      "size": 493,
+      "sha256": "63d846e1f22af5c2039be67444aba3770c89728bc58d74338600abcf75e12e63"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolContractClassificationTest.xml": {
+      "size": 1254,
+      "sha256": "b67cd718175d810c0c14be74f912a55e906b1bfb1802452a48f030e930ae9ed2"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolDeclarationParityTest.xml": {
+      "size": 1728,
+      "sha256": "56a630c4385f99785718f49740d70ad4153d6711b04c1c026432a3152c9167f3"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.recipe.Ticket23RecipeDataPhaseTraceTest.xml": {
+      "size": 1886,
+      "sha256": "b0d68320272e477f79aeda6ed2cb6701c9f4a0d0ef8158b71bf23a360586b30d"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.static_access.BindingHelpersTest.xml": {
+      "size": 2664,
+      "sha256": "0346209175937db1e7d682cac8346213345e0f1a9f6a7a5b8799ddcec1c12329"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.bindings.static_access.CapabilityEnergyTransactionTest.xml": {
+      "size": 1201,
+      "sha256": "340f813336b0e20c09acc78da6ad223b88d87926e6f5a17827e3fc5ec4fe7957"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardLayoutTest.xml": {
+      "size": 1105,
+      "sha256": "bbed7a9c8dba4cf8541accfdf2e9b21a5ddab73609ff6a2ec451c5b22f8954cc"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardTextTest.xml": {
+      "size": 982,
+      "sha256": "cdf5b2ebea1f533de969d5b328f03ddd7bce9b80456ac20b120a17ae8614a795"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardViewTest.xml": {
+      "size": 2268,
+      "sha256": "545d930665924fa76d03f66ad806d99cf63da73b0d3e2a20d09e7eb52011e826"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectDeclarationLifecycleTest.xml": {
+      "size": 72970,
+      "sha256": "c222e2167cb4f75f08949f28f6132a504852b114fccff9ed238e8db46c23a9e0"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectDeclarationParityTest.xml": {
+      "size": 986,
+      "sha256": "59f0b89700777fae7467b6fb0311a34ea995adc43dc44c609c40516816e808ce"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectDeclarationSurfaceTest.xml": {
+      "size": 1028,
+      "sha256": "0d6fbe16a1879e35cf61c6e99ac0d006ccaa4cc14f246f56e9569b8ddb2b7610"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectGenerationInvalidationTest.xml": {
+      "size": 2381,
+      "sha256": "b6c6157611121c099ea0213bc374991fa63976bda947a0d4485f23b4ef5318b9"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.render.Ticket26ClientInputHudLifecycleTest.xml": {
+      "size": 25629,
+      "sha256": "94f78badb3f4e022755bb3ee323f40b41d30eecac33147d15ac4ea661e54fbe9"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.render.Ticket26ClientInputHudSurfaceTest.xml": {
+      "size": 993,
+      "sha256": "9ec44dd84f48ad831dddd885888b1c0218cab2dd74f9cb6027c22749067ae8af"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.render.Ticket26ColorParameterSurfaceTest.xml": {
+      "size": 818,
+      "sha256": "14369533e62e4f92da7060d83abac270fefbbd4701ba9c769b8b74ed5473813f"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.render.Ticket27ClientGuiRenderLifecycleTest.xml": {
+      "size": 36988,
+      "sha256": "5a32c329ab496af3c9d27b6e190ff36973e9a3c0b19194cd7b6d1d9102c06815"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.render.Ticket27ClientGuiRenderSurfaceTest.xml": {
+      "size": 1045,
+      "sha256": "a0334ec4c2e260ccf45281ab0e753e7a77e930941cdb3452767cb58be8252e4f"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.renderer.EntityRendererConfigurationTest.xml": {
+      "size": 1002,
+      "sha256": "fbb1220fc95c6e4e83a47c2bbbfd57d51d9eded6f9dcc282b6928cc9e4ccda5b"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket41HiddenContainerIntegrationTest.xml": {
+      "size": 1543,
+      "sha256": "4a5ed8e27b8086db62cb60770681bcbe722305fb11f278d232521330aade995c"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket41JsxHostAdapterTest.xml": {
+      "size": 2615,
+      "sha256": "3b0503e6fe914e74aa9834a8c759bfad6a2cf6968e4c1a5edd1e98edb0713e0d"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket41MouseSelectionTest.xml": {
+      "size": 7852,
+      "sha256": "f6e3cac27527979149b2e129d0c6646c987675d1083a68b238c832a25d945926"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket41NativeAccessibilityTest.xml": {
+      "size": 2461,
+      "sha256": "0894de2b919a2f43efff872853b950cbd89965f358033876fed1fb417c438fe5"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket42HostTransactionBoundaryTest.xml": {
+      "size": 2480,
+      "sha256": "f46bb1219ac100c231c06175ab3abc527cde34b70df1524536cb1b123780a7a9"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket42UiGenerationLifecycleTest.xml": {
+      "size": 12116,
+      "sha256": "869f9dcb9b605f3c35a03fbccb6b3cce3fbfc9aa5e05eba0e956db3dbbdedbbb"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket43HostLayoutProjectionTest.xml": {
+      "size": 1195,
+      "sha256": "95a0565568395824d25718235509375189ca57e7a6fb81412b9606dde414b10c"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket44HandoffSmokeTest.xml": {
+      "size": 2498,
+      "sha256": "80edde71a7b3288708974c569dd8b2d28373c600503f5f00d98681f295670f61"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket44NativeBoxPaintingTest.xml": {
+      "size": 7695,
+      "sha256": "e9f3b02f9029d705a682f27b49ac878ca2c9b94ed7b8da5bec0ee799a6fe9578"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket44NativeTextPaintingTest.xml": {
+      "size": 7736,
+      "sha256": "21974e884c6553294f4767ca0e51ec53b1013afb529891740191025648b80495"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket44TextureBlitPlanTest.xml": {
+      "size": 972,
+      "sha256": "bdda65cc479aae7d251ef50a79475f5845de50a3a2a0b45cce78752c57f2f8c8"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket44TextureLoadingTest.xml": {
+      "size": 2231,
+      "sha256": "274790d25595c3fdaf56dc996406b158a6e98c8ea2014fc16b01668af6eb40ff"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket45InspectorSmokeTest.xml": {
+      "size": 779,
+      "sha256": "d1384d4d43ab24fb9d265afeccbe44ef7a09d113c233a965cec1bcefeff17934"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.client.ui.Ticket48PerformanceCountersTest.xml": {
+      "size": 2451,
+      "sha256": "75d288b57f51551867447adb351aa101da08bd219627ef0ff59e027b5704e966"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.command.AddressArgumentSerializationRegistrationTest.xml": {
+      "size": 677,
+      "sha256": "bfb5aa2daf5875971076b6b21c3b41785d13fb98d30c103ca9cd6c27106ee9e7"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.command.AddressArgumentTest.xml": {
+      "size": 847,
+      "sha256": "f1d50686b6955f6bcbba7291ea669fb7ba83765eac1ed5a3b4e70df4b4b94796"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.command.NekoJSCommandsEditorRemovalTest.xml": {
+      "size": 1349,
+      "sha256": "2e35ae4c56cfea650b33c18ada2b655d03d3af327c5cadb712d1a98feb075c40"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.command.NekoJSCommandsTrustArgumentAndUsageTest.xml": {
+      "size": 1438,
+      "sha256": "4b20003b12f657d4e1b63480e397e5a343d5fe345f187fac5e6953dd1c7e0ea8"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.command.RuntimeCommandLifecycleSourceTraceTest.xml": {
+      "size": 1043,
+      "sha256": "f87e638238dddc88f568fc850c5fead9c8789efecf1d265235b152a3f4a7c934"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.core.CoreBindingsGlobalsTest.xml": {
+      "size": 599,
+      "sha256": "08a5726d48c2b5a734372467b116b5d0aa2653566c550eba20f1d67fb68c6e31"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.core.Ticket08LoaderDiscoveryTest.xml": {
+      "size": 790,
+      "sha256": "73465321c4236beea602b48ffdec0ac05e1d74a4882a233af64940ba62422fb7"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.core.Ticket29AssetBindingTest.xml": {
+      "size": 638,
+      "sha256": "92f8a30bc9e953bb7f3204dde865a48cfdc9e2a64378b59b3a7d7caddf56f964"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.core.Ticket29AssetsLangCapabilityTraceTest.xml": {
+      "size": 1198,
+      "sha256": "bc51abde558e66bc57f73d1ecdb293a02ffe04b62c6f8c86bd9a23b47e62eebf"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.dynamic.DynamicConfigurationParticipantsTest.xml": {
+      "size": 3028,
+      "sha256": "207f44e388dd096f13a1775eb21a064e7cd7e187176bff53239dbcdb239ab915"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.dynamic.DynamicIntrusiveHolderRollbackTest.xml": {
+      "size": 1046,
+      "sha256": "72656eedbc9b0a6876be460f3030dbcd0c7f13d6f2b341258f518a6760418293"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.dynamic.DynamicItemInitializerRollbackTest.xml": {
+      "size": 710,
+      "sha256": "3e30b982a225ab154aeee81f2582950bb40d48178a3293f1c2026b36bba883f6"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.dynamic.DynamicSyncWiringSourceTraceTest.xml": {
+      "size": 1004,
+      "sha256": "d3b21b32a107adee18597bc7ccaf249ba9e6c33af15d2d52ffc0acc6f087e42b"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.dynamic.NeoForgeDynamicRegistryAdapterValidationTest.xml": {
+      "size": 1240,
+      "sha256": "1060a0b29833d418448b22603ee8f15ae91febdf6793b1063a984d7b99a01101"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.js.type_adapter.BlockPosAdapterTest.xml": {
+      "size": 3024,
+      "sha256": "c6a94310f0f84d0a7dc2dcddb925f0d85c3a752cc618ab341a3b04fa0faf24de"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.js.type_adapter.HolderAdapterTest.xml": {
+      "size": 1485,
+      "sha256": "455887e03aaffe26f4dfed3a3ffdc0f8aad679150881539a4c3abf17dd726cd1"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.js.type_adapter.RecipeFilterAdapterTest.xml": {
+      "size": 6626,
+      "sha256": "97d4c3ac2ef707ca27f3b8c90c67f9b61eb7154cc5f7a220e2618547532ab5fa"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest.xml": {
+      "size": 4598,
+      "sha256": "6b89578fb17c9aa201eaaaff9794597832785aac2736d4c9ad3f3049888e8b1b"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.js.type_adapter.Vec3AdapterTest.xml": {
+      "size": 2998,
+      "sha256": "8efe3dc9ee9c749e1a71f471e27cb13e65337420658cf9c6a36c5b29c5e87323"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.mixin.BlockRandomTickInjectionSiteTest.xml": {
+      "size": 838,
+      "sha256": "18f8e3c503ad7bb9b906b5c8503a8cf4e3019d98ea3388d8f062cfbf875804c2"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.network.DynamicSyncPayloadWireFormatTest.xml": {
+      "size": 1369,
+      "sha256": "c0a1363901a0286a964405548093ae51b28a6a8ce22bb5c209fe96d5c561bb4b"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.network.DynamicSyncPhaseRegistrationTest.xml": {
+      "size": 516,
+      "sha256": "bc6e45c65a4239be21f1f9d486b5b184480e1e13fd5e8931d99561416977d1ee"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.network.NekoScriptPayloadChannelValidationTest.xml": {
+      "size": 906,
+      "sha256": "e7942b064e77a5369d4be3a9984e457f2adbc2fe80df69e0699198fd61ac0904"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.network.NetworkGenerationRoutingTest.xml": {
+      "size": 18020,
+      "sha256": "796d78ec0cbc748df20d0aaa5f3e367f4672fa6ef6bcdb13756177183399be54"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.network.NetworkPayloadDefenseLineTest.xml": {
+      "size": 1807,
+      "sha256": "fb0b87e42880c3ad0ca7f55c29726e341f60dfe1089f31748c923a62adf40601"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.network.NetworkRegistrationSourceTraceTest.xml": {
+      "size": 1796,
+      "sha256": "6b8a7dde2aac026145582b5c3f9c7eaa5c14c1c67ad3e53132c46fc905a3bc76"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.network.PackSyncBridgeSourceTraceTest.xml": {
+      "size": 1790,
+      "sha256": "19c36c6b61a6e3d0bcde19dcf1dae98bc59a42d92a3b4e196fd870ba58e3365a"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.network.PayloadWireFormatGoldenTest.xml": {
+      "size": 2219,
+      "sha256": "ace83a0c9966f9212fd80b4d06198d523c2ad9c2c9d7295102ba5fcda10535fd"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.network.ShowErrorListPacketReadOnlyContractTest.xml": {
+      "size": 693,
+      "sha256": "0c1aed96c2ee650ae05face5265576e69222f02eaa6f3f50ac84d1189c292651"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.pack.FabricWorldPackStatusTest.xml": {
+      "size": 1133,
+      "sha256": "6887f8be0cb3573774f47cd0bbec38d1c104052fd593c85e7dd389c6867daa42"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.platform.ExtensionCoverageTest.xml": {
+      "size": 486,
+      "sha256": "a4bdb12ce4fdeedcfba3e17e03f19218b8f3f82421c91037d143b71cd4aee691"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.platform.ItemStackExtensionContractTest.xml": {
+      "size": 796,
+      "sha256": "b273a5f18bcd8c0c2b2374e75355831de4cea8a828ce1bcbb63d5c31170edcb2"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.platform.MixinConfigIntegrityTest.xml": {
+      "size": 483,
+      "sha256": "a88d3bfcd620c5948e3f138c6aa373371b5714764f5008e761f88f96ffebcab1"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.platform.MixinTargetResolutionTest.xml": {
+      "size": 478,
+      "sha256": "b0c451ad132aa822e66c2fc3cef83c5386ab738aa07cd14c92f775942c0503a4"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.platform.compat.McClientCompatWiringTest.xml": {
+      "size": 493,
+      "sha256": "1fe3ab805612d84c2b4c81eeef6d21f9e4aa15b1b350a92fe6e58b94e669124c"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.platform.compat.McVersionCompatWiringTest.xml": {
+      "size": 496,
+      "sha256": "2900a62422163dded6fb675aa73267a1cc2c04e219cb93e20e4fca9abe4e0ed4"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.platform.compat.ScriptPayloadRegistrationShapeTest.xml": {
+      "size": 698,
+      "sha256": "646f2f5a87d1932f0ab29886fd375cfbad5df653e887683f39fcf42617b97dc6"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.platform.nbt.NeoForgeNbtBinaryCodecTest.xml": {
+      "size": 1875,
+      "sha256": "7287bffb0377f8cfb5bf991830cf9c245d3b423a9e8e11a51aa14d807cd73ef7"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.probe.MinecraftTypeDocsPluginTest.xml": {
+      "size": 502,
+      "sha256": "bf1db252788591d404e26bf2e25d7508ea066be02ef9c60da2d23152fd672698"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.probe.NeoForgeManualTypeReferencesTest.xml": {
+      "size": 531,
+      "sha256": "037f92799c42477d931a184331bc045ddb524e77115936f2aeec10886ea88584"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.resource.ScriptPackModDataMountTest.xml": {
+      "size": 497,
+      "sha256": "e03928589f29de45294c3994460ae62f0e796dccf62d02913637625909939ff4"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.DataSyncGenerationBoundaryTest.xml": {
+      "size": 27262,
+      "sha256": "77170b0b632fc46808420418d9c416078b24172999a4fb366b45f449be64efbc"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.client.PainterJSScriptColorBoundaryTest.xml": {
+      "size": 6778,
+      "sha256": "43439df04cf595547d38eb7349e6d9c1bfd0907d88773f15a08222a8e8af5c03"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.client.PainterJSTextMembersTest.xml": {
+      "size": 941,
+      "sha256": "bb525cdcdcad5b21cf70f28c23ce9470b08a17b11db633d4b8454eea5414bca5"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.clientdata.ClientDataReceiveHandlerTest.xml": {
+      "size": 985,
+      "sha256": "13e660184790bf0f58c36466bdab4736c3c1e66550c2552cbc957106a48adf7f"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncDomainTest.xml": {
+      "size": 1239,
+      "sha256": "5f383243083ad8aee04a9e28463e9dfb039af8ae82751ec69221bdf6913f7ffe"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.entity.GoalRegistryApiTest.xml": {
+      "size": 2887,
+      "sha256": "fd44ce4eb83b2289efe1f3ffc953380c0d892de0332be1c1f930772f22ad0ccf"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.registry.CapabilityRegistryEventJSTest.xml": {
+      "size": 3247,
+      "sha256": "841b3fa962ec76d3f43c750a143c8aeb2c054d527ccadce38bb0d7af25e9a867"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest.xml": {
+      "size": 4426,
+      "sha256": "a4f54134778cc5149c3f2cbfac3224eb7ee1f710baabe1d84162bcb8f4d6f077"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest.xml": {
+      "size": 7176,
+      "sha256": "bab0ddb4b75a7917e1cadcb65275b7108ad62b5cc2cb8ecebfd59ba9b2242f9c"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest.xml": {
+      "size": 3133,
+      "sha256": "e4149dcac9c89e53ed3558b943637d32085691401a0761a6ab7ad4ec5a11367c"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.LootTableEventJSJsonSurfaceTest.xml": {
+      "size": 1241,
+      "sha256": "7f58f1db6a5733ea21f3c48f4688eaa59b31da0d03584af5eb1393ee6c943ffd"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationFloatCoercionBoundaryTest.xml": {
+      "size": 11689,
+      "sha256": "8a33625a5cef40f4197a076830140073d659280dc7a77308c65523d06f1ebf8b"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest.xml": {
+      "size": 4938,
+      "sha256": "06170b7d3778de75fd5c641ea872d9961ef7171b3571c5874e74924558f9de17"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationSetterPropertyParityTest.xml": {
+      "size": 19449,
+      "sha256": "8483a3224795726a36e38cf137251a59a4b121cc8631e0233a23b67b502268ef"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationSyncWireTest.xml": {
+      "size": 517,
+      "sha256": "ae010a39506ac7dc0b9cf210d4175fa0e617f738dd0f76571aac1e64094a5297"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.RecipeEventJSBaselineIsolationTest.xml": {
+      "size": 720,
+      "sha256": "3b62c0c037b8ce0548e3724071aae84bfc8e759a11c5e6df7bd9bce900fa0847"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.RecipeEventJSGeneratedIdTest.xml": {
+      "size": 679,
+      "sha256": "cf85cd63b9e09c1d82306215936e88ddcabff9128ffb2f1ab26545bcbe669cdd"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.RecipeEventJSJsonContractTest.xml": {
+      "size": 1674,
+      "sha256": "20b2c985cffc9d2fc7b3e94aa34c964f4ba296e3e7d9718eff599622cca6b864"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.TagEventJSApplyContractTest.xml": {
+      "size": 1198,
+      "sha256": "0c2a22fd6938a66d37cb737458bde89d02b7b356a940069b4c6547c8fc96ecbe"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest.xml": {
+      "size": 4358,
+      "sha256": "8688255cbfd793b8c2ca166df86cc7338cd3a86b0ce877e0eed15c32da54827f"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest.xml": {
+      "size": 4302,
+      "sha256": "37300d693da3dbf048936434f66e6e025aae60fa2a7653bdb5bfb0f8e1bcc18b"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest.xml": {
+      "size": 27204,
+      "sha256": "f7a148743f4142056f39393b41262e5defbeeaff88f85dcb4ea090db40f1f11d"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationEventSurfaceTest.xml": {
+      "size": 735,
+      "sha256": "5a3953c728cf7e6f8da49599e36da2830ef5ab46b27d0f2f9f0dfc28a387dfd6"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest.xml": {
+      "size": 4234,
+      "sha256": "df5eed5c41701f73f4691b3487e9cc4166a01b356e85f2c5add69b186153411f"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationOwnershipTest.xml": {
+      "size": 1188,
+      "sha256": "450435eac1871f51afbcabaf80c1fde9261c8267cbdf879e4fe8637c3619bad3"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest.xml": {
+      "size": 6256,
+      "sha256": "9c0c37b3e162b6924379ab1668fd8ad8c0271406fabb92be98ee3ae1751b6932"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest.xml": {
+      "size": 4383,
+      "sha256": "3ff4701bd66340cfeb6e6f21f3a0f20d3216c496d27259bb920fe8639962b87c"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.VillagerTradeLifecycleSourceTraceTest.xml": {
+      "size": 743,
+      "sha256": "bc9bd2c443f6652db8d7db8ac58c8000c1d58d0623459b8ac807c80e4ad9ad31"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.event.server.VillagerTradeRegistryRollbackTest.xml": {
+      "size": 545,
+      "sha256": "7d6ae9edb85f26f5d1c6ea4036406632ab9f3d34b03c1cece557b716b2c154de"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.pdata.ItemStackPersistentDataTest.xml": {
+      "size": 1315,
+      "sha256": "ec1046353aeb7183bf44937a90b09c8d5a503a153f3268621967eac1717f379d"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest.xml": {
+      "size": 4099,
+      "sha256": "037157f19593411efe7bbaaf79ac020e26bdacffc6e160d05dc7b8a0a130f2c0"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataSnapshotBehaviorTest.xml": {
+      "size": 930,
+      "sha256": "5e1d440ee617a42dbf24248975ed2362f7b14c1c51d1942d4100a5ad0061270d"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataSyncAcceptTest.xml": {
+      "size": 1186,
+      "sha256": "efb8cc7af7c0764d3c9bceae7ab07e300f9cce0772ccd7758153aa61ead67408"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.pdata.PersistentDataJSTest.xml": {
+      "size": 1388,
+      "sha256": "a785b49527ba8f31196e02c251c735b184b7765e29b07e2cf54531dc35cbe406"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.registry.BuilderFloatCoercionBoundaryTest.xml": {
+      "size": 5614,
+      "sha256": "0a8167548e317941c309a7d57464c1065570d60521d69e63562931a854c2b9b4"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.registry.BuilderSetterPropertyParityTest.xml": {
+      "size": 16384,
+      "sha256": "be3b393d52bddf3b7d2536a2047dc3d7b0745d692bd403167dc1f137ffce82ae"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.registry.BuilderTagTest.xml": {
+      "size": 3464,
+      "sha256": "a9046453c48a295759fd15e0e60f2388be52cd12e895c20ddf8c299f20723fa0"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityGoalRegistrationContractTest.xml": {
+      "size": 902,
+      "sha256": "bda9edeaa42b74dee60cc05539452eae6bbedaa83e9d0508ad848ad0a5b92c68"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest.xml": {
+      "size": 4454,
+      "sha256": "c2142da7a602a3af4a26049293d72a8c7273c19b181dc9ebbda5d89dda04eb4b"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationSafetyTest.xml": {
+      "size": 2827,
+      "sha256": "4a18c71c1a7cf42b2500dff623e617bb4eb3eda7569f3d4e08a224ed108998b6"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.ItemBuilderIssue36Test.xml": {
+      "size": 8319,
+      "sha256": "cdb8db9b965ec354f4ebf1a159ae7ed5ab1fafcb0e2660064e602df956e1f32b"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryBuilderNameCollisionTest.xml": {
+      "size": 544,
+      "sha256": "44efc8b41cd13c4de35ac29271a82b7f87c0227aaa274555960b3a14afbea982"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryBuilderSurfaceGoldenTest.xml": {
+      "size": 2289,
+      "sha256": "4de1ddcef69d488565464433c76fa75dd615ec451c930243a9a876c8059cf1d4"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryStartupMinimalExampleTest.xml": {
+      "size": 1423,
+      "sha256": "d0a815d8248f857db31bda706ab412e996dc6113cc9aaec40dcb605cd9bf087f"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryDefaultDeclarationsTest.xml": {
+      "size": 4602,
+      "sha256": "2d7fd0d20f240c5d9edb030aa20f9c20aa0cc1fc0eb6ba299068e32f40bc2d39"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryEpochNegativesTest.xml": {
+      "size": 2993,
+      "sha256": "9b69538ff4b6ecc177151851ebe8c487e416f28bc900f2483ea878d6c194f71c"
+    },
+    "xml/26.1.2/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryRuntimeEndToEndTest.xml": {
+      "size": 7277,
+      "sha256": "191e0e8e1bc2ab99747c5a172e6c5e015254b9f197effa5b0dd3861638df4b2f"
+    },
+    "xml/26.2.0-fabric/platformGateTest/TEST-com.tkisor.nekojs.platform.DeclaredEventSurfaceGoldenTest.xml": {
+      "size": 494,
+      "sha256": "efe2303811f2aca4e56d21c51e05979db822aeaddcb5d61adfc8b1bf324551ad"
+    },
+    "xml/26.2.0-fabric/platformGateTest/TEST-com.tkisor.nekojs.platform.EventSurfaceDomainGateTest.xml": {
+      "size": 496,
+      "sha256": "6081b2f95182a2a2df2c5e20018c4d820553e52022672eba847602d35c305fbf"
+    },
+    "xml/26.2.0-fabric/platformGateTest/TEST-com.tkisor.nekojs.platform.PlatformSpecContractGateTest.xml": {
+      "size": 498,
+      "sha256": "b6615a3c02161f3a8e51a98f2539380aa35a994e812b8a293629e4ba3e69a37d"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.api.inject.EntityPDataStoreTest.xml": {
+      "size": 855,
+      "sha256": "77a1d1545d3a58a1ce3c6fbe8481c06301a75ab88f2715d57688c017a27ffe8f"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.api.inject.PDataJoinWindowResolutionTraceTest.xml": {
+      "size": 1042,
+      "sha256": "dc0586599c8872878d5267ca427d7685785b3ed42615d473d02d5a039ee47fbd"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24FabricGameplayEventCatalogTest.xml": {
+      "size": 544,
+      "sha256": "3dcc51d464467e4d2fb9a91be244dce97d3f6a2659b64b53fd98946212fa75a3"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayEventPhaseTraceTest.xml": {
+      "size": 1383,
+      "sha256": "81930e6e525052d8e67eab3fd502f37346d03ab040b8de6da73b36df7cd00d9c"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.bindings.query.EntitySelectorsQueryBindingTest.xml": {
+      "size": 1419,
+      "sha256": "ea3a4769d166604bae5a85b4055226020375468aed76f647b55dd63999ef711f"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolCapabilityMatrixTest.xml": {
+      "size": 493,
+      "sha256": "b6f0756e43c8467e1b283a3379d90c72a01aea91bf66dcd9b98edffdbad70a31"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolContractClassificationTest.xml": {
+      "size": 1254,
+      "sha256": "54f58b8fc58062c2073b5b61cffd63c3fefc739f1321fe7ba6fb39ecc3448354"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolDeclarationParityTest.xml": {
+      "size": 49291,
+      "sha256": "0442a046763a5032db8b00a985d02870a67b923469e3b71d32be1cf179a615f8"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.bindings.recipe.Ticket23RecipeDataPhaseTraceTest.xml": {
+      "size": 1886,
+      "sha256": "291b911ccf389d7b90998b9f29a04bbf3ccb99908be58450310ef258773a0b24"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.bindings.static_access.BindingHelpersTest.xml": {
+      "size": 2665,
+      "sha256": "6aa1387b8600c08ef1ec2b7df2caf5e4b86b0c3681d9a85dbaa5a9c23dedd1fa"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardLayoutTest.xml": {
+      "size": 1105,
+      "sha256": "9fc09396a8743161a253347022df3c53183e2f821c47d8003bcc6c139472e646"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardTextTest.xml": {
+      "size": 983,
+      "sha256": "ca6a1940ce4840cad9d578c172ee7fdfb1b427218e08f151925fbad72bd8aca3"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardViewTest.xml": {
+      "size": 2266,
+      "sha256": "1cda397bf25717f330a5c2734272c5e4a25f47ea9fc2c9cbaadf1bba9a62c07d"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectDeclarationParityTest.xml": {
+      "size": 1421,
+      "sha256": "86315fab383026a5d7128fcdf9ae8d36f3ab261de15e3dcca429d1a4d9b6e09c"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.client.render.Ticket26ColorParameterSurfaceTest.xml": {
+      "size": 818,
+      "sha256": "c2e64d48ef22051ba01a27189d281e78a7ed401524ad0aab85d0e76410d880f8"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.client.renderer.EntityRendererConfigurationTest.xml": {
+      "size": 1003,
+      "sha256": "4fd4bc8684ba06a775a240c4a7daa5d454e3c2da73da250eca7f799c567e87dc"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.command.AddressArgumentTest.xml": {
+      "size": 851,
+      "sha256": "3da8246fa2e868120c0e049db718112c184f64320d6bb7aae1501766eea13275"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.command.RuntimeCommandLifecycleSourceTraceTest.xml": {
+      "size": 1043,
+      "sha256": "ae1ffa2761c65b0c6403d23465dfc0ddd896484a9762c702f1481aebf91b6608"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.core.Ticket08LoaderDiscoveryTest.xml": {
+      "size": 790,
+      "sha256": "15c7e3044b7cc43be1cba729659b89b4882a24874c24fad95ae116e0876d538a"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.dynamic.DynamicIntrusiveHolderRollbackTest.xml": {
+      "size": 1047,
+      "sha256": "30e3f1991d79a94349158699708fd331601e2a3c56ea5e22b4a816583b1d0246"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.dynamic.DynamicItemInitializerRollbackTest.xml": {
+      "size": 710,
+      "sha256": "8625738516a28095d2ae576920dc8e1c5007de2a57942507603ee4ff87b92f8f"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.ClientLevelWatchTest.xml": {
+      "size": 735,
+      "sha256": "3263cec94f694dc7eb3a7d8bf5218748b0e14f2c797f566b764c6085db965d16"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricCapabilityLookupTest.xml": {
+      "size": 1611,
+      "sha256": "e5a251410bf9115420435d0fd3ecd397ea603425a198c3a4a4d13446a94a6a25"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricClientDataAcceptTest.xml": {
+      "size": 956,
+      "sha256": "57bf129e7467090ea65c630c5d5dcf834b2ef48cab706c8d5ba111fea8b02ce8"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricClientPainterBehaviorTest.xml": {
+      "size": 666,
+      "sha256": "5acce15ea9e5dfd9cf1b5e82a38cb29f7444044de3ee072ff7a3e1d1f140d778"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricClientPainterSurfaceTest.xml": {
+      "size": 652,
+      "sha256": "2e0f546b5f5f498899f9cbee7810fabad8afc6e3434c79242a64e8c36dac1d01"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricNetworkRegistrationOnceTest.xml": {
+      "size": 510,
+      "sha256": "be8753f5e5910fff956bb095cd4b842ebc7e610e14f6d3b865342188cdfb7bfa"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricPDataWorldBoundaryTest.xml": {
+      "size": 827,
+      "sha256": "b2dec3207a7aff79490f8c5f9a931e920444e7fa98f58d0a252137b22fc8e265"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.FabricRegistryDrainBehaviorTest.xml": {
+      "size": 2148,
+      "sha256": "eb9b80ae436df07acc2177fbba97bc479a6cbe9293bdd9000b4906017f83b6a1"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.capability.FabricEnergyStorageTest.xml": {
+      "size": 958,
+      "sha256": "575f3cbb88638e29c822deb6b57b3e6aa75757b6ae155afbcd965e0846f00cd7"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.capability.FabricStoragePersistenceTest.xml": {
+      "size": 1634,
+      "sha256": "227c828e0e369ed07e00d29ff00dffdd54df93f9ab2e122387aae59d763260b3"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.client.FabricSpawnEggModelTest.xml": {
+      "size": 1606,
+      "sha256": "01881d5037233c7e698daa8c0ecd9c7804b28a9fd5b0f2a7f400b05b3763f264"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.event.FabricEventBusBridgeTest.xml": {
+      "size": 1135,
+      "sha256": "92e0a19ac58d2329491cc73e2102c229e0d35898a7642ab3e34377d4abe754be"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.mixin.NekoEntityPDataSaveShapeTest.xml": {
+      "size": 1338,
+      "sha256": "bfa80f947da9ecf6cb2b09bd1c46b692576784d79be65fa6d0961de80b56235a"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.fabric.resource.FabricDirectoryPackResourcesTest.xml": {
+      "size": 1103,
+      "sha256": "1860cd412556c75b24c88c476771443215fa8cb1114e9e5e24d2482169da22a7"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.js.type_adapter.BlockPosAdapterTest.xml": {
+      "size": 3025,
+      "sha256": "14e37a4936ad905eb2f2ad9b42603ecbfa1696e7634c8f2c51ed9f29694091a7"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.js.type_adapter.HolderAdapterTest.xml": {
+      "size": 1485,
+      "sha256": "3d045715b25bbae21d1f55de9dad320765f4d257ac9a862708f67b7bcd3ce4be"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest.xml": {
+      "size": 4601,
+      "sha256": "7534da9a74da7b5b74fa9855eeee4b926db6af6c7af0d3fb99689ef9ff599e6d"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.js.type_adapter.Vec3AdapterTest.xml": {
+      "size": 3002,
+      "sha256": "980ada814c28c4c5394e67f805d3024920a1669ff632a5a6c15d677fbc9a2c70"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.mixin.BlockRandomTickInjectionSiteTest.xml": {
+      "size": 840,
+      "sha256": "a4a66658e80e32d8aabaf1e85279e0349d4850e52f50a56586abbadf337a4891"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.network.NetworkGenerationRoutingTest.xml": {
+      "size": 19225,
+      "sha256": "5668c8a7648125f78fb836ebc78b0caabd5ec1dab67344e9528cc2ebf939c7a5"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.network.NetworkPayloadDefenseLineTest.xml": {
+      "size": 49580,
+      "sha256": "2509b70e77330deb84e19727fdd23cd79af9184c7b838dcd94358677d3a682bb"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.network.NetworkRegistrationSourceTraceTest.xml": {
+      "size": 1795,
+      "sha256": "e3fdc915d8939b021bdca829fbd8e71e5f061102abcdca442696dc60400b3de7"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.network.PackSyncBridgeSourceTraceTest.xml": {
+      "size": 1789,
+      "sha256": "46d80936fa173163f241bbaeec39bff8667a8c721ac3ffb1493bc892b970958a"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.network.PayloadWireFormatGoldenTest.xml": {
+      "size": 2219,
+      "sha256": "3ea400557d3dc637544b195bd23227cf5c4bc5f2723152fe17695c89b75251c9"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.pack.FabricWorldPackStatusTest.xml": {
+      "size": 1132,
+      "sha256": "5dcdfbad222cad64c4d82d72197960b9f9a65f487ddae7558376dd7984bff62b"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.platform.compat.FabricVersionCompatWiringTest.xml": {
+      "size": 500,
+      "sha256": "7b4707c7e8241fbbedb9b7fd4cfea2774733ec64cb649e75597b4040f1faf8ab"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.probe.MinecraftTypeDocsPluginTest.xml": {
+      "size": 502,
+      "sha256": "2a441247919e9719823976d70d52afda3995b47b7d805325420815b9f69aa1c2"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.resource.ScriptPackModDataMountTest.xml": {
+      "size": 497,
+      "sha256": "abf08ad899b7362fdcc01f9485aaa4c03295d35a3a1d54829a128cc35e000469"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.DataSyncGenerationBoundaryTest.xml": {
+      "size": 28436,
+      "sha256": "fee7e566ec7c9e0862d8529a433986e515326cacf249d417a876f7802151f22e"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.client.PainterJSScriptColorBoundaryTest.xml": {
+      "size": 6781,
+      "sha256": "002e616110ef1bc6a01f29888b162694f07a1f54c7589f6f1e94f236f9b84837"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.client.PainterJSTextMembersTest.xml": {
+      "size": 942,
+      "sha256": "45f88cb7f067f002a5e887238b8cc0ddb08cf95fb4b9681fd67901aad49839ab"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncDomainTest.xml": {
+      "size": 1240,
+      "sha256": "9ed88d1b7a53fbfa0316ff5fe0a614f6e6868d1ce53aa43716ead2a13fe59248"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.entity.GoalRegistryApiTest.xml": {
+      "size": 2886,
+      "sha256": "0807a81f5e7389f8abe9fdd2bbb16efb7ed0df1e41b33e2a2db036dba6351bd0"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationFloatCoercionBoundaryTest.xml": {
+      "size": 11690,
+      "sha256": "a0cac3a767c6ffdd63008273d3fea12663f0f0b6746eeaa82b9683ccbd428068"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest.xml": {
+      "size": 4938,
+      "sha256": "7960acc30b7c0b94d837828070c064b071b3ed82a291b6f7ab3677f63f4418c1"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationSetterPropertyParityTest.xml": {
+      "size": 19153,
+      "sha256": "549454826d250eeb4a1593f3beb5d591e5262397dc559ea68f69302184efc300"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationSyncWireTest.xml": {
+      "size": 517,
+      "sha256": "47d8014f3e17e2377147969d32c29eccccccdfe1a54d4f12e60164ad67491360"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.RecipeEventJSBaselineIsolationTest.xml": {
+      "size": 720,
+      "sha256": "f403b38e08af0cc9d130c3d117274e06c5d638ae38a401483e9c68d351264fae"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest.xml": {
+      "size": 4309,
+      "sha256": "ee5a79a28e73560b110dcb782eaccf8172a86a4f2bc2cc7d3c84e45f1e1e7f0e"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest.xml": {
+      "size": 4302,
+      "sha256": "309041672efe16245072030e08a43e34be29288a03c269afdcd19b810b892c21"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest.xml": {
+      "size": 27133,
+      "sha256": "d4824ec425ee231bf43061a7525544024ad2b615eceb985682064f71cc61999c"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationEventSurfaceTest.xml": {
+      "size": 735,
+      "sha256": "9e2114bb505476fe27f22ff8a33c977a3c65841b7459853f821ab3da3f850b29"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest.xml": {
+      "size": 4234,
+      "sha256": "4d075629444aff6e26231cd9fda01af9bceea9ff7720d0812697e47fdcceb87e"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationOwnershipTest.xml": {
+      "size": 1190,
+      "sha256": "b02daff090537821a046a07f778acc8a40bfcabd7337bf69bc515fc723d0d8e7"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest.xml": {
+      "size": 6256,
+      "sha256": "9674511df62611d106dd5c4e65be582853d94cc8de35c91db2d5ed7d049c72f5"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest.xml": {
+      "size": 4383,
+      "sha256": "469e828937ef5499570b957408c6b423c5b050dca1a889e847ebb59db23bc0f7"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.VillagerTradeLifecycleSourceTraceTest.xml": {
+      "size": 743,
+      "sha256": "2ab34c8feb1dfebf92c941f52bf10d963d6b3b0e1b15f778a6b8f35ba581f68b"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.event.server.VillagerTradeRegistryRollbackTest.xml": {
+      "size": 545,
+      "sha256": "18092b2b8369d042a164ba4a9e4c14a2c1fc99c960e3397a431e8da71b8ffbec"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.pdata.ItemStackPersistentDataTest.xml": {
+      "size": 1315,
+      "sha256": "ae7f19838d8054d45e654d374d53274e37171acba90478a45d8b7fea76a2382b"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest.xml": {
+      "size": 4099,
+      "sha256": "57e0faedbd70404b681de090def5025c314b3a1e09061eeb35ad83de5d413605"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataSnapshotBehaviorTest.xml": {
+      "size": 930,
+      "sha256": "bb9f14c84913315b5c1f2cd016e8c963a0a44dd5fee437c5c2be5c4bf52ec1a4"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataSyncAcceptTest.xml": {
+      "size": 1190,
+      "sha256": "32e0ef8d4639c13f0a877a0b9aafa2dbf45adea3075be0a243779c04b03fb68d"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.pdata.PersistentDataJSTest.xml": {
+      "size": 1388,
+      "sha256": "bc1e4cefdfd1fc2c7e84644e13bf7f2b4ae3bcae7fd55dac34fbcc2064fadb78"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.BuilderFloatCoercionBoundaryTest.xml": {
+      "size": 5615,
+      "sha256": "0a2fcd55316fdf2051fd6af8222d9ca77f20c677eaace5478233fa3ddfc5b38d"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.BuilderSetterPropertyParityTest.xml": {
+      "size": 16386,
+      "sha256": "83092a06f3dc8bffb7c320629ae8fa71330a03333d723895eab433b5e6993e1e"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityGoalRegistrationContractTest.xml": {
+      "size": 906,
+      "sha256": "921cbaf3551abee05b0da94c05c8eb858338ca398a1603c6391dc0affbd0949d"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest.xml": {
+      "size": 1089,
+      "sha256": "373a55a1c7d68d082b2b02cf0f91633adb9960233b6649678c8f35bf1801d33f"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationSafetyTest.xml": {
+      "size": 2827,
+      "sha256": "88bd4abf8a3ff01d598db8931c0078be5fcccd1d39b8f90a1d7a6035f383428e"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.ItemBuilderIssue36Test.xml": {
+      "size": 8320,
+      "sha256": "51510159cc9637b40518960c3590a7282aee204be2144b518a46919e9b1383c9"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryBuilderNameCollisionTest.xml": {
+      "size": 543,
+      "sha256": "5dc0e64a74e16832588c2ae6401cf8cd2d287d74149de49331f34d0316503a5b"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryBuilderSurfaceGoldenTest.xml": {
+      "size": 2113,
+      "sha256": "64fcf3af48d42b5cf9ff8193ea9253ff49bd138610248555a6051ccab3b2fb16"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryStartupMinimalExampleTest.xml": {
+      "size": 1423,
+      "sha256": "add35c6e6a3d578f17d824a5da94e7e7e84e5b7ce76d753de015b02b22ec10b4"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryDefaultDeclarationsTest.xml": {
+      "size": 39933,
+      "sha256": "92862b1e3c39ed2cef8afad48ced129851ad8f879575023e2d3a548f87f44c9f"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryEpochNegativesTest.xml": {
+      "size": 2992,
+      "sha256": "9e917bfa85a779cad43e448992a7767e1ad65fe03c3ecc05868d2b9260959781"
+    },
+    "xml/26.2.0-fabric/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryRuntimeEndToEndTest.xml": {
+      "size": 7276,
+      "sha256": "2f8e3882972d7bae19327455b7fa5ec59c2214fa59e3c258351a55d21c1198d4"
+    },
+    "xml/26.2.0/platformGateTest/TEST-com.tkisor.nekojs.platform.DeclaredEventSurfaceGoldenTest.xml": {
+      "size": 494,
+      "sha256": "29772c2ed301863fe31a5218a119b20897264e6f0c48d89aeada4ff33f5538e1"
+    },
+    "xml/26.2.0/platformGateTest/TEST-com.tkisor.nekojs.platform.EventSurfaceDomainGateTest.xml": {
+      "size": 496,
+      "sha256": "97e3359ca7d9c70b6bb02c436eec7f7e12d163cff4c251f920084da631dc71b4"
+    },
+    "xml/26.2.0/platformGateTest/TEST-com.tkisor.nekojs.platform.PlatformSpecContractGateTest.xml": {
+      "size": 498,
+      "sha256": "65a6ec3cb798f104e5f2f7aca484c29985b97062fd014d135bca71a3091a4c5d"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.api.event.EventBusForgeBridgeCancelActionTest.xml": {
+      "size": 853,
+      "sha256": "3132f6df679c00b546263b975933c17d38751f19bd976b3c40d3f25a31072b53"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.api.event.EventBusForgeBridgeSideFilterTest.xml": {
+      "size": 655,
+      "sha256": "293c65ddc13bd309afb80afcd0d3771e7ebbc8dc5c3dfb58625558e9f00ed4ce"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.api.event.EventBusForgeBridgeTest.xml": {
+      "size": 907,
+      "sha256": "81f420dd2aadca082dce0c63a8e724dabc2c5b473262878bd3015bf63590f541"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.api.inject.EntityPDataStoreTest.xml": {
+      "size": 852,
+      "sha256": "ac5520c3ea2307d85f388d163591dc7fe40ceaf1f1dd987be683db196a3d60d5"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.api.inject.PDataJoinWindowResolutionTraceTest.xml": {
+      "size": 1042,
+      "sha256": "8aeffd1b9e610c6efcc1886c9ace498149cca916b603ce05de16d5b230b2d2ed"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.api.recipe.IngredientActionRegistryTest.xml": {
+      "size": 1413,
+      "sha256": "a4246ebf649ca714d5f5964d565b5a2472987858f83cdd362fa9a4fa211a3b06"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.api.recipe.RecipeFilterApplicationTest.xml": {
+      "size": 1046,
+      "sha256": "0909916e18767e1573d44707a5211141b8a708e6b5c93c174f6ce94462cb8e81"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.event.EventApiSurfaceGoldenTest.xml": {
+      "size": 487,
+      "sha256": "c116af01a820e64b22d8c7fa99d5ed80df2e78f8ccdc46893f0e396456a37997"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.event.EventSurfaceOwnershipTest.xml": {
+      "size": 814,
+      "sha256": "587442296114a07654a4dc6cba116d818938c8ec66884995d24272c965e73309"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.event.NativeEventsLegacyTierCharacterizationTest.xml": {
+      "size": 875,
+      "sha256": "58b482897c28758ddfa7331e2427d063a5345873fa885f5cf1984af65d1b321e"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24DamagePreCancelSemanticsTest.xml": {
+      "size": 710,
+      "sha256": "fb3ce1ebd78688bab1df0ebe6ca7cbba13aa5263260c1ce40dc146a85504b019"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayEventCatalogTest.xml": {
+      "size": 684,
+      "sha256": "a6644b37faf6a068f858d28afced3a8462b8fb2eb2fca32d955b9ee674efa367"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayEventPhaseTraceTest.xml": {
+      "size": 1383,
+      "sha256": "dbf8d31d7198e6d9a268a2b62e8de987e1a9392fe342e346b5841c091567f8b7"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayEventReloadLifecycleTest.xml": {
+      "size": 32390,
+      "sha256": "c10e85e3634c569990e93650cc8dc7cec7e61c6fd7a0246d6ef98eda13dea086"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.event.Ticket24GameplayFamilyBusBehaviorTest.xml": {
+      "size": 2090,
+      "sha256": "ee3b3e6602f71168861adea9e916e0996059607eea5381087fc39ad2e0021a4f"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.event.client.KeyBindEventsTest.xml": {
+      "size": 1829,
+      "sha256": "529e2f9b4432d3a2b39e03479d631cb5a7dbbedcb1234c76408c09a7efe8d0f3"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.query.DataMapQueryBindingTest.xml": {
+      "size": 796,
+      "sha256": "c329fc15c950594f8c2a1e269a648f2063a619940ab2d79d736935ddbcee41e7"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.query.EntitySelectorsQueryBindingTest.xml": {
+      "size": 1420,
+      "sha256": "a8ccbdcc1969854adb42eba593fdd7c40f73cc74d293909e5b150eb6c469c5ad"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolCapabilityMatrixTest.xml": {
+      "size": 493,
+      "sha256": "4e295b318c65425b4fdabdf00a555b63274df5c8c25e2989f325f01fab3f0d7c"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolContractClassificationTest.xml": {
+      "size": 1250,
+      "sha256": "b11dbd1282d51b6d1446564af3bacfda86d57bf00d9a0ae3a58bd7b20bbd3baf"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.query.QueryToolDeclarationParityTest.xml": {
+      "size": 1727,
+      "sha256": "25dbcb672723a7b71a277f6d7a4bab7fa53af7d5879ca3e28f107d2e9345142d"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.recipe.Ticket23RecipeDataPhaseTraceTest.xml": {
+      "size": 1886,
+      "sha256": "3c86e2cb766bc3d199fa28109c1e554f321f41d1fdc1a578ef4a353d8dad5370"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.static_access.BindingHelpersTest.xml": {
+      "size": 2665,
+      "sha256": "ec85f0a7e31f22a860ad9c4a20c2ebaf53d337138141ba47bb2e2b8b1106197e"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.bindings.static_access.CapabilityEnergyTransactionTest.xml": {
+      "size": 1203,
+      "sha256": "9361242e05a7b8f5eb1abfb38db6aa42f7a0ac8428e7ad6a9f7953c921029d8d"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardLayoutTest.xml": {
+      "size": 1105,
+      "sha256": "bf2a70e65b34a303baf1da2fd349f135db3ab92f618ff6296b540a7c95c80488"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardTextTest.xml": {
+      "size": 983,
+      "sha256": "c603794001e8b75bbd7244bb172da2b12b615f9cbb37eb39182ed5fc53ae1038"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.gui.dashboard.DashboardViewTest.xml": {
+      "size": 2266,
+      "sha256": "4dff0fe18022d10c1cee033b1ea96385dd306acd7fd789a9a3dfb5c244e5e9d5"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectDeclarationLifecycleTest.xml": {
+      "size": 73281,
+      "sha256": "0d8e4a8a27524d593003c9a0fabc9f08214a6596be5e1165266d98a8fa3f0b1d"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectDeclarationParityTest.xml": {
+      "size": 986,
+      "sha256": "5c6d592d7e2d2e36c4ea3f9699e85479f5ec3d07d0bedc7f89a886c5d1e9b736"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectDeclarationSurfaceTest.xml": {
+      "size": 1028,
+      "sha256": "765abbb5afc9ab0c0aa86ed2db567caa9e5a99d9f7cceff8b1f5d039434b6d79"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.posteffect.PostEffectGenerationInvalidationTest.xml": {
+      "size": 2380,
+      "sha256": "ef0e2ff0ac9b568116bd273da073a132f57e871a89d5e248463267effe56b7aa"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.render.Ticket26ClientInputHudLifecycleTest.xml": {
+      "size": 25045,
+      "sha256": "1f008e658e124de2a91c3ef15a0f226ab0f6f34a17ae1754e6e7106783857a2f"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.render.Ticket26ClientInputHudSurfaceTest.xml": {
+      "size": 991,
+      "sha256": "b4693746cf9b09778206b4b39bd4b733180687acbf1c38501cd2a9925e423b64"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.render.Ticket26ColorParameterSurfaceTest.xml": {
+      "size": 818,
+      "sha256": "0af70c35c0e9882ceec9015ad06e890abca628cafc399d6e6ad738200baa5176"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.render.Ticket27ClientGuiRenderLifecycleTest.xml": {
+      "size": 36986,
+      "sha256": "2746d393f8907f5b2263b6b13f7d420a2deb1bf15925f3afabb575e960f96b21"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.render.Ticket27ClientGuiRenderSurfaceTest.xml": {
+      "size": 1045,
+      "sha256": "03d29ff8f9950ed2a928dbd278d4439e305857214bfa3d0e0c2b4236bbfce4e9"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.renderer.EntityRendererConfigurationTest.xml": {
+      "size": 1003,
+      "sha256": "60d9fabb96bbfc270859aeecb783646230c37901a5bef265209eab7c856b05c6"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket41HiddenContainerIntegrationTest.xml": {
+      "size": 1543,
+      "sha256": "fde96b6430c952f8f07a80ba065ebec6aac18eaeaef723c5329949643d7bf1ba"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket41JsxHostAdapterTest.xml": {
+      "size": 2617,
+      "sha256": "4f3105616f79cf8de3256f5162ec8da89810f7e56e26128f4b5f5a6b91dde343"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket41MouseSelectionTest.xml": {
+      "size": 7851,
+      "sha256": "9270408b8042e22da9cdd3496e1cd8822257f211772408a9ffecd848bea5ca32"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket41NativeAccessibilityTest.xml": {
+      "size": 2461,
+      "sha256": "8d1616f3e828356b16b633308300e6af5537eff8b7819289a7c7da131c81a3b0"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket42HostTransactionBoundaryTest.xml": {
+      "size": 2480,
+      "sha256": "7683673d7e2d7361b6b6c864fcaeb19c095ccf114508a3a66c4bf28edc57ec6b"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket42UiGenerationLifecycleTest.xml": {
+      "size": 12109,
+      "sha256": "a1f03ae615b92d221009a92fa4cbddf83ed771e0c9265a7a8582e6f79be2238e"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket43HostLayoutProjectionTest.xml": {
+      "size": 1191,
+      "sha256": "c6a930b5acd1fa1396b571e45329b79d5232ba344c16690b5dcf2730691bcb07"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket44HandoffSmokeTest.xml": {
+      "size": 2497,
+      "sha256": "12339ca7a1adc0a2ac03892787d99171ab602e7db61176438bf2fb2418238dfc"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket44NativeBoxPaintingTest.xml": {
+      "size": 7693,
+      "sha256": "19cb064e53c7a3da5e97373da5987af35345565a4e35aa07db262bbf3e989d2e"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket44NativeTextPaintingTest.xml": {
+      "size": 7737,
+      "sha256": "699861f0c4d48327645d0bd6db3f95ba4d05bc567c97c1fca7905cc1cddb1948"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket44TextureBlitPlanTest.xml": {
+      "size": 972,
+      "sha256": "31a78203f6dab79a7bb35a37bcd9f01b9a2269464d23a9c2047cfcb8bc1d1f13"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket44TextureLoadingTest.xml": {
+      "size": 2231,
+      "sha256": "07154e0ebea7bfa36cf30769cf21696614c4bb9cbc6b828875c2c95d14eebbd0"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket45InspectorSmokeTest.xml": {
+      "size": 776,
+      "sha256": "e2977632d42a735d41321101facff0242c8da26ca15acbd964f4e4df2e40e948"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.client.ui.Ticket48PerformanceCountersTest.xml": {
+      "size": 2451,
+      "sha256": "ff95c4a1128f801d0cf2157368b0500334530a563d1c9bf07cc5b11f66cdb2e7"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.command.AddressArgumentSerializationRegistrationTest.xml": {
+      "size": 677,
+      "sha256": "947b35a9dd07703723f62697b2ec7edb9f4227df4dbf78895c21e1f9a503e082"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.command.AddressArgumentTest.xml": {
+      "size": 849,
+      "sha256": "110c56e672887ddad7f52021eed6c220bd7e1b9fa6220eb65b0f5a8af1d1fbdc"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.command.NekoJSCommandsEditorRemovalTest.xml": {
+      "size": 1349,
+      "sha256": "777169f45aef2b8c64949605639db0aed769db85824ce53545b97751a547d0a0"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.command.NekoJSCommandsTrustArgumentAndUsageTest.xml": {
+      "size": 1439,
+      "sha256": "e04aaf06ada51b67ea6d20afcbfda0e200c07a810219581729bec5f1d09ca1fe"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.command.RuntimeCommandLifecycleSourceTraceTest.xml": {
+      "size": 1043,
+      "sha256": "722e4f1b1dc251bafba00284a14ecaf6ab4f82ad47e6c7b43d286186a22c2e23"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.core.CoreBindingsGlobalsTest.xml": {
+      "size": 596,
+      "sha256": "a3047d121d1ef78769aeafbeeee425ec7d4567d55fc2aa278ff688cec4d32b91"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.core.Ticket08LoaderDiscoveryTest.xml": {
+      "size": 789,
+      "sha256": "a5a1495d000a353e3c9b113601b8ac16319cf4e3e75e8672764a42d07143eded"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.core.Ticket29AssetBindingTest.xml": {
+      "size": 638,
+      "sha256": "70c8e89f85f81216802211ec878d5c3f41350872448b6b19cc7d104c7bcd33d6"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.core.Ticket29AssetsLangCapabilityTraceTest.xml": {
+      "size": 1196,
+      "sha256": "3cb0e0bae468be643b1360004e6b3023ecfffada52fd05fe96c70c8c5b0b7f56"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.dynamic.DynamicConfigurationParticipantsTest.xml": {
+      "size": 3027,
+      "sha256": "6e1890e87327769e0cbe8acd60c7ffa83209a166e681c9166c5095bad44a74c2"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.dynamic.DynamicIntrusiveHolderRollbackTest.xml": {
+      "size": 1047,
+      "sha256": "9ff5e2314ee91abc564e8cc7c40599d3294370a73db6eb89c1d0f3b7e760410d"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.dynamic.DynamicItemInitializerRollbackTest.xml": {
+      "size": 710,
+      "sha256": "732fa4406d7058ce6579aced172aaccd8a030c05d3ebef037b641719b509a2b5"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.dynamic.DynamicSyncWiringSourceTraceTest.xml": {
+      "size": 1004,
+      "sha256": "6a5d9a8c53521e3c4f8c294fbde4ddb960543e2092c456d7211b83f84286ed9a"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.dynamic.NeoForgeDynamicRegistryAdapterValidationTest.xml": {
+      "size": 1240,
+      "sha256": "5c1b8cbd162f45103f08c3cd4a2f3d80131d789cbd1a6379c4f60783b58a797e"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.js.type_adapter.BlockPosAdapterTest.xml": {
+      "size": 3025,
+      "sha256": "fdd31c5eaddd3cc0d617c764909142a0f6f0d25dde3cac88e9feff8951342332"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.js.type_adapter.HolderAdapterTest.xml": {
+      "size": 1485,
+      "sha256": "8bb0b92dae497a514af74319db6abd5bce663d06c8c8c86ba2dc16e1db0ce8af"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.js.type_adapter.RecipeFilterAdapterTest.xml": {
+      "size": 6624,
+      "sha256": "6ef6af1895f19c39e69209fabef2e245aad79b10f896e092110eb413a5dd158a"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest.xml": {
+      "size": 4600,
+      "sha256": "5fa406db733bc7dd405c0bd397710f34deff87f85c986f022206753808817b4e"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.js.type_adapter.Vec3AdapterTest.xml": {
+      "size": 3000,
+      "sha256": "ec72fdfe3555431b4fcb338905596a51c555feeb7d58384762e929975b15c7bf"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.mixin.BlockRandomTickInjectionSiteTest.xml": {
+      "size": 838,
+      "sha256": "8a10ec7a57a60dcc0b56eab7204cc714c3cf8e3de94091bdc3ad0faa239ae5f3"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.network.DynamicSyncPayloadWireFormatTest.xml": {
+      "size": 1366,
+      "sha256": "596a7df02ba7908b6a067406a454d5e0bd536cf92e9101fd00d0656c6cf7a016"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.network.DynamicSyncPhaseRegistrationTest.xml": {
+      "size": 516,
+      "sha256": "9ffed939557c5f60a0682ede05dd2e7ce768dc8f10af4eca4f61009d8203132b"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.network.NekoScriptPayloadChannelValidationTest.xml": {
+      "size": 904,
+      "sha256": "a173c6b1d5dfe6ca617d8f24c63a0d4fc7667f0e1a84bef6554460008b00d065"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.network.NetworkGenerationRoutingTest.xml": {
+      "size": 18311,
+      "sha256": "4ccf2878ae27842d137db7df45071f92f97f62ec5fcc8a52e7631defc9a2b31e"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.network.NetworkPayloadDefenseLineTest.xml": {
+      "size": 78501,
+      "sha256": "f3fea478d78ba99c0d7ae9ec793979dead007e8f19b20b78b023ec95402b093c"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.network.NetworkRegistrationSourceTraceTest.xml": {
+      "size": 1795,
+      "sha256": "e6946e7cb220ce4eb342a1929486a70ba38bfbff7f616d122dd92fd5a928582b"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.network.PackSyncBridgeSourceTraceTest.xml": {
+      "size": 1790,
+      "sha256": "c3d9ad8fe80eff4acfef6b71516ecb0aa08668e2b0a0cd56af9e160dedd0aae4"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.network.PayloadWireFormatGoldenTest.xml": {
+      "size": 2219,
+      "sha256": "0572778b5ec56065636c9e6a782562538f4f43c46bf58c04d11819ce4a84fe7f"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.network.ShowErrorListPacketReadOnlyContractTest.xml": {
+      "size": 693,
+      "sha256": "67d08a21745c5399fbc9da88ab3155bf4e8aed8f7fb6140f588cfa2f44b91085"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.pack.FabricWorldPackStatusTest.xml": {
+      "size": 1130,
+      "sha256": "a6c8f4ed0b2cb8ebdca8c10a173b31a775e4f98822a6d8a09bbed9ec73d4955a"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.platform.ExtensionCoverageTest.xml": {
+      "size": 486,
+      "sha256": "8324f6b4741fcca590911d1053567aaa8b00c3aeb1961125297524214b155bee"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.platform.ItemStackExtensionContractTest.xml": {
+      "size": 794,
+      "sha256": "0b4673246bc279d9b61a49087c1a3847401f23edafcf1bbe60cb1a76d3db4cb7"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.platform.MixinConfigIntegrityTest.xml": {
+      "size": 483,
+      "sha256": "d3cef4ad9a945901e1adacceef3f0982eec0bfba6de1ee749e33919051cf3807"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.platform.MixinTargetResolutionTest.xml": {
+      "size": 478,
+      "sha256": "04966d47c0a8918288b404aeca2a01df6a6b759a36ec6cc2d811304e13463003"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.platform.compat.McClientCompatWiringTest.xml": {
+      "size": 493,
+      "sha256": "b0a3952c29f14e1bde446e7b55d141677984cd7895bf4932c9d466296913f929"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.platform.compat.McVersionCompatWiringTest.xml": {
+      "size": 496,
+      "sha256": "5eac4ac729613b3c518a094cb5998b2dd87f0be1a53bdf817b656c42153050dd"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.platform.compat.ScriptPayloadRegistrationShapeTest.xml": {
+      "size": 698,
+      "sha256": "df861a3772fd0c61cc5c5a4b7cb02ca72853efc82db2f5c68086450bd85160e8"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.platform.nbt.NeoForgeNbtBinaryCodecTest.xml": {
+      "size": 1574,
+      "sha256": "8c5ce536c4dc0f066b13dde5652a1bdae497f1bb7c98491c17d98748a682b871"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.probe.MinecraftTypeDocsPluginTest.xml": {
+      "size": 502,
+      "sha256": "e877e57c2f9492d35fbf792e58c0c21fb5a7912aeb5d0585a7f64cae51df5196"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.probe.NeoForgeManualTypeReferencesTest.xml": {
+      "size": 531,
+      "sha256": "f507552012ed33068a5b5892f88c25eed573c217ef3a24ba18faadb3c8ac5e59"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.resource.ScriptPackModDataMountTest.xml": {
+      "size": 497,
+      "sha256": "6e0f8e6043fd4000ee4944d1a5395a0bdc0699b2fc0fde9e71c4bed85bae2990"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.DataSyncGenerationBoundaryTest.xml": {
+      "size": 27546,
+      "sha256": "bf0b5bb6d5e208409137af61bf7035d0c64ecc33458a3b017568a424e13eba7f"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.client.PainterJSScriptColorBoundaryTest.xml": {
+      "size": 7182,
+      "sha256": "2f2c7c40520db62b098db939b5afe554d94148657073d9c5542c58a4947c2ef1"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.client.PainterJSTextMembersTest.xml": {
+      "size": 941,
+      "sha256": "de8ab3a6fd265f356f2cc4e18eac62b3fcfb47747c07c76324ee5b79595ddc17"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.clientdata.ClientDataReceiveHandlerTest.xml": {
+      "size": 983,
+      "sha256": "b50b0d8d9814e0f017c4381c7485971b97e24d14aeb6608bd78d893efaf57749"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncDomainTest.xml": {
+      "size": 1236,
+      "sha256": "5cf56e9a1a60519656b8d32cda24bc7bdfd465c59b99066638db70e7eb86ea44"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.entity.GoalRegistryApiTest.xml": {
+      "size": 2886,
+      "sha256": "6a45e01071dc05466990cb4178a6524e46106901060d329c9f70bc59d46814ea"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.registry.CapabilityRegistryEventJSTest.xml": {
+      "size": 3248,
+      "sha256": "01bbef105086883bb3528f1427900f59513b152b07e83c011d7a9cca80bcfa32"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.registry.NativeCapabilityRegistrationTest.xml": {
+      "size": 4426,
+      "sha256": "1063d1907c33b473fa2d8d9ac9db943383c2a5b01a5d6e7f0c4613315788d00b"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJSTest.xml": {
+      "size": 7176,
+      "sha256": "09e1a6169e23449cf1cd11ace24d74446e953da5fe448af570382eaaba5fb4db"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.ItemModificationComponentsTest.xml": {
+      "size": 3131,
+      "sha256": "15277c89aeb66aafc440a16805006ee3e688cfd35cd63387f8ae494e986952ac"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.LootTableEventJSJsonSurfaceTest.xml": {
+      "size": 1239,
+      "sha256": "0934f31fb34c3e5d2c1d62cf5000de4b32ffd2dbaa62986404019f7a23d99452"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationFloatCoercionBoundaryTest.xml": {
+      "size": 11689,
+      "sha256": "7eab363d38f5b3664d95d01df630ca2ac7d7601e52bfaf7a65b45aea393c7ba6"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationLegacyCharacterizationTest.xml": {
+      "size": 4939,
+      "sha256": "5896ea08c456584408fc03ae6e0eb58576b81fe25761f3ed41b7645b0f47696c"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationSetterPropertyParityTest.xml": {
+      "size": 19045,
+      "sha256": "05f0322f2ff61b436e56ca4af63907490e6a85d05e1803ff145470ef631ee94d"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.ModificationSyncWireTest.xml": {
+      "size": 517,
+      "sha256": "d70c1e1bab1bc4f88a57b84acf8bffccbde2ab1b23b4bd0ad64c9b086e487842"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.RecipeEventJSBaselineIsolationTest.xml": {
+      "size": 718,
+      "sha256": "6ea79762bdd5c2b8dd52395283a04a178c315956bde34356e18ecc920529b382"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.RecipeEventJSGeneratedIdTest.xml": {
+      "size": 679,
+      "sha256": "baa0d15e2f72f357e3277961fbcfb897370952af7b964ad19c6c8dcbb661218d"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.RecipeEventJSJsonContractTest.xml": {
+      "size": 1678,
+      "sha256": "a638d45520e63492248a34fb9f2b8dbd317f4929f457802f184a1fbdad02f729"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.TagEventJSApplyContractTest.xml": {
+      "size": 1193,
+      "sha256": "8895ebcba226c3581334c9a44ea47e2a7946a4319545768c31f1295ad4836dd5"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket22VillagerTradeEventSurfaceTest.xml": {
+      "size": 4358,
+      "sha256": "5789d0e687631f5dabfb2bd8898b63ca14380dbeaeeb23739228039d936a7a05"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39BlockModificationScriptE2ETest.xml": {
+      "size": 4302,
+      "sha256": "e773b89bbaf9482c3a7ceb66f47edae20aefdaf5e5c1ed084893e209728fd557"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39InitialCollectionAtomicityTest.xml": {
+      "size": 27133,
+      "sha256": "8f97cf7c13925d351a7412a6c3d7bde2093c02d4ffd3c4084e1e057e7eafc94c"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationEventSurfaceTest.xml": {
+      "size": 735,
+      "sha256": "fa4bc816364e9861e7d5295ee609f0b70fd863b2598155ef26afc45a2444493f"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationExamplesTest.xml": {
+      "size": 4234,
+      "sha256": "1bcf002db618ac95dc069c951e7e88c9a1cf31f4080d8ca6e46289e974a560dd"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationOwnershipTest.xml": {
+      "size": 1188,
+      "sha256": "278109cef3b8fc8fa3f4cc6487f9a15200b9f12412844307fe41417f5939cc1e"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39ModificationScriptE2ETest.xml": {
+      "size": 6256,
+      "sha256": "14b07b45d3a8ffe99d96b0da1d602ee4a29889a0c0132f8f692662388df25536"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.Ticket39SameTargetReplacementTest.xml": {
+      "size": 4383,
+      "sha256": "3517d7394cdb8120a4d1206151fad37610f3e6a883a98b51eff773a3ad6280cc"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.VillagerTradeLifecycleSourceTraceTest.xml": {
+      "size": 743,
+      "sha256": "14ee1aa61c10da42d28a59cd3c23372437835ea881c82e3b8ecfc36cb1db9980"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.event.server.VillagerTradeRegistryRollbackTest.xml": {
+      "size": 545,
+      "sha256": "3bbfd7687f7a4b84a7e67ca3a59083aec4212fa1b0a2ea5e2ca1226b5da3b56c"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.pdata.ItemStackPersistentDataTest.xml": {
+      "size": 1315,
+      "sha256": "9d5717c0cc60c6819f2a39139be2529c0182f1299ac43dfb24a31150818e7b6c"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataServerBehaviorTest.xml": {
+      "size": 4095,
+      "sha256": "14751d27d1bb46ed281c43b9290e1a8b696cca57f2cc3e8566fd47eecdc23903"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataSnapshotBehaviorTest.xml": {
+      "size": 930,
+      "sha256": "c654d2a5e77378b7bf26e25f3f2af78909c97b60905f11a92e2e118bd11a8279"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.pdata.PDataSyncAcceptTest.xml": {
+      "size": 1190,
+      "sha256": "b8f5b85cbf49e40c099620e24df83b0c70f1d5bd6f6358beb504c1c18c7602d0"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.pdata.PersistentDataJSTest.xml": {
+      "size": 1388,
+      "sha256": "4b9d79c681f395f0f5d09af441315aecabf6aefd5eee4553b316463654f6e527"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.registry.BuilderFloatCoercionBoundaryTest.xml": {
+      "size": 5612,
+      "sha256": "dc744b09bb247efd38887464c7d4d9051fdc44025126da5a9732a081ffabbf45"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.registry.BuilderSetterPropertyParityTest.xml": {
+      "size": 16383,
+      "sha256": "f945db7518ee0153cba19af66ca5b31db58fe5f430e6bdf510b7c69614a005b0"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.registry.BuilderTagTest.xml": {
+      "size": 3461,
+      "sha256": "24fa07d4d9ff8c4856cd6e6fdf106bcd6096a22a46f4331f710a0551375530e7"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityGoalRegistrationContractTest.xml": {
+      "size": 906,
+      "sha256": "a2cf903cbe68ea9cb3e4e01fb2791ee255f7f1e5532c5b51824bb542a893cfe5"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationAttributesTest.xml": {
+      "size": 4458,
+      "sha256": "b20eb4fd2180f0f870590cfad8c84efe455a3932f3c96c8ccdbfed403e020f74"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.EntityRegistrationSafetyTest.xml": {
+      "size": 2827,
+      "sha256": "85ce5c9266b1e1e446afe6d0ce97104a6cedb04f3d6a0e1961a73eaae87ae76d"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.ItemBuilderIssue36Test.xml": {
+      "size": 8319,
+      "sha256": "d083c869d04fd4bc767bc639534556b6d7f6c9c73184b288dbe65de481c22521"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryBuilderNameCollisionTest.xml": {
+      "size": 544,
+      "sha256": "9a87216dc914c3d5717a31c9f021a9ab9cb57b213d904983ac23644c5a6451ee"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryBuilderSurfaceGoldenTest.xml": {
+      "size": 2290,
+      "sha256": "3b55d2dcbe0f7b21c1b3a579b6d5f63603583aeb72c794f26c1676becfea8093"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.RegistryStartupMinimalExampleTest.xml": {
+      "size": 1423,
+      "sha256": "66bb345a9dd015c0047a7daedc09dc048eacc5dacace3036f42b61f4e75bac45"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryDefaultDeclarationsTest.xml": {
+      "size": 4603,
+      "sha256": "254afc6cdb5b88bcae8a9b0b1eebd6f4fb444dfd033f03dd164a2c198bdeaa11"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryEpochNegativesTest.xml": {
+      "size": 2992,
+      "sha256": "34d3152b81e6b02c2dc9336605c9e7c269a515770309bf86255476deb7b74075"
+    },
+    "xml/26.2.0/test/TEST-com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryRuntimeEndToEndTest.xml": {
+      "size": 7276,
+      "sha256": "b005f74e68c0deacb7399196d8cf6c576306cb2cb0690fff9a17f6f802c85a46"
+    }
+  }
+}
