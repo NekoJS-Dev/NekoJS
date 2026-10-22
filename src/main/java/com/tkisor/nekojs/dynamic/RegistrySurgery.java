@@ -118,17 +118,29 @@ public final class RegistrySurgery {
      * (needed by registries whose constructor did not opt into intrusive holders
      * but whose {@code register} path we drive with
      * {@link MappedRegistry#createIntrusiveHolder}). The original null is
-     * restored afterwards.
+     * restored afterwards. On failure, an existing map loses only the unbound
+     * holders created by this action. Preexisting pending holders remain, while
+     * holders consumed by successful registration are not restored.
      */
     @SuppressWarnings("unchecked")
     public static <T, R> R withUnfrozenAndHolders(MappedRegistry<T> registry, Supplier<R> action) {
         Map<T, Holder.Reference<T>> previous = (Map<T, Holder.Reference<T>>) get(registry, "unregisteredIntrusiveHolders");
         boolean injected = previous == null;
+        var checkpoint = injected ? null : new IdentityHashMap<>(previous);
         if (injected) {
             set(registry, "unregisteredIntrusiveHolders", new IdentityHashMap<T, Holder.Reference<T>>());
         }
         try {
             return withUnfrozenRegistry(registry, action);
+        } catch (RuntimeException | Error failure) {
+            if (!injected) {
+                try {
+                    previous.keySet().removeIf(value -> !checkpoint.containsKey(value));
+                } catch (RuntimeException | Error cleanupFailure) {
+                    failure.addSuppressed(cleanupFailure);
+                }
+            }
+            throw failure;
         } finally {
             if (injected) {
                 set(registry, "unregisteredIntrusiveHolders", null);
