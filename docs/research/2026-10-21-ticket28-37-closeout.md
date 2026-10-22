@@ -173,3 +173,6 @@ fallback 阶段初次 Probe 检查仅两项 canonical 比对失败；既有再�
 
 
 2026-10-22 后续源码 `7bea6d6d` 的[纯源码事实复用检查](../architecture-refactor/evidence/2026-10-22-source-facts/README.md)通过 common/check、处理器、guard 及 26.1.2 build（3113 tests / 85 skipped / 零失败）；其余四节点尚未重建，不沿用旧候选结果。相同采样政策的[正式性能复验](../architecture-refactor/evidence/2026-10-22-source-facts-performance/README.md)：两组重载 340.0 / 292.8 ms，均仍超过 285.3 ms；启动 33486.6 ms，通过 41173 ms。17 条有效样本、9 次正常 RCON 退出，1640 个类及 JAR 与主检出一致。源码复用已实现，但重载性能门禁仍失败；不以第二组接近门槛或历史通过代替本轮结论。完整严格 TSC 的最近冻结结果仍为 `4405b0b0` 的 5867 条诊断，当前源码未重跑完整 IDE 与五节点运行，不声称已经完成最终统一候选。
+
+
+2026-10-23 [重载节奏诊断](../architecture-refactor/evidence/2026-10-23-reload-cadence-diagnostic/README.md)已封存：启动即录制 JFR，Done 后按 3 秒间隔执行 5 次真实重载；只统计命令窗口，入口预检合计 2.92 ms、模块求值 53.21 ms、配方条件过滤 1.69 ms、配方解码 59.86 ms，root 103.21 ms、命令 172.23 ms。此为有诊断开销的阶段测量，不能替代正式 340.0 / 292.8 ms 的失败。15 个 root / 17 个配方执行样本不足以锁定单一叶函数；未跳过当前授权、schema、插件事件或配方解码。纯编译 Source 实验的中位收益仅约 3 ms，未据此改变 CommonJS 语义。两次诊断启动失败保留，成功运行正常 RCON 退出，五处临时源码恢复后 1640 个类和 JAR 与正式候选逐字节一致。完整五节点构建后续另记，不外推旧制品。
