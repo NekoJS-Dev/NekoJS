@@ -1,4 +1,5 @@
 import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
+import { $VillagerTradeDeclarationEventJS, $VillagerTradeReloadEventJS } from "java:com/tkisor/nekojs/core/villager";
 import { $PainterJS, $ScreenRenderEventJS } from "java:com/tkisor/nekojs/wrapper/client";
 import { $BlockBrokenEventJS } from "java:com/tkisor/nekojs/wrapper/event/block";
 import { $ClientTickEventJS } from "java:com/tkisor/nekojs/wrapper/event/client";

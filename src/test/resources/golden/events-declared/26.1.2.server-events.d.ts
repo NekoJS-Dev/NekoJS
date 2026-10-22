@@ -1,3 +1,4 @@
+import { $VillagerTradeDeclarationEventJS, $VillagerTradeReloadEventJS } from "java:com/tkisor/nekojs/core/villager";
 import { $BlockEntityTickEvent, $RandomTickEvent } from "java:com/tkisor/nekojs/event/level";
 import { $DataGeneratorJS } from "java:com/tkisor/nekojs/wrapper";
 import { $BlockBrokenEventJS } from "java:com/tkisor/nekojs/wrapper/event/block";

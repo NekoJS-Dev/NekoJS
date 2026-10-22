@@ -95,3 +95,5 @@ git diff -- common/src/test/resources/nekojs common/src/test/probe-ts
 更新前该文件字节与 HEAD 一致（SHA-256 `b9bd89c5e3610f9898ec481e91dd0d5309182282d58dfe5abd72def33903452e`），已保存原字节；本次只运行 `:common:test --tests com.tkisor.nekojs.probe.DynamicRegistryEventsDeclarationGoldenTest.facadeEventDeclarationMatchesGolden -Dnekojs.golden.regenerate=true`，没有运行整树镜像或改动其他 golden。工作树已有其他工作，按用户的保留要求采用单方法生成并逐项核对，不清理工作树。
 
 技术审阅由主代理核对生产生成器、失败差异与生成后的两行增量；Luna xhigh 只读执行规范/规格分轴审查，规格发现的未输出 dispatch-key 依赖已另加回归并修正。后续普通测试不带 regenerate 开关。此记录不是维护者人工验收，也不表示完整严格 TSC 或发布验收通过。
+
+同日五节点制品后续：首次 `:26.1.2:build` 在节点声明 golden 门禁失败，核对差异仅新增 `$VillagerTradeDeclarationEventJS`、`$VillagerTradeReloadEventJS` 的真实 import。主代理先备份全部节点基线，再通过五节点各自的 `platformGateTest -Dnekojs.golden.regenerate=true` 生成（1m37s，通过仅表示生成完成）。共十个 server/startup 文件各增加同一行 import，所有方法、参数、回调和 client 文件字节保持原样；本地逐字节检查工具与 JSON 记录已保存。随后正常五节点 platform gate 与两个现代 NeoForge build 复验不带 regenerate 开关，实际结果另记验收材料；不将生成模式中的跳过当作门禁通过。
