@@ -1,0 +1,311 @@
+{
+  "sourceRevision": "975496d3bddf6fc76b206921a1d09207120ca24d",
+  "archiveSha256": "4031fb74f24bb1afb8ab59a8a904264712d340b05fb4d416cf6d49444c75ac0e",
+  "artifactReference": {
+    "path": "../2026-10-24-method-bounds-performance/evidence.zip",
+    "archiveSha256": "fd06117be248b8c6de605c5ffc23cb9b0dd5e640f06ec434e6e4abf526d55f28",
+    "entry": "artifact/nekojs-neoforge-26.1.2-1.1.0-preview3.jar"
+  },
+  "entries": {
+    "installed-candidate.json": {
+      "size": 1148252,
+      "sha256": "4ddd7d97816ce0f2f26fbac5f15ea0ec93b8e3015c5d23ead863b1f79a478b90"
+    },
+    "tools/derive-managed-schema-v2.py": {
+      "size": 1414,
+      "sha256": "9bb5144d46390252363459b886fea68f035fee95b78f524f1f2debb5490f4367"
+    },
+    "tools/managed-schema-diagnostic-controller.log": {
+      "size": 1066,
+      "sha256": "7fcab9899bbf0f7aed4be9242f8b9e04f32a363bd782a64b2be8b96ae0eeb6fd"
+    },
+    "tools/managed-schema-diagnostic-v2-controller.log": {
+      "size": 1903,
+      "sha256": "d4940a150f56f59aee85a42314a51fbd094963dff7c5189ba1cee64e46cba151"
+    },
+    "tools/rcon.py": {
+      "size": 2135,
+      "sha256": "e1b6166174d694019c833fca66ed48a433254bbdf5cb3ccb5bfd7a8694b6e8ae"
+    },
+    "tools/run-managed-schema-diagnostic-v2.py": {
+      "size": 8052,
+      "sha256": "e7469ce687ff495ee7fa6b8d5c20e3234193801cc4daf12d17e7f9283ae31403"
+    },
+    "tools/run-managed-schema-diagnostic.py": {
+      "size": 7683,
+      "sha256": "8b62add9dda01370fb688eef1d604a5486e8349f8faf45ecce5e0cffcc799363"
+    },
+    "tools/seal-managed-schema-diagnostic.py": {
+      "size": 4638,
+      "sha256": "7a0231749a5163c3b3d56ad15afda9337deb6f182c4b7bfc306377383992701d"
+    },
+    "v1/commands.json": {
+      "size": 413,
+      "sha256": "8708009a341386aea40d67bcaf573785d524a616d2d75846c8b47a9d0fb7ce5d"
+    },
+    "v1/compiler.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "v1/fixtures/client_scripts/src/main.js": {
+      "size": 56,
+      "sha256": "f6761879f26b6307f738affa36faa6298800b9e8edb857d6723918eaa7a4d08f"
+    },
+    "v1/fixtures/server_scripts/adapter-bench.js": {
+      "size": 3233,
+      "sha256": "0940215d42a0fa143ff796607cb219167e39e0f684de62ec91601fb59e950c7a"
+    },
+    "v1/fixtures/server_scripts/arith-bench.js": {
+      "size": 2287,
+      "sha256": "0910e7be74a4e7c98b4dda37a95b49c5ebbcb6307729017ef6bed6130068a26b"
+    },
+    "v1/fixtures/server_scripts/main.js": {
+      "size": 1303,
+      "sha256": "2ed0821fa466811aad6d42aaec8df8b22d8ab099d3769bcfa2f4c9d7805d29fe"
+    },
+    "v1/fixtures/server_scripts/mem-bench.js": {
+      "size": 2087,
+      "sha256": "a53d683ec08050dcd0b5f195cd91833e9505df62e9009037155e972b474c9dbe"
+    },
+    "v1/fixtures/server_scripts/src/main.js": {
+      "size": 144,
+      "sha256": "512d5b04384a2f9b4cd8bf033a2b68dd2db768d1c2a4841ccebeaad7fb18a625"
+    },
+    "v1/fixtures/server_scripts/tick-bench.js": {
+      "size": 2469,
+      "sha256": "e2959ed32909d5c534db8d34998380defa481144a8be4c2ad5614479eadd87ac"
+    },
+    "v1/fixtures/startup_scripts/s01-items-basic.js": {
+      "size": 822,
+      "sha256": "7a862fa65087ed414689bcd080bf93225e3db172afa93a23b0dab73d331ef08c"
+    },
+    "v1/fixtures/startup_scripts/s02-items-tagged.js": {
+      "size": 729,
+      "sha256": "3eea534154a96922be25f986a1f541b017e0e37989c96a97984f8265c359a1ca"
+    },
+    "v1/fixtures/startup_scripts/s03-blocks-basic.js": {
+      "size": 658,
+      "sha256": "0f0cc04570adc2fe9e20b14127875d9c28a1c27041b96b3e399c2b72f9670848"
+    },
+    "v1/fixtures/startup_scripts/s04-blocks-tagged.js": {
+      "size": 677,
+      "sha256": "a55d194e38adda6b59c72a2d452fedc142613eceb390d29ecd963e1c45e28c34"
+    },
+    "v1/fixtures/startup_scripts/s05-entitytypes.js": {
+      "size": 822,
+      "sha256": "2f6c656b0f7beae76e49654b2a858cadeea8a5611e57bd064c64a2d5827b2466"
+    },
+    "v1/fixtures/startup_scripts/s06-fluids-tabs.js": {
+      "size": 656,
+      "sha256": "75589aa6504718db31b03c3419a03fe8145a3f82f2e2333425b2430d14fb0b7c"
+    },
+    "v1/fixtures/startup_scripts/s07-script-events.js": {
+      "size": 523,
+      "sha256": "36601d10f2131700fdc0b7db1230e5c636c57cd6cc5cf3e383abdaa795ebdd52"
+    },
+    "v1/fixtures/startup_scripts/s08-data-setup.js": {
+      "size": 825,
+      "sha256": "e8b480609a48c296426af3b01ba5d8b3ff2367a401bdb09757b71c4a873c8544"
+    },
+    "v1/fixtures/startup_scripts/s09-interop-refs.js": {
+      "size": 726,
+      "sha256": "c3189069593db09076cb1fa29ae1fa788ef079dced1becb59f91a469d2cc7a03"
+    },
+    "v1/fixtures/startup_scripts/s10-marker.js": {
+      "size": 238,
+      "sha256": "c743247c414b97a2bd2b38c12f3608fa393a50424f5f7d42a0a501d9cc85814a"
+    },
+    "v1/fixtures/startup_scripts/src/main.js": {
+      "size": 145,
+      "sha256": "3d8db2102ab2a6d275b76b914ae96a38bc3b8e2531c71b38769fbe1e89a70d8a"
+    },
+    "v1/helper.jar": {
+      "size": 7557,
+      "sha256": "265f20d346338921b991a238c76deb5bb13c57724cb47cf373531c9ceb591089"
+    },
+    "v1/installed-source-26340.json": {
+      "size": 3046,
+      "sha256": "2246a8af61114531b355c66869ce178cf6601d9ecdb62c76151b667b4112209e"
+    },
+    "v1/owned-process.json": {
+      "size": 121,
+      "sha256": "da1ddb4479747ad5460c0b966afdbfc53f42c789280afa73f3ce8718d15c98cb"
+    },
+    "v1/result.json": {
+      "size": 570,
+      "sha256": "5804275eb6af9a37ffa56faf3986d000ed41f0aedff8647ceb81bc4b5d1d31dc"
+    },
+    "v1/schema-measure-00.json": {
+      "size": 26078,
+      "sha256": "02c28f69a3165514bd2f6b63847d1a2f870e7d5f30b585e358b485729417ddf4"
+    },
+    "v1/schema-measure-01.json": {
+      "size": 26134,
+      "sha256": "358fa1f01f36d47fc9c0744c3882230a08433161f10f6735d732d1a183ccaf71"
+    },
+    "v1/schema-measure-02.json": {
+      "size": 26133,
+      "sha256": "367aee35f4183290af64b83fae7662621b7e34ed99299ede676bdb9ea0ddf454"
+    },
+    "v1/server-stderr.log": {
+      "size": 11749,
+      "sha256": "61600acabda374b3dee6cc7ab8596b4c062e9db9485185353099a8aaa36c5423"
+    },
+    "v1/server-stdout.log": {
+      "size": 21243,
+      "sha256": "5c66019edc6f3f9559e66ffbaef939947573fad38632167b9f86bf086aa32c72"
+    },
+    "v1/src/AcceptanceMod.java": {
+      "size": 3224,
+      "sha256": "77fdb1ebdf8fd26bd3e11f536330ff41442b2a4b3e5fff29baa0563fcc2acff7"
+    },
+    "v1/src/ManagedSchemaObservation.java": {
+      "size": 5103,
+      "sha256": "8837877360199a7884eafc92594941184ec9284f1ff88b11acbe45584885b05e"
+    },
+    "v2/commands.json": {
+      "size": 761,
+      "sha256": "1460771329e5fb530027dbec3663e713e5514e5b537c0c53f70a25b9fd6ebea9"
+    },
+    "v2/compiler.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "v2/fixtures/client_scripts/src/main.js": {
+      "size": 56,
+      "sha256": "f6761879f26b6307f738affa36faa6298800b9e8edb857d6723918eaa7a4d08f"
+    },
+    "v2/fixtures/server_scripts/adapter-bench.js": {
+      "size": 3233,
+      "sha256": "0940215d42a0fa143ff796607cb219167e39e0f684de62ec91601fb59e950c7a"
+    },
+    "v2/fixtures/server_scripts/arith-bench.js": {
+      "size": 2287,
+      "sha256": "0910e7be74a4e7c98b4dda37a95b49c5ebbcb6307729017ef6bed6130068a26b"
+    },
+    "v2/fixtures/server_scripts/main.js": {
+      "size": 1303,
+      "sha256": "2ed0821fa466811aad6d42aaec8df8b22d8ab099d3769bcfa2f4c9d7805d29fe"
+    },
+    "v2/fixtures/server_scripts/mem-bench.js": {
+      "size": 2087,
+      "sha256": "a53d683ec08050dcd0b5f195cd91833e9505df62e9009037155e972b474c9dbe"
+    },
+    "v2/fixtures/server_scripts/src/main.js": {
+      "size": 144,
+      "sha256": "512d5b04384a2f9b4cd8bf033a2b68dd2db768d1c2a4841ccebeaad7fb18a625"
+    },
+    "v2/fixtures/server_scripts/tick-bench.js": {
+      "size": 2469,
+      "sha256": "e2959ed32909d5c534db8d34998380defa481144a8be4c2ad5614479eadd87ac"
+    },
+    "v2/fixtures/startup_scripts/s01-items-basic.js": {
+      "size": 822,
+      "sha256": "7a862fa65087ed414689bcd080bf93225e3db172afa93a23b0dab73d331ef08c"
+    },
+    "v2/fixtures/startup_scripts/s02-items-tagged.js": {
+      "size": 729,
+      "sha256": "3eea534154a96922be25f986a1f541b017e0e37989c96a97984f8265c359a1ca"
+    },
+    "v2/fixtures/startup_scripts/s03-blocks-basic.js": {
+      "size": 658,
+      "sha256": "0f0cc04570adc2fe9e20b14127875d9c28a1c27041b96b3e399c2b72f9670848"
+    },
+    "v2/fixtures/startup_scripts/s04-blocks-tagged.js": {
+      "size": 677,
+      "sha256": "a55d194e38adda6b59c72a2d452fedc142613eceb390d29ecd963e1c45e28c34"
+    },
+    "v2/fixtures/startup_scripts/s05-entitytypes.js": {
+      "size": 822,
+      "sha256": "2f6c656b0f7beae76e49654b2a858cadeea8a5611e57bd064c64a2d5827b2466"
+    },
+    "v2/fixtures/startup_scripts/s06-fluids-tabs.js": {
+      "size": 656,
+      "sha256": "75589aa6504718db31b03c3419a03fe8145a3f82f2e2333425b2430d14fb0b7c"
+    },
+    "v2/fixtures/startup_scripts/s07-script-events.js": {
+      "size": 523,
+      "sha256": "36601d10f2131700fdc0b7db1230e5c636c57cd6cc5cf3e383abdaa795ebdd52"
+    },
+    "v2/fixtures/startup_scripts/s08-data-setup.js": {
+      "size": 825,
+      "sha256": "e8b480609a48c296426af3b01ba5d8b3ff2367a401bdb09757b71c4a873c8544"
+    },
+    "v2/fixtures/startup_scripts/s09-interop-refs.js": {
+      "size": 726,
+      "sha256": "c3189069593db09076cb1fa29ae1fa788ef079dced1becb59f91a469d2cc7a03"
+    },
+    "v2/fixtures/startup_scripts/s10-marker.js": {
+      "size": 238,
+      "sha256": "c743247c414b97a2bd2b38c12f3608fa393a50424f5f7d42a0a501d9cc85814a"
+    },
+    "v2/fixtures/startup_scripts/src/main.js": {
+      "size": 145,
+      "sha256": "3d8db2102ab2a6d275b76b914ae96a38bc3b8e2531c71b38769fbe1e89a70d8a"
+    },
+    "v2/helper.jar": {
+      "size": 7698,
+      "sha256": "39eb80aac55ba959ab4a49cf54466bb41090cec0056f21596ef7ad716a5dca96"
+    },
+    "v2/installed-source-24996.json": {
+      "size": 3046,
+      "sha256": "ac25c963640ee215bab4837007fb420092bdf2c78b63a6c1a1b8ff031f256408"
+    },
+    "v2/owned-process.json": {
+      "size": 121,
+      "sha256": "975cf58837b98610f589148a50241c2e07126bcbe6c71f01bdeea470c668a7af"
+    },
+    "v2/result.json": {
+      "size": 2553,
+      "sha256": "e7d258c78393ce39dad707cb7ddbc8f2eb726615ffd349415fbae0239b4dee6a"
+    },
+    "v2/schema-measure-00.json": {
+      "size": 26119,
+      "sha256": "d194c34a3c5d5991a58cebc65efa26f597114be1a043e3f3115ef231b441d66c"
+    },
+    "v2/schema-measure-01.json": {
+      "size": 26115,
+      "sha256": "2c9a4908bcacf92afd0eec675c5baa29a848490e19e1ac546c555f858d3bddea"
+    },
+    "v2/schema-measure-02.json": {
+      "size": 26144,
+      "sha256": "d1ad7b8491c766187e8551be875f6fa32b452ee5852a7f10457a1e714506421e"
+    },
+    "v2/schema-measure-03.json": {
+      "size": 26133,
+      "sha256": "334218491929f4f0e2eb93a109f9f0d6f938277cbbe44a16a524a241e71419ad"
+    },
+    "v2/schema-measure-04.json": {
+      "size": 26131,
+      "sha256": "42a52bf1b5b0d15f9e1dde29288267b765439f64bee256e64b185065600fd566"
+    },
+    "v2/schema-measure-05.json": {
+      "size": 26130,
+      "sha256": "d72c81d9c0e161b1a2d102df700af5bfd3e45d1e9c72ef32b7cb5516e6057af9"
+    },
+    "v2/server-stderr.log": {
+      "size": 11749,
+      "sha256": "ba00dbf0c4fa43ad2fda6df757b72fff0e0650457399187a117c8bfdf44c01a9"
+    },
+    "v2/server-stdout.log": {
+      "size": 20150,
+      "sha256": "3fdbb165ae9397a41df56a0ac50b73d5c0be3d3a99c59b9718e643191677c261"
+    },
+    "v2/src/AcceptanceMod.java": {
+      "size": 3224,
+      "sha256": "77fdb1ebdf8fd26bd3e11f536330ff41442b2a4b3e5fff29baa0563fcc2acff7"
+    },
+    "v2/src/ManagedSchemaObservation.java": {
+      "size": 5297,
+      "sha256": "c9bebd3b32210859a5b2929dad681bb869678a80a8a0d271a33ebbeae82430d3"
+    }
+  },
+  "redactedOriginalHashes": {},
+  "exclusions": [
+    "world binaries",
+    "properties",
+    "compiler/launcher argument files",
+    "runtime libraries",
+    "crash report with full system details"
+  ]
+}

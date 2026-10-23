@@ -2,11 +2,11 @@
 
 当前975496d3的[本地候选交接](../architecture-refactor/evidence/2026-10-24-candidate-handoff/README.md)已包含六个确切JAR、完整矩阵/五节点服务端/默认Python，以及本轮安装客户端、真实TCP和分离回退证据。生产源码本片段未改。整票仍有两项工程失败：原门槛重载313.8/308.6ms和完整严格TSC5565条；维护者与发布结论未代签。
 
-## 先定向测量绑定metadata
+## managed schema微测量：未新增缓存
 
-只读调查找到待测的重复路径：ScriptEnvironmentFactory.bindManagedGlobals逐global调用ScriptBindingSchema.fromSurface，每次扫描完整surface.symbols。下一步在普通SERVER重载实际snapshot上记录symbol/global数量与本段时间，区分canonical core和插件/环境组合，不能拿构造出的巨大数据集冒充当前开销。
+只读调查找到ScriptEnvironmentFactory.bindManagedGlobals逐global调用ScriptBindingSchema.fromSurface、每次扫描完整surface.symbols的重复路径。主代理的[实际服务器快照诊断](../architecture-refactor/evidence/2026-10-24-managed-schema-diagnostic/README.md)已完成：原性能fixture、当前生产JAR、真实SERVER surface有148symbol与7个需处理的global；启动后和五次无错误重载后共6000条重新提取微测量，六组均值0.0537427–0.0997818ms，保留全部样本及12.1258ms最大值。v2 RCON正常停止0；v1夹具半写请求导致的崩溃独立保留，未作为正常停止或成功测量。
 
-只有成本证据成立，才考虑由已有root-owned factory按不可变ApiSurfaceSnapshot身份保留global→BindingMembers索引。新Context仍要创建自己的proxy、knownGlobals、View和诊断reporter，候选失败/active保留与schema快照边界不得改变。JavaMemberIndex已有Class缓存；不因该调用每代出现就重复做反射缓存。此项尚未实现或测量，不声称已改善性能。
+该测量是在启动/重载完成后重新执行纯提取，不是整个候选BINDING阶段的分段计时，不能据此给全阶段下结论。当前量级不足以支持增加root缓存；生产未改，正式性能失败不变。若后续不同真实插件集合表现出显著开销，才考虑按不可变ApiSurfaceSnapshot身份保留索引；每代proxy、knownGlobals、View、reporter和候选提交/失败边界继续独立。JavaMemberIndex已有Class缓存，不因调用每代出现就重复做反射缓存。
 
 另一轮Source身份调查确认普通新代URI与改写文本没有generation UUID；ESM capture局部revision只因显式失效变化。性能fixture为扁平JS，require使用内建fs/os/java路径，不含自有ESM依赖；新增ESM Source强引用缓存不能解释本次失败。已有共享Engine、bundled Source和guest状态隔离保持，不延迟初始化或转移失败时机。
 

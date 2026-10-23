@@ -1,5 +1,7 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-24 [实际managed schema微测量](../evidence/2026-10-24-managed-schema-diagnostic/README.md)完成6000条记录：148symbol/7global，六组纯重新提取均值0.0537427–0.0997818ms；保留v1夹具崩溃和v2正常停止，未增加缓存。它不测整个BINDING阶段，也不替代正式性能，重载313.8/308.6ms继续FAIL。
+
 2026-10-24 [本地候选交接](../evidence/2026-10-24-candidate-handoff/README.md)已准备五节点六个确切JAR、SHA256SUMS与独立清单；显示版本仍1.1.0-preview3，未切换版本或重打包，releaseReady=false。当前指定候选的工程复验已补齐，完整严格TSC和重载性能仍失败，未远程上传、push、发PR或正式发布。[下一共享原因调查](../../research/2026-10-24-shared-cause-followup.md)保留未实现/未测量项与已否决原型边界。
 
 2026-10-24 当前975496d3的[三节点安装客户端渲染](../evidence/2026-10-24-candidate-render/README.md)完成30原图逐张复核、13次原生F3+T、六个正常进程退出；legacy16阶段、现代各7阶段，实际JAR、1100源码、全部生产类与客户端加载来源均核对。结合本轮当前TCP与分离回退，指定候选的这些工程复验已补齐；不扩展为官方安装器、物理显示器present、任意旧版恢复政策或维护者发布验收。完整严格TSC5565与重载313.8/308.6ms继续FAIL，整票仍in-progress。
