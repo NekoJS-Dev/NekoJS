@@ -62,3 +62,10 @@ Spec 复审发现新 overload 绕过内置 provider 子类的旧无参覆盖方�
 ## 同名成员的显式 this 假设：否决
 
 主代理补做严格 TypeScript throwaway 实验：把直接 callable 交叉改为带显式 this 的调用签名，会阻止裸提取后直接调用，但仍允许赋给普通无参函数及通过 .call(receiver) 调用。实际宿主前置观察的提取结果是 number，后者依然是假阳性；两条 @ts-expect-error 未生效产生 TS2578。初次命令误指定 node 类型包的 TS2688 单独保留，正确严格配置的失败另存。只执行 .call，未声称 .apply/.bind 也做过实测。该假设未进入生产，成员删除范围没有扩大。
+
+
+## 本批完整测量与下一共享原因
+
+88e18d84 的完整矩阵通过（5140 tests / 271 skipped / 零失败错误），[五节点新安装](../architecture-refactor/evidence/2026-10-23-registry-installed/README.md)实际运行全过、五进程正常退出。1609 个新 stub 的默认 Pyright 通过。十入口完整严格 TSC 为 5619 条，比较前一实际安装结果移除244/新增6，仍失败；移除136条注册表缺失、10条 BlockState 名称、98条 raw 参数错误。新增两个 Fabric261 ContextChainAccessor<any> 缺 getModifiers，四个现代 Fabric GameRule.fabric_enumCycle 与泛型 RuleTypeExtensions 签名不兼容。旧裸泛型先报 TS2314，补齐参数没有使关系本身自然正确；接下来核对实际反射/方法过滤和接口泛型来源，不能通过删除实际成员或任意擦宽消除。
+
+对 Engine/Context/Source 生命周期的只读调查没有找出可支持新增缓存的重复准备：生产装配使用 NekoSharedEngine，同一 root 的 module cache 跨候选 session 保持 builtin Source identity；每个 Context 重新 eval 才提供其独立 Node 状态，现有测试同时验证身份复用与 guest state 隔离。普通和 pack 候选均沿 root 的 factory/cache 建 Context。plugin module wrapper 虽逐次构造，但没有足以解释正式超标的成本证据；未为此增加缓存或改变初始化时机。调查不替代正式性能失败。

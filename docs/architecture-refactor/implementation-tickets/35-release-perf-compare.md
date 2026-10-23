@@ -1,5 +1,7 @@
 # 35: P4 性能复测与政策对照
 
+2026-10-23 当前发布候选口径：下方 closed/278.0 ms 是 2026-09-29 的历史交付，不证明当前源码通过。最近正式样本绑定 `7bea6d6d`，[原政策复验](../evidence/2026-10-22-source-facts-performance/README.md)为 reload 340.0 / 292.8 ms（均超过原 285.3 ms，FAIL）、startup 33486.6 ms（低于 41173 ms，PASS）；17 条有效样本、9 次正常 RCON 退出。后续局部声明修复不据此改判新源码性能，最终候选仍由票 37 阻塞。未改门槛、剔除不利样本或采用历史通过替代当前失败。
+
 **What to build:** 在主整合完成后按已确认政策复测 startup、Probe、reload、tick、Adapter 与内存表现，对比 P0 基线和最终结果，并给出是否满足政策、是否需维护者重裁决的可审计结论。
 
 **Blocked by:** [04: P4 前性能发布政策确认](04-perf-release-policy.md)、[33: CI 用途子集与 Fabric processor 延期替代 gate](33-build-ci-processor-gate.md)、[08: 真实外部 PluginAddon 从 discovery 到贡献消费与 reload 存活](08-plugin-addon.md)、[18: PData 与 ClientData 数据同步路径保护和 generation 边界](18-data-sync.md)、[20: 管理命令权限、生命周期入口与阶段诊断结果](20-runtime-commands.md)、[23: Recipe/数据生成/loot/tags/recipe viewer 既有事件域路径](23-recipe-data-surface.md)、[24: Block/Item/Level/Player/Command/Capability/goal/实体行为既有事件面覆盖路径](24-gameplay-event-surface.md)、[25: DataMap 与 EntitySelectors 查询 binding/Adapter/declaration 路径](25-query-tools.md)、[30: 错误诊断、telemetry、workspace 与用户报告链路](30-diagnostics.md)、[15: 启动期注册、typed Builder 与连带注册垂直收口](15-registry-startup.md)、[21: Dynamic Registry 多人 prepare/ack/commit 门禁](21-registry-dynamic-sync.md)、[22: Villager Trades 声明事件与稳定查询](22-villager-trades.md)、[26: CLIENT 输入与 HUD callback 生命周期](26-client-input-hud.md)、[27: CLIENT GUI 与 render Adapter 资源呈现清理](27-client-gui-render.md)、[28: PostEffects 声明事件与运行 binding 分离](28-post-effects.md)、[29: Assets/Lang 资源生成与回读收口](29-assets.md)

@@ -1,5 +1,7 @@
 # 28: PostEffects 声明事件与运行 binding 分离
 
+2026-10-23 工程关闭：[逐条件收口记录](../evidence/2026-10-23-posteffects-closeout/README.md)确认 AC9 的事件资源生命周期、运行 binding parity、迁移表、旧入口无执行消费者及 A28 精确追认均已满足。4405b0b0 的三个节点安装渲染证据已补齐，当前 88e18d84 的本域 14 个生产文件逐字节不变；本批完整五节点矩阵中的相关 93 项测试零失败/跳过。两个原生归档重新复核通过。这里只关闭本域工程条件，不新增维护者结论，也不把旧候选组件证据冒充当前整批新 JAR 原生复验；完整 TSC、性能、最终候选与发布仍由票 37 保留。
+
 2026-10-22 统一候选补验：[最新三节点安装渲染](../evidence/2026-10-22-unified-client-native/README.md)全部绑定 `4405b0b0`，合计 30 张原图、13 次 native F3+T 调度及六个游戏进程正常退出；modern 的实际安装来源和各 1638 个生产 class 摘要核对通过。节点工程检查与独立安装渲染路径已补齐，完整 IDE、性能和整票维护者结论仍按票 37 保留。
 
 2026-10-22 legacy 独立安装补验：[完整记录](../evidence/2026-10-22-posteffects-legacy-installed/README.md)以最新候选 `4405b0b0` 的客户端普通 JAR/专服分类 JAR 完成 16 阶段、七次原生 F3+T、失败候选/清除/退役/未激活状态和原版链所有权检查；16 张原图逐张复核，两个进程正常退出。首轮误用专服 JAR 导致 ICU 模块重复的失败也完整保留。它补齐 legacy 安装路径；整票、完整 IDE、最终性能与分离回退未因此自动通过。
@@ -10,7 +12,7 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** in-progress（2026-10-21：三节点原生 debug 资源重载及 30 张世界目标画面补验通过；正式候选安装客户端及最终验收仍开放）
+**Status:** closed（2026-10-23：本域十项工程验收及 A28 精确删除条件已满足；证据与范围见上方收口记录。票 37 的最终整批候选、完整 IDE、性能和发布门禁继续开放）
 
 **Assignee:** main-session（2026-10-21 主代理实现、验证；Luna xhigh 仅只读审查。初次认领见下方历史记录）
 
@@ -37,7 +39,7 @@
 - [x] 26.x 与 1.21.1 的 PostChain/Shader JSON 形状、资源路径和 mixin/Adapter 时机有 fixture 与节点 smoke 证明；平台差异不进入 common 作者契约。【2026-10-21：[三节点原生补验](../evidence/2026-10-21-posteffects-native/README.md)，legacy 16 张、26.1.2/26.2.0 各 7 张原始世界目标图均由主代理查看；首个可用 Post 在 set/clear 后截取，原生 T 处理链触发资源重载，拒绝保留、恢复及 legacy 链所有权边界通过。对应 vendor 字节码、生产 class/JAR 绑定和正常退出保留。helper 提供 F3 状态并调用原生 KeyboardHandler，不冒充物理按键；开发客户端不冒充安装 JAR 启动，后者仍在整票/发布门禁。Fabric unavailable 与 legacy resources-only 边界不变。既有 JSON fixture 和 common 隔离证据继续保留。】
 - [x] TS/Python declaration、runtime member、contract/golden 与实际事件/binding 成员一致；EntitySelectors、Assets 和已事件化 render 域不被并入本票或重复声明。【2026-10-07 自主补验：`PostEffectDeclarationParityTest` 使用真实插件 binding 注册、真实 ClientEvents bus 元数据、生产 `ProbeCoordinator.collectClasses` / `TypeReflector` 和 TS/Python backend，逐节点验证 payload 与 instance binding 的类型、成员分离、Bean 属性、旧 binding 成员缺席及重复渲染确定性；五节点定向执行通过（NeoForge 三节点完整渲染，Fabric 两节点真实事件注册与类缺席断言）。既有 `DeclaredEventSurfaceGoldenTest` 的 NeoForge TS event golden 已包含 `postEffects` callback/import；portable common manifest 零命中是隔离设计，不是本域声明缺失。未扩展 common 契约、未手改 golden。详见 `evidence/ticket37-autonomous-closeout/WORKPLAN.md`。】
 - [x] Fabric 或旧版本不可用时 capability/source-trace/smoke 显式记录 unavailable 或 partial 并给出确定失败；不用静默 no-op、空画面或无错误返回冒充支持。【2026-10-07：`PostEffectDeclarationParityTest` 在两个 Fabric 节点真跑，核对真实客户端注册面无 `postEffects` bus、plugin/payload/binding 类缺席，并用真实 `EventGroupJS` + Graal 执行订阅，得到包含 `postEffects` 的明确异常；不是成功 no-op。P4 `CAPABILITY-MATRIX.md` Fabric 行已更正为 U。1.21.1 明示 resources-only runtime chain / inline declared chain 不可用；不把 generation 定义回读冒充实际画面。官方制品跨节点渲染和首帧时机仍属 AC6，不由这里的脚本失败测试外推。】
-- [ ] 旧 PostEffectsJS 静态 register/unregister 直连路径只有在事件资源生命周期、运行 binding parity、迁移表、旧 route 无消费者和维护者确认后删除；运行时操作仍保留在最终 binding 面。【维护者已在主会话选择「追认以下精确接口及行为变化」，仅覆盖已删除的 `PostEffectsJS#register(String, Map)` / `#unregister(String)` / `#has(String)`、`PostEffectManager#register` / `#unregister` / `#clearRegistered` 及 binding close 不再 teardown 清屏；保留 set/clear/toggle/current/query。已披露 legacy resources-only 及任意新 inline id 激活限制。精确追认不再待办，但不把跨节点首帧/视觉或其他未验证项算作通过；2026-10-21 三节点 smoke 已补齐，旧 wiki 调用也已迁移（当前中英文 global-bindings 仅说明旧成员已删除）；正式候选安装客户端和整票验收仍单列开放，本票继续 in-progress。替代 parity、迁移表与无消费者证据沿用下方引用；确认原文及边界见 [公开迁移记录](../evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md#已取得的维护者结论主会话原文)。】
+- [x] 旧 PostEffectsJS 静态 register/unregister 直连路径只有在事件资源生命周期、运行 binding parity、迁移表、旧 route 无消费者和维护者确认后删除；运行时操作仍保留在最终 binding 面。【维护者已在主会话选择「追认以下精确接口及行为变化」，仅覆盖已删除的 `PostEffectsJS#register(String, Map)` / `#unregister(String)` / `#has(String)`、`PostEffectManager#register` / `#unregister` / `#clearRegistered` 及 binding close 不再 teardown 清屏；保留 set/clear/toggle/current/query。已披露 legacy resources-only 及任意新 inline id 激活限制。精确追认不再待办，但不把跨节点首帧/视觉或其他未验证项算作通过；2026-10-21 三节点 smoke 已补齐，旧 wiki 调用也已迁移（当前中英文 global-bindings 仅说明旧成员已删除）；2026-10-22 的三个节点安装客户端已补齐；2026-10-23 收口复核确认本域条件满足，票 37 的最终整批候选验收仍独立开放。替代 parity、迁移表与无消费者证据沿用下方引用；确认原文及边界见 [公开迁移记录](../evidence/ticket37-autonomous-closeout/PUBLIC-MIGRATIONS.md#已取得的维护者结论主会话原文)。】
 - [x] 随实现交付声明事件与 set/clear/toggle/current 分工的最小可运行示例和必要迁移材料；示例只使用已通过 gate 的客户端能力。【`baseline/2026-09-21-post-effects/examples/post-effects-declaration.js`（只用 `ClientEvents.postEffects` + `ClientEvents.tickPost`/`loggedOut` + `PostEffects.set/clear/isAvailable/activeGeneration/installed/hasDefinition`）；`MIGRATION.md`（旧→新对照、breaking 清单、删除条件）】
 
 ## Sources

@@ -1,5 +1,11 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-23 新源码 `88e18d84` 的[五节点新安装与完整 IDE](../evidence/2026-10-23-registry-installed/README.md)全部运行通过、五进程正常退出；1609 个默认 Python stub 检查零错误/警告。完整严格 TSC 为 5619 条、十入口 exit2 无崩溃，相对 5857 移除244/新增6，继续 FAIL；新增为 Fabric 擦除/继承关系的进一步诊断，未隐藏或放宽。该批新 JAR 与全部编译类/源码绑定，最终客户端/TCP/回退及正式性能仍按原范围开放。
+
+2026-10-23 [票 28 本域工程收口](../evidence/2026-10-23-posteffects-closeout/README.md)已完成：精确删除条件、安装渲染、声明 parity 和旧消费者核对满足，本域 14 个源码与已验收组件一致、相关 93 项当前测试通过。票 28 的 closed 不替代本票最终候选、完整 TSC、性能、分离回退或维护者发布结论；本票仍 in-progress。
+
+2026-10-23 共享修复后续：`c0bc2dbe` 的[raw 泛型 TS 输出](../evidence/2026-10-23-raw-generic-output/README.md)通过先红后绿、三模式严格消费和 common/check（2420 tests / 4 skipped / 零失败，含 isolation）。`b47734c6` 的[两节点 COMMIT 后失败恢复](../evidence/2026-10-23-dynamic-commit-recovery/README.md)完成各七阶段及六进程正常退出。后续 `88e18d84` 注册表目录修复已完成五节点 48 项定向回归、完整定向 TS 链和两轴零剩余项复审；[完整五节点检查](../evidence/2026-10-23-registry-catalog/README.md)已通过（5140 tests / 271 skipped / 零失败错误，含 isolation/platform/artifact）；该新源码安装后的全图 IDE 已单独核验为 5619 条，完整 TSC 继续失败；性能仍以 `7bea6d6d` 的 340.0 / 292.8 ms 失败为准，不据局部通过关闭整票。
+
 2026-10-23 后续局部修复 `1f877b0f`：[实际事件签名依赖](../evidence/2026-10-23-event-dependencies/README.md)交给现有 TS 闭包，保持 exclude/hide，不收集未输出的 dispatch key。两项回归先红后绿；最终 common/check、隔离及 guard 通过（2416 tests / 4 skipped / 零失败），完整定向 `test:probe-types` 通过；两轴复审最终零未解决项。新源码尚未重新绑定五节点完整安装 IDE、正式性能或最终客户端/TCP/回退，票仍 in-progress。[加载细分诊断](../evidence/2026-10-23-loader-preparation-diagnostic/README.md)完成两轮十次 COMMIT 与正常停止，未据小占比缓存或改变初始化次序换取通过。
 
 2026-10-23 当前生产源码 `7bea6d6d` 的[完整新候选检查](../evidence/2026-10-23-current-candidate-checks/README.md)已完成：common/check、处理器、guard 与五节点构建通过，5070 tests / 271 skipped / 零失败；五个新安装服务端实际运行全部通过并正常退出 0，包含 26.1.2 实体查询及重载前后效果。测试服显式禁用空服暂停，旧候选首次失败仍未确诊。全部 1609 个新 stub 的默认 Pyright 通过；十入口新生成声明的完整严格 TSC 仍为 5867 条、无崩溃，继续 FAIL。[确切同一 26.1.2 JAR 的正式性能](../evidence/2026-10-22-source-facts-performance/README.md)仍为重载 340.0 / 292.8 ms 失败、启动 33486.6 ms 通过。后续最终候选的客户端/TCP/分离回退和真实维护者结论保持各自范围，未因本轮构建及服务器成功而关闭。
@@ -14,7 +20,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-23：A15/A16/A22 精确删除已批准并验证；当前五节点构建和新安装服务端通过，完整严格 TSC 与重载性能仍失败；最终候选客户端/TCP/回退及维护者结论保持独立验收范围）
+**Status:** in-progress（2026-10-23：A15/A16/A22 精确删除已批准并验证；当前五节点构建和新安装服务端通过，完整严格 TSC 5619 条与重载性能仍失败；最终候选客户端/TCP/回退及维护者结论保持独立验收范围）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 

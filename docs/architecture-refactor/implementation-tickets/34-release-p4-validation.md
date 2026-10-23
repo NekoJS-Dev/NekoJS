@@ -1,5 +1,7 @@
 # 34: P4 五节点整体验证与能力矩阵收口
 
+2026-10-23 追加：`b47734c6` 的[两节点 COMMIT 后激活失败与恢复](../evidence/2026-10-23-dynamic-commit-recovery/README.md)完成原故障点的七阶段实测、六个进程正常退出 0，补齐下方旧 TCP 证据未覆盖的具体路径。实际契约是服务器保持 COMMITTED，故障客户端保留旧状态，持续故障重连被拒绝，移除故障后同进程恢复并再次双提交；没有全局 DEGRADED 或禁止所有后续提交的承诺。完整 TSC、正式重载性能及最终统一候选继续在票 37 保留；本票历史 closed 不表示当前 release gate 已绿。
+
 2026-10-22 补充：[Dynamic Registry 双现代 NeoForge 节点真实 TCP](../evidence/2026-10-22-dynamic-tcp/README.md)已完成：安装候选 `d91ca974` 各八阶段，包含两客户端真实 ACK/NACK、配置补同步、超时/迟到 ACK、准备中断线/重连及实际物品正负检查；八个进程正常退出。它补齐了对应历史多人窗口的具体路径，未覆盖最终统一候选、COMMIT 后降级、其他动态类型或人工 release 结论。完整 TSC、最终性能与分离回退继续按票 37 保留。
 
 **What to build:** 在主整合完成后执行一次跨五节点的 P4 总体验证，汇总 build/check/artifact、contract/golden、runtime smoke、source trace、coverage ledger、能力矩阵和旧新对照，形成 release 是否可继续的判定。

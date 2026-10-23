@@ -1,5 +1,9 @@
 # 票 28 / 37 后续工程收尾
 
+2026-10-23 新源码 `88e18d84` 的[五节点新安装与完整 IDE](../architecture-refactor/evidence/2026-10-23-registry-installed/README.md)全部运行通过、五进程正常退出；1609 个默认 Python stub 检查零错误/警告。完整严格 TSC 为 5619 条、十入口 exit2 无崩溃，相对 5857 移除244/新增6，继续 FAIL；新增为 Fabric 擦除/继承关系的进一步诊断，未隐藏或放宽。该批新 JAR 与全部编译类/源码绑定，最终客户端/TCP/回退及正式性能仍按原范围开放。
+
+2026-10-23 注册表目录源码 `88e18d84` 的[完整检查](../architecture-refactor/evidence/2026-10-23-registry-catalog/README.md)已通过：5140 tests / 271 skipped / 零失败错误，含 common isolation、处理器、guard 和五节点 build/platform/artifact；48 项定向回归零失败/跳过，full/server 严格消费、Python Literal 与完整定向 TS 链通过，两轴复审零剩余项。新安装全图 IDE 随后独立完成，5619 条完整严格诊断继续失败，详见上方最新结果。[票 28 工程收口](../architecture-refactor/evidence/2026-10-23-posteffects-closeout/README.md)确认自身十项条件已满足，已改为 closed；精确追认和已验收组件不变，不是新增整票发布签字。票 37 及完整严格 TSC、重载性能、最终整批候选门禁保持开放。
+
 2026-10-23 后续修复 `c0bc2dbe` 的[raw 泛型 TS 输出](../architecture-refactor/evidence/2026-10-23-raw-generic-output/README.md)通过先红后绿回归、三模式严格消费、完整定向 TS 链与 common/check（2420 tests / 4 skipped / 零失败错误，含 isolation）；guard 零警告，两轴审查无剩余项。五节点新安装全图声明与性能尚未据此重测，保持旧完整 TSC 和性能失败结论；下一项为实际适配器与 RegistryTypes 目录的遗漏/名称不一致，见[共享原因与实现范围](2026-10-23-reload-declaration-findings.md)。
 
 2026-10-23 生产修复 `b47734c6` 已完成本项工程复验：[失败注册的 intrusive holder 清理](../architecture-refactor/evidence/2026-10-23-intrusive-holder-fix/README.md)保留旧 pending、清理本次新增未绑定 identity，保留 null/frozen 与异常归因。旧实现真实 refreeze 4 中 3 fail；四现代节点 16 回归全过，guard 零警告，两轴审查无剩余项。[四节点完整 build](../architecture-refactor/evidence/2026-10-23-holder-modern-builds/README.md)通过（2212 tests / 236 skipped / 零失败错误）。确切同批 JAR 的[两节点真实 TCP 七阶段](../architecture-refactor/evidence/2026-10-23-dynamic-commit-recovery/README.md)全过、六进程正常退出，覆盖原故障点、断线、持续故障重连拒绝、移除故障同进程恢复及再次双提交。完整 TSC、重载性能与最终统一候选验收仍开放，票保持 in-progress。
@@ -20,7 +24,7 @@
 
 ## 执行顺序与边界
 
-1. 按完整严格 TSC 的诊断归因修复共享原因，保留真实 Java/Graal 行为、公开成员、编辑后 IR 和依赖限制。先处理多父接口继承签名，再核对其他高重复原因。6867 是最近归档的十入口结果，不当作当前源码的新测量。
+1. 按完整严格 TSC 的诊断归因修复共享原因，保留真实 Java/Graal 行为、公开成员、编辑后 IR 和依赖限制。先处理多父接口继承签名，再核对其他高重复原因。6867 是本轮起点的十入口结果；最新测量见上方逐批记录，不混作当前源码数据。
 2. 补 PostEffects 的 26.1.2 / 1.21.1 原生 render-target 首帧、资源重载与失败保留。沿用现有 resources-only / unavailable 能力边界，不扩大任意 inline id 激活承诺。
 3. 通过真实独立服务端和客户端核验 Dynamic Registry 的 prepare/ack/commit、状态同步与 registry surgery；脚本包签名同步不替代该链路，默认安全门禁保持。
 4. 整合确切本地候选、迁移/支持矩阵与分离的制品/数据回退。已获批准的 A15/A16/A22、五处 Entity、A28 和票 36 试做不重复请求；未取得的最终发布/回滚结论仍须真实维护者确认。
