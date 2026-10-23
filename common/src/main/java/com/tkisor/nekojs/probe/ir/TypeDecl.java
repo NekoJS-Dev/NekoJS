@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.probe.ir;
 
+import com.tkisor.nekojs.api.surface.ApiTypeRef;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,14 +61,38 @@ public final class TypeDecl {
         return getter.setterParamType != null ? getter.setterParamType : field.isFinal ? null : field.type;
     }
 
-    /** 类级泛型参数（名字 + 可选上界 TypeSlot）。 */
+    /** A class type parameter with its reflected intersection bounds and editable legacy constraint. */
     public static final class TypeParam {
         public final String name;
         public TypeSlot bound;       // null = 无上界
+        private final TypeSlot originalBound;
+        private final ApiTypeRef originalBoundRef;
+        private final List<TypeSlot> additionalBounds;
 
         public TypeParam(String name, TypeSlot bound) {
+            this(name, bound, List.of());
+        }
+
+        TypeParam(String name, TypeSlot bound, List<TypeSlot> additionalBounds) {
             this.name = name;
             this.bound = bound;
+            this.originalBound = bound;
+            this.originalBoundRef = bound == null ? null : bound.ref;
+            this.additionalBounds = List.copyOf(additionalBounds);
+        }
+
+        /**
+         * Returns the effective constraint. Replacing, clearing or editing the legacy bound replaces
+         * the whole constraint, so reflected secondary bounds cannot reappear after an explicit edit.
+         */
+        public List<TypeSlot> bounds() {
+            if (bound == null) return List.of();
+            if (additionalBounds.isEmpty() || bound != originalBound || bound.overridden
+                    || !java.util.Objects.equals(bound.ref, originalBoundRef)) return List.of(bound);
+            List<TypeSlot> bounds = new ArrayList<>();
+            bounds.add(bound);
+            bounds.addAll(additionalBounds);
+            return List.copyOf(bounds);
         }
     }
 }

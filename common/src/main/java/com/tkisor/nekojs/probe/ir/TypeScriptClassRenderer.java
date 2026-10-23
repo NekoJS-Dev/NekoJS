@@ -338,12 +338,18 @@ public final class TypeScriptClassRenderer {
             // Edited IR remains authoritative; a library's original variance may no longer describe it.
             boolean covariant = d.kind == TypeDecl.Kind.INTERFACE && !d.mutated
                     && covariantTypeParameters.getOrDefault(d.fqn, Set.of()).contains(tp.name);
-            String s = (covariant ? "out " : "") + tp.name;
-            if (tp.bound != null) s += " extends " + renderTypeParameterBound(tp.bound, tp.name, aliases,
-                    new LinkedHashSet<>());
-            return s;
+            return (covariant ? "out " : "") + renderTypeParameter(tp, aliases);
         }).collect(Collectors.joining(", ")));
         sb.append(">");
+    }
+
+    /** Renders the effective class constraint shared by host declarations and their aliases. */
+    public static String renderTypeParameter(TypeDecl.TypeParam parameter, TypeAliasRegistry aliases) {
+        List<TypeSlot> bounds = parameter.bounds();
+        return parameter.name + (bounds.isEmpty() ? "" : " extends " + bounds.stream()
+                .map(bound -> renderTypeParameterBound(bound, parameter.name, aliases, new LinkedHashSet<>()))
+                .map(rendered -> bounds.size() > 1 ? "(" + rendered + ")" : rendered)
+                .collect(Collectors.joining(" & ")));
     }
 
     private String formatConstructor(MethodDecl c) {

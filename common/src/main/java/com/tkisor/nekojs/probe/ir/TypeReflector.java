@@ -579,10 +579,11 @@ public final class TypeReflector {
     public static List<TypeDecl.TypeParam> typeParametersOf(Class<?> cls) {
         List<TypeDecl.TypeParam> parameters = new ArrayList<>();
         for (TypeVariable<?> variable : cls.getTypeParameters()) {
-            Type[] bounds = variable.getBounds();
-            TypeSlot bound = bounds.length > 0 && bounds[0] != Object.class
-                    ? TypeSlot.of(bounds[0], toRef(bounds[0])) : null;
-            parameters.add(new TypeDecl.TypeParam(variable.getName(), bound));
+            List<TypeSlot> bounds = Arrays.stream(variable.getBounds()).filter(bound -> bound != Object.class)
+                    .map(bound -> TypeSlot.of(bound, toRef(bound))).toList();
+            TypeSlot first = bounds.isEmpty() ? null : bounds.getFirst();
+            parameters.add(new TypeDecl.TypeParam(variable.getName(), first,
+                    bounds.isEmpty() ? List.of() : bounds.subList(1, bounds.size())));
         }
         return parameters;
     }

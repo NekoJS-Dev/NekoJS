@@ -49,7 +49,9 @@ public final class ProbeAssignTypeEventJS {
         for (MethodDecl c : d.constructors) count += applyMethod(d, c, map);
         for (MethodDecl m : d.methods) count += applyMethod(d, m, map);
         for (FieldDecl f : d.fields) if (f.type != null) count += applySlot(d, f.type, map);
-        for (TypeDecl.TypeParam tp : d.typeParams) if (tp.bound != null) count += applySlot(d, tp.bound, map);
+        for (TypeDecl.TypeParam parameter : d.typeParams) {
+            for (TypeSlot bound : parameter.bounds()) count += applySlot(d, bound, map);
+        }
         return count;
     }
 

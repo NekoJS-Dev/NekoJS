@@ -137,11 +137,7 @@ public final class AdapterAliasGenerator {
         List<String> declarations = new ArrayList<>();
         List<String> arguments = new ArrayList<>();
         for (TypeDecl.TypeParam parameter : typeParameters) {
-            String declaration = parameter.name;
-            if (parameter.bound != null) {
-                declaration += " extends " + TypeScriptClassRenderer.renderTypeParameterBound(
-                        parameter.bound, parameter.name, scopedAliases, new LinkedHashSet<>());
-            }
+            String declaration = TypeScriptClassRenderer.renderTypeParameter(parameter, scopedAliases);
             // Raw Java uses historically accept erased values; explicit arguments still retain their bounds.
             declarations.add(declaration + " = any");
             arguments.add(parameter.name);

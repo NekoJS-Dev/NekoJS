@@ -244,10 +244,7 @@ public final class IndexFileGenerator {
         StringJoiner parameters = new StringJoiner(", ", "<", ">");
         StringJoiner arguments = new StringJoiner(", ", "<", ">");
         for (TypeDecl.TypeParam parameter : declaration.typeParams) {
-            String bound = parameter.bound == null ? "" : " extends "
-                    + TypeScriptClassRenderer.renderTypeParameterBound(parameter.bound, parameter.name,
-                            aliases, new LinkedHashSet<>());
-            parameters.add(parameter.name + bound);
+            parameters.add(TypeScriptClassRenderer.renderTypeParameter(parameter, aliases));
             arguments.add(parameter.name);
         }
         output.append("    export type ").append(canonical)
@@ -422,7 +419,7 @@ public final class IndexFileGenerator {
             collectTypeImports(iface.sourceType, imports, currentPackage);
         }
         for (TypeDecl.TypeParam parameter : decl.typeParams) {
-            if (parameter.bound != null) collectTypeImports(parameter.bound.sourceType, imports, currentPackage);
+            for (TypeSlot bound : parameter.bounds()) collectTypeImports(bound.sourceType, imports, currentPackage);
         }
         for (MethodDecl constructor : decl.constructors) {
             for (MethodDecl.MethodParam parameter : constructor.params) {
