@@ -8,6 +8,6 @@
 
 最近祖先的成员若是不可投影accessor、真实同名方法或类型不匹配，不越过它寻找更远的数据属性；父类缺失或隐藏时停止，不从反射补回。不同read/write类型保留get/set。只比较现有渲染后的类型，不新增泛型父参数替换，因此Base<T>实例化后的某些等价类型仍可能漏投影；这不是全图TSC已修复的声明。未删除任何Bean别名或真实字段/方法，没有扩大既往五处Entity.attackable迁移范围，Python和运行时未改。
 
-红绿证据：新增用例修复前3项中2项失败，公开生成物严格TSC出现2条TS2611；修复后3项通过、严格TS正负例通过。扩展的renderer、继承接口和静态继承回归通过；新增夹具包括只读/可写三代继承、继承setter、field-backed Bean、父级已经是accessor、类型差异、hide/rename/missing parent与getter override。完整矩阵与新候选全图声明的结果在后续封存后补充，旧975候选的5565条完整严格TSC失败和313.8/308.6ms正式性能失败仍保留。
+红绿证据：新增用例修复前3项中2项失败，公开生成物严格TSC出现2条TS2611；修复后3项通过、严格TS正负例通过。扩展的renderer、继承接口和静态继承回归通过；新增夹具包括只读/可写三代继承、继承setter、field-backed Bean、父级已经是accessor、类型差异、hide/rename/missing parent与getter override。源码87baad4b的[完整封存](../architecture-refactor/evidence/2026-10-24-inherited-bean/README.md)已完成5152项/271跳过/零失败错误、五节点全新安装与五次正常停止0、1609默认stub零错误警告；完整严格TSC5565→5549，删除16条TS2611、没有新增，仍FAIL。原政策[正式性能](../architecture-refactor/evidence/2026-10-24-inherited-bean-performance/README.md)为287.4/305.6ms继续FAIL，启动28014.8ms通过；17有效记录/9正常停止。旧975原失败保留为历史，不代替最新结果。
 
-复核入口：`:common:check`、`:common-api-processor:test`、`guardLint`及CI五节点build；`npm run test:probe-types`包含新增`test:probe-inherited-bean`。原性能仍须按原采样器和285.3ms门槛另行复验，不以[30轮分段诊断](../architecture-refactor/evidence/2026-10-24-reload-stage-profile/README.md)代替。
+复核入口：`:common:check`、`:common-api-processor:test`、`guardLint`及CI五节点build；`npm run test:probe-types`包含新增`test:probe-inherited-bean`。本阶段正式性能已按原采样器和285.3ms门槛独立复验，未以[30轮分段诊断](../architecture-refactor/evidence/2026-10-24-reload-stage-profile/README.md)代替；后续源码仍须保持同一政策。

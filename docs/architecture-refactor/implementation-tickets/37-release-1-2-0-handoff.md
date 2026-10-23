@@ -1,5 +1,7 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-24 最新工程源码87baad4b的[继承属性修复](../evidence/2026-10-24-inherited-bean/README.md)通过5152项/271跳过/零失败、五节点新安装与五次正常停止、1609默认stub零错误警告。完整严格TSC5565→5549，删除16条TS2611、没有新增，仍FAIL。[同JAR原政策性能](../evidence/2026-10-24-inherited-bean-performance/README.md)重载287.4/305.6ms继续超285.3ms，启动28014.8ms通过，17有效记录/9正常停止。既有六制品交接与客户端/TCP/回退仍明确绑定975，不冒称87已重跑那些流程。下一项无损共享修复及96个真实字段/方法冲突见[TS2300分类](../../research/2026-10-24-ts2300-followup.md)；未删除成员、放宽门禁或代签维护者结论，整票保持in-progress。
+
 2026-10-24 [实际managed schema微测量](../evidence/2026-10-24-managed-schema-diagnostic/README.md)完成6000条记录：148symbol/7global，六组纯重新提取均值0.0537427–0.0997818ms；保留v1夹具崩溃和v2正常停止，未增加缓存。它不测整个BINDING阶段，也不替代正式性能，重载313.8/308.6ms继续FAIL。
 
 2026-10-24 [本地候选交接](../evidence/2026-10-24-candidate-handoff/README.md)已准备五节点六个确切JAR、SHA256SUMS与独立清单；显示版本仍1.1.0-preview3，未切换版本或重打包，releaseReady=false。当前指定候选的工程复验已补齐，完整严格TSC和重载性能仍失败，未远程上传、push、发PR或正式发布。[下一共享原因调查](../../research/2026-10-24-shared-cause-followup.md)保留未实现/未测量项与已否决原型边界。
@@ -38,7 +40,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-24：A15/A16/A22 精确删除已批准并验证；当前975496d3五节点构建/安装、指定客户端/TCP/分离回退工程复验通过；完整严格TSC5565条与重载性能仍失败；最终回滚政策、维护者及发布结论未代签）
+**Status:** in-progress（2026-10-24：A15/A16/A22 精确删除已批准并验证；最新87baad4b通过5152项矩阵/五节点安装/1609默认stub，完整严格TSC5549条与重载287.4/305.6ms仍失败；指定客户端/TCP/分离回退与六制品交接仍绑定975496d3；最终回滚政策、维护者及发布结论未代签）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 

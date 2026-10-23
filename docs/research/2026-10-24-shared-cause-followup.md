@@ -1,6 +1,6 @@
 # 当前候选验收后的共享原因推进
 
-当前975496d3的[本地候选交接](../architecture-refactor/evidence/2026-10-24-candidate-handoff/README.md)已包含六个确切JAR、完整矩阵/五节点服务端/默认Python，以及本轮安装客户端、真实TCP和分离回退证据。生产源码本片段未改。整票仍有两项工程失败：原门槛重载313.8/308.6ms和完整严格TSC5565条；维护者与发布结论未代签。
+最新工程源码87baad4b的[继承属性修复](../architecture-refactor/evidence/2026-10-24-inherited-bean/README.md)已完成5152项完整矩阵、五节点新安装与1609默认stub，完整严格TSC降到5549条，仍FAIL。[最新原政策性能](../architecture-refactor/evidence/2026-10-24-inherited-bean-performance/README.md)重载287.4/305.6ms仍FAIL、启动28014.8ms通过。975496d3的[本地候选交接](../architecture-refactor/evidence/2026-10-24-candidate-handoff/README.md)仍保留其六个确切JAR及客户端/TCP/回退证明，不冒称那些流程已对87重跑。维护者与发布结论未代签。
 
 ## managed schema微测量：未新增缓存
 
@@ -16,6 +16,8 @@
 
 主代理的[raw接口重载原型](../architecture-refactor/evidence/2026-10-24-declaration-prototypes/README.md)证明：raw-first虽然保留普通调用结果，却仍给显式泛型具体类调用增加未经证明的返回保证；Java实际反例和TS2578负例均封存。没有把它加入生产，也未改Python或现有编辑选择。
 
-getter-only Bean的readonly属性表示已按[窄投影方案](2026-10-24-inherited-bean-properties.md)由主代理实现并通过最小红绿与扩展回归，完整矩阵/新实际候选待补。Bee.goalSelector保持只读，AbstractArrow.noPhysics保持可写；field-backed getter用既有字段writeType。真实方法、读写类型、override与隐藏/编辑父类边界保留，不反射被排除父类，也不扩展五处Entity.attackable删除批准。
+getter-only Bean的readonly属性表示已按[窄投影方案](2026-10-24-inherited-bean-properties.md)由主代理实现并通过最小红绿、扩展回归、完整矩阵和五节点新实际安装，全图删除16条TS2611、没有新增。Bee.goalSelector保持只读，AbstractArrow.noPhysics保持可写；field-backed getter用既有字段writeType。真实方法、读写类型、override与隐藏/编辑父类边界保留，不反射被排除父类，也不扩展五处Entity.attackable删除批准。
+
+[TS2300分类](2026-10-24-ts2300-followup.md)已由Luna只读调查和主代理独立解析核实：五份server基线1006个位置，跨节点96个真实字段/方法成员、1个重复import名；其中Bean accessor alias冲突为0。跨包同名事件import可直接复用现有局部别名机制修复，尚未实现。真实字段/方法的可表达性仍受已封存Graal反例约束，不能自动删除未授权成员。
 
 Optional/Stream的捕获与SAM host方向、Bean/同名方法、Mixin泛型来源仍需独立设计和真实消费证据。不通过全图any/unknown、全局协变、删除成员、空声明或放宽exclude/hide掩盖失败。后续生产改动完成后再冻结新候选，原政策复验仍使用原采样器、fixture与285.3ms门槛。

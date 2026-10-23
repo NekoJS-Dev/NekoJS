@@ -1,6 +1,8 @@
 # Current-candidate performance verification
 
-Latest fixed measurement (2026-10-24): [975496d3, original policy](../2026-10-24-method-bounds-performance/README.md). Reload means **313.8/308.6 ms FAIL** against 285.3 ms; startup mean **14132.6 ms PASS** against 41173 ms. All 17 records are valid, with 9 normal RCON stops. The 1641 production classes and exact JAR match the primary candidate. This remains a failed combined gate.
+Latest fixed measurement (2026-10-24): [87baad4b, original policy](../2026-10-24-inherited-bean-performance/README.md). Reload means **287.4/305.6 ms FAIL** against 285.3 ms; startup mean **28014.8 ms PASS** against 41173 ms. All 17 records are valid, with 9 normal RCON stops. The 1641 production classes and exact JAR match the installed candidate. This remains a failed combined gate; the declaration-only change does not establish a causal performance improvement.
+
+Previous 2026-10-24: [975496d3](../2026-10-24-method-bounds-performance/README.md) recorded 313.8/308.6 ms reload FAIL and 14132.6 ms startup PASS. Its complete evidence remains intact.
 
 Historical 2026-10-15: [e473479a](../2026-10-15-reload-performance/REPORT.md) passed 214.4/228.4 ms reload and 17718.2 ms startup. That history does not certify subsequent source changes or replace the current failed result.
 

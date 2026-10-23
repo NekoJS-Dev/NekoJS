@@ -1,6 +1,6 @@
 # 35: P4 性能复测与政策对照
 
-2026-10-24 当前发布候选口径：下方closed/278.0ms为2026-09-29历史交付。最近正式样本绑定 `975496d3`，[原政策复验](../evidence/2026-10-24-method-bounds-performance/README.md)为reload313.8/308.6ms（均超原285.3ms，FAIL）、startup14132.6ms（低于41173ms，PASS），17有效样本/9正常RCON停止；1641类及完整JAR与主候选一致。票37仍由性能、完整TSC与其他独立验收阻塞，未改门槛或移除不利样本。
+2026-10-24 当前发布候选口径：下方closed/278.0ms为2026-09-29历史交付。最近正式样本绑定 `87baad4b`，[原政策复验](../evidence/2026-10-24-inherited-bean-performance/README.md)为reload287.4/305.6ms（均超原285.3ms，FAIL）、startup28014.8ms（低于41173ms，PASS），17有效样本/9正常RCON停止；1641类及完整JAR与新安装候选一致。声明表示修复不证明性能因果改善，旧975的313.8/308.6ms记录保留。票37仍由性能、完整TSC与其他独立验收阻塞，未改门槛或移除不利样本。
 
 **What to build:** 在主整合完成后按已确认政策复测 startup、Probe、reload、tick、Adapter 与内存表现，对比 P0 基线和最终结果，并给出是否满足政策、是否需维护者重裁决的可审计结论。
 
