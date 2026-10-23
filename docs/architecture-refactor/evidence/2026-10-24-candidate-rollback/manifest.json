@@ -1,0 +1,170 @@
+{
+  "archiveSha256": "b376e7a05148b4de1416075fe056f7a1b277c43380240a23e2368a9ec2766ec7",
+  "oldRevision": "d91ca974",
+  "candidateRevision": "975496d3bddf6fc76b206921a1d09207120ca24d",
+  "entries": {
+    "artifact-rollback/commands.json": {
+      "size": 722,
+      "sha256": "739cd3c93abbe16faa6e02989a225e9171add929cc077d36385551f23cfd8d72"
+    },
+    "artifact-rollback/owned-process.json": {
+      "size": 271,
+      "sha256": "37f2ad9404ac62c2db88fc37eb7a7d65e338d7a1751a54918c22ac22e5d5dd5a"
+    },
+    "artifact-rollback/pdata-proof.js": {
+      "size": 504,
+      "sha256": "cbbd60a46073afe54d7e9a6ceac70a766e677ba0593bd805162d710f2e9145a0"
+    },
+    "artifact-rollback/preparation.json": {
+      "size": 4859,
+      "sha256": "09115e2810fe7ec437cb9010f2bec9b7e653d410f6e1061baea0c42d429f8e9b"
+    },
+    "artifact-rollback/result.json": {
+      "size": 9633,
+      "sha256": "07ef1b954c7ee294b8598bd938b8efa196a4494bd0cd9915cf08dd399dcba3cb"
+    },
+    "artifact-rollback/server-stderr.log": {
+      "size": 11747,
+      "sha256": "6310d1ccdd2d50a15bddc53b3d72ff9c0699ee3178bc9957d012fece02808394"
+    },
+    "artifact-rollback/server-stdout.log": {
+      "size": 13581,
+      "sha256": "6cf9ab9f678baaec7cd6fe353904b61e3dc5a33ca4f00940cdfd30abfabccc20"
+    },
+    "artifact/nekojs-neoforge-26.1.2-1.1.0-preview3.jar": {
+      "size": 17035036,
+      "sha256": "2206b92413bb4c9ac3f1d5f5cc2d7b3a9df95631e7defdd5c0d6ee368b9b2132"
+    },
+    "backup-manifest.json": {
+      "size": 4570,
+      "sha256": "8e80559a6b90c99c75d59967028cc373567b10367883c7a0ad3898f99c32abbc"
+    },
+    "baseline-initial/commands.json": {
+      "size": 1017,
+      "sha256": "54fd250726a51e8525dabb027e2302bee3e372c138879eb7a8fa88208c349e74"
+    },
+    "baseline-initial/owned-process.json": {
+      "size": 270,
+      "sha256": "eaa3675ae2ee9ad7a4df3ca2c013da0a052dd22b3d94803a3ad4ff76885a3ed5"
+    },
+    "baseline-initial/pdata-proof.js": {
+      "size": 592,
+      "sha256": "3d2baee5c07b61fb6eb3467c66475753bb8eb7dea8aa38d6eb9fb0e1de52a9d4"
+    },
+    "baseline-initial/preparation.json": {
+      "size": 216,
+      "sha256": "10ff34ad9ca23f07814b111e2492e2fa66994acbec8bffc69df1d5a36d48c2c6"
+    },
+    "baseline-initial/result.json": {
+      "size": 4985,
+      "sha256": "6592e0cccc717c031790863e49177c8e09edb0f276a003f5cb9fb367b61e9ab3"
+    },
+    "baseline-initial/server-stderr.log": {
+      "size": 11746,
+      "sha256": "83b6deb427116b7462d5534e701dc2ce081cf19e7f2fb66f91cb9d65d2474f79"
+    },
+    "baseline-initial/server-stdout.log": {
+      "size": 14518,
+      "sha256": "490cab10c6a08eff912ed35feb8d42a1a658737cc26e12647aa974ffbbe5a3fc"
+    },
+    "candidate-advance/commands.json": {
+      "size": 840,
+      "sha256": "3209f3a148f1ce8b5f874bd689c6a7b916346fc1ec2fcbc76482c4461fd01edd"
+    },
+    "candidate-advance/owned-process.json": {
+      "size": 271,
+      "sha256": "782ab4449443f266cc0141d44f3b2a6fdcd012d544007f93fda86612a1f4d899"
+    },
+    "candidate-advance/pdata-proof.js": {
+      "size": 593,
+      "sha256": "4910b45c7956026df21d3fdec65948a4773c4499e39ea5a4c7a07c8194aa962d"
+    },
+    "candidate-advance/preparation.json": {
+      "size": 4891,
+      "sha256": "7100a758b2702db6f364a4d270346bdab8a25b5fc693e360c9212bc28ef4db78"
+    },
+    "candidate-advance/result.json": {
+      "size": 9665,
+      "sha256": "899bb3e3fae88067ad60c7a8c634dfdb6f8069e9abd777e5b4bafd7d052a367a"
+    },
+    "candidate-advance/server-stderr.log": {
+      "size": 11747,
+      "sha256": "0b3d4da385df73a5cff358f015fbe92beabba4e35013f14cba0d6e1da979deba"
+    },
+    "candidate-advance/server-stdout.log": {
+      "size": 13895,
+      "sha256": "9e5348d5606f7fbd32729271f4c245ee331c56d97b6d2454afb1b9a4534ff5a2"
+    },
+    "data-restore/commands.json": {
+      "size": 717,
+      "sha256": "347420522ca1311064b6d91da5c1770d2418db3155a0547dfc3fc8da327119bb"
+    },
+    "data-restore/owned-process.json": {
+      "size": 266,
+      "sha256": "3d9913b352876573a2ba73ece0914e74cc27840d78b2bf1f7785b69a7a566e67"
+    },
+    "data-restore/pdata-proof.js": {
+      "size": 499,
+      "sha256": "d643cc9b4265cc116a8b05d76050f73e2a068e620350fd13003ee45c2738b20d"
+    },
+    "data-restore/preparation.json": {
+      "size": 4886,
+      "sha256": "230a21c4f2989f47eda364676d62cb03727d51ae0590cfd5031080e00eabc6b9"
+    },
+    "data-restore/result.json": {
+      "size": 9655,
+      "sha256": "9e2d5ad0607cea79679558fa4f28812851d79e91479080e928b1a6482188ef66"
+    },
+    "data-restore/server-stderr.log": {
+      "size": 11736,
+      "sha256": "2645cc9c2aed4c430d2becee8d6fd53bc50024884e7eaad17a80d0afa9996044"
+    },
+    "data-restore/server-stdout.log": {
+      "size": 13531,
+      "sha256": "e3dd4e094a3fde8b47d3df17e9a4ca8b6b78405d99f01a1f2328a9ec6f394b8e"
+    },
+    "final-verdict.json": {
+      "size": 374,
+      "sha256": "be834254beab7a5e811ac7b9f07e7b904194d2a3fe50ab5e4b92dc3ac2d899dc"
+    },
+    "summary.json": {
+      "size": 35252,
+      "sha256": "ef89a72869188328131d1604e3710d93fe56dfb3a4617e209084c654d1b5b42d"
+    },
+    "tools/method-bounds-rollback-binding.json": {
+      "size": 229795,
+      "sha256": "199a7575929bde5af83681a4841345494354934a6e9f33d24ef9c875324766da"
+    },
+    "tools/method-bounds-rollback-run.log": {
+      "size": 122,
+      "sha256": "e0c59ca299324e646f2720529c5686eec1d71f3f7e258d258d6d811ba1226c81"
+    },
+    "tools/prepare-method-bounds-rollback.py": {
+      "size": 1936,
+      "sha256": "655b526efe4b57111e2c89f20d6e593922bb9e4c3df120f5ae04dcde4e74e9a4"
+    },
+    "tools/rcon.py": {
+      "size": 2135,
+      "sha256": "e1b6166174d694019c833fca66ed48a433254bbdf5cb3ccb5bfd7a8694b6e8ae"
+    },
+    "tools/rollback-4405b0b0.py": {
+      "size": 9403,
+      "sha256": "0a7422f1005b9d03c254a183b291a41f143aba7a887d6b77469533e749f2d472"
+    },
+    "tools/rollback-method-bounds.py": {
+      "size": 9311,
+      "sha256": "36c40e658930293bf60264272cb9b0918902a746021f387ace78fa3ea705aa89"
+    },
+    "tools/seal-method-bounds-rollback.py": {
+      "size": 3480,
+      "sha256": "8ce3aaaaddb2a31b0eb5c9f08dd1fc5b54f12e4db0f8a95efd5bd152bcc8b484"
+    }
+  },
+  "redactedOriginalHashes": {},
+  "exclusions": [
+    "world binaries",
+    "runtime libraries",
+    "server.properties",
+    "human release acceptance"
+  ]
+}

@@ -1,5 +1,7 @@
 # 票 28 / 37 后续工程收尾
 
+2026-10-24 当前候选的[分离回退](../architecture-refactor/evidence/2026-10-24-candidate-rollback/README.md)已完成：d91ca974旧JAR→975496d3推进→旧JAR保留新数据→当前JAR恢复停服备份，四阶段/四正常停止通过。当前实际JAR与1641类绑定及全部真实记录独立封存。仅覆盖26.1.2完整世界夹具，不代签维护者最终政策；当前客户端/TCP继续独立验收，完整TSC和性能失败结论不变。
+
 2026-10-24 最新本地候选：`975496d3` [方法上界赋值与分组](../architecture-refactor/evidence/2026-10-24-method-bounds/README.md)通过5149tests完整矩阵、五节点新安装运行及正常退出0；1609默认stub通过。完整严格TSC仍5565（移除0/新增0），[原政策正式性能](../architecture-refactor/evidence/2026-10-24-method-bounds-performance/README.md)重载313.8/308.6ms仍失败，启动14132.6ms通过，17有效/9正常停止。五主题双语源码复核及严格wiki门禁已通过，人工状态保持pending。票28工程closed，票37及最终候选客户端/TCP/分离回退和维护者结论继续开放；未发PR、push或发布。
 
 2026-10-23 新源码 `88e18d84` 的[五节点新安装与完整 IDE](../architecture-refactor/evidence/2026-10-23-registry-installed/README.md)全部运行通过、五进程正常退出；1609 个默认 Python stub 检查零错误/警告。完整严格 TSC 为 5619 条、十入口 exit2 无崩溃，相对 5857 移除244/新增6，继续 FAIL；新增为 Fabric 擦除/继承关系的进一步诊断，未隐藏或放宽。该批新 JAR 与全部编译类/源码绑定，最终客户端/TCP/回退及正式性能仍按原范围开放。
