@@ -1,0 +1,99 @@
+{
+  "sourceRevision": "975496d3bddf6fc76b206921a1d09207120ca24d",
+  "typescriptVersion": "5.8.3",
+  "archiveSha256": "e6e8f1f79b0a46be6ba24841d000d4f23aed38ffabe6bb0b10597f0698e20bf0",
+  "entries": {
+    "RawCyclePrecision.java": {
+      "size": 176,
+      "sha256": "aaf959ded7ac0b8a6b481133ac226c363c6fd29ad235031566622b279b440fc6"
+    },
+    "RawCycleViews.java": {
+      "size": 1132,
+      "sha256": "9c93b7b8bac28ca28e41d6729b6d7c9cd0c62aa5f10580c1ed685f64e4b2687d"
+    },
+    "check-raw-interface-overload-prototype.py": {
+      "size": 2668,
+      "sha256": "7d2dcf1c0413e05b798db282b452711102d3648c187e5c9427e627e7ed4b0639"
+    },
+    "classes/RawCycleViews$Alpha.class": {
+      "size": 968,
+      "sha256": "7e180469a7d761e80bb9d8cc087628b962d5f9604a96823ba38c51fd06973f72"
+    },
+    "classes/RawCycleViews$Beta.class": {
+      "size": 961,
+      "sha256": "962a70fe4ad59bbe6cbf5a704eb52ac007ed7c9a6275a757cdb25e01ab67f213"
+    },
+    "classes/RawCycleViews$Cycle.class": {
+      "size": 299,
+      "sha256": "e643ba1bba192f7172412b72b5cee29a90a661398310f42ba9bc9222b8222895"
+    },
+    "classes/RawCycleViews$RawHost.class": {
+      "size": 497,
+      "sha256": "70f8a11b29507c57ee12611c01f4da8c6223b7cf5e2bd87e65f122dd9f8cc756"
+    },
+    "classes/RawCycleViews.class": {
+      "size": 1806,
+      "sha256": "e3efe7ddc10c2635fb5dbc5e55d261a9db44b8838cbd6a15a14853bcc0921fab"
+    },
+    "java-version.txt": {
+      "size": 177,
+      "sha256": "1f007ecac37c8806501385efccc8755c594cc9d4db1100aaa45424307b609ed7"
+    },
+    "raw-cycle-invalid-precision-v2.log": {
+      "size": 142,
+      "sha256": "dbecf12e8441baf7a9e6c13f52b0dacf93ff94dc1da93d862ec603b4c7cbbe2a"
+    },
+    "raw-cycle-invalid-precision.log": {
+      "size": 293,
+      "sha256": "efa9a9acdd1fa4d764d4c8682d20d596369569dd12a6dce807bc3d73025e52fc"
+    },
+    "raw-cycle-java.log": {
+      "size": 111,
+      "sha256": "30855fa81ef73dd11e46909df4dca3c7c2d142c6fc7b13e2eb60370bc1063393"
+    },
+    "raw-cycle-javac.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "raw-interface-overload-base.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "raw-interface-overload-no-new-precision.json": {
+      "size": 214,
+      "sha256": "97e5e847a8304bf915afddb3165d6bcb21c3258397bf7f21c1daf785d3b29539"
+    },
+    "raw-interface-overload-no-new-precision.log": {
+      "size": 126,
+      "sha256": "6d89cea0f36fa7a25d01cd52f21873427074e2c1f3c7063f42c02196d6d1cb7d"
+    },
+    "raw-interface-overload-no-new-precision.ts": {
+      "size": 1704,
+      "sha256": "17dbc57a0eaefb4862784834ccf6aef61caefd3521a546fd93352164bd966cd9"
+    },
+    "raw-interface-overload-prototype.ts": {
+      "size": 1592,
+      "sha256": "f510e4112b11bfe266f5c1a38ca86281d25ed2db559eb63dab09ada18be2a2d4"
+    },
+    "raw-interface-overload-result.json": {
+      "size": 341,
+      "sha256": "4617b20dfdf1ae537c8a281251c2b26f09889b854c73040227bda3306fdd3414"
+    },
+    "raw-interface-overload-tsconfig.json": {
+      "size": 187,
+      "sha256": "5f0e10bbd7f2f34c6bf6f027728b03a33b42e43abf6b3bebb6b73b078bcab465"
+    },
+    "seal-raw-interface-prototype.py": {
+      "size": 2531,
+      "sha256": "2f0b0b72f852bc49c276da98b6a617911119ed3f137158c250a50067c39f6af4"
+    },
+    "source/common/src/main/java/com/tkisor/nekojs/probe/ir/MethodDecl.java": {
+      "size": 3248,
+      "sha256": "02f7bd36239fd0ba6db4224be5f751e31a9878296dbc67b070df6e7f091b0cb2"
+    },
+    "source/common/src/main/java/com/tkisor/nekojs/probe/ir/TypeReflector.java": {
+      "size": 35762,
+      "sha256": "854b6819c1df61ec55a16ae38eec8823fc88164302182beb4d6cb0f8f03822f3"
+    }
+  }
+}

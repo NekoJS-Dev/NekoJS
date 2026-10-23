@@ -1,5 +1,7 @@
 # 票 28 / 37 后续工程收尾
 
+2026-10-24 [六制品本地交接](../architecture-refactor/evidence/2026-10-24-candidate-handoff/README.md)完成，releaseReady=false、版本未变；[共享原因后续](2026-10-24-shared-cause-followup.md)记录绑定metadata待测、getter读写边界与raw泛型重载实测反例。当前指定候选工程复验有完整证据，完整TSC/性能及维护者门禁仍未通过，票37保持in-progress。
+
 2026-10-24 当前候选的[三节点渲染](../architecture-refactor/evidence/2026-10-24-candidate-render/README.md)也已补齐：30原图实际逐张查看，13次原生F3+T与六个正常退出，范围为既有legacy16/现代各7阶段。当前975496d3的指定安装客户端、双节点TCP及26.1.2分离回退均有本轮确切制品证明。完整严格TSC和原门槛性能仍失败，维护者结论及最终发布仍未代签，票37继续in-progress。
 
 2026-10-24 当前975496d3的[两节点真实TCP验收](../architecture-refactor/evidence/2026-10-24-candidate-tcp/README.md)已补齐30阶段、14正常退出，含真实NACK、双ACK、超时/迟到ACK、PREPARE断线/重连与COMMIT物理失败、持续故障拒绝及同进程恢复。源码、全部生产类、实际加载路径和JAR均绑定本轮候选；不再仅借用旧JAR的该项证据。其他平台、渲染和维护者结论仍保持独立范围，完整TSC与性能不据本项改判。
