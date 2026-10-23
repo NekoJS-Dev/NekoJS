@@ -345,9 +345,13 @@ public final class TypeScriptClassRenderer {
 
     /** Renders the effective class constraint shared by host declarations and their aliases. */
     public static String renderTypeParameter(TypeDecl.TypeParam parameter, TypeAliasRegistry aliases) {
-        List<TypeSlot> bounds = parameter.bounds();
-        return parameter.name + (bounds.isEmpty() ? "" : " extends " + bounds.stream()
-                .map(bound -> renderTypeParameterBound(bound, parameter.name, aliases, new LinkedHashSet<>()))
+        return renderTypeParameter(parameter.name, parameter.bounds(), aliases);
+    }
+
+    private static String renderTypeParameter(String name, List<TypeSlot> bounds, TypeAliasRegistry aliases) {
+        return name + (bounds.isEmpty() ? "" : " extends " + bounds.stream()
+                .map(bound -> renderTypeParameterBound(bound, name, aliases, new LinkedHashSet<>()))
+                // An edited union must remain one operand of the intersection.
                 .map(rendered -> bounds.size() > 1 ? "(" + rendered + ")" : rendered)
                 .collect(Collectors.joining(" & ")));
     }
@@ -378,12 +382,9 @@ public final class TypeScriptClassRenderer {
         if (isStatic) sb.append("static ");
         sb.append(tsMemberName(m.effectiveName()));
         if (!m.typeParams.isEmpty()) {
-            sb.append("<").append(m.typeParams.stream().map(name -> {
-                List<TypeSlot> bounds = m.typeParameterBounds.getOrDefault(name, List.of());
-                return name + (bounds.isEmpty() ? "" : " extends " + bounds.stream()
-                        .map(bound -> renderTypeParameterBound(bound, name, aliases, new LinkedHashSet<>()))
-                        .collect(Collectors.joining(" & ")));
-            }).collect(Collectors.joining(", "))).append(">");
+            sb.append("<").append(m.typeParams.stream().map(name ->
+                    renderTypeParameter(name, m.typeParameterBounds.getOrDefault(name, List.of()), aliases))
+                    .collect(Collectors.joining(", "))).append(">");
         }
         sb.append("(");
         appendParameters(sb, m.params);

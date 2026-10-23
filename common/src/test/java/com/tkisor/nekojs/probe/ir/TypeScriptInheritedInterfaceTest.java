@@ -235,7 +235,7 @@ class TypeScriptInheritedInterfaceTest {
         assertTrue(otherBound.contains("T extends $Comparable<string>"), otherBound);
         assertTrue(!otherBound.contains("| number"), otherBound);
         String numeric = new TypeScriptClassRenderer(registry).render(new TypeReflector().reflect(NumericBounds.class));
-        assertTrue(numeric.contains("T extends number & ($Comparable<T> | string | number | boolean)"), numeric);
+        assertTrue(numeric.contains("T extends (number) & (($Comparable<T> | string | number | boolean))"), numeric);
     }
 
     @Test

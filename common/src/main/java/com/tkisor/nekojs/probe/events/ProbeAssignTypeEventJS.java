@@ -60,6 +60,9 @@ public final class ProbeAssignTypeEventJS {
         if (m.returnType != null) c += applySlot(d, m.returnType, map);
         if (m.setterParamType != null) c += applySlot(d, m.setterParamType, map);
         for (MethodDecl.MethodParam p : m.params) if (p.type != null) c += applySlot(d, p.type, map);
+        for (var bounds : m.typeParameterBounds.values()) {
+            for (TypeSlot bound : bounds) c += applySlot(d, bound, map);
+        }
         return c;
     }
 
