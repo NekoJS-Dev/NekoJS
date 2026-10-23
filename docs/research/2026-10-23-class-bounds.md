@@ -16,6 +16,6 @@
 
 当前定向21项Java测试通过，包括实际Graal调用。`npm run test:probe-types` 完整消费链通过，包含 plain、aliases、edited、unflagged、replaced、cleared、assigned、union 八种新模式。两轴最终审查：Standards 0硬违反/0剩余气味，Spec 0；对未置 overridden 的 ref 编辑疑问经实际输出及 JavaTypeScriptProjection 调用核对后撤销。
 
-完整 common/check、处理器、guard 与五节点构建及 platform/artifact 检查通过：5146 tests / 271 skipped / 零失败错误，5m44s，106 tasks / 41 executed；guard 383 blocks / 567 files / 0 warnings。命令：`gradlew.bat -g D:/mcmodDemo/NekoJS/.gradle-perf02 -Dorg.gradle.java.home="C:/Program Files/Java/jdk-25.0.2" :common:check :common-api-processor:test guardLint :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build --offline --no-parallel --console=plain`。实际新JAR安装、完整严格TSC/Pyright及与5575条旧结果的差异尚待捕获。不能用定向通过称为全图声明通过。
+完整 common/check、处理器、guard 与五节点构建及 platform/artifact 检查通过：5146 tests / 271 skipped / 零失败错误，5m44s，106 tasks / 41 executed；guard 383 blocks / 567 files / 0 warnings。命令：`gradlew.bat -g D:/mcmodDemo/NekoJS/.gradle-perf02 -Dorg.gradle.java.home="C:/Program Files/Java/jdk-25.0.2" :common:check :common-api-processor:test guardLint :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build --offline --no-parallel --console=plain`。后续[同一源码新JAR验收](../architecture-refactor/evidence/2026-10-23-class-bounds/README.md)已完成：五节点运行及正常退出0，1609默认stub通过；完整严格TSC为5565，移除10/新增0，仍FAIL。不能用定向通过称为全图声明通过。
 
 下一片段仍需处理已存在的方法级约束编辑/交叉类型分组路径；本片段只解决类级约束。完整捕获类型、成员冲突、Mixin擦除泛型、正式重载性能及最终统一候选客户端/TCP/分离回退仍按各自范围开放。没有PR、push、正式发布或人工验收代签。

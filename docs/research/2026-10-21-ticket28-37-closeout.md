@@ -1,6 +1,6 @@
 # 票 28 / 37 后续工程收尾
 
-2026-10-23 最新本地阶段：`459c0cd7` [synthetic接口实现声明](../architecture-refactor/evidence/2026-10-23-synthetic-contract/README.md)完整5141tests与五节点安装运行通过；1609默认stub通过，完整严格TSC为5575（移除44/新增0），仍失败。票28已工程关闭，票37及340.0/292.8ms重载性能、最终候选客户端/TCP/回退和维护者结论继续开放；未发PR、push或发布。
+2026-10-23 最新本地阶段：`6e7452b7` [完整类泛型约束](../architecture-refactor/evidence/2026-10-23-class-bounds/README.md)通过5146tests完整检查与五节点新安装正常退出；1609默认stub通过，完整严格TSC为5565（移除10/新增0），仍失败。票28工程closed；票37、340.0/292.8ms重载性能、最终候选客户端/TCP/分离回退及维护者结论继续开放。未发PR、push或发布。
 
 2026-10-23 新源码 `88e18d84` 的[五节点新安装与完整 IDE](../architecture-refactor/evidence/2026-10-23-registry-installed/README.md)全部运行通过、五进程正常退出；1609 个默认 Python stub 检查零错误/警告。完整严格 TSC 为 5619 条、十入口 exit2 无崩溃，相对 5857 移除244/新增6，继续 FAIL；新增为 Fabric 擦除/继承关系的进一步诊断，未隐藏或放宽。该批新 JAR 与全部编译类/源码绑定，最终客户端/TCP/回退及正式性能仍按原范围开放。
 

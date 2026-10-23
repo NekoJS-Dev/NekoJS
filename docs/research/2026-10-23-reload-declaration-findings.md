@@ -78,3 +78,8 @@ Spec 复审发现新 overload 绕过内置 provider 子类的旧无参覆盖方�
 459c0cd7在现有TypeReflector类方法过滤处仅保留同名同JVM参数和返回的实际接口synthetic实现，原Method继续负责Hide/remap。实际ContextChain输出List<any>，没有臆造S映射。三次夹具准备失败与真正功能红测分别保存；Java实际Graal/正式Index输出、strictTS正负例先红后绿。完整矩阵5141 tests/271 skipped零失败，五节点新安装正常退出，1609默认stub通过。完整strictTSC从5619降至5575，移除44/新增0，仍FAIL；[独立归档](../architecture-refactor/evidence/2026-10-23-synthetic-contract/README.md)已离线复核。正式性能和最终客户端/TCP/回退未据此改判。
 
 下一项明确共享原因是类级泛型只存getBounds()[0]：StringRepresentable.EnumCodec的E遗漏第二个StringRepresentable上界，而方法级已支持多界。需要保留可编辑首界兼容性，同时让类、canonical alias、adapter alias与依赖引用使用完整有效约束；不得从旧反射元数据复活被显式编辑或清除的约束。Python现有泛型展平约定与公开运行时保持。该项目前仅调查，尚未实现。
+
+
+## 类泛型后续交叉上界
+
+6e7452b7保留class全部反射上界，共用类/别名渲染并逐项分组；显式旧槽编辑替代整约束，assign尾界和依赖闭包同步。完整5146项检查及五个新JAR运行/正常退出通过，1609默认stub通过；完整严格TSC从5575降至5565（移除10/新增0），仍失败。[封存证据](../architecture-refactor/evidence/2026-10-23-class-bounds/README.md)已离线复核。方法级bounds赋值/分组为下一独立片段，未据本批宣称完整IDE或性能通过。
