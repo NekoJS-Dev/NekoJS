@@ -3,6 +3,7 @@ package com.tkisor.nekojs.probe.backend.typescript;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
+import com.tkisor.nekojs.core.reflect.JavaGenericTypes;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
@@ -183,7 +184,7 @@ public final class FunctionalInterfaceAliasGenerator {
             List<String> arguments = new ArrayList<>();
             TypeVariable<?>[] variables = alias.interfaceClass().getTypeParameters();
             Type[] declaredArguments = declared instanceof ParameterizedType parameterized
-                    ? parameterized.getActualTypeArguments() : new Type[0];
+                    ? JavaGenericTypes.arguments(parameterized).toArray(Type[]::new) : new Type[0];
             Map<TypeVariable<?>, ApiTypeRef> substitutions = new HashMap<>();
             if (declaredArguments.length == 0) {
                 for (TypeVariable<?> variable : variables) {
@@ -262,7 +263,7 @@ public final class FunctionalInterfaceAliasGenerator {
 
     private static String expansionKey(Class<?> raw, Type declared) {
         Type[] arguments = declared instanceof ParameterizedType parameterized
-                ? parameterized.getActualTypeArguments() : new Type[0];
+                ? JavaGenericTypes.arguments(parameterized).toArray(Type[]::new) : new Type[0];
         return expansionKey(raw.getName(), Arrays.stream(arguments).map(Type::getTypeName).toList());
     }
 
@@ -307,7 +308,7 @@ public final class FunctionalInterfaceAliasGenerator {
             String explicitAlias = registry.getRegisteredAlias(raw.getName());
             if (explicitAlias != null) {
                 Type[] arguments = declared instanceof ParameterizedType parameterized
-                        ? parameterized.getActualTypeArguments() : new Type[0];
+                        ? JavaGenericTypes.arguments(parameterized).toArray(Type[]::new) : new Type[0];
                 return registry.renderRegisteredAlias(raw.getName(), Arrays.stream(arguments)
                         .map(argument -> TypeScriptClassRenderer.renderTypeRef(hostRefWithRawArguments(argument),
                                 registry, false, expanding)).toList());
@@ -319,7 +320,7 @@ public final class FunctionalInterfaceAliasGenerator {
             }
 
             Type[] arguments = declared instanceof ParameterizedType parameterized
-                    ? parameterized.getActualTypeArguments() : new Type[0];
+                    ? JavaGenericTypes.arguments(parameterized).toArray(Type[]::new) : new Type[0];
             if (arguments.length > 0) {
                 String[] hostArguments = Arrays.stream(arguments)
                         .map(argument -> TypeScriptClassRenderer.renderTypeRef(hostRefWithRawArguments(argument),
@@ -356,7 +357,7 @@ public final class FunctionalInterfaceAliasGenerator {
                                          Set<String> generatedTypes) {
         StringBuilder host = new StringBuilder(registry.reference(raw.getName(), "$" + tsClassName(raw)));
         Type[] arguments = declared instanceof ParameterizedType parameterized
-                ? parameterized.getActualTypeArguments() : new Type[0];
+                ? JavaGenericTypes.arguments(parameterized).toArray(Type[]::new) : new Type[0];
         if (raw.getTypeParameters().length > 0) {
             host.append('<');
             for (int index = 0; index < raw.getTypeParameters().length; index++) {
@@ -394,7 +395,7 @@ public final class FunctionalInterfaceAliasGenerator {
                     && method.equals(samMethod)) return ApiTypeRef.primitive("any");
             ApiTypeRef replacement = substitutions.get(variable);
             if (replacement != null) return replacement;
-            return ApiTypeRef.typeVariable(variable.getName());
+            return TypeReflector.toRef(variable);
         }
         if (type instanceof WildcardType wildcard) {
             Type[] lower = wildcard.getLowerBounds();
@@ -412,7 +413,7 @@ public final class FunctionalInterfaceAliasGenerator {
         if (type instanceof ParameterizedType parameterized) {
             if (!(parameterized.getRawType() instanceof Class<?> raw)) return ApiTypeRef.primitive("any");
             if (!generatedTypes.contains(raw.getName())) return ApiTypeRef.primitive("any");
-            List<ApiTypeRef> arguments = Arrays.stream(parameterized.getActualTypeArguments())
+            List<ApiTypeRef> arguments = JavaGenericTypes.arguments(parameterized).stream()
                     // A container's wildcard describes its contents, not the value passed to the SAM.
                     // Preserve ordinary host wildcard mapping rather than claiming every read is the lower bound.
                     .map(argument -> toRef(argument, interfaceClass, false, false,
@@ -446,7 +447,7 @@ public final class FunctionalInterfaceAliasGenerator {
             if (parameterized.getRawType() instanceof Class<?> raw) {
                 collectClasses(raw, imports);
             }
-            for (Type argument : parameterized.getActualTypeArguments()) collectClasses(argument, imports);
+            for (Type argument : JavaGenericTypes.arguments(parameterized)) collectClasses(argument, imports);
         } else if (type instanceof GenericArrayType array) {
             collectClasses(array.getGenericComponentType(), imports);
         } else if (type instanceof WildcardType wildcard) {

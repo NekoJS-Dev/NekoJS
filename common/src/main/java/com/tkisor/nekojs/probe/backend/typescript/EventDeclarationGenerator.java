@@ -8,6 +8,7 @@ import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.reflect.JavaGenericTypes;
 
 import java.lang.reflect.TypeVariable;
 import java.util.*;
@@ -166,11 +167,11 @@ public final class EventDeclarationGenerator {
         } else if (event.eventType() != null) {
             eventType = moduleAliases.reference(event.eventType().getName(), "$" + getTsClassName(event.eventType()));
             // 处理泛型
-            TypeVariable<?>[] typeParams = event.eventType().getTypeParameters();
-            if (typeParams.length > 0) {
+            List<TypeVariable<?>> typeParams = JavaGenericTypes.parameters(event.eventType());
+            if (!typeParams.isEmpty()) {
                 eventType += "<";
                 List<String> args = new ArrayList<>();
-                for (int i = 0; i < typeParams.length; i++) {
+                for (int i = 0; i < typeParams.size(); i++) {
                     args.add("any");
                 }
                 eventType += String.join(", ", args);
@@ -185,7 +186,8 @@ public final class EventDeclarationGenerator {
         // 有 dispatch key 的版本
         if (event.dispatchable() && event.dispatchKeyType() != null) {
             String keyType = TypeScriptClassRenderer.renderTypeRef(
-                    TypeReflector.toRef(event.dispatchKeyType()), moduleAliases, true);
+                    JavaTypeScriptProjection.project(event.dispatchKeyType(), TypeReflector.toRef(event.dispatchKeyType())),
+                    moduleAliases, true);
             sb.append("        function ").append(event.name());
             sb.append("(extra: ").append(keyType);
             sb.append(", handler: ((event: ").append(eventType).append(") => void)): void;\n");

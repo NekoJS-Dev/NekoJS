@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.JavaMemberIndex;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
+import com.tkisor.nekojs.core.reflect.JavaGenericTypes;
 
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
@@ -387,7 +388,7 @@ public final class TypeReflector {
     }
 
     private static boolean contractInScope(Type type, Class<?> cls) {
-        if (type instanceof TypeVariable<?> variable) return List.of(cls.getTypeParameters()).contains(variable);
+        if (type instanceof TypeVariable<?> variable) return JavaGenericTypes.parameters(cls).contains(variable);
         if (type instanceof ParameterizedType parameterized) {
             return (parameterized.getOwnerType() == null || contractInScope(parameterized.getOwnerType(), cls))
                     && Arrays.stream(parameterized.getActualTypeArguments()).allMatch(arg -> contractInScope(arg, cls));
@@ -578,11 +579,11 @@ public final class TypeReflector {
     /** Reflects generic parameters without loading members when no edited declaration is available. */
     public static List<TypeDecl.TypeParam> typeParametersOf(Class<?> cls) {
         List<TypeDecl.TypeParam> parameters = new ArrayList<>();
-        for (TypeVariable<?> variable : cls.getTypeParameters()) {
+        for (TypeVariable<?> variable : JavaGenericTypes.parameters(cls)) {
             List<TypeSlot> bounds = Arrays.stream(variable.getBounds()).filter(bound -> bound != Object.class)
                     .map(bound -> TypeSlot.of(bound, toRef(bound))).toList();
             TypeSlot first = bounds.isEmpty() ? null : bounds.getFirst();
-            parameters.add(new TypeDecl.TypeParam(variable.getName(), first,
+            parameters.add(new TypeDecl.TypeParam(JavaGenericTypes.parameterName(variable), first,
                     bounds.isEmpty() ? List.of() : bounds.subList(1, bounds.size())));
         }
         return parameters;
@@ -607,8 +608,8 @@ public final class TypeReflector {
         if (type instanceof ParameterizedType pt) {
             Type raw = pt.getRawType();
             if (raw instanceof Class<?> rawCls) {
-                Type[] args = pt.getActualTypeArguments();
-                List<ApiTypeRef> argRefs = new ArrayList<>(args.length);
+                List<Type> args = JavaGenericTypes.arguments(pt);
+                List<ApiTypeRef> argRefs = new ArrayList<>(args.size());
                 for (Type arg : args) {
                     argRefs.add(toRef(arg));
                 }
@@ -617,7 +618,7 @@ public final class TypeReflector {
             return ApiTypeRef.primitive("any");
         }
         if (type instanceof GenericArrayType gat) return ApiTypeRef.array(toRef(gat.getGenericComponentType()));
-        if (type instanceof TypeVariable<?> tv) return ApiTypeRef.typeVariable(tv.getName());
+        if (type instanceof TypeVariable<?> tv) return ApiTypeRef.typeVariable(JavaGenericTypes.parameterName(tv));
         if (type instanceof WildcardType wt) {
             Type[] upper = wt.getUpperBounds();
             if (upper.length > 0 && upper[0] != Object.class) return toRef(upper[0]);

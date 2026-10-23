@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
+import com.tkisor.nekojs.core.reflect.JavaGenericTypes;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
 
 import java.lang.reflect.Constructor;
@@ -98,7 +99,7 @@ final class ProbeClassCollector {
             try {
                 if (cls.getGenericSuperclass() != null) collectTypeToQueue(cls.getGenericSuperclass(), queue, nextDepth);
                 for (Type iface : cls.getGenericInterfaces()) collectTypeToQueue(iface, queue, nextDepth);
-                for (TypeVariable<?> variable : cls.getTypeParameters()) {
+                for (TypeVariable<?> variable : JavaGenericTypes.parameters(cls)) {
                     for (Type bound : variable.getBounds()) collectTypeToQueue(bound, queue, nextDepth);
                 }
 
@@ -166,7 +167,7 @@ final class ProbeClassCollector {
         } else if (type instanceof ParameterizedType pt) {
             if (pt.getRawType() instanceof Class<?> rawCls) queue.add(new Object[]{rawCls, depth});
             boolean functional = FunctionalInterfaceResolver.resolve(pt) != null;
-            for (Type arg : pt.getActualTypeArguments()) {
+            for (Type arg : JavaGenericTypes.arguments(pt)) {
                 if (functional && arg instanceof WildcardType wildcard) {
                     // Callback signatures project wildcard bounds into concrete host parameter types.
                     // Follow only these bounds, through the existing depth and package filters.

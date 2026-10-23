@@ -314,7 +314,7 @@ public final class IndexFileGenerator {
                     imports.add(rawCls.getName());
                 }
             }
-            for (Type arg : pt.getActualTypeArguments()) {
+            for (Type arg : com.tkisor.nekojs.core.reflect.JavaGenericTypes.arguments(pt)) {
                 collectTypeImports(arg, imports, currentPackage);
             }
         } else if (type instanceof GenericArrayType gat) {

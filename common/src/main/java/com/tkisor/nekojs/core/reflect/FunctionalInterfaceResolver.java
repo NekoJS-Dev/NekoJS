@@ -55,7 +55,9 @@ public final class FunctionalInterfaceResolver {
         Set<String> classNames = new HashSet<>();
         Class<?> host = rawClass(declared);
         if (host != null) {
-            for (TypeVariable<?> variable : host.getTypeParameters()) classNames.add(variable.getName());
+            for (TypeVariable<?> variable : JavaGenericTypes.parameters(host)) {
+                classNames.add(JavaGenericTypes.parameterName(variable));
+            }
         }
         Set<String> usedNames = new HashSet<>(classNames);
         for (TypeVariable<?> variable : method.getTypeParameters()) usedNames.add(variable.getName());
@@ -135,10 +137,10 @@ public final class FunctionalInterfaceResolver {
         try {
             Map<TypeVariable<?>, Type> arguments = new HashMap<>(inherited);
             if (declared instanceof ParameterizedType parameterized) {
-                TypeVariable<?>[] variables = raw.getTypeParameters();
-                Type[] actual = parameterized.getActualTypeArguments();
-                for (int index = 0; index < variables.length; index++) {
-                    arguments.put(variables[index], substitute(actual[index], inherited, new HashSet<>()));
+                List<TypeVariable<?>> variables = JavaGenericTypes.parameters(raw);
+                List<Type> actual = JavaGenericTypes.arguments(parameterized);
+                for (int index = 0; index < variables.size(); index++) {
+                    arguments.put(variables.get(index), substitute(actual.get(index), inherited, new HashSet<>()));
                 }
             }
             if (raw == target) return arguments;

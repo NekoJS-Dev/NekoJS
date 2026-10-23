@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe.backend.typescript;
 
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import com.tkisor.nekojs.core.reflect.JavaGenericTypes;
 
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.ParameterizedType;
@@ -24,12 +25,12 @@ public final class JavaTypeScriptProjection {
             Type[] upper = wildcard.getUpperBounds();
             return upper.length > 0 && upper[0] != Object.class ? project(upper[0], reference) : reference;
         }
-        if (source instanceof Class<?> cls && cls.getTypeParameters().length > 0
+        if (source instanceof Class<?> cls && !JavaGenericTypes.parameters(cls).isEmpty()
                 && reference.kind() == ApiTypeRef.Kind.SYMBOL && reference.arguments().isEmpty()
                 && reference.name().equals("java:" + cls.getName())) {
             // A raw Java use site erases arguments; the generic declaration itself retains its parameters.
             return new ApiTypeRef(reference.kind(), reference.name(),
-                    Collections.nCopies(cls.getTypeParameters().length, ApiTypeRef.primitive("any")),
+                    Collections.nCopies(JavaGenericTypes.parameters(cls).size(), ApiTypeRef.primitive("any")),
                     reference.callbackSignature());
         }
         if (reference.kind() == ApiTypeRef.Kind.ARRAY) {
@@ -38,11 +39,11 @@ public final class JavaTypeScriptProjection {
             if (element != null) return ApiTypeRef.array(project(element, reference.arguments().getFirst()));
         }
         if (source instanceof ParameterizedType parameterized && reference.kind() == ApiTypeRef.Kind.SYMBOL) {
-            Type[] arguments = parameterized.getActualTypeArguments();
-            if (arguments.length == reference.arguments().size()) {
-                List<ApiTypeRef> projected = new ArrayList<>(arguments.length);
-                for (int index = 0; index < arguments.length; index++) {
-                    projected.add(project(arguments[index], reference.arguments().get(index)));
+            List<Type> arguments = JavaGenericTypes.arguments(parameterized);
+            if (arguments.size() == reference.arguments().size()) {
+                List<ApiTypeRef> projected = new ArrayList<>(arguments.size());
+                for (int index = 0; index < arguments.size(); index++) {
+                    projected.add(project(arguments.get(index), reference.arguments().get(index)));
                 }
                 return new ApiTypeRef(reference.kind(), reference.name(), projected, reference.callbackSignature());
             }

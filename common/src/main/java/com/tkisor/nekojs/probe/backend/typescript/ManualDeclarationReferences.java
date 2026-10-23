@@ -80,9 +80,10 @@ final class ManualDeclarationReferences {
         if (type.isArray()) return ApiTypeRef.array(rawHostRef(type.getComponentType()));
         ApiTypeRef reference = TypeReflector.toRef(type);
         // A Class reference denotes an actual raw Java use site, preserving the existing erasure rule.
-        if (reference.kind() == ApiTypeRef.Kind.SYMBOL && type.getTypeParameters().length > 0) {
+        int parameterCount = com.tkisor.nekojs.core.reflect.JavaGenericTypes.parameters(type).size();
+        if (reference.kind() == ApiTypeRef.Kind.SYMBOL && parameterCount > 0) {
             return new ApiTypeRef(reference.kind(), reference.name(), Collections.nCopies(
-                    type.getTypeParameters().length, ApiTypeRef.primitive("any")), null);
+                    parameterCount, ApiTypeRef.primitive("any")), null);
         }
         return reference;
     }
