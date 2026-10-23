@@ -1,6 +1,8 @@
 # Current-candidate performance verification
 
-Latest fixed measurement (2026-10-15): [built-in transform reuse and frozen candidate](../2026-10-15-reload-performance/REPORT.md), source `e473479a`, passes the unchanged primary NeoForge 26.1.2 gates: reload means 214.4/228.4 ms, startup mean 17718.2 ms. This supersedes the older failures as the latest measured primary result; it does not certify subsequent source changes, other nodes or release approval.
+Latest fixed measurement (2026-10-24): [975496d3, original policy](../2026-10-24-method-bounds-performance/README.md). Reload means **313.8/308.6 ms FAIL** against 285.3 ms; startup mean **14132.6 ms PASS** against 41173 ms. All 17 records are valid, with 9 normal RCON stops. The 1641 production classes and exact JAR match the primary candidate. This remains a failed combined gate.
+
+Historical 2026-10-15: [e473479a](../2026-10-15-reload-performance/REPORT.md) passed 214.4/228.4 ms reload and 17718.2 ms startup. That history does not certify subsequent source changes or replace the current failed result.
 
 Historical package date: 2026-10-07. Behavior revision: `ac810fa71d061d31983220c0d9b198af5d4253ac`. Primary node: NeoForge `26.1.2`. This evidence does not authorize publication or close the remaining domain tickets.
 

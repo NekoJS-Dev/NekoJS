@@ -10,4 +10,4 @@
 
 两轴最终审查：Standards零硬违反/零气味，Spec零偏差。构造器不是新增承诺：reflectConstructor原本不收集自身类型参数，其局部变量经ConstructorInputTypes投影首界。这个预存限制作为独立后续，不能据applyMethod共用代码称为完整构造器泛型已修复。
 
-2026-10-24复核最终完整矩阵：5149 tests / 271 skipped / 零失败错误；common/check含隔离、处理器、guard及五节点build/platform/artifact均通过，3m59s，106 tasks / 34 executed。完整test:probe-types链再次通过。本片段新JAR安装、全图IDE及正式性能尚待捕获。最近冻结的完整严格TSC仍是6e7452b7的5565条失败、正式重载仍7bea6d6d的340.0/292.8ms失败。没有PR、push、发布或人工结论代签。
+2026-10-24复核最终完整矩阵：5149 tests / 271 skipped / 零失败错误；common/check含隔离、处理器、guard及五节点build/platform/artifact均通过，3m59s，106 tasks / 34 executed。完整test:probe-types链再次通过。后续[975496d3新JAR安装与完整IDE](../architecture-refactor/evidence/2026-10-24-method-bounds/README.md)已完成：五节点实际行为及正常退出0，1609默认stub通过；严格TSC仍5565，移除0/新增0。[同一源码正式性能](../architecture-refactor/evidence/2026-10-24-method-bounds-performance/README.md)已完成：重载313.8/308.6ms仍FAIL，启动14132.6ms PASS，17有效/9正常停止。最近冻结的完整严格TSC仍是6e7452b7的5565条失败、正式重载已由本次975496d3的313.8/308.6ms失败更新。没有PR、push、发布或人工结论代签。

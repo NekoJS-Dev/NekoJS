@@ -83,3 +83,11 @@ Spec 复审发现新 overload 绕过内置 provider 子类的旧无参覆盖方�
 ## 类泛型后续交叉上界
 
 6e7452b7保留class全部反射上界，共用类/别名渲染并逐项分组；显式旧槽编辑替代整约束，assign尾界和依赖闭包同步。完整5146项检查及五个新JAR运行/正常退出通过，1609默认stub通过；完整严格TSC从5575降至5565（移除10/新增0），仍失败。[封存证据](../architecture-refactor/evidence/2026-10-23-class-bounds/README.md)已离线复核。方法级bounds赋值/分组为下一独立片段，未据本批宣称完整IDE或性能通过。
+
+## 方法泛型与当前正式性能
+
+975496d3已让方法现有上界槽参与assign_type，并复用类级逐项分组规则。真实Graal、严格TS正负例及完整5149项检查通过；五个新安装候选均正常停止，1609默认stub通过。完整严格TSC仍5565条，相对6e7452b7移除0/新增0；构造器局部变量仍沿既有首界输入投影，不在本次完成范围。[完整候选归档](../architecture-refactor/evidence/2026-10-24-method-bounds/README.md)已独立复核。
+
+同一源码的原政策正式性能已完成：重载313.8/308.6ms均超过285.3ms，启动14132.6ms通过。17条样本全部有效，9次会话正常停止；没有删除不利样本或改门槛。[性能归档](../architecture-refactor/evidence/2026-10-24-method-bounds-performance/README.md)保留精确源码/制品绑定及独立判断，不能把采集成功误报为性能通过。
+
+只读调查进一步追到StonecutterRecipe与Recipe约束的Codec回调，以及Entity与EntityAccess约束的Stream.findAny→Optional.or/filter：压平wildcard捕获后，原先未知的CAP变成可精确读写的上界，导致不变泛型不兼容。仅给Optional添加局部Omit视图仍会通过stream和toList递归扩散；把CAP输入设为never也会拒绝部分Java合法调用。尚无保持完整公开操作的实现证明，未把此保守子集、全局协变或成员删除加入生产。
