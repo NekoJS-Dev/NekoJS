@@ -17,6 +17,7 @@ import graal.graalvm.polyglot.Source;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -815,7 +816,8 @@ public final class NekoModulePipelineCache implements AutoCloseable {
                              NekoModuleIdentity identity, long registryRevision) {
         private static FileStamp read(Path path, String source, NekoModuleIdentity identity,
                                      long registryRevision) throws IOException {
-            return new FileStamp(Files.getLastModifiedTime(path).toMillis(), Files.size(path),
+            BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class);
+            return new FileStamp(attributes.lastModifiedTime().toMillis(), attributes.size(),
                     contentHash(source), identity, registryRevision);
         }
 
