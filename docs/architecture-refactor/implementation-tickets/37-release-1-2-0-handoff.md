@@ -1,5 +1,7 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-23 最新源码 `459c0cd7` 的[合成接口实现声明修复](../evidence/2026-10-23-synthetic-contract/README.md)通过完整五节点检查（5141 tests / 271 skipped / 零失败）与五个新安装服务端运行，全部正常退出0。1609个默认Python stub通过；完整严格TSC降至5575条，移除44/新增0，仍FAIL。原始Method的Hide/remap保留，普通synthetic/bridge仍过滤；没有猜测恢复Mixin擦除的泛型方法签名。正式重载仍以340.0 / 292.8 ms超标为准，最终客户端/TCP/分离回退与维护者结论继续开放。
+
 2026-10-23 新源码 `88e18d84` 的[五节点新安装与完整 IDE](../evidence/2026-10-23-registry-installed/README.md)全部运行通过、五进程正常退出；1609 个默认 Python stub 检查零错误/警告。完整严格 TSC 为 5619 条、十入口 exit2 无崩溃，相对 5857 移除244/新增6，继续 FAIL；新增为 Fabric 擦除/继承关系的进一步诊断，未隐藏或放宽。该批新 JAR 与全部编译类/源码绑定，最终客户端/TCP/回退及正式性能仍按原范围开放。
 
 2026-10-23 [票 28 本域工程收口](../evidence/2026-10-23-posteffects-closeout/README.md)已完成：精确删除条件、安装渲染、声明 parity 和旧消费者核对满足，本域 14 个源码与已验收组件一致、相关 93 项当前测试通过。票 28 的 closed 不替代本票最终候选、完整 TSC、性能、分离回退或维护者发布结论；本票仍 in-progress。
@@ -20,7 +22,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-23：A15/A16/A22 精确删除已批准并验证；当前五节点构建和新安装服务端通过，完整严格 TSC 5619 条与重载性能仍失败；最终候选客户端/TCP/回退及维护者结论保持独立验收范围）
+**Status:** in-progress（2026-10-23：A15/A16/A22 精确删除已批准并验证；当前459c0cd7五节点构建和新安装服务端通过，完整严格 TSC 5575 条与重载性能仍失败；最终候选客户端/TCP/回退及维护者结论保持独立验收范围）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 

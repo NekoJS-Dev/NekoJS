@@ -69,3 +69,12 @@ Spec 复审发现新 overload 绕过内置 provider 子类的旧无参覆盖方�
 88e18d84 的完整矩阵通过（5140 tests / 271 skipped / 零失败错误），[五节点新安装](../architecture-refactor/evidence/2026-10-23-registry-installed/README.md)实际运行全过、五进程正常退出。1609 个新 stub 的默认 Pyright 通过。十入口完整严格 TSC 为 5619 条，比较前一实际安装结果移除244/新增6，仍失败；移除136条注册表缺失、10条 BlockState 名称、98条 raw 参数错误。新增两个 Fabric261 ContextChainAccessor<any> 缺 getModifiers，四个现代 Fabric GameRule.fabric_enumCycle 与泛型 RuleTypeExtensions 签名不兼容。旧裸泛型先报 TS2314，补齐参数没有使关系本身自然正确；接下来核对实际反射/方法过滤和接口泛型来源，不能通过删除实际成员或任意擦宽消除。
 
 对 Engine/Context/Source 生命周期的只读调查没有找出可支持新增缓存的重复准备：生产装配使用 NekoSharedEngine，同一 root 的 module cache 跨候选 session 保持 builtin Source identity；每个 Context 重新 eval 才提供其独立 Node 状态，现有测试同时验证身份复用与 guest state 隔离。普通和 pack 候选均沿 root 的 factory/cache 建 Context。plugin module wrapper 虽逐次构造，但没有足以解释正式超标的成本证据；未为此增加缓存或改变初始化时机。调查不替代正式性能失败。
+
+
+## Synthetic 接口实现：当前已实现
+
+主代理用88e18d84的隔离Fabric261两次实机观察确认：ContextChain.getModifiers公开、synthetic、非bridge，Graal直接调用返回List；GameRule.fabric_enumCycle无方法变量且为Enum→Enum，原接口保留完整E约束，目标有MixinMerged注解。后者的来源标记不能单独证明源方法一定有相同泛型关系；没有按名字、default或marker强行恢复普通raw方法，也未在common增加Mixin必需依赖或第二签名pipeline。
+
+459c0cd7在现有TypeReflector类方法过滤处仅保留同名同JVM参数和返回的实际接口synthetic实现，原Method继续负责Hide/remap。实际ContextChain输出List<any>，没有臆造S映射。三次夹具准备失败与真正功能红测分别保存；Java实际Graal/正式Index输出、strictTS正负例先红后绿。完整矩阵5141 tests/271 skipped零失败，五节点新安装正常退出，1609默认stub通过。完整strictTSC从5619降至5575，移除44/新增0，仍FAIL；[独立归档](../architecture-refactor/evidence/2026-10-23-synthetic-contract/README.md)已离线复核。正式性能和最终客户端/TCP/回退未据此改判。
+
+下一项明确共享原因是类级泛型只存getBounds()[0]：StringRepresentable.EnumCodec的E遗漏第二个StringRepresentable上界，而方法级已支持多界。需要保留可编辑首界兼容性，同时让类、canonical alias、adapter alias与依赖引用使用完整有效约束；不得从旧反射元数据复活被显式编辑或清除的约束。Python现有泛型展平约定与公开运行时保持。该项目前仅调查，尚未实现。
