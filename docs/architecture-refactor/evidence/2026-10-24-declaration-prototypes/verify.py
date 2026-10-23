@@ -24,4 +24,4 @@ with zipfile.ZipFile(root / 'evidence.zip') as archive:
     assert 'RAW-EXPLICIT-TYPE-ARGUMENT-RETAINS-ENUM-RESULT' in log
     assert 'INTERFACE-VIEW-CAST-CAN-FAIL-FOR-UNCHECKED-RAW-IMPLEMENTATION' in log
 print(json.dumps(dict(archive='PASS', productionAdopted=False, ordinaryOverloadSelection='PASS',
-    unchangedConcreteGenericGuarantee='FAIL', fullStrictTypeScript='FAIL')))
+    unchangedConcreteGenericGuarantee='FAIL', scope='raw-interface-overload-prototype-only')))

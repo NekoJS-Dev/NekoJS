@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "D:\mcmodDemo\NekoJS-mult\docs\architecture-refactor\evidence\2026-10-24-declaration-prototypes\verify.py", line 22, in <module>
+    assert 'compiler.err.prob.found.req' in archive.read('raw-cycle-invalid-precision-v2.log').decode()
+                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xb8 in position 134: invalid start byte
