@@ -165,10 +165,9 @@ public final class TypeReflector {
         Set<String> processedProperties = new HashSet<>();
         for (var method : declared) {
             if (!Modifier.isPublic(method.getModifiers())) continue;
-            // bridge/synthetic 是 JVM 协变覆盖的实现细节（如宿主类上 mixin 注入接口的
-            // 协变返回覆盖会生成 Object bridge），对 JS/Python 侧无意义且产生
-            // 「同参不同返回」的冗余重载——与接口收集（reflectInterfaceMembers）一致地过滤
-            if (method.isSynthetic() || method.isBridge()) continue;
+            // Injected accessors can be synthetic public implementations of real interface methods.
+            // Keep their original Method for visibility/remapping; unrelated synthetic methods and bridges stay hidden.
+            if (method.isBridge() || method.isSynthetic() && !implementsInterfaceMethod(cls, method)) continue;
             boolean isStatic = Modifier.isStatic(method.getModifiers());
             // JS 侧方法名：@Remap/@RemapByPrefix 重映射；@HideFromJS → null（跳过）
             String jsName = jsName(method);
@@ -196,6 +195,17 @@ public final class TypeReflector {
             }
             decl.methods.add(m);
         }
+    }
+
+    private static boolean implementsInterfaceMethod(Class<?> cls, Method method) {
+        if (cls.isInterface() || cls.isEnum() || method.getDeclaringClass() != cls
+                || Modifier.isStatic(method.getModifiers())) return false;
+        List<Method> contracts = new ArrayList<>();
+        collectInterfaceMethods(cls, new HashSet<>(), contracts);
+        return contracts.stream().anyMatch(candidate -> Modifier.isPublic(candidate.getModifiers())
+                && !Modifier.isStatic(candidate.getModifiers()) && !candidate.isSynthetic() && !candidate.isBridge()
+                && candidate.getName().equals(method.getName()) && candidate.getReturnType() == method.getReturnType()
+                && Arrays.equals(candidate.getParameterTypes(), method.getParameterTypes()));
     }
 
     /** Returns declaration candidates shared by reflection and bounded dependency collection. */
