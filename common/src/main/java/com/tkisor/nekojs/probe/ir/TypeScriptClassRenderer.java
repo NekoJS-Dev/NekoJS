@@ -32,7 +32,8 @@ public final class TypeScriptClassRenderer {
     /** Uses this render's edited declarations; parent lookups never reflect over hidden or authored types. */
     public Set<String> setClassDeclarations(Map<String, TypeDecl> declarations) {
         staticInheritance = new TypeScriptStaticInheritance(declarations);
-        return declarations.values().stream().filter(declaration -> staticInheritance.project(declaration) != null)
+        return declarations.values().stream().filter(declaration -> staticInheritance.project(declaration) != null
+                        || hasInheritedBeanProjection(declaration))
                 .map(declaration -> declaration.fqn).collect(Collectors.toUnmodifiableSet());
     }
 
@@ -208,10 +209,11 @@ public final class TypeScriptClassRenderer {
             } else {
                 appendDoc(sb, "        ", f.docs);
                 GetterOverride override = getterOverrides.getOrDefault(d.fqn, Map.of()).get(getter.property);
-                sb.append("        get ").append(tsMemberName(f.effectiveName())).append("(): ")
-                        .append(override == null ? renderSlot(getter.returnType, false) : override.returnType())
-                        .append(";\n");
+                String readType = override == null ? renderSlot(getter.returnType, false) : override.returnType();
                 TypeSlot writeType = d.beanFieldWriteType(f, getter);
+                if (appendInheritedBeanProperty(sb, d, f.effectiveName(), readType, writeType)) continue;
+                sb.append("        get ").append(tsMemberName(f.effectiveName())).append("(): ")
+                        .append(readType).append(";\n");
                 if (writeType != null) {
                     sb.append("        set ").append(tsMemberName(f.effectiveName())).append("(value: ")
                             .append(renderSlot(writeType, true)).append(");\n");
@@ -231,17 +233,74 @@ public final class TypeScriptClassRenderer {
             // An explicit getter override emits only the read property, preserving the existing contract.
             GetterOverride ov = getterOverrides.getOrDefault(d.fqn, Map.of()).get(m.property);
             if (ov != null) {
-                sb.append("        get ").append(tsMemberName(m.property)).append("(): ").append(ov.returnType()).append(";\n");
+                if (!appendInheritedBeanProperty(sb, d, m.property, ov.returnType(), null)) {
+                    sb.append("        get ").append(tsMemberName(m.property)).append("(): ").append(ov.returnType()).append(";\n");
+                }
                 continue;
             }
             String type = renderSlot(m.returnType, false);
-            sb.append("        get ").append(tsMemberName(m.property)).append("(): ").append(type).append(";\n");
+            boolean fieldProperty = appendInheritedBeanProperty(sb, d, m.property, type, m.setterParamType);
+            if (!fieldProperty) sb.append("        get ").append(tsMemberName(m.property)).append("(): ").append(type).append(";\n");
             sb.append("        ").append(tsMemberName(m.effectiveName())).append("(): ").append(type).append(";\n");
-            if (m.setterParamType != null) {
+            if (!fieldProperty && m.setterParamType != null) {
                 sb.append("        set ").append(tsMemberName(m.property)).append("(value: ")
                   .append(renderSlot(m.setterParamType, true)).append(");\n");
             }
         }
+    }
+
+    private boolean appendInheritedBeanProperty(StringBuilder sb, TypeDecl declaration, String name,
+                                                String readType, TypeSlot writeType) {
+        if (!inheritsFieldProperty(declaration, name, readType, writeType)) return false;
+        sb.append("        ").append(writeType == null ? "readonly " : "")
+                .append(tsMemberName(name)).append(": ").append(readType).append(";\n");
+        return true;
+    }
+
+    private boolean hasInheritedBeanProjection(TypeDecl declaration) {
+        if (declaration.kind != TypeDecl.Kind.CLASS) return false;
+        Set<String> conflicts = beanPropertyConflicts(declaration);
+        for (MethodDecl getter : declaration.methods) {
+            if (getter.hidden || !getter.isGetter || !isValidTsIdentifier(getter.property)) continue;
+            FieldDecl field = declaration.fields.stream().filter(candidate -> !candidate.hidden && !candidate.isStatic
+                    && getter.property.equals(candidate.effectiveName())).findFirst().orElse(null);
+            if (field == null && (conflicts.contains(getter.property) || excludesBeanAlias(declaration, getter))) continue;
+            GetterOverride override = getterOverrides.getOrDefault(declaration.fqn, Map.of()).get(getter.property);
+            String read = override == null ? renderSlot(getter.returnType, false) : override.returnType();
+            TypeSlot write = field != null ? declaration.beanFieldWriteType(field, getter)
+                    : override == null ? getter.setterParamType : null;
+            if (inheritsFieldProperty(declaration, getter.property, read, write)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * A Bean can use property syntax only when the edited ancestor chain already emits a same-type
+     * data property. Each intervening Bean must admit that same projection; an accessor with different
+     * read/write types or a real method blocks it. Missing or hidden parents never trigger reflection.
+     */
+    private boolean inheritsFieldProperty(TypeDecl declaration, String name, String readType, TypeSlot writeType) {
+        if (writeType != null && !readType.equals(renderSlot(writeType, true))) return false;
+        for (TypeDecl parent : staticInheritance.parents(declaration)) {
+            FieldDecl field = parent.fields.stream().filter(candidate -> !candidate.hidden && !candidate.isStatic
+                    && name.equals(candidate.effectiveName())).findFirst().orElse(null);
+            MethodDecl getter = field == null ? parent.methods.stream().filter(method -> !method.hidden
+                    && method.isGetter && name.equals(method.property) && isValidTsIdentifier(method.property)
+                    && !beanPropertyConflicts(parent).contains(name) && !excludesBeanAlias(parent, method))
+                    .findFirst().orElse(null) : parent.beanGetterForField(field);
+            if (field != null && getter == null) return readType.equals(renderSlot(field.type, false));
+            if (getter != null) {
+                GetterOverride override = getterOverrides.getOrDefault(parent.fqn, Map.of()).get(name);
+                String parentRead = override == null ? renderSlot(getter.returnType, false) : override.returnType();
+                TypeSlot parentWrite = field != null ? parent.beanFieldWriteType(field, getter)
+                        : override == null ? getter.setterParamType : null;
+                if (!readType.equals(parentRead) || parentWrite != null && !readType.equals(renderSlot(parentWrite, true))) return false;
+            } else if (parent.methods.stream().anyMatch(method -> !method.hidden && !method.isStatic
+                    && !method.isConstructor && name.equals(method.effectiveName()))) {
+                return false;
+            }
+        }
+        return false;
     }
 
     private void appendInstanceMethods(StringBuilder sb, TypeDecl d) {

@@ -12,8 +12,10 @@
 
 ## 声明方案继续保留真实合同
 
+当前975候选的[30轮分段诊断](../architecture-refactor/evidence/2026-10-24-reload-stage-profile/README.md)已完成，临时源码和1641个class/JAR恢复为确切原字节。脚本execution与配方墙钟均值约45.9/42.2ms，裸Context build约0.5ms；细分样本支持继续核实文件路径工作，不支持新增schema或Context缓存。诊断的节奏、样本数和JFR开销不同，未取代正式失败。
+
 主代理的[raw接口重载原型](../architecture-refactor/evidence/2026-10-24-declaration-prototypes/README.md)证明：raw-first虽然保留普通调用结果，却仍给显式泛型具体类调用增加未经证明的返回保证；Java实际反例和TS2578负例均封存。没有把它加入生产，也未改Python或现有编辑选择。
 
-getter-only Bean的readonly属性表示可继续在编辑后IR图上小范围探索。当前Bee.goalSelector只读，而AbstractArrow.noPhysics有setter，不能同改readonly；field-backed getter还可能没有Bean setter但仍有字段writeType。任何实现都须保留真实访问器方法、原读写类型、显式override和隐藏/编辑父类边界；不能反射被排除父类来恢复信息，也不能扩展此前仅五处Entity.attackable删除批准。此项目前仅只读调查，未实现。
+getter-only Bean的readonly属性表示已按[窄投影方案](2026-10-24-inherited-bean-properties.md)由主代理实现并通过最小红绿与扩展回归，完整矩阵/新实际候选待补。Bee.goalSelector保持只读，AbstractArrow.noPhysics保持可写；field-backed getter用既有字段writeType。真实方法、读写类型、override与隐藏/编辑父类边界保留，不反射被排除父类，也不扩展五处Entity.attackable删除批准。
 
 Optional/Stream的捕获与SAM host方向、Bean/同名方法、Mixin泛型来源仍需独立设计和真实消费证据。不通过全图any/unknown、全局协变、删除成员、空声明或放宽exclude/hide掩盖失败。后续生产改动完成后再冻结新候选，原政策复验仍使用原采样器、fixture与285.3ms门槛。

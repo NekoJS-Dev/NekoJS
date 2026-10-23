@@ -60,7 +60,7 @@ final class TypeScriptStaticInheritance {
         return new Projection(List.copyOf(methods));
     }
 
-    private List<TypeDecl> parents(TypeDecl declaration) {
+    List<TypeDecl> parents(TypeDecl declaration) {
         List<TypeDecl> parents = new ArrayList<>();
         Set<String> visited = new HashSet<>();
         visited.add(declaration.fqn);
