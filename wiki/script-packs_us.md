@@ -17,7 +17,7 @@ Use `/nekojs packs create server economy` in game, or select several types with 
 ./tools/nekojs-pack.ps1 -Action validate -InputPath ./build/author/packs/economy
 ```
 
-Templates contain `manifest.json`, each selected type's `main.js` and `pack-api.d.ts`. Existing targets are rejected. Put the directory in `nekojs/packs/`, or in a world's `nekojs_packs/` when that platform mounts WORLD sources.
+Templates contain `manifest.json`, each selected type's `main.js` and `pack-api.d.ts`. Existing targets are rejected. The default example writes one log message. Put the directory in `nekojs/packs/`, or in a world's `nekojs_packs/` when that platform mounts WORLD sources.
 
 ```json
 {
@@ -26,11 +26,12 @@ Templates contain `manifest.json`, each selected type's `main.js` and `pack-api.
   "version": "1.0.0",
   "entries": { "server": ["main.js"] },
   "dependencies": { "economy": ">=1.0.0 <2.0.0" },
+  "environment": { "loaders": ["neoforge"], "minecraft": ">=26.1 <27" },
   "capabilities": { "requires": { "economy": ["wallet"] } }
 }
 ```
 
-The machine schema is in the repository at `docs/schema/script-pack-v1.schema.json`. Unknown fields, wrong field types and invalid entries are rejected before activation. Entry keys are `startup/server/client/test`; paths are relative to that type's directory. Only declared entries run independently. Other supported files remain import-only libraries. Physical imports stay inside the pack root; cross-pack calls use declared capabilities.
+The machine schema is in the repository at `docs/schema/script-pack-v1.schema.json`. Unknown fields, wrong field types and invalid entries are rejected before activation. Entry keys are `startup/server/client/test`; paths are relative to that type's directory. Entries must be existing, supported scripts; absolute paths, traversal and `node_modules` paths are rejected. Only declared entries run independently. Other supported files remain import-only libraries cached by that pack's module session. Physical imports stay inside the pack root; cross-pack calls use declared capabilities.
 
 Pack versions have three numeric parts, optional SemVer prerelease/build identifiers, no numeric leading zeros and at most nine digits per version part. Ranges accept `*`, exact versions, `>= <= > < =` comparators and space-separated conjunctions. Comparators allow one to three numeric parts. There is no npm/Maven solver, `^`, `~`, OR or dependency download. `environment.mods`, `environment.loaders` and `environment.minecraft` add environment conditions. Pack dependencies precede consumers; existing file `priority/after` rules cannot override them. Missing, incompatible, disabled, duplicate or cyclic dependencies block their consumers while unrelated packs continue.
 

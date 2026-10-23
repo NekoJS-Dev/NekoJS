@@ -63,8 +63,8 @@
       "us": "Quick start",
       "legacy": "快速开始.md",
       "legacyDigest": "6d7f5c999e495c3bf63ad6aab85a2a83cf6959be653897e5db8127e5698738e5",
-      "sourceDigest": "db974d99b967aa229531ccd061db2dc3b05ca049b6e550067625e654945d6733",
-      "translationDigest": "846a43f447798648a2f4c713b47c22add933b15ecc98f2be846966c475397319",
+      "sourceDigest": "88079c147e4f073ae624d4a1cfcdb0b013d8d47b568505119bbce19230db2fb5",
+      "translationDigest": "a738afad2fc14296d74e80fdf02943964a91d4e529504f74f278f26104dc2280",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -185,8 +185,8 @@
       "legacy": "script-packs.md",
       "translationStatus": "draft",
       "humanReview": "pending",
-      "sourceDigest": "1de430775cf2d1189166c0158d072d6735552c4aa35594e78553247a7dc1be98",
-      "translationDigest": "ecc3fef687b5a2a432bb07436412aafa3dea145a233a3e8540f5bd6b362116d4"
+      "sourceDigest": "15589155fca21aea68a8c186b1201599cd10e5bafeb802c5c8ee2bb770169dcb",
+      "translationDigest": "d6523684837ec8eb69bfee7f44d7b01ea92db3b20bfb5b6657e882549809596b"
     },
     {
       "id": "recipe-system",
@@ -207,8 +207,8 @@
       "us": "Registering new content",
       "legacy": "注册新内容.md",
       "legacyDigest": "9d4c07f0f1f6e614adf427a2b67cc547f85ce2d72c324c35b90ec59922788f02",
-      "sourceDigest": "997dc63209151533472a0ae1315ffba5931855824bf79b59a6bda17ac76c9f55",
-      "translationDigest": "6e7d91750d5b42ee177aef98a5245c81336f067c97a24b9c30bd4e138a7e7971",
+      "sourceDigest": "e3ab0b5a407fcf9d9d4e0720c752b18fd971cc425e9d20e9e2bbd87ef3868ef3",
+      "translationDigest": "0f8250418699f5f9c62c9bd1ec3d6dad5ae79a73becf3328ee796562c7add36e",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -279,8 +279,8 @@
       "us": "Type adapters",
       "legacy": "类型适配器.md",
       "legacyDigest": "03e9c1c029bde32fb81cb2115134491763a1d65d6ec5bb5b88512bbd7851e008",
-      "sourceDigest": "69e429f662a18437d950413cc41317eeb2870cecf078098fb165f64ee2804dab",
-      "translationDigest": "e3e806b8bc0e953e26d3c7dab345dff2bd79e9287f9f82524f1e29bbd48744af",
+      "sourceDigest": "d8a7f11bcca13849de1d8532fb06c3075b70d1bccd7734a7a724b41d691529c8",
+      "translationDigest": "ed87ebd5381db75a0df0e50c750aaaf0d9bd54946182bde4acd4633485ec2b28",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -291,8 +291,8 @@
       "us": "Event extensions",
       "legacy": "事件扩展.md",
       "legacyDigest": "033267bec13dfcc33faa9370b097ad6cb5128edd84fa6d37ca5dffdab69fab9d",
-      "sourceDigest": "b43f6162e78ef72d68a7b18bd6807a6700492986a6b9a5bfcdccaf828c24c55a",
-      "translationDigest": "e532fb262a0a7f98abd7062697efa0cb1f44dfe7a819787e7e377146b7b1163e",
+      "sourceDigest": "332a3d0662f562cc3e91df5ac08174c58057ddcc28b3f3f1daace867d252c701",
+      "translationDigest": "a5e56442329a242df76bdc36f1e48b75eeb83b5a1da8ff992677f12a27bca4f5",
       "translationStatus": "draft",
       "humanReview": "pending"
     },

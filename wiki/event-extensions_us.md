@@ -5,7 +5,7 @@
 <a id="wiki-section-1"></a>
 # Event extensions
 
-> This page covers two topics: (1) how plugins register **custom event groups** so scripts can use them like `ServerEvents`; (2) how users use `ScriptEvents` in **startup scripts** to bridge vanilla events into new event groups.
+> This page covers two topics: (1) how plugins register **custom event groups** so scripts can use them like `ServerEvents`; (2) how users use `ScriptEvents` in **startup scripts** to declare new event groups. Bridging native events is a separate operation described below.
 
 <a id="wiki-section-2"></a>
 ## Concepts recap
@@ -19,6 +19,8 @@ NekoJS's event system, described in [Project architecture: event system](project
 - **`FabricEventBusBridge`**: connects Fabric callback registrars to `EventBusJS` through `bind` / `bindTransformed`; `bindCancellable` forwards script cancellation through the callback adapter. Ordinary buses skip conversion/dispatch without listeners; dispatch buses preserve keyed delivery and support Java keyed listeners.
 
 **Cross-loader consistency:** keep the script contract aligned where capability permits: `EventGroup`, event name, payload meaning, Script Type, and cancellation/dispatch semantics. NeoForge binds native events on `IEventBus`; Fabric binds Fabric callbacks. The bus and payload contract can stay consistent, while the registration lambda adapts each real callback signature. Use a mixin or explicitly record unavailable capability where no equivalent callback exists; do not imply unsupported behavior.
+
+Java snippets using Minecraft identifiers on this page use 26.x names. On 1.21.1, replace `Identifier` and its import with `ResourceLocation`. The neutral event-group contract itself remains available across versions.
 
 The repository's detailed maintainer Java/JS examples and placement guide is `docs/maintenance/adding-events-adapters.md`.
 Built-in event groups live under `bindings/event/` and are declared as interfaces with `static final` fields, for example:
@@ -226,15 +228,21 @@ That model cannot be shared across loaders: Fabric events are callback interface
 <a id="wiki-section-15"></a>
 ## EventBusForgeBridge
 
-Use `EventBusForgeBridge` when your group needs to bridge **native platform events** (NeoForge `IEventBus` / Forge `EVENT_BUS`):
+Use `EventBusForgeBridge` when your group needs to bridge **native platform events** (NeoForge `IEventBus`):
 
 ```java
+import com.tkisor.nekojs.api.event.EventBusForgeBridge;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+
 EventBusForgeBridge.create(NeoForge.EVENT_BUS)
-    .bind(MyEvents.PLAYER_GREET)        // Bind each event to a native event
-    .bind(MyEvents.CUSTOM);
+    .bindTransformed(MyEvents.PLAYER_GREET,
+        event -> new PlayerGreetEvent((ServerPlayer) event.getEntity(), "Hello"),
+        PlayerEvent.PlayerLoggedInEvent.class);
 ```
 
-`bind(...)` subscribes to native events, forwards them to the neutral bus, and propagates cancellation back to the original `ICancellableEvent`. See built-in groups, such as `FORGE_BRIDGE` at the end of `ServerEvents.java`.
+`bind(...)` requires an event class extending NeoForge `Event`. The ordinary `PlayerGreetEvent` above instead uses `bindTransformed` to convert a real native login event, as shown here, or is posted by your own code. When the neutral bus is cancellable, the bridge propagates cancellation to native events implementing `ICancellableEvent`. See built-in groups, such as `FORGE_BRIDGE` at the end of `ServerEvents.java`.
 
 <a id="wiki-section-16"></a>
 ## Design considerations

@@ -7,6 +7,8 @@
 
 Register new content in `startup_scripts/` through the **single entry point** `RegistryEvents.register`. Registration scripts run during game startup; you must restart the game after adding or changing registered content. `/nekojs reload startup` currently rejects execution and cannot rerun STARTUP scripts from a command while the game is running.
 
+The complete example below targets NeoForge and includes its fluid registration entry. On Fabric, use the item and block portions.
+
 ```javascript
 // startup_scripts/my_content.js
 RegistryEvents.register(event => {
@@ -23,6 +25,7 @@ RegistryEvents.register(event => {
     b.lightLevel = 7
   })
 
+  // NeoForge only.
   event.fluid('mymod:molten_iron', b => {
     b.density = 3000
     b.viscosity = 2000
@@ -49,7 +52,7 @@ Invalid input fails immediately (all of these throw while the script executes an
 - An unrecognized registry name → `unknown registry 'xxx'`, with a hint to use an available convenience name or full key.
 - An unrecognized type name → `unknown type 'xxx' for registry '...'; known types: [...]`, listing the types registered for that registry.
 - A misspelled convenience method → `RegistryEvent has no member 'xxx'; known: [...]`, listing all entry points actually available on the current platform.
-- A missing/invalid callback or an id that is not a string → the corresponding `IllegalArgumentException`.
+- A missing/invalid callback → `IllegalArgumentException`. IDs accept strings or host `Identifier` values (`ResourceLocation` on 1.21.1); other values are rejected.
 
 Conversely, **leaving every builder setting unset is valid**: `event.item('mymod:x', b => {})` registers a usable item using the defaults listed below. The default values in these tables are what apply when you omit a setting.
 
@@ -289,7 +292,7 @@ RegistryEvents.register(event => {
   // Villager type (identifier only; no configuration)
   event.villagerType('mymod:miner', b => {})
 
-  // Enchantment
+  // NeoForge 1.21.1 only; use a datapack on 26.x.
   event.enchantment('mymod:ice_bane', b => {
     b.supportedItems = 'minecraft:enchantable/weapon'
     b.weight = 5; b.maxLevel = 3

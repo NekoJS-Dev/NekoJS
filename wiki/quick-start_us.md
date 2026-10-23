@@ -72,7 +72,7 @@ nekojs/packs/my_pack/
   Entering the world mounts them; leaving clears their listeners and timers. Current-world edits and enablement apply on the relevant type reload.
 - **Remote cache packs**: mounted SERVER_CACHE content can be queried, but local enablement commands cannot change its remote authorization.
 - Manifest fields are parsed permissively: `id`/`name`/`version`/`description`/`authors`/`enabled`/`clientSync`
-  (`clientSync` is reserved for multiplayer script distribution; see below). Each pack's script directories also get an automatically generated `jsconfig.json`,
+  (`clientSync` defaults to `true`; set it to `false` to exclude that pack from multiplayer distribution, as described below). Each pack's script directories also get an automatically generated `jsconfig.json`,
   with the same editor completion as standalone directories.
 - Both loaders mount directory-pack `data/<namespace>/**`. Fabric discovers directories before initial data loading; use native `/reload` for later data changes and F3+T for client assets. Directory mounting does not imply that every data-generation Script Event is available on both platforms. See [Script packs](script-packs_us) for resource precedence, remote restrictions, and loading boundaries.
 

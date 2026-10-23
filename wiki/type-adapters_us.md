@@ -12,7 +12,7 @@
 
 GraalJS `HostAccess` provides `targetTypeMapping(C, T, predicate, function)`: when a Java API expects type `T`, GraalJS automatically converts the incoming JS value (`Value`) to `T` through that mapping. NekoJS `JSTypeAdapter` carries the mapping.
 
-At bootstrap, NekoJS uses `NekoSharedHostAccess` to register all `JSTypeAdapter` instances in each Context as `HostAccess.targetTypeMapping(Value.class, T, adapter, adapter)`.
+At bootstrap, `NekoSharedHostAccess` configures the registered adapters as `HostAccess.targetTypeMapping(Value.class, T, adapter, adapter)`. Contexts use that shared HostAccess configuration.
 
 <a id="wiki-section-3"></a>
 ## Built-in adapters
@@ -35,7 +35,7 @@ NekoJS registers many adapters; see `src/main/java/com/tkisor/nekojs/js/type_ada
 | `EntityTypeAdapter` | `EntityType` | String id |
 | `MobEffectAdapter` / `PotionAdapter` / `ParticleTypeAdapter` / `SoundEventAdapter` / `CreativeModeTabAdapter` / `BlockEntityTypeAdapter` | Corresponding registry types | String id |
 | `CodecAdapter` | Any codec type | Parsed through the codec |
-| `DataComponentsAdapter` (static utility, not a registered adapter) | `DataComponentPatch` | JS object to data component patch (NeoForge only) |
+| `DataComponentsAdapter` (static utility, not a registered adapter) | `DataComponentPatch` | JS object to data component patch (NeoForge / Fabric 26.x) |
 | `RecipeFilterAdapter` | `RecipeFilter` | JS object; see [Recipe system: filters](recipe-system_us#wiki-section-3) |
 | `RecipeJsonValueAdapter` | `RecipeJsonValue` | — |
 
@@ -75,6 +75,7 @@ import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import graal.graalvm.polyglot.Value;
+import java.util.List;
 
 public class MyPosAdapter implements JSTypeAdapter<MyPos> {
 
@@ -200,7 +201,7 @@ public class MyPosAdapter extends BaseJsTypeAdapter<MyPos> {
 
 The form maps almost directly to the legacy SPI: `test` / `apply` become `supports` / `convert`, and `getPrecedence()` becomes `precedence()`. See `src/main/java/com/tkisor/nekojs/js/type_adapter/ComponentAdapter.java` for a migration example.
 
-> The base class's host-object branch is **narrower** than the legacy base class: `supports` accepts a host object only when `targetType.isAssignableFrom(host.getClass())`. Thus `fromHostObject` always receives the target type; it does not need to, and cannot, handle other forms such as `Map` there. Those go through `acceptOther` / `fromOther`. Returning `null` from `fromHostObject` is **not** a valid way to indicate an unrecognized value: the base class treats it as failure and throws `ValueConversionException` (`BaseJsTypeAdapter.convert`). To reject a value, make `supports` return false.
+> The base class's host-object branch is **narrower** than the legacy base class: `supports` accepts a host object only when `targetType.isAssignableFrom(host.getClass())`. Thus `fromHostObject` always receives the target type; it does not need to, and cannot, handle other forms such as `Map` there. An incompatible Java host object is rejected directly; ordinary non-host JS objects go through `acceptOther` / `fromOther`. Returning `null` from `fromHostObject` is **not** a valid way to indicate an unrecognized value: the base class treats it as failure and throws `ValueConversionException` (`BaseJsTypeAdapter.convert`). To reject a value, make `supports` return false.
 
 <a id="wiki-section-10"></a>
 ### Step 3: register
@@ -287,6 +288,8 @@ The following are recommendations derived from that behavior; no code enforces t
 <a id="wiki-section-14"></a>
 ## Test adapters
 
+The following test covers object and string conversion in the legacy `AbstractJSTypeAdapter` example from Step 2.
+
 ```java
 @Test
 void myPosAdapterConvertsObjectAndString() {
@@ -305,7 +308,7 @@ void myPosAdapterConvertsObjectAndString() {
 ## Platform independence
 
 Adapters **can** be cross-platform, but no mechanism requires that: an adapter compiled for one loader can still register and work. Built-in adapters use the following layering for cross-platform support; use the same organization if it suits your plugin:
-- New `JsTypeAdapter` / `BaseJsTypeAdapter` live in the `com.tkisor.nekojs.api.data` contract package with no Minecraft/Graal dependency. Legacy `JSTypeAdapter` / `AbstractJSTypeAdapter` live in `com.tkisor.nekojs.js.type_adapter`, depend on Graal `Value`, and have no Minecraft dependency. guardLint enforces these dependency boundaries **in this repository**, not in your mod.
+- New `JsTypeAdapter` / `BaseJsTypeAdapter` live in the `com.tkisor.nekojs.api.data` contract package with no Minecraft/Graal dependency. Legacy `JSTypeAdapter` lives in `com.tkisor.nekojs.api` and `AbstractJSTypeAdapter` in `com.tkisor.nekojs.api.data`; both depend on Graal `Value` and have no Minecraft dependency. guardLint enforces these dependency boundaries **in this repository**, not in your mod.
 - Minecraft-specific logic, such as `instanceof ItemStack`, belongs in `fromHostObject`; the platform supplies host objects.
 - Platform-specific adapters, such as `ItemAdapter`, belong in the platform sourceSet.
 

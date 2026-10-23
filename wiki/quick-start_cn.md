@@ -72,7 +72,7 @@ nekojs/packs/my_pack/
   退出时清理监听器与定时器。当前世界的启停或编辑在对应类型重载后应用。
 - **远端缓存包**：已挂载的 SERVER_CACHE 包可查询，由远端授权控制，不能用本地启停命令改写。
 - manifest 字段宽松解析：`id`/`name`/`version`/`description`/`authors`/`enabled`/`clientSync`
-  （`clientSync` 预留给多人脚本分发，见下）。每个包的脚本目录同样自动生成 `jsconfig.json`，
+  （`clientSync` 默认 `true`，设为 `false` 可排除该包的多人分发，见下）。每个包的脚本目录同样自动生成 `jsconfig.json`，
   编辑器补全与平铺目录一致。
 - 两个加载器都支持挂载目录包的 `data/<命名空间>/**`；Fabric 在首次数据加载前发现目录，后续 data 改动使用原版 `/reload`，客户端 assets 改动使用 F3+T。目录挂载不表示数据生成 Script Event 已在各平台全部可用。资源覆盖、远端限制与加载边界见[脚本包](script-packs_cn)。
 

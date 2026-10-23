@@ -12,7 +12,7 @@
 
 GraalJS 的 `HostAccess` 提供了 `targetTypeMapping(C, T, predicate, function)` 机制：当 Java API 期望类型 `T` 时，GraalJS 会自动把传入的 JS 值（`Value`）通过 mapping 转成 `T`。NekoJS 的 `JSTypeAdapter` 就是这个 mapping 的载体。
 
-NekoJS 在 bootstrap 时把所有注册的 `JSTypeAdapter` 通过 `NekoSharedHostAccess` 转成 `HostAccess.targetTypeMapping(Value.class, T, adapter, adapter)` 注册进每个 Context。
+NekoJS 在 bootstrap 时通过 `NekoSharedHostAccess` 将注册的适配器配置为 `HostAccess.targetTypeMapping(Value.class, T, adapter, adapter)`，由各 Context 使用这份共享 HostAccess 配置。
 
 <a id="wiki-section-3"></a>
 ## 内置适配器
@@ -35,7 +35,7 @@ NekoJS 已注册了大量适配器（见 `src/main/java/com/tkisor/nekojs/js/typ
 | `EntityTypeAdapter` | `EntityType` | 字符串 id |
 | `MobEffectAdapter` / `PotionAdapter` / `ParticleTypeAdapter` / `SoundEventAdapter` / `CreativeModeTabAdapter` / `BlockEntityTypeAdapter` | 各注册表类型 | 字符串 id |
 | `CodecAdapter` | 任意 codec 类型 | 按 codec 解析 |
-| `DataComponentsAdapter`（静态工具，非注册适配器） | `DataComponentPatch` | JS 对象 → data component patch（仅 NeoForge） |
+| `DataComponentsAdapter`（静态工具，非注册适配器） | `DataComponentPatch` | JS 对象 → data component patch（NeoForge / Fabric 26.x） |
 | `RecipeFilterAdapter` | `RecipeFilter` | JS 对象（见 [配方系统 - 过滤器](recipe-system_cn#wiki-section-3)） |
 | `RecipeJsonValueAdapter` | `RecipeJsonValue` | — |
 
@@ -75,6 +75,7 @@ import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import graal.graalvm.polyglot.Value;
+import java.util.List;
 
 public class MyPosAdapter implements JSTypeAdapter<MyPos> {
 
@@ -200,7 +201,7 @@ public class MyPosAdapter extends BaseJsTypeAdapter<MyPos> {
 
 写法与旧 SPI 几乎一一对应（`test`/`apply` → `supports`/`convert`，`getPrecedence()` → `precedence()`）。迁移实例见 `src/main/java/com/tkisor/nekojs/js/type_adapter/ComponentAdapter.java`。
 
-> 基类的 host object 分支比旧基类**收窄**了：`supports` 对 host object 只在 `targetType.isAssignableFrom(host.getClass())` 时放行，所以 `fromHostObject` 收到的一定已经是目标类型，不需要（也不可能）在里面处理 `Map` 之类的其它形态——那些值走 `acceptOther`/`fromOther`。而且 `fromHostObject` 返回 `null` **不是**「不识别」的合法表达：基类会把它当失败，抛 `ValueConversionException`（`BaseJsTypeAdapter.convert`）。要表达「不接受」就让 `supports` 返回 false。
+> 基类的 host object 分支比旧基类**收窄**了：`supports` 对 host object 只在 `targetType.isAssignableFrom(host.getClass())` 时放行，所以 `fromHostObject` 收到的一定已经是目标类型，不需要（也不可能）在里面处理 `Map` 之类的其它形态。不匹配的 Java host object 会直接被拒绝；普通非 host 的 JS 对象才走 `acceptOther`/`fromOther`。而且 `fromHostObject` 返回 `null` **不是**「不识别」的合法表达：基类会把它当失败，抛 `ValueConversionException`（`BaseJsTypeAdapter.convert`）。要表达「不接受」就让 `supports` 返回 false。
 
 <a id="wiki-section-10"></a>
 ### 步骤 3：注册
@@ -287,6 +288,8 @@ public void registerAdapters(JSTypeAdapterRegistry registry) {
 <a id="wiki-section-14"></a>
 ## 测试适配器
 
+下面针对步骤 2 的旧 SPI `AbstractJSTypeAdapter` 示例测试对象和字符串转换。
+
 ```java
 @Test
 void myPosAdapterConvertsObjectAndString() {
@@ -305,7 +308,7 @@ void myPosAdapterConvertsObjectAndString() {
 ## 平台无关性
 
 适配器**能**做到跨平台，但没有机制要求它跨平台——一个只在某个加载器上编译的适配器照样能注册、能工作。下面是内置适配器为了跨平台而采用的分层，你想复用这套排布就照着放：
-- 新 SPI `JsTypeAdapter`/`BaseJsTypeAdapter` 在契约包 `com.tkisor.nekojs.api.data`，无 MC/Graal 依赖；旧 SPI `JSTypeAdapter`/`AbstractJSTypeAdapter` 在 `com.tkisor.nekojs.js.type_adapter`（依赖 Graal `Value`），无 MC 依赖。这两层的「无 XX 依赖」由 guardLint 的边界规则对**本仓**强制，你的 mod 不受它约束。
+- 新 SPI `JsTypeAdapter`/`BaseJsTypeAdapter` 在契约包 `com.tkisor.nekojs.api.data`，无 MC/Graal 依赖；旧 SPI `JSTypeAdapter` 在 `com.tkisor.nekojs.api`，`AbstractJSTypeAdapter` 在 `com.tkisor.nekojs.api.data`（均依赖 Graal `Value`），无 MC 依赖。这两层的「无 XX 依赖」由 guardLint 的边界规则对**本仓**强制，你的 mod 不受它约束。
 - MC 相关逻辑（`instanceof ItemStack` 等）在 `fromHostObject` 里，平台提供 host 对象。
 - 平台专属适配器（如 `ItemAdapter`）放在平台 sourceSet。
 

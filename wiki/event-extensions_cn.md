@@ -5,7 +5,7 @@
 <a id="wiki-section-1"></a>
 # 事件扩展
 
-> 本页讲两件事：(1) 插件如何注册**自定义事件组**（让脚本像用 `ServerEvents` 一样用你的事件）；(2) 用户如何在**启动脚本**里用 `ScriptEvents` 把原版事件桥接成新事件组。
+> 本页讲两件事：(1) 插件如何注册**自定义事件组**（让脚本像用 `ServerEvents` 一样用你的事件）；(2) 用户如何在**启动脚本**里用 `ScriptEvents` 声明新事件组。原生事件的桥接是单独的操作，见后文。
 
 <a id="wiki-section-2"></a>
 ## 概念回顾
@@ -19,6 +19,8 @@ NekoJS 的事件系统（见 [项目架构 - 事件系统](project-architecture_
 - **`FabricEventBusBridge`**：通过 `bind` / `bindTransformed` 把 Fabric callback registrar 接到 `EventBusJS`；`bindCancellable` 将脚本取消结果交回 callback adapter。普通总线无监听器时跳过转换/派发，dispatch 总线保留 key 投递并兼容 Java keyed listener。
 
 **双端一致性边界**：脚本侧尽量保持同一个 `EventGroup`、事件名、payload 语义、Script Type 和取消/dispatch 契约。NeoForge 绑定原生 `IEventBus`；Fabric 绑定 Fabric callback。两边 bus/payload 契约可保持一致，但注册 lambda 仍需适配真实 callback 签名；无等价 API 时用 mixin 或明确记录 unavailable，不能伪装能力。
+
+本页涉及 Minecraft 标识符的 Java 片段使用 26.x 名称；1.21.1 应将 `Identifier` 和对应 import 改为 `ResourceLocation`。中立事件组契约本身仍跨版本使用。
 
 新事件/Adapter 的完整维护者 Java/JS 示例见仓库 `docs/maintenance/adding-events-adapters.md`。
 内置事件组放在 `bindings/event/` 下、以 interface + `static final` 字段的形式声明，例如：
@@ -227,15 +229,21 @@ MyClientEvents.hudRefresh.post({ reason: 'manual' })
 <a id="wiki-section-15"></a>
 ## EventBusForgeBridge
 
-如果你的事件组要桥接**平台原生事件**（NeoForge `IEventBus` / Forge `EVENT_BUS`），用 `EventBusForgeBridge`：
+如果你的事件组要桥接**平台原生事件**（NeoForge `IEventBus`），用 `EventBusForgeBridge`：
 
 ```java
+import com.tkisor.nekojs.api.event.EventBusForgeBridge;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+
 EventBusForgeBridge.create(NeoForge.EVENT_BUS)
-    .bind(MyEvents.PLAYER_GREET)        // 把每个事件绑到一个原生事件
-    .bind(MyEvents.CUSTOM);
+    .bindTransformed(MyEvents.PLAYER_GREET,
+        event -> new PlayerGreetEvent((ServerPlayer) event.getEntity(), "Hello"),
+        PlayerEvent.PlayerLoggedInEvent.class);
 ```
 
-`bind(...)` 会订阅原生事件，转发进中立总线，并把取消传播回原版 `ICancellableEvent`。详见内置事件组（如 `ServerEvents.java` 末尾的 `FORGE_BRIDGE`）。
+`bind(...)` 要求事件对象继承 NeoForge `Event`；前文的普通 `PlayerGreetEvent` 应像上例一样通过 `bindTransformed` 从真实的原生登录事件转换，或在自己的代码中调用 `post`。绑定可取消总线时，桥接器将取消结果传播回实现 `ICancellableEvent` 的原生事件。详见内置事件组（如 `ServerEvents.java` 末尾的 `FORGE_BRIDGE`）。
 
 <a id="wiki-section-16"></a>
 ## 设计要点

@@ -7,6 +7,8 @@
 
 在 `startup_scripts/` 里通过**单一入口** `RegistryEvents.register` 注册新内容。注册脚本在游戏启动阶段执行；新增或修改注册内容后必须重启游戏。当前 `/nekojs reload startup` 会拒绝执行，不能从运行中的命令重跑 STARTUP 脚本。
 
+下面的完整示例适用于 NeoForge，包含其专有的流体注册入口。Fabric 可使用其中的物品和方块部分。
+
 ```javascript
 // startup_scripts/my_content.js
 RegistryEvents.register(event => {
@@ -23,6 +25,7 @@ RegistryEvents.register(event => {
     b.lightLevel = 7
   })
 
+  // NeoForge only.
   event.fluid('mymod:molten_iron', b => {
     b.density = 3000
     b.viscosity = 2000
@@ -49,7 +52,7 @@ RegistryEvents.register(event => {
 - 注册表名不认识 → `unknown registry 'xxx'`，提示可用糖名或完整键的形式。
 - 类型名不认识 → `unknown type 'xxx' for registry '...'; known types: [...]`，直接列出该注册表下已登记的类型。
 - 拼错糖方法名 → `RegistryEvent has no member 'xxx'; known: [...]`，列出当前平台实际存在的全部入口。
-- 少传/传错回调、id 不是字符串 → 各自的 `IllegalArgumentException`。
+- 少传/传错回调 → `IllegalArgumentException`。ID 可以是字符串或当前平台的 `Identifier`（1.21.1 为 `ResourceLocation`）宿主对象，其他值会被拒绝。
 
 反过来说，**builder 上什么都不设也是合法的**：`event.item('mymod:x', b => {})` 会用表里列出的默认值注册出一个能用的物品。下面各表的「默认」列就是不写时的取值。
 
@@ -290,7 +293,7 @@ RegistryEvents.register(event => {
   // 村民类型（纯标识，无配置）
   event.villagerType('mymod:miner', b => {})
 
-  // 附魔
+  // NeoForge 1.21.1 only; use a datapack on 26.x.
   event.enchantment('mymod:ice_bane', b => {
     b.supportedItems = 'minecraft:enchantable/weapon'
     b.weight = 5; b.maxLevel = 3
