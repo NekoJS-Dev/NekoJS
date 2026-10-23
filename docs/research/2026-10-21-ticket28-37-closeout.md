@@ -1,5 +1,7 @@
 # 票 28 / 37 后续工程收尾
 
+2026-10-24 当前候选的[三节点渲染](../architecture-refactor/evidence/2026-10-24-candidate-render/README.md)也已补齐：30原图实际逐张查看，13次原生F3+T与六个正常退出，范围为既有legacy16/现代各7阶段。当前975496d3的指定安装客户端、双节点TCP及26.1.2分离回退均有本轮确切制品证明。完整严格TSC和原门槛性能仍失败，维护者结论及最终发布仍未代签，票37继续in-progress。
+
 2026-10-24 当前975496d3的[两节点真实TCP验收](../architecture-refactor/evidence/2026-10-24-candidate-tcp/README.md)已补齐30阶段、14正常退出，含真实NACK、双ACK、超时/迟到ACK、PREPARE断线/重连与COMMIT物理失败、持续故障拒绝及同进程恢复。源码、全部生产类、实际加载路径和JAR均绑定本轮候选；不再仅借用旧JAR的该项证据。其他平台、渲染和维护者结论仍保持独立范围，完整TSC与性能不据本项改判。
 
 2026-10-24 当前候选的[分离回退](../architecture-refactor/evidence/2026-10-24-candidate-rollback/README.md)已完成：d91ca974旧JAR→975496d3推进→旧JAR保留新数据→当前JAR恢复停服备份，四阶段/四正常停止通过。当前实际JAR与1641类绑定及全部真实记录独立封存。仅覆盖26.1.2完整世界夹具，不代签维护者最终政策；当前客户端/TCP继续独立验收，完整TSC和性能失败结论不变。
