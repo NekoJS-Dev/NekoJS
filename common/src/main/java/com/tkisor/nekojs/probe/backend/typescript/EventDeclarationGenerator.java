@@ -58,28 +58,33 @@ public final class EventDeclarationGenerator {
             sb.append("/// <reference path=\"../../../@event-builders/index.d.ts\" />\n\n");
         }
 
-        // 收集所有需要 import 的类型
         Set<String> imports = referencedClasses(events, payloads);
+        Set<TypeScriptImportNames.Symbol> symbols = new LinkedHashSet<>();
+        for (String fqn : imports) {
+            symbols.add(new TypeScriptImportNames.Symbol(fqn, "$" + fqn.substring(fqn.lastIndexOf('.') + 1)));
+            String adapterName = adapterAliasGenerator.aliasNameOf(fqn);
+            if (adapterName != null) symbols.add(new TypeScriptImportNames.Symbol(fqn, adapterName));
+        }
+        Set<String> payloadNames = payloads.values().stream().map(EventPayload::name).collect(Collectors.toSet());
+        TypeScriptImportNames importNames = new TypeScriptImportNames(symbols, payloadNames, Set.of());
+        // Imports and signatures share a module-local view; catalog identities and shared aliases stay unchanged.
+        TypeAliasRegistry moduleAliases = importNames.hasAliases()
+                ? aliasRegistry.withReferences(importNames::reference) : aliasRegistry;
 
-        // 生成 import 语句
         if (!imports.isEmpty()) {
             Map<String, List<String>> importsByPackage = new TreeMap<>();
-            for (String fqn : imports) {
+            for (var binding : importNames.bindings().entrySet()) {
+                String fqn = binding.getKey().fqn();
                 String pkg = fqn.substring(0, fqn.lastIndexOf('.'));
-                String simple = fqn.substring(fqn.lastIndexOf('.') + 1);
                 List<String> names = importsByPackage.computeIfAbsent(pkg, k -> new ArrayList<>());
-                names.add("$" + simple);
-                // dispatch key 参数放宽后可能引用 $Foo_，需一并导入
-                String aliasName = adapterAliasGenerator.aliasNameOf(fqn);
-                if (aliasName != null) {
-                    names.add(aliasName);
-                }
+                String exported = binding.getKey().exportedName();
+                String local = binding.getValue();
+                names.add(exported.equals(local) ? exported : exported + " as " + local);
             }
 
             for (var entry : importsByPackage.entrySet()) {
                 String importPath = "java:" + entry.getKey().replace('.', '/');
-                // 包内符号名按字典序排序：反射方法/接口顺序无规范保证，沿用首插序会导致
-                // 产物跨 JVM 运行抖动（事件类型图深递归时尤甚）
+                // Reflection order must not affect module output.
                 List<String> names = new ArrayList<>(new LinkedHashSet<>(entry.getValue()));
                 Collections.sort(names);
                 sb.append("import { ").append(String.join(", ", names));
@@ -121,7 +126,7 @@ public final class EventDeclarationGenerator {
             sb.append("    namespace ").append(group).append(" {\n");
 
             for (EventCatalogEntry event : groupEvents) {
-                sb.append(generateEventMethod(event, payloads.get(event.eventType())));
+                sb.append(generateEventMethod(event, payloads.get(event.eventType()), moduleAliases));
             }
 
             sb.append("    }\n\n");
@@ -141,7 +146,7 @@ public final class EventDeclarationGenerator {
         return cls.getSimpleName();
     }
 
-    private String generateEventMethod(EventCatalogEntry event, EventPayload payload) {
+    private String generateEventMethod(EventCatalogEntry event, EventPayload payload, TypeAliasRegistry moduleAliases) {
         StringBuilder sb = new StringBuilder();
 
         // ScriptEvents 声明的自定义事件：载荷任意、且脚本可自己触发
@@ -159,7 +164,7 @@ public final class EventDeclarationGenerator {
         if (payload != null) {
             eventType = payload.name();
         } else if (event.eventType() != null) {
-            eventType = "$" + getTsClassName(event.eventType());
+            eventType = moduleAliases.reference(event.eventType().getName(), "$" + getTsClassName(event.eventType()));
             // 处理泛型
             TypeVariable<?>[] typeParams = event.eventType().getTypeParameters();
             if (typeParams.length > 0) {
@@ -180,7 +185,7 @@ public final class EventDeclarationGenerator {
         // 有 dispatch key 的版本
         if (event.dispatchable() && event.dispatchKeyType() != null) {
             String keyType = TypeScriptClassRenderer.renderTypeRef(
-                    TypeReflector.toRef(event.dispatchKeyType()), aliasRegistry, true);
+                    TypeReflector.toRef(event.dispatchKeyType()), moduleAliases, true);
             sb.append("        function ").append(event.name());
             sb.append("(extra: ").append(keyType);
             sb.append(", handler: ((event: ").append(eventType).append(") => void)): void;\n");
