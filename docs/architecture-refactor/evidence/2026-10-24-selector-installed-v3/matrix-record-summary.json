@@ -1,0 +1,120 @@
+{
+  "sourceRevision": "3ccea55a53316ae9359eb8d96868505d178c6b7a",
+  "checkoutRevision": "3ccea55a53316ae9359eb8d96868505d178c6b7a",
+  "modules": [
+    {
+      "module": "common",
+      "task": "test",
+      "suites": 334,
+      "tests": 2460,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 4
+    },
+    {
+      "module": "common-api-processor",
+      "task": "test",
+      "suites": 1,
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "versions/1.21.1",
+      "task": "test",
+      "suites": 104,
+      "tests": 453,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 31
+    },
+    {
+      "module": "versions/1.21.1",
+      "task": "platformGateTest",
+      "suites": 3,
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "versions/26.1.2",
+      "task": "test",
+      "suites": 142,
+      "tests": 696,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 81
+    },
+    {
+      "module": "versions/26.1.2",
+      "task": "platformGateTest",
+      "suites": 3,
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "versions/26.2.0",
+      "task": "test",
+      "suites": 142,
+      "tests": 696,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 81
+    },
+    {
+      "module": "versions/26.2.0",
+      "task": "platformGateTest",
+      "suites": 3,
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "versions/26.1.2-fabric",
+      "task": "test",
+      "suites": 89,
+      "tests": 422,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 37
+    },
+    {
+      "module": "versions/26.1.2-fabric",
+      "task": "platformGateTest",
+      "suites": 3,
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "versions/26.2.0-fabric",
+      "task": "test",
+      "suites": 89,
+      "tests": 422,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 37
+    },
+    {
+      "module": "versions/26.2.0-fabric",
+      "task": "platformGateTest",
+      "suites": 3,
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "total": {
+    "tests": 5177,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 271
+  }
+}

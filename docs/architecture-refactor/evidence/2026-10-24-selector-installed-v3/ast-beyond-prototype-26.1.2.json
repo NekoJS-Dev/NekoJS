@@ -1,0 +1,998 @@
+{
+  "removed": [
+    {
+      "owner": "java:net/minecraft/world/entity#$Entity",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Entity",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Entity",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$AbstractMinecart",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$AbstractMinecart",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$AbstractMinecart",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    }
+  ],
+  "added": [
+    {
+      "owner": "java:net/minecraft/world/entity/boss/enderdragon#$EndCrystal",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/boss/enderdragon/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/boss/enderdragon#$EndCrystal",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/boss/enderdragon/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/boss/enderdragon#$EndCrystal",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/boss/enderdragon/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/decoration#$BlockAttachedEntity",
+      "declaration": "class",
+      "name": "push(double,double,double)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(double,double,double)\"(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/decoration/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/decoration#$BlockAttachedEntity",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.entity.Entity)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.entity.Entity)\"(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/decoration/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/decoration#$BlockAttachedEntity",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.phys.Vec3)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.phys.Vec3)\"(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/decoration/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/decoration#$ItemFrame",
+      "declaration": "class",
+      "name": "push(double,double,double)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(double,double,double)\"(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/decoration/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/decoration#$ItemFrame",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.entity.Entity)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.entity.Entity)\"(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/decoration/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/decoration#$ItemFrame",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.phys.Vec3)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.phys.Vec3)\"(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/decoration/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$AreaEffectCloud",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$AreaEffectCloud",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$AreaEffectCloud",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Display",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Display",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Display",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Entity",
+      "declaration": "class",
+      "name": "push(double,double,double)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(double,double,double)\"(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Entity",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.entity.Entity)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.entity.Entity)\"(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Entity",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.phys.Vec3)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.phys.Vec3)\"(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$ExperienceOrb",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$ExperienceOrb",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$ExperienceOrb",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Interaction",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Interaction",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Interaction",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$LightningBolt",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$LightningBolt",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$LightningBolt",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$LivingEntity",
+      "declaration": "class",
+      "name": "push(double,double,double)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(double,double,double)\"(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$LivingEntity",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.entity.Entity)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.entity.Entity)\"(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$LivingEntity",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.phys.Vec3)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.phys.Vec3)\"(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Marker",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Marker",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$Marker",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$OminousItemSpawner",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$OminousItemSpawner",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity#$OminousItemSpawner",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/item#$FallingBlockEntity",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/item/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/item#$FallingBlockEntity",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/item/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/item#$FallingBlockEntity",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/item/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/item#$ItemEntity",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/item/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/item#$ItemEntity",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/item/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/item#$ItemEntity",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/item/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/item#$PrimedTnt",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/item/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/item#$PrimedTnt",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/item/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/item#$PrimedTnt",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/item/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/monster/creaking#$Creaking",
+      "declaration": "class",
+      "name": "push(double,double,double)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(double,double,double)\"(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/monster/creaking/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/monster/creaking#$Creaking",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.entity.Entity)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.entity.Entity)\"(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/monster/creaking/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/monster/creaking#$Creaking",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.phys.Vec3)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.phys.Vec3)\"(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/monster/creaking/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/monster#$Shulker",
+      "declaration": "class",
+      "name": "push(double,double,double)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(double,double,double)\"(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/monster/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/monster#$Shulker",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.entity.Entity)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.entity.Entity)\"(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/monster/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/monster#$Shulker",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.phys.Vec3)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.phys.Vec3)\"(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/monster/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/monster#$Slime",
+      "declaration": "class",
+      "name": "push(double,double,double)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(double,double,double)\"(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/monster/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/monster#$Slime",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.entity.Entity)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.entity.Entity)\"(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/monster/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/monster#$Slime",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.phys.Vec3)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.phys.Vec3)\"(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/monster/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile/arrow#$AbstractArrow",
+      "declaration": "class",
+      "name": "push(double,double,double)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(double,double,double)\"(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/projectile/arrow/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile/arrow#$AbstractArrow",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.entity.Entity)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.entity.Entity)\"(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/projectile/arrow/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile/arrow#$AbstractArrow",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.phys.Vec3)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.phys.Vec3)\"(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/projectile/arrow/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile/hurtingprojectile/windcharge#$AbstractWindCharge",
+      "declaration": "class",
+      "name": "push(double,double,double)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(double,double,double)\"(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/projectile/hurtingprojectile/windcharge/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile/hurtingprojectile/windcharge#$AbstractWindCharge",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.entity.Entity)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.entity.Entity)\"(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/projectile/hurtingprojectile/windcharge/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile/hurtingprojectile/windcharge#$AbstractWindCharge",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.phys.Vec3)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.phys.Vec3)\"(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/projectile/hurtingprojectile/windcharge/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile#$EvokerFangs",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/projectile/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile#$EvokerFangs",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/projectile/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile#$EvokerFangs",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/projectile/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile#$EyeOfEnder",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/projectile/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile#$EyeOfEnder",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/projectile/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile#$EyeOfEnder",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/projectile/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile#$Projectile",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/projectile/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile#$Projectile",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/projectile/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/projectile#$Projectile",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/projectile/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/boat#$AbstractBoat",
+      "declaration": "class",
+      "name": "push(double,double,double)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(double,double,double)\"(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/vehicle/boat/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/boat#$AbstractBoat",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.entity.Entity)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.entity.Entity)\"(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/vehicle/boat/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/boat#$AbstractBoat",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.phys.Vec3)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.phys.Vec3)\"(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/vehicle/boat/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$AbstractMinecart",
+      "declaration": "class",
+      "name": "push(double,double,double)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(double,double,double)\"(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$AbstractMinecart",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.entity.Entity)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.entity.Entity)\"(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$AbstractMinecart",
+      "declaration": "class",
+      "name": "push(net.minecraft.world.phys.Vec3)",
+      "isStatic": false,
+      "kind": "method",
+      "text": "\"push(net.minecraft.world.phys.Vec3)\"(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$AbstractMinecartContainer",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$AbstractMinecartContainer",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$AbstractMinecartContainer",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$Minecart",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$Minecart",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$Minecart",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$MinecartCommandBlock",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$MinecartCommandBlock",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$MinecartCommandBlock",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$MinecartSpawner",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$MinecartSpawner",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$MinecartSpawner",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$MinecartTNT",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$MinecartTNT",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/minecraft/world/entity/vehicle/minecart#$MinecartTNT",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/minecraft/world/entity/vehicle/minecart/index.d.ts"
+    },
+    {
+      "owner": "java:net/neoforged/neoforge/entity#$PartEntity",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: number, arg1: number, arg2: number): void;",
+      "shape": "__method__(arg0: number, arg1: number, arg2: number): void;",
+      "file": "net/neoforged/neoforge/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/neoforged/neoforge/entity#$PartEntity",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Entity): void;",
+      "shape": "__method__(arg0: $Entity): void;",
+      "file": "net/neoforged/neoforge/entity/index.d.ts"
+    },
+    {
+      "owner": "java:net/neoforged/neoforge/entity#$PartEntity",
+      "declaration": "class",
+      "name": "push",
+      "isStatic": false,
+      "kind": "method",
+      "text": "push(arg0: $Vec3_): void;",
+      "shape": "__method__(arg0: $Vec3_): void;",
+      "file": "net/neoforged/neoforge/entity/index.d.ts"
+    }
+  ],
+  "headers": [],
+  "other": []
+}

@@ -1,0 +1,422 @@
+{
+  "sourceTrial": "build/closeout-selector-backend-installed-v2 (helper jar sha256 b7a064a3f69dcef8aafa4c65f5d758a7135c72ecabfbf0c0287f1dedb77cff35, identical on both nodes)",
+  "note": "First capture per node; MinecartFurnace runtime class is net.minecraft.world.entity.vehicle.minecart.MinecartFurnace on both loaders. Field push is declared on MinecartFurnace itself; methods push(double,double,double)/push(Vec3) are declared on Entity, push(Entity) on AbstractMinecart.",
+  "nodes": {
+    "26.1.2": {
+      "captures": 2,
+      "identity": {
+        "index": {
+          "class": "com.tkisor.nekojs.api.JavaMemberIndex",
+          "codeSource": "file:/D:/mcmodDemo/NekoJS-mult/build/closeout-selector-backend-installed-v2/26.1.2/mods/nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+          "classSha256": "6fd061c9de8e96498afb46856544d33addb75953605583bd0c689658fa821dbe"
+        },
+        "helper": {
+          "class": "nekojs.acceptance.push.PushIdentity",
+          "codeSource": "file:/D:/mcmodDemo/NekoJS-mult/build/closeout-selector-backend-installed-v2/26.1.2/mods/owned-push-identity.jar",
+          "classSha256": "b7a064a3f69dcef8aafa4c65f5d758a7135c72ecabfbf0c0287f1dedb77cff35"
+        },
+        "classes": [
+          {
+            "class": "net.minecraft.world.entity.vehicle.minecart.MinecartFurnace",
+            "fields": [
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.vehicle.minecart.MinecartFurnace",
+                "type": "net.minecraft.world.phys.Vec3",
+                "modifiers": "public"
+              }
+            ],
+            "methods": [
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "double",
+                  "double",
+                  "double"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(double,double,double)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "net.minecraft.world.phys.Vec3"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(net.minecraft.world.phys.Vec3)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.vehicle.minecart.AbstractMinecart",
+                "parameters": [
+                  "net.minecraft.world.entity.Entity"
+                ],
+                "generic": "public void net.minecraft.world.entity.vehicle.minecart.AbstractMinecart.push(net.minecraft.world.entity.Entity)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              }
+            ],
+            "binding": {
+              "class": "net.minecraft.world.entity.vehicle.minecart.MinecartFurnace",
+              "codeSource": "file:/D:/mcmodDemo/NekoJS-mult/build/closeout-selector-backend-installed-v2/26.1.2/libraries/net/neoforged/minecraft-server-patched/26.1.2.71/minecraft-server-patched-26.1.2.71.jar",
+              "classSha256": "c385e6a8eb6d8b9e00946e46d2006dca84896a3e7038a68f27005ced27f0b9d7"
+            }
+          },
+          {
+            "class": "net.minecraft.world.entity.vehicle.minecart.AbstractMinecart",
+            "fields": [],
+            "methods": [
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "double",
+                  "double",
+                  "double"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(double,double,double)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "net.minecraft.world.phys.Vec3"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(net.minecraft.world.phys.Vec3)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.vehicle.minecart.AbstractMinecart",
+                "parameters": [
+                  "net.minecraft.world.entity.Entity"
+                ],
+                "generic": "public void net.minecraft.world.entity.vehicle.minecart.AbstractMinecart.push(net.minecraft.world.entity.Entity)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              }
+            ],
+            "binding": {
+              "class": "net.minecraft.world.entity.vehicle.minecart.AbstractMinecart",
+              "codeSource": "file:/D:/mcmodDemo/NekoJS-mult/build/closeout-selector-backend-installed-v2/26.1.2/libraries/net/neoforged/minecraft-server-patched/26.1.2.71/minecraft-server-patched-26.1.2.71.jar",
+              "classSha256": "1789266d90c0560a3ca69f8d6b16510b39e0bf303bf2c2b5dd815ad70245bcf7"
+            }
+          },
+          {
+            "class": "net.minecraft.world.entity.Entity",
+            "fields": [],
+            "methods": [
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "double",
+                  "double",
+                  "double"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(double,double,double)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "net.minecraft.world.entity.Entity"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(net.minecraft.world.entity.Entity)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "net.minecraft.world.phys.Vec3"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(net.minecraft.world.phys.Vec3)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              }
+            ],
+            "binding": {
+              "class": "net.minecraft.world.entity.Entity",
+              "codeSource": "file:/D:/mcmodDemo/NekoJS-mult/build/closeout-selector-backend-installed-v2/26.1.2/libraries/net/neoforged/minecraft-server-patched/26.1.2.71/minecraft-server-patched-26.1.2.71.jar",
+              "classSha256": "14f5a19daebcf47fb8e3805a2ae994e3bfa9c4d0353898d09d27b9571d1dfe35"
+            }
+          },
+          {
+            "class": "net.minecraft.world.entity.LivingEntity",
+            "fields": [],
+            "methods": [
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "double",
+                  "double",
+                  "double"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(double,double,double)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "net.minecraft.world.phys.Vec3"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(net.minecraft.world.phys.Vec3)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.LivingEntity",
+                "parameters": [
+                  "net.minecraft.world.entity.Entity"
+                ],
+                "generic": "public void net.minecraft.world.entity.LivingEntity.push(net.minecraft.world.entity.Entity)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              }
+            ],
+            "binding": {
+              "class": "net.minecraft.world.entity.LivingEntity",
+              "codeSource": "file:/D:/mcmodDemo/NekoJS-mult/build/closeout-selector-backend-installed-v2/26.1.2/libraries/net/neoforged/minecraft-server-patched/26.1.2.71/minecraft-server-patched-26.1.2.71.jar",
+              "classSha256": "0f0ff378c203246d19ca69ba18d38e70d8d1e5232a103ff6aa720c5954312136"
+            }
+          }
+        ]
+      }
+    },
+    "26.1.2-fabric": {
+      "captures": 1,
+      "identity": {
+        "index": {
+          "class": "com.tkisor.nekojs.api.JavaMemberIndex",
+          "codeSource": "file:/D:/mcmodDemo/NekoJS-mult/build/closeout-selector-backend-installed-v2/26.1.2-fabric/mods/nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+          "classSha256": "6fd061c9de8e96498afb46856544d33addb75953605583bd0c689658fa821dbe"
+        },
+        "helper": {
+          "class": "nekojs.acceptance.push.PushIdentity",
+          "codeSource": "file:/D:/mcmodDemo/NekoJS-mult/build/closeout-selector-backend-installed-v2/26.1.2-fabric/mods/owned-push-identity.jar",
+          "classSha256": "b7a064a3f69dcef8aafa4c65f5d758a7135c72ecabfbf0c0287f1dedb77cff35"
+        },
+        "classes": [
+          {
+            "class": "net.minecraft.world.entity.vehicle.minecart.MinecartFurnace",
+            "fields": [
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.vehicle.minecart.MinecartFurnace",
+                "type": "net.minecraft.world.phys.Vec3",
+                "modifiers": "public"
+              }
+            ],
+            "methods": [
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "double",
+                  "double",
+                  "double"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(double,double,double)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "net.minecraft.world.phys.Vec3"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(net.minecraft.world.phys.Vec3)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.vehicle.minecart.AbstractMinecart",
+                "parameters": [
+                  "net.minecraft.world.entity.Entity"
+                ],
+                "generic": "public void net.minecraft.world.entity.vehicle.minecart.AbstractMinecart.push(net.minecraft.world.entity.Entity)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              }
+            ],
+            "binding": {
+              "class": "net.minecraft.world.entity.vehicle.minecart.MinecartFurnace",
+              "codeSource": "file:/D:/mcmodDemo/NekoJS-mult/build/ticket37-ec7-installed-nodes/26.1.2-fabric/versions/26.1.2/server-26.1.2.jar",
+              "classSha256": "dc2fe2901861e819b02eb839895c0bb9259b89ead20c42219478344733548640"
+            }
+          },
+          {
+            "class": "net.minecraft.world.entity.vehicle.minecart.AbstractMinecart",
+            "fields": [],
+            "methods": [
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "double",
+                  "double",
+                  "double"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(double,double,double)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "net.minecraft.world.phys.Vec3"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(net.minecraft.world.phys.Vec3)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.vehicle.minecart.AbstractMinecart",
+                "parameters": [
+                  "net.minecraft.world.entity.Entity"
+                ],
+                "generic": "public void net.minecraft.world.entity.vehicle.minecart.AbstractMinecart.push(net.minecraft.world.entity.Entity)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              }
+            ],
+            "binding": {
+              "class": "net.minecraft.world.entity.vehicle.minecart.AbstractMinecart",
+              "codeSource": "file:/D:/mcmodDemo/NekoJS-mult/build/ticket37-ec7-installed-nodes/26.1.2-fabric/versions/26.1.2/server-26.1.2.jar",
+              "classSha256": "85fe78ca5d97ec860b0c937bd5bc664d66f6f4067213caad644134a226fcf9d4"
+            }
+          },
+          {
+            "class": "net.minecraft.world.entity.Entity",
+            "fields": [],
+            "methods": [
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "double",
+                  "double",
+                  "double"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(double,double,double)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "net.minecraft.world.entity.Entity"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(net.minecraft.world.entity.Entity)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "net.minecraft.world.phys.Vec3"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(net.minecraft.world.phys.Vec3)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              }
+            ],
+            "binding": {
+              "class": "net.minecraft.world.entity.Entity",
+              "codeSource": "file:/D:/mcmodDemo/NekoJS-mult/build/ticket37-ec7-installed-nodes/26.1.2-fabric/versions/26.1.2/server-26.1.2.jar",
+              "classSha256": "74f60b93b523f703b84ec7d296c7c6ecd92b92e059832361707eaa5edd280d26"
+            }
+          },
+          {
+            "class": "net.minecraft.world.entity.LivingEntity",
+            "fields": [],
+            "methods": [
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "double",
+                  "double",
+                  "double"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(double,double,double)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.Entity",
+                "parameters": [
+                  "net.minecraft.world.phys.Vec3"
+                ],
+                "generic": "public void net.minecraft.world.entity.Entity.push(net.minecraft.world.phys.Vec3)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              },
+              {
+                "name": "push",
+                "declaringClass": "net.minecraft.world.entity.LivingEntity",
+                "parameters": [
+                  "net.minecraft.world.entity.Entity"
+                ],
+                "generic": "public void net.minecraft.world.entity.LivingEntity.push(net.minecraft.world.entity.Entity)",
+                "returnType": "void",
+                "bridge": false,
+                "synthetic": false
+              }
+            ],
+            "binding": {
+              "class": "net.minecraft.world.entity.LivingEntity",
+              "codeSource": "file:/D:/mcmodDemo/NekoJS-mult/build/ticket37-ec7-installed-nodes/26.1.2-fabric/versions/26.1.2/server-26.1.2.jar",
+              "classSha256": "b1a68c8942ebdac98b65ce281692491e637b37948649b1e36a8d9a1f1abdcb6e"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

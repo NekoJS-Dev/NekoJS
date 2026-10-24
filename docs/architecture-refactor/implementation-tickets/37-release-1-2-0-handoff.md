@@ -2,6 +2,8 @@
 
 2026-10-24 当前6e43b827的[工程候选验收汇总](../evidence/2026-10-24-owner-stamp-acceptance/README.md)为当前状态入口：确切六制品的TCP、三节点安装渲染及已知版本对的26.1.2制品/数据分离回退均已完成各自范围。完整严格TypeScript、原门槛重载、最终版本包装与维护者结论仍开放；旧975记录保持原二进制范围，未代签或发布。
 
+2026-10-24 显式选择器生成器（7d17de4e、e13cbe82）及[java:/node: Windows路径修复](../evidence/2026-10-24-java-module-windows-path/README.md)（3ccea55a）后的[第三轮隔离安装验收](../evidence/2026-10-24-selector-installed-v3/README.md)：五节点矩阵5177项/271跳过/零失败；新目录新端口安装五节点运行时全PASS，`java:`类导入实际执行；push继承家族运行时身份两加载器采集一致，AST实测迁移991移除/1070选择器/121普通新增、字段零删改。十组完整严格TS修正计数为1609（=1629首轮实测−20条脚本自生诊断；仍FAIL，剩余与旧原型1621同源），Python五节点1609 stub零错误零警告。正式重载、3ccea55a候选的制品/数据分离回退、性能复验与最终版本包装仍开放；无代签。
+
 2026-10-24 初次固定6e43b827时的记录：[owner泛型、事件导入与属性查询修复](../evidence/2026-10-24-owner-stamp/README.md)通过5158项/271跳过/零失败、五节点新安装与五正常停止、1609默认stub及完整定向TS链。完整严格TSC5549→5537，移除12/新增0，仍FAIL。[原政策正式性能](../evidence/2026-10-24-owner-stamp-performance/README.md)重载288.2/299.4ms均超285.3ms，启动26174.8ms通过，17有效记录/9正常停止。[六制品本地交接](../evidence/2026-10-24-owner-stamp-handoff/README.md)已更新为确切6e候选；当时客户端/TCP/分离回退尚未重跑，后续当前TCP已由上方独立证据补齐，975历史证明不冒称当前。维护者结论未代签，整票继续in-progress。
 
 2026-10-24 最新工程源码87baad4b的[继承属性修复](../evidence/2026-10-24-inherited-bean/README.md)通过5152项/271跳过/零失败、五节点新安装与五次正常停止、1609默认stub零错误警告。完整严格TSC5565→5549，删除16条TS2611、没有新增，仍FAIL。[同JAR原政策性能](../evidence/2026-10-24-inherited-bean-performance/README.md)重载287.4/305.6ms继续超285.3ms，启动28014.8ms通过，17有效记录/9正常停止。既有六制品交接与客户端/TCP/回退仍明确绑定975，不冒称87已重跑那些流程。下一项无损共享修复及96个真实字段/方法冲突见[TS2300分类](../../research/2026-10-24-ts2300-followup.md)；未删除成员、放宽门禁或代签维护者结论，整票保持in-progress。
@@ -44,7 +46,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-24：6e43b827本地候选及其范围内TCP/安装渲染/已知版本对分离回退已完成；完整严格TypeScript与原门槛重载仍FAIL，最终版本与维护者/发布门禁未完成；精确结果统一见上方验收汇总）
+**Status:** in-progress（2026-10-24：选择器生成器与java:/node:路径修复后3ccea55a第三轮安装验收五节点PASS、严格TS修正计数1609仍FAIL、原门槛重载仍FAIL，最终版本与维护者/发布门禁未完成；精确结果统一见上方验收汇总）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 

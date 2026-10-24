@@ -14,6 +14,14 @@
 
 两节点源码生成层的三个参数拼写分别为`push(double,double,double)`、`push(net.minecraft.world.entity.Entity)`、`push(net.minecraft.world.phys.Vec3)`；这些字符串本身不能证明原始声明类。主代理正在准备受控Java helper，在两次真实安装中采集class.getName、字段声明类/类型、JavaMemberIndex可见方法的原名/声明类/参数/返回及实际加载来源；待采集后更新完整迁移清单和数量，不把979+25+1预期当作已核对的最终范围。只读代理指出的旧版vehicle.MinecartFurnace包名也须由运行时确认，不能根据简称猜测26.1.2的实际Java名称。
 
+## 第三轮安装（v3）结果
+
+v2 安装暴露的 `java:`/`node:` Windows 路径缺陷已按共享根因修复（3ccea55a，[证据](../architecture-refactor/evidence/2026-10-24-java-module-windows-path/README.md)），并以修复后源码重跑完整流程，结果见[第三轮验收证据](../architecture-refactor/evidence/2026-10-24-selector-installed-v3/README.md)：五节点矩阵 5177 项 / 0 失败 / 271 skipped；新目录新端口的隔离安装五节点运行时全 PASS，`java:` 类导入实际执行，v2 的 NOT GREEN 与 trade 连带失败全部转绿。
+
+push 真实身份已在两加载器采集一致：实际类为 `net.minecraft.world.entity.vehicle.minecart.MinecartFurnace`，字段在本类，方法在 `Entity`/`AbstractMinecart`。AST 语义差分显示生产生成器相对原型恰在该家族超出（26.1.2 双加载器 +33 选择器 / +60 普通 / −6 普通），其余三节点与原型逐成员一致；全节点字段零删改。实测迁移量为 991 移除 / 1070 选择器 / 121 普通新增，旧 979+25+1 预期作废。
+
+十组完整严格 TS 修正计数为 **1609**（= 1629 首轮实测 − 20 条脚本自生诊断，全部 exit2），与旧原型 1621 同源存量为 TS2416/TS2344 主体；Python 五节点 1609 份 stub，Pyright 0 错误 0 警告。
+
 ## 下一步
 
-冻结保序修复源码，使用新目录和端口重复五节点安装；同时保留首轮记录。采集push真实身份，按TypeScript AST核对原批准迁移、额外家族、字段及普通安全分支，区分成员合同与无语义顺序变化。实际重跑十组完整严格程序及全部Python检查，再封存源码/JAR/辅助工具绑定和差分。1621仍是旧原型结果；1629是带错误验收脚本的首轮实测；修正后计数尚未产生，三者不能混用。正式重载、最终制品/数据回退及维护者结论仍未通过或未完成；无PR、push、正式发布或代签。
+正式重载（285.3ms 门槛）、新冻结候选（3ccea55a）的最终制品/数据分离回退、性能复验与 1.2.0 版本切换重打包复验仍未执行；维护者迁移确认与发布结论未完成。无PR、push、正式发布或代签。

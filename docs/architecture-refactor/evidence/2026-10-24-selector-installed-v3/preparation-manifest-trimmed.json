@@ -1,0 +1,47 @@
+{
+  "sourceRevision": "3ccea55a53316ae9359eb8d96868505d178c6b7a",
+  "checkoutRevision": "3ccea55a53316ae9359eb8d96868505d178c6b7a",
+  "productionPatchSha256": "f03aa86f04ffa0f54c393673011aa63ed370ebf55f8fd467ca403e177c5e9e49",
+  "nodes": [
+    {
+      "node": "1.21.1",
+      "artifact": "nekojs-neoforge-1.21.1-1.1.0-preview3-server.jar",
+      "sha256": "289adb32901658109336ee5987ee110fc2623ed69248498ed3b6b787b6ecb7a8",
+      "serverPort": 34421,
+      "rconPort": 34422,
+      "classCount": 1577
+    },
+    {
+      "node": "26.1.2",
+      "artifact": "nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "sha256": "4660937c3c2a5f823ad1486f31e8723338afe55e6623c3e533a30cf207b47f10",
+      "serverPort": 34431,
+      "rconPort": 34432,
+      "classCount": 1648
+    },
+    {
+      "node": "26.2.0",
+      "artifact": "nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+      "sha256": "e6501d9a0fd3e4e5fbedd1b77a7ab0886f909129f59bb17a117c86890b5a756a",
+      "serverPort": 34441,
+      "rconPort": 34442,
+      "classCount": 1648
+    },
+    {
+      "node": "26.1.2-fabric",
+      "artifact": "nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+      "sha256": "d10816eddec09ea2ce9f38ccc13c5f8306ab0111a736a6d72f1c74f495af765f",
+      "serverPort": 34451,
+      "rconPort": 34452,
+      "classCount": 1591
+    },
+    {
+      "node": "26.2.0-fabric",
+      "artifact": "nekojs-fabric-26.2-1.1.0-preview3.jar",
+      "sha256": "f91da65e9465d870208bf202034de44b4d84e47346901221e7ae7c7a8f05e758",
+      "serverPort": 34461,
+      "rconPort": 34462,
+      "classCount": 1591
+    }
+  ]
+}
