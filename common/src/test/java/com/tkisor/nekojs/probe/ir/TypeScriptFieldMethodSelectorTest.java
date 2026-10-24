@@ -51,6 +51,11 @@ class TypeScriptFieldMethodSelectorTest {
         public double y;
         public String x(double input) { return "child"; }
     }
+    public static class OrderedMethods {
+        public int first(int input) { return input; }
+        public void middle() {}
+        @Remap("first") public String zLast(String input) { return input; }
+    }
     public interface GenericOperation<T> { T value(T input); }
     public static class StringField implements GenericOperation<String> {
         public double value = 9;
@@ -447,5 +452,24 @@ class TypeScriptFieldMethodSelectorTest {
         String child = declaration.substring(declaration.indexOf("export class $TypeScriptFieldMethodSelectorTest$OrdinaryGrandchild"));
         child = child.substring(0, child.indexOf("    }"));
         assertFalse(child.contains("x()"), child);
+    }
+
+    @Test
+    void ordinaryMethodsKeepTheirEditedIROrderWhenNoIndexedGroupIsNeeded() throws Exception {
+        Path output = generate("method-order", List.of(OrderedMethods.class));
+        Files.writeString(output.resolve("exercise.ts"), """
+                import type { $TypeScriptFieldMethodSelectorTest$OrderedMethods as Methods } from 'java:com/tkisor/nekojs/probe/ir';
+                declare const methods: Methods;
+                const numeric: number = methods.first(1);
+                const textual: string = methods.first('value');
+                methods.middle();
+                // @ts-expect-error Keeping declaration order does not widen either overload.
+                methods.first(false);
+                """);
+        String declaration = Files.readString(output.resolve("@package/com/tkisor/nekojs/probe/ir/index.d.ts"));
+        int numeric = declaration.indexOf("first(input: number)");
+        int middle = declaration.indexOf("middle()");
+        int textual = declaration.indexOf("first(input: string)");
+        assertTrue(numeric >= 0 && numeric < middle && middle < textual, declaration);
     }
 }

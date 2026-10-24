@@ -346,16 +346,21 @@ public final class TypeScriptClassRenderer {
         }
         Map<String, List<NamedMethod>> groups = entries.stream()
                 .collect(Collectors.groupingBy(NamedMethod::name, LinkedHashMap::new, Collectors.toList()));
-        for (var entry : groups.entrySet()) {
-            List<NamedMethod> overloads = entry.getValue();
-            if (overloads.stream().noneMatch(overload -> !overload.method().overloads.isEmpty()
-                    && methodSelectors.inheritedOwner(overload.method()) != null)) {
-                for (NamedMethod overload : overloads) sb.append(formatMethod(overload.method(), false, overload.name()));
+        Set<String> indexed = groups.entrySet().stream().filter(entry -> entry.getValue().stream()
+                .anyMatch(overload -> !overload.method().overloads.isEmpty()
+                        && methodSelectors.inheritedOwner(overload.method()) != null))
+                .map(Map.Entry::getKey).collect(Collectors.toSet());
+        Set<String> emitted = new LinkedHashSet<>();
+        for (NamedMethod entry : entries) {
+            if (!indexed.contains(entry.name())) {
+                sb.append(formatMethod(entry.method(), false, entry.name()));
                 continue;
             }
+            if (!emitted.add(entry.name())) continue;
+            List<NamedMethod> overloads = groups.get(entry.name());
             // Keep literal overload fragments in their authored module and generic scope. Indexed access
             // specializes the existing ancestor operation without parsing or guessing TypeScript strings.
-            sb.append("        ").append(tsMemberName(entry.getKey())).append(": ");
+            sb.append("        ").append(tsMemberName(entry.name())).append(": ");
             sb.append(overloads.stream().map(overload -> {
                 MethodDecl method = overload.method();
                 ApiTypeRef owner = methodSelectors.inheritedOwner(method);
