@@ -10,6 +10,6 @@ EventDeclarationGenerator复用TypeScriptImportNames，按FQN与导出名分配�
 - 修复后该Java用例及严格TSC通过。覆盖两种回调成员、两种输入适配器、数组dispatch、输入重排与复用同一backend后的无冲突输出。
 - 增加显式builder payload名与真实类导出名碰撞的消费回归，验证只读属性、隐藏host成员和自定义事件`post`行为；两个Java用例、两份`skipLibCheck:false`的TS正负例均通过。
 - 已运行相关LegacyProbeCompatibility、ProbeEventsSurfaceGolden、DynamicRegistryEventsDeclarationGolden、DynamicRegistryDefaultDeclarations、TypeScriptDeclarationClosure回归，全部通过；未重写golden。
-- 已接入`npm run test:probe-event-imports`。完整suite在本轮后续共享原因修复完成后统一运行；未把旧5152项矩阵、五节点安装、完整5549条诊断或性能结果标为本次源码结果。
+- 已接入`npm run test:probe-event-imports`，完整`test:probe-types`已通过。批次固定到6e43b827后，[完整验收](../architecture-refactor/evidence/2026-10-24-owner-stamp/README.md)通过5158项/271跳过/零失败、五节点新安装及1609默认stub；全图严格诊断5549→5537，删除8条同名事件import的TS2300和4条owner变量TS2304，没有新增，仍FAIL。五节点事件golden由原生成器更新并通过普通gate；变更说明见REGENERATE.md，没有手改输出。
 
 此项解决局部import身份冲突，不解决96个真实字段/方法成员的TS可表达性。未删除成员、改变Graal行为、放宽严格门禁，未推送、发PR或正式发布，未代签人工结论。

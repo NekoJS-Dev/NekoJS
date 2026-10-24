@@ -1,6 +1,8 @@
 # Current-candidate performance verification
 
-Latest fixed measurement (2026-10-24): [87baad4b, original policy](../2026-10-24-inherited-bean-performance/README.md). Reload means **287.4/305.6 ms FAIL** against 285.3 ms; startup mean **28014.8 ms PASS** against 41173 ms. All 17 records are valid, with 9 normal RCON stops. The 1641 production classes and exact JAR match the installed candidate. This remains a failed combined gate; the declaration-only change does not establish a causal performance improvement.
+Latest fixed measurement (2026-10-24): [6e43b827, original policy](../2026-10-24-owner-stamp-performance/README.md). Reload means **288.2/299.4 ms FAIL** against 285.3 ms; startup mean **26174.8 ms PASS** against 41173 ms. All 17 records are valid, with 9 normal RCON stops. The 1642 production classes and exact JAR match the installed candidate. The combined gate remains NOT_PASS; isolated file-attribute timings do not establish end-to-end improvement. Ticket 35 is reopened for the current regression; its historical closed record remains intact.
+
+Previous fixed measurement (2026-10-24): [87baad4b, original policy](../2026-10-24-inherited-bean-performance/README.md). Reload means **287.4/305.6 ms FAIL** against 285.3 ms; startup mean **28014.8 ms PASS** against 41173 ms. All 17 records are valid, with 9 normal RCON stops. The 1641 production classes and exact JAR match the installed candidate. This remains a failed combined gate; the declaration-only change does not establish a causal performance improvement.
 
 Previous 2026-10-24: [975496d3](../2026-10-24-method-bounds-performance/README.md) recorded 313.8/308.6 ms reload FAIL and 14132.6 ms startup PASS. Its complete evidence remains intact.
 
@@ -52,7 +54,16 @@ Host/path/cache/I/O/output pressure, revision-dependent initialization and wrapp
 
 Complete evidence is preserved in the four group directories above: `samples.jsonl`, `env-snapshot.txt` and `raw-logs.zip` containing all original stdout/stderr files(14per startup group,2for reload). Each startup archive also contains its original `channel-test.txt`; its trailing whitespace is retained verbatim inside the archive rather than edited or committed as normalized text. Each copied text file and each decompressed archive entry was SHA256-compared with the original; all match. Invocation outputs are retained as `initial-startup-console.txt`, `repeat-startup-console.txt`, `confirmation-startup-console.txt` and `observed-reload-console.txt`. Original isolated run directories remain available under the owned worktree's `bench/perf/out/`; no raw source was deleted. No generic `error.png` DEBUG asset-path match is treated as a runtime ERROR; case-sensitive ERROR/FATAL logger records, uncaught thread exceptions and NEKO diagnostics are checked separately.
 
-## Remaining acceptance
+## Current remaining acceptance
+
+- Resolve the current 6e43b827 reload failure: 288.2/299.4ms against285.3ms, retaining both complete five-sample groups. Keep interpreter, owner-thread, command execution and marker-observation measurements distinct. The bounded source-map diagnostic measured2.80407ms mean parsing per reload; it did not establish an end-to-end saving or justify a production cache.
+- Full default strict TypeScript remains5537 diagnostics. Keep excluded/hidden types, actual public members and runtime semantics intact while fixing demonstrated shared causes.
+- The six current local artifacts are prepared. Native render, TCP and separated rollback have not been rerun on these6e binaries; the975 evidence retains its original scope. Final version packaging and maintainer acceptance remain open.
+- Preserve the original sampler, fixtures, timing boundary and threshold; later source or artifact changes need their own appropriate verification.
+
+## Historical remaining acceptance (ac810fa7)
+
+The following is the older package's original snapshot, not the current candidate's checklist. Its old failures and then-open domains remain documented as history; current bindings and gaps are listed above.
 
 - Investigate reload389.0msFAIL through a controlled stable-window repeat and profiling that separates interpreter/RCON/owner-thread wait, script execution and marker-observation overhead. The current five valid samples stay retained. Do not hide the first reload, substitute RCON roundtrip for marker time, loosen285.3ms or optimize away necessary work.
 - Do not reuse current measurements to certify later runtime/code/artifact changes without appropriate revalidation.

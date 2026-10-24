@@ -1,13 +1,14 @@
 # 35: P4 性能复测与政策对照
 
-2026-10-24 当前发布候选口径：下方closed/278.0ms为2026-09-29历史交付。最近正式样本绑定 `87baad4b`，[原政策复验](../evidence/2026-10-24-inherited-bean-performance/README.md)为reload287.4/305.6ms（均超原285.3ms，FAIL）、startup28014.8ms（低于41173ms，PASS），17有效样本/9正常RCON停止；1641类及完整JAR与新安装候选一致。声明表示修复不证明性能因果改善，旧975的313.8/308.6ms记录保留。票37仍由性能、完整TSC与其他独立验收阻塞，未改门槛或移除不利样本。
+2026-10-24 当前源码6e43b827的[原政策正式复验](../evidence/2026-10-24-owner-stamp-performance/README.md)为reload288.2/299.4ms（均超285.3ms，FAIL）、startup26174.8ms（低于41173ms，PASS），17有效记录/9正常RCON停止，1642生产类和整个JAR与五节点安装候选一致。当前性能回归未解决，本票重新in-progress；2026-09-29的closed与278.0ms只保留为历史交付，不能认证后续候选。不改门槛、不剔除208ms低值或其他样本；局部属性查询微测量不代替原端到端门禁。
+
+前一轮2026-10-24记录：历史closed/278.0ms为2026-09-29交付。87baad4b的[原政策复验](../evidence/2026-10-24-inherited-bean-performance/README.md)为reload287.4/305.6ms（均超原285.3ms，FAIL）、startup28014.8ms（低于41173ms，PASS），17有效样本/9正常RCON停止；1641类及完整JAR与当轮安装候选一致。声明表示修复不证明性能因果改善，旧975的313.8/308.6ms记录保留。该记录不认证上方最新6e候选，未改门槛或移除不利样本。
 
 **What to build:** 在主整合完成后按已确认政策复测 startup、Probe、reload、tick、Adapter 与内存表现，对比 P0 基线和最终结果，并给出是否满足政策、是否需维护者重裁决的可审计结论。
 
 **Blocked by:** [04: P4 前性能发布政策确认](04-perf-release-policy.md)、[33: CI 用途子集与 Fabric processor 延期替代 gate](33-build-ci-processor-gate.md)、[08: 真实外部 PluginAddon 从 discovery 到贡献消费与 reload 存活](08-plugin-addon.md)、[18: PData 与 ClientData 数据同步路径保护和 generation 边界](18-data-sync.md)、[20: 管理命令权限、生命周期入口与阶段诊断结果](20-runtime-commands.md)、[23: Recipe/数据生成/loot/tags/recipe viewer 既有事件域路径](23-recipe-data-surface.md)、[24: Block/Item/Level/Player/Command/Capability/goal/实体行为既有事件面覆盖路径](24-gameplay-event-surface.md)、[25: DataMap 与 EntitySelectors 查询 binding/Adapter/declaration 路径](25-query-tools.md)、[30: 错误诊断、telemetry、workspace 与用户报告链路](30-diagnostics.md)、[15: 启动期注册、typed Builder 与连带注册垂直收口](15-registry-startup.md)、[21: Dynamic Registry 多人 prepare/ack/commit 门禁](21-registry-dynamic-sync.md)、[22: Villager Trades 声明事件与稳定查询](22-villager-trades.md)、[26: CLIENT 输入与 HUD callback 生命周期](26-client-input-hud.md)、[27: CLIENT GUI 与 render Adapter 资源呈现清理](27-client-gui-render.md)、[28: PostEffects 声明事件与运行 binding 分离](28-post-effects.md)、[29: Assets/Lang 资源生成与回读收口](29-assets.md)
 
-**Status:** closed（2026-09-29 复测执行完毕,两个阻断维度均满足票 04 政策;结论与证据见
-[2026-09-29-release-perf/REPORT.md](../baseline/2026-09-29-release-perf/REPORT.md) 与文末 Closure record）
+**Status:** in-progress（2026-10-24：当前6e43b827重载288.2/299.4ms仍超285.3ms；启动通过。2026-09-29历史闭合结论及原始证据保留，不能代替当前候选验收。）
 
 **Closure record（2026-09-29）:**
 

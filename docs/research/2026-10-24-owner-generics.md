@@ -1,6 +1,6 @@
 # 非静态内类捕获的 owner 泛型
 
-Luna xhigh仅只读调查，主代理核实并实现。87baad4b完整严格诊断的唯一TS2304来自26.2 Fabric的`Settings<T>.MutableValue<V>.update`：实际class Signature返回外类`T`，反射签名保留了owner身份，原IR仅取内类本级`V`与引用的本级实参，结果输出未声明的`T`。这与Mixin猜测无关，也不通过补方法泛型、删除成员或把该结果改成any处理。
+Luna xhigh仅只读调查，主代理核实并实现。本轮首先定位87baad4b在26.2 Fabric的TS2304，随后核对26.2 NeoForge也有同类问题，均指向`Settings<T>.MutableValue<V>.update`：实际class Signature返回外类`T`，反射签名保留了owner身份，原IR仅取内类本级`V`与引用的本级实参，结果输出未声明的`T`。这与Mixin猜测无关，也不通过补方法泛型、删除成员或把该结果改成any处理。
 
 ## 实现与合同
 
@@ -21,4 +21,4 @@ TypeReflector把完整真实签名写入语言中性IR，已有TS类声明、适
 - 四组Java回归、三份`skipLibCheck:false`严格TS均通过，既有泛型/继承/输入消费者的定向Java回归通过。
 - 分轴审查指出的两项覆盖风险已补充并实际通过：捕获owner参数的内类继承同名`<T>`泛型default方法，验证捕获结果与方法自己的输入参数不同；显式manual host/input raw inner引用验证完整元数与真实host成员。未因审查建议额外删除任何公开成员。
 
-完整common隔离、五节点build、最新安装全图诊断及正式性能将在这一批共享原因修改完成后统一运行；87baad4b的5152项、5549条诊断与287.4/305.6ms仍是旧源码结果，不改写为本次结果。未推送、发PR、发布或代签维护者结论。
+批次固定到6e43b827后，[完整验收](../architecture-refactor/evidence/2026-10-24-owner-stamp/README.md)通过5158项/271跳过/零失败（含common隔离）、五节点build及新安装、1609默认stub和完整定向TS链。全图严格诊断5549→5537，删除4条owner变量TS2304和8条事件import TS2300，没有新增，仍FAIL；legacy的ClientCommonPacketListener缺名是独立未解决诊断。[原政策正式性能](../architecture-refactor/evidence/2026-10-24-owner-stamp-performance/README.md)重载288.2/299.4ms失败、启动26174.8ms通过。没有把旧源码结果改写为本次结果，未推送、发PR、发布或代签维护者结论。

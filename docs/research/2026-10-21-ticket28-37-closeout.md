@@ -1,5 +1,7 @@
 # 票 28 / 37 后续工程收尾
 
+2026-10-24 最新工程源码6e43b827：[完整工程验收](../architecture-refactor/evidence/2026-10-24-owner-stamp/README.md)5158项/271跳过/零失败、五节点新安装与五正常停止、1609默认stub及完整定向TS链通过。完整严格TSC5549→5537，移除12/新增0，仍FAIL。[原政策正式性能](../architecture-refactor/evidence/2026-10-24-owner-stamp-performance/README.md)重载288.2/299.4ms仍超285.3ms，启动26174.8ms通过，17有效/9正常停止。[本地六制品](../architecture-refactor/evidence/2026-10-24-owner-stamp-handoff/README.md)已绑定6e；客户端/TCP/分离回退未对该二进制重跑，975旧证明保持原范围。票28工程closed，票35当前性能回归重新in-progress，票37继续in-progress；没有代签维护者结论或push、PR、发布。
+
 2026-10-24 最新工程源码87baad4b：[继承属性修复与完整验收](../architecture-refactor/evidence/2026-10-24-inherited-bean/README.md)5152项/271跳过/零失败、五节点安装/五正常停止与1609默认stub通过；完整严格TSC5565→5549，移除16条TS2611、没有新增，仍FAIL。[原政策正式性能](../architecture-refactor/evidence/2026-10-24-inherited-bean-performance/README.md)重载287.4/305.6ms仍超285.3ms、启动28014.8ms通过，17有效/9正常停止。六制品/客户端/TCP/回退旧封存仍绑定975。另已逐条核实[TS2300分类和下一无损修复](2026-10-24-ts2300-followup.md)，不将96个真实字段/方法碰撞误说成可删除Bean别名。票28工程closed；票37继续in-progress，没有push、PR或发布。
 
 2026-10-24 [六制品本地交接](../architecture-refactor/evidence/2026-10-24-candidate-handoff/README.md)完成，releaseReady=false、版本未变；[共享原因后续](2026-10-24-shared-cause-followup.md)记录绑定metadata微测量、getter读写边界与raw泛型重载实测反例。当前指定候选工程复验有完整证据，完整TSC/性能及维护者门禁仍未通过，票37保持in-progress。

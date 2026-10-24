@@ -1,0 +1,10 @@
+{
+  "revision": "6e43b82789a7dbf7b9659dc1c21fefecac662649",
+  "sha256": "37a1e62646398c6998ffd36b0c59e4b97cc2dbaec56f2de3e9885ce735d39d82",
+  "bytes": 18168257,
+  "entries": 68,
+  "classes": 1642,
+  "valid": true,
+  "verdict": "NOT_PASS",
+  "redactedFiles": 47
+}

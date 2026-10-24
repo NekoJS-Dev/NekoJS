@@ -1,5 +1,7 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-24 最新源码6e43b827的[owner泛型、事件导入与属性查询修复](../evidence/2026-10-24-owner-stamp/README.md)通过5158项/271跳过/零失败、五节点新安装与五正常停止、1609默认stub及完整定向TS链。完整严格TSC5549→5537，移除12/新增0，仍FAIL。[原政策正式性能](../evidence/2026-10-24-owner-stamp-performance/README.md)重载288.2/299.4ms均超285.3ms，启动26174.8ms通过，17有效记录/9正常停止。[六制品本地交接](../evidence/2026-10-24-owner-stamp-handoff/README.md)已更新为确切6e候选；该候选客户端/TCP/分离回退尚未重跑，975历史证明不冒称当前。维护者结论未代签，整票继续in-progress。
+
 2026-10-24 最新工程源码87baad4b的[继承属性修复](../evidence/2026-10-24-inherited-bean/README.md)通过5152项/271跳过/零失败、五节点新安装与五次正常停止、1609默认stub零错误警告。完整严格TSC5565→5549，删除16条TS2611、没有新增，仍FAIL。[同JAR原政策性能](../evidence/2026-10-24-inherited-bean-performance/README.md)重载287.4/305.6ms继续超285.3ms，启动28014.8ms通过，17有效记录/9正常停止。既有六制品交接与客户端/TCP/回退仍明确绑定975，不冒称87已重跑那些流程。下一项无损共享修复及96个真实字段/方法冲突见[TS2300分类](../../research/2026-10-24-ts2300-followup.md)；未删除成员、放宽门禁或代签维护者结论，整票保持in-progress。
 
 2026-10-24 [实际managed schema微测量](../evidence/2026-10-24-managed-schema-diagnostic/README.md)完成6000条记录：148symbol/7global，六组纯重新提取均值0.0537427–0.0997818ms；保留v1夹具崩溃和v2正常停止，未增加缓存。它不测整个BINDING阶段，也不替代正式性能，重载313.8/308.6ms继续FAIL。
@@ -40,7 +42,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-24：A15/A16/A22 精确删除已批准并验证；最新87baad4b通过5152项矩阵/五节点安装/1609默认stub，完整严格TSC5549条与重载287.4/305.6ms仍失败；指定客户端/TCP/分离回退与六制品交接仍绑定975496d3；最终回滚政策、维护者及发布结论未代签）
+**Status:** in-progress（2026-10-24：最新6e43b827通过5158项矩阵/五节点安装/1609默认stub，完整严格TSC5537条与重载288.2/299.4ms仍FAIL；本地六制品清单已更新，当前客户端/TCP/分离回退未重跑；975旧证明保持其二进制范围，维护者和发布结论未代签）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 
@@ -67,7 +69,8 @@
 - [ ] README、wiki、ADR 与支持/能力矩阵的发布说明一致，公开说明 Fabric processor 延期、WORLD pack 差异和其他 partial/unavailable 能力。
 - [ ] 各 API/功能域的最小可运行示例、迁移材料和 cookbook 已随对应实现票交付并通过验收；本票只汇总、核对链接和修正发布索引，不首次补写域内材料。
 - [x] 可选离线 validator/migration report 保持显式运行、默认只读且不是 release blocker，也不进入普通 runtime 错误路径或第二套 Script API。【票38技术验收，现有CLI3tests再次通过；无runtime接线。】
-- [ ] 发布产物在本地完成准备、校验和交接清单核对；远程上传、渠道公告或正式发布动作未在本票执行，需维护者另行明确授权。
+- [x] 当前工程候选在本地完成准备、校验和交接清单核对。【2026-10-24：[6e43b827五节点六制品](../evidence/2026-10-24-owner-stamp-handoff/README.md)，完整SHA与生产类核对通过；显示版本仍1.1.0-preview3，releaseReady=false，不代替下项最终发布产物。】
+- [ ] 全部前置门禁通过后，最终1.2.0发布产物在本地完成准备、校验和交接清单核对；版本切换或包装后重验确切制品。远程上传、渠道公告或正式发布动作未在本票执行，需维护者另行明确授权。
 
 ## Current handoff record
 
