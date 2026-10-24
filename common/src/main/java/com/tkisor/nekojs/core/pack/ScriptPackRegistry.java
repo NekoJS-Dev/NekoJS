@@ -180,8 +180,7 @@ public final class ScriptPackRegistry {
      */
     public synchronized List<ScriptPack> activateWorldPacks(Path worldDir) {
         worldSession++;
-        Path normalized = worldDir == null ? null : worldDir.toAbsolutePath().normalize();
-        worldRoot = normalized == null ? null : normalized.resolve(WORLD_PACKS_DIR);
+        worldRoot = worldDir == null ? null : worldDir.toAbsolutePath().normalize().resolve(WORLD_PACKS_DIR);
         worldPacks = worldRoot == null
                 ? List.of()
                 : scan(worldRoot, ScriptPackScope.WORLD);

@@ -153,7 +153,6 @@ public final class EventCallbackSourceValidator {
             Map<String, ScriptBindingSchema.BindingMembers> schema, String group, String member,
             int argCount, int argIndex, List<String> params) {
         ScriptBindingSchema.BindingMembers binding = schema.get(group);
-        if (binding == null || argIndex < 0) return Map.of();
         Map<String, Set<Class<?>>> out = new HashMap<>();
         for (Class<?> valueClass : binding.valueClasses()) {
             List<Method> candidates = JavaMemberIndex.exposedMembersOf(valueClass).methods().get(member);
