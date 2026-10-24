@@ -1,5 +1,7 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-25 严格TS基线重建与第一族修复：新保存[可复用五节点安装/生成/检查驱动](../../../bench/tsbaseline/README.md)，c3ee4097 十入口默认安装基线实测 1609（逐入口/错误码与 v3 修正值逐项一致，声明树与 3ccea55a 逐字节一致）。[根因分类](../../../research/2026-10-25-strict-ts-root-causes.md)列 15 族（真实签名经 patched-jar javap 核验）。F1 Constable→Optional 通配族修复 `914df3c7`（canonical 渲染器输出位捕获视图，先红后绿+正负消费+[证据](../evidence/2026-10-25-strict-ts-f1-optional-capture-914df3c7/README.md)）：十入口 1609→1503（F1 −90、HolderLookup.Provider/RegistryAccess 连带 −16，零新增零回归），:common:check 与 test:probe-types 全过；剩余 50 为 number/string 值投影可表达性边界。完整严格 TS 仍 FAIL（1503）。
+
 2026-10-25 当前HEAD `d06cd961` 的[原政策正式性能](../evidence/2026-10-25-perf-d06cd961/README.md)：两组重载均值 219.8 / 214.0 ms（门槛 285.3）、启动 20340.4 ms（门槛 41173），**三组 PASS**；17 条有效记录、9 次会话全部正常 RCON 停服，原采样器（SHA 不变）/fixtures/门槛/首值保持，默认系统策略，JAR `10e43cae…`（1648 类）绑定该源码。对 26844b7e..d06cd961 全部 88 提交的只读路径复查未发现任何给重载路径新增可归因重复工作的提交，历史 FAIL 记录不改动不覆盖。同轮完成混合引号导入名分配回归修复（`d38c14dd`，先红后绿，backend 回归/common:check/probe-types 全过）与 v3 push 摘要标注修正（`d06cd961`，两个 helper JAR 摘要实为不同，相同的是内嵌 class 摘要）。完整严格 TS（1609 条 exit 2）、最终候选冻结/客户端/TCP/分离回退、1.2.0 包装与维护者结论仍开放；不代签。
 
 2026-10-24 当前6e43b827的[工程候选验收汇总](../evidence/2026-10-24-owner-stamp-acceptance/README.md)为当前状态入口：确切六制品的TCP、三节点安装渲染及已知版本对的26.1.2制品/数据分离回退均已完成各自范围。完整严格TypeScript、原门槛重载、最终版本包装与维护者结论仍开放；旧975记录保持原二进制范围，未代签或发布。
@@ -48,7 +50,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-25：d06cd961 原政策正式性能三组 PASS（本轮未作额外性能源码修改而通过，历史 FAIL 记录保留）；完整严格 TS 仍 FAIL、最终候选冻结/客户端/TCP/分离回退/1.2.0 包装与维护者/发布门禁未完成；精确结果统一见上方验收汇总）
+**Status:** in-progress（2026-10-25：d06cd961 原政策正式性能三组 PASS（历史 FAIL 记录保留）；完整严格 TS 仍 FAIL——914df3c7 十入口 1503，F1 族已修 −106、其余族待逐族推进；最终候选冻结/客户端/TCP/分离回退/1.2.0 包装与维护者/发布门禁未完成；精确结果统一见上方验收汇总）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 

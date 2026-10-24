@@ -57,3 +57,14 @@ ConstantDesc host interface 的投影差异，需单独核对）。
 F4（fabric 泛型方法投影一致性，80 条，独立机制）→ F5+F7（codec/getType，与 F1 同表示可复用）→
 F6 Recipe（约束位通配，量大但同机制）→ F2（互环，需单独的循环协变表示）→ F13/F9/F10-F12/F14
 （独立小机制）。每族独立先红后绿 + 正负消费，不宣称一次修复多族。
+
+## 2026-10-25 F1 实施结果（914df3c7）
+
+F1 已按上述约束实施：canonical 渲染器输出位捕获视图，先红后绿与正负消费、十入口实测见
+[独立证据页](../architecture-refactor/evidence/2026-10-25-strict-ts-f1-optional-capture-914df3c7/README.md)。
+十入口 1609→1503（F1 −90、F9 连带 −16，零新增零回归）。两点据此更正/明确：
+
+1. F9 的 `$HolderLookup$Provider`/`$RegistryAccess`（各 8）叶因实为 Optional 通配
+   （`RegistryOps.lookup` 两个 `Optional<? extends …>` 重载），非 F5/F6 连带；表中该两行归入 F1 机制。
+2. F1 剩余 50 = `$Double/$Float/$Integer/$Long/$String` ×10，为值投影（number/string 不结构满足
+   host 接口）的可表达性边界，需单独证明的投影变更，不以联合/any 放宽。
