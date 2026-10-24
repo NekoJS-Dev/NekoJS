@@ -267,10 +267,17 @@ public final class ClassEditor {
             return this;
         }
         touched();
+        boolean matched = false;
         for (MethodDecl m : matches) {
             // Missing parameter selectors remain no-ops, while existing edit validation still runs.
-            if (hasTarget.test(m)) m.explicitlyEdited = true;
+            if (hasTarget.test(m)) {
+                m.explicitlyEdited = true;
+                matched = true;
+            }
             op.accept(m);
+        }
+        if (!matched) {
+            NekoJS.LOGGER.debug("probe.modify_type: no overload of '{}' in {} matches the selector", name, decl.fqn);
         }
         return this;
     }

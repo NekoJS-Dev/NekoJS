@@ -17,6 +17,7 @@ import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -39,6 +40,11 @@ public final class FunctionalInterfaceAliasGenerator {
 
     /** Registers aliases only for visible interfaces that will have declarations in this output. */
     public void prepare(Set<String> generatedClasses, Set<String> hiddenClasses) {
+        prepare(generatedClasses, hiddenClasses, new ArrayList<>());
+    }
+
+    /** Variant that also reports SAM-unavailable omissions to the caller's warning channel. */
+    public void prepare(Set<String> generatedClasses, Set<String> hiddenClasses, Collection<String> warnings) {
         aliases.clear();
         hostImports.clear();
         registry.clearFunctionalInterfaceAliases();
@@ -69,8 +75,10 @@ public final class FunctionalInterfaceAliasGenerator {
             } catch (RuntimeException | LinkageError unavailable) {
                 // Loading an interface can succeed while a signature dependency is rejected by the loader.
                 // Match shared Probe reflection: retain other types, report the omission, and propagate VM failures.
-                NekoJS.LOGGER.warn("[NEKO-4029] Probe functional alias omitted for {}; its signature is unavailable ({})",
-                        fqn, unavailable.toString(), unavailable);
+                String warning = "[NEKO-4029] Probe functional alias omitted for " + fqn
+                        + "; its signature is unavailable (" + unavailable + ")";
+                warnings.add(warning);
+                NekoJS.LOGGER.warn(warning, unavailable);
             }
         }
         hostImports.removeIf(name -> name.equals(Object.class.getName()));

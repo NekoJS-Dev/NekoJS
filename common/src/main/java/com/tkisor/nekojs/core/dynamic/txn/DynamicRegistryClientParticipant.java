@@ -73,7 +73,7 @@ public final class DynamicRegistryClientParticipant {
         try {
             adapter.prepareActivation(adapterRequests(message));
         } catch (Throwable failure) {
-            return reject("prepare-failed:" + failure.getMessage());
+            return reject("prepare-failed:" + failureDetail(failure));
         }
         staged = message;
         event("prepare-staged:" + message.generation() + " entries=" + message.entries().size());

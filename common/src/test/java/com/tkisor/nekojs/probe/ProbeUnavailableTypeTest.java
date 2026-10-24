@@ -105,6 +105,24 @@ class ProbeUnavailableTypeTest {
     }
 
     @Test
+    void samSignatureLinkageFailureReportsTheOmissionThroughTheWarningChannel() throws Exception {
+        Thread thread = Thread.currentThread();
+        ClassLoader previous = thread.getContextClassLoader();
+        try {
+            thread.setContextClassLoader(fixtureLoader(MissingType.ABSENT));
+            var aliases = new com.tkisor.nekojs.probe.backend.typescript.FunctionalInterfaceAliasGenerator(
+                    new com.tkisor.nekojs.probe.types.TypeAliasRegistry());
+            List<String> warnings = new java.util.ArrayList<>();
+            aliases.prepare(java.util.Set.of(ProbeLinkageFixture.ClientCallback.class.getName()),
+                    java.util.Set.of(), warnings);
+            assertTrue(warnings.stream().anyMatch(warning -> warning.contains("[NEKO-4029]")
+                    && warning.contains(ProbeLinkageFixture.ClientCallback.class.getName())), warnings::toString);
+        } finally {
+            thread.setContextClassLoader(previous);
+        }
+    }
+
+    @Test
     void virtualMachineFailureIsNotReportedAsPartialSuccess() throws Exception {
         Class<?> host = fixtureLoader(MissingType.FATAL).loadClass(ProbeLinkageFixture.Host.class.getName());
         assertThrows(OutOfMemoryError.class,

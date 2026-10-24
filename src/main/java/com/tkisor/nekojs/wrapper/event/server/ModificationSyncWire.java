@@ -44,7 +44,7 @@ public final class ModificationSyncWire {
             CLIENT_OWNER.apply(declarations);
             NekoJS.LOGGER.info("Applied server Item/Block modification sync generation={} ({} declaration(s))",
                     generation, declarations.size());
-        } catch (Throwable failure) {
+        } catch (RuntimeException failure) {
             NekoJS.LOGGER.error("[NEKO-3011] Server Item/Block modification sync rejected", failure);
         }
     }

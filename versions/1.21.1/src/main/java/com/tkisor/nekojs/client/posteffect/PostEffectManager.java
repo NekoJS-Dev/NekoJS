@@ -244,7 +244,8 @@ public final class PostEffectManager {
             return Boolean.TRUE.equals(field.get(gameRenderer));
         } catch (ReflectiveOperationException e) {
             LOGGER.debug("Could not read GameRenderer.effectActive", e);
-            return Minecraft.getInstance().gameRenderer.currentEffect() != null;
+            // The early return above proved a chain is loaded; nothing on this thread can clear it in between.
+            return true;
         }
     }
 

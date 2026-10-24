@@ -48,6 +48,9 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     private final RecipeEventDeclarationGenerator recipeEventGenerator = new RecipeEventDeclarationGenerator(aliasRegistry);
     private final ManagedApiDeclarationGenerator managedDeclGenerator = new ManagedApiDeclarationGenerator();
 
+    /** Render-time degradations (e.g. omitted functional aliases) surfaced through GenerateResult warnings. */
+    private final Set<String> renderWarnings = new LinkedHashSet<>();
+
     // RecipeEventJS.recipes getter 覆盖的单一数据源：唯一渲染路径（IR renderer）从这里取字面量
     private static final String RECIPE_EVENT_RECIPES_GETTER = "recipes";
     private static final String RECIPE_EVENT_RECIPES_RETURN_TYPE = "DocumentedRecipes";
@@ -76,12 +79,21 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         return true;
     }
 
+    /** Merges render-time degradations into the result's warning channel; failures keep their message. */
+    @Override
+    public GenerateResult generate(ProbeContext ctx) {
+        GenerateResult result = ProbeBackend.super.generate(ctx);
+        return result.success() && !renderWarnings.isEmpty()
+                ? GenerateResult.withWarnings(result, List.copyOf(renderWarnings)) : result;
+    }
+
     /**
      * 渲染全部 TS 产物到内存（相对输出目录路径 → 内容）。落盘与原子提交由接口默认
      * {@code generate} 经 {@link ProbeOutputCommitter} 统一负责，本方法不触碰磁盘。
      */
     @Override
     public Map<String, String> render(ProbeContext ctx) {
+        renderWarnings.clear();
         applyBuiltinGetterOverrides();
         tsClassRenderer.setCovariantTypeParameters(fastutilResultVariance());
         NekoScriptCatalogSnapshot snapshot = ctx.snapshot();
@@ -143,7 +155,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                     declarations.includeReference(classesToGenerate, host);
                 }
 
-                functionalInterfaceAliasGenerator.prepare(classesToGenerate, hiddenFqns);
+                functionalInterfaceAliasGenerator.prepare(classesToGenerate, hiddenFqns, renderWarnings);
                 for (String host : functionalInterfaceAliasGenerator.hostImports()) {
                     declarations.includeReference(classesToGenerate, host);
                 }
