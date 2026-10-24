@@ -67,20 +67,37 @@ class TypeScriptSameNameHeritageTest {
         var generator = new IndexFileGenerator(renderer, new AdapterAliasGenerator(aliases));
         Class<?> usage = com.tkisor.nekojs.probe.testfixture.samechild.GetterUsage.class;
         Class<?> other = com.tkisor.nekojs.probe.testfixture.sameother.PersistentData.class;
-        String module = "java:" + other.getPackageName().replace('.', '/');
-        String quotedImport = "import { \"a'b\" as $NekoImport$PersistentData } from \"" + module + "\";";
+        String quotedImport = "import { \"a'b\" as $NekoImport$PersistentData } from \"custom\";";
         renderer.overrideGetter(usage, "quoted", "$NekoImport$PersistentData", quotedImport);
         List<Class<?>> classes = List.of(BASE, CHILD, other, usage);
         Set<String> fqns = classes.stream().map(Class::getName).collect(java.util.stream.Collectors.toSet());
         for (Class<?> type : classes) generator.predeclareClass(type.getName(), new TypeReflector().reflect(type), Set.of());
         String child = generator.generate(CHILD.getPackageName(), List.of("PersistentData", "GetterUsage"), List.of(), fqns);
-        Path output = Path.of("build/probe-ts-same-name-heritage-mixed-quote-import");
-        Files.createDirectories(output);
-        Files.writeString(output.resolve("child.d.ts"), child);
-        for (Class<?> type : List.of(BASE, other)) {
-            Files.writeString(output.resolve(type == BASE ? "base.d.ts" : "other.d.ts"),
-                    generator.generate(type.getPackageName(), List.of("PersistentData"), List.of(), fqns));
-        }
+        String base = generator.generate(BASE.getPackageName(), List.of("PersistentData"), List.of(), fqns);
+        String otherModule = generator.generate(other.getPackageName(), List.of("PersistentData"), List.of(), fqns);
+        Path output = Path.of("build/probe-ts-mixed-quote-import");
+        Path packages = output.resolve("@package/com/tkisor/nekojs/probe/testfixture");
+        Files.createDirectories(packages);
+        Files.writeString(packages.resolve("samechild.d.ts"), child);
+        Files.writeString(packages.resolve("samebase.d.ts"), base);
+        Files.writeString(packages.resolve("sameother.d.ts"), otherModule);
+        Files.writeString(output.resolve("custom.d.ts"), """
+                declare class CustomQuotedData {
+                    marker: string;
+                }
+                export { CustomQuotedData as "a'b" };
+                """);
+        Files.writeString(output.resolve("tsconfig.json"), """
+                {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"],"custom": ["custom.d.ts"]}},"include":["@package/**/*.d.ts","custom.d.ts","exercise.ts"]}
+                """);
+        Files.writeString(output.resolve("exercise.ts"), """
+                import type { $GetterUsage } from 'java:com/tkisor/nekojs/probe/testfixture/samechild';
+                import { "a'b" as QuotedBinding } from 'custom';
+                declare const usage: $GetterUsage;
+                const quoted: QuotedBinding = usage.quoted;
+                // @ts-expect-error The quoted getter stays bound to the custom module's class.
+                const wrong: number = usage.quoted;
+                """);
         String baseModule = "java:" + BASE.getPackageName().replace('.', '/');
         assertTrue(child.contains(quotedImport), child);
         assertTrue(child.contains("get quoted(): $NekoImport$PersistentData;"), child);
