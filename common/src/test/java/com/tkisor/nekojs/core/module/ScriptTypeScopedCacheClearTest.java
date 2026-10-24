@@ -242,6 +242,32 @@ class ScriptTypeScopedCacheClearTest {
     }
 
     @Test
+    void sharedJavaAndNodeModuleNamesNeverBecomeScriptPaths() {
+        NekoEsmVirtualModuleRegistry registry = cache.virtualModules();
+        List<String> shared = List.of("java:net/minecraft/world/phys[$Vec3]", "node:fs/promises[readFile]",
+                "java.lang/Integer[$Integer]", "java/java/lang[$Integer]");
+        for (String module : shared) {
+            registry.register(module, "export default 42;");
+            registry.reserve(module + "#namespace-capture:value");
+        }
+        registry.register("server_scripts/native.mjs#dynamic", "export default 1;");
+        registry.clear(ScriptType.SERVER);
+        for (String module : shared) {
+            assertTrue(isVirtual(registry, module));
+            assertTrue(isVirtual(registry, module + "#namespace-capture:value"));
+        }
+        assertFalse(isVirtual(registry, "server_scripts/native.mjs#dynamic"));
+        URI previous = registry.uri(shared.getFirst());
+        registry.invalidate(shared.getFirst());
+        assertFalse(isVirtual(registry, shared.getFirst()));
+        assertFalse(previous.equals(registry.register(shared.getFirst(), "export default 43;")));
+        registry.clear(ScriptType.CLIENT);
+        assertTrue(isVirtual(registry, shared.getFirst()));
+        registry.clear();
+        assertFalse(isVirtual(registry, shared.getFirst()));
+    }
+
+    @Test
     void esmRegistryClearByTypeClearsItsVirtualPathAndKeepsOtherTypes() {
         NekoEsmVirtualModuleRegistry registry = cache.virtualModules();
         registry.register("server_scripts/x.mjs", "export default 1");

@@ -210,7 +210,7 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
             return "<native-esm>";
         }
         String normalized = moduleId.replace('\\', '/');
-        if (normalized.startsWith("java:") || normalized.startsWith("java.") || normalized.startsWith("java/") || normalized.startsWith("node:")) {
+        if (isSharedVirtualModule(normalized)) {
             return normalized;
         }
         try {
@@ -238,6 +238,9 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
             base = base.substring(0, hash);
         }
         base = base.replace('\\', '/');
+        if (isSharedVirtualModule(base)) {
+            return null;
+        }
         int slash = base.indexOf('/');
         if (slash < 0) {
             return null;
@@ -245,6 +248,12 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
         Path parsed = root.getFileSystem().getPath(base);
         Path resolved = parsed.isAbsolute() ? parsed : root.getParent().resolve(parsed);
         return ScriptPathProvider.typeOf(resolved);
+    }
+
+    /** Recognizes shared Java and Node names before filesystem-based ownership lookup. */
+    private static boolean isSharedVirtualModule(String moduleId) {
+        return moduleId.startsWith("java:") || moduleId.startsWith("java.")
+                || moduleId.startsWith("java/") || moduleId.startsWith("node:");
     }
 
     private static String stableKey(String moduleId) {
