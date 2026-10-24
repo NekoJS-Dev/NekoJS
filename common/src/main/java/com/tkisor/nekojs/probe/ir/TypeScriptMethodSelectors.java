@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -49,7 +50,8 @@ final class TypeScriptMethodSelectors {
         declarations.forEach((name, declaration) -> {
             if (!declaration.hidden) visible.put(name, declaration);
         });
-        this.declarations = Map.copyOf(visible);
+        // Keep the sorted iteration order: it seeds family discovery and downstream declaration order.
+        this.declarations = Collections.unmodifiableMap(visible);
         visible.keySet().forEach(name -> children.put(name, new ArrayList<>()));
         for (TypeDecl declaration : visible.values()) {
             List<String> inherited = new ArrayList<>();
@@ -64,10 +66,9 @@ final class TypeScriptMethodSelectors {
         }
         // Limit inherited-copy normalization to actual field/method families. A same-name field in
         // an unrelated class must not alter this hierarchy's authored declarations.
-        for (Member field : fieldConflicts()) collectFamily(field);
-        Set<Member> projectionCandidates = Set.copyOf(affected);
-        affected.clear();
-        callable.clear();
+        Set<Member> fields = fieldConflicts();
+        Set<Member> projectionCandidates = new LinkedHashSet<>();
+        for (Member field : fields) collectFamily(field, projectionCandidates);
         for (TypeDecl declaration : visible.values()) {
             List<MethodDecl> projected = new ArrayList<>();
             for (MethodDecl method : declaration.methods) {
@@ -87,13 +88,12 @@ final class TypeScriptMethodSelectors {
             }
             methods.put(declaration.fqn, List.copyOf(projected));
         }
-        Set<Member> fields = fieldConflicts();
-        for (Member field : fields) collectFamily(field);
+        for (Member field : fields) collectFamily(field, affected);
         Set<Member> fieldActive = new LinkedHashSet<>(fields);
         ArrayDeque<Member> queue = new ArrayDeque<>(fields);
         while (!queue.isEmpty()) {
             Member current = queue.removeFirst();
-            for (String child : children.getOrDefault(current.owner(), List.of())) {
+            for (String child : children.get(current.owner())) {
                 Member next = new Member(child, current.name());
                 if (affected.contains(next) && fieldActive.add(next)) queue.addLast(next);
             }
@@ -102,7 +102,7 @@ final class TypeScriptMethodSelectors {
         queue.addAll(fieldActive);
         while (!queue.isEmpty()) {
             Member current = queue.removeFirst();
-            for (String parent : parents.getOrDefault(current.owner(), List.of())) {
+            for (String parent : parents.get(current.owner())) {
                 Member next = new Member(parent, current.name());
                 if (affected.contains(next) && unsafe.add(next)) queue.addLast(next);
             }
@@ -112,7 +112,7 @@ final class TypeScriptMethodSelectors {
             addBridgeContracts(declaration, member);
             if (unsafe.contains(member) || methods(declaration).stream().anyMatch(method -> !method.isStatic
                     && !method.isConstructor && member.name().equals(method.effectiveName()))
-                    || parents.getOrDefault(member.owner(), List.of()).stream()
+                    || parents.get(member.owner()).stream()
                     .anyMatch(parent -> keepsOrdinary(new Member(parent, member.name())))) continue;
             for (InheritedMethod inherited : inheritedMethods(member, Map.of(), new LinkedHashSet<>())) {
                 MethodDecl method = TypeScriptInheritedMethods.specialize(declaration, inherited.owner(), inherited.method(), inherited.bindings());
@@ -163,7 +163,7 @@ final class TypeScriptMethodSelectors {
 
     private Set<Member> fieldConflicts() {
         Set<Member> fields = new LinkedHashSet<>();
-        for (TypeDecl declaration : new TreeMap<>(declarations).values()) {
+        for (TypeDecl declaration : declarations.values()) {
             if (declaration.kind != TypeDecl.Kind.CLASS) continue;
             for (FieldDecl field : inheritedFields(declaration, new LinkedHashSet<>())) {
                 Member member = new Member(declaration.fqn, field.effectiveName());
@@ -188,7 +188,7 @@ final class TypeScriptMethodSelectors {
     private List<FieldDecl> inheritedFields(TypeDecl declaration, Set<String> visiting) {
         if (!visiting.add(declaration.fqn)) return List.of();
         List<FieldDecl> fields = new ArrayList<>(declaration.fields);
-        for (String parent : parents.getOrDefault(declaration.fqn, List.of())) {
+        for (String parent : parents.get(declaration.fqn)) {
             TypeDecl ancestor = declarations.get(parent);
             if (ancestor.kind == TypeDecl.Kind.CLASS) fields.addAll(inheritedFields(ancestor, visiting));
         }
@@ -230,11 +230,11 @@ final class TypeScriptMethodSelectors {
         Boolean known = callable.get(member);
         if (known != null) return known;
         TypeDecl declaration = declarations.get(member.owner());
-        if (declaration == null || !visiting.add(member)) return false;
+        if (!visiting.add(member)) return false;
         boolean found = methods(declaration).stream().anyMatch(method -> visibleMethod(declaration, method)
                 && member.name().equals(method.effectiveName()));
         if (!found) {
-            for (String parent : parents.getOrDefault(member.owner(), List.of())) {
+            for (String parent : parents.get(member.owner())) {
                 if (hasMethod(new Member(parent, member.name()), new LinkedHashSet<>(visiting))) {
                     found = true;
                     break;
@@ -245,18 +245,18 @@ final class TypeScriptMethodSelectors {
         return found;
     }
 
-    private void collectFamily(Member seed) {
+    private void collectFamily(Member seed, Set<Member> accumulator) {
         ArrayDeque<Member> queue = new ArrayDeque<>();
         queue.add(seed);
         while (!queue.isEmpty()) {
             Member current = queue.removeFirst();
-            if (!affected.add(current)) continue;
-            for (String parent : parents.getOrDefault(current.owner(), List.of())) {
+            if (!accumulator.add(current)) continue;
+            for (String parent : parents.get(current.owner())) {
                 Member next = new Member(parent, current.name());
                 if (hasMethod(next, new LinkedHashSet<>())) queue.addLast(next);
             }
             if (hasMethod(current, new LinkedHashSet<>())) {
-                for (String child : children.getOrDefault(current.owner(), List.of())) {
+                for (String child : children.get(current.owner())) {
                     queue.addLast(new Member(child, current.name()));
                 }
             }
@@ -267,7 +267,7 @@ final class TypeScriptMethodSelectors {
         if (!visiting.add(member)) return List.of();
         List<InheritedMethod> methods = new ArrayList<>();
         Set<Method> seen = new LinkedHashSet<>();
-        for (TypeSlot slot : parentSlots.getOrDefault(member.owner(), List.of())) {
+        for (TypeSlot slot : parentSlots.get(member.owner())) {
             if (slot.ref == null || slot.ref.kind() != ApiTypeRef.Kind.SYMBOL) continue;
             ApiTypeRef type = TypeScriptInheritedMethods.substitute(slot.ref, bindings);
             String parent = type.name().substring(type.name().indexOf(':') + 1);
@@ -302,7 +302,7 @@ final class TypeScriptMethodSelectors {
     private InheritedMethod inheritedDeclaration(String owner, Method source, Map<String, ApiTypeRef> bindings,
                                                   Set<String> visiting) {
         if (!visiting.add(owner)) return null;
-        for (TypeSlot slot : parentSlots.getOrDefault(owner, List.of())) {
+        for (TypeSlot slot : parentSlots.get(owner)) {
             if (slot.ref == null || slot.ref.kind() != ApiTypeRef.Kind.SYMBOL) continue;
             ApiTypeRef type = TypeScriptInheritedMethods.substitute(slot.ref, bindings);
             String parent = type.name().substring(type.name().indexOf(':') + 1);
