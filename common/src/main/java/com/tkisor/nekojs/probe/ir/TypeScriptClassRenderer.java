@@ -650,7 +650,7 @@ public final class TypeScriptClassRenderer {
 
     /** Renders edits from IR; ordinary input slots retain reflection generics for callback substitution. */
     private String renderSlot(TypeSlot slot, boolean input) {
-        if (slot == null || slot.ref == null) return "any";
+        if (slot == null) return "any";
         if (input && !slot.overridden && slot.sourceType != null) {
             return FunctionalInterfaceAliasGenerator.renderJavaTypeInput(
                     slot.sourceType, aliases, new LinkedHashSet<>());
@@ -659,7 +659,7 @@ public final class TypeScriptClassRenderer {
     }
 
     private static ApiTypeRef projectedRef(TypeSlot slot) {
-        return !slot.overridden && slot.sourceType != null && slot.ref != null
+        return !slot.overridden && slot.sourceType != null
                 ? JavaTypeScriptProjection.project(slot.sourceType, slot.ref) : slot.ref;
     }
 
@@ -671,7 +671,7 @@ public final class TypeScriptClassRenderer {
     /** Retains self-comparable Java bounds after boxed values project to JavaScript primitives. */
     public static String renderTypeParameterBound(TypeSlot slot, String variableName,
                                                   TypeAliasRegistry aliases, Set<String> expanding) {
-        if (!slot.overridden && slot.sourceType == Comparable.class && slot.ref != null
+        if (!slot.overridden && slot.sourceType == Comparable.class
                 && slot.ref.kind() == ApiTypeRef.Kind.SYMBOL
                 && slot.ref.name().equals("java:java.lang.Comparable") && slot.ref.arguments().isEmpty()) {
             return primitiveComparableBound(renderTypeRef(projectedRef(slot), aliases, false, expanding));

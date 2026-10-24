@@ -286,6 +286,9 @@ class TypeScriptFieldMethodSelectorTest {
         var edits = new ProbeModifyTypeEventJS(Map.of(parent.fqn, parent, field.fqn, field));
         edits.forClass(parent.fqn).changeReturnType("value", "boolean");
         edits.forClass(field.fqn).changeReturnType("value", "boolean");
+        List<String> parentBefore = methodFingerprints(parent);
+        List<String> fieldBefore = methodFingerprints(field);
+        List<String> inheritedBefore = methodFingerprints(inherited);
         Path output = generate("edited", List.of(FieldPosition.class, InheritedGeneric.class),
                 List.of(parent, field, inherited), new TypeScriptProbeBackend());
         Files.writeString(output.resolve("exercise.ts"), """
@@ -299,9 +302,17 @@ class TypeScriptFieldMethodSelectorTest {
                 // @ts-expect-error An explicit ancestor return edit remains authoritative.
                 const wrong: number = inherited.value();
                 """);
-        assertTrue(inherited.methods.isEmpty());
-        assertTrue(parent.methods.stream().anyMatch(method -> method.effectiveName().equals("value")));
-        assertTrue(field.methods.stream().noneMatch(method -> method.effectiveName().contains("(")));
+        assertEquals(parentBefore, methodFingerprints(parent), "render must not mutate the shared parent IR");
+        assertEquals(fieldBefore, methodFingerprints(field), "render must not mutate the shared field IR");
+        assertEquals(inheritedBefore, methodFingerprints(inherited), "render must not mutate the shared inherited IR");
+    }
+
+    /** Captures the mutable method state the shared IR exposes, so snapshots detect in-place edits. */
+    private static List<String> methodFingerprints(TypeDecl declaration) {
+        return declaration.methods.stream()
+                .map(method -> method.effectiveName() + ":" + method.returnType + ":" + method.params.size()
+                        + ":" + method.hidden + ":" + method.explicitlyEdited)
+                .toList();
     }
 
     @Test

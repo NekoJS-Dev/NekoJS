@@ -43,10 +43,8 @@ public final class JavaGenericTypes {
         for (TypeVariable<?> parameter : declaring.getTypeParameters()) reserved.add(parameter.getName());
         Map<TypeVariable<?>, String> names = new LinkedHashMap<>();
         Set<String> occupied = new HashSet<>();
-        if (capturesOwner(declaring)) {
-            for (TypeVariable<?> parameter : parameters(declaring.getDeclaringClass())) {
-                occupied.add(parameterName(parameter));
-            }
+        for (TypeVariable<?> parameter : parameters(declaring.getDeclaringClass())) {
+            occupied.add(parameterName(parameter));
         }
         reserved.addAll(occupied);
         for (TypeVariable<?> parameter : declaring.getTypeParameters()) {
@@ -60,7 +58,8 @@ public final class JavaGenericTypes {
             }
             names.put(parameter, name);
         }
-        return names.getOrDefault(variable, variable.getName());
+        // Core reflection interns one TypeVariable instance per class parameter, so the map always holds it.
+        return names.get(variable);
     }
 
     private static boolean capturesOwner(Class<?> type) {

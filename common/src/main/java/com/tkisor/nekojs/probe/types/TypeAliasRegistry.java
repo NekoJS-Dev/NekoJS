@@ -63,16 +63,6 @@ public final class TypeAliasRegistry {
         // Host maps accept arbitrary keys; object inputs are limited to TypeScript property keys.
         collectionAliases.put("java.util.Map", new CollectionAlias("$Map", "") {
             @Override
-            public String getInputType(String[] typeArgs) {
-                return getInputType(typeArgs, "$Map");
-            }
-
-            @Override
-            public String getInputType(String[] typeArgs, String hostName) {
-                return getInputType(typeArgs, typeArgs, hostName);
-            }
-
-            @Override
             public String getInputType(String[] hostArgs, String[] inputArgs, String hostName) {
                 if (hostArgs.length == 2 && inputArgs.length == 2) {
                     String host = hostName + "<" + hostArgs[0] + ", " + hostArgs[1] + ">";

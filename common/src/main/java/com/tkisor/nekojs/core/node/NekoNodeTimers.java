@@ -216,7 +216,9 @@ public final class NekoNodeTimers implements AutoCloseable {
     }
 
     private void recordScriptId(int id, Value callback) {
-        if (closed || callback == null) return;
+        // Callers hold the instance monitor, so `closed` cannot flip before this runs; `execute`
+        // re-checks because the flush thread may run after close.
+        if (callback == null) return;
         Context context = callback.getContext();
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
         if (scriptId == null || scriptId.isBlank()) {

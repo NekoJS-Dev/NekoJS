@@ -62,11 +62,7 @@ public final class FabricEventBusBridge {
             Consumer<Consumer<E>> registerCallback) {
         Objects.requireNonNull(bus, "bus");
         Objects.requireNonNull(registerCallback, "registerCallback");
-        registerCallback.accept(event -> {
-            if (bus.hasListeners()) {
-                bus.post(event);
-            }
-        });
+        registerCallback.accept(event -> bus.post(event));
         return this;
     }
 
@@ -80,7 +76,7 @@ public final class FabricEventBusBridge {
             throw new IllegalArgumentException(
                     "bindCancellable requires a cancellable event bus: " + bus.eventType().getName());
         }
-        registerCallback.accept(event -> bus.hasListeners() && bus.post(event));
+        registerCallback.accept(event -> bus.post(event));
         return this;
     }
 

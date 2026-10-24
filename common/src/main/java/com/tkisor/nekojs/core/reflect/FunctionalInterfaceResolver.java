@@ -53,7 +53,6 @@ public final class FunctionalInterfaceResolver {
 
     /** Uses caller-supplied, capture-free method variable names in an edited target declaration scope. */
     public static Signature resolve(Type declared, Method method, Map<TypeVariable<?>, String> variableNames) {
-        variableNames = Map.copyOf(variableNames);
         Map<TypeVariable<?>, Type> arguments = interfaceArguments(declared, method.getDeclaringClass(), Map.of(),
                 new HashSet<>());
         if (arguments == null) return null;
