@@ -14,4 +14,4 @@ Windows原采样器SHA256保持1f9c5d14a1a586da4b3f1ca8e71b2407ce089ee8bee185418
 
 归档68项、18,168,257字节，包含确切JAR、完整class绑定、全部样本、环境和原日志、原采样器/fixture及准备/执行/判断工具。47个文件中实际测试RCON密码的UTF8/UTF16字节已脱敏，原摘要和精确替换范围保留；敏感源副本可从Git和换行规则独立重建核对。world、properties和完整参数不在归档。
 
-复核：`python docs/architecture-refactor/evidence/2026-10-24-owner-stamp-performance/verify.py`，实际PASS，复算仍为FAIL/FAIL/PASS。完整严格TSC仍5537条FAIL；票35/37保持in-progress。客户端渲染、跨进程TCP及分离回退的既有验收仍绑定975，不冒称本轮6e二进制已执行那些流程；维护者结论未代签。
+复核：`python docs/architecture-refactor/evidence/2026-10-24-owner-stamp-performance/verify.py`，实际PASS，复算仍为FAIL/FAIL/PASS。完整严格TSC仍5537条FAIL；票35/37保持in-progress。本轮性能封存当时，客户端渲染、跨进程TCP及分离回退证据仍绑定975；后续已完成确切6e候选的这三组有界验收，见[统一当前状态](../2026-10-24-owner-stamp-acceptance/README.md)。原政策性能失败不变；维护者结论未代签。

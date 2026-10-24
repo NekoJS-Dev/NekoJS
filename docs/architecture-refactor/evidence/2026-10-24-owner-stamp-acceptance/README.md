@@ -22,3 +22,5 @@
 主代理另用audit-local-credentials.py对TCP/render/rollback三个封存包，分别私下读取其测试properties，以UTF8/UTF16字节模式扫描全部条目及嵌套JAR/ZIP，共24,729个payload，残留匹配0。三个原封存工具实际替换文件数均为0，redactedOriginalHashes为空，没有需要记录的替换前原摘要；不能把空映射说成已有脱敏记录。privacy-audit.json只保存计数及工具/归档绑定，不保存私有值或其摘要。公开验证只绑定这份本地审计记录，缺少私有模式时不能独立重复证明无凭据；原归档字节未改。
 
 范围保持：Fabric PostEffects unavailable、legacy resources-only不扩大；ModDev helper、合成按键和帧缓冲图不等于官方安装器、物理键盘/显示器或维护者验收；回退不承诺任意旧版、custom registry存档或世界外副作用。票37保持in-progress，没有PR、push、远程上传、正式发布或人工代签。
+
+后续[显式方法选择器原型](../2026-10-24-method-selectors/README.md)完成一次26.1.2 NeoForge实际安装观察及最小严格消费检查；生产声明未迁移，尚须收敛继承闭包，未请求新的迁移批准。本页完整5537条FAIL及原政策性能FAIL保持，原型不改变候选或发布结论。

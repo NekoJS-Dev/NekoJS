@@ -1,0 +1,18 @@
+{
+  "verdict": "PASS",
+  "scope": "Recorded bounded observations, not full strict output or migration acceptance",
+  "observations": 28,
+  "expectedSuccesses": 21,
+  "expectedRejections": 7,
+  "currentCollisionMembers": 96,
+  "normalServerExits": 1,
+  "strictPrototype": {
+    "before": 2,
+    "after": 0
+  },
+  "localJarsChecked": 3,
+  "collisionSourceFilesChecked": 36,
+  "initialStopClaim": "UNCONFIRMED; retained, excluded from normal-stop count",
+  "privateScan": "Bound receipt only; cannot repeat without private inputs",
+  "maintainerAcceptance": false
+}
