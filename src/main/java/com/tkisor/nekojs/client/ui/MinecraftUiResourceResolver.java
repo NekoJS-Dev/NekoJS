@@ -37,6 +37,7 @@ public final class MinecraftUiResourceResolver implements UiResourceResolver, Au
     private final ResourceManager resources;
     private final UiTextureBackend backend;
     private final Supplier<?> revision;
+    private final Supplier<java.util.Set<net.minecraft.client.gui.font.FontOption>> fontOptions;
     private final Thread ownerThread;
     private final String slotPrefix = "ui/" + UUID.randomUUID().toString().replace("-", "") + "/";
     private final Map<String, Texture> textures = new HashMap<>();
@@ -48,13 +49,21 @@ public final class MinecraftUiResourceResolver implements UiResourceResolver, Au
     private boolean closed;
 
     public MinecraftUiResourceResolver(ResourceManager resources, TextureManager textures) {
-        this(resources, UiTextureBackend.minecraft(textures), () -> resources.listPacks().toList());
+        this(resources, UiTextureBackend.minecraft(textures), () -> resources.listPacks().toList(),
+                MinecraftUiResourceResolver::gameFontOptions);
     }
 
+    /** Headless test seam: no client exists, so conditional providers filter against an empty option set. */
     MinecraftUiResourceResolver(ResourceManager resources, UiTextureBackend backend, Supplier<?> revision) {
+        this(resources, backend, revision, () -> java.util.Set.of());
+    }
+
+    MinecraftUiResourceResolver(ResourceManager resources, UiTextureBackend backend, Supplier<?> revision,
+            Supplier<java.util.Set<net.minecraft.client.gui.font.FontOption>> fontOptions) {
         this.resources = resources;
         this.backend = backend;
         this.revision = revision;
+        this.fontOptions = fontOptions;
         this.ownerThread = Thread.currentThread();
         this.currentRevision = revision.get();
     }
@@ -125,7 +134,7 @@ public final class MinecraftUiResourceResolver implements UiResourceResolver, Au
             List<net.minecraft.client.gui.font.providers.GlyphProviderDefinition.Conditional> providers,
             java.util.Set<Identifier> resolving) {
         for (var conditional : providers) {
-            if (!conditional.filter().apply(activeFontOptions())) continue;
+            if (!conditional.filter().apply(fontOptions.get())) continue;
             var definition = conditional.definition();
             var unpacked = definition.unpack();
             var loader = unpacked.left();
@@ -173,9 +182,9 @@ public final class MinecraftUiResourceResolver implements UiResourceResolver, Au
         }
     }
 
-    private java.util.Set<net.minecraft.client.gui.font.FontOption> activeFontOptions() {
+    /** The host adapter is created only from a running client, so the option set is always queryable. */
+    private static java.util.Set<net.minecraft.client.gui.font.FontOption> gameFontOptions() {
         net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
-        if (minecraft == null || minecraft.options == null) return java.util.Set.of();
         java.util.EnumSet<net.minecraft.client.gui.font.FontOption> options =
                 java.util.EnumSet.noneOf(net.minecraft.client.gui.font.FontOption.class);
         if (minecraft.options.forceUnicodeFont().get()) {
