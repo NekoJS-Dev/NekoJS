@@ -24,3 +24,5 @@
 范围保持：Fabric PostEffects unavailable、legacy resources-only不扩大；ModDev helper、合成按键和帧缓冲图不等于官方安装器、物理键盘/显示器或维护者验收；回退不承诺任意旧版、custom registry存档或世界外副作用。票37保持in-progress，没有PR、push、远程上传、正式发布或人工代签。
 
 后续[显式方法选择器原型](../2026-10-24-method-selectors/README.md)完成一次26.1.2 NeoForge实际安装观察及最小严格消费检查；生产声明未迁移，尚须收敛继承闭包，未请求新的迁移批准。本页完整5537条FAIL及原政策性能FAIL保持，原型不改变候选或发布结论。
+
+后续[模块准备分段诊断](../2026-10-24-owner-source-diagnostic/README.md)完成十次COMMIT和确切源码/class/JAR恢复。测量范围有限，没有生产优化或门槛变更；原性能FAIL保持，下一调查边界见[测量后的方向](../../../research/2026-10-24-module-preparation-profile.md)。
