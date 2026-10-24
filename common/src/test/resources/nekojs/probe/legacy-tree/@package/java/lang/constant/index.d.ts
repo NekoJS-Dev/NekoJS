@@ -26,7 +26,7 @@ declare module "java:java/lang/constant" {
     };
 
     export interface $Constable {
-        describeConstable(): $Optional<$ConstantDesc>;
+        describeConstable(): { isPresent(): boolean; isEmpty(): boolean; get(): $ConstantDesc; stream(): { count(): number; findAny(): { isPresent(): boolean; isEmpty(): boolean; get(): $ConstantDesc; }; findFirst(): { isPresent(): boolean; isEmpty(): boolean; get(): $ConstantDesc; }; } };
     }
 
     export interface $ConstantDesc {

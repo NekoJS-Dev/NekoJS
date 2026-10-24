@@ -8,6 +8,9 @@ import com.tkisor.nekojs.probe.backend.typescript.JavaTypeScriptProjection;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.WildcardType;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -655,7 +658,47 @@ public final class TypeScriptClassRenderer {
             return FunctionalInterfaceAliasGenerator.renderJavaTypeInput(
                     slot.sourceType, aliases, new LinkedHashSet<>());
         }
+        if (!input && !slot.overridden && slot.sourceType != null) {
+            String captureView = renderOptionalCaptureView(slot.sourceType);
+            if (captureView != null) return captureView;
+        }
         return renderTypeRef(projectedRef(slot), aliases, input);
+    }
+
+    /**
+     * Capture-safe view for output use sites of {@code Optional<? extends Bound>}.
+     *
+     * <p>Java hierarchies legally declare such wildcard returns on a base type while implementations
+     * narrow the element ({@code Constable.describeConstable()} vs {@code Boolean}). The flattened
+     * {@code $Optional<$Bound>} is invariant, so every narrowing override fails TS2416. The view
+     * keeps exactly the members whose Java capture semantics are nameable: reads of the bound,
+     * presence checks, and one recursive {@code stream()} projection whose terminal optionals read
+     * as the bound without re-entering {@code stream()} (inline types cannot name themselves, and
+     * members taking the captured variable in input position — or/filter/map/orElse — have no
+     * sound parameter type here, so they stay available on the concrete implementations only).
+     * Wrong element types remain rejected because {@code get()} returns the upper bound.
+     *
+     * @return the view type, or null when the source is not an unedited
+     *         {@code Optional<? extends Bound>} use site.
+     */
+    private String renderOptionalCaptureView(Type source) {
+        if (!(source instanceof ParameterizedType parameterized)) return null;
+        if (!(parameterized.getRawType() instanceof Class<?> raw) || raw != java.util.Optional.class) return null;
+        List<Type> arguments = com.tkisor.nekojs.core.reflect.JavaGenericTypes.arguments(parameterized);
+        if (arguments.size() != 1 || !(arguments.getFirst() instanceof WildcardType wildcard)) {
+            return null;
+        }
+        if (List.of(wildcard.getLowerBounds()).size() > 0
+                || wildcard.getUpperBounds().length != 1
+                || wildcard.getUpperBounds()[0] == Object.class) {
+            return null;
+        }
+        Type bound = wildcard.getUpperBounds()[0];
+        String boundTs = renderTypeRef(JavaTypeScriptProjection.project(bound,
+                TypeReflector.toRef(bound)), aliases, false);
+        String terminal = "{ isPresent(): boolean; isEmpty(): boolean; get(): " + boundTs + "; }";
+        return "{ isPresent(): boolean; isEmpty(): boolean; get(): " + boundTs + "; "
+                + "stream(): { count(): number; findAny(): " + terminal + "; findFirst(): " + terminal + "; } }";
     }
 
     private static ApiTypeRef projectedRef(TypeSlot slot) {
