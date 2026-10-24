@@ -1,0 +1,59 @@
+# 完整严格 TS 根因分类表（基线 1609）
+
+绑定 [c3ee4097 五节点隔离安装基线](../architecture-refactor/evidence/2026-10-25-strict-ts-baseline-c3ee4097/README.md)：
+十入口 1609 条、逐入口与错误码分布同 v3 修正值、五节点声明树与 3ccea55a 逐字节一致。分类输入为
+`build/tsbaseline-c3ee4097/ide/*-tsc.txt` 完整诊断；"真实签名"列经 patched server jar `javap` 或 JDK
+文档核对，非推断。TS2416/TS2430 顶层错误按 elaboration 链追到叶子后归入对应根因族。
+
+## 总表（族 × 计数 × 节点聚类 × 叶因）
+
+节点列 = 该族在五节点 server 入口的出现量（startup 通常 +1，为脚本目录自生噪声）。
+
+| 族 | 码 | 总数 | 节点分布 | 来源 Java 关系 | 叶因机制 |
+|---|---|---:|---|---|---|
+| F1 Constable→Optional | TS2416 | 140 | 28×5 均匀 | `Constable.describeConstable(): Optional<? extends ConstantDesc>`；14 个实现类（Boolean/Byte/Character/Class/Double/Enum/Float/Integer/Long/Short/String/MethodHandle/MethodType/VarHandle）返回各自 `Optional<具体Desc>` | 通配符上界压平成 `$Optional<$ConstantDesc>`；`$Optional<T>` 不变泛型 → 实现返回不可赋给接口 |
+| F2 java.time chrono 互环 | TS2416+TS2344 | 330 | 66×5 均匀 | `Chronology.dateNow(): ChronoLocalDate` ↔ `ChronoLocalDate.getChronology(): Chronology`；`IsoChronology`/`LocalDate`/`Period` 协变覆写 | `$LocalDate`↔`$ChronoLocalDate`、`$IsoChronology`↔`$Chronology` 互环协变覆写 + 重载集合两两比较噪声（`$ZoneId` vs `$Clock` 是比较器伪象） |
+| F3 实体不变容器/重载序 | TS2416 | 76 | 1.21.1=8，26.x=16-18 | `EntityGetter.players(): List<? extends Player>` vs `ServerLevel.players(): List<ServerPlayer>`；`ServerPlayer.teleport` 3 参 void + 1 参返回覆写 `$Player.teleport` | List 压平同 F1；teleport/level 另含重载集合 arity 混排（"Expected 3 or more, but got 1"） |
+| F4 fabric 泛型方法投影不一致 | TS2416 | 80 | 仅 fabric 40+40 | fabric `AttachmentTarget.<A>getAttached(AttachmentType<A>): A` vs `Entity` 实现渲染为 `unknown` 返回 | 同一泛型方法：接口侧保留 `<A>…: A`，类侧擦成 `unknown`，两侧投影不一致 |
+| F5 codec/getType 不变通配 | TS2416+TS2344 | 230 | 1.21.1=30，26.x=50 | `PositionSource.getType(): PositionSourceType<? extends PositionSource>`（javap 核对）等 | 压平后 `$PositionSourceType<$PositionSource>` 不变，经 `codec().flatComapMap` 的 `$Function_` 逆变显形 |
+| F6 Recipe 约束不变 | TS2344+TS2430 | 432+16 | 1.21.1 无（API 不存在），26.x=106-110 | `SelectableRecipe$SingleInputSet<T extends Recipe<?>>`（javap 核对）+ `SingleItemRecipe implements Recipe<SingleRecipeInput>` | 约束 `Recipe<?>` 压成 `$Recipe<any>`，而 `$Recipe.getSerializer(): $RecipeSerializer<$Recipe<T>>` 不变自指 → `$StonecutterRecipe` 不满足 `$Recipe<any>`；`$CraftingRecipe extends $Recipe<$CraftingInput>` 的 TS2430 同叶 |
+| F7 ConsumeEffect 约束 | TS2344 | 120 | 1.21.1 无，26.x=30×4 | `ConsumeEffect.getType(): ConsumeEffectType<?>`，实现返回 `ConsumeEffectType<自身>` | 同 F5 机制（codec flatComapMap 逆变叶） |
+| F8 Entity/EntityAccess Stream | TS2344+TS2416 | 12 | 仅 neoforge 4×3 | `Entity.getSelfAndPassengers(): Stream<Entity>` 覆写 `EntityAccess` 的 `Stream<? extends EntityAccess>` | elaboration 实测链条 `$Stream<$Entity>`→`findAny().or`→`$Supplier_<$Optional<…>>`→`get().filter`→`$Predicate_` 参数逆变拒绝 |
+| F9 接口 extends 不兼容 | TS2430 | 50 | 1.21.1=2，26.x=12 | EnchantmentEntityEffect、HolderLookup.Provider、RegistryAccess、SectionPos↔Vec3i、CraftingRecipe/SmithingRecipe | 前四者为 F5/F6 叶因的连带；SectionPos↔Vec3i 另见 F13 |
+| F10 客户端类省略残留引用 | TS2724/TS2552/TS2304 | 46 | 仅 1.21.1 | NEKO-4029 在 DEDICATED_SERVER 省略 `$ClientGamePacketListener`/`$ClientCommonPacketListener`/`$RecipeBookMenu`，但其它声明仍引用 | 省略类与依赖闭包的边界不一致（连接 2026-10-24-unavailable-declaration-boundaries 的既有边界） |
+| F11 nekojs core 模块缺失 | TS2307 | 31 | 全节点 5-7 | `java:com/tkisor/nekojs/core/villager`、`core/modification`、`@side-only/server/events/recipes` 模块未被生成 | 声明引用了未生成的自有模块（闭包/可达性边界待查） |
+| F12 neoforge 客户端扩展模块缺失 | TS2307 | 8 | 仅 1.21.1 | `java:net/neoforged/neoforge/client/extensions/common` | 同 F10 边界 |
+| F13 取器/方法同名冲突 | TS2426+TS2416 | 10+6 | 1.21.1=8，其余 0-2 | 基类 bean 取器 `get level` vs 子类方法 `level()`（BlockEntity/ShelfBlockEntity、Vec3i/SectionPos x/y/z） | 同一 Java 成员名在两级分别投影为取器与方法，TS 同名空间冲突 |
+| F14 fabric NekoEntityPData 缺成员 | TS2420 | 4 | 仅 fabric 26.x=2+2 | 接口要求 `neko$getPDataRoot`，fabric `$Entity` 未含 | 接口注入成员在 fabric 渲染路径缺失（连接 prior 轮 fabric_enumCycle 同域） |
+| 尾项 | 各 | 22 | 分散 | `$BlastFurnaceMenu` 等 4×TS2344（1.21.1 容器菜单）、`offset`/`getOrCreate`/`getOrThrow`/`leashHolder`/`fabric_enumCycle`/`get`/`x/y/z` 各 2-4 | 多为上述族的孤立实例，修复验证时逐条归并 |
+
+## 叶因归纳（共享机制层）
+
+1. **通配符上界压平 × 不变泛型容器**（F1/F3部分/F5/F6/F7/F8，合计约 1040）：真实签名
+   `Container<? extends Bound>` 被 `TypeReflector.toRef`（ir/TypeReflector.java:626）与
+   `JavaTypeScriptProjection.project`（backend/typescript/JavaTypeScriptProjection.java:24）压成
+   `$Container<$Bound>`；TS 泛型无使用位置型变，`$Optional/$List/$Stream/$RecipeSerializer/$Codec` 均按
+   结构测得不变，协变覆写在 TS 侧必然失败。诊断经 or/Supplier、filter/Predicate、flatComapMap/Function
+   的参数逆变显形，属同一根因的不同 SAM 出口。
+2. **投影一致性缺陷**（F4，80）：泛型方法 `<A>…: A` 接口侧/类侧投影路径不同。
+3. **bean 投影形状不一致**（F13，16）：同名成员在继承两级产生取器 vs 方法两种形状。
+4. **省略类/未生成模块的引用残留**（F10/F11/F12，85）：依赖闭包与省略边界不同步。
+5. **重载集合混排**（F3 的 teleport/level 部分）：覆写重载集与基类重载集 arity 交错，TS 两两比较失败。
+
+## 第一修复族（§3-4）：F1 Constable→Optional
+
+选择依据：纯 JDK 类型（无 Minecraft 依赖，fixture 最小）、五节点均匀 28、诊断链已被既有只读调查
+（2026-10-23 reload-declaration-findings §Optional 捕获与协变）完整刻画：九个 `Optional.or`/Supplier
+出口（Boolean/Byte/Character/Class/Enum/Short/MethodHandle/MethodType/VarHandle）+五个
+`Optional.filter`/Predicate 出口（Double/Float/Integer/Long/String，后五者为 number/string 与
+ConstantDesc host interface 的投影差异，需单独核对）。
+
+约束（沿用已批准边界）：不改共享 IR 语义；未经正负证明不引入全局 `out T`/any/never/成员删除；
+已编辑 TypeSlot 以 IR 为准不从反射恢复；`$Optional.stream(): $Stream<CAP>` 的递归捕获与 SAM 输入
+方向（`$Constable_<CallbackResult>`）必须保持可拒绝错误 Supplier/Predicate。
+
+## 后续族的顺序建议
+
+F4（fabric 泛型方法投影一致性，80 条，独立机制）→ F5+F7（codec/getType，与 F1 同表示可复用）→
+F6 Recipe（约束位通配，量大但同机制）→ F2（互环，需单独的循环协变表示）→ F13/F9/F10-F12/F14
+（独立小机制）。每族独立先红后绿 + 正负消费，不宣称一次修复多族。
