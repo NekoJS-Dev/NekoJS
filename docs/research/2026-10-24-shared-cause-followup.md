@@ -28,6 +28,10 @@ getter-only Bean的readonly属性表示已按[窄投影方案](2026-10-24-inheri
 
 两处TS2416代表也不支持“缺少父类同名overload”：ServerPlayer/Player.teleport两侧均有坐标与TeleportTransition签名，IsoChronology/AbstractChronology.dateNow两侧均有Clock、ZoneId和无参签名；TypeReflector已经重发可见父类同名Method。level()的诊断明确追到ServerLevel.noSave字段与Level.noSave()方法冲突；teleport日志只展开到arity，尚未证明它的叶子根因，不能用前者替后者下结论。未新增重复overload、raw/any或删除成员。
 
-另有条件性配方调查：SERVER命令先applyRecipeScripts，若目录数据包激活再触发资源重载，其尾部也应用配方。两遍可能使用不同资源基线、分别提交RecipeMap并触发回调；不能直接跳过其中一遍。当前正式fixture是否进入此条件、各遍条数与耗时尚未测量；这只是后续测量点，不是当前超标归因或生产改动。每次JSON工作集的深拷贝继续保护基线，不缓存可变recipe或改变事件/失败时机。
+后续[十轮配方实测](../architecture-refactor/evidence/2026-10-24-owner-recipe-diagnostic/README.md)已完成：原fixture每次reload COMMIT恰好一遍apply、每遍1515条，另十次list查询不算reload；codec均值37.52728ms，filter1.66348/copy1.93726/mapBuild1.04497ms，十次COMMIT和一次正常停止。单遍RegistryOps已经memoize注册表查找，Recipe/Ingredient codec静态复用，没有据此增加缓存。源码、1642class与整个JAR恢复原字节。此诊断不取代原正式288.2/299.4ms失败。
+
+条件性的目录数据包路径仍须独立验证：SERVER命令先applyRecipeScripts，若目录数据包激活再触发资源重载，其尾部也应用配方。两遍可能使用不同资源基线、分别提交RecipeMap并触发回调，不能直接跳过其中一遍。本次原flat fixture的单遍结果不推广到该路径。每次JSON工作集的深拷贝继续保护基线，不缓存可变recipe或改变事件/失败时机。
+
+[不可用声明边界](2026-10-24-unavailable-declaration-boundaries.md)另核实了legacy客户端类型加载限制与四个真实core引用，原依赖报告已明确不完整。没有现成api.*领域接口可无损代替，不把这些错误当成可随意补import、空stub或放开core的依据。
 
 Optional/Stream的捕获与SAM host方向、Bean/同名方法、Mixin泛型来源仍需独立设计和真实消费证据。不通过全图any/unknown、全局协变、删除成员、空声明或放宽exclude/hide掩盖失败。后续生产改动完成后再冻结新候选，原政策复验仍使用原采样器、fixture与285.3ms门槛。
