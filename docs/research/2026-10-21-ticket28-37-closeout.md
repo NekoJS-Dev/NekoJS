@@ -1,6 +1,8 @@
 # 票 28 / 37 后续工程收尾
 
-2026-10-24 最新工程源码6e43b827：[完整工程验收](../architecture-refactor/evidence/2026-10-24-owner-stamp/README.md)5158项/271跳过/零失败、五节点新安装与五正常停止、1609默认stub及完整定向TS链通过。完整严格TSC5549→5537，移除12/新增0，仍FAIL。[原政策正式性能](../architecture-refactor/evidence/2026-10-24-owner-stamp-performance/README.md)重载288.2/299.4ms仍超285.3ms，启动26174.8ms通过，17有效/9正常停止。[本地六制品](../architecture-refactor/evidence/2026-10-24-owner-stamp-handoff/README.md)已绑定6e；客户端/TCP/分离回退未对该二进制重跑，975旧证明保持原范围。票28工程closed，票35当前性能回归重新in-progress，票37继续in-progress；没有代签维护者结论或push、PR、发布。
+2026-10-24 当前状态统一见[6e43b827工程候选验收汇总](../architecture-refactor/evidence/2026-10-24-owner-stamp-acceptance/README.md)：TCP、三节点安装渲染和已知版本对的26.1.2分离回退已完成各自范围；六制品保持原字节。完整严格TypeScript与原门槛重载仍FAIL，最终版本及维护者/发布门禁开放；旧975证明继续保留，不重标为新候选。
+
+2026-10-24 初次固定6e43b827时的记录：[完整工程验收](../architecture-refactor/evidence/2026-10-24-owner-stamp/README.md)5158项/271跳过/零失败、五节点新安装与五正常停止、1609默认stub及完整定向TS链通过。完整严格TSC5549→5537，移除12/新增0，仍FAIL。[原政策正式性能](../architecture-refactor/evidence/2026-10-24-owner-stamp-performance/README.md)重载288.2/299.4ms仍超285.3ms，启动26174.8ms通过，17有效/9正常停止。[本地六制品](../architecture-refactor/evidence/2026-10-24-owner-stamp-handoff/README.md)已绑定6e；当时客户端/TCP/分离回退尚未对该二进制重跑，后续三项已由上方汇总的独立证据补齐，975旧证明保持原范围。票28工程closed，票35当前性能回归重新in-progress，票37继续in-progress；没有代签维护者结论或push、PR、发布。
 
 2026-10-24 最新工程源码87baad4b：[继承属性修复与完整验收](../architecture-refactor/evidence/2026-10-24-inherited-bean/README.md)5152项/271跳过/零失败、五节点安装/五正常停止与1609默认stub通过；完整严格TSC5565→5549，移除16条TS2611、没有新增，仍FAIL。[原政策正式性能](../architecture-refactor/evidence/2026-10-24-inherited-bean-performance/README.md)重载287.4/305.6ms仍超285.3ms、启动28014.8ms通过，17有效/9正常停止。六制品/客户端/TCP/回退旧封存仍绑定975。另已逐条核实[TS2300分类和下一无损修复](2026-10-24-ts2300-followup.md)，不将96个真实字段/方法碰撞误说成可删除Bean别名。票28工程closed；票37继续in-progress，没有push、PR或发布。
 

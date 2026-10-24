@@ -58,7 +58,7 @@ Complete evidence is preserved in the four group directories above: `samples.jso
 
 - Resolve the current 6e43b827 reload failure: 288.2/299.4ms against285.3ms, retaining both complete five-sample groups. Keep interpreter, owner-thread, command execution and marker-observation measurements distinct. The bounded source-map diagnostic measured2.80407ms mean parsing per reload; it did not establish an end-to-end saving or justify a production cache.
 - Full default strict TypeScript remains5537 diagnostics. Keep excluded/hidden types, actual public members and runtime semantics intact while fixing demonstrated shared causes.
-- The six current local artifacts are prepared. Native render, TCP and separated rollback have not been rerun on these6e binaries; the975 evidence retains its original scope. Final version packaging and maintainer acceptance remain open.
+- The six current local artifacts and their bounded TCP, native render and known-pair separated rollback checks are complete; see the [current6e acceptance record](../2026-10-24-owner-stamp-acceptance/README.md). The975 evidence retains its original scope. Final version packaging and maintainer acceptance remain open.
 - Preserve the original sampler, fixtures, timing boundary and threshold; later source or artifact changes need their own appropriate verification.
 
 ## Historical remaining acceptance (ac810fa7)

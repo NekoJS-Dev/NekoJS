@@ -1,6 +1,8 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
-2026-10-24 最新源码6e43b827的[owner泛型、事件导入与属性查询修复](../evidence/2026-10-24-owner-stamp/README.md)通过5158项/271跳过/零失败、五节点新安装与五正常停止、1609默认stub及完整定向TS链。完整严格TSC5549→5537，移除12/新增0，仍FAIL。[原政策正式性能](../evidence/2026-10-24-owner-stamp-performance/README.md)重载288.2/299.4ms均超285.3ms，启动26174.8ms通过，17有效记录/9正常停止。[六制品本地交接](../evidence/2026-10-24-owner-stamp-handoff/README.md)已更新为确切6e候选；该候选客户端/TCP/分离回退尚未重跑，975历史证明不冒称当前。维护者结论未代签，整票继续in-progress。
+2026-10-24 当前6e43b827的[工程候选验收汇总](../evidence/2026-10-24-owner-stamp-acceptance/README.md)为当前状态入口：确切六制品的TCP、三节点安装渲染及已知版本对的26.1.2制品/数据分离回退均已完成各自范围。完整严格TypeScript、原门槛重载、最终版本包装与维护者结论仍开放；旧975记录保持原二进制范围，未代签或发布。
+
+2026-10-24 初次固定6e43b827时的记录：[owner泛型、事件导入与属性查询修复](../evidence/2026-10-24-owner-stamp/README.md)通过5158项/271跳过/零失败、五节点新安装与五正常停止、1609默认stub及完整定向TS链。完整严格TSC5549→5537，移除12/新增0，仍FAIL。[原政策正式性能](../evidence/2026-10-24-owner-stamp-performance/README.md)重载288.2/299.4ms均超285.3ms，启动26174.8ms通过，17有效记录/9正常停止。[六制品本地交接](../evidence/2026-10-24-owner-stamp-handoff/README.md)已更新为确切6e候选；当时客户端/TCP/分离回退尚未重跑，后续当前TCP已由上方独立证据补齐，975历史证明不冒称当前。维护者结论未代签，整票继续in-progress。
 
 2026-10-24 最新工程源码87baad4b的[继承属性修复](../evidence/2026-10-24-inherited-bean/README.md)通过5152项/271跳过/零失败、五节点新安装与五次正常停止、1609默认stub零错误警告。完整严格TSC5565→5549，删除16条TS2611、没有新增，仍FAIL。[同JAR原政策性能](../evidence/2026-10-24-inherited-bean-performance/README.md)重载287.4/305.6ms继续超285.3ms，启动28014.8ms通过，17有效记录/9正常停止。既有六制品交接与客户端/TCP/回退仍明确绑定975，不冒称87已重跑那些流程。下一项无损共享修复及96个真实字段/方法冲突见[TS2300分类](../../research/2026-10-24-ts2300-followup.md)；未删除成员、放宽门禁或代签维护者结论，整票保持in-progress。
 
@@ -42,7 +44,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-24：最新6e43b827通过5158项矩阵/五节点安装/1609默认stub，完整严格TSC5537条与重载288.2/299.4ms仍FAIL；本地六制品清单已更新，当前客户端/TCP/分离回退未重跑；975旧证明保持其二进制范围，维护者和发布结论未代签）
+**Status:** in-progress（2026-10-24：6e43b827本地候选及其范围内TCP/安装渲染/已知版本对分离回退已完成；完整严格TypeScript与原门槛重载仍FAIL，最终版本与维护者/发布门禁未完成；精确结果统一见上方验收汇总）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 
@@ -62,7 +64,7 @@
 
 - [ ] 每个 Script/Plugin public breaking 符号都有旧写法、1.2.0 新写法、替代路径、数据影响和维护者确认；没有迁移项被可选工具替代。
 - [x] 数据保护清单覆盖 config、world、实体/玩家 pdata、脚本与 pack、trust-store、workspace/declaration、日志与 cache 的可再生性、备份、保留和回滚。【2026-10-07：`evidence/ticket37-autonomous-closeout/DATA-PROTECTION.md`；当前路径/owner核对及bounded rehearsal，未冒充实际用户数据恢复。】
-- [ ] release rollback 与 data rollback 分开验证；旧制品回退不宣称恢复脚本对外部世界、网络或 Java 对象造成的副作用。
+- [x] 当前已知候选对的release rollback与data rollback分开验证；旧制品回退不宣称恢复脚本对外部世界、网络或Java对象造成的副作用。【[6e确切候选四阶段](../evidence/2026-10-24-owner-stamp-rollback/README.md)：d91ca974旧JAR仍读到推进后的pdata/金块，恢复停服备份后当前JAR才回到旧值；四正常退出。仅26.1.2完整世界夹具与该已知版本对，不代签任意旧版、世界外副作用或维护者最终回滚政策。】
 - [ ] 必要数据迁移具备备份或原子替换、版本/schema 标记、旧 fixture 回读、幂等验证、失败恢复和原始数据保留证据；无必要变化的默认路径、key、wire id、格式和启用规则未被暗中改变。
 - [ ] 各功能域迁移票已按自身删除条件移除旧 public route、compat shim、重复 runtime path 或第二语义 pipeline，并完成对应域验证；本票只复核无残留，并只删除已被调用者证据证明为无调用者的小量过渡项，不在验收后临时扩大代码清理。
 - [ ] 若最终清理、版本切换或发布包装改变确切候选制品，则对该候选制品重新执行必要 build、artifact、metadata、runtime smoke 和性能相关验证；旧制品证据不能冒充最终证据。

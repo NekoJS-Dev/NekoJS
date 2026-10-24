@@ -1,0 +1,1069 @@
+{
+  "sourceRevision": "6e43b82789a7dbf7b9659dc1c21fefecac662649",
+  "archiveSha256": "18bf67d9e4eac68803dc145ac19fb36f976fbee82764dc91240b68b138845983",
+  "artifactReferences": {
+    "261": {
+      "path": "../2026-10-24-owner-stamp-performance/evidence.zip",
+      "entry": "artifact/nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "archiveSha256": "37a1e62646398c6998ffd36b0c59e4b97cc2dbaec56f2de3e9885ce735d39d82"
+    },
+    "262": {
+      "entry": "artifact/nekojs-neoforge-26.2.0-1.1.0-preview3.jar"
+    }
+  },
+  "entries": {
+    "artifact/nekojs-neoforge-26.2.0-1.1.0-preview3.jar": {
+      "size": 17511969,
+      "sha256": "bc4aaeebb1ed737ef451f3a31efcbdf5205b497742c2804c14ac2bd906fc2ff8"
+    },
+    "basic-261/01-empty-ledger-two-players.json": {
+      "size": 1983,
+      "sha256": "74da3da79e8541a4e3c8eb9dc507fcbaaeca77d610541dc3204fd85bbde0d7c7"
+    },
+    "basic-261/02-real-prepare-nack.json": {
+      "size": 3774,
+      "sha256": "f64d4393d0c89cb79e55d5bf6ef8c37cd5751e30fafa131befe74cba48953580"
+    },
+    "basic-261/03-play-prepare-ack-commit.json": {
+      "size": 5409,
+      "sha256": "3b9b355736ba620dfe390ac0933e17628d89334c6ad41b74901799b39c92a402"
+    },
+    "basic-261/04-configuration-state-sync.json": {
+      "size": 5940,
+      "sha256": "09a7711d43ba02b38e57742c1ea0ccd75406eb4a3d6a73a6ac5177c2b4249b29"
+    },
+    "basic-261/05-two-distinct-prepare-acks.json": {
+      "size": 7960,
+      "sha256": "2924486fbb33557cb603e3f5bf6599830ff793a41f806c0895fd450cdc144c16"
+    },
+    "basic-261/06-ack-timeout-and-late-ack.json": {
+      "size": 9442,
+      "sha256": "280dae3bbb162ef25049ffdabfabfe14a2acc23e1c577bfc647b2e46da4bbcff"
+    },
+    "basic-261/07-prepare-disconnect-abort.json": {
+      "size": 10783,
+      "sha256": "dd1ba3aabcddf1afa3a56237339244f863582093c596788a1055eb848caaca6d"
+    },
+    "basic-261/08-reconnect-activated-state-only.json": {
+      "size": 11195,
+      "sha256": "f5d59e5c5949f18ec5c9952c6e40464d56ac2c147d8ec2baacae81793db188e6"
+    },
+    "basic-261/acceptance-review.json": {
+      "size": 1664,
+      "sha256": "32c32b20782e97c7d5611a3c4606474d0098739bcea511f94e64792d1241311e"
+    },
+    "basic-261/build.gradle": {
+      "size": 1707,
+      "sha256": "ed5acc87b07a65a99f192375912a7ee8bb427739f1a87f12cc1ad7098d3494c8"
+    },
+    "basic-261/candidate-binding.json": {
+      "size": 501109,
+      "sha256": "a7939a5f5dc6209b1d30b5c0a35c734b53eafe921d5ec00f11d2265b959d2b31"
+    },
+    "basic-261/clientA-owned-process.json": {
+      "size": 157,
+      "sha256": "9e3775112dfc4b0b6c35be27423512865885effc362efa974c60724313360d5d"
+    },
+    "basic-261/clientA-stderr.log": {
+      "size": 594,
+      "sha256": "dd0eb21a2bfb868866c3cb72f11fab7b4eea2a8acdb16bd8080ca1f493aab6fe"
+    },
+    "basic-261/clientA-stdout.log": {
+      "size": 17927,
+      "sha256": "e8e33583d6dfcf48a84d0e5a1cf255a86ff1252c52a9e46799ae5bdd4f8bf4f8"
+    },
+    "basic-261/clientA/client-observation.json": {
+      "size": 346,
+      "sha256": "a4517162eb58021300169545db903ddab8b3e5f8123153508a8124e282d18769"
+    },
+    "basic-261/clientA/client-observation.jsonl": {
+      "size": 3191,
+      "sha256": "0251ee8e9de2c8b46a8bb9f3b1990aa425446532140923f33e251712fff5a80a"
+    },
+    "basic-261/clientA/installed-source-24068.json": {
+      "size": 3130,
+      "sha256": "aa76f4cb38bc5c300c0900bb583ed527304591cf50acdf478db13bf5be5ae3d4"
+    },
+    "basic-261/clientA/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "basic-261/clientA/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "basic-261/clientA/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "basic-261/clientB-disabled-owned-process.json": {
+      "size": 157,
+      "sha256": "3b319582b9d1087e0f2414847f9fa6c00788a68d00bbcef50b94edc01fc3c45b"
+    },
+    "basic-261/clientB-disabled-stderr.log": {
+      "size": 594,
+      "sha256": "ed1117fe3e12b5697229fa4f5d07070ced049975c311a32537bf51eddb66f859"
+    },
+    "basic-261/clientB-disabled-stdout.log": {
+      "size": 15987,
+      "sha256": "c8bcad46112e141d27f3a5d8e8e6af27d5290facf0a783c3a85f75ca5092f8b5"
+    },
+    "basic-261/clientB-enabled-owned-process.json": {
+      "size": 157,
+      "sha256": "eb8218faca474c9f409517a32674424f73503a45be864a322d1962b4bc40a590"
+    },
+    "basic-261/clientB-enabled-stderr.log": {
+      "size": 594,
+      "sha256": "425216f1c88d00303194477918220468d591aa5aab9399160f244497e61a15a7"
+    },
+    "basic-261/clientB-enabled-stdout.log": {
+      "size": 14513,
+      "sha256": "7753908eab163181f3c774fd9326a6aff0757f3408ed2b3d85bc47b43b48c20b"
+    },
+    "basic-261/clientB/client-observation.json": {
+      "size": 346,
+      "sha256": "a4517162eb58021300169545db903ddab8b3e5f8123153508a8124e282d18769"
+    },
+    "basic-261/clientB/client-observation.jsonl": {
+      "size": 2711,
+      "sha256": "3c04971baad41fff483b0dd5cf259ddd0525cdf7c583c38727f388faf1a0a5e7"
+    },
+    "basic-261/clientB/installed-source-10884.json": {
+      "size": 3130,
+      "sha256": "ee8d13a4de69db378add2aa5bcee33407384661b52e310d87b922cb07845fe31"
+    },
+    "basic-261/clientB/installed-source-19252.json": {
+      "size": 3130,
+      "sha256": "548276a550915d48d22a47a1cb3b3b34f013a1bc52c8726aeef06a09a3129c0d"
+    },
+    "basic-261/clientB/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "basic-261/clientB/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "basic-261/clientB/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "basic-261/commands.jsonl": {
+      "size": 821,
+      "sha256": "8096f579cfcf1be9765a7f680dd00eb7a66cfdd9295661c0557bc0481b176137"
+    },
+    "basic-261/helper.jar": {
+      "size": 14163,
+      "sha256": "b74e0da1500acc248e17286b8ebac3d6152ad6764e55e541e21211cc88af2474"
+    },
+    "basic-261/preparation.json": {
+      "size": 65668,
+      "sha256": "75b47b911a8de8a8b682f76ec9973463b043afe23d100f6d9bf13542d547c745"
+    },
+    "basic-261/run-result.json": {
+      "size": 693,
+      "sha256": "f49d1657559cd493cfad7e3699b6fb4bc946c47c8f3d76e86982704db215257f"
+    },
+    "basic-261/server-owned-process.json": {
+      "size": 154,
+      "sha256": "3e7ac400e9a5d00b52d7239febfc5b5c9c5e63d31eca89d97ca3705de3248c88"
+    },
+    "basic-261/server-stderr.log": {
+      "size": 11752,
+      "sha256": "574cb7837f692836c33384bb7acd344aee3992a74472fa41136d64ef0f01cac3"
+    },
+    "basic-261/server-stdout.log": {
+      "size": 18799,
+      "sha256": "d4f054961266947f93bd12067cc148e2ed43b420c5daccc9d5dab6c310ac6c55"
+    },
+    "basic-261/server/banned-ips.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "basic-261/server/banned-players.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "basic-261/server/installed-source-24856.json": {
+      "size": 3118,
+      "sha256": "c59eba2fd5e902a100631463b52d715cf6f2a9c58b150353980ccbbddbadaac5"
+    },
+    "basic-261/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "basic-261/server/nekojs/server_scripts/owned-dynamic-items.js": {
+      "size": 382,
+      "sha256": "6f1d11a15f4726b000c02e72c0c3263d5e30d28a9e2d8706cc30775db762642c"
+    },
+    "basic-261/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "basic-261/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "basic-261/server/ops.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "basic-261/server/server-observation.json": {
+      "size": 6810,
+      "sha256": "be7d5577b8c91047e575ee92f8fc89d825dea91fd3c7539e2eaa81fa7b3d71eb"
+    },
+    "basic-261/server/server-observation.jsonl": {
+      "size": 124821,
+      "sha256": "26f5881d76c6616c24248c06cfbce4976b6163a826895570c294c1a1440f5879"
+    },
+    "basic-261/server/usercache.json": {
+      "size": 215,
+      "sha256": "b1aff9d857cfe0d9c3780d54c0507d21d6852f68b9460a2b1ea049d53a407d0d"
+    },
+    "basic-261/server/usernamecache.json": {
+      "size": 112,
+      "sha256": "d381a10030851d75f4fc936a7022789fc04fed6e89bd8c47156e9720f120e0ac"
+    },
+    "basic-261/server/whitelist.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "basic-261/settings.gradle": {
+      "size": 447,
+      "sha256": "6867d7aee6865263f3f369586573073e2eef5ef1404b889c49c9334b829eced3"
+    },
+    "basic-261/src/main/java/nekojs/acceptance/tcp/AcceptanceMod.java": {
+      "size": 3236,
+      "sha256": "4d1be0f6642abf587eef5704fcdd6b3c78fe68c07d8bf841f0832b2e03d200dc"
+    },
+    "basic-261/src/main/java/nekojs/acceptance/tcp/ClientObservation.java": {
+      "size": 3419,
+      "sha256": "dcbb3e00681c616c183727d317f99827857b61ae80750eabed0d8b91c1a4e250"
+    },
+    "basic-261/src/main/java/nekojs/acceptance/tcp/RegistryObservation.java": {
+      "size": 2405,
+      "sha256": "d7bbdf4e3b7d4cee6196c5998ccf73791f24e88db5b7ab869d0963b566eb9618"
+    },
+    "basic-261/src/main/java/nekojs/acceptance/tcp/ServerObservation.java": {
+      "size": 1949,
+      "sha256": "d3a7b761a4cb6ecdf6729cc955e776052a7cb9448c1b325a05774a8f52112d39"
+    },
+    "basic-261/src/main/java/nekojs/acceptance/tcp/mixin/CommitFaultMixin.java": {
+      "size": 1648,
+      "sha256": "3cbad2f3c2981d9908bbfdcc234ca821a476d23088c7cc53a8fa8329c621e6c2"
+    },
+    "basic-261/src/main/resources/META-INF/neoforge.mods.toml": {
+      "size": 218,
+      "sha256": "e2e96a229f8fa5ea73013810ffb49b0b1c445244c04db91c58bc64cf11714a45"
+    },
+    "basic-261/src/main/resources/owned-commit-fault.mixins.json": {
+      "size": 225,
+      "sha256": "47708cd1e21f3226a87652713f88c695a064f1ac82da540ff70b8503bccf2a7c"
+    },
+    "basic-262/01-empty-ledger-two-players.json": {
+      "size": 1983,
+      "sha256": "ea57d4a83c1e38fd3290790911f6e578c4c21052be452dcafd7fb695416a116a"
+    },
+    "basic-262/02-real-prepare-nack.json": {
+      "size": 3774,
+      "sha256": "3024de74bc06a01325eb6506e6fb0ef2fbc21508545fb32aca1118e64c943f5f"
+    },
+    "basic-262/03-play-prepare-ack-commit.json": {
+      "size": 5409,
+      "sha256": "3a85233dec8b9e0f8dd8f068ab2a4144f82c7e4bffa64c76f84f548e6d277437"
+    },
+    "basic-262/04-configuration-state-sync.json": {
+      "size": 5940,
+      "sha256": "7ccdc49a5317712a6fc90cc0fa531d68318fc66fc841029db92b11d127d23d8e"
+    },
+    "basic-262/05-two-distinct-prepare-acks.json": {
+      "size": 7960,
+      "sha256": "ac74cd451d499e5759c1cee7100557eda368558e8a9326a87ac2aeb36df4a394"
+    },
+    "basic-262/06-ack-timeout-and-late-ack.json": {
+      "size": 9442,
+      "sha256": "753c7bb9bd20e7c510be1ace2b88000619da9138f514d0614315fe12f557e7ea"
+    },
+    "basic-262/07-prepare-disconnect-abort.json": {
+      "size": 10783,
+      "sha256": "36d7535b0f57486ca0bee1767bda86b55b8353018ec6e071098b940c115237e2"
+    },
+    "basic-262/08-reconnect-activated-state-only.json": {
+      "size": 11195,
+      "sha256": "4233852d34b3c07c07fcb3431598cf686370dcd9d6d28f8daee8f32e7f412dde"
+    },
+    "basic-262/acceptance-review.json": {
+      "size": 1660,
+      "sha256": "0a825bdc7aac6a1f87a357ded2935f2bb851aa718959a8d22920a9a872e28a20"
+    },
+    "basic-262/build.gradle": {
+      "size": 1707,
+      "sha256": "64268fac2c757811cbef713dbf62b18f000aaa72da0366b86c89ad693c9141d7"
+    },
+    "basic-262/candidate-binding.json": {
+      "size": 501109,
+      "sha256": "1db1875da1d47cd61b0d38ee032a5957644eb4009b27531f7570639827cea640"
+    },
+    "basic-262/clientA-owned-process.json": {
+      "size": 157,
+      "sha256": "6e78065ff2c7d69ed2e51f1764419cee35330df8191f20cec4e84a77125c4a24"
+    },
+    "basic-262/clientA-stderr.log": {
+      "size": 594,
+      "sha256": "2df80e2996da7a0c0777b1434dff04b408bbd06c9da2815927e1ebf737723c64"
+    },
+    "basic-262/clientA-stdout.log": {
+      "size": 28089,
+      "sha256": "23e1ba0929086829e33332130b49482c083d98069b25e29d96e53a8ad795742b"
+    },
+    "basic-262/clientA/client-observation.json": {
+      "size": 346,
+      "sha256": "a4517162eb58021300169545db903ddab8b3e5f8123153508a8124e282d18769"
+    },
+    "basic-262/clientA/client-observation.jsonl": {
+      "size": 3191,
+      "sha256": "0251ee8e9de2c8b46a8bb9f3b1990aa425446532140923f33e251712fff5a80a"
+    },
+    "basic-262/clientA/installed-source-23632.json": {
+      "size": 3130,
+      "sha256": "fd0fd9e11edf8a08387d544422ae34b6357137d608dacee15b2ee36197480ee0"
+    },
+    "basic-262/clientA/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "basic-262/clientA/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "basic-262/clientA/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "basic-262/clientB-disabled-owned-process.json": {
+      "size": 157,
+      "sha256": "65847c69d676eadfc0dd2baed25c8fe3743d6220b548f73a0b2ce8aa70e0e350"
+    },
+    "basic-262/clientB-disabled-stderr.log": {
+      "size": 594,
+      "sha256": "5e6b79eb34fdcb8497c2e860def555ad7cd6aa8803a3ef6b12ef3fe4a299b99e"
+    },
+    "basic-262/clientB-disabled-stdout.log": {
+      "size": 25809,
+      "sha256": "d2d5a78f995ef02ab575529cea2508060878f303d9990f254e9754787469235f"
+    },
+    "basic-262/clientB-enabled-owned-process.json": {
+      "size": 156,
+      "sha256": "4bb8b1ae734d42b24ff088a9cb89ce99e26ddf293eb256711c0c2021b8647d82"
+    },
+    "basic-262/clientB-enabled-stderr.log": {
+      "size": 594,
+      "sha256": "dea24d30204be9a93f797dcb046bc14b64b915d205746f30eabcf07c5824acac"
+    },
+    "basic-262/clientB-enabled-stdout.log": {
+      "size": 24502,
+      "sha256": "dbf7aa4b8856b37a7d1e7b0116252cb05c3b7513b67587569a42dffb7afc5acc"
+    },
+    "basic-262/clientB/client-observation.json": {
+      "size": 346,
+      "sha256": "a4517162eb58021300169545db903ddab8b3e5f8123153508a8124e282d18769"
+    },
+    "basic-262/clientB/client-observation.jsonl": {
+      "size": 2711,
+      "sha256": "3c04971baad41fff483b0dd5cf259ddd0525cdf7c583c38727f388faf1a0a5e7"
+    },
+    "basic-262/clientB/installed-source-28856.json": {
+      "size": 3130,
+      "sha256": "fbb8dfde39fe74fa16db4da7de89880054c0f8a96713adc4e9f1bdb7f3e470ee"
+    },
+    "basic-262/clientB/installed-source-9468.json": {
+      "size": 3129,
+      "sha256": "6708d4d1fbd22d1928c50cc5b4804b4f216a8fc757b52e70ebf911a196d6c0e0"
+    },
+    "basic-262/clientB/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "basic-262/clientB/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "basic-262/clientB/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "basic-262/commands.jsonl": {
+      "size": 821,
+      "sha256": "8096f579cfcf1be9765a7f680dd00eb7a66cfdd9295661c0557bc0481b176137"
+    },
+    "basic-262/helper.jar": {
+      "size": 14163,
+      "sha256": "b74e0da1500acc248e17286b8ebac3d6152ad6764e55e541e21211cc88af2474"
+    },
+    "basic-262/preparation.json": {
+      "size": 65668,
+      "sha256": "274be9bed7e3e257f2180683783d9a47608d07d3a728f72ddbe462e88e49cb6e"
+    },
+    "basic-262/run-result.json": {
+      "size": 693,
+      "sha256": "f49d1657559cd493cfad7e3699b6fb4bc946c47c8f3d76e86982704db215257f"
+    },
+    "basic-262/server-owned-process.json": {
+      "size": 153,
+      "sha256": "4e371ec0308c98a0af4cfb5a697304dc0d6e13dfaf5cdced27a5027344718ad0"
+    },
+    "basic-262/server-stderr.log": {
+      "size": 11703,
+      "sha256": "11bc6557268082cd79305177a89805aed0c9d38e46ea944df0a61fb4b80d648e"
+    },
+    "basic-262/server-stdout.log": {
+      "size": 27840,
+      "sha256": "25d5563b05a77d0ab5346af37797ee99d95aa54bb90e1748c38c1c89649f8a31"
+    },
+    "basic-262/server/banned-ips.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "basic-262/server/banned-players.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "basic-262/server/installed-source-8204.json": {
+      "size": 3117,
+      "sha256": "9441ddf9116c5e1ced4de78de1efe9335ed47998e307fae7f924097fc12b8c12"
+    },
+    "basic-262/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "basic-262/server/nekojs/server_scripts/owned-dynamic-items.js": {
+      "size": 382,
+      "sha256": "6f1d11a15f4726b000c02e72c0c3263d5e30d28a9e2d8706cc30775db762642c"
+    },
+    "basic-262/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "basic-262/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "basic-262/server/ops.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "basic-262/server/server-observation.json": {
+      "size": 6810,
+      "sha256": "73487d29f6dd12d968a53d3b1bf2d9f2beda6eafe7ad9ab91109509a0a02b6d5"
+    },
+    "basic-262/server/server-observation.jsonl": {
+      "size": 116214,
+      "sha256": "89255b9d84236da09869c5b1a947827b56b021559492d1726680556c30f5a39f"
+    },
+    "basic-262/server/usercache.json": {
+      "size": 215,
+      "sha256": "1891850aa3cdb69d81630b4bb71482fb33cef42098f490e634c0d270fb577976"
+    },
+    "basic-262/server/usernamecache.json": {
+      "size": 112,
+      "sha256": "d381a10030851d75f4fc936a7022789fc04fed6e89bd8c47156e9720f120e0ac"
+    },
+    "basic-262/server/whitelist.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "basic-262/settings.gradle": {
+      "size": 447,
+      "sha256": "6867d7aee6865263f3f369586573073e2eef5ef1404b889c49c9334b829eced3"
+    },
+    "basic-262/src/main/java/nekojs/acceptance/tcp/AcceptanceMod.java": {
+      "size": 3236,
+      "sha256": "4d1be0f6642abf587eef5704fcdd6b3c78fe68c07d8bf841f0832b2e03d200dc"
+    },
+    "basic-262/src/main/java/nekojs/acceptance/tcp/ClientObservation.java": {
+      "size": 3419,
+      "sha256": "dcbb3e00681c616c183727d317f99827857b61ae80750eabed0d8b91c1a4e250"
+    },
+    "basic-262/src/main/java/nekojs/acceptance/tcp/RegistryObservation.java": {
+      "size": 2405,
+      "sha256": "d7bbdf4e3b7d4cee6196c5998ccf73791f24e88db5b7ab869d0963b566eb9618"
+    },
+    "basic-262/src/main/java/nekojs/acceptance/tcp/ServerObservation.java": {
+      "size": 1949,
+      "sha256": "d3a7b761a4cb6ecdf6729cc955e776052a7cb9448c1b325a05774a8f52112d39"
+    },
+    "basic-262/src/main/java/nekojs/acceptance/tcp/mixin/CommitFaultMixin.java": {
+      "size": 1648,
+      "sha256": "3cbad2f3c2981d9908bbfdcc234ca821a476d23088c7cc53a8fa8329c621e6c2"
+    },
+    "basic-262/src/main/resources/META-INF/neoforge.mods.toml": {
+      "size": 218,
+      "sha256": "e2e96a229f8fa5ea73013810ffb49b0b1c445244c04db91c58bc64cf11714a45"
+    },
+    "basic-262/src/main/resources/owned-commit-fault.mixins.json": {
+      "size": 225,
+      "sha256": "47708cd1e21f3226a87652713f88c695a064f1ac82da540ff70b8503bccf2a7c"
+    },
+    "commit-261/01-empty-two-enabled-clients.json": {
+      "size": 1983,
+      "sha256": "ccf741b91a562ca35c72c131c5c692e9e692768c45d6decb5a3b90d8ab4f4c1e"
+    },
+    "commit-261/02-normal-dual-commit.json": {
+      "size": 4089,
+      "sha256": "e04eb8dda8a443c33d34b47c44eac0c674b1bcdf6726a5a934d531fcd4fbda21"
+    },
+    "commit-261/03-real-commit-activation-failure.json": {
+      "size": 6532,
+      "sha256": "b0a56278e51f460cf5d585ac2bcac3a6d49816544ec0f35c7b575f9fe9880aa4"
+    },
+    "commit-261/04-failed-catch-up-retains-prior-client-state.json": {
+      "size": 6544,
+      "sha256": "d186f88d660514fce8775fac6faefb2a09783cb0a0e90ce2fa983ce9933ebbc3"
+    },
+    "commit-261/05-reconnect-rejected-before-play.json": {
+      "size": 7210,
+      "sha256": "896bbef33beecc468fc8dad02d814353ae33b86d622fcf43c99c73f75bbc4219"
+    },
+    "commit-261/06-same-client-recovery-after-fault-removed.json": {
+      "size": 7611,
+      "sha256": "834949045b7bbb10fa7d3ff8075784721175e9a2a42e4effe9f586cc6682a700"
+    },
+    "commit-261/07-subsequent-dual-commit-after-recovery.json": {
+      "size": 9697,
+      "sha256": "be92bfee3c745fd3099f882b176455a10129a78a08354a9b690cc3fffc5bc743"
+    },
+    "commit-261/build.gradle": {
+      "size": 1708,
+      "sha256": "758bf648bcf0d36a16d7ea633d36abc4941238d0c698f7d49be72806e56340c8"
+    },
+    "commit-261/candidate-binding.json": {
+      "size": 501109,
+      "sha256": "a7939a5f5dc6209b1d30b5c0a35c734b53eafe921d5ec00f11d2265b959d2b31"
+    },
+    "commit-261/clientA-owned-process.json": {
+      "size": 157,
+      "sha256": "db623f0729caf902b706ac9dda16dcd44b8c6b3c9994c659f3d44569f2564553"
+    },
+    "commit-261/clientA-stderr.log": {
+      "size": 592,
+      "sha256": "aad4a37db525d16161682125d56037c1d0c9654ac86b7f6d64cd930dc90d27c1"
+    },
+    "commit-261/clientA-stdout.log": {
+      "size": 18041,
+      "sha256": "ec0839ab9658524f91f02a2798c352aacb9ea0775a386c703c48b83c39bfc242"
+    },
+    "commit-261/clientA/client-observation.json": {
+      "size": 380,
+      "sha256": "9d887c1328e7745d2695af4f3d1febac8bf88ab83b7b0f4bed1ecd1dc4d940b8"
+    },
+    "commit-261/clientA/client-observation.jsonl": {
+      "size": 4695,
+      "sha256": "4749795dfcc6b518cc64dba64723d942e386b5701b93c543715a8c5b0e02f98c"
+    },
+    "commit-261/clientA/installed-source-6020.json": {
+      "size": 3141,
+      "sha256": "0a2b9aa95b60d036a34e1e897ba858baa4a61f1818b88fb02de37da096dac56a"
+    },
+    "commit-261/clientA/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "commit-261/clientA/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "commit-261/clientA/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "commit-261/clientB-owned-process.json": {
+      "size": 158,
+      "sha256": "4e3cf0cca3d6918cd1c537c944d11986634bfe208b0f1ada2995e94a155dbb76"
+    },
+    "commit-261/clientB-stderr.log": {
+      "size": 595,
+      "sha256": "9708a21dd781ad41f4b2348626a6cd67686c8a057dce76e450a750ef76b3346b"
+    },
+    "commit-261/clientB-stdout.log": {
+      "size": 16580,
+      "sha256": "f56b50e1b184fe767682062fe7d5d3a9cc9122dc9b1e3ed9ea468f5765cb2ade"
+    },
+    "commit-261/clientB/client-observation.json": {
+      "size": 379,
+      "sha256": "227708a1a65293adfcb5e7d6aa0b991540fb217cb4acae2c78016e7e94087aa9"
+    },
+    "commit-261/clientB/client-observation.jsonl": {
+      "size": 2000,
+      "sha256": "9a9f18816b9eb034dfa0bdefc14e3ab0003dfc8525bbcc3564cc58f35b926d63"
+    },
+    "commit-261/clientB/installed-source-21228.json": {
+      "size": 3142,
+      "sha256": "152971436e7722dd626081aa3a710034af058e343452e417443acc8eedc61c69"
+    },
+    "commit-261/clientB/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "commit-261/clientB/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "commit-261/clientB/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "commit-261/commands.jsonl": {
+      "size": 583,
+      "sha256": "4bbb7f20f81e9ed1114c5a6453e13d44784cdb894d52afbf250c74b300900f72"
+    },
+    "commit-261/helper.jar": {
+      "size": 14163,
+      "sha256": "b74e0da1500acc248e17286b8ebac3d6152ad6764e55e541e21211cc88af2474"
+    },
+    "commit-261/preparation.json": {
+      "size": 65668,
+      "sha256": "b0b781f334fa29d67cf75104976e2a4b7e3ab4ced3488d7cb2bd9043ab1ff10d"
+    },
+    "commit-261/run-result.json": {
+      "size": 676,
+      "sha256": "f2b196123f964d11b841558185d30bb31c901b83ccd226df24ca75175ad47981"
+    },
+    "commit-261/server-owned-process.json": {
+      "size": 155,
+      "sha256": "41ff71313ff2eded4155710014eb64c80108a87e4a983b91dc00aac6fd5b6dbe"
+    },
+    "commit-261/server-stderr.log": {
+      "size": 11750,
+      "sha256": "e2a3ea9757a7eaaa2d7ca3773aba650b8640844541cb1faebc1af30a9cce6a08"
+    },
+    "commit-261/server-stdout.log": {
+      "size": 17240,
+      "sha256": "0b47c724566a93943e8ef36a727f1f3a70ef43617335facefbfe04249b1f59e6"
+    },
+    "commit-261/server/banned-ips.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "commit-261/server/banned-players.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "commit-261/server/installed-source-26572.json": {
+      "size": 3130,
+      "sha256": "d8df5d31b25b61490b3af77d65af11a978c1b59e50ed3aee48a16cb1fa42581c"
+    },
+    "commit-261/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "commit-261/server/nekojs/server_scripts/owned-dynamic-items.js": {
+      "size": 387,
+      "sha256": "7f3a93450bea11f034251062df1701f701ef60b7f624fda6ae6f5faee1ed97b2"
+    },
+    "commit-261/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "commit-261/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "commit-261/server/ops.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "commit-261/server/server-observation.json": {
+      "size": 5636,
+      "sha256": "e0b113a624dcd974a88b27ea4c9427894d5843f641975d55442a5b718e8e43eb"
+    },
+    "commit-261/server/server-observation.jsonl": {
+      "size": 76629,
+      "sha256": "32fe6394f5f732f2a9d1fd08a55bb9e37041d71542db4949d28460121ec482ca"
+    },
+    "commit-261/server/usercache.json": {
+      "size": 215,
+      "sha256": "8d480932f47320e483decc8da82e53406c22cda91e36e6cc15418c104b7bccc7"
+    },
+    "commit-261/server/usernamecache.json": {
+      "size": 112,
+      "sha256": "d381a10030851d75f4fc936a7022789fc04fed6e89bd8c47156e9720f120e0ac"
+    },
+    "commit-261/server/whitelist.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "commit-261/settings.gradle": {
+      "size": 447,
+      "sha256": "6867d7aee6865263f3f369586573073e2eef5ef1404b889c49c9334b829eced3"
+    },
+    "commit-261/src/main/java/nekojs/acceptance/tcp/AcceptanceMod.java": {
+      "size": 3236,
+      "sha256": "4d1be0f6642abf587eef5704fcdd6b3c78fe68c07d8bf841f0832b2e03d200dc"
+    },
+    "commit-261/src/main/java/nekojs/acceptance/tcp/ClientObservation.java": {
+      "size": 3419,
+      "sha256": "dcbb3e00681c616c183727d317f99827857b61ae80750eabed0d8b91c1a4e250"
+    },
+    "commit-261/src/main/java/nekojs/acceptance/tcp/RegistryObservation.java": {
+      "size": 2405,
+      "sha256": "d7bbdf4e3b7d4cee6196c5998ccf73791f24e88db5b7ab869d0963b566eb9618"
+    },
+    "commit-261/src/main/java/nekojs/acceptance/tcp/ServerObservation.java": {
+      "size": 1949,
+      "sha256": "d3a7b761a4cb6ecdf6729cc955e776052a7cb9448c1b325a05774a8f52112d39"
+    },
+    "commit-261/src/main/java/nekojs/acceptance/tcp/mixin/CommitFaultMixin.java": {
+      "size": 1648,
+      "sha256": "3cbad2f3c2981d9908bbfdcc234ca821a476d23088c7cc53a8fa8329c621e6c2"
+    },
+    "commit-261/src/main/resources/META-INF/neoforge.mods.toml": {
+      "size": 218,
+      "sha256": "e2e96a229f8fa5ea73013810ffb49b0b1c445244c04db91c58bc64cf11714a45"
+    },
+    "commit-261/src/main/resources/owned-commit-fault.mixins.json": {
+      "size": 225,
+      "sha256": "47708cd1e21f3226a87652713f88c695a064f1ac82da540ff70b8503bccf2a7c"
+    },
+    "commit-262/01-empty-two-enabled-clients.json": {
+      "size": 1983,
+      "sha256": "ccf741b91a562ca35c72c131c5c692e9e692768c45d6decb5a3b90d8ab4f4c1e"
+    },
+    "commit-262/02-normal-dual-commit.json": {
+      "size": 4089,
+      "sha256": "1354f7b4865e386b0fca6ad485b6d6ac3c387a92b15944624836526e05df834f"
+    },
+    "commit-262/03-real-commit-activation-failure.json": {
+      "size": 6532,
+      "sha256": "475796601f2b196191ca53ad052ee69993c7beb0625b12668f44279e6af92d27"
+    },
+    "commit-262/04-failed-catch-up-retains-prior-client-state.json": {
+      "size": 6544,
+      "sha256": "38dbcc4da8bd8f8acc243f1aa536b608df3401d7f5e5aa3b492335a81d06f66f"
+    },
+    "commit-262/05-reconnect-rejected-before-play.json": {
+      "size": 7210,
+      "sha256": "1d42bcb41f5bd88c9d6e5c85605a6fa42f81c9e06176ea306d9c40bc1d2351e7"
+    },
+    "commit-262/06-same-client-recovery-after-fault-removed.json": {
+      "size": 7611,
+      "sha256": "972e5b705706e21dd6f9bc439e5c8a6fcd828cb0b61cbdd8f4d99ecc39529308"
+    },
+    "commit-262/07-subsequent-dual-commit-after-recovery.json": {
+      "size": 9697,
+      "sha256": "6be2d2d6517bb9e34fc2bd5c67260679ed7a742e5c88c056b4e6a30f84743bf4"
+    },
+    "commit-262/build.gradle": {
+      "size": 1708,
+      "sha256": "33fd4f4337ddffe444f9e305a916d601ec1991c2110852305161a53e4761d97b"
+    },
+    "commit-262/candidate-binding.json": {
+      "size": 501109,
+      "sha256": "1db1875da1d47cd61b0d38ee032a5957644eb4009b27531f7570639827cea640"
+    },
+    "commit-262/clientA-owned-process.json": {
+      "size": 158,
+      "sha256": "855426f16c5316213d054a4a4391691fe4050261a8b5f03c76ec92503519a4d0"
+    },
+    "commit-262/clientA-stderr.log": {
+      "size": 595,
+      "sha256": "35d1169fb4f76a0c23f02926ab96e46d67b31e80e4fb7723f514f6607a27d6bf"
+    },
+    "commit-262/clientA-stdout.log": {
+      "size": 28211,
+      "sha256": "6758816778fe9f8df09334af94db96a583fb2723b6178a3981012c14a498f0bc"
+    },
+    "commit-262/clientA/client-observation.json": {
+      "size": 380,
+      "sha256": "9d887c1328e7745d2695af4f3d1febac8bf88ab83b7b0f4bed1ecd1dc4d940b8"
+    },
+    "commit-262/clientA/client-observation.jsonl": {
+      "size": 4695,
+      "sha256": "4749795dfcc6b518cc64dba64723d942e386b5701b93c543715a8c5b0e02f98c"
+    },
+    "commit-262/clientA/installed-source-29224.json": {
+      "size": 3142,
+      "sha256": "5a8b93b0b6a6b19db19bc6b1a2ace90b4f589cae7d03fc6ad99fbd74f3ff7dd9"
+    },
+    "commit-262/clientA/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "commit-262/clientA/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "commit-262/clientA/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "commit-262/clientB-owned-process.json": {
+      "size": 158,
+      "sha256": "cb844956c71112c85cdf0bdee2ea9977d883a92b692aee5cc9dc587c5ff396de"
+    },
+    "commit-262/clientB-stderr.log": {
+      "size": 595,
+      "sha256": "c28ee4a3bf797f60e9493e36ac7e58a57d5f37201988ebc0e70d9631f741aa08"
+    },
+    "commit-262/clientB-stdout.log": {
+      "size": 26573,
+      "sha256": "90cb764fcc29d3f734d70445e40a6161129584e4559baf0c03b063598fadd3f3"
+    },
+    "commit-262/clientB/client-observation.json": {
+      "size": 379,
+      "sha256": "227708a1a65293adfcb5e7d6aa0b991540fb217cb4acae2c78016e7e94087aa9"
+    },
+    "commit-262/clientB/client-observation.jsonl": {
+      "size": 2000,
+      "sha256": "9a9f18816b9eb034dfa0bdefc14e3ab0003dfc8525bbcc3564cc58f35b926d63"
+    },
+    "commit-262/clientB/installed-source-28380.json": {
+      "size": 3142,
+      "sha256": "c963404929dc9468f57d33682d97ca3b3cfe09e0ec9e5c85a08ab5903ccdb4b0"
+    },
+    "commit-262/clientB/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "commit-262/clientB/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "commit-262/clientB/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "commit-262/commands.jsonl": {
+      "size": 583,
+      "sha256": "4bbb7f20f81e9ed1114c5a6453e13d44784cdb894d52afbf250c74b300900f72"
+    },
+    "commit-262/helper.jar": {
+      "size": 14163,
+      "sha256": "b74e0da1500acc248e17286b8ebac3d6152ad6764e55e541e21211cc88af2474"
+    },
+    "commit-262/preparation.json": {
+      "size": 65668,
+      "sha256": "229637dcf506e17e8ddc4979f16feaab40ebf3f8ee360bdbf972e82fc94ef458"
+    },
+    "commit-262/run-result.json": {
+      "size": 676,
+      "sha256": "f2b196123f964d11b841558185d30bb31c901b83ccd226df24ca75175ad47981"
+    },
+    "commit-262/server-owned-process.json": {
+      "size": 155,
+      "sha256": "671134e6634501156b6732d9016f1f66bb6e9c3efbe04f3f649e1266dfb129b9"
+    },
+    "commit-262/server-stderr.log": {
+      "size": 11704,
+      "sha256": "0e4307a86733a0060bbcf4ae648f8f85f23bd1c392c32a141d644a8797912ed2"
+    },
+    "commit-262/server-stdout.log": {
+      "size": 26285,
+      "sha256": "0f5c5e20985d62d6b349a874f7f975a00ca8e7357763b39a30b9b257ba7555eb"
+    },
+    "commit-262/server/banned-ips.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "commit-262/server/banned-players.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "commit-262/server/installed-source-25760.json": {
+      "size": 3130,
+      "sha256": "3a575658fb9e8350b35a896417ecfbf0c611c8557435d0de2a3812551f3e077f"
+    },
+    "commit-262/server/nekojs/client_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "d7d7ebeb82cd5676f5788883b7c69aea62f3facfeea370220dd2e5c3eb562a72"
+    },
+    "commit-262/server/nekojs/server_scripts/owned-dynamic-items.js": {
+      "size": 387,
+      "sha256": "7f3a93450bea11f034251062df1701f701ef60b7f624fda6ae6f5faee1ed97b2"
+    },
+    "commit-262/server/nekojs/server_scripts/src/main.js": {
+      "size": 87,
+      "sha256": "f15d497d6f8e5c94ea07e4e1b003a0796bf53012ed9fcd980bbe0034bf92cc1b"
+    },
+    "commit-262/server/nekojs/startup_scripts/src/main.js": {
+      "size": 89,
+      "sha256": "ce7b8f8dd982fa1d41c0c5c795c7dbe510f26936fb9f1d7afc116044f874534a"
+    },
+    "commit-262/server/ops.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "commit-262/server/server-observation.json": {
+      "size": 5636,
+      "sha256": "d916db9de67ac7b83c6e08b48b7ab11cbb5e86f2c5f79c6dcfd6af0c9d8023d9"
+    },
+    "commit-262/server/server-observation.jsonl": {
+      "size": 77166,
+      "sha256": "f372fbb9656c23d80d0ad21edc9a0ec60b59814f0c763f7fd573bd693d012002"
+    },
+    "commit-262/server/usercache.json": {
+      "size": 215,
+      "sha256": "dab7049baae4efec6de1ac7de24e17c43f3ffcf85b6fdf3098af88ff10b238ab"
+    },
+    "commit-262/server/usernamecache.json": {
+      "size": 112,
+      "sha256": "d381a10030851d75f4fc936a7022789fc04fed6e89bd8c47156e9720f120e0ac"
+    },
+    "commit-262/server/whitelist.json": {
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "commit-262/settings.gradle": {
+      "size": 447,
+      "sha256": "6867d7aee6865263f3f369586573073e2eef5ef1404b889c49c9334b829eced3"
+    },
+    "commit-262/src/main/java/nekojs/acceptance/tcp/AcceptanceMod.java": {
+      "size": 3236,
+      "sha256": "4d1be0f6642abf587eef5704fcdd6b3c78fe68c07d8bf841f0832b2e03d200dc"
+    },
+    "commit-262/src/main/java/nekojs/acceptance/tcp/ClientObservation.java": {
+      "size": 3419,
+      "sha256": "dcbb3e00681c616c183727d317f99827857b61ae80750eabed0d8b91c1a4e250"
+    },
+    "commit-262/src/main/java/nekojs/acceptance/tcp/RegistryObservation.java": {
+      "size": 2405,
+      "sha256": "d7bbdf4e3b7d4cee6196c5998ccf73791f24e88db5b7ab869d0963b566eb9618"
+    },
+    "commit-262/src/main/java/nekojs/acceptance/tcp/ServerObservation.java": {
+      "size": 1949,
+      "sha256": "d3a7b761a4cb6ecdf6729cc955e776052a7cb9448c1b325a05774a8f52112d39"
+    },
+    "commit-262/src/main/java/nekojs/acceptance/tcp/mixin/CommitFaultMixin.java": {
+      "size": 1648,
+      "sha256": "3cbad2f3c2981d9908bbfdcc234ca821a476d23088c7cc53a8fa8329c621e6c2"
+    },
+    "commit-262/src/main/resources/META-INF/neoforge.mods.toml": {
+      "size": 218,
+      "sha256": "e2e96a229f8fa5ea73013810ffb49b0b1c445244c04db91c58bc64cf11714a45"
+    },
+    "commit-262/src/main/resources/owned-commit-fault.mixins.json": {
+      "size": 225,
+      "sha256": "47708cd1e21f3226a87652713f88c695a064f1ac82da540ff70b8503bccf2a7c"
+    },
+    "tools/bind-owner-stamp-runtime.py": {
+      "size": 3875,
+      "sha256": "aac006780e7b93f7b2a9dc1d65782deb9e4a2094fceac137b6cb1b31393ef15e"
+    },
+    "tools/derive-owner-stamp-basic-tcp.py": {
+      "size": 1064,
+      "sha256": "093ca2005ee10af42afb1f808ec7a0c96556f08162eae691ee81878a5072971d"
+    },
+    "tools/derive-owner-stamp-commit-tcp.py": {
+      "size": 1018,
+      "sha256": "e6f937b19d2f03119a40338b77832e87502758a2ffaaeb3c3cb713042cf65e9e"
+    },
+    "tools/derive-owner-stamp-tcp-evidence.py": {
+      "size": 2005,
+      "sha256": "a1f7277eef9bb93c6cb20351d2b7afcf5e07a217ab2f93ce07c153ecb2db02fb"
+    },
+    "tools/owner-stamp-basic-tcp-261-helper-build.log": {
+      "size": 2971,
+      "sha256": "ac7c8228ac56cae13a2bd65f158adb0414273e6b0fa27ae0ca4e419e05b4ed9f"
+    },
+    "tools/owner-stamp-basic-tcp-261-run.log": {
+      "size": 944,
+      "sha256": "c4b4df34c2bf1edb9877110736bdf1676dad91987139bc5aa76471600600ab06"
+    },
+    "tools/owner-stamp-basic-tcp-262-helper-build.log": {
+      "size": 2969,
+      "sha256": "9af51d5175de6b0f53e0916b6d407da877abb773cbd6d356cd660d546d4cfcda"
+    },
+    "tools/owner-stamp-basic-tcp-262-run.log": {
+      "size": 944,
+      "sha256": "c4b4df34c2bf1edb9877110736bdf1676dad91987139bc5aa76471600600ab06"
+    },
+    "tools/owner-stamp-basic-tcp-driver.log": {
+      "size": 2950,
+      "sha256": "a693f831ff5fae350cd6487692a46caa971e4a1f59debb7076c460aa7516e08d"
+    },
+    "tools/owner-stamp-runtime-binding.log": {
+      "size": 182,
+      "sha256": "bde318c97d375974c56b27e747be9e74b2aaedca07376231f9eacded8a2c491b"
+    },
+    "tools/owner-stamp-tcp-261-helper-build.log": {
+      "size": 2973,
+      "sha256": "73b5ace702c211f35e9972c6d0f4e5b88fe44ab5290c1423b3144f53a1eaf7eb"
+    },
+    "tools/owner-stamp-tcp-261-run.log": {
+      "size": 948,
+      "sha256": "2a9fa047389d0ff3389f7461da74f976111f070fd334d42afad59be46b9e188f"
+    },
+    "tools/owner-stamp-tcp-262-helper-build.log": {
+      "size": 2971,
+      "sha256": "1d3616dc6162397bd5b0552b2a3db8be659fb1a25a30533f8f310a607ff7eed5"
+    },
+    "tools/owner-stamp-tcp-262-run.log": {
+      "size": 948,
+      "sha256": "2a9fa047389d0ff3389f7461da74f976111f070fd334d42afad59be46b9e188f"
+    },
+    "tools/owner-stamp-tcp-driver.log": {
+      "size": 1016,
+      "sha256": "620fef1351bac9ceceef61e1518adee5720eee68046eaf51f21099db7af9af9b"
+    },
+    "tools/prepare-owner-stamp-basic-tcp.py": {
+      "size": 9416,
+      "sha256": "728d47d3e1688ef0bf84d928416cacaf29b830f37a50e12891cac192b3dafe5b"
+    },
+    "tools/prepare-owner-stamp-tcp.py": {
+      "size": 9433,
+      "sha256": "8260762a5b03ae3655925cadad5c50d6fc64c615a9431251c99cb16080cc4e1f"
+    },
+    "tools/rcon.py": {
+      "size": 2135,
+      "sha256": "e1b6166174d694019c833fca66ed48a433254bbdf5cb3ccb5bfd7a8694b6e8ae"
+    },
+    "tools/run-owner-stamp-basic-tcp-261.py": {
+      "size": 12834,
+      "sha256": "fcd145396b09ade91623d34cfb73d7d0f5077014976bb66beada78ea16c8fbb0"
+    },
+    "tools/run-owner-stamp-basic-tcp-262.py": {
+      "size": 12834,
+      "sha256": "58a83313ed94afb9698ce272417fc55f27c51faa8b06471d494ab3ad58269557"
+    },
+    "tools/run-owner-stamp-basic-tcp-all.py": {
+      "size": 1595,
+      "sha256": "9c8f49bd09f946d427771844fab47fc3923643d97bfbd8934c34d4e4be5fd86d"
+    },
+    "tools/run-owner-stamp-tcp-261.py": {
+      "size": 14241,
+      "sha256": "6f99948aec9f06c12624ab10d417d523c037dc88f81a8e6e92a9bb740f22d2ad"
+    },
+    "tools/run-owner-stamp-tcp-262.py": {
+      "size": 14241,
+      "sha256": "3759d7bf8fd417d521efddaeb6c5eeefeb626cc60f78db14260cc6a2c971b64a"
+    },
+    "tools/run-owner-stamp-tcp-all.py": {
+      "size": 1547,
+      "sha256": "9e083bb06486a9e6ca05ee11fad0e36ed5049c66267fcf949c69b8ed6895f60e"
+    },
+    "tools/seal-owner-stamp-tcp.py": {
+      "size": 5502,
+      "sha256": "fb2cb890f6a75d7b849a8ac15ffbe758b49b72b367cfeb19db8dc11641102d03"
+    },
+    "tools/verify-owner-stamp-basic-tcp-261.py": {
+      "size": 5517,
+      "sha256": "28f6c119cf3a7f695978381cdfdf5002f0a692afdb18e9c77d6fcb54cf1cc66c"
+    },
+    "tools/verify-owner-stamp-basic-tcp-262.py": {
+      "size": 5517,
+      "sha256": "6b82c5f4fd5c2771d224026ddbb7e5bc685f389eb5083b74084c1b7a55622dad"
+    },
+    "tools/verify-owner-stamp-tcp.py": {
+      "size": 5700,
+      "sha256": "185e5117b5eee609fdd44baf624ef5645dfc20100e4ca63005d2371817acbf9d"
+    }
+  },
+  "redactedOriginalHashes": {},
+  "exclusions": [
+    "world binaries",
+    "server.properties",
+    "launch-descriptor.json",
+    "*-arguments.txt",
+    "runtime libraries",
+    "human acceptance"
+  ]
+}
