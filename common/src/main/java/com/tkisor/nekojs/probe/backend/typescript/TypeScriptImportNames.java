@@ -56,22 +56,23 @@ final class TypeScriptImportNames {
 
     private static void reserveImportNames(String statement, Set<String> reserved) {
         // Opaque imports stay unchanged. Reserving binding identifiers also covers default and namespace
-        // bindings; quoted module specifiers bind nothing, so their contents are skipped.
+        // bindings; quoted module specifiers bind nothing, so their contents are skipped. A string closes
+        // only on the same quote kind — the other quote is content, as in import { "a'b" as $X }.
         String decoded = UNICODE_ESCAPE.matcher(statement).replaceAll(match -> {
             int codePoint = Integer.parseInt(match.group(1) != null ? match.group(1) : match.group(2), 16);
             return java.util.regex.Matcher.quoteReplacement(Character.isValidCodePoint(codePoint)
                     ? new String(Character.toChars(codePoint)) : match.group());
         });
         StringBuilder identifier = new StringBuilder();
-        boolean quoted = false;
+        int quote = 0;
         int[] codePoints = decoded.codePoints().toArray();
         for (int index = 0; index < codePoints.length; index++) {
             int codePoint = codePoints[index];
-            if (quoted) {
+            if (quote != 0) {
                 if (codePoint == '\\' && index + 1 < codePoints.length) {
                     index++;
-                } else if (codePoint == '"' || codePoint == '\'') {
-                    quoted = false;
+                } else if (codePoint == quote) {
+                    quote = 0;
                 }
                 continue;
             }
@@ -80,7 +81,7 @@ final class TypeScriptImportNames {
                     reserved.add(identifier.toString());
                     identifier.setLength(0);
                 }
-                quoted = true;
+                quote = codePoint;
                 continue;
             }
             if (codePoint == '$' || codePoint == '_' || Character.isUnicodeIdentifierPart(codePoint)) {

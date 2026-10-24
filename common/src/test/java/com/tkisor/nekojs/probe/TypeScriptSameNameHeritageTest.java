@@ -61,6 +61,34 @@ class TypeScriptSameNameHeritageTest {
     }
 
     @Test
+    void mixedQuoteImportBindingsStayReservedForAllocatedPrivateNames() throws Exception {
+        var aliases = new TypeAliasRegistry();
+        var renderer = new TypeScriptClassRenderer(aliases);
+        var generator = new IndexFileGenerator(renderer, new AdapterAliasGenerator(aliases));
+        Class<?> usage = com.tkisor.nekojs.probe.testfixture.samechild.GetterUsage.class;
+        Class<?> other = com.tkisor.nekojs.probe.testfixture.sameother.PersistentData.class;
+        String module = "java:" + other.getPackageName().replace('.', '/');
+        String quotedImport = "import { \"a'b\" as $NekoImport$PersistentData } from \"" + module + "\";";
+        renderer.overrideGetter(usage, "quoted", "$NekoImport$PersistentData", quotedImport);
+        List<Class<?>> classes = List.of(BASE, CHILD, other, usage);
+        Set<String> fqns = classes.stream().map(Class::getName).collect(java.util.stream.Collectors.toSet());
+        for (Class<?> type : classes) generator.predeclareClass(type.getName(), new TypeReflector().reflect(type), Set.of());
+        String child = generator.generate(CHILD.getPackageName(), List.of("PersistentData", "GetterUsage"), List.of(), fqns);
+        Path output = Path.of("build/probe-ts-same-name-heritage-mixed-quote-import");
+        Files.createDirectories(output);
+        Files.writeString(output.resolve("child.d.ts"), child);
+        for (Class<?> type : List.of(BASE, other)) {
+            Files.writeString(output.resolve(type == BASE ? "base.d.ts" : "other.d.ts"),
+                    generator.generate(type.getPackageName(), List.of("PersistentData"), List.of(), fqns));
+        }
+        String baseModule = "java:" + BASE.getPackageName().replace('.', '/');
+        assertTrue(child.contains(quotedImport), child);
+        assertTrue(child.contains("get quoted(): $NekoImport$PersistentData;"), child);
+        assertFalse(child.contains("as $NekoImport$PersistentData } from \"" + baseModule + "\""), child);
+        assertTrue(child.contains("as $NekoImport$PersistentData1 } from \"" + baseModule + "\""), child);
+    }
+
+    @Test
     void moduleReferencesKeepImportedHomonymsAndLocalDeclarationsDistinct() throws Exception {
         var aliases = new TypeAliasRegistry();
         var generator = new IndexFileGenerator(new TypeScriptClassRenderer(aliases), new AdapterAliasGenerator(aliases));
