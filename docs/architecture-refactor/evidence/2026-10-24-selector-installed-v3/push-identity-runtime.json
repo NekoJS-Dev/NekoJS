@@ -1,5 +1,5 @@
 {
-  "sourceTrial": "build/closeout-selector-backend-installed-v2 (helper jar sha256 b7a064a3f69dcef8aafa4c65f5d758a7135c72ecabfbf0c0287f1dedb77cff35, identical on both nodes)",
+  "sourceTrial": "build/closeout-selector-backend-installed-v2 (PushIdentity.class sha256 b7a064a3f69dcef8aafa4c65f5d758a7135c72ecabfbf0c0287f1dedb77cff35 identical on both nodes; the two owned-push-identity.jar files differ: 208f198d1606b5403883a68c430d08232fca25607f24187c6551dd5346f244d5 and 6734e141d73ee2c84a1d70920c571366a67802061b97bd952c9d05262d257c10)",
   "note": "First capture per node; MinecartFurnace runtime class is net.minecraft.world.entity.vehicle.minecart.MinecartFurnace on both loaders. Field push is declared on MinecartFurnace itself; methods push(double,double,double)/push(Vec3) are declared on Entity, push(Entity) on AbstractMinecart.",
   "nodes": {
     "26.1.2": {

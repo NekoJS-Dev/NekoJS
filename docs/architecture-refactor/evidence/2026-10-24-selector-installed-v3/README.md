@@ -13,7 +13,7 @@
 
 ## push 继承家族的运行时身份与 AST 差分
 
-[push-identity-runtime.json](push-identity-runtime.json)：两加载器（26.1.2 NeoForge/Fabric）运行时一致确认——实际类为 `net.minecraft.world.entity.vehicle.minecart.MinecartFurnace`（非旧简称 `vehicle.MinecartFurnace`），`push` 字段（public Vec3）声明在本类，`push(double,double,double)`/`push(Vec3)` 声明在 `Entity`，`push(Entity)` 声明在 `AbstractMinecart`；helper jar 两节点 SHA256 相同。
+[push-identity-runtime.json](push-identity-runtime.json)：两加载器（26.1.2 NeoForge/Fabric）运行时一致确认——实际类为 `net.minecraft.world.entity.vehicle.minecart.MinecartFurnace`（非旧简称 `vehicle.MinecartFurnace`），`push` 字段（public Vec3）声明在本类，`push(double,double,double)`/`push(Vec3)` 声明在 `Entity`，`push(Entity)` 声明在 `AbstractMinecart`；两节点 helper 内嵌的 `PushIdentity.class` 摘要相同（b7a064a3…），但两个 `owned-push-identity.jar` 文件摘要不同（208f198d… / 6734e141…，身份采集自 v2 安装目录）。
 
 [ast-diff-summary.json](ast-diff-summary.json)（TypeScript AST 语义对比，忽略包序与行号）：
 
