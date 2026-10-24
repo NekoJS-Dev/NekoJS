@@ -9,6 +9,15 @@
 >
 > Two backends are built in: `typescript:builtin` and `python:builtin`, registered by common's `NekoProbeBuiltinPlugin`. Third-party plugins can register their own backends through `registerProbeBackends`.
 
+When a real Java instance field and method have the same exposed name, TypeScript keeps the field
+and exposes the method through Graal's signature selector. For example, read or write `vector.x`
+as a number and call `vector["x()"]()`. A setter overload can use `matrix["m00(double)"](0.5)`.
+The selector uses the original Java method name and erased parameter types, with fully qualified
+reference types, binary inner-class names (`Outer$Inner`) and array spelling for varargs (`Type[]`).
+Relevant parent contracts also use selectors; safe branches keep their ordinary method calls.
+Regenerate with `/nekojs probe` rather than editing generated declarations. This declaration migration
+does not change JavaScript execution, Java or Python APIs, or hidden/excluded member permissions.
+
 <a id="wiki-section-2"></a>
 ## Commands
 

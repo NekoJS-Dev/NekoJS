@@ -9,6 +9,13 @@
 >
 > 内置两个 backend：`typescript:builtin` 与 `python:builtin`（由 common 的 `NekoProbeBuiltinPlugin` 插件注册）。第三方插件可通过 `registerProbeBackends` 注册自己的 backend。
 
+真实 Java 实例字段和方法的暴露名称相同时，TypeScript 保留字段，方法使用 Graal 已有的签名选择器。
+例如 `vector.x` 仍按数字读写，方法改为 `vector["x()"]()`；setter 重载可写为
+`matrix["m00(double)"](0.5)`。选择器使用原始 Java 方法名和擦除后的参数类型，引用类型使用完整名称，
+内部类使用二进制名称（`Outer$Inner`），可变参数使用数组拼写（`Type[]`）。必要的父合同也使用选择器，
+安全分支保留普通方法调用。运行 `/nekojs probe` 重新生成，无需手改声明。
+这次声明迁移不改变 JavaScript 执行、Java/Python API 或隐藏、排除及权限规则。
+
 <a id="wiki-section-2"></a>
 ## 命令一览
 

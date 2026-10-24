@@ -105,6 +105,7 @@ public final class TypeReflector {
             if (!Modifier.isPublic(field.getModifiers())) continue;
             boolean isStatic = Modifier.isStatic(field.getModifiers());
             FieldDecl f = new FieldDecl(field.getName(), TypeSlot.of(field.getGenericType(), toRef(field.getGenericType())));
+            f.sourceField = field;
             f.isStatic = isStatic;
             f.isFinal = Modifier.isFinal(field.getModifiers());
             f.docs.addAll(AnnotatedDocs.fieldDocs(field));
@@ -127,6 +128,7 @@ public final class TypeReflector {
             if (Modifier.isStatic(field.getModifiers()) && Modifier.isPublic(field.getModifiers())
                     && Modifier.isFinal(field.getModifiers())) {
                 FieldDecl f = new FieldDecl(field.getName(), TypeSlot.of(field.getGenericType(), toRef(field.getGenericType())));
+                f.sourceField = field;
                 f.isStatic = true;
                 f.isFinal = true;
                 f.docs.addAll(AnnotatedDocs.fieldDocs(field));
@@ -139,6 +141,7 @@ public final class TypeReflector {
         for (var field : cls.getDeclaredFields()) {
             if (field.isEnumConstant()) {
                 FieldDecl f = new FieldDecl(field.getName(), TypeSlot.of(cls, toRef(cls)));
+                f.sourceField = field;
                 f.isStatic = true;
                 f.isEnumConstant = true;
                 f.docs.addAll(AnnotatedDocs.fieldDocs(field));
@@ -147,6 +150,7 @@ public final class TypeReflector {
                 // 非常量公开字段：renderer 的 renderEnum 只发射 isEnumConstant，这里仅供
                 // import 收集镜像旧 collectImports（旧实现对枚举的公开字段类型也收集 import）
                 FieldDecl f = new FieldDecl(field.getName(), TypeSlot.of(field.getGenericType(), toRef(field.getGenericType())));
+                f.sourceField = field;
                 f.isStatic = Modifier.isStatic(field.getModifiers());
                 f.isFinal = Modifier.isFinal(field.getModifiers());
                 decl.fields.add(f);

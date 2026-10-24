@@ -48,6 +48,12 @@ public final class FunctionalInterfaceResolver {
 
     /** Resolves an inherited method against a class or interface's actual generic hierarchy. */
     public static Signature resolve(Type declared, Method method) {
+        return resolve(declared, method, Map.of());
+    }
+
+    /** Uses caller-supplied, capture-free method variable names in an edited target declaration scope. */
+    public static Signature resolve(Type declared, Method method, Map<TypeVariable<?>, String> variableNames) {
+        variableNames = Map.copyOf(variableNames);
         Map<TypeVariable<?>, Type> arguments = interfaceArguments(declared, method.getDeclaringClass(), Map.of(),
                 new HashSet<>());
         if (arguments == null) return null;
@@ -63,8 +69,8 @@ public final class FunctionalInterfaceResolver {
         for (TypeVariable<?> variable : method.getTypeParameters()) usedNames.add(variable.getName());
         List<TypeVariable<?>> variables = new java.util.ArrayList<>();
         for (TypeVariable<?> variable : method.getTypeParameters()) {
-            String name = variable.getName();
-            if (classNames.contains(name)) {
+            String name = variableNames.getOrDefault(variable, variable.getName());
+            if (!variableNames.containsKey(variable) && classNames.contains(name)) {
                 int suffix = 1;
                 while (usedNames.contains(name + suffix)) suffix++;
                 name += suffix;
@@ -82,6 +88,11 @@ public final class FunctionalInterfaceResolver {
                 .toList();
         Type result = substitute(method.getGenericReturnType(), arguments, new HashSet<>());
         return new Signature(method, parameters, result, variables);
+    }
+
+    /** Substitutes already-resolved arguments without re-expanding replacements from another scope. */
+    public static Type substitute(Type declared, Map<TypeVariable<?>, Type> arguments) {
+        return substitute(declared, arguments, new HashSet<>());
     }
 
     /** Returns the raw class for class and parameterized reflection types. */

@@ -28,12 +28,17 @@ public final class TypeScriptClassRenderer {
     private Set<BeanAliasExclusionCatalogEntry> beanAliasExclusions = Set.of();
     private Map<String, Set<String>> covariantTypeParameters = Map.of();
     private TypeScriptStaticInheritance staticInheritance = new TypeScriptStaticInheritance(Map.of());
+    private TypeScriptMethodSelectors methodSelectors = new TypeScriptMethodSelectors(Map.of());
+    private Map<String, TypeDecl> selectorDeclarations = Map.of();
 
     /** Uses this render's edited declarations; parent lookups never reflect over hidden or authored types. */
     public Set<String> setClassDeclarations(Map<String, TypeDecl> declarations) {
         staticInheritance = new TypeScriptStaticInheritance(declarations);
+        selectorDeclarations = Map.copyOf(declarations);
+        refreshMethodSelectors();
+        Set<String> selectorTypes = methodSelectors.affectedTypes();
         return declarations.values().stream().filter(declaration -> staticInheritance.project(declaration) != null
-                        || hasInheritedBeanProjection(declaration))
+                        || hasInheritedBeanProjection(declaration) || selectorTypes.contains(declaration.fqn))
                 .map(declaration -> declaration.fqn).collect(Collectors.toUnmodifiableSet());
     }
 
@@ -46,11 +51,23 @@ public final class TypeScriptClassRenderer {
     /** Replaces the per-snapshot rules; matching never expands to subclasses or same-name properties. */
     public void setBeanAliasExclusions(List<BeanAliasExclusionCatalogEntry> exclusions) {
         beanAliasExclusions = Set.copyOf(exclusions);
+        refreshMethodSelectors();
+    }
+
+    private void refreshMethodSelectors() {
+        methodSelectors = new TypeScriptMethodSelectors(selectorDeclarations, this::emitsInstanceMethod);
     }
 
     private boolean excludesBeanAlias(TypeDecl declaration, MethodDecl getter) {
         return beanAliasExclusions.stream().anyMatch(entry -> entry.targetType() == declaration.sourceClass
                 && entry.getterName().equals(getter.name) && entry.propertyName().equals(getter.property));
+    }
+
+    private boolean emitsInstanceMethod(TypeDecl declaration, MethodDecl method) {
+        return declaration.kind != TypeDecl.Kind.CLASS || !method.isGetter
+                || !isValidTsIdentifier(method.property) || beanPropertyConflicts(declaration).contains(method.property)
+                || excludesBeanAlias(declaration, method)
+                || !getterOverrides.getOrDefault(declaration.fqn, Map.of()).containsKey(method.property);
     }
 
     // 覆盖 getter 的返回类型 (fqn -> getter 属性名 -> { returnType, importStatement })
@@ -85,6 +102,7 @@ public final class TypeScriptClassRenderer {
     public void overrideGetter(Class<?> cls, String getterName, String returnType, String importStatement) {
         getterOverrides.computeIfAbsent(cls.getName(), k -> new LinkedHashMap<>())
                 .put(getterName, new GetterOverride(returnType, importStatement));
+        refreshMethodSelectors();
     }
 
     /**
@@ -123,6 +141,8 @@ public final class TypeScriptClassRenderer {
         scoped.beanAliasExclusions = beanAliasExclusions;
         scoped.covariantTypeParameters = covariantTypeParameters;
         scoped.staticInheritance = staticInheritance;
+        scoped.methodSelectors = methodSelectors;
+        scoped.selectorDeclarations = selectorDeclarations;
         return scoped.render(decl);
     }
 
@@ -222,11 +242,11 @@ public final class TypeScriptClassRenderer {
         }
         Set<String> propertyConflicts = beanPropertyConflicts(d);
         // Bean aliases supplement the real accessor methods unless an instance member owns the name.
-        for (MethodDecl m : d.methods) {
+        for (MethodDecl m : methodSelectors.methods(d)) {
             if (m.hidden || !m.isGetter) continue;
             // Invalid identifiers and occupied property names retain their actual accessor methods.
             if (!isValidTsIdentifier(m.property) || propertyConflicts.contains(m.property) || excludesBeanAlias(d, m)) {
-                sb.append(formatMethod(m, false));
+                appendInstanceMethod(sb, d, m);
                 continue;
             }
             appendDoc(sb, "        ", m.docs);
@@ -241,7 +261,9 @@ public final class TypeScriptClassRenderer {
             String type = renderSlot(m.returnType, false);
             boolean fieldProperty = appendInheritedBeanProperty(sb, d, m.property, type, m.setterParamType);
             if (!fieldProperty) sb.append("        get ").append(tsMemberName(m.property)).append("(): ").append(type).append(";\n");
-            sb.append("        ").append(tsMemberName(m.effectiveName())).append("(): ").append(type).append(";\n");
+            for (String name : methodSelectors.names(d, m)) {
+                sb.append("        ").append(tsMemberName(name)).append("(): ").append(type).append(";\n");
+            }
             if (!fieldProperty && m.setterParamType != null) {
                 sb.append("        set ").append(tsMemberName(m.property)).append("(value: ")
                   .append(renderSlot(m.setterParamType, true)).append(");\n");
@@ -305,10 +327,48 @@ public final class TypeScriptClassRenderer {
 
     private void appendInstanceMethods(StringBuilder sb, TypeDecl d) {
         // Explicit setters remain callable even when their Bean alias conflicts or no getter exists.
-        for (MethodDecl m : d.methods) {
-            if (m.hidden || m.isConstructor || m.isStatic || m.isGetter) continue;
-            sb.append(formatMethod(m, false));
+        appendProjectedMethods(sb, d, methodSelectors.methods(d).stream().filter(method -> !method.hidden
+                && !method.isConstructor && !method.isStatic && !method.isGetter).toList());
+    }
+
+    private record NamedMethod(String name, MethodDecl method) {}
+
+    private void appendProjectedMethods(StringBuilder sb, TypeDecl declaration, List<MethodDecl> methods) {
+        List<NamedMethod> entries = new java.util.ArrayList<>();
+        for (MethodDecl method : methods) {
+            for (String name : methodSelectors.names(declaration, method)) entries.add(new NamedMethod(name, method));
         }
+        for (MethodDecl method : methodSelectors.materializedMethods(declaration)) {
+            entries.add(new NamedMethod(method.effectiveName(), method));
+        }
+        for (MethodDecl method : methodSelectors.bridgeContracts(declaration)) {
+            entries.add(new NamedMethod(TypeScriptMethodSelectors.selector(method.sourceMethod), method));
+        }
+        Map<String, List<NamedMethod>> groups = entries.stream()
+                .collect(Collectors.groupingBy(NamedMethod::name, LinkedHashMap::new, Collectors.toList()));
+        for (var entry : groups.entrySet()) {
+            List<NamedMethod> overloads = entry.getValue();
+            if (overloads.stream().noneMatch(overload -> !overload.method().overloads.isEmpty()
+                    && methodSelectors.inheritedOwner(overload.method()) != null)) {
+                for (NamedMethod overload : overloads) sb.append(formatMethod(overload.method(), false, overload.name()));
+                continue;
+            }
+            // Keep literal overload fragments in their authored module and generic scope. Indexed access
+            // specializes the existing ancestor operation without parsing or guessing TypeScript strings.
+            sb.append("        ").append(tsMemberName(entry.getKey())).append(": ");
+            sb.append(overloads.stream().map(overload -> {
+                MethodDecl method = overload.method();
+                ApiTypeRef owner = methodSelectors.inheritedOwner(method);
+                return !method.overloads.isEmpty() && owner != null
+                        ? renderTypeRef(owner, aliases, false) + "[" + new JsonPrimitive(methodSelectors.inheritedName(method)) + "]"
+                        : "{\n" + formatMethod(method, false, null) + "        }";
+            })
+                    .distinct().collect(Collectors.joining(" & "))).append(";\n");
+        }
+    }
+
+    private void appendInstanceMethod(StringBuilder sb, TypeDecl declaration, MethodDecl method) {
+        for (String name : methodSelectors.names(declaration, method)) sb.append(formatMethod(method, false, name));
     }
 
     private static Set<String> beanPropertyConflicts(TypeDecl declaration) {
@@ -336,9 +396,7 @@ public final class TypeScriptClassRenderer {
             }
         }
         sb.append(" {\n");
-        for (MethodDecl m : d.methods) {
-            if (!m.hidden && !m.isStatic) sb.append(formatMethod(m, false));
-        }
+        appendProjectedMethods(sb, d, methodSelectors.methods(d).stream().filter(method -> !method.hidden && !method.isStatic).toList());
         sb.append("    }\n");
 
         if (!hasClassValue(d)) return sb.toString();
@@ -435,11 +493,15 @@ public final class TypeScriptClassRenderer {
     }
 
     private String formatMethod(MethodDecl m, boolean isStatic) {
+        return formatMethod(m, isStatic, m.effectiveName());
+    }
+
+    private String formatMethod(MethodDecl m, boolean isStatic, String emittedName) {
         StringBuilder sb = new StringBuilder();
         appendDoc(sb, "        ", m.docs);
         sb.append("        ");
         if (isStatic) sb.append("static ");
-        sb.append(tsMemberName(m.effectiveName()));
+        if (emittedName != null) sb.append(tsMemberName(emittedName));
         if (!m.typeParams.isEmpty()) {
             sb.append("<").append(m.typeParams.stream().map(name ->
                     renderTypeParameter(name, m.typeParameterBounds.getOrDefault(name, List.of()), aliases))
@@ -448,7 +510,7 @@ public final class TypeScriptClassRenderer {
         sb.append("(");
         appendParameters(sb, m.params);
         sb.append("): ").append(renderSlot(m.returnType, false)).append(";\n");
-        appendOverloads(sb, m, false, isStatic);
+        appendOverloads(sb, m, false, isStatic, emittedName);
         return sb.toString();
     }
 
@@ -458,6 +520,10 @@ public final class TypeScriptClassRenderer {
      * 也不参与 import 收集——引用的类型须已在本模块可见（{@code $Foo} 形式），由注解作者保证。
      */
     private void appendOverloads(StringBuilder sb, MethodDecl m, boolean constructor, boolean isStatic) {
+        appendOverloads(sb, m, constructor, isStatic, m.effectiveName());
+    }
+
+    private void appendOverloads(StringBuilder sb, MethodDecl m, boolean constructor, boolean isStatic, String name) {
         for (MethodDecl.Overload o : m.overloads) {
             appendDoc(sb, "        ", o.docs);
             sb.append("        ");
@@ -465,7 +531,8 @@ public final class TypeScriptClassRenderer {
                 sb.append("constructor(");
             } else {
                 if (isStatic) sb.append("static ");
-                sb.append(tsMemberName(m.effectiveName())).append("(");
+                if (name != null) sb.append(tsMemberName(name));
+                sb.append("(");
             }
             sb.append(String.join(", ", o.params)).append(")");
             if (!constructor) {
