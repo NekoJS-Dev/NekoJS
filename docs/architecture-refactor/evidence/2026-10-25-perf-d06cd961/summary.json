@@ -44,7 +44,8 @@
   },
   "totalValidRows": 17,
   "kills": 0,
-  "timeouts": 0,
+  "timeoutsMarked": 0,
   "stopChannel": "rcon (all sessions)",
-  "attributionNote": "PASS binds d06cd961 exactly; no per-commit attribution claimed; prior PASS (26844b7e) and FAIL (6e43b827) records remain unchanged."
+  "launchMode": "Gradle :26.1.2:runServer development run (not an installed-JAR dedicated server)",
+  "attributionNote": "PASS binds d06cd961 exactly with no additional performance source changes this round; root cause of prior FAIL/PASS swings not determined; no per-commit attribution claimed; prior records remain unchanged."
 }

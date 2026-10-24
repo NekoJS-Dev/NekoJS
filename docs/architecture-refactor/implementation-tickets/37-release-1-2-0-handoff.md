@@ -48,7 +48,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-24：选择器生成器与java:/node:路径修复后3ccea55a第三轮安装验收五节点PASS、严格TS修正计数1609仍FAIL、原门槛重载仍FAIL，最终版本与维护者/发布门禁未完成；精确结果统一见上方验收汇总）
+**Status:** in-progress（2026-10-25：d06cd961 原政策正式性能三组 PASS（本轮未作额外性能源码修改而通过，历史 FAIL 记录保留）；完整严格 TS 仍 FAIL、最终候选冻结/客户端/TCP/分离回退/1.2.0 包装与维护者/发布门禁未完成；精确结果统一见上方验收汇总）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 
