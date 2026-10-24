@@ -1,0 +1,57 @@
+[
+  {
+    "node": "1.21.1",
+    "pid": 35104,
+    "probeReceiptHead": "Generating probe (typescript:builtin)...\n  warning: [NEKO-4029] Probe functional alias omitted for net.minecraft.network.protocol.common.ClientCommonPacketListener; its signature is unavailable (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDIC",
+    "probeFiles": 394,
+    "exitCode": 0,
+    "sessionLockReleased": true,
+    "stdoutTail": [
+      "[03:40:00] [Server thread/INFO] [minecraft/GenericThread]: Thread RCON Listener stopped"
+    ]
+  },
+  {
+    "node": "26.1.2",
+    "pid": 9400,
+    "probeReceiptHead": "Generating probe (typescript:builtin)...\nProbe generated: 448 files in 10360ms\n  Output: .neko_probe\\typescript\n",
+    "probeFiles": 448,
+    "exitCode": 0,
+    "sessionLockReleased": true,
+    "stdoutTail": [
+      "[03:40:43] [main/INFO] [ne.ne.fm.ModLoader/]: Clearing ModLoader"
+    ]
+  },
+  {
+    "node": "26.2.0",
+    "pid": 2512,
+    "probeReceiptHead": "Generating probe (typescript:builtin)...\nProbe generated: 430 files in 7373ms\n  Output: .neko_probe\\typescript\n",
+    "probeFiles": 430,
+    "exitCode": 0,
+    "sessionLockReleased": true,
+    "stdoutTail": [
+      "[03:41:24] [main/INFO] [ne.ne.fm.ModLoader/]: Clearing ModLoader"
+    ]
+  },
+  {
+    "node": "26.1.2-fabric",
+    "pid": 24964,
+    "probeReceiptHead": "Generating probe (typescript:builtin)...Probe generated: 540 files in 7627ms  Output: .neko_probe\\typescript",
+    "probeFiles": 540,
+    "exitCode": 0,
+    "sessionLockReleased": true,
+    "stdoutTail": [
+      "[03:42:11] [Server thread/INFO]: Thread RCON Listener stopped"
+    ]
+  },
+  {
+    "node": "26.2.0-fabric",
+    "pid": 2492,
+    "probeReceiptHead": "Generating probe (typescript:builtin)...Probe generated: 519 files in 5470ms  Output: .neko_probe\\typescript",
+    "probeFiles": 519,
+    "exitCode": 0,
+    "sessionLockReleased": true,
+    "stdoutTail": [
+      "[03:42:58] [Server thread/INFO]: Thread RCON Listener stopped"
+    ]
+  }
+]

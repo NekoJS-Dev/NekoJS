@@ -1,0 +1,112 @@
+{
+  "revision": "c3ee4097",
+  "platformSource": "D:\\mcmodDemo\\NekoJS-mult\\build\\closeout-selector-backend-installed-v3",
+  "generatedAt": "2026-10-25T03:39:03",
+  "nodes": [
+    {
+      "node": "1.21.1",
+      "loader": "neoforge",
+      "java": "C:/Program Files/Java/jdk-21.0.10/bin/java.exe",
+      "serverPort": 34500,
+      "rconPort": 34501,
+      "mods": [
+        {
+          "file": "graal-1504336-8762962.jar",
+          "sha256": "d48e2cae5988175ca2a7593e3403c64ded6503649a50e6e368b9cf6d73780a22",
+          "origin": "platform-source (pinned curse.maven artifact)"
+        },
+        {
+          "file": "nekojs-neoforge-1.21.1-1.1.0-preview3-server.jar",
+          "sha256": "2819770bd76768be36f43e32060b7fae06bff40665171553f74fdb8b8b2011a5",
+          "origin": "versions\\1.21.1\\build\\libs\\nekojs-neoforge-1.21.1-1.1.0-preview3-server.jar"
+        }
+      ]
+    },
+    {
+      "node": "26.1.2",
+      "loader": "neoforge",
+      "java": "C:/Program Files/Java/jdk-25.0.2/bin/java.exe",
+      "serverPort": 34510,
+      "rconPort": 34511,
+      "mods": [
+        {
+          "file": "graal-1504336-8762962.jar",
+          "sha256": "d48e2cae5988175ca2a7593e3403c64ded6503649a50e6e368b9cf6d73780a22",
+          "origin": "platform-source (pinned curse.maven artifact)"
+        },
+        {
+          "file": "nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+          "sha256": "10e43cae8f92ed7c753aaedbff102d51523b44e5caedcaf9ffec25b319442e0c",
+          "origin": "versions\\26.1.2\\build\\libs\\nekojs-neoforge-26.1.2-1.1.0-preview3.jar"
+        }
+      ]
+    },
+    {
+      "node": "26.2.0",
+      "loader": "neoforge",
+      "java": "C:/Program Files/Java/jdk-25.0.2/bin/java.exe",
+      "serverPort": 34520,
+      "rconPort": 34521,
+      "mods": [
+        {
+          "file": "graal-1504336-8762962.jar",
+          "sha256": "d48e2cae5988175ca2a7593e3403c64ded6503649a50e6e368b9cf6d73780a22",
+          "origin": "platform-source (pinned curse.maven artifact)"
+        },
+        {
+          "file": "nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+          "sha256": "3ab195b7e77bb22bf1fbaaa4dd4af3ee4cbaa94fa2bbe204e2b77cb703599655",
+          "origin": "versions\\26.2.0\\build\\libs\\nekojs-neoforge-26.2.0-1.1.0-preview3.jar"
+        }
+      ]
+    },
+    {
+      "node": "26.1.2-fabric",
+      "loader": "fabric",
+      "java": "C:/Program Files/Java/jdk-25.0.2/bin/java.exe",
+      "serverPort": 34530,
+      "rconPort": 34531,
+      "mods": [
+        {
+          "file": "graal-1504336-8762963.jar",
+          "sha256": "3eaa2c40e55411ba17749ae106708901f60ad00c4a35557ff3aca2b8f169733e",
+          "origin": "platform-source (pinned curse.maven artifact)"
+        },
+        {
+          "file": "fabric-api-0.155.2+26.1.2.jar",
+          "sha256": "7196f2d8700cf906676db98cc13cd4b98267c4ca4ba3e8c516e62070b21a5a3a",
+          "origin": "platform-source (pinned curse.maven artifact)"
+        },
+        {
+          "file": "nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+          "sha256": "f36905c414cd906164326c330cf433171a9bc10e3ad6f8eea15797dd67599216",
+          "origin": "versions\\26.1.2-fabric\\build\\libs\\nekojs-fabric-26.1.2-1.1.0-preview3.jar"
+        }
+      ]
+    },
+    {
+      "node": "26.2.0-fabric",
+      "loader": "fabric",
+      "java": "C:/Program Files/Java/jdk-25.0.2/bin/java.exe",
+      "serverPort": 34540,
+      "rconPort": 34541,
+      "mods": [
+        {
+          "file": "graal-1504336-8762963.jar",
+          "sha256": "3eaa2c40e55411ba17749ae106708901f60ad00c4a35557ff3aca2b8f169733e",
+          "origin": "platform-source (pinned curse.maven artifact)"
+        },
+        {
+          "file": "fabric-api-0.159.0+26.2.jar",
+          "sha256": "3f3a5d96e6a8f554a72e71fb507d6a979ca16d9190c305ceb1300f1d01e733ee",
+          "origin": "platform-source (pinned curse.maven artifact)"
+        },
+        {
+          "file": "nekojs-fabric-26.2-1.1.0-preview3.jar",
+          "sha256": "59cfc6be72921b2d2741e3b80c7e7e7c8298466062c1670cd61f34862cfaf492",
+          "origin": "versions\\26.2.0-fabric\\build\\libs\\nekojs-fabric-26.2-1.1.0-preview3.jar"
+        }
+      ]
+    }
+  ]
+}
