@@ -52,7 +52,7 @@ declare global {
         function randomTick(handler: ((event: $RandomTickEvent) => void)): void;
         function randomTick(extra: $Block, handler: ((event: $RandomTickEvent) => void)): void;
         function blockEntityTick(handler: ((event: $BlockEntityTickEvent) => void)): void;
-        function blockEntityTick(extra: $BlockEntityType, handler: ((event: $BlockEntityTickEvent) => void)): void;
+        function blockEntityTick(extra: $BlockEntityType<any>, handler: ((event: $BlockEntityTickEvent) => void)): void;
     }
 
     namespace CommandEvents {
@@ -62,23 +62,23 @@ declare global {
 
     namespace EntityEvents {
         function damagePre(handler: ((event: $LivingDamageEvent$Pre) => void)): void;
-        function damagePre(extra: $EntityType, handler: ((event: $LivingDamageEvent$Pre) => void)): void;
+        function damagePre(extra: $EntityType<any>, handler: ((event: $LivingDamageEvent$Pre) => void)): void;
         function damagePost(handler: ((event: $LivingDamageEvent$Post) => void)): void;
-        function damagePost(extra: $EntityType, handler: ((event: $LivingDamageEvent$Post) => void)): void;
+        function damagePost(extra: $EntityType<any>, handler: ((event: $LivingDamageEvent$Post) => void)): void;
         function death(handler: ((event: $LivingDeathEvent) => void)): void;
-        function death(extra: $EntityType, handler: ((event: $LivingDeathEvent) => void)): void;
+        function death(extra: $EntityType<any>, handler: ((event: $LivingDeathEvent) => void)): void;
         function drops(handler: ((event: $LivingDropsEvent) => void)): void;
-        function drops(extra: $EntityType, handler: ((event: $LivingDropsEvent) => void)): void;
+        function drops(extra: $EntityType<any>, handler: ((event: $LivingDropsEvent) => void)): void;
         function finalizeSpawn(handler: ((event: $FinalizeSpawnEvent) => void)): void;
-        function finalizeSpawn(extra: $EntityType, handler: ((event: $FinalizeSpawnEvent) => void)): void;
+        function finalizeSpawn(extra: $EntityType<any>, handler: ((event: $FinalizeSpawnEvent) => void)): void;
         function tickPre(handler: ((event: $EntityTickEvent$Pre) => void)): void;
-        function tickPre(extra: $EntityType, handler: ((event: $EntityTickEvent$Pre) => void)): void;
+        function tickPre(extra: $EntityType<any>, handler: ((event: $EntityTickEvent$Pre) => void)): void;
         function tickPost(handler: ((event: $EntityTickEvent$Post) => void)): void;
-        function tickPost(extra: $EntityType, handler: ((event: $EntityTickEvent$Post) => void)): void;
+        function tickPost(extra: $EntityType<any>, handler: ((event: $EntityTickEvent$Post) => void)): void;
         function joinLevel(handler: ((event: $EntityJoinLevelEvent) => void)): void;
-        function joinLevel(extra: $EntityType, handler: ((event: $EntityJoinLevelEvent) => void)): void;
+        function joinLevel(extra: $EntityType<any>, handler: ((event: $EntityJoinLevelEvent) => void)): void;
         function leaveLevel(handler: ((event: $EntityLeaveLevelEvent) => void)): void;
-        function leaveLevel(extra: $EntityType, handler: ((event: $EntityLeaveLevelEvent) => void)): void;
+        function leaveLevel(extra: $EntityType<any>, handler: ((event: $EntityLeaveLevelEvent) => void)): void;
         function useItemStarted(handler: ((event: $LivingEntityUseItemEvent$Start) => void)): void;
         function useItemStarted(extra: $Item, handler: ((event: $LivingEntityUseItemEvent$Start) => void)): void;
         function useItemStopped(handler: ((event: $LivingEntityUseItemEvent$Stop) => void)): void;

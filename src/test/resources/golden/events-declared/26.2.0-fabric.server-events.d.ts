@@ -1,9 +1,9 @@
 import { $VillagerTradeDeclarationEventJS, $VillagerTradeReloadEventJS } from "java:com/tkisor/nekojs/core/villager";
 import { $BlockBrokenEventJS } from "java:com/tkisor/nekojs/wrapper/event/block";
 import { $EntityJoinLevelEventJS, $EntityLeaveLevelEventJS, $EntityTickEventJS, $LivingDamageEventJS, $LivingDeathEventJS, $LivingDropsEventJS, $MobFinalizeSpawnEventJS } from "java:com/tkisor/nekojs/wrapper/event/entity";
-import { $ItemDroppedEventJS, $ItemEntityPickupEventJS, $ItemRightClickEventJS, $ItemUseFinishedEventJS, $PlayerEntityInteractEventJS } from "java:com/tkisor/nekojs/wrapper/event/item";
+import { $ItemDroppedEventJS, $ItemEntityPickupEventJS, $ItemRightClickEventJS, $ItemUseFinishedEventJS, $PlayerEntityInteractEventJS as $NekoImport$PlayerEntityInteractEventJS } from "java:com/tkisor/nekojs/wrapper/event/item";
 import { $LevelEventJS } from "java:com/tkisor/nekojs/wrapper/event/level";
-import { $InventoryChangedEventJS, $PlayerAdvancementEventJS, $PlayerChangedDimensionEventJS, $PlayerCloneEventJS, $PlayerContainerEventJS, $PlayerCraftedEventJS, $PlayerDestroyItemEventJS, $PlayerEntityInteractEventJS, $PlayerLifecycleEventJS, $PlayerRespawnEventJS, $PlayerTickEventJS, $ServerChatEventJS } from "java:com/tkisor/nekojs/wrapper/event/player";
+import { $InventoryChangedEventJS, $PlayerAdvancementEventJS, $PlayerChangedDimensionEventJS, $PlayerCloneEventJS, $PlayerContainerEventJS, $PlayerCraftedEventJS, $PlayerDestroyItemEventJS, $PlayerEntityInteractEventJS as $NekoImport$PlayerEntityInteractEventJS1, $PlayerLifecycleEventJS, $PlayerRespawnEventJS, $PlayerTickEventJS, $ServerChatEventJS } from "java:com/tkisor/nekojs/wrapper/event/player";
 import { $BlockModificationEventJS, $CommandRegistryEventJS, $DatapackSyncEventJS, $ItemModificationEventJS, $LootTableLoadEventJS, $RecipeEventJS, $ServerLifecycleEventJS, $ServerTickEventJS, $TagUpdatedEventJS } from "java:com/tkisor/nekojs/wrapper/event/server";
 import { $EntityType } from "java:net/minecraft/world/entity";
 import { $Item } from "java:net/minecraft/world/item";
@@ -27,23 +27,23 @@ declare global {
 
     namespace EntityEvents {
         function joinLevel(handler: ((event: $EntityJoinLevelEventJS) => void)): void;
-        function joinLevel(extra: $EntityType, handler: ((event: $EntityJoinLevelEventJS) => void)): void;
+        function joinLevel(extra: $EntityType<any>, handler: ((event: $EntityJoinLevelEventJS) => void)): void;
         function death(handler: ((event: $LivingDeathEventJS) => void)): void;
-        function death(extra: $EntityType, handler: ((event: $LivingDeathEventJS) => void)): void;
+        function death(extra: $EntityType<any>, handler: ((event: $LivingDeathEventJS) => void)): void;
         function damagePre(handler: ((event: $LivingDamageEventJS) => void)): void;
-        function damagePre(extra: $EntityType, handler: ((event: $LivingDamageEventJS) => void)): void;
+        function damagePre(extra: $EntityType<any>, handler: ((event: $LivingDamageEventJS) => void)): void;
         function damagePost(handler: ((event: $LivingDamageEventJS) => void)): void;
-        function damagePost(extra: $EntityType, handler: ((event: $LivingDamageEventJS) => void)): void;
+        function damagePost(extra: $EntityType<any>, handler: ((event: $LivingDamageEventJS) => void)): void;
         function drops(handler: ((event: $LivingDropsEventJS) => void)): void;
-        function drops(extra: $EntityType, handler: ((event: $LivingDropsEventJS) => void)): void;
+        function drops(extra: $EntityType<any>, handler: ((event: $LivingDropsEventJS) => void)): void;
         function finalizeSpawn(handler: ((event: $MobFinalizeSpawnEventJS) => void)): void;
-        function finalizeSpawn(extra: $EntityType, handler: ((event: $MobFinalizeSpawnEventJS) => void)): void;
+        function finalizeSpawn(extra: $EntityType<any>, handler: ((event: $MobFinalizeSpawnEventJS) => void)): void;
         function tickPre(handler: ((event: $EntityTickEventJS) => void)): void;
-        function tickPre(extra: $EntityType, handler: ((event: $EntityTickEventJS) => void)): void;
+        function tickPre(extra: $EntityType<any>, handler: ((event: $EntityTickEventJS) => void)): void;
         function tickPost(handler: ((event: $EntityTickEventJS) => void)): void;
-        function tickPost(extra: $EntityType, handler: ((event: $EntityTickEventJS) => void)): void;
+        function tickPost(extra: $EntityType<any>, handler: ((event: $EntityTickEventJS) => void)): void;
         function leaveLevel(handler: ((event: $EntityLeaveLevelEventJS) => void)): void;
-        function leaveLevel(extra: $EntityType, handler: ((event: $EntityLeaveLevelEventJS) => void)): void;
+        function leaveLevel(extra: $EntityType<any>, handler: ((event: $EntityLeaveLevelEventJS) => void)): void;
     }
 
     namespace ItemEvents {
@@ -59,8 +59,8 @@ declare global {
         function dropped(extra: $Item, handler: ((event: $ItemDroppedEventJS) => void)): void;
         function foodEaten(handler: ((event: $ItemUseFinishedEventJS) => void)): void;
         function foodEaten(extra: $Item, handler: ((event: $ItemUseFinishedEventJS) => void)): void;
-        function entityInteracted(handler: ((event: $PlayerEntityInteractEventJS) => void)): void;
-        function entityInteracted(extra: $Item, handler: ((event: $PlayerEntityInteractEventJS) => void)): void;
+        function entityInteracted(handler: ((event: $NekoImport$PlayerEntityInteractEventJS) => void)): void;
+        function entityInteracted(extra: $Item, handler: ((event: $NekoImport$PlayerEntityInteractEventJS) => void)): void;
         function modification(handler: ((event: $ItemModificationEventJS) => void)): void;
     }
 
@@ -90,7 +90,7 @@ declare global {
         function destroyed(handler: ((event: $PlayerDestroyItemEventJS) => void)): void;
         function destroyed(extra: $Item, handler: ((event: $PlayerDestroyItemEventJS) => void)): void;
         function advancement(handler: ((event: $PlayerAdvancementEventJS) => void)): void;
-        function entityInteract(handler: ((event: $PlayerEntityInteractEventJS) => void)): void;
+        function entityInteract(handler: ((event: $NekoImport$PlayerEntityInteractEventJS1) => void)): void;
         function changedDimension(handler: ((event: $PlayerChangedDimensionEventJS) => void)): void;
         function inventoryChanged(handler: ((event: $InventoryChangedEventJS) => void)): void;
         function inventoryChanged(extra: $Item, handler: ((event: $InventoryChangedEventJS) => void)): void;

@@ -97,3 +97,11 @@ git diff -- common/src/test/resources/nekojs common/src/test/probe-ts
 技术审阅由主代理核对生产生成器、失败差异与生成后的两行增量；Luna xhigh 只读执行规范/规格分轴审查，规格发现的未输出 dispatch-key 依赖已另加回归并修正。后续普通测试不带 regenerate 开关。此记录不是维护者人工验收，也不表示完整严格 TSC 或发布验收通过。
 
 同日五节点制品后续：首次 `:26.1.2:build` 在节点声明 golden 门禁失败，核对差异仅新增 `$VillagerTradeDeclarationEventJS`、`$VillagerTradeReloadEventJS` 的真实 import。主代理先备份全部节点基线，再通过五节点各自的 `platformGateTest -Dnekojs.golden.regenerate=true` 生成（1m37s，通过仅表示生成完成）。共十个 server/startup 文件各增加同一行 import，所有方法、参数、回调和 client 文件字节保持原样；本地逐字节检查工具与 JSON 记录已保存。随后正常五节点 platform gate 与两个现代 NeoForge build 复验不带 regenerate 开关，实际结果另记验收材料；不将生成模式中的跳过当作门禁通过。
+
+## 2026-10-24：事件局部身份与raw dispatch元数
+
+生产701dd511为跨包同名事件分配私有import alias；7e484118补齐非静态owner泛型，并让raw dispatch使用已有Java原始类型投影。初次05afbd33完整矩阵在1.21.1节点声明golden比较失败，日志保留为`build/priority-closeout/owner-stamp-matrix.log`，未记作通过。
+
+主代理先保存15份节点基线原字节为`owner-stamp-node-goldens-before.zip`，再仅对五节点DeclaredEventSurfaceGoldenTest使用原生regenerate开关，43秒完成；生成模式中的abort不算普通门禁通过。逐文件检查得到恰好10个server/startup变化、5个client字节不变：五节点raw EntityType、BlockEntityType dispatch补`<any>`元数；两个Fabric节点item/player包同名事件的import及回调引用分别使用私有alias。所有事件组、函数名及顺序不变，Java运行时身份/公开订阅方法不变，不删除、合并事件。
+
+主代理的`check-owner-stamp-goldens.py`以保存原字节检查上述确切变换并输出完整旧新diff、15文件SHA和事件声明数量，结果通过；技术审阅与Luna只读分轴审查另存本轮交接，维护者人工验收尚未记录，不代签。随后的正式门禁必须不带regenerate开关，不能以更新golden代替完整严格声明或发布通过。

@@ -19,5 +19,6 @@ TypeReflector把完整真实签名写入语言中性IR，已有TS类声明、适
 - 公开ProbeCoordinator回归确认owner实参与bound进入受限扫描，maxDepth=1不遍历下一层、maxDepth=2可遍历、精确正则exclude仍拒绝。首轮测试错误把包前缀规则当成精确类规则、把maxDepth=0当成零深度；已按现有合同改夹具，生产规则未改。最初扫描红例在缺少真实owner边时失败。
 - Python公开backend消费确认update仍输出Any且没有未声明T。首次夹具未提供Python要求的共享IR被拒绝，补上真实反射IR后通过，未修改backend错误处理。
 - 四组Java回归、三份`skipLibCheck:false`严格TS均通过，既有泛型/继承/输入消费者的定向Java回归通过。
+- 分轴审查指出的两项覆盖风险已补充并实际通过：捕获owner参数的内类继承同名`<T>`泛型default方法，验证捕获结果与方法自己的输入参数不同；显式manual host/input raw inner引用验证完整元数与真实host成员。未因审查建议额外删除任何公开成员。
 
 完整common隔离、五节点build、最新安装全图诊断及正式性能将在这一批共享原因修改完成后统一运行；87baad4b的5152项、5549条诊断与287.4/305.6ms仍是旧源码结果，不改写为本次结果。未推送、发PR、发布或代签维护者结论。

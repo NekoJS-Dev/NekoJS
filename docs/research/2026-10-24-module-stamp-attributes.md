@@ -7,3 +7,5 @@ Luna xhigh只读调查后，主代理追查了NekoModulePipelineCache.prepare/re
 使用已有公开cache准备接缝的真实文件/内容覆盖/同mtime等长度/编译器替换/错误阶段/信任回归验证合同，不为“某内部方法被调用几次”新增实现耦合测试。完整检查与原政策性能在本批源码固定后统一复验；285.3ms门槛、原采样器、fixture与marker时机保持，未先行宣称性能通过。87baad4b正式287.4/305.6ms仍FAIL，启动通过。
 
 未合并预检和模块准备之间的两次源码读取；那会影响两次读取间文件变化及失败时序。未修改运行时owner、Context生命周期、source map、转译代码或插件初始化时机。未推送、发PR、发布或代签维护者结论。
+
+主代理补充的配对微测量已实际完成：JDK25.0.2、原性能fixture的18个真实文件、3对预热后10对正式样本，每对交替先后顺序、每种形式每样本18000次完整查询。分开读取均值4873.64ns/次，合并读取2418.68ns/次，比例0.49628；26条原始记录的checksum一致，前后fixture SHA不变。工具、完整样本和环境在`build/priority-closeout/stamp-attributes-benchmark`及同级`run-stamp-attributes-benchmark.py`、`FileStampAttributesBenchmark.java`。此测量只隔离属性查询，不包含源码读取/哈希/编译，也不能推算整个重载收益或替代正式285.3ms门禁。

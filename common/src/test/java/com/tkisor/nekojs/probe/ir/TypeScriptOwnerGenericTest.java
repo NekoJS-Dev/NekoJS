@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
+import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
@@ -27,8 +28,10 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TypeScriptOwnerGenericTest {
+    public interface CapturedContract<X> { default <T> X choose(T input) { return null; } }
+
     public static class Owner<T extends Owner<T>> {
-        public class Inner<V> {
+        public class Inner<V> implements CapturedContract<T> {
             public V value;
             public Inner(V value) { this.value = value; }
             public T update(V value) { this.value = value; return null; }
@@ -123,6 +126,11 @@ class TypeScriptOwnerGenericTest {
                 import type { $TypeScriptOwnerGenericTest$Concrete as Concrete } from 'java:com/tkisor/nekojs/probe/ir';
                 declare const concrete: Concrete;
                 const updated: Concrete = concrete.text.update('value');
+                const chosen: Concrete = concrete.text.choose<number>(12);
+                // @ts-expect-error An inherited method's variable must not replace its captured result variable.
+                const wrongChosen: string = concrete.text.choose<number>(12);
+                // @ts-expect-error The inherited method retains its own explicit type parameter.
+                concrete.text.choose<string>(12);
                 const count: number = updated.count;
                 const text: string = concrete.text.value;
                 concrete.consume(concrete.text);
@@ -219,8 +227,12 @@ class TypeScriptOwnerGenericTest {
         Path output = Path.of("build/probe-ts-owner-generics/events");
         var event = EventCatalogEntry.of("OwnerEvents", "visit", ScriptType.SERVER,
                 Owner.Inner.class, Owner.Inner.class, false, true);
+        var manual = ManualDeclarationCatalogEntry.of("test:owner", "declare function ownedAccept(value: OwnerInput): OwnerOutput;",
+                "", List.of()).withReferences(Map.of(
+                        "OwnerInput", ManualDeclarationCatalogEntry.TypeReference.input(Owner.Inner.class),
+                        "OwnerOutput", ManualDeclarationCatalogEntry.TypeReference.host(Owner.Inner.class)));
         var snapshot = new NekoScriptCatalogSnapshot(List.of(), List.of(), List.of(event), List.of(),
-                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), List.of(), List.of(manual), List.of(), List.of(), List.of(), List.of(),
                 null, Map.of(), List.of());
         var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("unrelated.primary"), List.of(), List.of(), List.of(), 1, "SMART"));
@@ -233,11 +245,17 @@ class TypeScriptOwnerGenericTest {
             Files.writeString(target, entry.getValue());
         }
         Files.writeString(output.resolve("tsconfig.json"), """
-                {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"]}},"include":["@package/**/*.d.ts","@side-only/server/events/index.d.ts","exercise.ts"]}
+                {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"]}},"include":["@package/**/*.d.ts","@manual/**/*.d.ts","@side-only/server/events/index.d.ts","exercise.ts"]}
                 """);
         Files.writeString(output.resolve("exercise.ts"), """
                 import type { $TypeScriptOwnerGenericTest$Owner$Inner as Inner } from 'java:com/tkisor/nekojs/probe/ir';
                 declare const inner: Inner<any, string>;
+                const returned: OwnerOutput = ownedAccept(inner);
+                returned.update('value');
+                // @ts-expect-error Explicit raw manual references retain the host member shape.
+                returned.missing;
+                // @ts-expect-error Raw manual inputs do not accept scalar values.
+                ownedAccept(12);
                 OwnerEvents.visit(inner, event => {
                     event.update('value');
                     // @ts-expect-error A raw inner event still retains its actual member names.
