@@ -421,7 +421,7 @@ declare module "java:java/time" {
         static values(): $DayOfWeek[];
         static valueOf(name: string): $DayOfWeek;
     }
-    export interface $DayOfWeek extends $Enum<$DayOfWeek> {}
+    export interface $DayOfWeek extends $Enum<$DayOfWeek>, $TemporalAccessor, $TemporalAdjuster {}
 
     export class $LocalDate implements $Temporal, $TemporalAdjuster, $ChronoLocalDate, $Serializable {
         static EPOCH: $LocalDate;
@@ -686,7 +686,7 @@ declare module "java:java/time" {
         static values(): $Month[];
         static valueOf(name: string): $Month;
     }
-    export interface $Month extends $Enum<$Month> {}
+    export interface $Month extends $Enum<$Month>, $TemporalAccessor, $TemporalAdjuster {}
 
     export class $OffsetTime implements $Temporal, $TemporalAdjuster, $Comparable<$OffsetTime>, $Serializable {
         static MAX: $OffsetTime;

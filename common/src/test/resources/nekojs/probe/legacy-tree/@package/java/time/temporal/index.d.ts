@@ -128,7 +128,7 @@ declare module "java:java/time/temporal" {
         static values(): $ChronoField[];
         static valueOf(name: string): $ChronoField;
     }
-    export interface $ChronoField extends $Enum<$ChronoField> {}
+    export interface $ChronoField extends $Enum<$ChronoField>, $TemporalField {}
 
     export type $TemporalAdjuster_<CallbackArg0 = $Temporal, CallbackResult = $Temporal> = ((arg0: CallbackArg0) => CallbackResult) | ($TemporalAdjuster & { readonly [Symbol.hasInstance]?: never });
     export type $TemporalQuery_<Host0 = any, CallbackArg0 = $TemporalAccessor, CallbackResult = Host0> = ((arg0: CallbackArg0) => CallbackResult) | ($TemporalQuery<Host0> & { readonly [Symbol.hasInstance]?: never });

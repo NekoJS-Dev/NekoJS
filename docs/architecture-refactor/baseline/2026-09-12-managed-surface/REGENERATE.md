@@ -105,3 +105,9 @@ git diff -- common/src/test/resources/nekojs common/src/test/probe-ts
 主代理先保存15份节点基线原字节为`owner-stamp-node-goldens-before.zip`，再仅对五节点DeclaredEventSurfaceGoldenTest使用原生regenerate开关，43秒完成；生成模式中的abort不算普通门禁通过。逐文件检查得到恰好10个server/startup变化、5个client字节不变：五节点raw EntityType、BlockEntityType dispatch补`<any>`元数；两个Fabric节点item/player包同名事件的import及回调引用分别使用私有alias。所有事件组、函数名及顺序不变，Java运行时身份/公开订阅方法不变，不删除、合并事件。
 
 主代理的`check-owner-stamp-goldens.py`以保存原字节检查上述确切变换并输出完整旧新diff、15文件SHA和事件声明数量，结果通过；技术审阅与Luna只读分轴审查另存本轮交接，维护者人工验收尚未记录，不代签。随后的正式门禁必须不带regenerate开关，不能以更新golden代替完整严格声明或发布通过。
+
+## 2026-10-25：枚举实例接口合同恢复
+
+TypeScriptClassRenderer.renderEnum 从编辑后的 IR 保留 Java 枚举的接口继承。初次普通 common/check 的两项 legacy tree golden 比对失败已保留于 build/enum-interface-check.log；不能记作通过。已先将原始 golden 备份到 build/enum-interface-evidence/goldens-before.zip，再仅运行 :common:regenerateGoldens --tests com.tkisor.nekojs.probe.LegacyProbeTreeTest。
+
+主代理核对仅四个文件变化：IsoEra 补 Era，DayOfWeek/Month 补 TemporalAccessor/TemporalAdjuster，ChronoField 补 TemporalField，LinkOption 补 OpenOption/CopyOption。最后两个空接口因新增依赖关系调整声明顺序，内容不变；没有删除或放宽成员。生成模式的跳过不作为门禁通过，随后普通 common/check 和严格消费需要独立通过。该技术核对不代替维护者人工接受。

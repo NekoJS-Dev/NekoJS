@@ -75,7 +75,7 @@ declare module "java:java/nio/file" {
         static values(): $LinkOption[];
         static valueOf(name: string): $LinkOption;
     }
-    export interface $LinkOption extends $Enum<$LinkOption> {}
+    export interface $LinkOption extends $Enum<$LinkOption>, $OpenOption, $CopyOption {}
 
     export interface $WatchEvent$Kind<T> {
         name(): string;
@@ -129,6 +129,12 @@ declare module "java:java/nio/file" {
         matches(arg0: $Path): boolean;
     }
 
+    export interface $CopyOption {
+    }
+
+    export interface $OpenOption {
+    }
+
     export interface $WatchEvent<T> {
         context(): T;
         count(): number;
@@ -147,18 +153,12 @@ declare module "java:java/nio/file" {
     }
     export interface $AccessMode extends $Enum<$AccessMode> {}
 
-    export interface $CopyOption {
-    }
-
     export interface $DirectoryStream<T> extends $Closeable, $Iterable<T> {
         iterator(): $Iterator<T>;
     }
 
     export interface $DirectoryStream$Filter<T> {
         accept(arg0: T): boolean;
-    }
-
-    export interface $OpenOption {
     }
 
     export type $LinkOption_ = $LinkOption | "NOFOLLOW_LINKS";

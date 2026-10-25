@@ -84,7 +84,7 @@ declare module "java:java/time/chrono" {
         static values(): $IsoEra[];
         static valueOf(name: string): $IsoEra;
     }
-    export interface $IsoEra extends $Enum<$IsoEra> {}
+    export interface $IsoEra extends $Enum<$IsoEra>, $Era {}
 
     export interface $ChronoLocalDateTime<D extends $ChronoLocalDate> extends $Temporal, $TemporalAdjuster, $Comparable<$ChronoLocalDateTime<any>> {
         adjustInto(arg0: $Temporal): $Temporal;
