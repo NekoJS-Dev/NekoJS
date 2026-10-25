@@ -76,3 +76,12 @@ F1 已按上述约束实施：canonical 渲染器输出位捕获视图，先红�
    （`RegistryOps.lookup` 两个 `Optional<? extends …>` 重载），非 F5/F6 连带；表中该两行归入 F1 机制。
 2. F1 剩余 50 = `$Double/$Float/$Integer/$Long/$String` ×10，为值投影（number/string 不结构满足
    host 接口）的可表达性边界，需单独证明的投影变更，不以联合/any 放宽。
+
+## 2026-10-25 F1 视图重做为成员驱动表示（d075db12 + fab58a7d）
+
+复核指出 914df3c7 的内联视图缺失合法公开成员（`orElseThrow`/Bean `present`/`filter`/递归
+`stream()`），已改为按反射实例面生成的命名 `$OptionalView<B>`/`$StreamView<B>`：排除集
+收敛为三条带 tsc 错误链证明的机械规则（嵌套捕获容器参数、多重载上界 SAM 组、不变容器返回，
+`$Iterator` 白名单），被排除成员在具体实现上保留。fab58a7d 确切产物十入口重测仍为
+1609→1503（F1 156→50、逐条移除 106/新增 0），设计与证明见
+[证据页](../architecture-refactor/evidence/2026-10-25-strict-ts-f1v2-member-view-fab58a7d/README.md)。
