@@ -96,3 +96,11 @@ F1 已按上述约束实施：canonical 渲染器输出位捕获视图，先红�
 与 `collect` 第二重载为实证边界。视图净增 5 个成员，f1v3 确切产物十入口仍 1503（与 f1v2
 逐入口一致、零诊断代价、逐条 −106/+0），实验编号与规则细节见
 [证据页](../architecture-refactor/evidence/2026-10-25-strict-ts-f1v3-overload-retention-f71b45fb/README.md)。
+
+## 主代理后续：F4 来源恢复（dad806fa）
+
+基线表保持 c3ee4097 的分类口径。主代理从同擦除且无歧义的接口来源恢复实现中丢失的方法泛型、界限、参数和返回；不按 Fabric 方法名单修补，保留原始 Method 与隐藏/remap。
+
+[新安装冻结证据](../architecture-refactor/evidence/2026-10-25-primary-erased-method-dad806fa/README.md)：1503→1409，逐条移除94/新增0；F4 80→0，原尾项26→12（fabric_enumCycle、Builder.get/getOrCreate、MinecraftServer.getOrThrow 连带14条），其余族不变。此处按旧互斥分类分别计数，不将14条重复累计到 F4。完整严格 TS 仍 FAIL。
+
+F1 不能因减少106条就视为公开合同完成：or、部分 reduce/Collector collect 和 toList 仍在捕获视图中省略。本轮没有修改或认可这些排除；完整捕获关系表示与默认数值/字符串投影仍需继续证明。
