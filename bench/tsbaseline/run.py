@@ -240,7 +240,8 @@ def query_process_identity(pid):
 
 def cmd_run(args):
     target = os.path.abspath(args.target)
-    manifest = json.load(open(os.path.join(target, "preparation-manifest.json"), encoding="utf-8"))
+    with open(os.path.join(target, "preparation-manifest.json"), encoding="utf-8") as manifest_file:
+        manifest = json.load(manifest_file)
     results = []
     for entry in manifest["nodes"]:
         node = entry["node"]
@@ -248,73 +249,75 @@ def cmd_run(args):
         cfg = next(c for c in NODES if c["node"] == node)
         stdout_path = os.path.join(node_dir, "server-stdout.log")
         stderr_path = os.path.join(node_dir, "server-stderr.log")
-        out_f = open(stdout_path, "w", encoding="utf-8", errors="replace")
-        err_f = open(stderr_path, "w", encoding="utf-8", errors="replace")
-        proc = subprocess.Popen([entry["java"], "-Xms512M", "-Xmx2G"] + cfg["args"],
-                                cwd=node_dir, stdout=out_f, stderr=err_f,
-                                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
-        # Ownership record: kill-servers.ps1 only ever touches processes listed here, after
-        # verifying PID liveness, exact creation time and exact command line (see README).
-        record = {"node": node, "pid": proc.pid, "startedAtEpoch": time.time(),
-                  "java": entry["java"], "rconPort": entry["rconPort"]}
-        record.update(query_process_identity(proc.pid))
-        write_json(os.path.join(node_dir, "server-process.json"), record)
-        print(f"{node}: started pid {proc.pid}, waiting for rcon on {entry['rconPort']}")
-        result = {"node": node, "pid": proc.pid}
-        failure = None
-        cause = None
-        try:
-            ready = wait_rcon_ready(entry["rconPort"], entry["rconPassword"], time.time() + args.boot_timeout)
-            if not ready:
-                failure = f"{node}: rcon never became ready; stdout tail:\n{tail_text(stdout_path)}"
-            else:
-                # RCON response bodies truncate at one packet (~4KB) because the mod emits
-                # many NEKO-4029 warnings before the completion line, so completion is
-                # confirmed from the stdout log instead; the RCON receipt is trigger-only.
-                try:
-                    receipt = rcon_call(entry["rconPort"], entry["rconPassword"], args.probe_timeout,
-                                        ["nekojs probe typescript"])[0]
-                    result["probeReceiptHead"] = receipt[:300]
-                    deadline = time.time() + args.probe_timeout
-                    marker = None
-                    while time.time() < deadline:
-                        marker = re.search(r"Probe \[typescript\] generated (\d+) files",
-                                           tail_text(stdout_path, lines=400))
-                        if marker:
-                            break
-                        if proc.poll() is not None:
+        with open(stdout_path, "w", encoding="utf-8", errors="replace") as out_f, \
+                open(stderr_path, "w", encoding="utf-8", errors="replace") as err_f:
+            proc = subprocess.Popen([entry["java"], "-Xms512M", "-Xmx2G"] + cfg["args"],
+                                    cwd=node_dir, stdout=out_f, stderr=err_f,
+                                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+            print(f"{node}: started pid {proc.pid}, waiting for rcon on {entry['rconPort']}")
+            result = {"node": node, "pid": proc.pid}
+            failure = None
+            cause = None
+            try:
+                # Identity lookup and recording already own a live child and must share its recovery path.
+                record = {"node": node, "pid": proc.pid, "startedAtEpoch": time.time(),
+                          "java": entry["java"], "rconPort": entry["rconPort"]}
+                record.update(query_process_identity(proc.pid))
+                write_json(os.path.join(node_dir, "server-process.json"), record)
+                ready = wait_rcon_ready(entry["rconPort"], entry["rconPassword"], time.time() + args.boot_timeout)
+                if not ready:
+                    failure = f"{node}: rcon never became ready; stdout tail:\n{tail_text(stdout_path)}"
+                else:
+                    # RCON response bodies truncate at one packet (~4KB) because the mod emits
+                    # many NEKO-4029 warnings before the completion line, so completion is
+                    # confirmed from the stdout log instead; the RCON receipt is trigger-only.
+                    try:
+                        receipt = rcon_call(entry["rconPort"], entry["rconPassword"], args.probe_timeout,
+                                            ["nekojs probe typescript"])[0]
+                        result["probeReceiptHead"] = receipt[:300]
+                        deadline = time.time() + args.probe_timeout
+                        marker = None
+                        while time.time() < deadline:
+                            marker = re.search(r"Probe \[typescript\] generated (\d+) files",
+                                               tail_text(stdout_path, lines=400))
+                            if marker:
+                                break
+                            if proc.poll() is not None:
+                                raise RuntimeError(
+                                    f"server exited during probe; stdout tail:\n{tail_text(stdout_path)}")
+                            time.sleep(2)
+                        if not marker:
                             raise RuntimeError(
-                                f"server exited during probe; stdout tail:\n{tail_text(stdout_path)}")
-                        time.sleep(2)
-                    if not marker:
-                        raise RuntimeError(
-                            f"probe completion line never appeared; stdout tail:\n{tail_text(stdout_path)}")
-                    result["probeFiles"] = int(marker.group(1))
-                except (OSError, RuntimeError) as probe_failure:
-                    cause = probe_failure
-                    failure = f"{node}: probe failed: {probe_failure}"
-        except Exception as unexpected:
-            cause = unexpected
-            failure = f"{node}: unexpected driver failure: {unexpected}"
-        # Unified owned-server recovery for success, probe failure and driver error alike:
-        # clean RCON stop first, bounded wait, then kill the child we own.
-        result.update(stop_owned_server(proc, entry, args))
-        out_f.close(); err_f.close()
-        result["sessionLockReleased"] = wait_session_lock(node_dir, time.time() + 120)
-        result["stdoutTail"] = tail_text(stdout_path, 5).strip().splitlines()[-1:] or [""]
-        if failure is not None:
-            result["failure"] = failure
-        results.append(result)
-        # Persist after every node so a later failure still leaves the completed nodes inspectable.
-        write_json(os.path.join(target, "run-summary.json"), results)
-        print(f"{node}: probeFiles={result.get('probeFiles')} exit={result['exitCode']} "
-              f"killed={result['killed']} stopSent={result['stopSent']} "
-              f"lockReleased={result['sessionLockReleased']}")
-        if failure is not None:
-            # Keep the original exception chained for the driver's own crash paths.
-            raise SystemExit(failure) from cause
-        if result["exitCode"] != 0:
-            raise SystemExit(f"{node}: unexpected server exit {result['exitCode']}")
+                                f"probe completion line never appeared; stdout tail:\n{tail_text(stdout_path)}")
+                        result["probeFiles"] = int(marker.group(1))
+                    except (OSError, RuntimeError) as probe_failure:
+                        cause = probe_failure
+                        failure = f"{node}: probe failed: {probe_failure}"
+            except BaseException as unexpected:
+                # Save interruptions long enough to release the owned child, then propagate them unchanged.
+                cause = unexpected
+                failure = f"{node}: unexpected driver failure: {unexpected}"
+            # Unified owned-server recovery for success, probe failure and driver error alike:
+            # clean RCON stop first, bounded wait, then kill the child we own.
+            result.update(stop_owned_server(proc, entry, args))
+            out_f.close(); err_f.close()
+            result["sessionLockReleased"] = wait_session_lock(node_dir, time.time() + 120)
+            result["stdoutTail"] = tail_text(stdout_path, 5).strip().splitlines()[-1:] or [""]
+            if failure is not None:
+                result["failure"] = failure
+            results.append(result)
+            # Persist after every node so a later failure still leaves the completed nodes inspectable.
+            write_json(os.path.join(target, "run-summary.json"), results)
+            print(f"{node}: probeFiles={result.get('probeFiles')} exit={result['exitCode']} "
+                  f"killed={result['killed']} stopSent={result['stopSent']} "
+                  f"lockReleased={result['sessionLockReleased']}")
+            if cause is not None and not isinstance(cause, Exception):
+                raise cause
+            if failure is not None:
+                # Keep the original exception chained for the driver's own crash paths.
+                raise SystemExit(failure) from cause
+            if result["exitCode"] != 0:
+                raise SystemExit(f"{node}: unexpected server exit {result['exitCode']}")
     print("run complete")
 
 

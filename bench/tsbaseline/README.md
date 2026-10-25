@@ -52,6 +52,9 @@ python bench/tsbaseline/run.py check --target build/tsbaseline-<tag>
 
 ## 产物
 
+驱动故障回归：`python -m unittest discover -s bench/tsbaseline -p test_run.py`。
+身份查询在亲启子进程的回收范围内；查询超时也会等待/回收、落盘失败摘要并保留异常链。
+
 | 文件 | 内容 |
 |---|---|
 | `preparation-manifest.json` | revision、平台来源、每节点 jar 名+SHA256、端口、rcon 密码 |
