@@ -18,7 +18,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -344,21 +346,73 @@ public final class TypeReflector {
         MethodDecl declaration = reflectMethod(method);
         if (declaration.hidden) return declaration;
         if (method.getDeclaringClass() != cls) {
-            FunctionalInterfaceResolver.Signature signature = inheritedSignature(cls, method);
-            reflectTypeParameters(declaration, signature.typeParameters());
-            declaration.returnType = TypeSlot.of(signature.returnType(), toRef(signature.returnType()));
-            for (int index = 0; index < declaration.params.size(); index++) {
-                Type type = signature.parameterTypes().get(index);
-                if (declaration.params.get(index).varargs) {
-                    type = type instanceof GenericArrayType array ? array.getGenericComponentType()
-                            : ((Class<?>) type).getComponentType();
-                }
-                declaration.params.get(index).type = TypeSlot.of(type, toRef(type));
-            }
+            applySignature(declaration, inheritedSignature(cls, method));
+        }
+        FunctionalInterfaceResolver.Signature contract = interfaceMethodContract(cls, method);
+        if (contract != null) {
+            applySignature(declaration, contract);
+            return declaration;
         }
         Type result = interfaceReturnContract(cls, method, declaration.returnType.sourceType);
         declaration.returnType = TypeSlot.of(result, toRef(result));
         return declaration;
+    }
+
+    private static void applySignature(MethodDecl declaration, FunctionalInterfaceResolver.Signature signature) {
+        reflectTypeParameters(declaration, signature.typeParameters());
+        declaration.returnType = TypeSlot.of(signature.returnType(), toRef(signature.returnType()));
+        for (int index = 0; index < declaration.params.size(); index++) {
+            Type type = signature.parameterTypes().get(index);
+            if (declaration.params.get(index).varargs) {
+                type = type instanceof GenericArrayType array ? array.getGenericComponentType()
+                        : ((Class<?>) type).getComponentType();
+            }
+            declaration.params.get(index).type = TypeSlot.of(type, toRef(type));
+        }
+    }
+
+    /** Restores an erased implementation only when every matching interface agrees on the full generic contract. */
+    private static FunctionalInterfaceResolver.Signature interfaceMethodContract(Class<?> cls, Method method) {
+        if (cls.isInterface() || Modifier.isStatic(method.getModifiers()) || method.getTypeParameters().length != 0
+                || !(method.getGenericReturnType() instanceof Class<?>)
+                || !Arrays.equals(method.getGenericParameterTypes(), method.getParameterTypes())) return null;
+        List<Method> contracts = new ArrayList<>();
+        collectInterfaceMethods(cls, new HashSet<>(), contracts);
+        FunctionalInterfaceResolver.Signature agreed = null;
+        for (Method candidate : contracts) {
+            if (Modifier.isStatic(candidate.getModifiers()) || !Modifier.isPublic(candidate.getModifiers())
+                    || candidate.isBridge() || candidate.isSynthetic() || !candidate.getName().equals(method.getName())
+                    || !Arrays.equals(candidate.getParameterTypes(), method.getParameterTypes())
+                    || candidate.getReturnType() != method.getReturnType()) continue;
+            FunctionalInterfaceResolver.Signature signature = FunctionalInterfaceResolver.resolve(cls, candidate);
+            if (signature == null || signature.typeParameters().isEmpty() || jsName(candidate) == null) return null;
+            Set<TypeVariable<?>> variables = new HashSet<>(JavaGenericTypes.parameters(cls));
+            variables.addAll(signature.typeParameters());
+            if (!contractInScope(signature.returnType(), variables)
+                    || signature.parameterTypes().stream().anyMatch(type -> !contractInScope(type, variables))
+                    || signature.typeParameters().stream().flatMap(variable -> Arrays.stream(variable.getBounds()))
+                    .anyMatch(type -> !contractInScope(type, variables))) return null;
+            if (agreed != null && !sameMethodContract(agreed, signature)) return null;
+            agreed = signature;
+        }
+        return agreed;
+    }
+
+    private static boolean sameMethodContract(FunctionalInterfaceResolver.Signature left,
+                                              FunctionalInterfaceResolver.Signature right) {
+        if (left.typeParameters().size() != right.typeParameters().size()) return false;
+        Map<TypeVariable<?>, Type> substitutions = new HashMap<>();
+        for (int index = 0; index < left.typeParameters().size(); index++) {
+            substitutions.put(right.typeParameters().get(index), left.typeParameters().get(index));
+        }
+        for (int index = 0; index < left.typeParameters().size(); index++) {
+            Type[] bounds = Arrays.stream(right.typeParameters().get(index).getBounds())
+                    .map(type -> FunctionalInterfaceResolver.substitute(type, substitutions)).toArray(Type[]::new);
+            if (!sameContracts(left.typeParameters().get(index).getBounds(), bounds)) return false;
+        }
+        return sameContract(left.returnType(), FunctionalInterfaceResolver.substitute(right.returnType(), substitutions))
+                && sameContracts(left.parameterTypes().toArray(Type[]::new), right.parameterTypes().stream()
+                .map(type -> FunctionalInterfaceResolver.substitute(type, substitutions)).toArray(Type[]::new));
     }
 
     // Bytecode injection can erase an implementation's Signature attribute while retaining its typed interface.
@@ -392,15 +446,19 @@ public final class TypeReflector {
     }
 
     private static boolean contractInScope(Type type, Class<?> cls) {
-        if (type instanceof TypeVariable<?> variable) return JavaGenericTypes.parameters(cls).contains(variable);
+        return contractInScope(type, new HashSet<>(JavaGenericTypes.parameters(cls)));
+    }
+
+    private static boolean contractInScope(Type type, Set<TypeVariable<?>> variables) {
+        if (type instanceof TypeVariable<?> variable) return variables.contains(variable);
         if (type instanceof ParameterizedType parameterized) {
-            return (parameterized.getOwnerType() == null || contractInScope(parameterized.getOwnerType(), cls))
-                    && Arrays.stream(parameterized.getActualTypeArguments()).allMatch(arg -> contractInScope(arg, cls));
+            return (parameterized.getOwnerType() == null || contractInScope(parameterized.getOwnerType(), variables))
+                    && Arrays.stream(parameterized.getActualTypeArguments()).allMatch(arg -> contractInScope(arg, variables));
         }
-        if (type instanceof GenericArrayType array) return contractInScope(array.getGenericComponentType(), cls);
+        if (type instanceof GenericArrayType array) return contractInScope(array.getGenericComponentType(), variables);
         if (type instanceof WildcardType wildcard) {
-            return Arrays.stream(wildcard.getUpperBounds()).allMatch(bound -> contractInScope(bound, cls))
-                    && Arrays.stream(wildcard.getLowerBounds()).allMatch(bound -> contractInScope(bound, cls));
+            return Arrays.stream(wildcard.getUpperBounds()).allMatch(bound -> contractInScope(bound, variables))
+                    && Arrays.stream(wildcard.getLowerBounds()).allMatch(bound -> contractInScope(bound, variables));
         }
         return type instanceof Class<?>;
     }
