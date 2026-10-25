@@ -1,19 +1,19 @@
 # Reproducible root-cause family mapping for strict-TS baseline diagnostics (ticket 37).
 #
-# Parses the ten *-tsc.txt files produced by `run.py check` and assigns EVERY diagnostic
-# to exactly one family from docs/research/2026-10-25-strict-ts-root-causes.md. The rule
-# chain below is ordered and exclusive: the first matching rule wins, so per-family totals
-# always sum to the parsed diagnostic total with no double counting. Linked mechanisms
-# that share a leaf cause are folded into that leaf's family (for example the
-# HolderLookup$Provider/RegistryAccess TS2430 rows are Optional-wildcard sites per the
-# RegistryOps.lookup javap verification, so they count under F1, not F9).
+# Parses the ten *-tsc.txt files produced by `run.py check` and assigns diagnostics to
+# families from docs/research/2026-10-25-strict-ts-root-causes.md. The rule chain is
+# ordered and exclusive: the first matching rule wins, so per-family totals always sum
+# to the parsed diagnostic total with no double counting. Linked mechanisms that share
+# a leaf cause are folded into that leaf's family (for example the HolderLookup$Provider
+# TS2430 rows are Optional-wildcard sites per the RegistryOps.lookup javap verification,
+# so they count under F1, not F9). There is NO catch-all rule: the tail family lists the
+# known isolated signatures explicitly, and any diagnostic outside every rule lands in
+# UNMAPPED and fails the run with a non-zero exit code, so new or shifted error shapes
+# are never silently absorbed into a bucket.
 #
 # Usage:
 #   python bench/tsbaseline/classify_diagnostics.py --ide-dir build/tsbaseline-<tag>/ide \
 #       [--json out.json] [--markdown out.md]
-#
-# Exit code is nonzero when any diagnostic falls outside every rule (UNMAPPED); extending
-# the tail family requires an explicit rule edit, not a silent bucket.
 
 import argparse
 import collections
@@ -22,6 +22,8 @@ import json
 import os
 import re
 import sys
+
+TAIL_SIGNATURES = re.compile(r"Property '(getOrCreate|getOrThrow|leashHolder|fabric_enumCycle|get)'")
 
 RULES = [
     # (family, predicate(message_block, code))
@@ -47,7 +49,10 @@ RULES = [
     ("F12-neoforge-client-missing", lambda m, c: c == "TS2307"
         and "neoforge/client/extensions" in m),
     ("F14-fabric-pdata-member", lambda m, c: c == "TS2420"),
-    ("tail-isolated-instances", lambda m, c: True),
+    # Known isolated signatures enumerated explicitly (menus + scattered single properties);
+    # extend this list only after inspecting the new diagnostic text.
+    ("tail-isolated-instances", lambda m, c: "$AbstractContainerMenu" in m
+        or TAIL_SIGNATURES.search(m)),
 ]
 
 

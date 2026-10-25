@@ -33,7 +33,7 @@ F1 的 `28×5` 混用了双入口合计（现全部按 server 入口列示）。
 | F12 neoforge 客户端扩展模块缺失 | TS2307 | 8 | 仅 1.21.1=4 | `java:net/neoforged/neoforge/client/extensions/common` | 同 F10 边界 |
 | F13 取器/方法同名冲突 | TS2426+TS2416+TS2430 | 36 | 1.21.1=8，26.x=1-4 | 基类 bean 取器 `get level` vs 子类方法 `level()`（BlockEntity/ShelfBlockEntity、Vec3i/SectionPos x/y/z/offset 及其 TS2430） | 同一 Java 成员名在两级分别投影为取器与方法，TS 同名空间冲突 |
 | F14 fabric NekoEntityPData 缺成员 | TS2420 | 4 | 仅 fabric 26.x=1+1 | 接口要求 `neko$getPDataRoot`，fabric `$Entity` 未含 | 接口注入成员在 fabric 渲染路径缺失（连接 prior 轮 fabric_enumCycle 同域） |
-| 尾项 | 各 | 26 | 分散 | `$BlastFurnaceMenu` 等 4×TS2344（1.21.1 容器菜单）、`offset` 外的 `getOrCreate`/`getOrThrow`/`leashHolder`/`fabric_enumCycle`/`get` 各 2-4 | 多为上述族的孤立实例，修复验证时逐条归并（分类器中显式兜底，非静默桶） |
+| 尾项 | 各 | 26 | 分散 | `$BlastFurnaceMenu` 等 4×TS2344（1.21.1 容器菜单）、`getOrCreate`/`getOrThrow`/`leashHolder`/`fabric_enumCycle`/`get` 各 2-4 | 多为上述族的孤立实例，修复验证时逐条归并（分类器按已知签名显式枚举；未匹配任何规则的诊断落入 UNMAPPED 并使分类器非零退出，不静默吸收） |
 
 ## 叶因归纳（共享机制层）
 

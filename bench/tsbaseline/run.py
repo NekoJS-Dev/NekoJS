@@ -221,6 +221,23 @@ def tail_text(path, lines=15):
         return ""
 
 
+def query_process_identity(pid):
+    """Exact WMI identity (microsecond creation time, full command line) for cleanup verification."""
+    try:
+        out = subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             "$p = Get-CimInstance Win32_Process -Filter 'ProcessId=%d'; if ($p) {"
+             " @{ creationDate = (Get-Date $p.CreationDate).ToString('yyyy-MM-ddTHH:mm:ss.fffffff');"
+             "   commandLine = $p.CommandLine } | ConvertTo-Json -Compress }" % pid],
+            capture_output=True, text=True, timeout=15)
+        if out.returncode != 0 or not out.stdout.strip():
+            return {}
+        info = json.loads(out.stdout)
+        return {"creationDate": info.get("creationDate"), "commandLine": info.get("commandLine")}
+    except (OSError, ValueError):
+        return {}
+
+
 def cmd_run(args):
     target = os.path.abspath(args.target)
     manifest = json.load(open(os.path.join(target, "preparation-manifest.json"), encoding="utf-8"))
@@ -237,14 +254,15 @@ def cmd_run(args):
                                 cwd=node_dir, stdout=out_f, stderr=err_f,
                                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
         # Ownership record: kill-servers.ps1 only ever touches processes listed here, after
-        # verifying PID liveness, creation time and command line (see bench/tsbaseline/README.md).
-        write_json(os.path.join(node_dir, "server-process.json"), {
-            "node": node, "pid": proc.pid, "startedAtEpoch": time.time(),
-            "java": entry["java"], "rconPort": entry["rconPort"],
-        })
+        # verifying PID liveness, exact creation time and exact command line (see README).
+        record = {"node": node, "pid": proc.pid, "startedAtEpoch": time.time(),
+                  "java": entry["java"], "rconPort": entry["rconPort"]}
+        record.update(query_process_identity(proc.pid))
+        write_json(os.path.join(node_dir, "server-process.json"), record)
         print(f"{node}: started pid {proc.pid}, waiting for rcon on {entry['rconPort']}")
         result = {"node": node, "pid": proc.pid}
         failure = None
+        cause = None
         try:
             ready = wait_rcon_ready(entry["rconPort"], entry["rconPassword"], time.time() + args.boot_timeout)
             if not ready:
@@ -273,8 +291,10 @@ def cmd_run(args):
                             f"probe completion line never appeared; stdout tail:\n{tail_text(stdout_path)}")
                     result["probeFiles"] = int(marker.group(1))
                 except (OSError, RuntimeError) as probe_failure:
+                    cause = probe_failure
                     failure = f"{node}: probe failed: {probe_failure}"
         except Exception as unexpected:
+            cause = unexpected
             failure = f"{node}: unexpected driver failure: {unexpected}"
         # Unified owned-server recovery for success, probe failure and driver error alike:
         # clean RCON stop first, bounded wait, then kill the child we own.
@@ -282,6 +302,8 @@ def cmd_run(args):
         out_f.close(); err_f.close()
         result["sessionLockReleased"] = wait_session_lock(node_dir, time.time() + 120)
         result["stdoutTail"] = tail_text(stdout_path, 5).strip().splitlines()[-1:] or [""]
+        if failure is not None:
+            result["failure"] = failure
         results.append(result)
         # Persist after every node so a later failure still leaves the completed nodes inspectable.
         write_json(os.path.join(target, "run-summary.json"), results)
@@ -289,7 +311,8 @@ def cmd_run(args):
               f"killed={result['killed']} stopSent={result['stopSent']} "
               f"lockReleased={result['sessionLockReleased']}")
         if failure is not None:
-            raise SystemExit(failure)
+            # Keep the original exception chained for the driver's own crash paths.
+            raise SystemExit(failure) from cause
         if result["exitCode"] != 0:
             raise SystemExit(f"{node}: unexpected server exit {result['exitCode']}")
     print("run complete")
