@@ -1,0 +1,2 @@
+# Preserve the byte hashes of the frozen verifier dependency on Windows checkouts.
+*.py text eol=lf
