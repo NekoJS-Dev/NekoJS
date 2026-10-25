@@ -1,6 +1,8 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
-2026-10-25 Codex复核五项修正与F1成员驱动视图重做（`d075db12`+`fab58a7d`，[证据](../evidence/2026-10-25-strict-ts-f1v2-member-view-fab58a7d/README.md)）：捕获视图改为按 `java.util.Optional`/`Stream`/`BaseStream` 反射实例面生成的命名 `$OptionalView<B>`/`$StreamView<B>`——`orElseThrow`/Bean `present`/`filter`/递归 `stream().findAny().stream()` 等复核点名正例全部恢复为正向合同（夹具+严格 tsc 退出 0），排除集收敛为三条带实测错误链证明的机械规则（嵌套捕获容器参数 `or`；多重载上界 SAM 组 `reduce/sorted/collect`；不变容器返回 `toList/spliterator`，`$Iterator` 白名单），被排除成员在具体实现上完整保留；原型在 914df3c7 真实树副本零净差异后产品化。驱动加固：kill 脚本仅处理本驱动 `server-process.json` 记录且三重身份验证（四情形实测）、run 异常路径统一回收（故障注入实测）、check 三态分类显式失败 invalid 运行（注入实测）。[根因分类](../../../research/2026-10-25-strict-ts-root-causes.md)经新增 `classify_diagnostics.py` 逐条互斥归类精确闭合 1609（映射 JSON 入库，F9 按叶因解散归 F1/F5/F6/F13）。fab58a7d 确切产物十入口重测 1609→1503（F1 156→50、其余族±0、逐条移除 106/新增 0），:common:check 全量与 test:probe-types 绿。
+2026-10-25 第二轮复核四项修正（`122c8c3e`+`f71b45fb`，[证据](../evidence/2026-10-25-strict-ts-f1v3-overload-retention-f71b45fb/README.md)）：捕获视图重载保留重做——真实树 19 轮实验矩阵（X4–X8/Y1–Y16）证伪了"整组排除"，`sorted` 双签名（无参前置）、三参 `reduce`、supplier 版 `collect`、`spliterator` 全部恢复为正向合同（golden +5 行），排除收敛为实证锚定的 R1a 嵌套捕获容器 / R1b 多重载组内全 B 别名（BinaryOperator reduce、同形状单签名如 orElseGet 不受影响）/ R2 组内零参+首个选择 / R3 不变容器返回（toList，白名单 Iterator/Spliterator）；驱动三项：kill 脚本改微秒创建时刻+完整命令行双全等（PID 复用两形态实测 SKIP）、run 失败原因入摘要且 `SystemExit from` 原异常（注入实测）、分类器去无条件兜底改显式枚举（未知诊断 UNMAPPED 非零退出，闭合仍 1609）。f1v3 确切产物十入口 1503（与 f1v2 逐入口一致、重载保留零诊断代价、族级 F1 156→50 其余 ±0、逐条 −106/+0），:common:check 全量与 test:probe-types 绿。
+
+2026-10-25 Codex复核五项修正与F1成员驱动视图重做（`d075db12`+`fab58a7d`，[证据](../evidence/2026-10-25-strict-ts-f1v2-member-view-fab58a7d/README.md)）：捕获视图改为按 `java.util.Optional`/`Stream`/`BaseStream` 反射实例面生成的命名 `$OptionalView<B>`/`$StreamView<B>`——`orElseThrow`/Bean `present`/`filter`/递归 `stream().findAny().stream()` 等复核点名正例全部恢复为正向合同（夹具+严格 tsc 退出 0），排除集收敛为三条带实测错误链证明的机械规则（嵌套捕获容器参数 `or`；多重载上界 SAM 组 `reduce/sorted/collect`；不变容器返回 `toList/spliterator`，`$Iterator` 白名单），被排除成员在具体实现上完整保留；原型在 914df3c7 真实树副本零净差异后产品化。驱动加固：kill 脚本仅处理本驱动 `server-process.json` 记录且三重身份验证（四情形实测）、run 异常路径统一回收（故障注入实测）、check 三态分类显式失败 invalid 运行（注入实测）。[根因分类](../../../research/2026-10-25-strict-ts-root-causes.md)经新增 `classify_diagnostics.py` 逐条互斥归类精确闭合 1609（映射 JSON 入库，F9 按叶因解散归 F1/F5/F6/F13）。fab58a7d 确切产物十入口重测 1609→1503（F1 156→50、其余族±0、逐条移除 106/新增 0），:common:check 全量与 test:probe-types 绿。（该轮的整组重载排除已被上方 f1v3 重做修正；历史证据保持原样。）
 
 2026-10-25 严格TS基线重建与第一族修复：新保存[可复用五节点安装/生成/检查驱动](../../../bench/tsbaseline/README.md)，c3ee4097 十入口默认安装基线实测 1609（逐入口/错误码与 v3 修正值逐项一致，声明树与 3ccea55a 逐字节一致）。[根因分类](../../../research/2026-10-25-strict-ts-root-causes.md)列 15 族（真实签名经 patched-jar javap 核验）。F1 Constable→Optional 通配族修复 `914df3c7`（canonical 渲染器输出位捕获视图，先红后绿+正负消费+[证据](../evidence/2026-10-25-strict-ts-f1-optional-capture-914df3c7/README.md)）：十入口 1609→1503（F1 −90、HolderLookup.Provider/RegistryAccess 连带 −16，零新增零回归），:common:check 与 test:probe-types 全过；剩余 50 为 number/string 值投影可表达性边界。完整严格 TS 仍 FAIL（1503）。（该轮内联视图后被 2026-10-25 复核指出公开面缩减，已由上方 fab58a7d 成员驱动视图替换；历史证据保持原样。）
 
@@ -52,7 +54,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-25：d06cd961 原政策正式性能三组 PASS（历史 FAIL 记录保留）；完整严格 TS 仍 FAIL——fab58a7d 十入口 1503（F1 成员驱动视图 −106、其余族未动），下一族 F4（fabric 泛型方法投影，80）；最终候选冻结/客户端/TCP/分离回退/1.2.0 包装与维护者/发布门禁未完成；精确结果统一见上方验收汇总）
+**Status:** in-progress（2026-10-25：d06cd961 原政策正式性能三组 PASS（历史 FAIL 记录保留）；完整严格 TS 仍 FAIL——f71b45fb 十入口 1503（F1 成员驱动视图 −106 且重载保留零代价，其余族未动），下一族 F4（fabric 泛型方法投影，80）；最终候选冻结/客户端/TCP/分离回退/1.2.0 包装与维护者/发布门禁未完成；精确结果统一见上方验收汇总）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 

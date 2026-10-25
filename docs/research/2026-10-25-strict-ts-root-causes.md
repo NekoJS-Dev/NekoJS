@@ -85,3 +85,14 @@ F1 已按上述约束实施：canonical 渲染器输出位捕获视图，先红�
 `$Iterator` 白名单），被排除成员在具体实现上保留。fab58a7d 确切产物十入口重测仍为
 1609→1503（F1 156→50、逐条移除 106/新增 0），设计与证明见
 [证据页](../architecture-refactor/evidence/2026-10-25-strict-ts-f1v2-member-view-fab58a7d/README.md)。
+（该轮的"多重载组整组排除"后被第二轮复核证伪并修正，见下节；历史证据保持原样。）
+
+## 2026-10-25 F1 重载保留修正（122c8c3e + f71b45fb）
+
+第二轮复核确认整组排除删除了合法的 `sorted()` 等重载。f1v2 真实树 19 轮实验矩阵
+（X4–X8/Y1–Y16）修正规律：单独保留任一 `sorted`/`reduce`/`collect` 重载均可过，`sorted`
+双签名无参前置可过，"全 B 别名" SAM（`$BinaryOperator_<B,B,B,B>`）在多重载组内不可表示
+（同形状单签名如 `orElseGet` 不受影响），`spliterator(): $Spliterator<B>` 可恢复，`toList`
+与 `collect` 第二重载为实证边界。视图净增 5 个成员，f1v3 确切产物十入口仍 1503（与 f1v2
+逐入口一致、零诊断代价、逐条 −106/+0），实验编号与规则细节见
+[证据页](../architecture-refactor/evidence/2026-10-25-strict-ts-f1v3-overload-retention-f71b45fb/README.md)。
