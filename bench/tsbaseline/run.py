@@ -251,14 +251,16 @@ def cmd_run(args):
         stderr_path = os.path.join(node_dir, "server-stderr.log")
         with open(stdout_path, "w", encoding="utf-8", errors="replace") as out_f, \
                 open(stderr_path, "w", encoding="utf-8", errors="replace") as err_f:
-            proc = subprocess.Popen([entry["java"], "-Xms512M", "-Xmx2G"] + cfg["args"],
-                                    cwd=node_dir, stdout=out_f, stderr=err_f,
-                                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
-            print(f"{node}: started pid {proc.pid}, waiting for rcon on {entry['rconPort']}")
-            result = {"node": node, "pid": proc.pid}
+            proc = None
+            result = {"node": node, "pid": None}
             failure = None
             cause = None
             try:
+                proc = subprocess.Popen([entry["java"], "-Xms512M", "-Xmx2G"] + cfg["args"],
+                                        cwd=node_dir, stdout=out_f, stderr=err_f,
+                                        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+                result["pid"] = proc.pid
+                print(f"{node}: started pid {proc.pid}, waiting for rcon on {entry['rconPort']}")
                 # Identity lookup and recording already own a live child and must share its recovery path.
                 record = {"node": node, "pid": proc.pid, "startedAtEpoch": time.time(),
                           "java": entry["java"], "rconPort": entry["rconPort"]}
@@ -299,7 +301,15 @@ def cmd_run(args):
                 failure = f"{node}: unexpected driver failure: {unexpected}"
             # Unified owned-server recovery for success, probe failure and driver error alike:
             # clean RCON stop first, bounded wait, then kill the child we own.
-            result.update(stop_owned_server(proc, entry, args))
+            try:
+                result.update(stop_owned_server(proc, entry, args) if proc is not None
+                              else {"stopSent": False, "exitCode": None, "killed": False})
+            except Exception as cleanup_failure:
+                result.update(stopSent=None, exitCode=None, killed=False,
+                              cleanupFailure=f"{type(cleanup_failure).__name__}: {cleanup_failure}")
+                if cause is None:
+                    cause = cleanup_failure
+                    failure = f"{node}: server cleanup failed: {cleanup_failure}"
             out_f.close(); err_f.close()
             result["sessionLockReleased"] = wait_session_lock(node_dir, time.time() + 120)
             result["stdoutTail"] = tail_text(stdout_path, 5).strip().splitlines()[-1:] or [""]
@@ -308,14 +318,14 @@ def cmd_run(args):
             results.append(result)
             # Persist after every node so a later failure still leaves the completed nodes inspectable.
             write_json(os.path.join(target, "run-summary.json"), results)
-            print(f"{node}: probeFiles={result.get('probeFiles')} exit={result['exitCode']} "
-                  f"killed={result['killed']} stopSent={result['stopSent']} "
-                  f"lockReleased={result['sessionLockReleased']}")
             if cause is not None and not isinstance(cause, Exception):
                 raise cause
             if failure is not None:
                 # Keep the original exception chained for the driver's own crash paths.
                 raise SystemExit(failure) from cause
+            print(f"{node}: probeFiles={result.get('probeFiles')} exit={result['exitCode']} "
+                  f"killed={result['killed']} stopSent={result['stopSent']} "
+                  f"lockReleased={result['sessionLockReleased']}")
             if result["exitCode"] != 0:
                 raise SystemExit(f"{node}: unexpected server exit {result['exitCode']}")
     print("run complete")

@@ -17,10 +17,18 @@ class RunCleanupTest(unittest.TestCase):
     def test_interruption_reaps_owned_server_without_replacing_the_interrupt(self):
         self.assert_owned_cleanup(KeyboardInterrupt("identity interrupted"), KeyboardInterrupt)
 
-    def assert_owned_cleanup(self, failure, expected_exception):
+    def test_status_output_failure_after_launch_still_reaps_owned_server(self):
+        self.assert_owned_cleanup(BrokenPipeError("status channel closed"), SystemExit, phase="status")
+
+    def test_cleanup_failure_does_not_mask_the_original_identity_failure(self):
+        self.assert_owned_cleanup(baseline.subprocess.TimeoutExpired("process identity", 15), SystemExit,
+                                  cleanup_failure=PermissionError("child termination denied"))
+
+    def assert_owned_cleanup(self, failure, expected_exception, phase="identity", cleanup_failure=None):
         process = Mock(pid=987654)
         process.poll.return_value = None
         process.wait.side_effect = [baseline.subprocess.TimeoutExpired("server", 15), -9]
+        process.kill.side_effect = cleanup_failure
         with tempfile.TemporaryDirectory(prefix="neko-baseline-cleanup-") as folder:
             target = Path(folder)
             (target / "1.21.1").mkdir()
@@ -30,7 +38,8 @@ class RunCleanupTest(unittest.TestCase):
             args = types.SimpleNamespace(target=folder, boot_timeout=1, probe_timeout=1, stop_timeout=1)
             with patch.object(baseline.subprocess, "Popen", return_value=process) as launch, \
                     patch.object(baseline.subprocess, "CREATE_NEW_PROCESS_GROUP", 0, create=True), \
-                    patch.object(baseline, "query_process_identity", side_effect=failure), \
+                    patch.object(baseline, "query_process_identity", side_effect=failure if phase == "identity" else None), \
+                    patch.object(baseline, "print", side_effect=failure if phase == "status" else None, create=True), \
                     patch.object(baseline, "rcon_call", side_effect=OSError("stop unavailable")), \
                     patch.object(baseline, "wait_session_lock", return_value=True):
                 try:
@@ -46,9 +55,12 @@ class RunCleanupTest(unittest.TestCase):
             else:
                 self.assertIs(raised.exception.__cause__, failure)
             process.kill.assert_called_once_with()
-            self.assertEqual(process.wait.call_count, 2)
+            self.assertEqual(process.wait.call_count, 1 if cleanup_failure else 2)
             results = json.loads((target / "run-summary.json").read_text(encoding="utf-8"))
-            self.assertTrue(results[0]["killed"])
+            if cleanup_failure:
+                self.assertIn(str(cleanup_failure), results[0]["cleanupFailure"])
+            else:
+                self.assertTrue(results[0]["killed"])
             self.assertIn(str(failure), results[0]["failure"])
 
 

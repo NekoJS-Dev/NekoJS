@@ -54,6 +54,8 @@ python bench/tsbaseline/run.py check --target build/tsbaseline-<tag>
 
 驱动故障回归：`python -m unittest discover -s bench/tsbaseline -p test_run.py`。
 身份查询在亲启子进程的回收范围内；查询超时也会等待/回收、落盘失败摘要并保留异常链。
+启动状态输出失败和中断也进入同一路径；中断在回收后原样传播。回收本身失败时，
+摘要另记 `cleanupFailure`，保留原始操作异常，不把未知停服结果记为成功。
 
 | 文件 | 内容 |
 |---|---|
