@@ -16,8 +16,8 @@ renderEnum 从编辑后的 IR 补回实例接口继承，沿用 Enum<Self> 与�
 
 初次普通 common/check 有两项预期 golden 差异；原生生成后，首次矩阵尚未退出时错误地启动了第二次 common/check，两个 Gradle 测试运行交叉污染固定临时游戏目录，并发生结果文件冲突。失败、日志占用及无限循环线程栈保留在 build/enum-interface-*；核实身份后回收本次挂住的 worker 4940。没有改断言或产品运行时，也没有将这些运行计作通过。
 
-最终使用新的临时目录以及 --no-daemon --no-parallel --max-workers=1 串行运行 common/check、处理器、guardLint 和五节点 build，2m25s 通过（106 tasks；节点测试有缓存复用）。当前 XML 合计5187 tests、271 skipped、0 failures/errors。npm test:probe-types 全链与四项 CI gate 通过；两轴只读复审无新增确证问题。完整五节点安装及十入口诊断尚待新候选绑定，不能提前宣称 F2 清零。最终候选性能、Python 默认安装与客户端/TCP/回退未重测。
+最终使用新的临时目录以及 --no-daemon --no-parallel --max-workers=1 串行运行 common/check、处理器、guardLint 和五节点 build，2m25s 通过（106 tasks；节点测试有缓存复用）。当前 XML 合计5187 tests、271 skipped、0 failures/errors。npm test:probe-types 全链与四项 CI gate 通过；两轴只读复审无新增确证问题。84ae51c1五节点新安装全部正常停服，十入口1409→1079，F2清零；原文差分−334/+4，同源缺失引用核对后−330/+0，详见冻结证据。最终候选性能、Python 默认安装与客户端/TCP/回退未重测。
 
 ## 独立后续调查记录
 
-F14 的4条并非缺少Java实现：当前 Fabric Entity 声明有 getPDataRoot()/pDataRoot，而 NekoEntityPData 要求 neko$getPDataRoot()。实体从 EntityExtension 获得类级 RemapByPrefix，影响另一接口实现的方法名称；未标该注解的接口自身仍按原名发射。后续需要来源和接收者上下文一致的合同投影；不能简单补一个运行时不可访问的原名方法，也不能为消除诊断就给接口加注解扩大脚本暴露。本阶段未改此处产品代码。
+F14 的4条并非缺少Java实现：当前 Fabric Entity 声明有 getPDataRoot()/pDataRoot，而 NekoEntityPData 要求 neko$getPDataRoot()。实体从 EntityExtension 获得类级 RemapByPrefix，影响另一接口实现的方法名称；未标该注解的接口自身仍按原名发射。后续需要来源和接收者上下文一致的合同投影，并实测实际暴露方式，不能未经证明就添加接口原名或修改接口注解来消除诊断。此前对原名运行时不可访问的表述超出了源码核对范围，现明确为待实测。本阶段未改此处产品代码。

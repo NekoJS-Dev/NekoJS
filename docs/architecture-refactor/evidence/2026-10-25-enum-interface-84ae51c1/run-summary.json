@@ -1,0 +1,67 @@
+[
+  {
+    "node": "1.21.1",
+    "pid": 28736,
+    "probeReceiptHead": "Generating probe (typescript:builtin)...\n  warning: [NEKO-4029] Probe functional alias omitted for net.minecraft.network.protocol.common.ClientCommonPacketListener; its signature is unavailable (java.lang.RuntimeException: Attempted to load class net/minecraft/client/Minecraft for invalid dist DEDIC",
+    "probeFiles": 394,
+    "stopSent": true,
+    "exitCode": 0,
+    "killed": false,
+    "sessionLockReleased": true,
+    "stdoutTail": [
+      "[23:46:05] [Server thread/INFO] [minecraft/GenericThread]: Thread RCON Listener stopped"
+    ]
+  },
+  {
+    "node": "26.1.2",
+    "pid": 29648,
+    "probeReceiptHead": "Generating probe (typescript:builtin)...\nProbe generated: 448 files in 4710ms\n  Output: .neko_probe\\typescript\n",
+    "probeFiles": 448,
+    "stopSent": true,
+    "exitCode": 0,
+    "killed": false,
+    "sessionLockReleased": true,
+    "stdoutTail": [
+      "[23:46:29] [main/INFO] [ne.ne.fm.ModLoader/]: Clearing ModLoader"
+    ]
+  },
+  {
+    "node": "26.2.0",
+    "pid": 37284,
+    "probeReceiptHead": "Generating probe (typescript:builtin)...\nProbe generated: 430 files in 3400ms\n  Output: .neko_probe\\typescript\n",
+    "probeFiles": 430,
+    "stopSent": true,
+    "exitCode": 0,
+    "killed": false,
+    "sessionLockReleased": true,
+    "stdoutTail": [
+      "[23:46:51] [main/INFO] [ne.ne.fm.ModLoader/]: Clearing ModLoader"
+    ]
+  },
+  {
+    "node": "26.1.2-fabric",
+    "pid": 13736,
+    "probeReceiptHead": "Generating probe (typescript:builtin)...Probe generated: 540 files in 3577ms  Output: .neko_probe\\typescript",
+    "probeFiles": 540,
+    "stopSent": true,
+    "exitCode": 0,
+    "killed": false,
+    "sessionLockReleased": true,
+    "stdoutTail": [
+      "[23:47:58] [Server thread/INFO]: Thread RCON Listener stopped"
+    ]
+  },
+  {
+    "node": "26.2.0-fabric",
+    "pid": 26240,
+    "probeReceiptHead": "Generating probe (typescript:builtin)...Probe generated: 519 files in 3424ms  Output: .neko_probe\\typescript",
+    "probeFiles": 519,
+    "stopSent": true,
+    "exitCode": 0,
+    "killed": false,
+    "sessionLockReleased": true,
+    "stdoutTail": [
+      "[23:49:03] [Server thread/INFO]: Thread RCON Listener stopped"
+    ]
+  }
+]

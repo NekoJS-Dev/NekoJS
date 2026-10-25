@@ -1,0 +1,190 @@
+{
+  "sourceRevision": "84ae51c1",
+  "typescriptVersion": "Version 5.8.3",
+  "skipLibCheck": false,
+  "noEmit": true,
+  "nodes": [
+    {
+      "node": "1.21.1",
+      "typescript": [
+        {
+          "side": "server",
+          "exitCode": 2,
+          "runState": "diagnostics",
+          "diagnosticCount": 69,
+          "codes": {
+            "TS2304": 1,
+            "TS2307": 7,
+            "TS2344": 12,
+            "TS2416": 23,
+            "TS2426": 3,
+            "TS2430": 1,
+            "TS2552": 10,
+            "TS2724": 12
+          },
+          "diagnosticsComplete": true,
+          "command": "node D:\\mcmodDemo\\NekoJS-mult\\node_modules\\typescript\\bin\\tsc -p D:\\mcmodDemo\\NekoJS-mult\\build\\tsbaseline-enum-84ae51c1\\ide\\1.21.1-server-tsconfig.json"
+        },
+        {
+          "side": "startup",
+          "exitCode": 2,
+          "runState": "diagnostics",
+          "diagnosticCount": 70,
+          "codes": {
+            "TS2304": 1,
+            "TS2307": 8,
+            "TS2344": 12,
+            "TS2416": 23,
+            "TS2426": 3,
+            "TS2430": 1,
+            "TS2552": 10,
+            "TS2724": 12
+          },
+          "diagnosticsComplete": true,
+          "command": "node D:\\mcmodDemo\\NekoJS-mult\\node_modules\\typescript\\bin\\tsc -p D:\\mcmodDemo\\NekoJS-mult\\build\\tsbaseline-enum-84ae51c1\\ide\\1.21.1-startup-tsconfig.json"
+        }
+      ]
+    },
+    {
+      "node": "26.1.2",
+      "typescript": [
+        {
+          "side": "server",
+          "exitCode": 2,
+          "runState": "diagnostics",
+          "diagnosticCount": 121,
+          "codes": {
+            "TS2307": 3,
+            "TS2344": 79,
+            "TS2416": 34,
+            "TS2426": 1,
+            "TS2430": 4
+          },
+          "diagnosticsComplete": true,
+          "command": "node D:\\mcmodDemo\\NekoJS-mult\\node_modules\\typescript\\bin\\tsc -p D:\\mcmodDemo\\NekoJS-mult\\build\\tsbaseline-enum-84ae51c1\\ide\\26.1.2-server-tsconfig.json"
+        },
+        {
+          "side": "startup",
+          "exitCode": 2,
+          "runState": "diagnostics",
+          "diagnosticCount": 122,
+          "codes": {
+            "TS2307": 4,
+            "TS2344": 79,
+            "TS2416": 34,
+            "TS2426": 1,
+            "TS2430": 4
+          },
+          "diagnosticsComplete": true,
+          "command": "node D:\\mcmodDemo\\NekoJS-mult\\node_modules\\typescript\\bin\\tsc -p D:\\mcmodDemo\\NekoJS-mult\\build\\tsbaseline-enum-84ae51c1\\ide\\26.1.2-startup-tsconfig.json"
+        }
+      ]
+    },
+    {
+      "node": "26.2.0",
+      "typescript": [
+        {
+          "side": "server",
+          "exitCode": 2,
+          "runState": "diagnostics",
+          "diagnosticCount": 115,
+          "codes": {
+            "TS2307": 3,
+            "TS2344": 76,
+            "TS2416": 32,
+            "TS2430": 4
+          },
+          "diagnosticsComplete": true,
+          "command": "node D:\\mcmodDemo\\NekoJS-mult\\node_modules\\typescript\\bin\\tsc -p D:\\mcmodDemo\\NekoJS-mult\\build\\tsbaseline-enum-84ae51c1\\ide\\26.2.0-server-tsconfig.json"
+        },
+        {
+          "side": "startup",
+          "exitCode": 2,
+          "runState": "diagnostics",
+          "diagnosticCount": 116,
+          "codes": {
+            "TS2307": 4,
+            "TS2344": 76,
+            "TS2416": 32,
+            "TS2430": 4
+          },
+          "diagnosticsComplete": true,
+          "command": "node D:\\mcmodDemo\\NekoJS-mult\\node_modules\\typescript\\bin\\tsc -p D:\\mcmodDemo\\NekoJS-mult\\build\\tsbaseline-enum-84ae51c1\\ide\\26.2.0-startup-tsconfig.json"
+        }
+      ]
+    },
+    {
+      "node": "26.1.2-fabric",
+      "typescript": [
+        {
+          "side": "server",
+          "exitCode": 2,
+          "runState": "diagnostics",
+          "diagnosticCount": 119,
+          "codes": {
+            "TS2307": 2,
+            "TS2344": 77,
+            "TS2416": 34,
+            "TS2420": 1,
+            "TS2426": 1,
+            "TS2430": 4
+          },
+          "diagnosticsComplete": true,
+          "command": "node D:\\mcmodDemo\\NekoJS-mult\\node_modules\\typescript\\bin\\tsc -p D:\\mcmodDemo\\NekoJS-mult\\build\\tsbaseline-enum-84ae51c1\\ide\\26.1.2-fabric-server-tsconfig.json"
+        },
+        {
+          "side": "startup",
+          "exitCode": 2,
+          "runState": "diagnostics",
+          "diagnosticCount": 120,
+          "codes": {
+            "TS2307": 3,
+            "TS2344": 77,
+            "TS2416": 34,
+            "TS2420": 1,
+            "TS2426": 1,
+            "TS2430": 4
+          },
+          "diagnosticsComplete": true,
+          "command": "node D:\\mcmodDemo\\NekoJS-mult\\node_modules\\typescript\\bin\\tsc -p D:\\mcmodDemo\\NekoJS-mult\\build\\tsbaseline-enum-84ae51c1\\ide\\26.1.2-fabric-startup-tsconfig.json"
+        }
+      ]
+    },
+    {
+      "node": "26.2.0-fabric",
+      "typescript": [
+        {
+          "side": "server",
+          "exitCode": 2,
+          "runState": "diagnostics",
+          "diagnosticCount": 113,
+          "codes": {
+            "TS2307": 2,
+            "TS2344": 74,
+            "TS2416": 32,
+            "TS2420": 1,
+            "TS2430": 4
+          },
+          "diagnosticsComplete": true,
+          "command": "node D:\\mcmodDemo\\NekoJS-mult\\node_modules\\typescript\\bin\\tsc -p D:\\mcmodDemo\\NekoJS-mult\\build\\tsbaseline-enum-84ae51c1\\ide\\26.2.0-fabric-server-tsconfig.json"
+        },
+        {
+          "side": "startup",
+          "exitCode": 2,
+          "runState": "diagnostics",
+          "diagnosticCount": 114,
+          "codes": {
+            "TS2307": 3,
+            "TS2344": 74,
+            "TS2416": 32,
+            "TS2420": 1,
+            "TS2430": 4
+          },
+          "diagnosticsComplete": true,
+          "command": "node D:\\mcmodDemo\\NekoJS-mult\\node_modules\\typescript\\bin\\tsc -p D:\\mcmodDemo\\NekoJS-mult\\build\\tsbaseline-enum-84ae51c1\\ide\\26.2.0-fabric-startup-tsconfig.json"
+        }
+      ]
+    }
+  ],
+  "totalDiagnostics": 1079
+}

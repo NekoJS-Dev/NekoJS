@@ -1,0 +1,2577 @@
+{
+  "before": 1409,
+  "after": 1079,
+  "rawRemoved": 334,
+  "rawAdded": 4,
+  "semanticRemoved": 330,
+  "semanticAdded": 0,
+  "beforeEntrypoints": {
+    "1.21.1-server": 102,
+    "1.21.1-startup": 103,
+    "26.1.2-fabric-server": 152,
+    "26.1.2-fabric-startup": 153,
+    "26.1.2-server": 154,
+    "26.1.2-startup": 155,
+    "26.2.0-fabric-server": 146,
+    "26.2.0-fabric-startup": 147,
+    "26.2.0-server": 148,
+    "26.2.0-startup": 149
+  },
+  "afterEntrypoints": {
+    "1.21.1-server": 69,
+    "1.21.1-startup": 70,
+    "26.1.2-fabric-server": 119,
+    "26.1.2-fabric-startup": 120,
+    "26.1.2-server": 121,
+    "26.1.2-startup": 122,
+    "26.2.0-fabric-server": 113,
+    "26.2.0-fabric-startup": 114,
+    "26.2.0-server": 115,
+    "26.2.0-startup": 116
+  },
+  "rawRemovedIdentities": [
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'date' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateEpochDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateNow' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateYearDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'eraOf' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'localDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'period' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'resolveDate' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'zonedDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/index.d.ts",
+        "TS2344",
+        "Type '$LocalDate' does not satisfy the constraint '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getEra' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'multipliedBy' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'negated' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'normalized' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'until' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'with' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/net/minecraft/network/protocol/common/index.d.ts",
+        "TS2304",
+        "Cannot find name '$ClientCommonPacketListener'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/net/minecraft/network/protocol/game/index.d.ts",
+        "TS2552",
+        "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'date' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateEpochDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateNow' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateYearDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'eraOf' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'localDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'period' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'resolveDate' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'zonedDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/index.d.ts",
+        "TS2344",
+        "Type '$LocalDate' does not satisfy the constraint '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getEra' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'multipliedBy' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'negated' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'normalized' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'until' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'with' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/net/minecraft/network/protocol/common/index.d.ts",
+        "TS2304",
+        "Cannot find name '$ClientCommonPacketListener'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/net/minecraft/network/protocol/game/index.d.ts",
+        "TS2552",
+        "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'date' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateEpochDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateNow' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateYearDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'eraOf' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'localDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'period' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'resolveDate' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'zonedDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2344",
+        "Type '$LocalDate' does not satisfy the constraint '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getEra' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'multipliedBy' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'negated' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'normalized' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'until' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'with' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'date' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateEpochDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateNow' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateYearDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'eraOf' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'localDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'period' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'resolveDate' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'zonedDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2344",
+        "Type '$LocalDate' does not satisfy the constraint '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getEra' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'multipliedBy' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'negated' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'normalized' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'until' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'with' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'date' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateEpochDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateNow' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateYearDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'eraOf' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'localDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'period' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'resolveDate' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'zonedDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/index.d.ts",
+        "TS2344",
+        "Type '$LocalDate' does not satisfy the constraint '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getEra' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'multipliedBy' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'negated' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'normalized' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'until' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'with' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'date' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateEpochDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateNow' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateYearDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'eraOf' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'localDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'period' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'resolveDate' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'zonedDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/index.d.ts",
+        "TS2344",
+        "Type '$LocalDate' does not satisfy the constraint '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getEra' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'multipliedBy' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'negated' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'normalized' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'until' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.1.2-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'with' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'date' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateEpochDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateNow' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateYearDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'eraOf' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'localDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'period' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'resolveDate' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'zonedDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2344",
+        "Type '$LocalDate' does not satisfy the constraint '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getEra' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'multipliedBy' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'negated' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'normalized' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'until' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'with' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'date' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateEpochDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateNow' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateYearDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'eraOf' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'localDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'period' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'resolveDate' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'zonedDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2344",
+        "Type '$LocalDate' does not satisfy the constraint '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getEra' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'multipliedBy' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'negated' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'normalized' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'until' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-fabric-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'with' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'date' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateEpochDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateNow' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateYearDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'eraOf' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'localDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'period' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'resolveDate' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'zonedDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/index.d.ts",
+        "TS2344",
+        "Type '$LocalDate' does not satisfy the constraint '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getEra' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'multipliedBy' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'negated' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'normalized' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'until' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-server",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'with' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'date' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateEpochDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateNow' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 3
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'dateYearDay' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'eraOf' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'localDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'period' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'resolveDate' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/chrono/index.d.ts",
+        "TS2416",
+        "Property 'zonedDateTime' in type '$IsoChronology' is not assignable to the same property in base type '$AbstractChronology'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/index.d.ts",
+        "TS2344",
+        "Type '$LocalDate' does not satisfy the constraint '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getChronology' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'getEra' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'minus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'multipliedBy' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'negated' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'normalized' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'plus' in type '$Period' is not assignable to the same property in base type '$ChronoPeriod'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'until' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    },
+    {
+      "identity": [
+        "26.2.0-startup",
+        "@package/java/time/index.d.ts",
+        "TS2416",
+        "Property 'with' in type '$LocalDate' is not assignable to the same property in base type '$ChronoLocalDate'."
+      ],
+      "count": 2
+    }
+  ],
+  "rawAddedIdentities": [
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/net/minecraft/network/protocol/common/index.d.ts",
+        "TS2552",
+        "Cannot find name '$ClientCommonPacketListener'. Did you mean '$ServerCommonPacketListener'?"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-server",
+        "@package/net/minecraft/network/protocol/game/index.d.ts",
+        "TS2304",
+        "Cannot find name '$ClientGamePacketListener'."
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/net/minecraft/network/protocol/common/index.d.ts",
+        "TS2552",
+        "Cannot find name '$ClientCommonPacketListener'. Did you mean '$ServerCommonPacketListener'?"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "1.21.1-startup",
+        "@package/net/minecraft/network/protocol/game/index.d.ts",
+        "TS2304",
+        "Cannot find name '$ClientGamePacketListener'."
+      ],
+      "count": 1
+    }
+  ],
+  "missingNameNormalization": "Only TS2304/TS2552 exact Cannot find name diagnostics; compare identifier, actual owner declaration and actual source line, preserving counts. Optional spelling suggestions are not name resolution changes.",
+  "beforeMissingContexts": [
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/common/index.d.ts",
+      "line": 17,
+      "column": 85,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientCommonPacketListener'. Did you mean '$ServerCommonPacketListener'?",
+      "owner": "export class $ClientboundCustomPayloadPacket extends $Record implements $Packet<$ClientCommonPacketListener> {",
+      "sourceLine": "export class $ClientboundCustomPayloadPacket extends $Record implements $Packet<$ClientCommonPacketListener> {",
+      "name": "$ClientCommonPacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/common/index.d.ts",
+      "line": 26,
+      "column": 22,
+      "code": "TS2304",
+      "message": "Cannot find name '$ClientCommonPacketListener'.",
+      "owner": "export class $ClientboundCustomPayloadPacket extends $Record implements $Packet<$ClientCommonPacketListener> {",
+      "sourceLine": "handle(arg0: $ClientCommonPacketListener): void;",
+      "name": "$ClientCommonPacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 43,
+      "column": 65,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundAddEntityPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "export class $ClientboundAddEntityPacket implements $Packet<$ClientGamePacketListener> {",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 78,
+      "column": 22,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundAddEntityPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "handle(arg0: $ClientGamePacketListener): void;",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 82,
+      "column": 71,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundBlockEntityDataPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "export class $ClientboundBlockEntityDataPacket implements $Packet<$ClientGamePacketListener> {",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 95,
+      "column": 22,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundBlockEntityDataPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "handle(arg0: $ClientGamePacketListener): void;",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 115,
+      "column": 75,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundLevelChunkWithLightPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "export class $ClientboundLevelChunkWithLightPacket implements $Packet<$ClientGamePacketListener> {",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 130,
+      "column": 22,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundLevelChunkWithLightPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "handle(arg0: $ClientGamePacketListener): void;",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/world/inventory/index.d.ts",
+      "line": 82,
+      "column": 47,
+      "code": "TS2552",
+      "message": "Cannot find name '$RecipeBookMenu'. Did you mean '$RecipeBookType'?",
+      "owner": "export class $AbstractFurnaceMenu extends $RecipeBookMenu<$SingleRecipeInput, $AbstractCookingRecipe> {",
+      "sourceLine": "export class $AbstractFurnaceMenu extends $RecipeBookMenu<$SingleRecipeInput, $AbstractCookingRecipe> {",
+      "name": "$RecipeBookMenu"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/world/inventory/index.d.ts",
+      "line": 274,
+      "column": 40,
+      "code": "TS2552",
+      "message": "Cannot find name '$RecipeBookMenu'. Did you mean '$RecipeBookType'?",
+      "owner": "export class $CraftingMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "sourceLine": "export class $CraftingMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "name": "$RecipeBookMenu"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/world/inventory/index.d.ts",
+      "line": 354,
+      "column": 41,
+      "code": "TS2552",
+      "message": "Cannot find name '$RecipeBookMenu'. Did you mean '$RecipeBookType'?",
+      "owner": "export class $InventoryMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "sourceLine": "export class $InventoryMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "name": "$RecipeBookMenu"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/common/index.d.ts",
+      "line": 17,
+      "column": 85,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientCommonPacketListener'. Did you mean '$ServerCommonPacketListener'?",
+      "owner": "export class $ClientboundCustomPayloadPacket extends $Record implements $Packet<$ClientCommonPacketListener> {",
+      "sourceLine": "export class $ClientboundCustomPayloadPacket extends $Record implements $Packet<$ClientCommonPacketListener> {",
+      "name": "$ClientCommonPacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/common/index.d.ts",
+      "line": 26,
+      "column": 22,
+      "code": "TS2304",
+      "message": "Cannot find name '$ClientCommonPacketListener'.",
+      "owner": "export class $ClientboundCustomPayloadPacket extends $Record implements $Packet<$ClientCommonPacketListener> {",
+      "sourceLine": "handle(arg0: $ClientCommonPacketListener): void;",
+      "name": "$ClientCommonPacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 43,
+      "column": 65,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundAddEntityPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "export class $ClientboundAddEntityPacket implements $Packet<$ClientGamePacketListener> {",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 78,
+      "column": 22,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundAddEntityPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "handle(arg0: $ClientGamePacketListener): void;",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 82,
+      "column": 71,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundBlockEntityDataPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "export class $ClientboundBlockEntityDataPacket implements $Packet<$ClientGamePacketListener> {",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 95,
+      "column": 22,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundBlockEntityDataPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "handle(arg0: $ClientGamePacketListener): void;",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 115,
+      "column": 75,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundLevelChunkWithLightPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "export class $ClientboundLevelChunkWithLightPacket implements $Packet<$ClientGamePacketListener> {",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 130,
+      "column": 22,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundLevelChunkWithLightPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "handle(arg0: $ClientGamePacketListener): void;",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/world/inventory/index.d.ts",
+      "line": 82,
+      "column": 47,
+      "code": "TS2552",
+      "message": "Cannot find name '$RecipeBookMenu'. Did you mean '$RecipeBookType'?",
+      "owner": "export class $AbstractFurnaceMenu extends $RecipeBookMenu<$SingleRecipeInput, $AbstractCookingRecipe> {",
+      "sourceLine": "export class $AbstractFurnaceMenu extends $RecipeBookMenu<$SingleRecipeInput, $AbstractCookingRecipe> {",
+      "name": "$RecipeBookMenu"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/world/inventory/index.d.ts",
+      "line": 274,
+      "column": 40,
+      "code": "TS2552",
+      "message": "Cannot find name '$RecipeBookMenu'. Did you mean '$RecipeBookType'?",
+      "owner": "export class $CraftingMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "sourceLine": "export class $CraftingMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "name": "$RecipeBookMenu"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/world/inventory/index.d.ts",
+      "line": 354,
+      "column": 41,
+      "code": "TS2552",
+      "message": "Cannot find name '$RecipeBookMenu'. Did you mean '$RecipeBookType'?",
+      "owner": "export class $InventoryMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "sourceLine": "export class $InventoryMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "name": "$RecipeBookMenu"
+    }
+  ],
+  "afterMissingContexts": [
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/common/index.d.ts",
+      "line": 17,
+      "column": 85,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientCommonPacketListener'. Did you mean '$ServerCommonPacketListener'?",
+      "owner": "export class $ClientboundCustomPayloadPacket extends $Record implements $Packet<$ClientCommonPacketListener> {",
+      "sourceLine": "export class $ClientboundCustomPayloadPacket extends $Record implements $Packet<$ClientCommonPacketListener> {",
+      "name": "$ClientCommonPacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/common/index.d.ts",
+      "line": 26,
+      "column": 22,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientCommonPacketListener'. Did you mean '$ServerCommonPacketListener'?",
+      "owner": "export class $ClientboundCustomPayloadPacket extends $Record implements $Packet<$ClientCommonPacketListener> {",
+      "sourceLine": "handle(arg0: $ClientCommonPacketListener): void;",
+      "name": "$ClientCommonPacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 43,
+      "column": 65,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundAddEntityPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "export class $ClientboundAddEntityPacket implements $Packet<$ClientGamePacketListener> {",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 78,
+      "column": 22,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundAddEntityPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "handle(arg0: $ClientGamePacketListener): void;",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 82,
+      "column": 71,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundBlockEntityDataPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "export class $ClientboundBlockEntityDataPacket implements $Packet<$ClientGamePacketListener> {",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 95,
+      "column": 22,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundBlockEntityDataPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "handle(arg0: $ClientGamePacketListener): void;",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 115,
+      "column": 75,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundLevelChunkWithLightPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "export class $ClientboundLevelChunkWithLightPacket implements $Packet<$ClientGamePacketListener> {",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 130,
+      "column": 22,
+      "code": "TS2304",
+      "message": "Cannot find name '$ClientGamePacketListener'.",
+      "owner": "export class $ClientboundLevelChunkWithLightPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "handle(arg0: $ClientGamePacketListener): void;",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/world/inventory/index.d.ts",
+      "line": 83,
+      "column": 47,
+      "code": "TS2552",
+      "message": "Cannot find name '$RecipeBookMenu'. Did you mean '$RecipeBookType'?",
+      "owner": "export class $AbstractFurnaceMenu extends $RecipeBookMenu<$SingleRecipeInput, $AbstractCookingRecipe> {",
+      "sourceLine": "export class $AbstractFurnaceMenu extends $RecipeBookMenu<$SingleRecipeInput, $AbstractCookingRecipe> {",
+      "name": "$RecipeBookMenu"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/world/inventory/index.d.ts",
+      "line": 275,
+      "column": 40,
+      "code": "TS2552",
+      "message": "Cannot find name '$RecipeBookMenu'. Did you mean '$RecipeBookType'?",
+      "owner": "export class $CraftingMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "sourceLine": "export class $CraftingMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "name": "$RecipeBookMenu"
+    },
+    {
+      "entry": "1.21.1-server",
+      "file": "@package/net/minecraft/world/inventory/index.d.ts",
+      "line": 355,
+      "column": 41,
+      "code": "TS2552",
+      "message": "Cannot find name '$RecipeBookMenu'. Did you mean '$RecipeBookType'?",
+      "owner": "export class $InventoryMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "sourceLine": "export class $InventoryMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "name": "$RecipeBookMenu"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/common/index.d.ts",
+      "line": 17,
+      "column": 85,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientCommonPacketListener'. Did you mean '$ServerCommonPacketListener'?",
+      "owner": "export class $ClientboundCustomPayloadPacket extends $Record implements $Packet<$ClientCommonPacketListener> {",
+      "sourceLine": "export class $ClientboundCustomPayloadPacket extends $Record implements $Packet<$ClientCommonPacketListener> {",
+      "name": "$ClientCommonPacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/common/index.d.ts",
+      "line": 26,
+      "column": 22,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientCommonPacketListener'. Did you mean '$ServerCommonPacketListener'?",
+      "owner": "export class $ClientboundCustomPayloadPacket extends $Record implements $Packet<$ClientCommonPacketListener> {",
+      "sourceLine": "handle(arg0: $ClientCommonPacketListener): void;",
+      "name": "$ClientCommonPacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 43,
+      "column": 65,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundAddEntityPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "export class $ClientboundAddEntityPacket implements $Packet<$ClientGamePacketListener> {",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 78,
+      "column": 22,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundAddEntityPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "handle(arg0: $ClientGamePacketListener): void;",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 82,
+      "column": 71,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundBlockEntityDataPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "export class $ClientboundBlockEntityDataPacket implements $Packet<$ClientGamePacketListener> {",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 95,
+      "column": 22,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundBlockEntityDataPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "handle(arg0: $ClientGamePacketListener): void;",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 115,
+      "column": 75,
+      "code": "TS2552",
+      "message": "Cannot find name '$ClientGamePacketListener'. Did you mean '$ServerGamePacketListener'?",
+      "owner": "export class $ClientboundLevelChunkWithLightPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "export class $ClientboundLevelChunkWithLightPacket implements $Packet<$ClientGamePacketListener> {",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/network/protocol/game/index.d.ts",
+      "line": 130,
+      "column": 22,
+      "code": "TS2304",
+      "message": "Cannot find name '$ClientGamePacketListener'.",
+      "owner": "export class $ClientboundLevelChunkWithLightPacket implements $Packet<$ClientGamePacketListener> {",
+      "sourceLine": "handle(arg0: $ClientGamePacketListener): void;",
+      "name": "$ClientGamePacketListener"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/world/inventory/index.d.ts",
+      "line": 83,
+      "column": 47,
+      "code": "TS2552",
+      "message": "Cannot find name '$RecipeBookMenu'. Did you mean '$RecipeBookType'?",
+      "owner": "export class $AbstractFurnaceMenu extends $RecipeBookMenu<$SingleRecipeInput, $AbstractCookingRecipe> {",
+      "sourceLine": "export class $AbstractFurnaceMenu extends $RecipeBookMenu<$SingleRecipeInput, $AbstractCookingRecipe> {",
+      "name": "$RecipeBookMenu"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/world/inventory/index.d.ts",
+      "line": 275,
+      "column": 40,
+      "code": "TS2552",
+      "message": "Cannot find name '$RecipeBookMenu'. Did you mean '$RecipeBookType'?",
+      "owner": "export class $CraftingMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "sourceLine": "export class $CraftingMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "name": "$RecipeBookMenu"
+    },
+    {
+      "entry": "1.21.1-startup",
+      "file": "@package/net/minecraft/world/inventory/index.d.ts",
+      "line": 355,
+      "column": 41,
+      "code": "TS2552",
+      "message": "Cannot find name '$RecipeBookMenu'. Did you mean '$RecipeBookType'?",
+      "owner": "export class $InventoryMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "sourceLine": "export class $InventoryMenu extends $RecipeBookMenu<$CraftingInput, $CraftingRecipe> {",
+      "name": "$RecipeBookMenu"
+    }
+  ]
+}

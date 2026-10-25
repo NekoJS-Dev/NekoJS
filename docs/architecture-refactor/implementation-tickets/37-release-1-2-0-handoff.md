@@ -1,5 +1,7 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-26 枚举实例接口合同恢复（产品 `84ae51c1`，[冻结证据](../evidence/2026-10-25-enum-interface-84ae51c1/README.md)）：生成器从编辑后的 IR 保留枚举 implements，恢复 IsoEra→Era 等默认实例合同，不改运行时或静态工厂。七项枚举回归、六组严格消费、定向 TS 全链、四项 CI gate 及串行隔离矩阵通过（5187 tests、271 skipped、零失败；节点测试有缓存复用）。早期重叠测试的目录/结果文件污染与回收证据保留，不计绿态。新五节点安装全部正常停服；十入口1409→1079，F2 330→0，其余族不变。原码/原文多重集差分为−334/+4；其中4条是同一客户端缺失引用的 TS2304/TS2552 提示变化，实际声明、源码行和缺失名称匹配后差分为−330/+0，两种口径及原文均保存。完整严格TS仍FAIL，F1公开捕获合同保持开放；新候选性能、Python默认安装及最终客户端/TCP/回退等未重测，不外推旧证据。
+
 2026-10-25 主代理接手审核与实现（`a8c0f274`、`555ee037`、`dad806fa`，[冻结证据](../evidence/2026-10-25-primary-erased-method-dad806fa/README.md)）：f1v3 恢复的重载与驱动修正保留，但 or/部分 reduce/Collector collect/toList 仍被省略，F1 公开合同未获完整通过。修复启动后身份查询/输出/中断的 owned 子进程回收与清理失败保因，四项故障回归通过；共享反射层从无歧义、同擦除接口恢复完整方法泛型合同，保留原 Method、隐藏/remap 和既有类型。完整 common/处理器/guard/五节点矩阵 5183 tests、271 skipped、零失败，定向 TS 链与四项 CI gate 通过。新五节点安装全部正常停服，新十入口 1503→1409（移除94/新增0：F4 80→0、尾项26→12，其余不变），全图仍 FAIL。性能与最终候选门禁保留各自范围；未 push、PR 或代签。
 
 2026-10-25 第二轮复核四项修正（`122c8c3e`+`f71b45fb`，[证据](../evidence/2026-10-25-strict-ts-f1v3-overload-retention-f71b45fb/README.md)）：捕获视图重载保留重做——真实树 19 轮实验矩阵（X4–X8/Y1–Y16）证伪了"整组排除"，`sorted` 双签名（无参前置）、三参 `reduce`、supplier 版 `collect`、`spliterator` 全部恢复为正向合同（golden +5 行），排除收敛为实证锚定的 R1a 嵌套捕获容器 / R1b 多重载组内全 B 别名（BinaryOperator reduce、同形状单签名如 orElseGet 不受影响）/ R2 组内零参+首个选择 / R3 不变容器返回（toList，白名单 Iterator/Spliterator）；驱动三项：kill 脚本改微秒创建时刻+完整命令行双全等（PID 复用两形态实测 SKIP）、run 失败原因入摘要且 `SystemExit from` 原异常（注入实测）、分类器去无条件兜底改显式枚举（未知诊断 UNMAPPED 非零退出，闭合仍 1609）。f1v3 确切产物十入口 1503（与 f1v2 逐入口一致、重载保留零诊断代价、族级 F1 156→50 其余 ±0、逐条 −106/+0），:common:check 全量与 test:probe-types 绿。
@@ -56,7 +58,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-25：dad806fa 新安装十入口严格 TS 1409，F4 清零且移除94/新增0，仍 FAIL；F1 公开方法缺失及其余族开放。d06cd961 的原政策性能 PASS 不外推新候选；最终客户端/TCP/分离回退、Python 默认复验、包装与维护者/发布门禁未完成。）
+**Status:** in-progress（2026-10-26：84ae51c1 新安装十入口严格 TS 1079，F2/F4 清零，仍 FAIL；本轮原文差分−334/+4，同源缺失引用核对后−330/+0。F1 公开方法缺失及其余族开放。d06cd961 的原政策性能 PASS 不外推新候选；最终客户端/TCP/分离回退、Python 默认复验、包装与维护者/发布门禁未完成。）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 

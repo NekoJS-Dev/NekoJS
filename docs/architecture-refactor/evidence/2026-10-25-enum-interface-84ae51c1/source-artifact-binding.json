@@ -1,0 +1,38 @@
+{
+  "revision": "84ae51c143f4911cf746f6257eae4a77db912448",
+  "source": "common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer.java",
+  "sourceSha256": "61ea57dc3e85f718b677d2674f34f1642c6c7a512100ff6955d4b0b353594fa9",
+  "compiledRendererSha256": "0325b761829a29ecd6ed7832d75eb83a9928d15043e990d3d1b8a12b96236810",
+  "nodes": [
+    {
+      "node": "1.21.1",
+      "jar": "nekojs-neoforge-1.21.1-1.1.0-preview3-server.jar",
+      "sha256": "ba4021203a42003823b182fc993cf7685354833b8eb0c209a6fd639e36ec0b51",
+      "rendererClassMatchesCompiled": true
+    },
+    {
+      "node": "26.1.2",
+      "jar": "nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "sha256": "eca308e2086e87040f3bbad7653aee19209c81b1af30d65d6bb319b02301e59d",
+      "rendererClassMatchesCompiled": true
+    },
+    {
+      "node": "26.2.0",
+      "jar": "nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+      "sha256": "9d5ddee9537c849dbed2ff696f1aaa8951407343865059f0b90c16ce51490d0d",
+      "rendererClassMatchesCompiled": true
+    },
+    {
+      "node": "26.1.2-fabric",
+      "jar": "nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+      "sha256": "a52c63d0481fbb5133d3976632120f1a0e0bb8a7da6513a2cd7d4c5009cafe43",
+      "rendererClassMatchesCompiled": true
+    },
+    {
+      "node": "26.2.0-fabric",
+      "jar": "nekojs-fabric-26.2-1.1.0-preview3.jar",
+      "sha256": "bfe5af290cd3330837e103eb66ac567a9718a80951556b0ceba5e48a9352a5aa",
+      "rendererClassMatchesCompiled": true
+    }
+  ]
+}

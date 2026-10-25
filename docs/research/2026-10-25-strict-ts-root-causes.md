@@ -104,3 +104,9 @@ F1 已按上述约束实施：canonical 渲染器输出位捕获视图，先红�
 [新安装冻结证据](../architecture-refactor/evidence/2026-10-25-primary-erased-method-dad806fa/README.md)：1503→1409，逐条移除94/新增0；F4 80→0，原尾项26→12（fabric_enumCycle、Builder.get/getOrCreate、MinecraftServer.getOrThrow 连带14条），其余族不变。此处按旧互斥分类分别计数，不将14条重复累计到 F4。完整严格 TS 仍 FAIL。
 
 F1 不能因减少106条就视为公开合同完成：or、部分 reduce/Collector collect 和 toList 仍在捕获视图中省略。本轮没有修改或认可这些排除；完整捕获关系表示与默认数值/字符串投影仍需继续证明。
+
+## 2026-10-26 F2 叶因修复（84ae51c1）
+
+实际叶因为枚举声明遗漏 Java 实例接口，而非 java.time 源签名错误。保留编辑后 IR 中的实例接口继承，恢复 IsoEra→Era 等默认实例合同，同时保持静态工厂分离。[五节点新安装证据](../architecture-refactor/evidence/2026-10-25-enum-interface-84ae51c1/README.md)十入口1409→1079，F2 330→0，其他族计数不变，零UNMAPPED。
+
+严格的原码/原文多重集为移除334/新增4，不能简写成原文零新增。新增4条仅为同一客户端listener缺失引用在TS2304/带提示的TS2552之间变化；按实际所属声明、源码行、缺失名称及次数核对后为330/0。两种差分、原文和来源声明全部冻结，分类器及 tsc 门禁未放宽。完整严格 TS 仍 FAIL；F1 公共合同未完成。
