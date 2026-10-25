@@ -1,0 +1,38 @@
+{
+  "revision": "1a1660b61b6c84bf498959c5f161ed6d8fc47e7c",
+  "source": "common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/FunctionalInterfaceAliasGenerator.java",
+  "gitSourceSha256": "1a5bbe686ec5b68dbaf509f57210c4cb1382e8fd8153fbd623bac63be625c38b",
+  "compiledClassSha256": "d2c76036e136401048a651c8ca3bdaedd5c0451a4409eb57223b35317c687fa6",
+  "nodes": [
+    {
+      "node": "1.21.1",
+      "jar": "nekojs-neoforge-1.21.1-1.1.0-preview3-server.jar",
+      "sha256": "0199607c78618eb82f6e7f4f6a3ce0501e1dbe63a6fa1e54c4a17cf706b884f4",
+      "aliasClassMatchesCompiled": true
+    },
+    {
+      "node": "26.1.2",
+      "jar": "nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "sha256": "6f8d2302afc49b0e68004ce6c1a588ffc1b593927e9e911961b3fad1842903e7",
+      "aliasClassMatchesCompiled": true
+    },
+    {
+      "node": "26.2.0",
+      "jar": "nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+      "sha256": "3e73add7d89e175e9bf5c875772d5014e5842de9786538e20230b2097f93c1ce",
+      "aliasClassMatchesCompiled": true
+    },
+    {
+      "node": "26.1.2-fabric",
+      "jar": "nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+      "sha256": "18c61a1d4f5143263e2cb2ba7028c530d0e055ec5a98dfc8d936ce57ab8a635c",
+      "aliasClassMatchesCompiled": true
+    },
+    {
+      "node": "26.2.0-fabric",
+      "jar": "nekojs-fabric-26.2-1.1.0-preview3.jar",
+      "sha256": "307c90e7e8b3e6a1714cd5822ec043611b0f8b4816a6da4355bc69bde9ac2d65",
+      "aliasClassMatchesCompiled": true
+    }
+  ]
+}

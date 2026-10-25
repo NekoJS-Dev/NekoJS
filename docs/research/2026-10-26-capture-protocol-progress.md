@@ -24,11 +24,13 @@
 
 完整 npm 链曾抓到新增对象分支从 Function.apply 收集错误推断候选，导致既有三参数 reduce 结果从 number 变为 unknown；新分支使用 globalThis.NoInfer 阻止该额外推断路径，仍执行最终参数检查，没有把原调用改成显式泛型。修复后普通 Probe 套件和完整 test:probe-types 链通过。既有 host 保留测试改为要求完整旧 host 分支存在，不再要求它恰为别名最后一个分支。官方再生17个 golden，独立逐行核对为78个新增代理分支及2个 sealed host-only 别名，其余成员、名称、元数及顺序不变。
 
-完整 common/check、处理器、guard 与五节点矩阵通过（3m50s，918 suites / 5191 tests / 271 skipped / 零失败或错误）；每个 Test 任务的临时目录独立，未并发运行第二个 Gradle。四项 CI gate 通过。当前没有新的安装诊断、性能或最终候选通过结论。隔离捕获原型已冻结于 ../architecture-refactor/evidence/2026-10-26-capture-protocol-prototypes/，16组实际重放的退出码与错误码计数全部吻合；保留失败实验，不作为生产 F1 完成证据。
+完整 common/check、处理器、guard 与五节点矩阵通过（3m50s，918 suites / 5191 tests / 271 skipped / 零失败或错误）；每个 Test 任务的临时目录独立，未并发运行第二个 Gradle。四项 CI gate 通过。隔离捕获原型已冻结于 ../architecture-refactor/evidence/2026-10-26-capture-protocol-prototypes/，16组实际重放的退出码与错误码计数全部吻合；保留失败实验，不作为生产 F1 完成证据。
+
+产品1a1660b6的全新五节点安装与十入口复测完成：五次RCON正常停服、exit0、未kill且世界锁释放；1079条与84ae51c1逐入口一致，各族不变，原文及同源差分均移除0/新增0。新冻结消费者另行重放通过，完整严格TS仍FAIL。[本次冻结证据](../architecture-refactor/evidence/2026-10-26-sam-proxy-1a1660b6/README.md)不外推性能和最终候选结论。
 
 ## 下一步
 
-1. 完成本次对象协议的普通门禁及必要golden更新，分轴复审并commit；源规则不按Java类名列补丁。
+1. 对象协议普通门禁、golden、分轴复审与产品commit已完成；新安装零诊断回归，完整形状伪host的名义身份限制另记开放。
 2. 继续将隔离原型变为可证明的通用规则：先证工厂参数性及其反例，再设计完整IR驱动视图，保留所有公开成员、既有Bound直接输入与方法局部变量，并让真实host和callback都通过。
 3. 合同证明通过前不移除生产排除器、不宣称F1完成；可以推进独立且有来源证明的族。完整新候选需五节点安装/十入口重采与原文及同源差分，未知项不能静默归类。
 
