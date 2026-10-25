@@ -33,18 +33,30 @@ python bench/tsbaseline/run.py check --target build/tsbaseline-<tag>
   其余节点取对应 `nekojs-{neoforge|fabric}-<ver>-*.jar` 最新构建产物。
 - **生成**：RCON `nekojs probe typescript`，等待 `Probe generated: N files` 完成行；
   停服走 RCON `stop`，等 exit 0 与 `world/session.lock` 释放。
+- **进程回收**：启动即写 `<node>/server-process.json`（pid、启动时刻、启动器特征）。
+  `run` 的成功、探针失败与驱动异常共用同一条回收路径：先 RCON `stop`，有界等待
+  （stop 未送达时 15 秒，送达后 `--stop-timeout`），超时才 kill 自己启动的子进程；
+  失败也先落盘 `run-summary.json` 再抛出原始异常。宿主机上绝不按通用进程名匹配。
+- **孤立进程清理**：`kill-servers.ps1 -Target <安装根>` 只处理该目录下
+  `server-process.json` 记录过的进程，且需三重身份验证（PID 存活、命令行仍含启动器
+  特征、创建时刻与记录一致，防 PID 复用）；验证不过一律 SKIP。正常停服由 `run`
+  负责；脚本只是驱动已死时的兜底，不再接受无参全量匹配。
 - **检查**：每节点 × {server, startup} 两个入口，tsconfig `extends` 生成的
   `nekojs/<side>_scripts/jsconfig.json`（strict=true 由其携带），仅覆盖
   `skipLibCheck=false`、`noEmit=true`；tsc 用仓库 `node_modules` 的 TypeScript，
-  版本写入 summary。退出码 2 = 有诊断（预期基线状态），不是驱动失败。
+  版本写入 summary。运行分三类：`clean`（exit 0 零诊断）、`diagnostics`
+  （exit 1/2 且解析出 TSxxxx——基线状态）、`invalid`（非零退出且零条诊断，如
+  TypeScript 损坏 / 找不到模块 / 配置缺失）。`invalid` 显式失败并停止汇总，
+  绝不折算成"零诊断"；三者与每入口计数一并写入 `ide-check-summary.json`。
 
 ## 产物
 
 | 文件 | 内容 |
 |---|---|
 | `preparation-manifest.json` | revision、平台来源、每节点 jar 名+SHA256、端口、rcon 密码 |
-| `run-summary.json` | 每节点 pid、probe 响应/文件数、停服 exit、session.lock 释放 |
-| `ide-check-summary.json` | 十入口退出码、按 TSxxxx 分组的诊断计数、tsc 版本、命令行 |
+| `<node>/server-process.json` | 该节点服务端 pid、启动时刻、启动器特征（kill 脚本的作用域凭据） |
+| `run-summary.json` | 每节点 pid、probe 响应/文件数、停服路径（stopSent/exit/killed）、session.lock 释放 |
+| `ide-check-summary.json` | 十入口退出码、runState（clean/diagnostics/invalid）、按 TSxxxx 分组的诊断计数、tsc 版本、命令行 |
 | `ide/<node>-<side>-tsc.txt` | 每入口完整诊断原文（根因分类的原始输入） |
 | `ide/<node>-<side>-tsconfig.json` | 实际执行的 tsconfig（绝对路径绑定该次安装） |
 

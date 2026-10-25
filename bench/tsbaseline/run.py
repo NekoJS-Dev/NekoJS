@@ -236,62 +236,95 @@ def cmd_run(args):
         proc = subprocess.Popen([entry["java"], "-Xms512M", "-Xmx2G"] + cfg["args"],
                                 cwd=node_dir, stdout=out_f, stderr=err_f,
                                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+        # Ownership record: kill-servers.ps1 only ever touches processes listed here, after
+        # verifying PID liveness, creation time and command line (see bench/tsbaseline/README.md).
+        write_json(os.path.join(node_dir, "server-process.json"), {
+            "node": node, "pid": proc.pid, "startedAtEpoch": time.time(),
+            "java": entry["java"], "rconPort": entry["rconPort"],
+        })
         print(f"{node}: started pid {proc.pid}, waiting for rcon on {entry['rconPort']}")
         result = {"node": node, "pid": proc.pid}
-        ready = wait_rcon_ready(entry["rconPort"], entry["rconPassword"], time.time() + args.boot_timeout)
-        if not ready:
-            proc.kill()
-            out_f.close(); err_f.close()
-            raise SystemExit(f"{node}: rcon never became ready; stdout tail:\n{tail_text(stdout_path)}")
-        # RCON response bodies truncate at one packet (~4KB) because the mod emits
-        # many NEKO-4029 warnings before the completion line, so completion is
-        # confirmed from the stdout log instead; the RCON receipt is trigger-only.
+        failure = None
         try:
-            receipt = rcon_call(entry["rconPort"], entry["rconPassword"], args.probe_timeout,
-                                ["nekojs probe typescript"])[0]
-            result["probeReceiptHead"] = receipt[:300]
-            deadline = time.time() + args.probe_timeout
-            marker = None
-            while time.time() < deadline:
-                marker = re.search(r"Probe \[typescript\] generated (\d+) files",
-                                   tail_text(stdout_path, lines=400))
-                if marker:
-                    break
-                if proc.poll() is not None:
-                    raise RuntimeError(f"{node}: server exited during probe; stdout tail:\n{tail_text(stdout_path)}")
-                time.sleep(2)
-            if not marker:
-                raise RuntimeError(f"{node}: probe completion line never appeared; stdout tail:\n{tail_text(stdout_path)}")
-            result["probeFiles"] = int(marker.group(1))
-        finally:
-            # Always attempt a clean stop, even when the probe step failed.
-            if proc.poll() is None:
+            ready = wait_rcon_ready(entry["rconPort"], entry["rconPassword"], time.time() + args.boot_timeout)
+            if not ready:
+                failure = f"{node}: rcon never became ready; stdout tail:\n{tail_text(stdout_path)}"
+            else:
+                # RCON response bodies truncate at one packet (~4KB) because the mod emits
+                # many NEKO-4029 warnings before the completion line, so completion is
+                # confirmed from the stdout log instead; the RCON receipt is trigger-only.
                 try:
-                    rcon_call(entry["rconPort"], entry["rconPassword"], 30.0, ["stop"])
-                except (OSError, RuntimeError):
-                    pass
-        try:
-            result["exitCode"] = proc.wait(timeout=args.stop_timeout)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait()
-            result["exitCode"] = None
-            result["killed"] = True
+                    receipt = rcon_call(entry["rconPort"], entry["rconPassword"], args.probe_timeout,
+                                        ["nekojs probe typescript"])[0]
+                    result["probeReceiptHead"] = receipt[:300]
+                    deadline = time.time() + args.probe_timeout
+                    marker = None
+                    while time.time() < deadline:
+                        marker = re.search(r"Probe \[typescript\] generated (\d+) files",
+                                           tail_text(stdout_path, lines=400))
+                        if marker:
+                            break
+                        if proc.poll() is not None:
+                            raise RuntimeError(
+                                f"server exited during probe; stdout tail:\n{tail_text(stdout_path)}")
+                        time.sleep(2)
+                    if not marker:
+                        raise RuntimeError(
+                            f"probe completion line never appeared; stdout tail:\n{tail_text(stdout_path)}")
+                    result["probeFiles"] = int(marker.group(1))
+                except (OSError, RuntimeError) as probe_failure:
+                    failure = f"{node}: probe failed: {probe_failure}"
+        except Exception as unexpected:
+            failure = f"{node}: unexpected driver failure: {unexpected}"
+        # Unified owned-server recovery for success, probe failure and driver error alike:
+        # clean RCON stop first, bounded wait, then kill the child we own.
+        result.update(stop_owned_server(proc, entry, args))
         out_f.close(); err_f.close()
         result["sessionLockReleased"] = wait_session_lock(node_dir, time.time() + 120)
         result["stdoutTail"] = tail_text(stdout_path, 5).strip().splitlines()[-1:] or [""]
         results.append(result)
-        print(f"{node}: probeFiles={result['probeFiles']} exit={result['exitCode']} "
+        # Persist after every node so a later failure still leaves the completed nodes inspectable.
+        write_json(os.path.join(target, "run-summary.json"), results)
+        print(f"{node}: probeFiles={result.get('probeFiles')} exit={result['exitCode']} "
+              f"killed={result['killed']} stopSent={result['stopSent']} "
               f"lockReleased={result['sessionLockReleased']}")
+        if failure is not None:
+            raise SystemExit(failure)
         if result["exitCode"] != 0:
             raise SystemExit(f"{node}: unexpected server exit {result['exitCode']}")
-    write_json(os.path.join(target, "run-summary.json"), results)
     print("run complete")
 
 
+def stop_owned_server(proc, entry, args):
+    """Graceful stop first, bounded wait, then kill; returns the recovery outcome."""
+    outcome = {"stopSent": False, "exitCode": None, "killed": False}
+    if proc.poll() is None:
+        try:
+            rcon_call(entry["rconPort"], entry["rconPassword"], 30.0, ["stop"])
+            outcome["stopSent"] = True
+        except (OSError, RuntimeError):
+            pass
+        grace = args.stop_timeout if outcome["stopSent"] else 15
+        try:
+            outcome["exitCode"] = proc.wait(timeout=grace)
+            return outcome
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            outcome["exitCode"] = proc.wait()
+            outcome["killed"] = True
+    else:
+        outcome["exitCode"] = proc.returncode
+    return outcome
+
+
 def tsc_version():
-    out = subprocess.run(["node", os.path.join(REPO_ROOT, "node_modules", "typescript", "bin", "tsc"), "--version"],
-                         capture_output=True, text=True)
+    try:
+        out = subprocess.run(["node", os.path.join(REPO_ROOT, "node_modules", "typescript", "bin", "tsc"), "--version"],
+                             capture_output=True, text=True)
+    except OSError as failure:
+        raise SystemExit(f"cannot launch node/tsc: {failure}")
+    if out.returncode != 0:
+        raise SystemExit(f"tsc --version failed (exit {out.returncode}): {(out.stderr or out.stdout)[:300]}")
     return out.stdout.strip()
 
 
@@ -306,6 +339,7 @@ def cmd_check(args):
     for entry in manifest["nodes"]:
         node = entry["node"]
         node_summary = {"node": node, "typescript": []}
+        summary["nodes"].append(node_summary)
         for side in SIDES:
             jsconfig = os.path.join(target, node, "nekojs", f"{side}_scripts", "jsconfig.json")
             if not os.path.exists(jsconfig):
@@ -319,25 +353,43 @@ def cmd_check(args):
                    "-p", tsconfig_path]
             proc = subprocess.run(cmd, capture_output=True)
             text = proc.stdout.decode("utf-8", errors="replace")
+            stderr_text = proc.stderr.decode("utf-8", errors="replace")
             with open(diag_path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(text)
             with open(err_path, "w", encoding="utf-8", newline="\n") as f:
-                f.write(proc.stderr.decode("utf-8", errors="replace"))
+                f.write(stderr_text)
             codes = {}
             for line in text.splitlines():
                 m = TS_CODE.search(line)
                 if m:
                     codes[m.group(1)] = codes.get(m.group(1), 0) + 1
             count = sum(codes.values())
-            total += count
+            # A run is valid only when the exit code and the parsed diagnostics agree: a broken
+            # TypeScript install or missing config exits nonzero with an EMPTY diagnostic listing,
+            # which must fail explicitly instead of counting as "zero diagnostics".
+            if proc.returncode == 0:
+                run_state = "clean" if count == 0 else "diagnostics"
+            elif proc.returncode in (1, 2) and count > 0:
+                run_state = "diagnostics"
+            else:
+                run_state = "invalid"
+            if run_state != "invalid":
+                total += count
             node_summary["typescript"].append({
-                "side": side, "exitCode": proc.returncode, "diagnosticCount": count,
-                "codes": dict(sorted(codes.items())),
-                "diagnosticsComplete": "Compilation failed" not in proc.stderr.decode("utf-8", errors="replace"),
+                "side": side, "exitCode": proc.returncode, "runState": run_state,
+                "diagnosticCount": count, "codes": dict(sorted(codes.items())),
+                "diagnosticsComplete": run_state != "invalid",
                 "command": " ".join(cmd),
             })
-            print(f"{node}/{side}: exit={proc.returncode} diagnostics={count}")
-        summary["nodes"].append(node_summary)
+            print(f"{node}/{side}: exit={proc.returncode} state={run_state} diagnostics={count}")
+            if run_state == "invalid":
+                summary["totalDiagnostics"] = total
+                write_json(os.path.join(target, "ide-check-summary.json"), summary)
+                raise SystemExit(
+                    f"{node}/{side}: invalid tsc run (exit {proc.returncode}, {count} parsed "
+                    f"diagnostics); stdout head:\n{text[:300]}\nstderr head:\n{stderr_text[:300]}")
+        summary["totalDiagnostics"] = total
+        write_json(os.path.join(target, "ide-check-summary.json"), summary)
     summary["totalDiagnostics"] = total
     write_json(os.path.join(target, "ide-check-summary.json"), summary)
     print(f"total diagnostics across ten entrypoints: {total}")
