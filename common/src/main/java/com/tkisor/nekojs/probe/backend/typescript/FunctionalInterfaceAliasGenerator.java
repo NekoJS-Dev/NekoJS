@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.probe.backend.typescript;
 
+import com.google.gson.JsonPrimitive;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
@@ -26,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Prepares deterministic callable-plus-host aliases for generated functional interfaces. */
+/** Prepares host inputs and supported callable/object conversions for generated interface aliases. */
 public final class FunctionalInterfaceAliasGenerator {
     private static final int MAX_EXPANSIONS_PER_INTERFACE = 12;
 
@@ -161,10 +162,21 @@ public final class FunctionalInterfaceAliasGenerator {
         if (!typeParameters.isEmpty()) {
             declaration.append('<').append(String.join(", ", typeParameters)).append('>');
         }
-        // Function.apply/call can structurally imitate a Java SAM method with an unconstrained result.
-        // Host instances lack Function's constructor symbol; executable inputs must satisfy the callback branch.
-        declaration.append(" = (").append(callback).append(") | (").append(host)
-                .append(" & { readonly [Symbol.hasInstance]?: never })");
+        // Graal also implements a SAM from its Java-named object member, leaving default methods to Java.
+        // Protect both non-executable branches: Function.apply/call must not bypass callback result checking.
+        String nonExecutable = " & { readonly [Symbol.hasInstance]?: never }";
+        boolean sealed = cls.isSealed();
+        declaration.append(" = ");
+        if (!sealed) declaration.append('(').append(callback).append(") | ");
+        declaration.append('(').append(host).append(nonExecutable).append(')');
+        // Sealed shapes keep their alias name and generic arity, but only existing hosts can implement them.
+        if (!sealed) {
+            // Function.apply also participates in inference before the non-executable guard is checked.
+            // Keep the additional proxy form out of inference without suppressing its argument checks.
+            declaration.append(" | (globalThis.NoInfer<{ readonly ")
+                    .append(new JsonPrimitive(alias.signature().method().getName())).append(": ")
+                    .append(callback).append(" }").append(nonExecutable).append(">)");
+        }
         declaration.append(";\n");
         return declaration.toString();
     }

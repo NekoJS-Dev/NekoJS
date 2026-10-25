@@ -822,7 +822,7 @@ declare module "java:java/util" {
     }
 
     export type $Collection_<E> = ($Collection<E> | (E)[]);
-    export type $Comparator_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = Host0, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($Comparator<Host0> & { readonly [Symbol.hasInstance]?: never });
+    export type $Comparator_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = Host0, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($Comparator<Host0> & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "compare": (arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
     export type $Iterator_<E> = E[];
     export type $List_<E> = ($List<E> | (E)[]);
     export type $Locale$Category_ = $Locale$Category | "DISPLAY" | "FORMAT";

@@ -71,8 +71,8 @@ declare module "java:java/util/concurrent" {
     export interface $Future$State extends $Enum<$Future$State> {}
 
     export type $TimeUnit_ = $TimeUnit | "DAYS" | "HOURS" | "MICROSECONDS" | "MILLISECONDS" | "MINUTES" | "NANOSECONDS" | "SECONDS";
-    export type $ThreadFactory_<CallbackArg0 = $Runnable, CallbackResult = $Thread> = ((arg0: CallbackArg0) => CallbackResult) | ($ThreadFactory & { readonly [Symbol.hasInstance]?: never });
-    export type $Callable_<Host0 = any, CallbackResult = Host0> = (() => CallbackResult) | ($Callable<Host0> & { readonly [Symbol.hasInstance]?: never });
-    export type $Executor_<CallbackArg0 = $Runnable> = ((arg0: CallbackArg0) => void) | ($Executor & { readonly [Symbol.hasInstance]?: never });
+    export type $ThreadFactory_<CallbackArg0 = $Runnable, CallbackResult = $Thread> = ((arg0: CallbackArg0) => CallbackResult) | ($ThreadFactory & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "newThread": (arg0: CallbackArg0) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $Callable_<Host0 = any, CallbackResult = Host0> = (() => CallbackResult) | ($Callable<Host0> & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "call": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $Executor_<CallbackArg0 = $Runnable> = ((arg0: CallbackArg0) => void) | ($Executor & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "execute": (arg0: CallbackArg0) => void } & { readonly [Symbol.hasInstance]?: never }>);
     export type $Future$State_ = $Future$State | "CANCELLED" | "FAILED" | "RUNNING" | "SUCCESS";
 }

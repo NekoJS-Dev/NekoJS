@@ -263,8 +263,8 @@ declare module "java:java/io" {
         transferTo(arg0: $Writer): number;
     }
 
-    export type $Closeable_ = (() => void) | ($Closeable & { readonly [Symbol.hasInstance]?: never });
-    export type $FileFilter_<CallbackArg0 = $File, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | ($FileFilter & { readonly [Symbol.hasInstance]?: never });
-    export type $FilenameFilter_<CallbackArg0 = $File, CallbackArg1 = string, CallbackResult = boolean> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($FilenameFilter & { readonly [Symbol.hasInstance]?: never });
-    export type $Flushable_ = (() => void) | ($Flushable & { readonly [Symbol.hasInstance]?: never });
+    export type $Closeable_ = (() => void) | ($Closeable & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "close": () => void } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $FileFilter_<CallbackArg0 = $File, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | ($FileFilter & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "accept": (arg0: CallbackArg0) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $FilenameFilter_<CallbackArg0 = $File, CallbackArg1 = string, CallbackResult = boolean> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($FilenameFilter & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "accept": (arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $Flushable_ = (() => void) | ($Flushable & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "flush": () => void } & { readonly [Symbol.hasInstance]?: never }>);
 }

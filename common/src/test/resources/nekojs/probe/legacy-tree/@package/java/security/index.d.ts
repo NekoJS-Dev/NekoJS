@@ -199,9 +199,9 @@ declare module "java:java/security" {
         combine(arg0: $ProtectionDomain[], arg1: $ProtectionDomain[]): $ProtectionDomain[];
     }
 
-    export type $Principal_<CallbackResult = string> = (() => CallbackResult) | ($Principal & { readonly [Symbol.hasInstance]?: never });
-    export type $Guard_<CallbackArg0 = unknown> = ((arg0: CallbackArg0) => void) | ($Guard & { readonly [Symbol.hasInstance]?: never });
-    export type $PrivilegedAction_<Host0 = any, CallbackResult = Host0> = (() => CallbackResult) | ($PrivilegedAction<Host0> & { readonly [Symbol.hasInstance]?: never });
-    export type $PrivilegedExceptionAction_<Host0 = any, CallbackResult = Host0> = (() => CallbackResult) | ($PrivilegedExceptionAction<Host0> & { readonly [Symbol.hasInstance]?: never });
-    export type $DomainCombiner_<CallbackArg0 = $ProtectionDomain[], CallbackArg1 = $ProtectionDomain[], CallbackResult = $ProtectionDomain[]> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($DomainCombiner & { readonly [Symbol.hasInstance]?: never });
+    export type $Principal_<CallbackResult = string> = (() => CallbackResult) | ($Principal & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "getName": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $Guard_<CallbackArg0 = unknown> = ((arg0: CallbackArg0) => void) | ($Guard & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "checkGuard": (arg0: CallbackArg0) => void } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $PrivilegedAction_<Host0 = any, CallbackResult = Host0> = (() => CallbackResult) | ($PrivilegedAction<Host0> & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "run": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $PrivilegedExceptionAction_<Host0 = any, CallbackResult = Host0> = (() => CallbackResult) | ($PrivilegedExceptionAction<Host0> & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "run": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $DomainCombiner_<CallbackArg0 = $ProtectionDomain[], CallbackArg1 = $ProtectionDomain[], CallbackResult = $ProtectionDomain[]> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($DomainCombiner & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "combine": (arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
 }

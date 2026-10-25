@@ -1190,11 +1190,11 @@ declare module "java:java/lang" {
         unstarted(arg0: $Runnable_): $Thread;
     }
 
-    export type $AutoCloseable_ = (() => void) | ($AutoCloseable & { readonly [Symbol.hasInstance]?: never });
-    export type $Comparable_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Comparable<Host0> & { readonly [Symbol.hasInstance]?: never });
+    export type $AutoCloseable_ = (() => void) | ($AutoCloseable & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "close": () => void } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $Comparable_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Comparable<Host0> & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "compareTo": (arg0: CallbackArg0) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
     export type $Iterable_<T> = ($Iterable<T> | (T)[]);
-    export type $Readable_<CallbackArg0 = $CharBuffer, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Readable & { readonly [Symbol.hasInstance]?: never });
-    export type $Runnable_ = (() => void) | ($Runnable & { readonly [Symbol.hasInstance]?: never });
+    export type $Readable_<CallbackArg0 = $CharBuffer, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Readable & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "read": (arg0: CallbackArg0) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $Runnable_ = (() => void) | ($Runnable & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "run": () => void } & { readonly [Symbol.hasInstance]?: never }>);
     export type $Thread$State_ = $Thread$State | "BLOCKED" | "NEW" | "RUNNABLE" | "TERMINATED" | "TIMED_WAITING" | "WAITING";
-    export type $Thread$UncaughtExceptionHandler_<CallbackArg0 = $Thread, CallbackArg1 = $Throwable> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($Thread$UncaughtExceptionHandler & { readonly [Symbol.hasInstance]?: never });
+    export type $Thread$UncaughtExceptionHandler_<CallbackArg0 = $Thread, CallbackArg1 = $Throwable> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($Thread$UncaughtExceptionHandler & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "uncaughtException": (arg0: CallbackArg0, arg1: CallbackArg1) => void } & { readonly [Symbol.hasInstance]?: never }>);
 }

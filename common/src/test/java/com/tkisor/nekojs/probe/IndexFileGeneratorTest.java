@@ -176,7 +176,7 @@ class IndexFileGeneratorTest {
 
         assertTrue(out.contains("export type $Function_<Host0 = any, Host1 = any, CallbackArg0 = Host0, CallbackResult = Host1> ="), out);
         assertTrue(out.contains("=> CallbackResult"), out);
-        assertTrue(out.contains("| ($Function<Host0, Host1> & { readonly [Symbol.hasInstance]?: never });"),
+        assertTrue(out.contains("| ($Function<Host0, Host1> & { readonly [Symbol.hasInstance]?: never })"),
                 "the callback alias must also accept the Java host interface instance: " + out);
     }
 }

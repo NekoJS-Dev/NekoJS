@@ -799,7 +799,7 @@ declare module "java:java/time" {
         withYears(arg0: number): $Period;
     }
 
-    export type $InstantSource_<CallbackResult = $Instant> = (() => CallbackResult) | ($InstantSource & { readonly [Symbol.hasInstance]?: never });
+    export type $InstantSource_<CallbackResult = $Instant> = (() => CallbackResult) | ($InstantSource & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "instant": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
     export type $DayOfWeek_ = $DayOfWeek | "FRIDAY" | "MONDAY" | "SATURDAY" | "SUNDAY" | "THURSDAY" | "TUESDAY" | "WEDNESDAY";
     export type $Month_ = $Month | "APRIL" | "AUGUST" | "DECEMBER" | "FEBRUARY" | "JANUARY" | "JULY" | "JUNE" | "MARCH" | "MAY" | "NOVEMBER" | "OCTOBER" | "SEPTEMBER";
 }

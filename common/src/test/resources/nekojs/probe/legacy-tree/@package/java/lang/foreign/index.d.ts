@@ -321,6 +321,6 @@ declare module "java:java/lang/foreign" {
         withoutName(): $GroupLayout;
     }
 
-    export type $MemorySegment$Scope_<CallbackResult = boolean> = (() => CallbackResult) | ($MemorySegment$Scope & { readonly [Symbol.hasInstance]?: never });
-    export type $SegmentAllocator_<CallbackArg0 = number, CallbackArg1 = number, CallbackResult = $MemorySegment> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($SegmentAllocator & { readonly [Symbol.hasInstance]?: never });
+    export type $MemorySegment$Scope_<CallbackResult = boolean> = ($MemorySegment$Scope & { readonly [Symbol.hasInstance]?: never });
+    export type $SegmentAllocator_<CallbackArg0 = number, CallbackArg1 = number, CallbackResult = $MemorySegment> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($SegmentAllocator & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "allocate": (arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
 }

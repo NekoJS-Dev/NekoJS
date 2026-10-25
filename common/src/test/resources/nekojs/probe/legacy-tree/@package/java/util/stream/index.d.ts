@@ -282,9 +282,9 @@ declare module "java:java/util/stream" {
     }
 
     export type $Collector$Characteristics_ = $Collector$Characteristics | "CONCURRENT" | "IDENTITY_FINISH" | "UNORDERED";
-    export type $DoubleStream$DoubleMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $DoubleConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($DoubleStream$DoubleMapMultiConsumer & { readonly [Symbol.hasInstance]?: never });
-    export type $IntStream$IntMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $IntConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($IntStream$IntMapMultiConsumer & { readonly [Symbol.hasInstance]?: never });
-    export type $LongStream$LongMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $LongConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($LongStream$LongMapMultiConsumer & { readonly [Symbol.hasInstance]?: never });
+    export type $DoubleStream$DoubleMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $DoubleConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($DoubleStream$DoubleMapMultiConsumer & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "accept": (arg0: CallbackArg0, arg1: CallbackArg1) => void } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $IntStream$IntMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $IntConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($IntStream$IntMapMultiConsumer & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "accept": (arg0: CallbackArg0, arg1: CallbackArg1) => void } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $LongStream$LongMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $LongConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($LongStream$LongMapMultiConsumer & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "accept": (arg0: CallbackArg0, arg1: CallbackArg1) => void } & { readonly [Symbol.hasInstance]?: never }>);
     export type $Stream_<T> = T[];
     export interface $StreamView<B> {
         allMatch(arg0: $Predicate_<B, B, boolean>): boolean;

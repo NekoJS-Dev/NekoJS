@@ -235,8 +235,8 @@ declare module "java:java/net" {
         getContent(arg0: $URLConnection): unknown;
     }
 
-    export type $URLStreamHandlerFactory_<CallbackArg0 = string, CallbackResult = $URLStreamHandler> = ((arg0: CallbackArg0) => CallbackResult) | ($URLStreamHandlerFactory & { readonly [Symbol.hasInstance]?: never });
+    export type $URLStreamHandlerFactory_<CallbackArg0 = string, CallbackResult = $URLStreamHandler> = ((arg0: CallbackArg0) => CallbackResult) | ($URLStreamHandlerFactory & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "createURLStreamHandler": (arg0: CallbackArg0) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
     export type $Proxy$Type_ = $Proxy$Type | "DIRECT" | "HTTP" | "SOCKS";
-    export type $ContentHandlerFactory_<CallbackArg0 = string, CallbackResult = $ContentHandler> = ((arg0: CallbackArg0) => CallbackResult) | ($ContentHandlerFactory & { readonly [Symbol.hasInstance]?: never });
-    export type $FileNameMap_<CallbackArg0 = string, CallbackResult = string> = ((arg0: CallbackArg0) => CallbackResult) | ($FileNameMap & { readonly [Symbol.hasInstance]?: never });
+    export type $ContentHandlerFactory_<CallbackArg0 = string, CallbackResult = $ContentHandler> = ((arg0: CallbackArg0) => CallbackResult) | ($ContentHandlerFactory & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "createContentHandler": (arg0: CallbackArg0) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $FileNameMap_<CallbackArg0 = string, CallbackResult = string> = ((arg0: CallbackArg0) => CallbackResult) | ($FileNameMap & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "getContentTypeFor": (arg0: CallbackArg0) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
 }

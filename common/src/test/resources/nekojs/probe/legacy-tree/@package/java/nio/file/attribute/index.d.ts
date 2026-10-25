@@ -55,9 +55,9 @@ declare module "java:java/nio/file/attribute" {
         to(arg0: $TimeUnit_): number;
     }
 
-    export type $FileAttributeView_<CallbackResult = string> = (() => CallbackResult) | ($FileAttributeView & { readonly [Symbol.hasInstance]?: never });
-    export type $FileStoreAttributeView_<CallbackResult = string> = (() => CallbackResult) | ($FileStoreAttributeView & { readonly [Symbol.hasInstance]?: never });
-    export type $AttributeView_<CallbackResult = string> = (() => CallbackResult) | ($AttributeView & { readonly [Symbol.hasInstance]?: never });
-    export type $GroupPrincipal_<CallbackResult = string> = (() => CallbackResult) | ($GroupPrincipal & { readonly [Symbol.hasInstance]?: never });
-    export type $UserPrincipal_<CallbackResult = string> = (() => CallbackResult) | ($UserPrincipal & { readonly [Symbol.hasInstance]?: never });
+    export type $FileAttributeView_<CallbackResult = string> = (() => CallbackResult) | ($FileAttributeView & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "name": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $FileStoreAttributeView_<CallbackResult = string> = (() => CallbackResult) | ($FileStoreAttributeView & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "name": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $AttributeView_<CallbackResult = string> = (() => CallbackResult) | ($AttributeView & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "name": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $GroupPrincipal_<CallbackResult = string> = (() => CallbackResult) | ($GroupPrincipal & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "getName": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $UserPrincipal_<CallbackResult = string> = (() => CallbackResult) | ($UserPrincipal & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "getName": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
 }

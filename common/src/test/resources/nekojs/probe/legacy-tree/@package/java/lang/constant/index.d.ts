@@ -113,7 +113,7 @@ declare module "java:java/lang/constant" {
         of(arg0: $ClassDesc): $MethodTypeDesc;
     };
 
-    export type $Constable_<CallbackResult = $Optional<$ConstantDesc>> = (() => CallbackResult) | ($Constable & { readonly [Symbol.hasInstance]?: never });
-    export type $ConstantDesc_<CallbackArg0 = $MethodHandles$Lookup, CallbackResult = unknown> = ((arg0: CallbackArg0) => CallbackResult) | ($ConstantDesc & { readonly [Symbol.hasInstance]?: never });
+    export type $Constable_<CallbackResult = $Optional<$ConstantDesc>> = (() => CallbackResult) | ($Constable & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "describeConstable": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $ConstantDesc_<CallbackArg0 = $MethodHandles$Lookup, CallbackResult = unknown> = ($ConstantDesc & { readonly [Symbol.hasInstance]?: never });
     export type $DirectMethodHandleDesc$Kind_ = $DirectMethodHandleDesc$Kind | "CONSTRUCTOR" | "GETTER" | "INTERFACE_SPECIAL" | "INTERFACE_STATIC" | "INTERFACE_VIRTUAL" | "SETTER" | "SPECIAL" | "STATIC" | "STATIC_GETTER" | "STATIC_SETTER" | "VIRTUAL";
 }

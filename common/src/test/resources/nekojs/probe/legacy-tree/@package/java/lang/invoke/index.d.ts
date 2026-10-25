@@ -261,6 +261,6 @@ declare module "java:java/lang/invoke" {
     }
 
     export type $MethodHandles$Lookup$ClassOption_ = $MethodHandles$Lookup$ClassOption | "NESTMATE" | "STRONG";
-    export type $TypeDescriptor_<CallbackResult = string> = (() => CallbackResult) | ($TypeDescriptor & { readonly [Symbol.hasInstance]?: never });
+    export type $TypeDescriptor_<CallbackResult = string> = (() => CallbackResult) | ($TypeDescriptor & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "descriptorString": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
     export type $VarHandle$AccessMode_ = $VarHandle$AccessMode | "COMPARE_AND_EXCHANGE" | "COMPARE_AND_EXCHANGE_ACQUIRE" | "COMPARE_AND_EXCHANGE_RELEASE" | "COMPARE_AND_SET" | "GET" | "GET_ACQUIRE" | "GET_AND_ADD" | "GET_AND_ADD_ACQUIRE" | "GET_AND_ADD_RELEASE" | "GET_AND_BITWISE_AND" | "GET_AND_BITWISE_AND_ACQUIRE" | "GET_AND_BITWISE_AND_RELEASE" | "GET_AND_BITWISE_OR" | "GET_AND_BITWISE_OR_ACQUIRE" | "GET_AND_BITWISE_OR_RELEASE" | "GET_AND_BITWISE_XOR" | "GET_AND_BITWISE_XOR_ACQUIRE" | "GET_AND_BITWISE_XOR_RELEASE" | "GET_AND_SET" | "GET_AND_SET_ACQUIRE" | "GET_AND_SET_RELEASE" | "GET_OPAQUE" | "GET_VOLATILE" | "SET" | "SET_OPAQUE" | "SET_RELEASE" | "SET_VOLATILE" | "WEAK_COMPARE_AND_SET" | "WEAK_COMPARE_AND_SET_ACQUIRE" | "WEAK_COMPARE_AND_SET_PLAIN" | "WEAK_COMPARE_AND_SET_RELEASE";
 }

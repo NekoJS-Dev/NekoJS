@@ -262,5 +262,5 @@ declare module "java:java/time/chrono" {
     }
 
     export type $IsoEra_ = $IsoEra | "BCE" | "CE";
-    export type $Era_<CallbackResult = number> = (() => CallbackResult) | ($Era & { readonly [Symbol.hasInstance]?: never });
+    export type $Era_<CallbackResult = number> = (() => CallbackResult) | ($Era & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "getValue": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
 }

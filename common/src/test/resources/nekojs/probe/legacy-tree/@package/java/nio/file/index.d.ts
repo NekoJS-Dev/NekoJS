@@ -162,8 +162,8 @@ declare module "java:java/nio/file" {
     }
 
     export type $LinkOption_ = $LinkOption | "NOFOLLOW_LINKS";
-    export type $WatchEvent$Modifier_<CallbackResult = string> = (() => CallbackResult) | ($WatchEvent$Modifier & { readonly [Symbol.hasInstance]?: never });
-    export type $PathMatcher_<CallbackArg0 = $Path, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | ($PathMatcher & { readonly [Symbol.hasInstance]?: never });
+    export type $WatchEvent$Modifier_<CallbackResult = string> = (() => CallbackResult) | ($WatchEvent$Modifier & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "name": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $PathMatcher_<CallbackArg0 = $Path, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | ($PathMatcher & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "matches": (arg0: CallbackArg0) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
     export type $AccessMode_ = $AccessMode | "EXECUTE" | "READ" | "WRITE";
-    export type $DirectoryStream$Filter_<Host0 = any, CallbackArg0 = Host0, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | ($DirectoryStream$Filter<Host0> & { readonly [Symbol.hasInstance]?: never });
+    export type $DirectoryStream$Filter_<Host0 = any, CallbackArg0 = Host0, CallbackResult = boolean> = ((arg0: CallbackArg0) => CallbackResult) | ($DirectoryStream$Filter<Host0> & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "accept": (arg0: CallbackArg0) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
 }

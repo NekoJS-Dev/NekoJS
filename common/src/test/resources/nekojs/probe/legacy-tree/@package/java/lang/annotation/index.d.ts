@@ -8,5 +8,5 @@ declare module "java:java/lang/annotation" {
         toString(): string;
     }
 
-    export type $Annotation_<CallbackResult = $Class<$Annotation>> = (() => CallbackResult) | ($Annotation & { readonly [Symbol.hasInstance]?: never });
+    export type $Annotation_<CallbackResult = $Class<$Annotation>> = (() => CallbackResult) | ($Annotation & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "annotationType": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
 }

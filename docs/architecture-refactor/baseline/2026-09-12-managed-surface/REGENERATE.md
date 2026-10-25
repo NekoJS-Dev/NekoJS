@@ -111,3 +111,9 @@ git diff -- common/src/test/resources/nekojs common/src/test/probe-ts
 TypeScriptClassRenderer.renderEnum 从编辑后的 IR 保留 Java 枚举的接口继承。初次普通 common/check 的两项 legacy tree golden 比对失败已保留于 build/enum-interface-check.log；不能记作通过。已先将原始 golden 备份到 build/enum-interface-evidence/goldens-before.zip，再仅运行 :common:regenerateGoldens --tests com.tkisor.nekojs.probe.LegacyProbeTreeTest。
 
 主代理核对仅四个文件变化：IsoEra 补 Era，DayOfWeek/Month 补 TemporalAccessor/TemporalAdjuster，ChronoField 补 TemporalField，LinkOption 补 OpenOption/CopyOption。最后两个空接口因新增依赖关系调整声明顺序，内容不变；没有删除或放宽成员。生成模式的跳过不作为门禁通过，随后普通 common/check 和严格消费需要独立通过。该技术核对不代替维护者人工接受。
+
+## 2026-10-26：SAM 对象输入与 sealed 转换边界
+
+FunctionalInterfaceAliasGenerator 根据真实 Java SAM 名及既有参数/返回槽补对象输入，复用非可执行值保护。新增分支以 globalThis.NoInfer 避免 Function.apply 污染原有回调的泛型推断；最终参数检查保持。真实 Graal 消费确认 sealed 接口只能接收已有 host，不能通过函数或对象代理实现，因此 sealed 别名保留名称、泛型元数和完整 host，移除不支持的旧函数输入。
+
+生成前原始字节备份于 build/sam-proxy-goldens-before.zip；只运行 :common:regenerateGoldens --tests com.tkisor.nekojs.probe.LegacyProbeTreeTest，随后以普通 Probe 测试和完整 test:probe-types 验证。独立逐行比较及 JDK21 sealed 反射核对得到17个文件变化：78个别名追加对象分支，ConstantDesc 与 MemorySegment.Scope 两个 sealed 别名仅保留原 host；其余成员、名称、泛型元数、原有非 sealed 分支和顺序保持。主代理技术核对及只读分轴审查不代替维护者人工接受；完整严格安装门禁和最终候选状态另行记录。
