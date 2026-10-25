@@ -19,10 +19,13 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Output use sites of {@code Optional<? extends Bound>} render a capture-safe view instead of the
- * flattened invariant {@code $Optional<$Bound>}, so Java-legal covariant overrides
- * (interface {@code Optional<? extends B>}, implementation {@code Optional<Sub>}) stay assignable
- * while the interface result keeps the upper bound and the implementation keeps its narrow view.
+ * Output use sites of {@code Optional<? extends Bound>} reference a member-driven capture view
+ * ({@code $OptionalView<B>}/{@code $StreamView<B>}) instead of the flattened invariant
+ * {@code $Optional<$Bound>}, so Java-legal covariant overrides stay assignable while the interface
+ * result keeps the full public instance surface of {@code java.util.Optional} (including Bean
+ * properties and recursive {@code stream()} navigation). Members whose capture semantics have no
+ * provably compatible TypeScript shape are excluded by documented rule (or/reduce/sorted/collect/
+ * toList/spliterator) and asserted absent here.
  */
 class ProbeWildcardOptionalCaptureTest {
     public static class ConstDesc { public String label; }
@@ -78,7 +81,7 @@ class ProbeWildcardOptionalCaptureTest {
                     $ProbeWildcardOptionalCaptureTest$DynamicDesc as DynamicDesc,
                     $ProbeWildcardOptionalCaptureTest$BooleanLike,
                 } from 'java:com/tkisor/nekojs/probe';
-                import type { $Optional } from 'java:java/util';
+                import type { $Optional, $OptionalView } from 'java:java/util';
                 import type { $Predicate_, $Supplier_ } from 'java:java/util/function';
 
                 declare const impl: $ProbeWildcardOptionalCaptureTest$BooleanLike;
@@ -87,27 +90,63 @@ class ProbeWildcardOptionalCaptureTest {
                 const asInterface: ConstableLike = impl;
 
                 // The interface result keeps the upper bound through the capture view.
-                const upper: ConstDesc = asInterface.describeConstable().get();
+                const captureResult = asInterface.describeConstable();
+                const explicit: $OptionalView<ConstDesc> = captureResult;
+                const upper: ConstDesc = captureResult.get();
                 const label: string = upper.label;
                 // @ts-expect-error The upper-bound view does not expose the narrow member.
                 upper.code;
+                // @ts-expect-error A wrong element kind cannot satisfy the bound.
+                const wrongElement: number = captureResult.get();
 
-                // The stream projection recurses one capture level: terminal results read as the bound.
-                const found: ConstDesc = asInterface.describeConstable().stream().findAny().get();
-                const counted: number = asInterface.describeConstable().stream().count();
-                // @ts-expect-error The truncated capture level does not re-enter stream.
-                asInterface.describeConstable().stream().findAny().stream();
+                // The public instance surface of Optional stays available on the capture view.
+                const thrown: ConstDesc = captureResult.orElseThrow();
+                const present: boolean = captureResult.present;
+                const empty: boolean = captureResult.empty;
+                const filtered = captureResult.filter(() => true);
+                const orElse: ConstDesc = captureResult.orElse(upper);
+                // The SAM alias union does not infer method type variables from callback results (the
+                // concrete $Optional surface has the same limitation), so pass them explicitly.
+                const mapped = captureResult.map<string>((d: ConstDesc) => d.label);
+                const mappedLabel: string = mapped.get();
+                declare const otherOpt: $Optional<ConstDesc>;
+                const flatMapped = captureResult.flatMap<ConstDesc>((d: ConstDesc): $Optional<ConstDesc> => otherOpt);
+                const flatValue: ConstDesc = flatMapped.get();
 
-                // The concrete implementation view keeps its narrow result.
+                // stream() navigation recurses through the terminal optionals.
+                const counted: number = captureResult.stream().findAny().stream().count();
+                const deep: ConstDesc = captureResult.stream().findAny().stream().findFirst().get();
+                const chained = captureResult.stream().filter(() => true).map((d: ConstDesc) => d.label).count();
+                const listed: ConstDesc = captureResult.stream().iterator().next();
+                const maxed = captureResult.stream().max(null as never);
+
+                // Rule 1: or(Supplier<Optional<? extends T>>) nests the capture container in an input
+                // position; the SAM host branch compares the narrowed element in both bivariant
+                // directions, so no parameter shape is provably compatible. It stays on the concrete
+                // implementations only.
+                // @ts-expect-error or is excluded from the capture view by rule 1.
+                captureResult.or;
+                // Rule 2: overload sets with bound-parameterized functional aliases pair strictly
+                // (reduce/sorted/collect); rule 3 excludes invariant container returns (toList,
+                // spliterator). They stay available on concrete streams.
+                // @ts-expect-error reduce is excluded from the stream capture view by rule 2.
+                captureResult.stream().reduce;
+                // @ts-expect-error sorted is excluded from the stream capture view by rule 2.
+                captureResult.stream().sorted;
+                // @ts-expect-error collect is excluded from the stream capture view by rule 2.
+                captureResult.stream().collect;
+                // @ts-expect-error toList is excluded from the stream capture view by rule 3.
+                captureResult.stream().toList;
+                // @ts-expect-error spliterator is excluded from the stream capture view by rule 3.
+                captureResult.stream().spliterator;
+
+                // The concrete implementation view keeps its narrow result and full container surface.
                 const narrow: DynamicDesc = impl.describeConstable().get();
                 const code: number = narrow.code;
-
-                // SAM input directions on the concrete view keep accepting correct and
-                // rejecting unrelated payloads.
                 declare const goodSupplier: $Supplier_<$Optional<DynamicDesc>, $Optional<DynamicDesc>>;
                 const supplied: $Optional<DynamicDesc> = impl.describeConstable().or(goodSupplier);
                 declare const goodPredicate: $Predicate_<DynamicDesc, DynamicDesc, boolean>;
-                const filtered: $Optional<DynamicDesc> = impl.describeConstable().filter(goodPredicate);
+                const implFiltered: $Optional<DynamicDesc> = impl.describeConstable().filter(goodPredicate);
                 declare const badSupplier: $Supplier_<$Optional<string>, $Optional<string>>;
                 // @ts-expect-error An unrelated supplier payload is rejected.
                 impl.describeConstable().or(badSupplier);
@@ -118,17 +157,53 @@ class ProbeWildcardOptionalCaptureTest {
                 impl.describeConstable().filter(badPredicate);
                 """);
         String declarations = files.get("@package/com/tkisor/nekojs/probe/index.d.ts");
+        String utilFile = files.get("@package/java/util/index.d.ts");
+        String streamFile = files.get("@package/java/util/stream/index.d.ts");
+
         String interfaceBlock = blockOf(declarations, "export interface $ProbeWildcardOptionalCaptureTest$ConstableLike");
-        assertTrue(interfaceBlock.contains("describeConstable(): {"),
-                "interface return renders the capture view: " + interfaceBlock);
-        assertTrue(interfaceBlock.contains("get(): $ProbeWildcardOptionalCaptureTest$ConstDesc;"),
-                "capture view keeps the upper bound: " + interfaceBlock);
+        assertTrue(interfaceBlock.contains(
+                "describeConstable(): $OptionalView<$ProbeWildcardOptionalCaptureTest$ConstDesc>;"),
+                "interface return references the capture view: " + interfaceBlock);
         assertFalse(interfaceBlock.contains("$Optional<$ProbeWildcardOptionalCaptureTest$ConstDesc>"),
                 "flattened invariant optional no longer appears on the interface: " + interfaceBlock);
         String implBlock = blockOf(declarations, "export class $ProbeWildcardOptionalCaptureTest$BooleanLike");
         assertTrue(implBlock.contains(
                 "describeConstable(): $Optional<$ProbeWildcardOptionalCaptureTest$DynamicDesc>;"),
                 "implementation keeps its narrow optional: " + implBlock);
+
+        // The view derives from the rendered instance surface of java.util.Optional.
+        String optionalView = blockOf(utilFile, "export interface $OptionalView");
+        assertTrue(optionalView.contains("orElseThrow(): B;"), "orElseThrow stays callable: " + optionalView);
+        assertTrue(optionalView.contains("get present(): boolean;"), "Bean property stays readable: " + optionalView);
+        assertTrue(optionalView.contains("get empty(): boolean;"), "Bean property stays readable: " + optionalView);
+        assertTrue(optionalView.contains("filter(arg0: $Predicate_<B, B, boolean>): $OptionalView<B>;"),
+                "filter keeps its bound predicate and re-enters the view: " + optionalView);
+        assertTrue(optionalView.contains(
+                "flatMap<U>(arg0: $Function_<B, $Optional<U>, B, $Optional<U>>): $OptionalView<U>;"),
+                "flatMap keeps the concrete container in parameter position: " + optionalView);
+        assertTrue(optionalView.contains("stream(): $StreamView<B>;"),
+                "stream navigates into the stream view: " + optionalView);
+        assertFalse(optionalView.contains(" or(arg0"), "or is excluded by rule 1: " + optionalView);
+        assertTrue(utilFile.contains("$StreamView") && utilFile.contains("java:java/util/stream"),
+                "java/util imports the stream view it references");
+
+        String streamView = blockOf(streamFile, "export interface $StreamView");
+        assertTrue(streamView.contains("findAny(): $OptionalView<B>;"),
+                "terminal optionals re-enter the optional view: " + streamView);
+        assertTrue(streamView.contains(
+                "flatMap<R>(arg0: $Function_<B, $Stream<R>, B, $Stream<R>>): $StreamView<R>;"),
+                "stream flatMap keeps the concrete container in parameter position: " + streamView);
+        assertTrue(streamView.contains("iterator(): $Iterator<B>;"),
+                "covariant iterator return stays: " + streamView);
+        assertTrue(streamView.contains("parallel(): $StreamView<B>"),
+                "inherited BaseStream members are merged: " + streamView);
+        assertFalse(streamView.contains("reduce"), "reduce is excluded by rule 2: " + streamView);
+        assertFalse(streamView.contains("sorted"), "sorted is excluded by rule 2: " + streamView);
+        assertFalse(streamView.contains("collect"), "collect is excluded by rule 2: " + streamView);
+        assertFalse(streamView.contains("toList"), "toList is excluded by rule 3: " + streamView);
+        assertFalse(streamView.contains("spliterator"), "spliterator is excluded by rule 3: " + streamView);
+        assertTrue(streamFile.contains("$OptionalView") && streamFile.contains("java:java/util"),
+                "java/util/stream imports the optional view it references");
     }
 
     private static String blockOf(String declarations, String header) {

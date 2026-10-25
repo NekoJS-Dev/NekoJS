@@ -1,6 +1,6 @@
 import { $Class, $Enum } from "java:java/lang";
 import { $MethodHandle, $MethodHandles$Lookup, $MethodType, $TypeDescriptor$OfField, $TypeDescriptor$OfMethod } from "java:java/lang/invoke";
-import { $List, $Optional } from "java:java/util";
+import { $List, $Optional, $OptionalView } from "java:java/util";
 
 declare module "java:java/lang/constant" {
     export interface $ClassDesc extends $ConstantDesc, $TypeDescriptor$OfField<$ClassDesc> {
@@ -26,7 +26,7 @@ declare module "java:java/lang/constant" {
     };
 
     export interface $Constable {
-        describeConstable(): { isPresent(): boolean; isEmpty(): boolean; get(): $ConstantDesc; stream(): { count(): number; findAny(): { isPresent(): boolean; isEmpty(): boolean; get(): $ConstantDesc; }; findFirst(): { isPresent(): boolean; isEmpty(): boolean; get(): $ConstantDesc; }; } };
+        describeConstable(): $OptionalView<$ConstantDesc>;
     }
 
     export interface $ConstantDesc {

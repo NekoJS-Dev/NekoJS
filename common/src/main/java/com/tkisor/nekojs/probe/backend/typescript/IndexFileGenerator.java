@@ -34,6 +34,8 @@ public final class IndexFileGenerator {
     private final java.util.concurrent.ConcurrentHashMap<String, Set<String>> importCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<String, TypeDecl> irCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<String, Set<String>> referenceCache = new java.util.concurrent.ConcurrentHashMap<>();
+    /** fqn → "host->exportedName" rendering references; drives view-name imports precisely. */
+    private final java.util.concurrent.ConcurrentHashMap<String, Set<String>> nameReferenceCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final Set<String> authoredClasses = java.util.concurrent.ConcurrentHashMap.newKeySet();
     /**
      * 枚举输入别名缓存（FQN → 别名名 + 就近发射的声明行）。predeclareClass 时从 {@link TypeDecl}
@@ -110,6 +112,28 @@ public final class IndexFileGenerator {
         for (String fqn : importsNeeded) {
             for (String name : exportedSymbols(fqn)) importedSymbols.add(new TypeScriptImportNames.Symbol(fqn, name));
         }
+        // Capture views live in their source modules; the paired view is imported when referenced.
+        boolean optionalViewDeclared = packageName.equals("java.util") && irRenderer.captureViewUsed();
+        boolean streamViewDeclared = packageName.equals("java.util.stream") && irRenderer.captureViewUsed();
+        if (optionalViewDeclared) {
+            importedSymbols.add(new TypeScriptImportNames.Symbol("java.util.stream.Stream", "$StreamView"));
+        } else if (streamViewDeclared) {
+            importedSymbols.add(new TypeScriptImportNames.Symbol("java.util.Optional", "$OptionalView"));
+        }
+        // Modules that rendered a capture-view reference import exactly that exported name.
+        boolean referencesOptionalView = false;
+        boolean referencesStreamView = false;
+        for (String simpleName : classNames) {
+            Set<String> names = nameReferenceCache.getOrDefault(packageName + "." + simpleName, Set.of());
+            referencesOptionalView |= names.contains("java.util.Optional->$OptionalView");
+            referencesStreamView |= names.contains("java.util.stream.Stream->$StreamView");
+        }
+        if (referencesOptionalView && !optionalViewDeclared) {
+            importedSymbols.add(new TypeScriptImportNames.Symbol("java.util.Optional", "$OptionalView"));
+        }
+        if (referencesStreamView && !streamViewDeclared) {
+            importedSymbols.add(new TypeScriptImportNames.Symbol("java.util.stream.Stream", "$StreamView"));
+        }
         Set<String> declaredNames = new LinkedHashSet<>();
         Set<String> authoredImports = new LinkedHashSet<>();
         for (String simpleName : classNames) {
@@ -124,6 +148,9 @@ public final class IndexFileGenerator {
         for (String simpleName : classNames) {
             extraImports.addAll(irRenderer.getExtraImports(packageName + "." + simpleName));
         }
+        // The locally declared view names must not be stolen by an import binding.
+        if (optionalViewDeclared) declaredNames.add("$OptionalView");
+        if (streamViewDeclared) declaredNames.add("$StreamView");
         Set<TypeScriptImportNames.Symbol> authoredSymbols = new LinkedHashSet<>();
         for (TypeScriptImportNames.Symbol symbol : importedSymbols) {
             if (authoredImports.contains(symbol.fqn())) authoredSymbols.add(symbol);
@@ -227,6 +254,13 @@ public final class IndexFileGenerator {
                 if (alias != null) {
                     sb.append(alias);
                 }
+            }
+
+            if (optionalViewDeclared) {
+                sb.append(irRenderer.renderOptionalCaptureViewDeclaration(moduleAliases));
+            }
+            if (streamViewDeclared) {
+                sb.append(irRenderer.renderStreamCaptureViewDeclaration(moduleAliases));
             }
 
             sb.append("}\n");
@@ -457,11 +491,13 @@ public final class IndexFileGenerator {
         String packageName = packageOf(fqn);
         Set<String> imports = new LinkedHashSet<>();
         Set<String> referencesNeeded = new LinkedHashSet<>();
+        Set<String> referencedNames = new LinkedHashSet<>();
         // Contextual callback arguments can introduce host types absent from the Java parameter.
         // Observe the same rendering references used for module-local names instead of expanding a second signature.
         TypeAliasRegistry references = adapterAliasGenerator.aliasRegistry().withReferences((host, name) -> {
             if (name.startsWith("$")) {
                 referencesNeeded.add(host);
+                referencedNames.add(host + "->" + name);
                 if (!packageOf(host).equals(packageName)) imports.add(host);
             }
             return name;
@@ -474,6 +510,7 @@ public final class IndexFileGenerator {
         }
         importCache.put(fqn, imports);
         referenceCache.put(fqn, Set.copyOf(referencesNeeded));
+        nameReferenceCache.put(fqn, Set.copyOf(referencedNames));
         if (decl.sourceClass != null) {
             classCache.put(fqn, decl.sourceClass);
         }
@@ -576,6 +613,7 @@ public final class IndexFileGenerator {
         enumAliasCache.clear();
         irCache.clear();
         referenceCache.clear();
+        nameReferenceCache.clear();
         authoredClasses.clear();
     }
 }

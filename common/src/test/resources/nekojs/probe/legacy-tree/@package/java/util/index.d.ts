@@ -3,7 +3,7 @@ import { $Cloneable, $Comparable, $Comparable_, $Enum, $Iterable, $Runnable, $Ru
 import { $Charset } from "java:java/nio/charset";
 import { $Instant } from "java:java/time";
 import { $BiConsumer, $BiConsumer_, $BiFunction, $BiFunction_, $Consumer, $Consumer_, $DoubleConsumer, $DoubleConsumer_, $DoubleSupplier, $DoubleSupplier_, $Function, $Function_, $IntConsumer, $IntConsumer_, $IntFunction, $IntFunction_, $IntSupplier, $IntSupplier_, $LongConsumer, $LongConsumer_, $LongSupplier, $LongSupplier_, $Predicate, $Predicate_, $Supplier, $Supplier_, $ToDoubleFunction, $ToDoubleFunction_, $ToIntFunction, $ToIntFunction_, $ToLongFunction, $ToLongFunction_, $UnaryOperator, $UnaryOperator_ } from "java:java/util/function";
-import { $DoubleStream, $IntStream, $LongStream, $Stream } from "java:java/util/stream";
+import { $DoubleStream, $IntStream, $LongStream, $Stream, $StreamView } from "java:java/util/stream";
 
 export * as function from "java:java/util/function";
 export * as stream from "java:java/util/stream";
@@ -836,4 +836,24 @@ declare module "java:java/util" {
     export type $Set_<E> = $Set<E>;
     export type $SortedMap_<K, V> = $SortedMap<K, V>;
     export type $Spliterator_<T> = T[];
+    export interface $OptionalView<B> {
+        get empty(): boolean;
+        isEmpty(): boolean;
+        get present(): boolean;
+        isPresent(): boolean;
+        equals(arg0: unknown): boolean;
+        filter(arg0: $Predicate_<B, B, boolean>): $OptionalView<B>;
+        flatMap<U>(arg0: $Function_<B, $Optional<U>, B, $Optional<U>>): $OptionalView<U>;
+        get(): B;
+        hashCode(): number;
+        ifPresentOrElse(arg0: $Consumer_<B, B>, arg1: $Runnable_): void;
+        ifPresent(arg0: $Consumer_<B, B>): void;
+        map<U>(arg0: $Function_<B, U, B, U>): $OptionalView<U>;
+        orElseGet(arg0: $Supplier_<B, B>): B;
+        orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): B;
+        orElseThrow(): B;
+        orElse(arg0: B): B;
+        stream(): $StreamView<B>;
+        toString(): string;
+    }
 }

@@ -1,5 +1,5 @@
 import { $AutoCloseable, $AutoCloseable_, $Enum, $Runnable, $Runnable_ } from "java:java/lang";
-import { $Comparator, $Comparator_, $DoubleSummaryStatistics, $IntSummaryStatistics, $Iterator, $List, $LongSummaryStatistics, $Optional, $OptionalDouble, $OptionalInt, $OptionalLong, $PrimitiveIterator$OfDouble, $PrimitiveIterator$OfInt, $PrimitiveIterator$OfLong, $Set, $Spliterator, $Spliterator$OfDouble, $Spliterator$OfInt, $Spliterator$OfLong } from "java:java/util";
+import { $Comparator, $Comparator_, $DoubleSummaryStatistics, $IntSummaryStatistics, $Iterator, $List, $LongSummaryStatistics, $Optional, $OptionalDouble, $OptionalInt, $OptionalLong, $OptionalView, $PrimitiveIterator$OfDouble, $PrimitiveIterator$OfInt, $PrimitiveIterator$OfLong, $Set, $Spliterator, $Spliterator$OfDouble, $Spliterator$OfInt, $Spliterator$OfLong } from "java:java/util";
 import { $BiConsumer, $BiConsumer_, $BiFunction, $BiFunction_, $BinaryOperator, $BinaryOperator_, $Consumer, $Consumer_, $DoubleBinaryOperator, $DoubleBinaryOperator_, $DoubleConsumer, $DoubleConsumer_, $DoubleFunction, $DoubleFunction_, $DoublePredicate, $DoublePredicate_, $DoubleSupplier, $DoubleSupplier_, $DoubleToIntFunction, $DoubleToIntFunction_, $DoubleToLongFunction, $DoubleToLongFunction_, $DoubleUnaryOperator, $DoubleUnaryOperator_, $Function, $Function_, $IntBinaryOperator, $IntBinaryOperator_, $IntConsumer, $IntConsumer_, $IntFunction, $IntFunction_, $IntPredicate, $IntPredicate_, $IntSupplier, $IntSupplier_, $IntToDoubleFunction, $IntToDoubleFunction_, $IntToLongFunction, $IntToLongFunction_, $IntUnaryOperator, $IntUnaryOperator_, $LongBinaryOperator, $LongBinaryOperator_, $LongConsumer, $LongConsumer_, $LongFunction, $LongFunction_, $LongPredicate, $LongPredicate_, $LongSupplier, $LongSupplier_, $LongToDoubleFunction, $LongToDoubleFunction_, $LongToIntFunction, $LongToIntFunction_, $LongUnaryOperator, $LongUnaryOperator_, $ObjDoubleConsumer, $ObjDoubleConsumer_, $ObjIntConsumer, $ObjIntConsumer_, $ObjLongConsumer, $ObjLongConsumer_, $Predicate, $Predicate_, $Supplier, $Supplier_, $ToDoubleFunction, $ToDoubleFunction_, $ToIntFunction, $ToIntFunction_, $ToLongFunction, $ToLongFunction_, $UnaryOperator, $UnaryOperator_ } from "java:java/util/function";
 
 declare module "java:java/util/stream" {
@@ -286,4 +286,44 @@ declare module "java:java/util/stream" {
     export type $IntStream$IntMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $IntConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($IntStream$IntMapMultiConsumer & { readonly [Symbol.hasInstance]?: never });
     export type $LongStream$LongMapMultiConsumer_<CallbackArg0 = number, CallbackArg1 = $LongConsumer> = ((arg0: CallbackArg0, arg1: CallbackArg1) => void) | ($LongStream$LongMapMultiConsumer & { readonly [Symbol.hasInstance]?: never });
     export type $Stream_<T> = T[];
+    export interface $StreamView<B> {
+        allMatch(arg0: $Predicate_<B, B, boolean>): boolean;
+        anyMatch(arg0: $Predicate_<B, B, boolean>): boolean;
+        count(): number;
+        distinct(): $StreamView<B>;
+        dropWhile(arg0: $Predicate_<B, B, boolean>): $StreamView<B>;
+        filter(arg0: $Predicate_<B, B, boolean>): $StreamView<B>;
+        findAny(): $OptionalView<B>;
+        findFirst(): $OptionalView<B>;
+        flatMapToDouble(arg0: $Function_<B, $DoubleStream, B, $DoubleStream>): $DoubleStream;
+        flatMapToInt(arg0: $Function_<B, $IntStream, B, $IntStream>): $IntStream;
+        flatMapToLong(arg0: $Function_<B, $LongStream, B, $LongStream>): $LongStream;
+        flatMap<R>(arg0: $Function_<B, $Stream<R>, B, $Stream<R>>): $StreamView<R>;
+        forEachOrdered(arg0: $Consumer_<B, B>): void;
+        forEach(arg0: $Consumer_<B, B>): void;
+        limit(arg0: number): $StreamView<B>;
+        mapMultiToDouble(arg0: $BiConsumer_<B, $DoubleConsumer, B, $DoubleConsumer>): $DoubleStream;
+        mapMultiToInt(arg0: $BiConsumer_<B, $IntConsumer, B, $IntConsumer>): $IntStream;
+        mapMultiToLong(arg0: $BiConsumer_<B, $LongConsumer, B, $LongConsumer>): $LongStream;
+        mapMulti<R>(arg0: $BiConsumer_<B, $Consumer<R>, B, $Consumer<R>>): $StreamView<R>;
+        mapToDouble(arg0: $ToDoubleFunction_<B, B, number>): $DoubleStream;
+        mapToInt(arg0: $ToIntFunction_<B, B, number>): $IntStream;
+        mapToLong(arg0: $ToLongFunction_<B, B, number>): $LongStream;
+        map<R>(arg0: $Function_<B, R, B, R>): $StreamView<R>;
+        max(arg0: $Comparator_<B, B, B, number>): $OptionalView<B>;
+        min(arg0: $Comparator_<B, B, B, number>): $OptionalView<B>;
+        noneMatch(arg0: $Predicate_<B, B, boolean>): boolean;
+        peek(arg0: $Consumer_<B, B>): $StreamView<B>;
+        skip(arg0: number): $StreamView<B>;
+        takeWhile(arg0: $Predicate_<B, B, boolean>): $StreamView<B>;
+        toArray<A>(arg0: $IntFunction_<A[], number, A[]>): A[];
+        toArray(): unknown[];
+        close(): void;
+        isParallel(): boolean;
+        iterator(): $Iterator<B>;
+        onClose(arg0: $Runnable_): $StreamView<B>;
+        parallel(): $StreamView<B>;
+        sequential(): $StreamView<B>;
+        unordered(): $StreamView<B>;
+    }
 }
