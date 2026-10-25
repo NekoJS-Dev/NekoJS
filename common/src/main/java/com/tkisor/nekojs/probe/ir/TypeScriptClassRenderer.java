@@ -713,18 +713,21 @@ public final class TypeScriptClassRenderer {
      * {@code stream().findAny().stream()}); parameters keep the concrete containers of method-local
      * variables exactly as the source class renders them.
      *
-     * <p>Members whose capture semantics have no provably compatible TypeScript shape are excluded by
-     * three mechanical rules, each verified against the real five-node declaration trees (see
-     * {@code docs/research/2026-10-25-strict-ts-root-causes.md} and the F1 evidence pages):
-     * (1) a parameter that nests the capture container over the owner variable — {@code or(Supplier<? extends
-     * Optional<? extends T>>)}: the SAM host branch forces a same-generic comparison onto the narrowed
-     * element in both bivariant directions; (2) a multi-signature member where any overload takes a
-     * functional alias over the bound — TypeScript pairs overloads strictly, so {@code reduce}, {@code sorted}
-     * and {@code collect} cannot survive partial filtering; (3) a return of another generic container
-     * instantiated at the bound that TypeScript measures invariant — {@code toList(): $List<B>} and
-     * {@code spliterator(): $Spliterator<B>} — with {@code $Iterator<B>} whitelisted because its element
-     * position stays covariant. Excluded members remain available on the concrete implementations;
-     * wrong element types stay rejected because {@code get()} returns the upper bound.
+     * <p>Members and overloads whose capture semantics have no provably compatible TypeScript shape are
+     * excluded by experimentally pinned rules (every branch verified against the real five-node
+     * declaration trees; see the F1 evidence pages): (1a) a parameter nesting the capture container over
+     * the bound — {@code or(Supplier<? extends Optional<? extends T>>)} — fails the SAM host branch in
+     * both bivariant directions; (1b) inside a multi-signature group an overload whose functional alias
+     * returns the bare bound — {@code reduce(BinaryOperator<B>)} — has an unrepresentable host return,
+     * while the same shape stays fine on single signatures ({@code orElseGet}) through method-parameter
+     * bivariance; (2) multi-signature groups keep at most the zero-argument overload (emitted first)
+     * plus the first remaining overload when they mix bound-SAM overloads with a zero-argument one
+     * ({@code sorted}), or just their first overload otherwise ({@code collect}); groups without
+     * bound-SAM overloads keep everything ({@code toArray}, {@code orElseThrow}); (3) a return of
+     * another generic container instantiated at the bound that TypeScript measures invariant
+     * ({@code toList(): $List<B>}), with {@code $Iterator<B>} and {@code $Spliterator<B>} whitelisted
+     * because their element positions stay covariant. Excluded members remain available on the concrete
+     * implementations; wrong element types stay rejected because {@code get()} returns the upper bound.
      */
     public String renderOptionalCaptureViewDeclaration(TypeAliasRegistry moduleAliases) {
         StringBuilder body = new StringBuilder();
@@ -774,10 +777,6 @@ public final class TypeScriptClassRenderer {
         });
         String rendered = render(declaration, moduleAliases);
         List<String> candidates = new java.util.ArrayList<>();
-        Set<String> excludedGroups = new LinkedHashSet<>();
-        Map<String, Integer> signatureCounts = new LinkedHashMap<>();
-        java.util.regex.Pattern boundSamArgument =
-                java.util.regex.Pattern.compile("\\$[\\w$]+_<[^()]*\\bB\\b");
         boolean inBody = false;
         for (String line : rendered.split("\n", -1)) {
             if (!inBody) {
@@ -798,32 +797,127 @@ public final class TypeScriptClassRenderer {
                 member = member.replaceAll("\\b" + java.util.regex.Pattern.quote(substitution.getKey())
                                 + "\\b", java.util.regex.Matcher.quoteReplacement(substitution.getValue()));
             }
-            if (trimmed.startsWith("get ") || trimmed.startsWith("set ")) {
-                candidates.add(member);
-                continue;
-            }
-            String token = captureMemberToken(member);
-            signatureCounts.merge(token, 1, Integer::sum);
-            // Rule 2 marks the whole overload group: TypeScript pairs overloads strictly, so keeping a
-            // partially filtered set (for example bare sorted()) fails signature arity pairing.
-            int open = member.indexOf('(');
-            int close = member.lastIndexOf(')');
-            if (open >= 0 && close > open
-                    && boundSamArgument.matcher(member.substring(open + 1, close)).find()) {
-                excludedGroups.add(token);
-            }
             candidates.add(member);
         }
-        excludedGroups.removeIf(token -> signatureCounts.getOrDefault(token, 0) <= 1);
-        for (String member : candidates) {
-            String transformed = transformCaptureViewMember(member, excludedGroups, optionalView, streamView);
+        for (String member : selectCaptureViewMembers(candidates)) {
+            String transformed = transformCaptureViewMember(member, optionalView, streamView);
             if (transformed != null) output.append(transformed).append('\n');
         }
     }
 
-    /** Applies the container-return rewrite plus the three exclusion rules; null drops the member. */
-    private static String transformCaptureViewMember(String member, Set<String> excludedGroups,
-                                                     String optionalView, String streamView) {
+    /**
+     * Applies the overload-level exclusion and selection rules to the collected member lines.
+     * Every rule branch is pinned by a real-tree tsc experiment (see the F1 evidence pages):
+     * single-signature members keep method-parameter bivariance, so a SAM returning the bare bound
+     * still passes ({@code orElseGet}); inside a multi-signature group the comparison is strict,
+     * so such overloads ({@code reduce(BinaryOperator)}) cannot be represented, and the remaining
+     * overload list must keep at most the zero-argument overload (first) plus the first remaining
+     * overload when the group mixes bound-SAM overloads with a zero-argument one
+     * ({@code sorted}), or just the first overload otherwise ({@code collect}). Groups without
+     * bound-SAM overloads keep every overload in source order ({@code toArray}, {@code orElseThrow}).
+     */
+    private static List<String> selectCaptureViewMembers(List<String> candidates) {
+        record Entry(String line, String token, String params, boolean zeroArg, boolean boundSam, boolean unsafe) {}
+        List<Entry> entries = new java.util.ArrayList<>();
+        java.util.regex.Pattern boundSamArgument =
+                java.util.regex.Pattern.compile("\\$[\\w$]+_<[^()]*\\bB\\b");
+        for (String line : candidates) {
+            if (line.strip().startsWith("get ") || line.strip().startsWith("set ")) {
+                entries.add(new Entry(line, "", "", false, false, false));
+                continue;
+            }
+            int open = line.indexOf('(');
+            int close = line.lastIndexOf(')');
+            String params = open >= 0 && close > open ? line.substring(open + 1, close) : "";
+            boolean zeroArg = params.isBlank();
+            boolean boundSam = boundSamArgument.matcher(params).find();
+            entries.add(new Entry(line, captureMemberToken(line), params, zeroArg, boundSam, false));
+        }
+        Map<String, List<Entry>> groups = new LinkedHashMap<>();
+        for (Entry entry : entries) {
+            if (!entry.token().isEmpty()) groups.computeIfAbsent(entry.token(), k -> new java.util.ArrayList<>()).add(entry);
+        }
+        // Rule 1b: within multi-signature groups a functional alias whose type arguments are all the
+        // bare bound (for example $BinaryOperator_<B, B, B, B>) has an unrepresentable host branch:
+        // every slot compares the narrowed element, and the callback-result slot has no bivariant
+        // rescue inside overload-set comparison. Mixed-argument aliases stay ($BiConsumer_<R, B, R, B>).
+        for (List<Entry> group : groups.values()) {
+            if (group.size() <= 1) continue;
+            for (int index = 0; index < group.size(); index++) {
+                if (allBoundSamAlias(group.get(index).params())) {
+                    group.set(index, new Entry(group.get(index).line(), group.get(index).token(),
+                            group.get(index).params(), group.get(index).zeroArg(), group.get(index).boundSam(), true));
+                }
+            }
+        }
+        for (List<Entry> group : groups.values()) {
+            List<Entry> kept = group.stream().filter(entry -> !entry.unsafe()).toList();
+            if (kept.size() > 1) {
+                boolean anyBoundSam = kept.stream().anyMatch(Entry::boundSam);
+                Entry zero = kept.stream().filter(Entry::zeroArg).findFirst().orElse(null);
+                if (anyBoundSam && zero != null) {
+                    // Zero-argument overload first, then the first remaining overload in source order.
+                    List<Entry> selected = new java.util.ArrayList<>();
+                    selected.add(zero);
+                    for (Entry entry : kept) {
+                        if (entry != zero && selected.size() == 1) selected.add(entry);
+                    }
+                    kept = selected;
+                } else if (anyBoundSam || zero == null) {
+                    kept = List.of(kept.getFirst());
+                }
+                // Groups with neither a bound-SAM overload nor a zero-argument overload keep everything.
+            }
+            group.clear();
+            group.addAll(kept);
+        }
+        // A group renders once, at its first source position, in the selected order.
+        List<String> result = new java.util.ArrayList<>();
+        Set<String> rendered = new LinkedHashSet<>();
+        for (Entry entry : entries) {
+            if (entry.token().isEmpty()) {
+                result.add(entry.line());
+                continue;
+            }
+            if (!rendered.add(entry.token())) continue;
+            for (Entry selected : groups.get(entry.token())) result.add(selected.line());
+        }
+        return result;
+    }
+
+    /** True when a functional alias's every type argument is the bare bound, e.g. {@code $BinaryOperator_<B, B, B, B>}. */
+    private static boolean allBoundSamAlias(String params) {
+        java.util.regex.Matcher alias = java.util.regex.Pattern.compile("\\$[\\w$]+_<").matcher(params);
+        while (alias.find()) {
+            int depth = 1;
+            int index = alias.end();
+            List<String> arguments = new java.util.ArrayList<>();
+            StringBuilder current = new StringBuilder();
+            while (index < params.length() && depth > 0) {
+                char c = params.charAt(index);
+                if (c == '<') depth++;
+                else if (c == '>') {
+                    depth--;
+                    if (depth == 0) break;
+                }
+                if (depth == 1 && c == ',') {
+                    arguments.add(current.toString().strip());
+                    current.setLength(0);
+                } else {
+                    current.append(c);
+                }
+                index++;
+            }
+            arguments.add(current.toString().strip());
+            if (!arguments.isEmpty() && arguments.stream().allMatch(argument -> argument.equals("B"))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Applies the container-return rewrite plus the parameter and return exclusions; null drops the member. */
+    private static String transformCaptureViewMember(String member, String optionalView, String streamView) {
         if (member.strip().startsWith("get ") || member.strip().startsWith("set ")) return member;
         int paramsStart = member.indexOf('(');
         int paramsEnd = member.lastIndexOf(')');
@@ -831,25 +925,22 @@ public final class TypeScriptClassRenderer {
         String head = member.substring(0, paramsStart);
         String params = member.substring(paramsStart + 1, paramsEnd);
         String result = member.substring(paramsEnd + 1);
-        String token = captureMemberToken(member);
         boolean returns = result.startsWith(": ");
         String value = returns ? result.substring(2) : "";
         if (value.endsWith(";")) value = value.substring(0, value.length() - 1);
-        // Rule 1: the parameter nests the capture container over the view bound; the SAM host branch
+        // Rule 1a: the parameter nests the capture container over the view bound; the SAM host branch
         // then compares the narrowed element in both bivariant directions.
         if (params.contains("$Optional<B>") || params.contains("$Stream<B>")) return null;
-        // Rule 2: multi-signature members pair overloads strictly; any bound-parameterized functional
-        // alias in the group (for example $Comparator_<B, B, B, number>) rejects the whole group.
-        if (excludedGroups.contains(token)) return null;
         if (returns) {
             // Returns re-enter the capture views; parameters keep the source's concrete containers.
             if (value.startsWith("$Optional<")) value = optionalView + value.substring("$Optional".length());
             else if (value.startsWith("$Stream<")) value = streamView + value.substring("$Stream".length());
             else {
-                // Rule 3: a non-view generic container of the bound that TypeScript measures invariant.
+                // Rule 3: a non-view generic container of the bound that TypeScript measures invariant
+                // (toList(): $List<B>). $Iterator<B> and $Spliterator<B> are measured covariant and stay.
                 boolean bare = value.equals("B") || value.equals("B[]");
                 boolean view = value.startsWith(optionalView + "<") || value.startsWith(streamView + "<");
-                boolean whitelisted = value.equals("$Iterator<B>");
+                boolean whitelisted = value.equals("$Iterator<B>") || value.equals("$Spliterator<B>");
                 if (!bare && !view && !whitelisted
                         && java.util.regex.Pattern.compile("\\bB\\b").matcher(value).find()) {
                     return null;

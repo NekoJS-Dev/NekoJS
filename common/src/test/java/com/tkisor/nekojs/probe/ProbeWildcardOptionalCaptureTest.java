@@ -120,25 +120,33 @@ class ProbeWildcardOptionalCaptureTest {
                 const listed: ConstDesc = captureResult.stream().iterator().next();
                 const maxed = captureResult.stream().max(null as never);
 
-                // Rule 1: or(Supplier<Optional<? extends T>>) nests the capture container in an input
+                // Multi-overload groups keep their representable overloads: both sorted() and
+                // sorted(comparator), the three-argument reduce, the supplier-collect, and the
+                // covariant spliterator return.
+                const natural = captureResult.stream().sorted().count();
+                const ordered = captureResult.stream().sorted((a: ConstDesc, b: ConstDesc): number => 0).count();
+                const reduced: number = captureResult.stream().reduce(
+                    0, (u: number, d: ConstDesc): number => u, (x: number, y: number): number => x);
+                const collected: string[] = captureResult.stream().collect(
+                    (): string[] => [], (acc: string[], d: ConstDesc): void => {}, (a: string[], b: string[]): void => {});
+                const split = captureResult.stream().spliterator();
+
+                // Rule 1a: or(Supplier<Optional<? extends T>>) nests the capture container in an input
                 // position; the SAM host branch compares the narrowed element in both bivariant
                 // directions, so no parameter shape is provably compatible. It stays on the concrete
                 // implementations only.
-                // @ts-expect-error or is excluded from the capture view by rule 1.
+                // @ts-expect-error or is excluded from the capture view by rule 1a.
                 captureResult.or;
-                // Rule 2: overload sets with bound-parameterized functional aliases pair strictly
-                // (reduce/sorted/collect); rule 3 excludes invariant container returns (toList,
-                // spliterator). They stay available on concrete streams.
-                // @ts-expect-error reduce is excluded from the stream capture view by rule 2.
-                captureResult.stream().reduce;
-                // @ts-expect-error sorted is excluded from the stream capture view by rule 2.
-                captureResult.stream().sorted;
-                // @ts-expect-error collect is excluded from the stream capture view by rule 2.
-                captureResult.stream().collect;
+                // Rule 1b: inside a multi-signature group a functional alias returning the bare bound
+                // has an unrepresentable host return (apply(): T compares covariantly), so the two
+                // BinaryOperator reduce overloads stay on the concrete implementations only.
+                // @ts-expect-error reduce(BinaryOperator) is excluded by rule 1b.
+                captureResult.stream().reduce((a: ConstDesc, b: ConstDesc): ConstDesc => a);
+                // @ts-expect-error The two-argument reduce(identity, BinaryOperator) is excluded by rule 1b.
+                captureResult.stream().reduce(upper, (a: ConstDesc, b: ConstDesc): ConstDesc => a);
+                // Rule 3: toList(): $List<B> returns a container TypeScript measures invariant.
                 // @ts-expect-error toList is excluded from the stream capture view by rule 3.
                 captureResult.stream().toList;
-                // @ts-expect-error spliterator is excluded from the stream capture view by rule 3.
-                captureResult.stream().spliterator;
 
                 // The concrete implementation view keeps its narrow result and full container surface.
                 const narrow: DynamicDesc = impl.describeConstable().get();
@@ -197,11 +205,24 @@ class ProbeWildcardOptionalCaptureTest {
                 "covariant iterator return stays: " + streamView);
         assertTrue(streamView.contains("parallel(): $StreamView<B>"),
                 "inherited BaseStream members are merged: " + streamView);
-        assertFalse(streamView.contains("reduce"), "reduce is excluded by rule 2: " + streamView);
-        assertFalse(streamView.contains("sorted"), "sorted is excluded by rule 2: " + streamView);
-        assertFalse(streamView.contains("collect"), "collect is excluded by rule 2: " + streamView);
+        // Both sorted overloads stay, with the zero-argument overload emitted first.
+        int sortedZero = streamView.indexOf("sorted(): $StreamView<B>;");
+        int sortedComparator = streamView.indexOf("sorted(arg0: $Comparator_<B, B, B, number>): $StreamView<B>;");
+        assertTrue(sortedZero >= 0 && sortedComparator > sortedZero,
+                "sorted keeps both overloads with the zero-argument overload first: " + streamView);
+        assertTrue(streamView.contains(
+                "reduce<U>(arg0: U, arg1: $BiFunction_<U, B, U, U, B, U>, arg2: $BinaryOperator_<U, U, U, U>): U;"),
+                "the three-argument reduce overload stays: " + streamView);
+        assertTrue(streamView.contains(
+                "collect<R>(arg0: $Supplier_<R, R>, arg1: $BiConsumer_<R, B, R, B>, arg2: $BiConsumer_<R, R, R, R>): R;"),
+                "the supplier-collect overload stays: " + streamView);
+        assertTrue(streamView.contains("spliterator(): $Spliterator<B>;"),
+                "the covariant spliterator return stays: " + streamView);
+        assertFalse(streamView.contains("$BinaryOperator_<B, B, B, B>"),
+                "rule 1b drops the bare-bound BinaryOperator overloads: " + streamView);
+        assertFalse(streamView.contains("collect<R, A>"),
+                "rule 2 keeps only the first collect overload: " + streamView);
         assertFalse(streamView.contains("toList"), "toList is excluded by rule 3: " + streamView);
-        assertFalse(streamView.contains("spliterator"), "spliterator is excluded by rule 3: " + streamView);
         assertTrue(streamFile.contains("$OptionalView") && streamFile.contains("java:java/util"),
                 "java/util/stream imports the optional view it references");
     }

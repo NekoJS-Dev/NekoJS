@@ -289,6 +289,7 @@ declare module "java:java/util/stream" {
     export interface $StreamView<B> {
         allMatch(arg0: $Predicate_<B, B, boolean>): boolean;
         anyMatch(arg0: $Predicate_<B, B, boolean>): boolean;
+        collect<R>(arg0: $Supplier_<R, R>, arg1: $BiConsumer_<R, B, R, B>, arg2: $BiConsumer_<R, R, R, R>): R;
         count(): number;
         distinct(): $StreamView<B>;
         dropWhile(arg0: $Predicate_<B, B, boolean>): $StreamView<B>;
@@ -314,7 +315,10 @@ declare module "java:java/util/stream" {
         min(arg0: $Comparator_<B, B, B, number>): $OptionalView<B>;
         noneMatch(arg0: $Predicate_<B, B, boolean>): boolean;
         peek(arg0: $Consumer_<B, B>): $StreamView<B>;
+        reduce<U>(arg0: U, arg1: $BiFunction_<U, B, U, U, B, U>, arg2: $BinaryOperator_<U, U, U, U>): U;
         skip(arg0: number): $StreamView<B>;
+        sorted(): $StreamView<B>;
+        sorted(arg0: $Comparator_<B, B, B, number>): $StreamView<B>;
         takeWhile(arg0: $Predicate_<B, B, boolean>): $StreamView<B>;
         toArray<A>(arg0: $IntFunction_<A[], number, A[]>): A[];
         toArray(): unknown[];
@@ -324,6 +328,7 @@ declare module "java:java/util/stream" {
         onClose(arg0: $Runnable_): $StreamView<B>;
         parallel(): $StreamView<B>;
         sequential(): $StreamView<B>;
+        spliterator(): $Spliterator<B>;
         unordered(): $StreamView<B>;
     }
 }
