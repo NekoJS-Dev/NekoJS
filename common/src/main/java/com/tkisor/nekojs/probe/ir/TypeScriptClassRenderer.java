@@ -161,7 +161,7 @@ public final class TypeScriptClassRenderer {
         appendTypeParameters(sb, d);
 
         if (d.superType != null) {
-            String superTs = renderSlot(d.superType, false);
+            String superTs = renderHeritageSlot(d.superType, aliases);
             // 父类槽经 TypeConverter 可能映射为 TS 原始类型（Number 子类 → number，即 $Double extends number），
             // 经 probe 编辑（changeSuper/assign_type）还可能是联合/回调（extends string | number）——
             // 这些都不能作 heritage，省略整个 extends 子句（implements 等照常保留）
@@ -455,7 +455,7 @@ public final class TypeScriptClassRenderer {
         if (d.superType != null) parentSlots.add(d.superType);
         parentSlots.addAll(d.interfaces);
         List<String> parents = parentSlots.stream()
-                .map(slot -> renderTypeRef(projectedRef(slot), enumAliases, false))
+                .map(slot -> renderHeritageSlot(slot, enumAliases))
                 .filter(TypeScriptClassRenderer::isHeritageSafe).toList();
         if (!parents.isEmpty()) {
             // Merging inherits Java interface defaults and Enum<Self> without inheriting static factories.
@@ -571,6 +571,8 @@ public final class TypeScriptClassRenderer {
             sb.append(tsParamName(p.name));
             if (p.varargs || p.optional) sb.append("?");
             sb.append(": ");
+            boolean unionElement = p.varargs && projectedRef(p.type).kind() == ApiTypeRef.Kind.UNION;
+            if (unionElement) sb.append('(');
             if (constructor && !p.type.overridden && p.type.sourceType != null) {
                 // TypeScript class constructors cannot declare their own type parameters.
                 // Project only those local variables; ordinary class variables and edited slots keep their scope.
@@ -579,6 +581,7 @@ public final class TypeScriptClassRenderer {
             } else {
                 sb.append(renderSlot(p.type, true));
             }
+            if (unionElement) sb.append(')');
             if (p.varargs) sb.append("[]");
         }
     }
@@ -633,7 +636,7 @@ public final class TypeScriptClassRenderer {
      */
     private List<String> renderHeritageEntries(List<TypeSlot> slots) {
         return slots.stream()
-                .map(s -> renderSlot(s, false))
+                .map(s -> renderHeritageSlot(s, aliases))
                 .filter(TypeScriptClassRenderer::isHeritageSafe)
                 .toList();
     }
@@ -674,7 +677,7 @@ public final class TypeScriptClassRenderer {
                 return aliases.reference("java.util.Optional", "$OptionalView") + "<" + bound + ">";
             }
         }
-        return renderTypeRef(projectedRef(slot), aliases, input);
+        return renderTypeRef(projectedRef(slot), slot.overridden ? aliases.withRawValueReferences() : aliases, input);
     }
 
     /**
@@ -960,6 +963,17 @@ public final class TypeScriptClassRenderer {
                 ? JavaTypeScriptProjection.project(slot.sourceType, slot.ref) : slot.ref;
     }
 
+    private String renderHeritageSlot(TypeSlot slot, TypeAliasRegistry registry) {
+        ApiTypeRef reference = projectedRef(slot);
+        TypeAliasRegistry names = slot.overridden ? registry.withRawValueReferences() : registry;
+        if (reference.kind() == ApiTypeRef.Kind.SYMBOL
+                && !JavaTypeScriptProjection.scalarAlternatives(fqnOfSymbol(reference.name())).isEmpty()) {
+            // Inheritance names the host itself; its generic arguments are still value positions.
+            return renderHostSymbol(reference, names, new LinkedHashSet<>());
+        }
+        return renderTypeRef(reference, names, false);
+    }
+
     /** 简单 ApiTypeRef → TS（无别名表；probe.add_global 的全局声明类型等声明位使用）。 */
     public static String renderTypeRef(ApiTypeRef ref) {
         return renderTypeRef(ref, null, false);
@@ -968,6 +982,7 @@ public final class TypeScriptClassRenderer {
     /** Retains self-comparable Java bounds after boxed values project to JavaScript primitives. */
     public static String renderTypeParameterBound(TypeSlot slot, String variableName,
                                                   TypeAliasRegistry aliases, Set<String> expanding) {
+        if (slot.overridden) aliases = (aliases == null ? new TypeAliasRegistry() : aliases).withRawValueReferences();
         if (!slot.overridden && slot.sourceType == Comparable.class
                 && slot.ref.kind() == ApiTypeRef.Kind.SYMBOL
                 && slot.ref.name().equals("java:java.lang.Comparable") && slot.ref.arguments().isEmpty()) {
@@ -1013,7 +1028,11 @@ public final class TypeScriptClassRenderer {
             case VOID -> "void";
             case PRIMITIVE -> mapPrimT(ref.name());
             case TYPE_VARIABLE -> ref.name();
-            case ARRAY -> renderTypeRef(ref.arguments().get(0), aliases, input, expandingFunctionalAliases) + "[]";
+            case ARRAY -> {
+                ApiTypeRef element = ref.arguments().getFirst();
+                String rendered = renderTypeRef(element, aliases, input, expandingFunctionalAliases);
+                yield (element.kind() == ApiTypeRef.Kind.UNION ? "(" + rendered + ")" : rendered) + "[]";
+            }
             case UNION -> ref.arguments().stream()
                     .map(a -> renderTypeRef(a, aliases, input, expandingFunctionalAliases))
                     .collect(Collectors.joining(" | "));
@@ -1032,6 +1051,20 @@ public final class TypeScriptClassRenderer {
                 return aliases.renderRegisteredAlias(fqn, ref.arguments().stream()
                         .map(argument -> renderTypeRef(argument, aliases, false, expandingFunctionalAliases)).toList());
             }
+        }
+        List<ApiTypeRef> scalarValues = ref.arguments().isEmpty() && (aliases == null || aliases.projectsScalarValues())
+                ? JavaTypeScriptProjection.scalarAlternatives(fqn) : List.of();
+        if (!scalarValues.isEmpty()) {
+            TypeAliasRegistry.FunctionalInterfaceAlias functionalAlias = input && aliases != null
+                    ? aliases.getFunctionalInterfaceAlias(fqn) : null;
+            String host = functionalAlias == null ? renderHostSymbol(ref, aliases, expandingFunctionalAliases)
+                    : FunctionalInterfaceAliasGenerator.renderInputType(ref, functionalAlias, aliases, expandingFunctionalAliases);
+            // Keep identity until this boundary: an explicit input adapter above replaces the whole value domain.
+            // Parentheses also keep array and varargs element unions intact at their callers.
+            return "(" + scalarValues.stream().map(value -> renderTypeRef(value, aliases, false, expandingFunctionalAliases))
+                    .collect(Collectors.joining(" | ")) + " | " + host + ")";
+        }
+        if (input && aliases != null) {
             TypeAliasRegistry.FunctionalInterfaceAlias functionalAlias =
                     aliases.getFunctionalInterfaceAlias(fqn);
             if (functionalAlias != null) {
@@ -1054,6 +1087,11 @@ public final class TypeScriptClassRenderer {
         // Graal exposes boxed characters as string values, including returns and generic contents.
         // This is an intrinsic value projection; ordinary host identities and input adapters stay separate.
         if (fqn.equals("java.lang.Character")) return "string";
+        return renderHostSymbol(ref, aliases, expandingFunctionalAliases);
+    }
+
+    private static String renderHostSymbol(ApiTypeRef ref, TypeAliasRegistry aliases, Set<String> expandingFunctionalAliases) {
+        String fqn = fqnOfSymbol(ref.name());
         String name = "$" + simpleSymbolName(ref.name());
         StringBuilder sb = new StringBuilder(aliases == null ? name : aliases.reference(fqn, name));
         if (!ref.arguments().isEmpty()) {

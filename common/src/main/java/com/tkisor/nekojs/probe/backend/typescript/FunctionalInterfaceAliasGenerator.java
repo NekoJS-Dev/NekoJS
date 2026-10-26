@@ -333,6 +333,9 @@ public final class FunctionalInterfaceAliasGenerator {
                         .map(argument -> TypeScriptClassRenderer.renderTypeRef(hostRefWithRawArguments(argument),
                                 registry, false, expanding)).toList());
             }
+            if (registry.projectsScalarValues() && !JavaTypeScriptProjection.scalarAlternatives(raw.getName()).isEmpty()) {
+                return TypeScriptClassRenderer.renderTypeRef(hostRefWithRawArguments(declared), registry, true, expanding);
+            }
             TypeAliasRegistry.FunctionalInterfaceAlias functionalAlias =
                     registry.getFunctionalInterfaceAlias(raw.getName());
             if (functionalAlias != null) {

@@ -41,3 +41,15 @@
 现有 `MethodDecl.sourceMethod` 能精确定位工厂，但 IR 没有这种行为关系字段。候选接入点是现有 `NekoJSPlugin.registerTypeDocs` → `TypeDocsPoint` → catalog snapshot 通道，使用精确 Method 和返回 SAM 的操作数索引；不是在 renderer 按方法名列白名单。若证明确实需要扩展，须校验工厂/SAM/索引及冲突，依据编辑后的 IR 激活：隐藏仍隐藏，重命名保留身份，改写参数/返回槽则取消该见证。该方案尚未实现，完整 host 成员和泛型方法消费仍需先证；不将只读建议当作已通过的设计。
 
 两轴复审共同指出完整结构对象仍可模拟 sealed host；这是保留的旧结构分支限制，当前不作“仅真实 host 能通过 TypeScript”的承诺。要消除此限制需要另行处理 Java host 的名义身份，不能通过删除合法 host 输入掩盖。
+
+## F1 标量合同修复（源码门禁通过，待安装复核）
+
+真实Graal确认ConstantDesc的Double/Integer/String输出为number/number/string，标量没有resolveConstantDesc；ClassDesc仍为具备该方法的host，数字/字符串输入和混合数组可用，boolean被拒绝。公开backend在旧源码产生五项describeConstable继承错误，拒绝合法数字/字符串输入，并错误放行标量的host方法访问；原文保存在build/constable-value-consumer-red.log。
+
+第一版提前将ApiTypeRef展开为union虽然通过初例，但复审后新增公开消费者证实了三条adapter优先权回退：通配符集合、SAM返回与嵌套SAM返回均出现TS2578；golden逐行核对另发现varargs数组括号缺口。这些中间结果保留，不算最终候选通过。
+
+当前实现保留原Java符号到最后的值渲染边界：先用显式输入adapter，再根据固定JDK装箱类型的sealed祖先元数据输出带括号的标量/host联合。继承顶部保留host，泛型实参仍在值位置渲染。显式编辑使用独立raw-value命名视图，保留原始host、数组及嵌套SAM槽，且不泄漏至普通输出。三个严格消费者（normal/edited/adapted）及真实运行已通过，包含构造器局部泛型的varargs数组；显式array(union)/varargs分组缺陷也有两条TS2322红证和对应绿证。
+
+收口后的完整common/check、处理器、guard及五节点构建矩阵通过（9m05s，919 suites / 5193 tests / 271 skipped / 零失败错误），TS完整链退出0，四项CI gate通过；使用独立测试临时目录，未并发启动另一Gradle。两个golden文件八处值变化独立核对通过，其他行/成员/继承不变。源码最终复审没有新的确证项，旧host名义身份缺口保持开放；尚无新安装数量结论。
+
+本项只修正F1的标量值合同；or/部分reduce/Collector collect/toList的公共捕获视图缺口仍需完整实现，不因诊断计数变化而关闭。正式性能、Python默认安装及最终候选门禁仍保持各自范围。

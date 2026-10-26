@@ -26,7 +26,7 @@ declare module "java:java/lang/constant" {
     };
 
     export interface $Constable {
-        describeConstable(): $OptionalView<$ConstantDesc>;
+        describeConstable(): $OptionalView<(number | string | $ConstantDesc)>;
     }
 
     export interface $ConstantDesc {
@@ -63,12 +63,12 @@ declare module "java:java/lang/constant" {
     export interface $DirectMethodHandleDesc$Kind extends $Enum<$DirectMethodHandleDesc$Kind> {}
 
     export class $DynamicConstantDesc<T> implements $ConstantDesc {
-        static ofCanonical<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3: $ConstantDesc_<$MethodHandles$Lookup, unknown>[]): $ConstantDesc;
-        static ofNamed<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3?: $ConstantDesc_<$MethodHandles$Lookup, unknown>[]): $DynamicConstantDesc<T>;
-        static of<T>(arg0: $DirectMethodHandleDesc, arg1?: $ConstantDesc_<$MethodHandles$Lookup, unknown>[]): $DynamicConstantDesc<T>;
+        static ofCanonical<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3: (number | string | $ConstantDesc_<$MethodHandles$Lookup, unknown>)[]): (number | string | $ConstantDesc);
+        static ofNamed<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3?: (number | string | $ConstantDesc_<$MethodHandles$Lookup, unknown>)[]): $DynamicConstantDesc<T>;
+        static of<T>(arg0: $DirectMethodHandleDesc, arg1?: (number | string | $ConstantDesc_<$MethodHandles$Lookup, unknown>)[]): $DynamicConstantDesc<T>;
         static of<T>(arg0: $DirectMethodHandleDesc): $DynamicConstantDesc<T>;
-        bootstrapArgsList(): $List<$ConstantDesc>;
-        bootstrapArgs(): $ConstantDesc[];
+        bootstrapArgsList(): $List<(number | string | $ConstantDesc)>;
+        bootstrapArgs(): (number | string | $ConstantDesc)[];
         bootstrapMethod(): $DirectMethodHandleDesc;
         constantName(): string;
         constantType(): $ClassDesc;
@@ -113,7 +113,7 @@ declare module "java:java/lang/constant" {
         of(arg0: $ClassDesc): $MethodTypeDesc;
     };
 
-    export type $Constable_<CallbackResult = $Optional<$ConstantDesc>> = (() => CallbackResult) | ($Constable & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "describeConstable": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
+    export type $Constable_<CallbackResult = $Optional<(number | string | $ConstantDesc)>> = (() => CallbackResult) | ($Constable & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "describeConstable": () => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
     export type $ConstantDesc_<CallbackArg0 = $MethodHandles$Lookup, CallbackResult = unknown> = ($ConstantDesc & { readonly [Symbol.hasInstance]?: never });
     export type $DirectMethodHandleDesc$Kind_ = $DirectMethodHandleDesc$Kind | "CONSTRUCTOR" | "GETTER" | "INTERFACE_SPECIAL" | "INTERFACE_STATIC" | "INTERFACE_VIRTUAL" | "SETTER" | "SPECIAL" | "STATIC" | "STATIC_GETTER" | "STATIC_SETTER" | "VIRTUAL";
 }

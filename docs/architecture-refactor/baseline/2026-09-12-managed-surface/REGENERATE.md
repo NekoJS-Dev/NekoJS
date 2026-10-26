@@ -117,3 +117,9 @@ TypeScriptClassRenderer.renderEnum 从编辑后的 IR 保留 Java 枚举的接�
 FunctionalInterfaceAliasGenerator 根据真实 Java SAM 名及既有参数/返回槽补对象输入，复用非可执行值保护。新增分支以 globalThis.NoInfer 避免 Function.apply 污染原有回调的泛型推断；最终参数检查保持。真实 Graal 消费确认 sealed 接口只能接收已有 host，不能通过函数或对象代理实现，因此 sealed 别名保留名称、泛型元数和完整 host，移除不支持的旧函数输入。
 
 生成前原始字节备份于 build/sam-proxy-goldens-before.zip；只运行 :common:regenerateGoldens --tests com.tkisor.nekojs.probe.LegacyProbeTreeTest，随后以普通 Probe 测试和完整 test:probe-types 验证。独立逐行比较及 JDK21 sealed 反射核对得到17个文件变化：78个别名追加对象分支，ConstantDesc 与 MemorySegment.Scope 两个 sealed 别名仅保留原 host；其余成员、名称、泛型元数、原有非 sealed 分支和顺序保持。主代理技术核对及只读分轴审查不代替维护者人工接受；完整严格安装门禁和最终候选状态另行记录。
+
+## 2026-10-26：ConstantDesc 的真实标量值合同
+
+真实Graal消费证明Double/Integer/String常量描述为number/number/string，ClassDesc仍为host，数字/字符串和混合数组输入可用，boolean被拒绝。声明在最终值边界表达相应标量/host联合；继承顶部仍引用host，显式adapter与IR覆写保留优先权，不改变Java/Python共享IR。初版提前展开union造成三条adapter优先权消费失败，另有varargs及显式array(union)分组失败，均保留原文，未算作最终绿态。
+
+再生前保存build/constable-value-goldens-before.zip，仅以原生LegacyProbeTreeTest再生。主代理的逐字节/逐行核对得到两个文件八处值类型变化：java.lang.constant的describeConstable、DynamicConstantDesc工厂/参数/返回及Constable输入别名的默认结果，另有java.lang中EnumDesc的派生工厂签名。所有其他行、成员、别名名称/元数、顺序和host继承字节保持，变换逐项对照真实值合同，未手改golden。独立核对报告为build/constable-value-golden-delta.json。随后普通门禁必须独立通过；此技术核对不代签维护者接受，完整安装诊断和最终候选结论另行记录。

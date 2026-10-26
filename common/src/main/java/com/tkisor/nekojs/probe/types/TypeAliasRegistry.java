@@ -16,6 +16,7 @@ public final class TypeAliasRegistry {
     private final Map<String, CollectionAlias> collectionAliases = new LinkedHashMap<>();
     private final Map<String, FunctionalInterfaceAlias> functionalAliases = new LinkedHashMap<>();
     private java.util.function.BiFunction<String, String, String> references = (fqn, name) -> name;
+    private boolean projectScalarValues = true;
     /**
      * 枚举输入别名的惰性解析缓存：FQN → {@code $<SimpleName>_}；空串 = 已确认非枚举/不可加载。
      *
@@ -42,7 +43,19 @@ public final class TypeAliasRegistry {
         view.functionalAliases.putAll(functionalAliases);
         view.enumAliasCache.putAll(enumAliasCache);
         view.references = references;
+        view.projectScalarValues = projectScalarValues;
         return view;
+    }
+
+    /** Keeps explicit host references free of scalar alternatives while retaining names and input aliases. */
+    public TypeAliasRegistry withRawValueReferences() {
+        TypeAliasRegistry view = withReferences(references);
+        view.projectScalarValues = false;
+        return view;
+    }
+
+    public boolean projectsScalarValues() {
+        return projectScalarValues;
     }
 
     /** Resolves one exported symbol by its Java identity within the current module. */

@@ -506,7 +506,7 @@ declare module "java:java/lang" {
 
     export class $Enum$EnumDesc<E extends $Enum<E>> extends $DynamicConstantDesc<E> {
         static of<E extends $Enum<E>>(arg0: $ClassDesc, arg1: string): $Enum$EnumDesc<E>;
-        static of<T>(arg0: $DirectMethodHandleDesc, arg1?: $ConstantDesc_<$MethodHandles$Lookup, unknown>[]): $DynamicConstantDesc<T>;
+        static of<T>(arg0: $DirectMethodHandleDesc, arg1?: (number | string | $ConstantDesc_<$MethodHandles$Lookup, unknown>)[]): $DynamicConstantDesc<T>;
         static of<T>(arg0: $DirectMethodHandleDesc): $DynamicConstantDesc<T>;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): E;
         toString(): string;

@@ -7,13 +7,46 @@ import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.WildcardType;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
-/** Projects Java Object values and raw generic use sites without changing shared or explicitly edited IR. */
+/** Projects Java values and raw uses while retaining source identities until their conversion boundary. */
 public final class JavaTypeScriptProjection {
+    // Fixed JDK metadata contains no plugin classes or generation-owned resources.
+    private static final Map<String, List<ApiTypeRef>> SCALAR_ALTERNATIVES = scalarAlternatives();
+
     private JavaTypeScriptProjection() {}
+
+    /** Scalar implementations of sealed platform types, alongside their ordinary host values. */
+    public static List<ApiTypeRef> scalarAlternatives(String className) {
+        return SCALAR_ALTERNATIVES.getOrDefault(className, List.of());
+    }
+
+    private static Map<String, List<ApiTypeRef>> scalarAlternatives() {
+        Map<String, LinkedHashSet<ApiTypeRef>> alternatives = new LinkedHashMap<>();
+        for (Class<?> scalar : List.of(String.class, Character.class, Boolean.class, Byte.class,
+                Short.class, Integer.class, Long.class, Float.class, Double.class)) {
+            ApiTypeRef value = ApiTypeRef.primitive(scalar == String.class || scalar == Character.class ? "string"
+                    : scalar == Boolean.class ? "boolean" : "number");
+            var parents = new ArrayDeque<Class<?>>(List.of(scalar.getInterfaces()));
+            var seen = new LinkedHashSet<Class<?>>();
+            while (!parents.isEmpty()) {
+                Class<?> parent = parents.removeFirst();
+                if (!seen.add(parent)) continue;
+                if (parent.isSealed()) alternatives.computeIfAbsent(parent.getName(), ignored -> new LinkedHashSet<>()).add(value);
+                parents.addAll(List.of(parent.getInterfaces()));
+            }
+        }
+        Map<String, List<ApiTypeRef>> result = new LinkedHashMap<>();
+        alternatives.forEach((name, values) -> result.put(name,
+                values.stream().sorted(java.util.Comparator.comparing(ApiTypeRef::compatibilityKey)).toList()));
+        return Map.copyOf(result);
+    }
 
     /** Uses source types only for unedited slots, including nested host arguments and generic bounds. */
     public static ApiTypeRef project(Type source, ApiTypeRef reference) {
