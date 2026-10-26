@@ -21,3 +21,9 @@ renderEnum 从编辑后的 IR 补回实例接口继承，沿用 Enum<Self> 与�
 ## 独立后续调查记录
 
 F14 的4条并非缺少Java实现：当前 Fabric Entity 声明有 getPDataRoot()/pDataRoot，而 NekoEntityPData 要求 neko$getPDataRoot()。实体从 EntityExtension 获得类级 RemapByPrefix，影响另一接口实现的方法名称；未标该注解的接口自身仍按原名发射。后续需要来源和接收者上下文一致的合同投影，并实测实际暴露方式，不能未经证明就添加接口原名或修改接口注解来消除诊断。此前对原名运行时不可访问的表述超出了源码核对范围，现明确为待实测。本阶段未改此处产品代码。
+
+## 2026-10-26 标量合同结果与后续顺序
+
+3d2cc1cb修正ConstantDesc值的标量/host表示，显式adapter、原始IR覆写及继承均保留；5193 tests矩阵、TS全链和四项CI gate通过。[新安装证据](../architecture-refactor/evidence/2026-10-26-constable-values-3d2cc1cb/README.md)1079→1029，原文/同源−50/+0，F1诊断清零、其他族逐入口不变，完整严格TS仍FAIL。
+
+优先顺序继续是完整F1公共捕获合同，而不是按诊断清零关闭。移除手工factory witness、保留B结果的操作数域原型仍有合法继承、Collection.addAll重载及隐式factory上下文推断失败；先做受控变量实验，不删成员、改调用为显式泛型或削弱负例。正式新候选性能、Python/客户端/TCP/回退/包装与真实维护者结论继续按各自未完成范围推进。

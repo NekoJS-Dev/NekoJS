@@ -110,3 +110,9 @@ F1 不能因减少106条就视为公开合同完成：or、部分 reduce/Collect
 实际叶因为枚举声明遗漏 Java 实例接口，而非 java.time 源签名错误。保留编辑后 IR 中的实例接口继承，恢复 IsoEra→Era 等默认实例合同，同时保持静态工厂分离。[五节点新安装证据](../architecture-refactor/evidence/2026-10-25-enum-interface-84ae51c1/README.md)十入口1409→1079，F2 330→0，其他族计数不变，零UNMAPPED。
 
 严格的原码/原文多重集为移除334/新增4，不能简写成原文零新增。新增4条仅为同一客户端listener缺失引用在TS2304/带提示的TS2552之间变化；按实际所属声明、源码行、缺失名称及次数核对后为330/0。两种差分、原文和来源声明全部冻结，分类器及 tsc 门禁未放宽。完整严格 TS 仍 FAIL；F1 公共合同未完成。
+
+## 2026-10-26 F1 标量叶因修复（3d2cc1cb）
+
+真实Graal输出将ConstantDesc的Double/Integer/String实现暴露为number/number/string；接口值只写host类型会同时误报合法继承、拒绝合法标量输入并放行不存在的host方法。保留源Java符号至转换边界后再渲染标量/host联合，显式adapter与覆写保持优先，继承顶部保持host；不改Java/Python共享IR。
+
+[新五节点安装证据](../architecture-refactor/evidence/2026-10-26-constable-values-3d2cc1cb/README.md)十入口1079→1029，原文及限定同源均−50/+0；F1诊断50→0，其他族逐入口不变，零UNMAPPED。三变体严格消费和919 suites / 5193 tests / 271 skipped的收口矩阵通过。完整严格TS仍FAIL，F1的or/部分reduce/Collector collect/toList公开视图缺口继续开放；不能把诊断清零视为完整API交付。

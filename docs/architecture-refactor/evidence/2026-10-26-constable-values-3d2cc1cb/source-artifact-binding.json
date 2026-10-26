@@ -1,0 +1,55 @@
+{
+  "revision": "3d2cc1cb063a853599e1b6617113a3307294fed5",
+  "sources": {
+    "common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/FunctionalInterfaceAliasGenerator.java": "418aaef98001d9c77ac01ed67f1472e37fe8f2eca8d1af9a145bd5c2a33c3fb0",
+    "common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/JavaTypeScriptProjection.java": "08da6306328cc7adefaa865aa8b59b9f1046c3155d2a9952db9180cfff74664c",
+    "common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer.java": "b25df18bbb919f5db73a10a3c75dfc47d13eabf1731ec6a03a25a489528e5690",
+    "common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java": "101d8cf8478f3578df7dba348a6b3ec0079f082930bd7018c3b1d0db2795020d"
+  },
+  "compiledClasses": {
+    "com/tkisor/nekojs/probe/backend/typescript/FunctionalInterfaceAliasGenerator.class": "849048a806ba3fe6bdfa6d82fefcd933501d284f973a76295bfd1a3bded47c01",
+    "com/tkisor/nekojs/probe/backend/typescript/JavaTypeScriptProjection.class": "0ba4ac28a30ffc67bcf546f55041ac277c62a4d0c9cf693920f19d769d65056a",
+    "com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer$1.class": "1384172f1e6fac5278018cde4fa8ab9e151e39554e73ac353dfa59ad51ab6928",
+    "com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer$1Entry.class": "f2b7bac449e328328b2e0564420e8ca1d7fbc0a345a9b8b014ca96c527b11d04",
+    "com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer$GetterOverride.class": "60e5d7f25258467e85bb20e8d8e2aaf6b7c1c19fea46bf71f1c28fa7f700edbc",
+    "com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer$NamedMethod.class": "d846027ac1875443ff5c48d4e8e6b010fae1295c7bee18fada80ecd9af59582a",
+    "com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer.class": "42427e9c3f22a2db3d71443e988eaf7d15ef7853d97888ad1195c964be38e6b3",
+    "com/tkisor/nekojs/probe/types/TypeAliasRegistry$1.class": "7fe19221447d66427f8dc5586fd144c1cb1c5bc0f29b78c96d300e73ed8eca3f",
+    "com/tkisor/nekojs/probe/types/TypeAliasRegistry$2.class": "828027772dc30ee313dd1c2378f6b8e412134631a8afc2135b9a6a73ded84656",
+    "com/tkisor/nekojs/probe/types/TypeAliasRegistry$CollectionAlias.class": "78fc22ab18b1f723c2b7ff971c04d41051205d18a23f19a1bd65929cf6b3de70",
+    "com/tkisor/nekojs/probe/types/TypeAliasRegistry$FunctionalInterfaceAlias.class": "28f71ab879ab40119d8c7730972da28f58e76d9b323ea814f7cfd9ad3ae8bd7f",
+    "com/tkisor/nekojs/probe/types/TypeAliasRegistry.class": "5f25f3c4b03dfc942f1003b65b364b03b894893676a27a756628c7e9a70c1ea8"
+  },
+  "nodes": [
+    {
+      "node": "1.21.1",
+      "jar": "nekojs-neoforge-1.21.1-1.1.0-preview3-server.jar",
+      "sha256": "ff57f184bb1536273ad2b772bda0560102c9b1b5d845e8452834067dff4468c0",
+      "allChangedClassFamiliesMatch": true
+    },
+    {
+      "node": "26.1.2",
+      "jar": "nekojs-neoforge-26.1.2-1.1.0-preview3.jar",
+      "sha256": "5ae2b2edb33300f71ce519c275a3481d508a43b8289a90c5c3035caf7e211d5d",
+      "allChangedClassFamiliesMatch": true
+    },
+    {
+      "node": "26.2.0",
+      "jar": "nekojs-neoforge-26.2.0-1.1.0-preview3.jar",
+      "sha256": "277a13d05fd47cb19394c370a1d185f24308af6a6a0907047ca6f44c9aa15ae8",
+      "allChangedClassFamiliesMatch": true
+    },
+    {
+      "node": "26.1.2-fabric",
+      "jar": "nekojs-fabric-26.1.2-1.1.0-preview3.jar",
+      "sha256": "f69784db9fde482e633cf9cfb132c5e8ef9a25749cc1dd45cbf3fd06e1321510",
+      "allChangedClassFamiliesMatch": true
+    },
+    {
+      "node": "26.2.0-fabric",
+      "jar": "nekojs-fabric-26.2-1.1.0-preview3.jar",
+      "sha256": "8cfc6df1ec6fe326177b0730ab51f23452a511093973031da8f53da89f777d62",
+      "allChangedClassFamiliesMatch": true
+    }
+  ]
+}

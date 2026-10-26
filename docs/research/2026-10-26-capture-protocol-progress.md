@@ -31,7 +31,7 @@
 ## 下一步
 
 1. 对象协议普通门禁、golden、分轴复审与产品commit已完成；新安装零诊断回归，完整形状伪host的名义身份限制另记开放。
-2. 继续将隔离原型变为可证明的通用规则：先证工厂参数性及其反例，再设计完整IR驱动视图，保留所有公开成员、既有Bound直接输入与方法局部变量，并让真实host和callback都通过。
+2. 继续将隔离原型变为可证明的通用规则：先检查保留B结果的操作数域约束能否避免强化工厂签名，再设计完整IR驱动视图，保留所有公开成员、既有Bound直接输入与方法局部变量，并让真实host和callback都通过。工厂语义贡献仍是候选，不因既有建议自动新增扩展点。
 3. 合同证明通过前不移除生产排除器、不宣称F1完成；可以推进独立且有来源证明的族。完整新候选需五节点安装/十入口重采与原文及同源差分，未知项不能静默归类。
 
 ## 工厂见证的只读调查结论
@@ -42,7 +42,7 @@
 
 两轴复审共同指出完整结构对象仍可模拟 sealed host；这是保留的旧结构分支限制，当前不作“仅真实 host 能通过 TypeScript”的承诺。要消除此限制需要另行处理 Java host 的名义身份，不能通过删除合法 host 输入掩盖。
 
-## F1 标量合同修复（源码门禁通过，待安装复核）
+## F1 标量合同修复（3d2cc1cb安装复核完成，完整捕获合同仍开放）
 
 真实Graal确认ConstantDesc的Double/Integer/String输出为number/number/string，标量没有resolveConstantDesc；ClassDesc仍为具备该方法的host，数字/字符串输入和混合数组可用，boolean被拒绝。公开backend在旧源码产生五项describeConstable继承错误，拒绝合法数字/字符串输入，并错误放行标量的host方法访问；原文保存在build/constable-value-consumer-red.log。
 
@@ -50,6 +50,14 @@
 
 当前实现保留原Java符号到最后的值渲染边界：先用显式输入adapter，再根据固定JDK装箱类型的sealed祖先元数据输出带括号的标量/host联合。继承顶部保留host，泛型实参仍在值位置渲染。显式编辑使用独立raw-value命名视图，保留原始host、数组及嵌套SAM槽，且不泄漏至普通输出。三个严格消费者（normal/edited/adapted）及真实运行已通过，包含构造器局部泛型的varargs数组；显式array(union)/varargs分组缺陷也有两条TS2322红证和对应绿证。
 
-收口后的完整common/check、处理器、guard及五节点构建矩阵通过（9m05s，919 suites / 5193 tests / 271 skipped / 零失败错误），TS完整链退出0，四项CI gate通过；使用独立测试临时目录，未并发启动另一Gradle。两个golden文件八处值变化独立核对通过，其他行/成员/继承不变。源码最终复审没有新的确证项，旧host名义身份缺口保持开放；尚无新安装数量结论。
+收口后的完整common/check、处理器、guard及五节点构建矩阵通过（9m05s，919 suites / 5193 tests / 271 skipped / 零失败错误），TS完整链退出0，四项CI gate通过；使用独立测试临时目录，未并发启动另一Gradle。两个golden文件八处值变化独立核对通过，其他行/成员/继承不变。源码最终复审没有新的确证项，旧host名义身份缺口保持开放。
+
+[新安装冻结证据](../architecture-refactor/evidence/2026-10-26-constable-values-3d2cc1cb/README.md)：五次RCON正常停止、未kill且世界锁释放；1079→1029，每入口−5，原文及同源均−50/+0。F1诊断50→0，其他族逐入口完全一致，零UNMAPPED；四个源码族共12个class在五份安装JAR中逐字节匹配编译结果，三个冻结消费者独立重放通过。Fabric启动器发生Maven读取超时后原进程继续完成，日志保留，未另起实例或作为性能结果。
 
 本项只修正F1的标量值合同；or/部分reduce/Collector collect/toList的公共捕获视图缺口仍需完整实现，不因诊断计数变化而关闭。正式性能、Python默认安装及最终候选门禁仍保持各自范围。
+
+## 下一轮受控原型的起点
+
+build/capture-bound-operators-prototype.py保留操作数O域元组检查、只返回B，去掉手工工厂witness，并使用3d2cc1cb公开backend生成的完整SAM别名。首版文本替换曾引入语法错误（只算原型脚本错误）；修复后的operators/supplier两组确切tsc仍分别8/9条失败，未投产。原文在build/capture-bound-operators-v2-20261026：6条合法继承及1条父接口赋值失败；直接operator组另有隐式identity()退为unknown，supplier组再有合法Supplier<Optional<Narrow>>拒绝。
+
+两组保留裸Bound host、窄域host及factory的正负控制，没有强化任何factory；这说明当前变体尚不足以交付。下轮应分离“当前SAM别名”“工厂witness去除”“generic域约束”“Collection.addAll重载”和“工厂上下文推断”等变量，逐项复验，而非把多变量失败归为某一个唯一原因。完整视图不删成员、不放宽结果或错误域控制，尚未证明需要新增工厂贡献API。

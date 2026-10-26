@@ -1,5 +1,7 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-26 ConstantDesc标量合同（产品 `3d2cc1cb`，[冻结证据](../evidence/2026-10-26-constable-values-3d2cc1cb/README.md)）：真实Graal证明常量描述包含number/string及host，声明在最终值边界表达联合，显式adapter及覆写仍优先，继承顶部保留host。三变体严格消费、构造器varargs和显式联合数组分组均有正负证据；收口矩阵5193 tests / 271 skipped / 零失败错误，TS全链和四项CI gate通过。新五节点正常停服，十入口1079→1029、原文/同源均−50/+0，F1诊断清零，其他族逐入口不变且零UNMAPPED。F1公开捕获方法仍缺，完整严格TS仍FAIL；启动器短暂Maven超时后原进程完成，原文保留，不作为性能样本。新候选性能、Python/客户端/TCP/回退/包装及维护者结论仍未完成，未push、PR或代签。
+
 2026-10-26 SAM对象输入与转换边界（产品 `1a1660b6`，[冻结证据](../evidence/2026-10-26-sam-proxy-1a1660b6/README.md)）：真实Graal确认Java命名的最小SAM对象可用、默认方法可用、@Remap不改代理分派名；TS别名新增受保护对象分支，globalThis.NoInfer避免Function.apply污染旧reduce推断。sealed接口保留完整host、移除运行时不支持的旧函数输入，不增代理分支；完整结构对象模拟host的旧名义身份限制仍记录开放。四项新回归、完整定向TS链、四项CI gate及独立临时目录矩阵通过（5191 tests / 271 skipped / 零失败错误）。新五节点安装全部正常停服，十入口仍1079，各族不变、原文及同源差分均0/0，零UNMAPPED，完整严格TS继续FAIL。另冻结并重放16组捕获协议实验，失败保留且不视为生产F1完成；F1缺失公开方法及最终候选门禁仍开放，未push、PR或代签。
 
 2026-10-26 枚举实例接口合同恢复（产品 `84ae51c1`，[冻结证据](../evidence/2026-10-25-enum-interface-84ae51c1/README.md)）：生成器从编辑后的 IR 保留枚举 implements，恢复 IsoEra→Era 等默认实例合同，不改运行时或静态工厂。七项枚举回归、六组严格消费、定向 TS 全链、四项 CI gate 及串行隔离矩阵通过（5187 tests、271 skipped、零失败；节点测试有缓存复用）。早期重叠测试的目录/结果文件污染与回收证据保留，不计绿态。新五节点安装全部正常停服；十入口1409→1079，F2 330→0，其余族不变。原码/原文多重集差分为−334/+4；其中4条是同一客户端缺失引用的 TS2304/TS2552 提示变化，实际声明、源码行和缺失名称匹配后差分为−330/+0，两种口径及原文均保存。完整严格TS仍FAIL，F1公开捕获合同保持开放；新候选性能、Python默认安装及最终客户端/TCP/回退等未重测，不外推旧证据。
@@ -60,7 +62,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-26：1a1660b6 新安装十入口严格 TS 1079，F2/F4 清零，仍 FAIL；SAM合法输入恢复，各族与84ae51c1不变，原文及同源差分均0/0。F1公开方法缺失、host名义身份及其余族开放。d06cd961 的原政策性能 PASS 不外推新候选；最终客户端/TCP/分离回退、Python默认复验、包装与维护者/发布门禁未完成。）
+**Status:** in-progress（2026-10-26：3d2cc1cb新安装十入口严格TS 1029，原文及同源均−50/+0，其他族不变。F1/F2/F4诊断清零，完整严格TS仍FAIL；F1公开捕获方法缺失、host名义身份及其余族开放。d06cd961的原政策性能PASS不外推新候选；最终客户端/TCP/分离回退、Python默认复验、包装与维护者/发布门禁未完成。）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 
