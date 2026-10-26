@@ -1,0 +1,20 @@
+REPLAY: probe-ts-capture-return-contract exit 0
+REPLAY: probe-ts-complete-capture exit 0
+REPLAY: probe-ts-complete-capture-authored-optional exit 0
+REPLAY: probe-ts-complete-capture-authored-stream exit 0
+REPLAY: probe-ts-complete-capture-edited exit 0
+REPLAY: probe-ts-complete-capture-reused exit 0
+REPLAY: probe-ts-wildcard-optional exit 0
+INSTALLED REPLAY: 1.21.1-server exit 2 diagnostics 64
+INSTALLED REPLAY: 1.21.1-startup exit 2 diagnostics 65
+INSTALLED REPLAY: 26.1.2-server exit 2 diagnostics 116
+INSTALLED REPLAY: 26.1.2-startup exit 2 diagnostics 117
+INSTALLED REPLAY: 26.2.0-server exit 2 diagnostics 110
+INSTALLED REPLAY: 26.2.0-startup exit 2 diagnostics 111
+INSTALLED REPLAY: 26.1.2-fabric-server exit 2 diagnostics 114
+INSTALLED REPLAY: 26.1.2-fabric-startup exit 2 diagnostics 115
+INSTALLED REPLAY: 26.2.0-fabric-server exit 2 diagnostics 108
+INSTALLED REPLAY: 26.2.0-fabric-startup exit 2 diagnostics 109
+Installed diagnostic total: 1029 (expected strict TS failure retained)
+Artifacts: C:\Users\11515\.codex\worktrees\capture-views\NekoJS-mult\build\complete-capture-replay-4ur3z1g_
+PASS: frozen complete-capture evidence; installed-node and final-candidate gates remain separate

@@ -2,15 +2,15 @@
 
 起点：dbdfcfeb（产品 dad806fa）；主代理实现、验证及本地提交，不 push、不发 PR。
 
-1. F1 保持开放：补齐公开捕获合同，禁止以删方法、宽泛类型或放宽门禁收口。当前仍缺 or、BinaryOperator reduce、Collector collect、toList；完整表示已通过手工原型，返回合同基础已提交5280d20b，下一步实现遵循可见编辑IR的完整生成器。
-2. F2枚举接口根因已修复并有新安装证明，F4亦已清零；当前正式安装3d2cc1cb仍有1029条完整严格TS错误。优先完成F1公共方法，再逐个修复有来源证据的其他共享根因，先建立真实正负消费红证。
+1. 完整捕获视图及连续 wildcard 祖先合同已实现（8f71ca31 /15c4d9a6），恢复 or、全部 reduce、Collector collect、toList 与递归导航，保留编辑后的可见 IR、工厂及全部正负合同；host 结构身份和 JS 数组桥异常继续记录，不能把它们写成已修复。
+2. 当前正式安装15c4d9a6仍有1029条完整严格TS错误，对3d2cc1cb完整块−0/+0，F1/F2/F4均零。下一共享原因优先调查F6 Recipe约束488条及其Codec链，随后F7 160条、F5 160条等；先核对真实Java签名并建立正负红证，不能将实际消费类型的Codec全局标为协变来抹掉错误。
 3. 修改遵循编辑后的 IR；保留枚举静态工厂与 Enum<Self> 实例继承分离、重命名和隐藏。用合法默认方法、接口赋值及错误载荷验证。
 4. 定向回归通过后执行 common/check、严格 TS 链；有意 golden 变化通过现有生成器再生并审查。确切产物需新的五节点十入口证明，不能借用旧安装结果。
 5. 每阶段记录 passed/failed/not-run、诊断增减和未解决合同。最后候选性能、客户端/TCP/分离回退与维护者接受仍独立验收。
 
-F1 的优先级不变；在安全表示尚未成立时，独立修复不得被描述成 F1 已完成。
+完整视图公开方法恢复已经有实际新安装证明；其余边界与其他族不得被诊断清零掩盖。
 
-当前5280d20b仅完成返回合同基础及common/定向TS验证，[冻结证据](../architecture-refactor/evidence/2026-10-26-capture-return-contracts/README.md)不覆盖新五节点安装或性能。两个泛型继承P2与中间覆盖控制已修复，完整视图、其他族及最终候选继续推进。早期JS数组调用触发ClassCastException的扩展失败仍保留为开放边界。
+2026-10-26阶段5280d20b仅完成返回合同基础及common/定向TS验证，[该阶段冻结证据](../architecture-refactor/evidence/2026-10-26-capture-return-contracts/README.md)不覆盖新五节点安装或性能。后续完整视图及新安装见[2026-10-27证据](../architecture-refactor/evidence/2026-10-27-transitive-capture-facets/README.md)；其他族及最终候选继续推进，早期JS数组调用触发ClassCastException的扩展失败仍保留。
 
 ## 枚举接口修复：实现及局部门禁
 

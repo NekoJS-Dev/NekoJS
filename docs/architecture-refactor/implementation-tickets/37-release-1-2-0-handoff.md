@@ -1,5 +1,7 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-27 完整捕获视图恢复（产品 `8f71ca31`，连续 wildcard 祖先合同修复 `15c4d9a6`，[最终证据](../evidence/2026-10-27-transitive-capture-facets/README.md)）：从可见编辑 IR 继承完整原始实例面，恢复 or、全部 reduce、Collector collect、toList 及 List/Collection 递归导航，保留输入域负例、工厂签名和隐藏/排除/手写替代权威。前驱新安装 1037 的 8 条遗漏已保留[失败证据](../evidence/2026-10-27-complete-capture-views/README.md)，补回归修复后，完整矩阵5200 tests /271 skipped /零失败错误、TS全链和四项CI gate通过；新五节点均正常停服，25类与制品匹配，十入口回到1029，对3d2cc1cb完整诊断块−0/+0，各族及逐入口不变且零UNMAPPED。F1/F2/F4诊断为零，F1公开方法缺口已补；host结构身份、JS数组桥异常、其余严格TS族及最终候选门禁继续开放，未push、PR、发布或代签。
+
 2026-10-26 继承捕获返回合同基础（产品 `5280d20b`，[冻结证据](../evidence/2026-10-26-capture-return-contracts/README.md)）：从可见编辑IR给窄Optional返回追加继承facet，保留直接窄读取及较宽fallback；支持泛型参数/数组专化、继承实现、中间重复覆盖和wildcard窄返回，隐藏/改名/覆盖返回不从反射恢复。两轴复查的两项P2各自先红后绿并复查通过；common/check+guardLint（2478 tests /4 skipped /零失败错误）、完整npm链和确切生成消费者通过，移除facet对照严格报5条TS2345。完整视图公开方法恢复仍开放；没有新安装/十入口/性能，1029仍仅绑定3d2cc1cb。JS数组触发ClassCastException的扩展失败保留，未宣称修复，票保持in-progress。
 
 2026-10-26 ConstantDesc标量合同（产品 `3d2cc1cb`，[冻结证据](../evidence/2026-10-26-constable-values-3d2cc1cb/README.md)）：真实Graal证明常量描述包含number/string及host，声明在最终值边界表达联合，显式adapter及覆写仍优先，继承顶部保留host。三变体严格消费、构造器varargs和显式联合数组分组均有正负证据；收口矩阵5193 tests / 271 skipped / 零失败错误，TS全链和四项CI gate通过。新五节点正常停服，十入口1079→1029、原文/同源均−50/+0，F1诊断清零，其他族逐入口不变且零UNMAPPED。F1公开捕获方法仍缺，完整严格TS仍FAIL；启动器短暂Maven超时后原进程完成，原文保留，不作为性能样本。新候选性能、Python/客户端/TCP/回退/包装及维护者结论仍未完成，未push、PR或代签。
@@ -64,7 +66,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-26：3d2cc1cb新安装十入口严格TS 1029，原文及同源均−50/+0，其他族不变。F1/F2/F4诊断清零，完整严格TS仍FAIL；F1公开捕获方法缺失、host名义身份及其余族开放。d06cd961的原政策性能PASS不外推新候选；最终客户端/TCP/分离回退、Python默认复验、包装与维护者/发布门禁未完成。）
+**Status:** in-progress（2026-10-27：15c4d9a6新安装十入口严格TS 1029，对3d2cc1cb完整诊断块−0/+0，F1/F2/F4为零；完整捕获视图公开方法已恢复，前驱连续wildcard回归8条已消除并保留失败。完整严格TS仍FAIL，host结构身份、JS数组桥异常及其余族开放。d06cd961的原政策性能PASS不外推新候选；最终客户端/TCP/分离回退、Python默认复验、包装与维护者/发布门禁未完成。）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 
