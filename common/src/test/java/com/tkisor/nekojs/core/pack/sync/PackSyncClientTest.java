@@ -367,7 +367,8 @@ class PackSyncClientTest {
         PackSyncClient.installClientReloadHook(() -> true);
         PackSyncClient.handleHashList(runtimeRoot, address, hashes(oldPack));
         PackSyncTrustStore.get().trustServer(address);
-        assertFalse(PackSyncClient.handleBundle(runtimeRoot, List.of(oldPack)).shouldDisconnect());
+        PackSyncClient.Outcome installed = PackSyncClient.handleBundle(runtimeRoot, List.of(oldPack));
+        assertFalse(installed.shouldDisconnect(), installed::disconnect);
 
         PackSyncClient.installClientReloadHook(() -> false);
         PackSyncClient.handleHashList(runtimeRoot, address, hashes(replacement));
