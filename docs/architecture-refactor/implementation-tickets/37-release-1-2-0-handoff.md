@@ -1,5 +1,7 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-26 继承捕获返回合同基础（产品 `5280d20b`，[冻结证据](../evidence/2026-10-26-capture-return-contracts/README.md)）：从可见编辑IR给窄Optional返回追加继承facet，保留直接窄读取及较宽fallback；支持泛型参数/数组专化、继承实现、中间重复覆盖和wildcard窄返回，隐藏/改名/覆盖返回不从反射恢复。两轴复查的两项P2各自先红后绿并复查通过；common/check+guardLint（2478 tests /4 skipped /零失败错误）、完整npm链和确切生成消费者通过，移除facet对照严格报5条TS2345。完整视图公开方法恢复仍开放；没有新安装/十入口/性能，1029仍仅绑定3d2cc1cb。JS数组触发ClassCastException的扩展失败保留，未宣称修复，票保持in-progress。
+
 2026-10-26 ConstantDesc标量合同（产品 `3d2cc1cb`，[冻结证据](../evidence/2026-10-26-constable-values-3d2cc1cb/README.md)）：真实Graal证明常量描述包含number/string及host，声明在最终值边界表达联合，显式adapter及覆写仍优先，继承顶部保留host。三变体严格消费、构造器varargs和显式联合数组分组均有正负证据；收口矩阵5193 tests / 271 skipped / 零失败错误，TS全链和四项CI gate通过。新五节点正常停服，十入口1079→1029、原文/同源均−50/+0，F1诊断清零，其他族逐入口不变且零UNMAPPED。F1公开捕获方法仍缺，完整严格TS仍FAIL；启动器短暂Maven超时后原进程完成，原文保留，不作为性能样本。新候选性能、Python/客户端/TCP/回退/包装及维护者结论仍未完成，未push、PR或代签。
 
 2026-10-26 SAM对象输入与转换边界（产品 `1a1660b6`，[冻结证据](../evidence/2026-10-26-sam-proxy-1a1660b6/README.md)）：真实Graal确认Java命名的最小SAM对象可用、默认方法可用、@Remap不改代理分派名；TS别名新增受保护对象分支，globalThis.NoInfer避免Function.apply污染旧reduce推断。sealed接口保留完整host、移除运行时不支持的旧函数输入，不增代理分支；完整结构对象模拟host的旧名义身份限制仍记录开放。四项新回归、完整定向TS链、四项CI gate及独立临时目录矩阵通过（5191 tests / 271 skipped / 零失败错误）。新五节点安装全部正常停服，十入口仍1079，各族不变、原文及同源差分均0/0，零UNMAPPED，完整严格TS继续FAIL。另冻结并重放16组捕获协议实验，失败保留且不视为生产F1完成；F1缺失公开方法及最终候选门禁仍开放，未push、PR或代签。

@@ -1,6 +1,6 @@
 # F1 完整捕获合同与 SAM 输入进展
 
-本轮长期目标已设为 active。产品/证据基点32408e4c（产品84ae51c1），完整严格 TS 1079；F2/F4清零，F1公共合同仍开放。主代理实现与执行验证，子代理仅只读审查；本地提交，不push、不发PR、不发布。
+本轮长期目标保持 active。最近正式安装为产品3d2cc1cb，完整严格 TS 1029、仍FAIL；F1/F2/F4诊断清零不等于F1公共合同闭合。当前产品5280d20b已实现继承返回合同基础，尚未重新安装采样，不能把1029冒称为它的结果。主代理实现与执行验证，子代理仅只读审查；本地提交，不push、不发PR、不发布。
 
 ## 隔离捕获原型，不作为生产通过
 
@@ -61,3 +61,19 @@
 build/capture-bound-operators-prototype.py保留操作数O域元组检查、只返回B，去掉手工工厂witness，并使用3d2cc1cb公开backend生成的完整SAM别名。首版文本替换曾引入语法错误（只算原型脚本错误）；修复后的operators/supplier两组确切tsc仍分别8/9条失败，未投产。[冻结输入与实际重放证据](../architecture-refactor/evidence/2026-10-26-bound-operator-prototypes/README.md)保留6条合法继承及1条父接口赋值失败；直接operator组另有隐式identity()退为unknown，supplier组再有合法Supplier<Optional<Narrow>>拒绝。
 
 两组保留裸Bound host、窄域host及factory的正负控制，没有强化任何factory；这说明当前变体尚不足以交付。下轮应分离“当前SAM别名”“工厂witness去除”“generic域约束”“Collection.addAll重载”和“工厂上下文推断”等变量，逐项复验，而非把多变量失败归为某一个唯一原因。完整视图不删成员、不放宽结果或错误域控制，尚未证明需要新增工厂贡献API。
+
+## 返回合同原型及实现起点
+
+新一轮以窄返回在前的交叉合同分离直接调用和父接口视图，不再要求原始不变容器结构协变；host 输入重载前置恢复未增强工厂的隐式推断。补充控制曾暴露两处合法 Collection 拒绝及一处窄 Collector 漏检，修正输入载体及累加器域后原型通过，完整视图继承原始源声明后同组仍通过。[五组精确输入与独立实际复放](../architecture-refactor/evidence/2026-10-26-capture-return-facets/README.md)全部保留成功和失败，不作完整生产证据。
+
+生产实现先补接收者返回合同：只读当前可见 IR 的真实继承链，替换类泛型参数，在原窄返回后附加匹配父方法的捕获合同；隐藏、改名及覆盖返回类型均不得从反射恢复。新的公开 backend 定向回归先红后绿，泛型两层继承与窄/宽消费通过。真实 NekoSharedHostAccess 已执行普通/host/对象 or、两种 BinaryOperator reduce、三参 collect、host Collector 和 toList；没有改变 Java 运行时。
+
+完整视图成员恢复仍是下一步，当前正式安装数字仍为3d2cc1cb的1029。显式any的逃逸不被NoInfer消除；旧host结构身份缺口仍开放。当前 common/check 与完整 npm 门禁结果以本阶段最终证据为准，不外推尚未执行的新安装、性能或最终候选验收。
+
+## 返回合同基础已提交：5280d20b
+
+两轴只读复查分别发现了泛型参数擦除差异和继承实现必须使用真正接收者两项P2，主代理各自取得红证并修复；同时补中间类重复具体覆盖及wildcard窄返回的继承控制。最终common/check+guardLint通过（338 suites /2478 tests /4 skipped /零失败错误），完整npm链exit0；独立移除facet的生成树对照在五个合法fallback处报TS2345，原生成树及全部负例为exit0。官方golden再生只有两文件10处追加合同及3行导入，其余golden字节保持。[冻结源码、结果与独立重放](../architecture-refactor/evidence/2026-10-26-capture-return-contracts/README.md)绑定5280d20b，未借用旧JAR来源。
+
+下轮直接实现完整视图生成：使用可见、编辑后的源IR及原始源类型继承，保留每个公开方法、重载、Bean与方法局部变量；将手工原型的输入域约束和重载顺序转为通用规则。先补同上界覆盖、显式较宽flatMap、成员隐藏/编辑及helper名冲突消费，不能偷删成员、泛型参数或负例。没有证明需要强化工厂签名或增加贡献API。
+
+另保留JS数组触发ClassCastException的扩展尝试失败记录；真实Java数组正例通过，不把替换输入当成该运行时问题已解决。F1完整合同、新五节点十入口、其他严格TS族与最终候选门禁仍开放，长期目标没有标记完成。

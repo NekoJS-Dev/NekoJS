@@ -1,0 +1,1993 @@
+{
+  "productSource": "5280d20bd0936e5dca034982d3e2e7bda2c1ec4c",
+  "archive": "validation.zip",
+  "archiveSha256": "92797993966c5b5092ec820a41b6fa8da8fe50ee6366190eae59fc4c50139e87",
+  "commonTest": {
+    "tests": 2478,
+    "skipped": 4,
+    "failures": 0,
+    "errors": 0,
+    "suites": 338
+  },
+  "ciGates": {
+    "count": 4,
+    "failed": 0,
+    "nodeReportUsesExistingArtifacts": true
+  },
+  "variants": [
+    {
+      "name": "generated",
+      "exitCode": 0,
+      "errorCodes": {},
+      "files": [
+        "@package/com/index.d.ts",
+        "@package/com/tkisor/index.d.ts",
+        "@package/com/tkisor/nekojs/index.d.ts",
+        "@package/com/tkisor/nekojs/probe/index.d.ts",
+        "@package/index.d.ts",
+        "@package/java/index.d.ts",
+        "@package/java/io/index.d.ts",
+        "@package/java/lang/annotation/index.d.ts",
+        "@package/java/lang/constant/index.d.ts",
+        "@package/java/lang/foreign/index.d.ts",
+        "@package/java/lang/index.d.ts",
+        "@package/java/lang/invoke/index.d.ts",
+        "@package/java/lang/module/index.d.ts",
+        "@package/java/lang/reflect/index.d.ts",
+        "@package/java/net/index.d.ts",
+        "@package/java/nio/channels/index.d.ts",
+        "@package/java/nio/channels/spi/index.d.ts",
+        "@package/java/nio/charset/index.d.ts",
+        "@package/java/nio/file/attribute/index.d.ts",
+        "@package/java/nio/file/index.d.ts",
+        "@package/java/nio/file/spi/index.d.ts",
+        "@package/java/nio/index.d.ts",
+        "@package/java/security/cert/index.d.ts",
+        "@package/java/security/index.d.ts",
+        "@package/java/util/concurrent/index.d.ts",
+        "@package/java/util/function/index.d.ts",
+        "@package/java/util/index.d.ts",
+        "@package/java/util/stream/index.d.ts",
+        "@package/javax/index.d.ts",
+        "@package/javax/security/auth/index.d.ts",
+        "@package/javax/security/index.d.ts",
+        "@special/dependencies.json",
+        "exercise.ts",
+        "java-time-ambient.d.ts",
+        "tsconfig.json"
+      ]
+    },
+    {
+      "name": "without-facets",
+      "exitCode": 2,
+      "errorCodes": {
+        "TS2345": 5
+      },
+      "files": [
+        "@package/com/index.d.ts",
+        "@package/com/tkisor/index.d.ts",
+        "@package/com/tkisor/nekojs/index.d.ts",
+        "@package/com/tkisor/nekojs/probe/index.d.ts",
+        "@package/index.d.ts",
+        "@package/java/index.d.ts",
+        "@package/java/io/index.d.ts",
+        "@package/java/lang/annotation/index.d.ts",
+        "@package/java/lang/constant/index.d.ts",
+        "@package/java/lang/foreign/index.d.ts",
+        "@package/java/lang/index.d.ts",
+        "@package/java/lang/invoke/index.d.ts",
+        "@package/java/lang/module/index.d.ts",
+        "@package/java/lang/reflect/index.d.ts",
+        "@package/java/net/index.d.ts",
+        "@package/java/nio/channels/index.d.ts",
+        "@package/java/nio/channels/spi/index.d.ts",
+        "@package/java/nio/charset/index.d.ts",
+        "@package/java/nio/file/attribute/index.d.ts",
+        "@package/java/nio/file/index.d.ts",
+        "@package/java/nio/file/spi/index.d.ts",
+        "@package/java/nio/index.d.ts",
+        "@package/java/security/cert/index.d.ts",
+        "@package/java/security/index.d.ts",
+        "@package/java/util/concurrent/index.d.ts",
+        "@package/java/util/function/index.d.ts",
+        "@package/java/util/index.d.ts",
+        "@package/java/util/stream/index.d.ts",
+        "@package/javax/index.d.ts",
+        "@package/javax/security/auth/index.d.ts",
+        "@package/javax/security/index.d.ts",
+        "@special/dependencies.json",
+        "exercise.ts",
+        "java-time-ambient.d.ts",
+        "tsconfig.json"
+      ]
+    }
+  ],
+  "sourceFiles": [
+    "common/src/main/java/com/tkisor/nekojs/core/reflect/JavaGenericTypes.java",
+    "common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptCaptureReturns.java",
+    "common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer.java",
+    "common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptStaticInheritance.java",
+    "common/src/test/java/com/tkisor/nekojs/probe/ProbeCaptureReturnContractTest.java",
+    "common/src/test/java/com/tkisor/nekojs/probe/ProbeWildcardOptionalCaptureTest.java",
+    "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/index.d.ts",
+    "common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/invoke/index.d.ts",
+    "package.json",
+    "docs/architecture-refactor/baseline/2026-09-12-managed-surface/REGENERATE.md"
+  ],
+  "entries": [
+    {
+      "path": "source/common/src/main/java/com/tkisor/nekojs/core/reflect/JavaGenericTypes.java",
+      "sha256": "c66fd39573759ad78b8ea4d498b4e2b8ed27a0ae9375cd44ff86f996b7b3d1d2"
+    },
+    {
+      "path": "source/common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptCaptureReturns.java",
+      "sha256": "b9163b02ac1987605e86f376e6ae279c2617b48d37613d9f9383c9683931db16"
+    },
+    {
+      "path": "source/common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer.java",
+      "sha256": "46ba64de3e4b4070c535ac7d7de02790aca14d15f86ca64b6e1844e2047b3117"
+    },
+    {
+      "path": "source/common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptStaticInheritance.java",
+      "sha256": "6c05f6c092186c2714497c85158a011d2bad735180b9cc52f9b9d7f2a3482208"
+    },
+    {
+      "path": "source/common/src/test/java/com/tkisor/nekojs/probe/ProbeCaptureReturnContractTest.java",
+      "sha256": "c70c5761b3473ef9bea0cbb16f568b77f22981962945d50ccf2fdde4fc87862b"
+    },
+    {
+      "path": "source/common/src/test/java/com/tkisor/nekojs/probe/ProbeWildcardOptionalCaptureTest.java",
+      "sha256": "e871f98e66ad2aa337d8abcf7d1427f49c88a89b320389e74d455d221981ccbd"
+    },
+    {
+      "path": "source/common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/index.d.ts",
+      "sha256": "f5331b639981bb578ef140d35b0f2d97112408862af495177c70f64cb25b7549"
+    },
+    {
+      "path": "source/common/src/test/resources/nekojs/probe/legacy-tree/@package/java/lang/invoke/index.d.ts",
+      "sha256": "acf8930bb570247d48fe3d06e255efaf5f3d5d8bdae373b40cc4a79609a66425"
+    },
+    {
+      "path": "source/package.json",
+      "sha256": "4b1f0b01d588442dc4634db124550c940714af9ace2c4483f8865d4c13018838"
+    },
+    {
+      "path": "source/docs/architecture-refactor/baseline/2026-09-12-managed-surface/REGENERATE.md",
+      "sha256": "963eca6d03f8ce5eb3c151c1dcb1d1fbcd6da8cadc9f2f1fe2d52639affdc870"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.capability.CapabilityResolverTest.xml",
+      "sha256": "7c711b2a5730501f52b7c1258d136bee28e88d43d77f53a166b7ab88d4fab2a3"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.catalog.LegacySurfaceAdapterTest.xml",
+      "sha256": "a6f917f01c81e92790d779da98786fe13e2ba5374ba2e98e83334a2fb4781509"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.catalog.LegacySurfaceShadowCharacterizationTest.xml",
+      "sha256": "dc7bdee6f1f5b078d44a1b4ffd642f1f37733508b9d16bbf4c39ed439fa25572"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.catalog.NekoScriptCatalogEventsTest.xml",
+      "sha256": "7c90c2ab474d250558a9003dc322fe6f999d767c90a4b36473fa04414ac83b46"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.catalog.NekoScriptCatalogRegistryTypesTest.xml",
+      "sha256": "e63995f784be0e0c7b45728b821a665ddd41d407daa30e266a844ee98d0477fa"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.catalog.NekoScriptCatalogScriptEventsTest.xml",
+      "sha256": "05f2a526bea609416d550862d1bb028a3bc5713b6e7f71d7a1379c18fa59e714"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.data.AbstractJSTypeAdapterTest.xml",
+      "sha256": "2d0bfa818908b5998be020e3c1f7f54798669e136314086abe6d79f6f71d95e1"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.data.AliasJSTypeAdapterTest.xml",
+      "sha256": "ebdfa0443cb165fed7ad76460c4efdfba02001eecafead71ced0e0ab1b99b6fe"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.data.BaseJsTypeAdapterTest.xml",
+      "sha256": "2f3468464de75a985fa61dde2da63b4a1058e5b8396680875afef4eafda93879"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.data.BindingPriorityTest.xml",
+      "sha256": "3ee065361e0ee68cb147faf277e8d70215c08037bb7d805582f37582ff9c7ed4"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.data.BindingRegistryDuplicateTest.xml",
+      "sha256": "7d9fd21188567410af6b237432fff8d66df3a00763d3a304974551bb08046d66"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.data.JsonValueTest.xml",
+      "sha256": "bc4d78152c261dc058ad14b1f042626d8f9aeae3099046954ef51576b97ac31d"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.data.NbtValueTest.xml",
+      "sha256": "f42f38f1dc36faec1c661004da0ea7b06023f7e8430c07605a0270657f698ee3"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.data.NekoIdTest.xml",
+      "sha256": "06ca5039851d71a6767d0f1694c529572a58749308899907b8ead15ffc74dcc4"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.data.RecordJSTypeAdapterTest.xml",
+      "sha256": "5b280145ea04a9f18d61121b29c03b3205d87a069b3cc3564936a8d20fada9e1"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.data.TextValueTest.xml",
+      "sha256": "d05c02e97b6d5ebdcbc849350a420c0277b39f57cde95976a121edc6080bdf3c"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.error.ApiInvocationExceptionTest.xml",
+      "sha256": "7d48cdbbf26505d8b56c5cfe8f745920aa6d3047a0bbdba9833e9a83d67d8e40"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.event.EventBusJSCollectionDispatchTest.xml",
+      "sha256": "c970ac93a6b87b23fdeacfec3a355e12e6455c6c939a59ca6a5389ac7a1202ae"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.event.EventBusJSExternalBehaviorStressTest.xml",
+      "sha256": "3ca7bb4f1f776c397955f44f8705b24b09693605d7f2dded19c75ac663b65e81"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.event.EventBusJSHasListenersTest.xml",
+      "sha256": "90f472831086d4fcda906a216c832bba278dd3329b1e828f03f84451f2b3d04a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.event.EventBusJSPriorityKeyTest.xml",
+      "sha256": "444b83fc02232c47448176806efd47bdba43e139e1195ed92c39b096fc1c1114"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.event.ScriptBindingSchemaInferTypeTest.xml",
+      "sha256": "4ac9006a4b9e82b164b33e5a5bd0fccda3d6c8dd6292998200583d301dd38f8b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.event.ScriptEventDefinitionClearListenersTest.xml",
+      "sha256": "17373b3524adef7718002c1243d9fb21b00b72960866543bcc29229529f6d731"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.event.ScriptEventRegistryTest.xml",
+      "sha256": "abe6ecec55ba4f4d92ed35375ba4d6a449a9eb85bd051f8e0ff0eea3baa9668d"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.event.ScriptEventsDeclarationDiagnosticsTest.xml",
+      "sha256": "78210f43f916f44a33450da700dcfec85dbf2638991f115dfe7080777652e035"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.event.ScriptEventsMinimalExampleTest.xml",
+      "sha256": "9939cb3232339fb374640475a058af4530ac90592e20cef61322d17861ceb80f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.event.ScriptEventSourceIdTest.xml",
+      "sha256": "d1fe6cf3f795fcd91e30809b46e6b4ce11089f67b159fa1d0850b2aee316015f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.facade.ModInfoValueTest.xml",
+      "sha256": "d6a628ebd8eabe0fce2e30d2e27849cc13fc7cdf14bd96cde7cd5044487aa443"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.JavaMemberIndexTest.xml",
+      "sha256": "7b887182380ffe72298823c873d4174bd5ac92da41710e9da4afa07dc52e278f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.module.ApiModuleResolverTest.xml",
+      "sha256": "13c766ad3a4fd84944165563ecde9e856e969112267993d06ce29f2e3694598c"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorageTest.xml",
+      "sha256": "0abd3ecfec59ff95819c3b16c31265c9c1f36e5b7cb361665d864b7b29d835d9"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.recipe.RecipeJsonTypeCatalogTest.xml",
+      "sha256": "3a3534cb6b32f5138f9237db6b2dd0bc8b2c680e7b05cf7d8eca7ea5ac4d7636"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.spec.BlockSpecTest.xml",
+      "sha256": "2d3a16f046d4c5003902b1190a35d21742f167b0020d4a3de352bc2c0d048346"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.spec.BlockStateSpecTest.xml",
+      "sha256": "2b8c7d8a73ccdf1674996108b084bfdaff29332adb4e6e2aa830e69136b56032"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.spec.EntitySpecTest.xml",
+      "sha256": "4409242cb5a172a6f4e7563b0124002a1c21e87e8fd48496afe6aa425cde2798"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.spec.ItemSpecTest.xml",
+      "sha256": "0d353121dfac6852945832a821de2a0defc9945d844afc363499eddd6b235516"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.spec.ItemStackSpecTest.xml",
+      "sha256": "d6a0357409a031ac6cfbff89f3413ce5bca711c6eb0f6dbd4d9f8be0147d0c8c"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.spec.LevelSpecTest.xml",
+      "sha256": "0dcac3542439211776d9951926aa54f67b8b20deb11e134b03e91d98096d0dc9"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.spec.LivingEntitySpecTest.xml",
+      "sha256": "6db42574246a6865345e91ec379e69b647dbc3af64baa70cc3778738a2bde768"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.spec.MutableComponentSpecTest.xml",
+      "sha256": "e04c62fb4c3bf3ffc217b9384b7e237508110551cc96d0f0a2b66aec1283d29a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.spec.PlayerSpecTest.xml",
+      "sha256": "4c76b14f4ba70c28b5f080cefed007abe6ed8a2115ea0a0e879829ca5e30b7a6"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.spec.ServerSpecTest.xml",
+      "sha256": "615c35cd418c919ada9fd0414d8f64140b1005007f10e35e2da428597928788d"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.surface.ApiDescriptorModelTest.xml",
+      "sha256": "9309511824b10ebc949f302709a8294b07e411e64654efc0540e4ec6788d62ab"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.surface.ApiSignatureValidationTest.xml",
+      "sha256": "c6a9396767243ffb79640ae13d1054751c9d3e3c74bf44a7eb61c28f387dc3ef"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.surface.ApiSurfaceModelTest.xml",
+      "sha256": "d2cc9f44e255d8ff9b24a46e95c1ba7ebde19ba3af2eb14569069b10e7b167b4"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.surface.ApiSurfaceSnapshotTest.xml",
+      "sha256": "d92cf8fc18d31e2eb834180baf3f4ebe749c4c2b6b16b7279186ded718d7f3e6"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.ui.DiskPackUiResourceResolverTest.xml",
+      "sha256": "62ba24c081b504f43de4d019d8f0d91a3dafc49002d6a6e0f0c62863d28603bd"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.ui.ScriptColorBoundaryRealEngineTest.xml",
+      "sha256": "acfdd4c7b8d1b9549f626e6cfd5b1b82131783f5e25c4d039a209577ea439441"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.ui.SnapshotDifferTest.xml",
+      "sha256": "d7d71070b015e81b9f43bf78aa975e38abf51a3c1941427e527e06d9656d54a4"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.ui.TextLayouterTest.xml",
+      "sha256": "96d2db986c0df97ff3edc8c91f0c7f0dbc6c5f317b3743ae7096b78cbc5b8be4"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.ui.UiColorTest.xml",
+      "sha256": "927959609f53c700b8f716fe2451cd5f8cb04df8d957090eadbc81c24b76c522"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.ui.UiResourceIdTest.xml",
+      "sha256": "3ce4f85d3c2615cd004a86fc8335e6e5cfb2bb05a35d1e1550addd82bb4fa1c1"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.api.ui.VisualStyleResolverTest.xml",
+      "sha256": "7dffb66481edeb6901506a39b0ba0b99dbea7607266e0b861a95e96fd60e11be"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.AdvancedJavaInteropSmokeTest.xml",
+      "sha256": "c6571fc997c2a87d69fe0d1714604877ce5cfe0aa06bc747549b9d80eb5aa6b5"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.ApiFacadeProxyTest.xml",
+      "sha256": "ba38bd36e7f7e188fc542e9e4a7d442816059cee73f2edd6db205333069cfec8"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.ApiManifestGoldenTest.xml",
+      "sha256": "3bd6d98c63692d42023058ee2ad163c9d340e7c353fe1df4c3f5738c7b2f6846"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.ApiValueMarshallerTest.xml",
+      "sha256": "cec38fa1669fc39785ed847780288d4beca8ca56d62fd262246d74f36420d527"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.ContractReflectorTest.xml",
+      "sha256": "a06cdc14d4658c06dfa793e577b484492ec7a0d0b5702d1b48cd0f65f7f29ed9"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.CoreContractReflectionTest.xml",
+      "sha256": "8dba51ff1212d3c42f02adaa4080bc5ca5c165fa0e33fb27d2e5a2c6ef460e56"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.CoreManagedApiBootstrapTest.xml",
+      "sha256": "a71abf70e1576082c7898808f6fdf410f29c620c3af1e31fe21825f3b100bfe4"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.data.PerfTimerValueTest.xml",
+      "sha256": "25540fe8caf8411dc7d599b3c7ced7cdd0bf95902c844b57a0c17de49763e34b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.EventContractReflectorDerivationTest.xml",
+      "sha256": "42fe67591038e6f19a574143aaacddd509a3cdec66aee474286de5321a497610"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.facade.DefaultIdFacadeTest.xml",
+      "sha256": "52296f26fe08e278a02122cf8be062f040f630d81894eb83eb58d4f4875dd712"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.facade.DefaultJsonFacadeTest.xml",
+      "sha256": "e88b14b360233f42aab9e461e6d23c2f157c492c0b7ef47ad4cf844e7b9a32a1"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.facade.DefaultNbtFacadeTest.xml",
+      "sha256": "83f036ffe6a1a12d46a88641024561437be8c433682bf58002bcb06fbe9dcc64"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.facade.DefaultPerformanceFacadeTest.xml",
+      "sha256": "89ac27518cf7609ba20819d0d63d667bc6c0f55d0517a3b699887bbfa8545875"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.facade.DefaultPlatformFacadeTest.xml",
+      "sha256": "08059afb5659a9d33cbc493543c0f978a7dbca8881d8d2602de1d29d19339c0a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.facade.DefaultRegistryFacadeTest.xml",
+      "sha256": "e700655a19be77a2fdc7aeaea3ce564ac0e39a9a0b414cf4415224bf8434b933"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.facade.DefaultTextFacadeTest.xml",
+      "sha256": "bc4d3229d07f729a854d639c605a4840ee961c287cfc1894617fb201cc73e71a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.facade.RegistryViewIterableTest.xml",
+      "sha256": "147ba158488fd70248b534f137141cb248fae318d543e0006b68605c00201072"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.JsApiSurfaceResolverTest.xml",
+      "sha256": "9f5ac179a6c290652f7de59d7e65fc9b5cd58c3cef3e9e3a86efd08b9524de2b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.json.JsonFileStoreTest.xml",
+      "sha256": "9f162caaf67e6b05628cd397f6e8b0e4d9fd1a3b3e585c7a05f659a3eff38bcf"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.ManagedBuilderWriteSemanticsTest.xml",
+      "sha256": "25b5ef3808d56a07884aec46e8ec1371d00e0ebb59ffd277faed3a5a64c79069"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.ManagedDeclarationCoverageGateTest.xml",
+      "sha256": "449b23a79b5c155229085b3314e8a75fa1d60c58e2a1948425b6e0a583720344"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.ManagedSurfaceCapabilityConditionsTest.xml",
+      "sha256": "8c090fb2185264462c89474d391733b7bc4f64008e9605747146a89182f54f54"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.ManagedSurfaceDerivationDeterminismTest.xml",
+      "sha256": "c64d557923eaa4f6c198ae10847465ca933dcae3f95c2288bbf6774c31321266"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.ManagedSurfaceEndToEndChainTest.xml",
+      "sha256": "4a696d1c1f4ff98025ae76919cefa6278eab006c2d094103548abf6050bedebc"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.nbt.NbtFileStoreTest.xml",
+      "sha256": "d17d9fed7a9ec496e68fadbb938f3106d4bfd0560798e77adee3fc6e96a33634"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.NormativeApiContractOwnerTest.xml",
+      "sha256": "551209141e60b252ad16b249f0943366fdafb94dba80d1760a9c8badf19b7434"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.api.Phase3AFacadeIntegrationTest.xml",
+      "sha256": "84a18099b3e1d2a4ebd5cbb0d6dd43e6405d807c12ce74833218ff6e1f506856"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.bridge.GraalValueViewTest.xml",
+      "sha256": "73188651380dd2284db6383e5348950e02ac01055df3c71f835b35f91244637a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.bridge.LegacyAdapterBridgeTest.xml",
+      "sha256": "5be7a658df450a59866ae0ba7b4f668b211f3e7d6b086880cee2e68613adccdf"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.bridge.NewAdapterBridgeTest.xml",
+      "sha256": "85a62abfdc90ae71c344d42b670a197bb724ad5302fcd96d0a5cf09d6913082e"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.bridge.RegistryBridgeIntegrationTest.xml",
+      "sha256": "278fad322888a45eac068a94437ebc65879ed775acd0ddb5c1b400051a429153"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.CapabilityCallbackSourceValidatorTest.xml",
+      "sha256": "b9e656438179430862ae4b34cc576e707c94ca314f04921b424591deed4c6377"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.EventCallbackSourceValidatorTest.xml",
+      "sha256": "b912753888cf4c905e3c22c527ca7c106174e6fb150c4395a8fce9d3aaee6b1a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidatorTest.xml",
+      "sha256": "a0da055b5bdf042dc37c06c39c32f7f476e270da8f3bfd210e9e78ac908521e7"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.ManagedEventCallbackSourceValidatorTest.xml",
+      "sha256": "94fa6d75b2a3f884bb077ca5574fbec8ceff0425771df9481209ba3155806aa5"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.NativeSamCallbackTypesTest.xml",
+      "sha256": "93d0162f38ecf4e6880778e8a77ffd602cff53f87a99a51872f165bb591c63ac"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.NekoCompilationPipelineJsxRuntimeTest.xml",
+      "sha256": "20671bd8a83b218c356c18e4513b6695cce07839c1eb777ab6b7f0671ae8a845"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.NekoCompilerGoldenTest.xml",
+      "sha256": "a77787e1567b6bb4d9b7e9d25112d1e01ba5959340109b4be60c32ba1b10cedc"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.NekoJsxAttributesTest.xml",
+      "sha256": "29e69d9c018502f5f4ac1b9ff7d7f175a256700ced3d53803d55c11aafe90ec1"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.NekoJsxClassicRuntimeTest.xml",
+      "sha256": "c307f375d4fad064542d39816924c1047cdf2f476b0441fd695789d5e1210af1"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.NekoJsxCompilerTest.xml",
+      "sha256": "e28dd5e6cae52b2bef7d5f6e4eb3893bda07004b8bec5124cbc2a203402b0e99"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.NekoJsxFragmentTest.xml",
+      "sha256": "765e74cc1a2a08943136451ae35fe5d31172a55e8633c30933a274bc352e1289"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.NekoSourceMapBuilderTest.xml",
+      "sha256": "1e827d8dafa528113747a0052778a4b5a90a27126601bd1fdd972d91551f8ede"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.NekoTypeScriptCompilerTest.xml",
+      "sha256": "a806838bed5e11253cdac43daa3092ec9a761e147cf73d6d4a4d60048966e1e5"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.NekoTypeScriptEnumDiagnosticLocationTest.xml",
+      "sha256": "21bd22bfeff064e8d63e6a0706738ac627795f651ffd5928ce22b1008ca674ae"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.NodeModuleTypeDocsTest.xml",
+      "sha256": "66ea5183f5f4417239d6f0948523d69ae4adc2955b71d4200701a05534ee0bae"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.python.PythonEmitterMagicImportTest.xml",
+      "sha256": "8b94f0f85fbe04942be54e2cd3d2bdb8fc33cdd5fd9e5659eadab188a089758a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.PythonGoldenTest.xml",
+      "sha256": "6b410b701a658a1cd60cb1764d8ed069ea756794af485de757b7792bc0762bfd"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.PythonToJsCompilerTest.xml",
+      "sha256": "d6949b691b273f01cc5190eb8d5bcbb39f037d863261214dec656fd936bb2170"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.ScriptSourcePreflightTest.xml",
+      "sha256": "b9ed5f3dfdc34a1fa0d3b2b580eb064ed9973759ff1e0d91dfb029b413b4dc46"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.TypeScriptErasureParseCorpusTest.xml",
+      "sha256": "28442e237ff700b752db757505122c5e81c815e77ccf723185271a1a227ea46d"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.compiler.ValParserTest.xml",
+      "sha256": "0c06e200fe9a933e3950577d39e47993a1545c37ad90a4063159b94016ff942f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.config.SandboxConfigLoaderTest.xml",
+      "sha256": "776ab29c2ff1f079cb324b99ae57f806e25276c674eed87b52f20412a8f39813"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.DynamicRegistrationBookkeepingTest.xml",
+      "sha256": "9f45f046b25c17394173bf6751a73e9a3f9e470e4c89ed7731391daa788fab7d"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.facade.DynamicActivationOwnerReleaseTest.xml",
+      "sha256": "482fc8524dd4a7503b71b386dc18dab953868c52e73e117afd3a4587653db135"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.facade.DynamicRegistryActivationFacadeTest.xml",
+      "sha256": "25f3791e725cc4293ca000d953b791eb7719e4585efc37ac65811d03e1514794"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.facade.DynamicRegistryCandidateInertnessTest.xml",
+      "sha256": "ebdefd4eb6df73989327ad7bb26147ad0213e0e14897e251da36bb5b02c59374"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.facade.DynamicRegistryDeclarationParityTest.xml",
+      "sha256": "1738ef6e4c8f14b4f25bb259d373fb9e0fb6610059b02fe1f1add8eca3d8ba0a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.facade.DynamicRegistryEventFacadeTest.xml",
+      "sha256": "35ab42216d7e6b18e54435caeaf8ff5943c5bbd7ad16246663592e9a492770a8"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.facade.DynamicRegistryInertPlanExampleTest.xml",
+      "sha256": "06eade646065c939cefae8664372a37be04b629be0bb7b84a3a8431f2f00a453"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.facade.DynamicRegistryReloadPipelineTest.xml",
+      "sha256": "e4fc727ff7cc0775f2cf1a1574b15f269e67b64f46c222d4c02acdaa4f7842c9"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.plan.DynamicBuilderNumberCoercionTest.xml",
+      "sha256": "f75e7bfa4885024fd045e5829a5883e1ae957fe461aaa285848de943a1190188"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.plan.DynamicBuilderSurfaceParityTest.xml",
+      "sha256": "ef3cd1ec18b2ece7b0ed4b6ab11cc3d71f46ed361e5b0701177fbad814840a0f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.plan.DynamicCandidatePlanSemanticsTest.xml",
+      "sha256": "7e32a88ad861120766f10d928facb2876c987569201e79fc5e048f13e32632c1"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.plan.DynamicPlanInertnessTest.xml",
+      "sha256": "d6848acacfbff5b3a41b347a762e0f61313d9c1ea97a64c5a1a1684c31bf1ef5"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.txn.DynamicRegistryClientParticipantTest.xml",
+      "sha256": "4370871e043f2812a791f462a6a38a425da1568d6140b0edc85e1613ee8e661a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.txn.DynamicRegistryClusterConsistencyTest.xml",
+      "sha256": "c51f75a36b5d360f34327399460173163d664267194b515dcce42f4ca66fe3ce"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.txn.DynamicRegistryTransactionSemanticsTest.xml",
+      "sha256": "40617604a0edfcc54ffa859eda959a91e930ee58667328ab381870e2a6eaae31"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.dynamic.txn.DynamicSyncWireCodecTest.xml",
+      "sha256": "e78aefd41e93e8849d347dea84b8c904e85c2605dd2316b857cb4a0921e4467f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.error.DefaultErrorTrackerTest.xml",
+      "sha256": "f97fe23864312de731511edfee7aa55f9f7832ed89fa7abfd4d930501a46ccb9"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.error.ErrorDashboardModelTest.xml",
+      "sha256": "bb2144825ef4dfee6a78084a48dc8c454b829e8fa32acd7610016e5aa140c03b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.error.ErrorOpenServiceTest.xml",
+      "sha256": "39fc276ae153415425c047814a5d2422139adef66ac48e2a0660dd203a5b8fb5"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.error.LocalErrorSourceTest.xml",
+      "sha256": "8fccc1f206290a7738b3555c7e0ab3256747f2e4499dcb8c6683e5ac3a63a8d4"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.error.ScriptDiagnosticGenerationTest.xml",
+      "sha256": "7fab82e6bf7557fbc0139542237e1d85e5baab28fd8b7602a3decf26b04c4e8f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.error.ScriptDiagnosticRecordTest.xml",
+      "sha256": "b48c80169df6163e61ff863c9599666e2b9c711a63865748fd1e0338ef90c6b4"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.error.SourceMapRegistryTest.xml",
+      "sha256": "8cd3bbdc5cddffc3e3ac44881bc57608805c192bf54493a8d99ed273b0c7ae7d"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.error.Ticket27DiagnosticOpenActionConsumeTest.xml",
+      "sha256": "ce64a4b516a401f274d549db19b14cfb075f5dc7f1d2232ef7199a6a3f51b251"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.error.Ticket27ErrorDashboardSnapshotTest.xml",
+      "sha256": "c7ec8b8adc54a997660ba2c35b6dcc446f82d775f708c32064e29f20547364c8"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.fs.ClassFilterTest.xml",
+      "sha256": "9ca8222c5de5982cee2837324d7502ca0efe79e748dfdfe0a05b71d5932f9282"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.fs.JSConfigModelTest.xml",
+      "sha256": "004e795b5a56ad8a6c0a3bb433f034a5bfdd6db442707a437d5a66e05e0170c2"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.fs.NekoJSPathsTest.xml",
+      "sha256": "1caae0c3c8b9e00c4cb84c6851c6097a0f4fafedee173394d72aff4bfcfe38ca"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.fs.SandboxPolicyTest.xml",
+      "sha256": "156baf71a92417de0fa34d54b8f3eb921d6740ad36fd21153833f737b7256ffc"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.FunctionalInterfaceHostAccessTest.xml",
+      "sha256": "81fbf0193da72be000e8d7e063d8b2459c61512e3042fd20ef9a59f66225ed0e"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.HostIdentityInputTest.xml",
+      "sha256": "365864d8ddbecd320e994e1a3c6fd933c76296cac2977ff473d2ad5b3e012f90"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.JavaClassLoadTelemetryRecorderTest.xml",
+      "sha256": "7a3669476633f157360ca12a0d534f0d3bf6f6afa0b2a2392cd810ee8bfee164"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.lifecycle.NekoRuntimeModuleCacheOwnershipTest.xml",
+      "sha256": "f3081f5790948434977ecb0e6b472f4ecf3a93e999bcd27267ba930152ccc63a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.lifecycle.NekoRuntimeRootLifecycleTest.xml",
+      "sha256": "a88e5e38c32d2d9ecdd76742099b8a0b821005d7e0038d54744881e270891a49"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.lifecycle.NekoRuntimeRootReloadResultTest.xml",
+      "sha256": "bdf5fd8798b6d16fdb1e97351cf89459588cf260e9005782a469756f267c910e"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.lifecycle.OnceRegistryTest.xml",
+      "sha256": "e1cbbb531576d1273db49cd106a7b453028b285cc8f99c3fa204faa7b3da7e17"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.lifecycle.ReloadProgressTrackerTest.xml",
+      "sha256": "4b8d8bc06b38c43ca5808df96fee002c70c794400702474b1315afbf1766ef54"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.lifecycle.ResourceTrackerTest.xml",
+      "sha256": "0713a4c7f01790a868239934b4a77eac32713507c92e222d50c9186f2472ca81"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.lifecycle.RuntimeCommandResultFormatterTest.xml",
+      "sha256": "8443882a0d315820a926377507f26b21df184fa14a8a5c4b918ccbdfff226a8c"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.lifecycle.ScriptLifecycleGateTest.xml",
+      "sha256": "d224b234460aae068bb508f5474d168f303ba701310bef50b3163c1b99d0141b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.log.NekoJSLoggersConcurrencyTest.xml",
+      "sha256": "4c54d4c7c46b9b1018177419b2baf83811dddbc97a08135e3e7fa69c364b5033"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.modification.Ticket39DomainCollectionTest.xml",
+      "sha256": "d3f63387956228440cf1f8e21f91ed7011a29a9ccbc70a83f3eca63ab5eb798a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.BuiltinModuleReuseTest.xml",
+      "sha256": "640d9e4b7948d927f4bbe1efbae818be38d2200e10e3405177a7b9429da107b1"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.BuiltinModuleTransformCacheTest.xml",
+      "sha256": "e9c90e837717d12efaa3a7041c5c2108ffddbdaec2160fbe50596d29a9fe4735"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.cjs.CjsStaticAnalyzerTest.xml",
+      "sha256": "813da5cde788c6d26b284391be1e3e6e946962c199e438eb7ae50f43ada31f2b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.CommonIsolationPrefixAgreementTest.xml",
+      "sha256": "cf7e11df8f759ae82aa910fa7cc4199cf8348135c6739f1085bbc153581c3c6f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.DiagnosticPhaseMatrixTest.xml",
+      "sha256": "8b5311edcdb1120e8e48f5b85d2b2277d7c8ea827cae97d0ea3f395beab51cc0"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.esm.NekoEsmParserRegexTest.xml",
+      "sha256": "756a82224ff61fa2db2b6eef698d583d99f472e753d540a5a1750dee43e4d640"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.LegacyCjsBridgeCharacterizationTest.xml",
+      "sha256": "7859ea16f9e2fead6cd67926e1896bf4abe0cf07034de7cdafa689b2ca1280b9"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.ManagedBindingSchemaTest.xml",
+      "sha256": "aaa24c19983d6f5bcc2292262ece18f0e3f64ef39543d06a86485fc34829759b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.ModuleExamplesSmokeTest.xml",
+      "sha256": "9226c643fcf6be99aecdd4bce93708fdef39b239e5838e96c481d10444dd76b3"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.ModulePipelineIsolationTest.xml",
+      "sha256": "9dfab2b545533c17e67073e794baa45ee5059d500dce9c65610357f31b5302bc"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NativeJavaPackageImportTest.xml",
+      "sha256": "d6468231236e844a215436fccf847f5f9630dccd70def4f8c29c7061338134e6"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoModuleErrorStageTest.xml",
+      "sha256": "be2bccfa33fde84abbd453a1dccc8b6422abbc86ce6bdd36e43b20229c20f526"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoModuleIdentityLifecycleTest.xml",
+      "sha256": "cd5efd09a5ac1373001f31259b885f2ee61acc6d365ade15cd40f202269641b2"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoModulePipelineCacheSessionTest.xml",
+      "sha256": "7e955ce8179531565d3d615221ec3046ed180b4bd0098fb408df4ad337eaf92a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoModulePipelineCacheStampTest.xml",
+      "sha256": "0eac2354da4f0105917e4beda5c3788fa8e0b6c69acf561330fed8676fa63415"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoModulePipelineMultiHostTest.xml",
+      "sha256": "c93388a17765a7da6d58ddf3395ddb530abe295a6e7249b5ae40d40760f40b3c"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoModulePipelinePreflightGateTest.xml",
+      "sha256": "14e7cd831a8c1d2ab5af33b941942f59e4bd0db51b966da71c5d2b01c2c6ae96"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoModulePipelinePrepareTest.xml",
+      "sha256": "ff928fd0c077c343088db12e4d7c753668706fd5d2db297f0d4671b032ebe482"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoModuleResolverTest.xml",
+      "sha256": "812fede658dc45d66e373425583763847249f7128960a4b18f7c0132ed524014"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoModuleTrustStageTest.xml",
+      "sha256": "a76740779a929647767d9ca8a2da99bad35aecef8fda57191225df839c35edff"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoPythonPrepareTest.xml",
+      "sha256": "e04952c7a667b4cbfd382940c246697a78084cef2aa87ed3c80a129a3f5fe711"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoPythonRuntimeTest.xml",
+      "sha256": "c36e754f62814569e45fe3b0478b3e0d7bc596b437071f0f28e65567ead938dc"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoRuntimeTrustContextTest.xml",
+      "sha256": "5fe0b771e0f83f7eaada4858d9b1df91eaf32120cb12247c6dffc122c46cd7f8"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoSandboxFactoryResourceTest.xml",
+      "sha256": "cdf6123e26666dc835c559de46b78aae69fd0105dd9622e5b98fb9e9a742a9a0"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHostSyntaxLocationTest.xml",
+      "sha256": "b6f7f53957f396dab50e63fd989c29c90a1d099a543fe79134f9ec5ca195c96f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoTypeScriptJsxPrepareTest.xml",
+      "sha256": "05160222b0a22397c3e2f52a6064300bed09ac216a0031a59ac9a2a547cdd62b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.NekoTypeScriptJsxRuntimeTest.xml",
+      "sha256": "730d7cc1c0a19461ea3c5d3612b67a4922e3989eeb6b39f7596e5e418de04686"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.PythonExamplesSmokeTest.xml",
+      "sha256": "ffb5a5ccec15486eb2c9bc4d36bf1b03588b74e44907f2af303d55af735596ed"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.ScriptTypeScopedCacheClearTest.xml",
+      "sha256": "647fc607e1357b7b8e01f44cdb5235c9fa2ff229ac92ec11fa4f4ea6385366b4"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.Ticket43ProfileGoldenTest.xml",
+      "sha256": "1b145ce6b01e2dddb3f10cb9b6643c79806a5ae350089eedafffa729c3f8e2e0"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.Ticket45InspectorOutputTest.xml",
+      "sha256": "43ba2cb82423cdeb143886a5703f7703f3af76166145d548dbaa641f4175b439"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.TypeScriptJsxExamplesSmokeTest.xml",
+      "sha256": "d89ef0355f210771e6186b086bafe2d210ea0a15b5fd8a3289ce486e0416d028"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.TypeScriptUiAuthoringDocsTest.xml",
+      "sha256": "464bd2ba52301af15b24264b3da6a9b9116cdb7fa2cdb4e3b32c846433b2b068"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.module.WebConversionReportContractTest.xml",
+      "sha256": "3ab9f7b2a15f089a859811074f3d3e86c0a65b7e38599e398248613d70aeb75c"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.NekoJSBasePluginManagerTest.xml",
+      "sha256": "d5ea9f5a2e0efcc75c17b0d8ae5f78633f88c53f2d0d30057e7ab77333c66ffd"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.NekoJSMemberRemapperTest.xml",
+      "sha256": "5837d27850dc819b5e3e90df7e9d50bade98097d94e3ef5abf07cbc0d9dfc3f9"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.node.NekoNodeBufferTest.xml",
+      "sha256": "3a3f7280fac0709485bec12575d5df8d6e8235c8ce4d0ff32de0da068234238a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.node.NekoNodeFSTest.xml",
+      "sha256": "fbdc02c05d392aa908f3756f3fbfc61be7989de96aad8e95735ba018214b2244"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.node.NekoNodeOSTest.xml",
+      "sha256": "91ce81d75aa7a4945bfa41a17bb27e540efee6cdd3e221c1c1dfd41622a57641"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.node.NekoNodeTimersTest.xml",
+      "sha256": "671d198cde76f5e3691b4559bc56417db0fac3bdd95c8e3c0f8a408d675e468a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.node.NodeModulesJsRegressionTest.xml",
+      "sha256": "43e5a1c6c8cd6a6827ad5bfa501f80feaec5029668c5ae4fc07498687e3da606"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.PackActivationTest.xml",
+      "sha256": "2882c360a3442abc6767627eaa52ac5c8369c237954f0e5229e257699518d1aa"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.PackResourceStabilityTest.xml",
+      "sha256": "f36a5c47a8a027d6882f294d79af34169c9c09f57327f093b9a020c60ab59487"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.ScriptLocatorPackTest.xml",
+      "sha256": "bbc036f5472ae0e52aa45fad575921a523837da53b7e56c85430944b5a77eb25"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.ScriptPackOperationsTest.xml",
+      "sha256": "5f01f85814d6c7008234e9af49152ace9b9885444d0b19f8ad9ffc9e03375adc"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.ScriptPackRegistryTest.xml",
+      "sha256": "4c40b0106b4a9077d37653dfd4a4a69bb785e2e341097d31fea7714e49fe5a79"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.sync.PackHasherTest.xml",
+      "sha256": "9ddb10de07ff2297fb3f77541ffea24deb2967574fe4d09fec950db53ff048bf"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.sync.PackSignatureVerifierTest.xml",
+      "sha256": "a0b86f5ca4a609b3cc69dbaf9a3e0fb6dfb105a3fb9684503d3d0cd49f966d54"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.sync.PackSyncClientTest.xml",
+      "sha256": "a101556368a39bc312e9b63f7be23baf06ea1f2715e155e9379921ed26159647"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.sync.PackSyncServerTest.xml",
+      "sha256": "e929240493c0666f5e04fb57551a34a3a2148474f6e8985f64313bdde06bee2d"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.sync.PackSyncTrustStoreTest.xml",
+      "sha256": "3b8011b20aeea92a3701ac3ea967ba9bdc065b0fa2c4eb569e231eb048fe88d4"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.sync.PackToolsTest.xml",
+      "sha256": "62cbb0bfbf69dfeff913b7df8aeae1f2acafdfa89960c38ccc22c01c0081ea8d"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.sync.ScriptPackRegistryServerCacheTest.xml",
+      "sha256": "b800902f17cf7b05164c325e7bb2af6861d2cbb134a90c0a096f7663b7a320bf"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.sync.ServerPackCacheTest.xml",
+      "sha256": "baa6cd8a6984eea0606086e1202550e11f84bbddf0c7dd40bda01ff2dbdbc266"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.pack.VersionedPackTest.xml",
+      "sha256": "66b14f0978d1b2bef5d388e224f98726e5379a96b9d490a9223734d1b4bc972a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.ApiSurfaceBootstrapTest.xml",
+      "sha256": "d15b20436ca2640abd8436b8fe922881561196750d5b5d0a604540056facd945"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.AttachedDataHooksTest.xml",
+      "sha256": "477ed758d4ddb6eb6af09516ff506def0c68dfa7672454c2d8ab406f7bb46e98"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.BeanAliasExclusionPointTest.xml",
+      "sha256": "1d852ee4439211e0f66171b313e712a306cc823510ea1e3369620fed4e256675"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.BindingSideSelectionTest.xml",
+      "sha256": "a536bfcbb15a8b6e611a30e6b2308276d03e4253b45f2c4ae6fc0f95c665fec6"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.ClassDeclarationCatalogPointTest.xml",
+      "sha256": "616dafaca8126c05ddf3955e80079480c0414fa46ba41f0b5322cdab030680db"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.DataGenerationAggregationTest.xml",
+      "sha256": "fd8d6c3b7df9b77c383fcfbc61bbecf06190c8b4920e84e78cf001e1bbf6ccdd"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.DeepFreezeTest.xml",
+      "sha256": "f39c094d9abf471e047f924071f68afb4103c53cf10be21b0e6950ac9e70eb91"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.NekoCommonBuiltinPluginTest.xml",
+      "sha256": "c18155fd61389e5bf0915bb7028ce68b0744f96bf1e80bc068e60c4e4a7b2bab"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.NekoPluginBootstrapHookDeliveryTest.xml",
+      "sha256": "0eabdffc836133298da4209f8a0ccf26d428ee77cc199fac1dc0bb49ac23e9a5"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.NekoPluginBootstrapV2Test.xml",
+      "sha256": "03f3f9378f3027e820f13fbb8dcc06cb645f06602476aa04c7e4da01db192ab0"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.NekoPluginExtensionPointTest.xml",
+      "sha256": "0fd3ca0972e3b1fb3a03d43b1f51c5c24452bd62e92bfe14d94bf417ef1f8259"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.NekoPluginExtensionProviderTest.xml",
+      "sha256": "826634c70f641f832a832c547662a4932f628a0c6ac4ae2313e0504ae872e94f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.NekoRuntimeAccessTest.xml",
+      "sha256": "4e478c525d9cf63daade289bdb4f44b9b2935e0cee38d6b30f2fd52bdc0f5e12"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.PluginGenerationHooksTest.xml",
+      "sha256": "6b3f36a896559d9c280254a292b00018c060f727675bf0533aae50faf77615e7"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.PluginHookPairingTest.xml",
+      "sha256": "dfe0d896f572316e626997cfaaf953132010b997ffb8f127f4bf759ce29f5585"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.Ticket08ExternalAddonChainTest.xml",
+      "sha256": "9ee78b36e4391c367010019298a6db3aae33eb068022ca3200a05a682aa2a1b4"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.Ticket29GeneratedLangsTest.xml",
+      "sha256": "51ed957ce40b1970ddef99e9d42e630c01d644c92e3fc29b3e382d3bce30d83d"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.plugin.WorkspaceGeneratorModifyConfigHookTest.xml",
+      "sha256": "3fdacb6f9088e5c84a2506a1f70faa49700e687e2ed40eb7b771f80370d705b8"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.posteffect.PostEffectCandidatePlanTest.xml",
+      "sha256": "095b674497541e42e379ba7c605d94b1ea5627b2b92688a973f55fa69062cc39"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.posteffect.PostEffectChainJsonTest.xml",
+      "sha256": "f0249cc0165a0a343cf12fd9baf5154502bf67554d0f874fdd349c0c3b9fc78b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.registry.ItemDefinitionConfigTest.xml",
+      "sha256": "0b5e187e2bb95fc6ec22a23a3ea6b2306b99c79cc326f08bcbc7f793b0936ce7"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.RunawayWatchdogTest.xml",
+      "sha256": "c2fe2d287c4aa871f1d12971b8ecdabf7a5c2cc75a80ec957dee6f16e884b909"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.state.GenerationGlobalsDiscardResilienceTest.xml",
+      "sha256": "b591bc0053f3bfc4f964703cdeaaad40b720e41e1f5c17d73f44ad4739d7cbef"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.state.GlobalStateExamplesTest.xml",
+      "sha256": "28a44211b2dda3803ba90ee0f963200e4632720d0b974e87365875817c63ef3a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.state.NekoGlobalRemovalTest.xml",
+      "sha256": "d7a809cef31410f7e43a549629c2446060f78a436cd7d80184aa69c949998dc2"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.state.Ticket10GlobalStateTest.xml",
+      "sha256": "a160e58153e5e7424b7b9ecc350e6b27eaa0eadba63d4f040a065573c0dbfe8c"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.SyncEvalWatchdogTest.xml",
+      "sha256": "a5c24f36cef7a02127813f8d54147be345a768d8f7b5c5ebcb1068cad7850044"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.core.villager.Ticket22VillagerTradeDomainTest.xml",
+      "sha256": "3f2b65e2d1787db99c88fa3b1dceb390bdd16db7f120c8accaf17194e5fe934b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.eventbus.EventBusBaseRuntimeTest.xml",
+      "sha256": "9ac2e01186b98ab7db23757ebff4be61fe2024aa68305e3124e8cb78cb5cdbcb"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.eventbus.EventBusConcurrentStressTest.xml",
+      "sha256": "395485af7e6841b5b0ac2117e76500fe7e6c66c89094c80eafaf9b8ac53c7f43"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.js.DelegatingBindingContextSwitchTest.xml",
+      "sha256": "be9481d371385df1b0407779bdcef3ef5caed57380dacff93653aa84fa6ad497"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.platform.PlatformCapabilityTest.xml",
+      "sha256": "afb6bcb42d4303d088fc62df70a706eb55bc0e404558d8d7011f325488f50693"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.platform.PlatformConcurrencyTest.xml",
+      "sha256": "26bb641590f5fe5edc1ecc8ff08887b46904b10be397d2ca96ad75849f9951e3"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.AdapterAliasGeneratorTest.xml",
+      "sha256": "1c1e39831c55c52a19ca91b26bcfc053676d47108ae3ac12729fd28a0e5a964f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.backend.python.PythonBeanMemberCollisionTest.xml",
+      "sha256": "a93530b09d3f7d48687c0986d9f24076842c38286283a0a7500e12e826203907"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.backend.python.PythonFieldMethodCollisionTest.xml",
+      "sha256": "0e0fa0e9713e69c409639808d1b53a1558d143eb4325f9211523ee66902335fe"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.backend.python.PythonProbeBackendIntegrationTest.xml",
+      "sha256": "68c87bb6cb9e5a785dec632a9bd4fba10ac71cc7d7d142ce98ade24f4e4c13ef"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.backend.python.PythonRendererTest.xml",
+      "sha256": "9737d7dfec9960dfcce6c83ac8a3dff23b95ce1fe81a536d2b5257408bec630f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.backend.RegistryBuilderDeclarationParityTest.xml",
+      "sha256": "0ec863fb554a0cfda4144548e19277cba04abb6eea03eea99569e767bdf94e86"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.backend.typescript.FunctionalInterfaceAliasGeneratorTest.xml",
+      "sha256": "ae99fb85086f9af8234051cf12546a4d42306aed3977c63158587ee7584999c7"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.backend.typescript.ManualDeclarationReferencesTest.xml",
+      "sha256": "43bc14c5b05ad673f8a9fd9428f6731bc489559106b8294128597b0bc3a611bf"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.backend.typescript.TypeScriptDeclarationClosureTest.xml",
+      "sha256": "eca3abfcff92d5274160a3b0ccbb179c24bd447aaf516bfdc5cf0fa0845997d5"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.backend.typescript.TypeScriptEventImportTest.xml",
+      "sha256": "84ae0e6ca5433119b1db78c228dae259e48184fa0a125c957ca626b2829b3527"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.BeanAliasExclusionTest.xml",
+      "sha256": "1c27340e4eeaf9df7e3d70c0b3d929f7992de93849aa7500b738172cbfe433f7"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ClassDeclarationTypeScriptBackendTest.xml",
+      "sha256": "47e3d4ce9f4a8c2ed2eb02873455162166bbc3df2b91c540edec8bfa9473e268"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.CommunityProbeTypeScriptFixtureTest.xml",
+      "sha256": "c263c06aacb7294ea70aa4f37690eb1d9e69963edf855c9548fc8f70c192e37c"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.DynamicRegistryDefaultDeclarationsTest.xml",
+      "sha256": "30561226f5e34eb0f9ac02e6aa416412602b43298453dff5c5263342d004c8a4"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.DynamicRegistryEventsDeclarationGoldenTest.xml",
+      "sha256": "4807926df3e761a97d370447bd6b6c8e76114e2c7c995a9a0a23d0466d0d3232"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.events.ModifyTypeEditorTest.xml",
+      "sha256": "296a83e1a851b6e4b0f0c3e30c11e4df4c8cf8fb2bdcc527c1c91aaca07b6a3a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.events.ProbePhase5EventsTest.xml",
+      "sha256": "9229aedba7da0bd9939de36571b7c10d43a1ea94a3b32e71ab6f4c3b667532cd"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.FileEditorConfigContributorMergeTest.xml",
+      "sha256": "2699a75b3a2c43a18ffc4cbf14160101f4627ead8b1ae6fe175a6539b13e38da"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.FileEditorConfigContributorTest.xml",
+      "sha256": "6b36325087eb34f706771103def48ed9b02b47c168ac757317bf37953718b544"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.IndexFileGeneratorTest.xml",
+      "sha256": "ad5795656d82675683a6c163ab3ceb84abdabb5a7fd6a386360f3b4bca052190"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.AnnotatedDocsTest.xml",
+      "sha256": "2cdf1614043daf0930502a9a21bce63e8c082952f6579399bb90c1ae4eb1b2dc"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeReflectorReturnContractTest.xml",
+      "sha256": "3445146fe7f42852bef40092ee11927b21fac65272197a6769fff372523427d8"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeReflectorSyntheticContractTest.xml",
+      "sha256": "09ff2d3bce3b3c0c953393a90df9311779dd70cb037da812aad4af0b8fb1b5b8"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeReflectorTest.xml",
+      "sha256": "ed8cf2ab0cbf734fe16f2571d59fc68c1af744325f4728d7506e8dee841f6f74"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptCharacterProjectionTest.xml",
+      "sha256": "746645e78a04d864f1df213b9786704a6c37ff4723365532fda2ffd7df21856f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptClassRendererTest.xml",
+      "sha256": "b719f853b10219421f0cda14e22036e37e1104fedb256b44a621eb20b6b56ee2"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptCollectionInputTest.xml",
+      "sha256": "6e7210fc0db92b7d80b7ef4a8b74d6cd396b1a7ab22a1db03dcb627230a0d57a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptConstructorInputTest.xml",
+      "sha256": "5e1b8c3df2efec9a74a22895a9e54dc62ef328847dc09106ffc88b3fd52ba041"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptConstructorMemberTest.xml",
+      "sha256": "dca886885b57e79b9c0b16207090d858f3a2cff7b091bd31d92760e23cbbbad7"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptFieldMethodSelectorTest.xml",
+      "sha256": "b4ff4c586da9a7ac12e405ef929acf42e52788fe035042bd6d4e0f9595c64cf5"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptInheritedBeanTest.xml",
+      "sha256": "6322ff486aaa52e90b769e8618f329d475fb90afe2a72a0a40ac7f636d6bb034"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptInheritedInterfaceTest.xml",
+      "sha256": "21d0c637b17339a7cba4655844f5f672a87fd7449557cdb184a0b6ae0a1e7e05"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptInterfaceMergeTest.xml",
+      "sha256": "43fbc30f0e2b52fa08858926407bd604ccdce3d80898d232130e32825080ca97"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptInterfaceStaticSurfaceTest.xml",
+      "sha256": "b4043afb555a16537590842a0ae965666471a22d56e482867bacfa60235d544d"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptMemberNameTest.xml",
+      "sha256": "666b14f76d3858e7ae5cdc22ba0af175244777ba9a7eceb93bf625e0f447d2b4"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptObjectProjectionTest.xml",
+      "sha256": "003ead465a8d8e4a8f6e52bf3a25a71f3dc7c8a01c96084a863cb6a12d605f2c"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptOwnerGenericTest.xml",
+      "sha256": "94d91165993655e325bd2e9f16effb22d5668aa73f1786e5e5e17c8072162f03"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptRawInputTest.xml",
+      "sha256": "d879b6e3950b9bc02bf31a9869f7130a9d11cac0c278b781ed33484dd56bf68b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptRawOutputTest.xml",
+      "sha256": "caea62dd6b1116ba856b0263750b3c2702b4fdb4fe4993c47d7e02d915d94fd9"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptResultVarianceTest.xml",
+      "sha256": "3e49ae345276b520969acc57981133d0c786ec82d7d4eaff19286780164b3678"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ir.TypeScriptStaticShadowingTest.xml",
+      "sha256": "4cff932008874a704818ccf3ef817db436cd925196b5192de0fcabee4ba4d381"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.JsxRuntimeProbeDeclarationGoldenTest.xml",
+      "sha256": "9d5edc2de9b98b9fd86f62659632e619e08bc2489fc1e91ae35c59e113061065"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.LegacyProbeCompatibilityTest.xml",
+      "sha256": "ea913f5c7af512833284d551aa8da83eb96300512c5f61ed0eacd3b95bf868a2"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.LegacyProbeTreeTest.xml",
+      "sha256": "7843209c51f5498f4c62e997a7668a56f339ce8e0afba70055e1058dc79b949f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ManagedApiDeclarationGeneratorTest.xml",
+      "sha256": "3530c4c39e81e2cb75b1dda1088b89770008b83b110bec5953ecb7732b485009"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.NekoProbeBuiltinPluginTest.xml",
+      "sha256": "4ffad3b025770c7477356086edab34429f32c315f7bc7e5f81cd36486a0d4afb"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeBackendRegistryTest.xml",
+      "sha256": "3c7f7542874b67512843af89fbc9355a1db631498423b962d7bcc306836ece56"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeBackendRenderTest.xml",
+      "sha256": "b87a0c1effd3387c182ae7129bfc75c2c1d36c1d45c0a239bcc490ffcc6a9306"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeCaptureReturnContractTest.xml",
+      "sha256": "6b2e8b4cbf5166993dfefd635c613d797c144606efa9759551823787f1043998"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeConfigTest.xml",
+      "sha256": "75b217ee5c81247e259efa50d27aaa4325807bd199b58c3d5f1e864598ecedb9"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeConstableValueProjectionTest.xml",
+      "sha256": "dd6a4de546a5ffdc17aec46a4d014d3f6b0b3dabfef0040094fd07f5139d535f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeCoordinatorHardeningTest.xml",
+      "sha256": "b8abe25b4db89e53c2f86d77f10d17996fd5d2db27c338ae0f7d67e1d1fa4468"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeCoordinatorInstanceTest.xml",
+      "sha256": "c41609433ccbecac90baf7ac7864b3c5d8dc6a9089e6e31995564d77cfce79a2"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeDeclarationCollectionTest.xml",
+      "sha256": "81e7600a16c00edd789f426ab4058a4225fc6a497f81f888656cc4c6858fa107"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeEventsSurfaceGoldenTest.xml",
+      "sha256": "6e16dd7841ba3b2f3684268f86782dcb91706089a2c82fc28b4cee10b5cde483"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeOutputCommitterTest.xml",
+      "sha256": "e395f35836059858d604a96227ea440f951071987439fd24e91adec53373fecc"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeOutputCompatibilityTest.xml",
+      "sha256": "2490d1df2ff3f079821a74f567dad214f8d09163554af3961629449e01efeb69"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeScanModeTest.xml",
+      "sha256": "d7c63051eeffe27b69c3c11f74395d2d320a3f587ea80a3b3c9a191ba7a8fb6a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeTypeScriptFixtureWriterTest.xml",
+      "sha256": "64895533e1453ba0cc1a92f05a665fdc379452700148ec871b1bce6c488b900b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeUnavailableTypeTest.xml",
+      "sha256": "f76ef1ba5ec3a0c075b4da51988eac33ba01e7c250c07281409a5f4f564fa53e"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeWildcardCollectionTest.xml",
+      "sha256": "9f86c9c0eaa0f4e64a5c5f28d31ba6ecbf296289cfdd4f65bed01f3fba7a02da"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.ProbeWildcardOptionalCaptureTest.xml",
+      "sha256": "27c5d480b86d84f352c113a71563ba6f106783f44bebc135eef3459f9261848f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.PythonDeclarationAttributionTest.xml",
+      "sha256": "c190a2a9be247da5e04dd38be2d015c74002877ade7d238bfa505cc26cc8b09c"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.PythonDeclarationDeterminismParityTest.xml",
+      "sha256": "69a422b029ada592540097ecb1d3abea21e58124f6ea06a892b5f354ba0a2f18"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.RecipeEventDeclarationGeneratorTest.xml",
+      "sha256": "1af6291bc971ff9515e576d49e83968182e78b543498e1dbad2f472eb714363d"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.TypeScriptClassBoundsTest.xml",
+      "sha256": "bb5543f7be42218e4c2e80381c0fca6894ae63ff87ef66484423734a698eae06"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.TypeScriptEnumHeritageTest.xml",
+      "sha256": "bf2377bfb4587cf23ec4c4c7bc1cdb3d9d27904bca759d0703ba44590ba488d5"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.TypeScriptGenericAdapterTest.xml",
+      "sha256": "97fd8a0c030622e1cb6cc6494b6e3286853f62749dffae89442ece966643242a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.TypeScriptInterfaceBindingTest.xml",
+      "sha256": "dbee3c4ffd672ab2f16a44b9542d57fe0ce6eb901dbed79a710c36f372e26d62"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.TypeScriptMethodBoundsTest.xml",
+      "sha256": "26427f7be6520e3fe9989ddaa727228be1dbeb252c1ba0968b92760384d7956e"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.TypeScriptNoopIrGoldenTest.xml",
+      "sha256": "a80308a2b481ba04700937c5d1163ec84c074d35015d980892f17789d48f80e0"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.TypeScriptProbeBackendEditorConfigTest.xml",
+      "sha256": "282fddc7b9a36939f86490b1753d4179c0f5321cd18e8b6b09ffd8d013e03a4e"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.TypeScriptSameNameHeritageTest.xml",
+      "sha256": "9816c069db3b178428e040da21350d780b4b4680c3229660e13a5b25ea64326e"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.TypeScriptSamProxyInputTest.xml",
+      "sha256": "f6562ad6105b68675dd0ce3f4268a1d6978d5827056499efbe749ccabadea679"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.probe.TypeScriptSkippedDeclarationTest.xml",
+      "sha256": "13b7ca52b3f92def7d1aec5bb5da1b6f8f18610decfdfec9d17777a50c97bf48"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.EventGroupSchemaWiringTest.xml",
+      "sha256": "f8210cd53c890d772dd237a26951aa85b9f72917aebb5f5514a6865e0499fb7c"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.ManagedApiEnvironmentTest.xml",
+      "sha256": "826dde7ca1b69e7649eac7ea076f91e68b6588076ea703808e49b9328540361f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.ReloadMemoryStabilityTest.xml",
+      "sha256": "b35b468b1aec56dcc14309b4a491f1b904b1980417f6328b3da35da38350db8b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.ScriptEnvironmentBindingScopeTest.xml",
+      "sha256": "a60aecc94bd5046f14d7320c9b5f433da884fc80c96d49af8af8aefbecffc357"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.ScriptLoadOrderSorterTest.xml",
+      "sha256": "7d7325a665c628e72f0b86550f8260a9d670a090420fc655029bf3d6809443cc"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.ScriptReloadGenerationTest.xml",
+      "sha256": "cbed2c13c61ed5620acf3eed906f870d9465709e8a554625acdeb71404746c44"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.ScriptReloadRegressionTest.xml",
+      "sha256": "7ff3eb79b074e18688bdf1c4e11ad11592cafc8e0a08677225b78c234945ca9b"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.ScriptTypedValueConcurrencyTest.xml",
+      "sha256": "5e3994f13d4813c730d05933e6b03bd169b8e3ebbef03700a9aa643d45f9962a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.StartupReloadScriptFileFullReloadTest.xml",
+      "sha256": "5e7bfc13f045f68c3c448718411da1f81dea06b0168ce738db7e2a41b6eab0f0"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.Ticket06RunawayProbeTest.xml",
+      "sha256": "6d87a4b2f6176b658c03ead988e40f16d01039fd06e4ed814318254c6d31a573"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.Ticket07RuntimeThreadsTest.xml",
+      "sha256": "e9e6a7655be87ba151363ef62ea2edd46a27948055980676f374b8aca69731ad"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.WorkspaceGeneratorManagedTypesTest.xml",
+      "sha256": "ee7cb94ae4aec1975197485ef63524e5036a45dda8afb22e7c442bff3767625f"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.WorkspaceGeneratorPreserveTest.xml",
+      "sha256": "bf0f2ebe58432f85ffca46d516c3b8d1e28178824dc2c80c89cb9f49956766af"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.script.WorldPackRelativePathExecutionTest.xml",
+      "sha256": "3534b2b6ab1e05e818a24576d4503a16257e921539b7fc8d2e5ad329b672ece6"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.wrapper.AssetGeneratorJSTest.xml",
+      "sha256": "f253708e0aa1cca186fef8cbc0a6406c34ba6f66e2f05962fddf381a91be2b53"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.wrapper.clientdata.ClientDataStoreTest.xml",
+      "sha256": "07743f9043bb00c2a31f2012d070ef931571eb2757e6c70b6b32c8b25c411660"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.wrapper.DataGenerationBatchTest.xml",
+      "sha256": "1f3e98eb0dac4276051cfd6e4b6cb08d8d14672ecbf53539f025567c34804ba5"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.wrapper.DataGeneratorJsJsonRealEngineTest.xml",
+      "sha256": "379b8734f4358c3c8949cfcc251d9fd2557b9c7a5ae7b32b01b4815cbad43095"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.wrapper.DataGeneratorJSPathTest.xml",
+      "sha256": "848add39e3880254b0f490e0a075a4773d3fba1c3f21af2f9cbd8c4e5c44f9d6"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.wrapper.DataGeneratorJSTest.xml",
+      "sha256": "5ace1f71e7bf16797965b4d16b8dad41199e3a202f0da83a26cbdc7c7581bebb"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.wrapper.DataGeneratorQuotaTest.xml",
+      "sha256": "266e115be35140def5165f7f220ba744c6d5df62eb0231089eaaad2effd2ffa5"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.wrapper.LangGeneratorJSPathTest.xml",
+      "sha256": "40344056edb2f065aff006628a22f813fd0868e6a70a1ee8f080f9b7b391e0ca"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.wrapper.LangGeneratorJSTest.xml",
+      "sha256": "ad5c0f7c0779d36a88b4775f55e9395c7b7b04302d4c00c32d1b4ea3ceb954e0"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.wrapper.LangGeneratorQuotaTest.xml",
+      "sha256": "aec7120375c93585e680fc66c3354fcea26e536f17982cb75b85698f8062384a"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.wrapper.RegisteredItemAssetsTest.xml",
+      "sha256": "eae726127def41e3187851e136a64e4d08edf2c5f54d966b219e615923b60f54"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.wrapper.SchemaRecipeBuilderContractTest.xml",
+      "sha256": "c8f400ac491ffbcabdc269f870bafa092b3b2a5943399a920fa31ded99488b29"
+    },
+    {
+      "path": "reports/common-test/TEST-com.tkisor.nekojs.wrapper.Ticket29AssetsReadbackFixtureTest.xml",
+      "sha256": "543e3e49d2a4937910bba9be07c9225d7d39f0446979eafe9ff1bbc0f76127a1"
+    },
+    {
+      "path": "logs/capture-return-contract-red.log",
+      "sha256": "4ed26f3f77f8584dd8c7ef2a00f2c65799af7c00421340c14bc33c166d48c0bf"
+    },
+    {
+      "path": "logs/capture-return-contract-green.log",
+      "sha256": "e1e787bc1c8979c279b3a3117988d13dac291873bf47f89a512fef16b5e6a3fc"
+    },
+    {
+      "path": "logs/capture-return-contract-common-check.log",
+      "sha256": "d99f0879d6086ad174eb3d310dd369411c38a00bcd923b0111f5e9f8f58bc671"
+    },
+    {
+      "path": "logs/capture-return-contract-golden.log",
+      "sha256": "deeae0e294523ff29d22a4935136fa5b28f8532ef4d9976a8ae44e51d025e258"
+    },
+    {
+      "path": "logs/capture-return-parameter-red.log",
+      "sha256": "fe293fa382371f945079b753cfc0e3b2a58ac98db48da70e470798e187cf8ffa"
+    },
+    {
+      "path": "logs/capture-return-parameter-green.log",
+      "sha256": "ba0e9e75701d45670e40af3714f3ae92f9de86a19c4f0a16dedc9b3fbb9420e1"
+    },
+    {
+      "path": "logs/capture-return-parameter-array-green.log",
+      "sha256": "93d4ea46194d7bb7016d35d098def5de0218f8d3eb738e8bdc514a142c3e3c67"
+    },
+    {
+      "path": "logs/capture-return-parameter-final-green.log",
+      "sha256": "744132df1bdfe521837aa06bb007777a5d58a28e64223703d314ca4aa5e39805"
+    },
+    {
+      "path": "logs/capture-return-chain-red.log",
+      "sha256": "1e16cfebe13551417907336f1003bec52bcc38cb33dfacf09243609c7da81140"
+    },
+    {
+      "path": "logs/capture-return-chain-green-receiver-red.log",
+      "sha256": "773b759ff827aa09c3ceca0f852cd3304e4c2af6899624703f416517fd798dd5"
+    },
+    {
+      "path": "logs/capture-return-receiver-green.log",
+      "sha256": "9d0e4da9b6757652e667617f58db1b152c3d88b7c88a62b5769a75618e00bd02"
+    },
+    {
+      "path": "logs/capture-return-contract-release-common-check.log",
+      "sha256": "6dcab0995edcc16aeeae6bef5ad5f004a234b9802b3e8c3d51cf6b1357bc9bd2"
+    },
+    {
+      "path": "logs/capture-return-contract-release-probe-types.log",
+      "sha256": "726d767167b2a6d1090c54e7f59763def2251d75f6b3e9f477560ccdc3ada24a"
+    },
+    {
+      "path": "logs/capture-return-contract-release-ci-gates.log",
+      "sha256": "ad8f2ead9b837619be4a1a8dd0b930405ad5764c837da7959d3b5c0f69b39fd5"
+    },
+    {
+      "path": "reports/ci-gates.json",
+      "sha256": "d3182fbd2d4185e06257c3dd0f7c2706d288cc9cc038d0cb6d9f285b0a016a54"
+    },
+    {
+      "path": "reports/golden-delta.json",
+      "sha256": "e8d5406b737205ed28d92edda0af9f94e9483d99cf66139c928324278c8e983e"
+    },
+    {
+      "path": "reports/goldens-before.zip",
+      "sha256": "74877c250c65be5fc2005e71854093819c1253e2f80da5dab48134cf1440c9c8"
+    },
+    {
+      "path": "scripts/check-capture-return-goldens.py",
+      "sha256": "61c14b0d2eb484de5cc8502cc6cf0f935bb12953b53f0f70709e6a5f38aa9cb6"
+    },
+    {
+      "path": "scripts/capture-return-consumer-mutation.py",
+      "sha256": "87599ab70757c9e8182de482e3485940640d6365647549c3bbc783607804e8aa"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/core/reflect/JavaGenericTypes.class",
+      "sha256": "c7740cfb2f3f2a367926f297566bdfdd4f2511a4363b63d1dcbbd4d4c4e94fa5"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/probe/ir/TypeScriptCaptureReturns$Target.class",
+      "sha256": "b6d8779a563e41cbfbeee8dcd7cccd54b9c3ddc38aea2a08f8d0478bef93fa50"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/probe/ir/TypeScriptCaptureReturns.class",
+      "sha256": "57954efd807f946091a4a1d34e8a2fc2b22fd3ef9b32c1ac31015bbdb7dfc14b"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer$1.class",
+      "sha256": "62a7a76202691a796850f74e021f6c891b8ad3ce6ebb5fadf8b2a9d3ab0adb8c"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer$1Entry.class",
+      "sha256": "23f3a31c300a3736b2644e3173401d40fed665aaf02bd09c26d49f9de53ad736"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer$GetterOverride.class",
+      "sha256": "8cd6a4ba105fe7e35096de8d8e1ac415cf70b95c5a22e269e9890306f01f281d"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer$NamedMethod.class",
+      "sha256": "902e5874306d913dcc12b999fbc4e8597b0140398184c1e430c058ea887a3f7e"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer.class",
+      "sha256": "fcc9c5bd0547a1a064e993602d90917c92f261775e12da412d66b720d6caa614"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/probe/ir/TypeScriptStaticInheritance$JavaParameterKey.class",
+      "sha256": "5ab4af567f0d053ee714c4677ad208dde7ab57425163197abedd3b88859189ea"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/probe/ir/TypeScriptStaticInheritance$MethodKey.class",
+      "sha256": "da029f91e300129edaff1ab31a0bd8ac7687b610974d67832c3a3391b6165a0a"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/probe/ir/TypeScriptStaticInheritance$ParameterKey.class",
+      "sha256": "5dfcdb7220a7590e2076e07c0e7bf7da94cc3dd7542a9263e3aa1e6b43209794"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/probe/ir/TypeScriptStaticInheritance$Projection.class",
+      "sha256": "dad64317c66c88d1e8db81b29170a19b429dd7067ed7cc5187714315ce5284a5"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/probe/ir/TypeScriptStaticInheritance$SyntheticParameterKey.class",
+      "sha256": "b21bef6e35c47d4cec51a3fe0aacf962f518c95c851f58134c2583a75fc20cd0"
+    },
+    {
+      "path": "compiled/main/com/tkisor/nekojs/probe/ir/TypeScriptStaticInheritance.class",
+      "sha256": "dae7f4f568e8296607e1893c02149146754be6f63b21058a72dbbfaca8a84b30"
+    },
+    {
+      "path": "compiled/test/ProbeCaptureReturnContractTest$Base.class",
+      "sha256": "d698a757c9e6a8a4f1d873847690a7bb4c10ce08c4855b8eb3211b18cafb5469"
+    },
+    {
+      "path": "compiled/test/ProbeCaptureReturnContractTest$Calls.class",
+      "sha256": "5dc8db3a5678b879b0a899dfe6b624755ce6c4dabea4bfe0083c1ef517318f90"
+    },
+    {
+      "path": "compiled/test/ProbeCaptureReturnContractTest$Child.class",
+      "sha256": "ab5d8780dab0418eae3270386fc769e6339515193a6759c189a630a1c5e3d404"
+    },
+    {
+      "path": "compiled/test/ProbeCaptureReturnContractTest$Implementation.class",
+      "sha256": "343abd876cf25c24b9e789606269721450255bf528e61d7dd3c9cec04a5ac8a3"
+    },
+    {
+      "path": "compiled/test/ProbeCaptureReturnContractTest$InheritedImplementation.class",
+      "sha256": "36e2c6e25acfe0e185166f60eb8ae7981e941a72387e342ef7d3de4b9efa2dfc"
+    },
+    {
+      "path": "compiled/test/ProbeCaptureReturnContractTest$MethodBase.class",
+      "sha256": "3f421760a186a3f18b0e32200641f7949de983f7df427673f7d31ab878ce2163"
+    },
+    {
+      "path": "compiled/test/ProbeCaptureReturnContractTest$Middle.class",
+      "sha256": "5ae6bcbaec0364bb71a227cf3b618e800f758aaec8a6c52c55faccadd9419901"
+    },
+    {
+      "path": "compiled/test/ProbeCaptureReturnContractTest$ParameterImplementation.class",
+      "sha256": "eeab09ccf6e2860417386d0a9338caa873c9733400c954448416358618431f52"
+    },
+    {
+      "path": "compiled/test/ProbeCaptureReturnContractTest$ParameterParent.class",
+      "sha256": "ec79f780837af25ac612d59a727880534798daca547d4444cb47f01e193b7026"
+    },
+    {
+      "path": "compiled/test/ProbeCaptureReturnContractTest$Parent.class",
+      "sha256": "477b74947387ed6a62ee4a49a9264e06c2350ab25b00185e6069900d8ffb9de2"
+    },
+    {
+      "path": "compiled/test/ProbeCaptureReturnContractTest$RepeatedOverride.class",
+      "sha256": "6f6d24d9a3b092eae38b7ffef89af5c278c20cf0d0b0769dd050d3da55b4dd35"
+    },
+    {
+      "path": "compiled/test/ProbeCaptureReturnContractTest$WildcardOverride.class",
+      "sha256": "06910abb6839547142cac7d4084e46a6426eaa9633d9c3a37df320827d082ca6"
+    },
+    {
+      "path": "compiled/test/ProbeCaptureReturnContractTest.class",
+      "sha256": "b1af97f358570efc8dbdad2da99377f0888bf5cb88261c67ed2f60e8e86fead7"
+    },
+    {
+      "path": "inputs/generated/@package/com/index.d.ts",
+      "sha256": "c7e76bf821ef00813ee04a7d9a6fa71d10b593635272f4b8126b6e61cc4f1de7"
+    },
+    {
+      "path": "inputs/generated/@package/com/tkisor/index.d.ts",
+      "sha256": "10925c6e0e405dcdbbef13de5c4f738bbd2b56b8f38604828df28cec44fc520c"
+    },
+    {
+      "path": "inputs/generated/@package/com/tkisor/nekojs/index.d.ts",
+      "sha256": "25466bed0396ef11064e0230232ffa19ab2c1a172bd42a4782686df43f5f0330"
+    },
+    {
+      "path": "inputs/generated/@package/com/tkisor/nekojs/probe/index.d.ts",
+      "sha256": "b5e6d404c939ab90d09830181b4fb4915537418a80c412bb1cf720090ee692f2"
+    },
+    {
+      "path": "inputs/generated/@package/index.d.ts",
+      "sha256": "d1d71cc7e7fa8b2c191c8370b3a4bc06637b62f4372ad7197df16cfad7cebfcd"
+    },
+    {
+      "path": "inputs/generated/@package/java/index.d.ts",
+      "sha256": "d20cb9d6efead50e20557dfdde5b611f90df6acd6574fec90243936a4d3d898f"
+    },
+    {
+      "path": "inputs/generated/@package/java/io/index.d.ts",
+      "sha256": "219e72b8d6e3b26a96874a8a7bef75268124008cbb32109e114401a7f5febe05"
+    },
+    {
+      "path": "inputs/generated/@package/java/lang/annotation/index.d.ts",
+      "sha256": "bfa5a11c0a7dad34fa32019b669085dbaed76b428c9f71d3d8a3caa320eb9c8b"
+    },
+    {
+      "path": "inputs/generated/@package/java/lang/constant/index.d.ts",
+      "sha256": "1d2db2e2e7493b9115c61f660a8244a5a7a1f52806149048a5ad8426341b2cab"
+    },
+    {
+      "path": "inputs/generated/@package/java/lang/foreign/index.d.ts",
+      "sha256": "b3927846ad0a763297afa6e521bc86863f4214844c51074cbee835cf1bdd5989"
+    },
+    {
+      "path": "inputs/generated/@package/java/lang/index.d.ts",
+      "sha256": "481172ed8f7b13e4ff5ede92328eedfdf30df5c7cee51e4b1b192ad73796438f"
+    },
+    {
+      "path": "inputs/generated/@package/java/lang/invoke/index.d.ts",
+      "sha256": "dde75b354a2884d27db756c34334a3a1a3b0a58dffedef6f64109a5d5391b21f"
+    },
+    {
+      "path": "inputs/generated/@package/java/lang/module/index.d.ts",
+      "sha256": "d1c8e9e6ed2fe52d0b60c38a68706098b0913ef23831aad46337183af2b20496"
+    },
+    {
+      "path": "inputs/generated/@package/java/lang/reflect/index.d.ts",
+      "sha256": "aca010e2ba0f6eecd5b99a2283731b667a71b476e2d66b5c17c52bd142a6939b"
+    },
+    {
+      "path": "inputs/generated/@package/java/net/index.d.ts",
+      "sha256": "a11221e73e1a861314088ca0ea328a85ca0c7ad0c3bd6fc85d65b752e2ebe8e8"
+    },
+    {
+      "path": "inputs/generated/@package/java/nio/channels/index.d.ts",
+      "sha256": "ff752f8310140cabee6b3b231b3040529b7da3db79e1597458ee03787e0fded2"
+    },
+    {
+      "path": "inputs/generated/@package/java/nio/channels/spi/index.d.ts",
+      "sha256": "ed65e845984a83fdf759b5bf00bdf61d3346d462a38ac4057b482dea8154931e"
+    },
+    {
+      "path": "inputs/generated/@package/java/nio/charset/index.d.ts",
+      "sha256": "cd22b42f68445daf449084e17eb6b960db5597be62a0fbfcbe399da9121dffd0"
+    },
+    {
+      "path": "inputs/generated/@package/java/nio/file/attribute/index.d.ts",
+      "sha256": "dcee4a2b6ea661fd906b68de7810182b0b6f30c78f5e9d051f1f61aa559376a2"
+    },
+    {
+      "path": "inputs/generated/@package/java/nio/file/index.d.ts",
+      "sha256": "8b78274d2d1c6f82c2afcbde599e605215d1374e26f6f330d4cfb18c927ecaf3"
+    },
+    {
+      "path": "inputs/generated/@package/java/nio/file/spi/index.d.ts",
+      "sha256": "1906909e33a1aa2fb65d1b66a610ee43983d3c13ac06fde4697a68d56ee1502b"
+    },
+    {
+      "path": "inputs/generated/@package/java/nio/index.d.ts",
+      "sha256": "c6a02d9a91df34b86188d8b9f802729566acdfa5052028e0183043c45f24a491"
+    },
+    {
+      "path": "inputs/generated/@package/java/security/cert/index.d.ts",
+      "sha256": "74563c1d004d3fce528ef0d4c7c135ba63212a1aa050d5cc0b913ebe7f7a5e03"
+    },
+    {
+      "path": "inputs/generated/@package/java/security/index.d.ts",
+      "sha256": "6ce9d313fdf8cf83a9df28114770b8ac9c29bc92f8c7b11c961421a4d1a103c4"
+    },
+    {
+      "path": "inputs/generated/@package/java/util/concurrent/index.d.ts",
+      "sha256": "971d25517e96c0df2d9e2fa3a658282f8c11778e0acbc3378db0b5389a57ecc1"
+    },
+    {
+      "path": "inputs/generated/@package/java/util/function/index.d.ts",
+      "sha256": "0fea044f6c88d98f1a1744e0384dede7b3d0ed394289e0d8f712b2c93e678bae"
+    },
+    {
+      "path": "inputs/generated/@package/java/util/index.d.ts",
+      "sha256": "c84f36d0936e059afd69ee5127285cac04b198e9d1a47455dce000c53903f53f"
+    },
+    {
+      "path": "inputs/generated/@package/java/util/stream/index.d.ts",
+      "sha256": "566da037f9a4ad94760df4a7ea9cdc4421ce3530cfc0dc153927a3910427afca"
+    },
+    {
+      "path": "inputs/generated/@package/javax/index.d.ts",
+      "sha256": "1a6307ce8817423674b87b57427d7452f30f073e10eaab69b0adb586dbe7c4aa"
+    },
+    {
+      "path": "inputs/generated/@package/javax/security/auth/index.d.ts",
+      "sha256": "7bd66d9bb4fe2a1be4ebbe69747c3d72bdc96fa9c488f8710c8c955de010808f"
+    },
+    {
+      "path": "inputs/generated/@package/javax/security/index.d.ts",
+      "sha256": "8a721451374224ef493e28fe24452f522cfd754db6d779cb6da9e696510d5dab"
+    },
+    {
+      "path": "inputs/generated/@special/dependencies.json",
+      "sha256": "4f38e9a2cffde945594c542975c461331af5f3120eef6ae6830da9ef53c36ec3"
+    },
+    {
+      "path": "inputs/generated/exercise.ts",
+      "sha256": "9f9e284393c340ede439eefdb6ec042e66ce91d22860b6cf10ff68f57afce77a"
+    },
+    {
+      "path": "inputs/generated/java-time-ambient.d.ts",
+      "sha256": "0883593b0b19f9e8624054d09b6eecef514a018f8662d67e946e9bd13b2d6bd2"
+    },
+    {
+      "path": "inputs/generated/tsconfig.json",
+      "sha256": "fe3d0b821bed3fe80621ee63ff73128470017e0a1cf2f27292714dfb3416a636"
+    },
+    {
+      "path": "logs/generated/tsc.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "logs/generated/tsc-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "inputs/without-facets/@package/com/index.d.ts",
+      "sha256": "6f7ed90d88841ebebe29ada5f0c47c39113fe1c3921157f9f875bf7aaf77d71f"
+    },
+    {
+      "path": "inputs/without-facets/@package/com/tkisor/index.d.ts",
+      "sha256": "56d6fc67a0d750f90e545eec7d29d1124b570ee20466d75b01f37f47588bf766"
+    },
+    {
+      "path": "inputs/without-facets/@package/com/tkisor/nekojs/index.d.ts",
+      "sha256": "ad983e1108e0616b85c7a5aaf85f3d3fe12025aaed75c51d7628102b22dc2988"
+    },
+    {
+      "path": "inputs/without-facets/@package/com/tkisor/nekojs/probe/index.d.ts",
+      "sha256": "17b69a17ac460d36a7fab0cea631acd450f7d8a4b032663e15ceccf2c5be8550"
+    },
+    {
+      "path": "inputs/without-facets/@package/index.d.ts",
+      "sha256": "26e941a87d4996f96ba27c5dcd3461bef547ec66053061f4224e3c636a09f51c"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/index.d.ts",
+      "sha256": "6d8a8d3a99c3fc55f43ea613a171ace07e398e07775715ea6486f10fd394e679"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/io/index.d.ts",
+      "sha256": "2c738ed7a7e18f352d5d2df104ca303abb2d27ef102bb8dac20916c2bbea6f63"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/lang/annotation/index.d.ts",
+      "sha256": "1ba430d97159396954720265f927589f4dad9ccbb629a9d1aa9cd5ad7988b54a"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/lang/constant/index.d.ts",
+      "sha256": "60d421c9ef1a6f46d94aaf62c5508d06abd1694d810e9f3d2acdbfa6134a3651"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/lang/foreign/index.d.ts",
+      "sha256": "8e0d579165da23480648331ba920097a125719c306caf8890657ac29322e3a49"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/lang/index.d.ts",
+      "sha256": "fd5816f6a5cbe97d2a8094c335f39bd06795c265b03846eff6a51c3b110c3e37"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/lang/invoke/index.d.ts",
+      "sha256": "e186de44a14a03bc65c74d4ae9be09204a51da6a78531e0c114369cc4813cd19"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/lang/module/index.d.ts",
+      "sha256": "e99697f92429974b22083f5a77d713251b6e84a6ee1c52d39dc1201d33b5c08c"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/lang/reflect/index.d.ts",
+      "sha256": "7a4b9131d189ce02f01c58e6e74b79dc1c88d82f25b6280e749ab03b8a0e624b"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/net/index.d.ts",
+      "sha256": "d7df4c8ec7456facb3073d3e0abc8ffee4e9581c70ce83708e21cd5cae24472f"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/nio/channels/index.d.ts",
+      "sha256": "0236315e0834442d8fe2656c6420bec2e7fa0c0b175935928d83eed844d0b4b9"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/nio/channels/spi/index.d.ts",
+      "sha256": "fbe7cba47a1b95ceb9bd0cb8284ee0b7726af433b93ad58663f43ed90b6340da"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/nio/charset/index.d.ts",
+      "sha256": "15bfd0e952a67f0bfe91cdcd245567cd619cdf9601a981497f5458ed1687f5cb"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/nio/file/attribute/index.d.ts",
+      "sha256": "6e8a0c2e46f692179ec8c8a1b565535556cba801ccd379f74fbaa6ec98da8642"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/nio/file/index.d.ts",
+      "sha256": "0500bd38df0ad21ccf0e753e9804da9d734aea44fcdeecc2ff69dda9a90d8f48"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/nio/file/spi/index.d.ts",
+      "sha256": "fcd44d0d09dccd5678675058a2b08e6288b914820dd8993b438c6fd5dee11614"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/nio/index.d.ts",
+      "sha256": "282b6aa90de1837d2bf84799ae8c6671c86055a7c86cf42356ef622b87f64a02"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/security/cert/index.d.ts",
+      "sha256": "e7dfa15c3e130b3b661e7b0fbaaa07e958a5805189148b5853753656c0075fae"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/security/index.d.ts",
+      "sha256": "3a7edf1532c7a3abbd5a97a0c5c0c6d336cbd475c1382130199c45e610f6ff3e"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/util/concurrent/index.d.ts",
+      "sha256": "65f7175d24e3a8e602b5b1310027040c5d93d46cd82ddf745355c0b4aafbac52"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/util/function/index.d.ts",
+      "sha256": "94cc79e07e33e53654afc69b500daa20a8e6089fd3e851c92a0536137dba4a35"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/util/index.d.ts",
+      "sha256": "cc13c39b48394fab65ec27c340da7308bf5448e4b84241f3a6a15cac949255b2"
+    },
+    {
+      "path": "inputs/without-facets/@package/java/util/stream/index.d.ts",
+      "sha256": "99d79612c0f1574c93e6e2e5936f531a04efdd4716ca0a3fd7eae0c48fab719c"
+    },
+    {
+      "path": "inputs/without-facets/@package/javax/index.d.ts",
+      "sha256": "bfffafe82e30edccfecb2e0a65dc51378081902bd39fe972854299bd2c4ba077"
+    },
+    {
+      "path": "inputs/without-facets/@package/javax/security/auth/index.d.ts",
+      "sha256": "8e5ca831ff8b5df65d91b108f9dc4e2e6b455298eb1a35913036e0a588b9bcf6"
+    },
+    {
+      "path": "inputs/without-facets/@package/javax/security/index.d.ts",
+      "sha256": "01dd0ba187ccea21d0267aea945fc696a439a3f57f6a7340f69d98d7891b0413"
+    },
+    {
+      "path": "inputs/without-facets/@special/dependencies.json",
+      "sha256": "4f38e9a2cffde945594c542975c461331af5f3120eef6ae6830da9ef53c36ec3"
+    },
+    {
+      "path": "inputs/without-facets/exercise.ts",
+      "sha256": "9f9e284393c340ede439eefdb6ec042e66ce91d22860b6cf10ff68f57afce77a"
+    },
+    {
+      "path": "inputs/without-facets/java-time-ambient.d.ts",
+      "sha256": "0883593b0b19f9e8624054d09b6eecef514a018f8662d67e946e9bd13b2d6bd2"
+    },
+    {
+      "path": "inputs/without-facets/tsconfig.json",
+      "sha256": "fe3d0b821bed3fe80621ee63ff73128470017e0a1cf2f27292714dfb3416a636"
+    },
+    {
+      "path": "logs/without-facets/tsc.txt",
+      "sha256": "717f2cdf9b2b0701d8bb59b2a119265388c702c23fe26351ac7a9cc81688f502"
+    },
+    {
+      "path": "logs/without-facets/tsc-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "scope": "common verification and focused strict consumers; no new installed-node or performance acceptance",
+  "historicalLogs": "Earlier development logs are retained; their intermediate source snapshots were not frozen and are not the replay inputs."
+}
