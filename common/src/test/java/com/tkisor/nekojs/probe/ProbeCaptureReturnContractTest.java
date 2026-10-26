@@ -43,6 +43,12 @@ class ProbeCaptureReturnContractTest {
     public static class WildcardOverride implements Middle<Base> {
         @Override public Optional<? extends Child> values() { return Optional.of(new Child()); }
     }
+    public interface WildcardMiddle extends Parent<Base> {
+        @Override Optional<? extends Child> values();
+    }
+    public static class WildcardMiddleImplementation implements WildcardMiddle {
+        @Override public Optional<Child> values() { return Optional.of(new Child()); }
+    }
     public interface ParameterParent<T> {
         Optional<? extends T> values(T input);
         Optional<? extends T> values(T[] input);
@@ -113,6 +119,7 @@ class ProbeCaptureReturnContractTest {
                 List.of(getClass().getPackageName()), List.of(), List.of("java.time"), List.of(), 1, "SMART"));
         var context = new ProbeContext.Of(snapshot, List.of(Base.class, Child.class, Parent.class,
                 Middle.class, Implementation.class, RepeatedOverride.class, WildcardOverride.class,
+                WildcardMiddle.class, WildcardMiddleImplementation.class,
                 ParameterParent.class, ParameterImplementation.class, MethodBase.class, InheritedImplementation.class),
                 config, NekoJSPaths.fromGameDir(temp),
                 "typescript", temp.resolve("typescript"));
@@ -168,7 +175,9 @@ class ProbeCaptureReturnContractTest {
                     $ProbeCaptureReturnContractTest$WildcardOverride as WildcardOverride,
                     $ProbeCaptureReturnContractTest$ParameterParent as ParameterParent,
                     $ProbeCaptureReturnContractTest$ParameterImplementation as ParameterImplementation,
-                    $ProbeCaptureReturnContractTest$InheritedImplementation as InheritedImplementation
+                    $ProbeCaptureReturnContractTest$InheritedImplementation as InheritedImplementation,
+                    $ProbeCaptureReturnContractTest$WildcardMiddle as WildcardMiddle,
+                    $ProbeCaptureReturnContractTest$WildcardMiddleImplementation as WildcardMiddleImplementation
                 } from 'java:com/tkisor/nekojs/probe';
                 declare const implementation: Implementation;
                 declare const input: Base;
@@ -184,6 +193,13 @@ class ProbeCaptureReturnContractTest {
                 // @ts-expect-error A broader inherited fallback does not promise the narrow member.
                 implementation.values().orElse(input).code;
                 const parent: Parent<Base> = implementation;
+                declare const layered: WildcardMiddleImplementation;
+                const layeredMiddle: WildcardMiddle = layered;
+                const layeredParent: Parent<Base> = layered;
+                const layeredChild: Child = layered.values().get();
+                const layeredFallback: Base = layeredParent.values().orElse(input);
+                // @ts-expect-error An inherited upper-bound fallback does not retain the narrow payload.
+                layered.values().orElse(input).code;
                 const broad: Base = parent.values().get();
                 declare const parameterImplementation: ParameterImplementation;
                 const parameterParent: ParameterParent<Base> = parameterImplementation;

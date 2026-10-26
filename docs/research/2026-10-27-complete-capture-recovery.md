@@ -25,3 +25,9 @@
 3. 继续其余严格 TS 根因；最终候选性能、Python 默认安装、客户端/TCP/分离回退及维护者结论分别验收。
 
 显式 any 及完整伪 host 的结构身份限制仍开放。此前 JS 数组的泛型桥 ClassCastException 仍未解决；真实 Java 数组正例不代表该问题已修复。不 push、不发 PR、不发布、不代签人工接受。
+
+## 新安装暴露的连续 wildcard 合同
+
+`8f71ca31` / `5dd4de8e` 通过五节点普通矩阵及四项 CI gate 后，实际新安装十入口为 1037（对 3d2cc1cb 的 1029，完整块 −0/+8）。新增全部是现代 RegistryAccess 的父接口自己已经收窄 wildcard 返回的情形；现有定向夹具缺少这一中间覆盖。其余族不变，零 UNMAPPED。五次正常 RCON 停止、世界锁释放，25 个编译类与安装制品匹配。
+
+新增 `WildcardMiddle → Parent<Base>` 及具体实现的公开 backend 消费，旧逻辑实际报 TS2416/TS2322 等继承与赋值错误。收集父 wildcard 的上界后继续沿当前可见 IR 收集祖先 facet，修复后同一严格消费者 exit 0，保留窄返回、宽 fallback 与负例。该修复需新的完整 common/平台矩阵及确切制品安装，不能把前驱的 1037 记录改写成通过。

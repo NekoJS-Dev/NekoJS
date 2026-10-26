@@ -82,6 +82,8 @@ final class TypeScriptCaptureReturns {
                     else methodArguments.remove(method.typeParams.get(index));
                 }
                 result.add(TypeScriptInheritedMethods.substitute(bound, methodArguments));
+                // A wildcard override also carries the capture facets of its own ancestors.
+                collect(parent, target, arguments, new LinkedHashSet<>(visiting), result);
             }
             // The nearest declaration owns its signature, including hides and explicit edits.
             if (!declares) collect(parent, target, arguments, new LinkedHashSet<>(visiting), result);
