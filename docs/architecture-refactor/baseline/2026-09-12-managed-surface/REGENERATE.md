@@ -129,3 +129,9 @@ FunctionalInterfaceAliasGenerator 根据真实 Java SAM 名及既有参数/返�
 TypeScriptCaptureReturns 从当前可见、编辑后的父类型 IR 收集匹配方法的 Optional wildcard 上界，替换类泛型实参；渲染时在原始窄返回之后附加对应 OptionalView。它为恢复完整公开视图铺路，不改变 Java/Python IR、工厂或运行时行为，隐藏/改名/覆盖返回不从反射恢复。
 
 普通 common/check 先记录两项旧录制树失败，再通过 :common:regenerateGoldens 官方再生。原始字节备份于 build/capture-return-goldens-before.zip；build/check-capture-return-goldens.py 独立核对两文件：java.lang 的七处及 java.lang.invoke 的三处 describeConstable 窄返回保持原文，末尾追加继承上界的 OptionalView；三行导入新增 OptionalView/ConstantDesc 相关名称，其他所有文件及行字节不变。后续普通门禁、严格消费、安装和最终候选结论分别记录；本项技术核对不代签维护者接受。
+
+## 2026-10-27：完整捕获视图
+
+完整视图继承当前可见、编辑后的原始实例面，恢复 or、各 reduce、Collector collect、toList 及递归 List/Collection 导航；输入域保护复用既有 SAM 参数/返回规则，不改原始工厂签名。首次 common 检查的两项录制树差异已保留，另有独立资源同步测试失败，不将该轮视为通过。
+
+再生前保存 build/complete-capture-goldens-before.zip，仅运行官方 :common:regenerateGoldens --tests '*LegacyProbeTreeTest'。build/check-complete-capture-goldens.py 核对全部备份文件，恰好 java.util 与 java.util.stream 两文件变化：新增完整视图、输入载体及相应导入；原始类型与 SAM 别名前缀除导入外字节保持，其他文件字节保持。普通门禁、严格消费、新安装和最终候选分别验证；此记录不是人工接受。

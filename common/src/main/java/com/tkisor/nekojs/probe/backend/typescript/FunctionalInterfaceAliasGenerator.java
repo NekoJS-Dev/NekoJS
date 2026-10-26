@@ -198,42 +198,85 @@ public final class FunctionalInterfaceAliasGenerator {
             return renderHostType(declared, alias.interfaceClass(), registry, alias.generatedTypes());
         }
         try {
-            FunctionalInterfaceResolver.Signature signature = FunctionalInterfaceResolver.resolve(declared);
-            if (signature == null) signature = alias.signature();
-
-            List<String> arguments = new ArrayList<>();
-            TypeVariable<?>[] variables = alias.interfaceClass().getTypeParameters();
-            Type[] declaredArguments = declared instanceof ParameterizedType parameterized
-                    ? JavaGenericTypes.arguments(parameterized).toArray(Type[]::new) : new Type[0];
-            Map<TypeVariable<?>, ApiTypeRef> substitutions = new HashMap<>();
-            if (declaredArguments.length == 0) {
-                for (TypeVariable<?> variable : variables) {
-                    substitutions.put(variable, ApiTypeRef.primitive("any"));
-                }
-            }
-            for (int index = 0; index < variables.length; index++) {
-                ApiTypeRef hostArgument = index < declaredArguments.length
-                        ? toRef(declaredArguments[index], alias.interfaceClass(), true, false, Map.of(),
-                                alias.generatedTypes(), null)
-                        : ApiTypeRef.primitive("any");
-                if (declaredArguments.length == 0) substitutions.put(variables[index], hostArgument);
-                arguments.add(TypeScriptClassRenderer.renderTypeRef(hostArgument, registry, false, expanding));
-            }
-            for (Type parameter : signature.parameterTypes()) {
-                ApiTypeRef callbackArgument = toRef(parameter, alias.interfaceClass(), true, false, substitutions,
-                        alias.generatedTypes(), signature.method());
-                arguments.add(TypeScriptClassRenderer.renderTypeRef(callbackArgument, registry, false, expanding));
-            }
-            if (signature.returnType() != void.class && signature.returnType() != Void.class) {
-                ApiTypeRef callbackResult = toRef(signature.returnType(), alias.interfaceClass(), false, true,
-                        substitutions, alias.generatedTypes(), signature.method());
-                arguments.add(renderCallbackResult(callbackResult, registry, expanding));
-            }
+            InputShape shape = inputShape(declared, alias, registry, expanding);
+            List<String> arguments = new ArrayList<>(shape.hostArguments());
+            arguments.addAll(shape.callbackArguments());
+            if (!shape.returnsVoid()) arguments.add(shape.result());
 
             return registry.reference(fqn, alias.aliasName()) + (arguments.isEmpty() ? "" : "<" + String.join(", ", arguments) + ">");
         } finally {
             expanding.remove(expansionKey);
         }
+    }
+
+    /** Separates the existing host and callback renderings for capture-bound input constraints. */
+    public record InputShape(String hostName, List<String> hostArguments, List<String> callbackArguments,
+                             String result, java.lang.reflect.Method method, boolean sealed, boolean returnsVoid) {
+        public InputShape {
+            hostArguments = List.copyOf(hostArguments);
+            callbackArguments = List.copyOf(callbackArguments);
+        }
+        public String host() {
+            return hostName + (hostArguments.isEmpty() ? "" : "<" + String.join(", ", hostArguments) + ">");
+        }
+        public String callback() {
+            List<String> parameters = new ArrayList<>();
+            for (int index = 0; index < callbackArguments.size(); index++) {
+                parameters.add("arg" + index + ": " + callbackArguments.get(index));
+            }
+            return "(" + String.join(", ", parameters) + ") => " + result;
+        }
+    }
+
+    public static InputShape captureInputShape(Type declared, TypeAliasRegistry registry) {
+        Class<?> raw = FunctionalInterfaceResolver.rawClass(declared);
+        if (raw == null || registry.getRegisteredAlias(raw.getName()) != null) return null;
+        var alias = registry.getFunctionalInterfaceAlias(raw.getName());
+        if (alias == null) return null;
+        Set<String> expanding = new LinkedHashSet<>();
+        enterExpansion(raw.getName(), expansionKey(raw, declared), expanding);
+        return inputShape(declared, alias, registry, expanding);
+    }
+
+    private static InputShape inputShape(Type declared, TypeAliasRegistry.FunctionalInterfaceAlias alias,
+                                         TypeAliasRegistry registry, Set<String> expanding) {
+        FunctionalInterfaceResolver.Signature signature = FunctionalInterfaceResolver.resolve(declared);
+        if (signature == null) signature = alias.signature();
+
+        List<String> arguments = new ArrayList<>();
+        TypeVariable<?>[] variables = alias.interfaceClass().getTypeParameters();
+        Type[] declaredArguments = declared instanceof ParameterizedType parameterized
+                ? JavaGenericTypes.arguments(parameterized).toArray(Type[]::new) : new Type[0];
+        Map<TypeVariable<?>, ApiTypeRef> substitutions = new HashMap<>();
+        if (declaredArguments.length == 0) {
+            for (TypeVariable<?> variable : variables) {
+                substitutions.put(variable, ApiTypeRef.primitive("any"));
+            }
+        }
+        for (int index = 0; index < variables.length; index++) {
+            ApiTypeRef hostArgument = index < declaredArguments.length
+                    ? toRef(declaredArguments[index], alias.interfaceClass(), true, false, Map.of(),
+                            alias.generatedTypes(), null)
+                    : ApiTypeRef.primitive("any");
+            if (declaredArguments.length == 0) substitutions.put(variables[index], hostArgument);
+            arguments.add(TypeScriptClassRenderer.renderTypeRef(hostArgument, registry, false, expanding));
+        }
+        for (Type parameter : signature.parameterTypes()) {
+            ApiTypeRef callbackArgument = toRef(parameter, alias.interfaceClass(), true, false, substitutions,
+                    alias.generatedTypes(), signature.method());
+            arguments.add(TypeScriptClassRenderer.renderTypeRef(callbackArgument, registry, false, expanding));
+        }
+        if (signature.returnType() != void.class && signature.returnType() != Void.class) {
+            ApiTypeRef callbackResult = toRef(signature.returnType(), alias.interfaceClass(), false, true,
+                    substitutions, alias.generatedTypes(), signature.method());
+            arguments.add(renderCallbackResult(callbackResult, registry, expanding));
+        }
+        int hostCount = variables.length;
+        int parameterCount = signature.parameterTypes().size();
+        String result = arguments.size() == hostCount + parameterCount ? "void" : arguments.getLast();
+        return new InputShape(registry.reference(alias.interfaceClass().getName(), "$" + tsClassName(alias.interfaceClass())),
+                arguments.subList(0, hostCount), arguments.subList(hostCount, hostCount + parameterCount),
+                result, signature.method(), alias.interfaceClass().isSealed(), arguments.size() == hostCount + parameterCount);
     }
 
     public static String renderInputType(ApiTypeRef declared, TypeAliasRegistry.FunctionalInterfaceAlias alias,

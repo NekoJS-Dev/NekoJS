@@ -112,27 +112,25 @@ public final class IndexFileGenerator {
         for (String fqn : importsNeeded) {
             for (String name : exportedSymbols(fqn)) importedSymbols.add(new TypeScriptImportNames.Symbol(fqn, name));
         }
-        // Capture views live in their source modules; the paired view is imported when referenced.
-        boolean optionalViewDeclared = packageName.equals("java.util") && irRenderer.captureViewUsed();
-        boolean streamViewDeclared = packageName.equals("java.util.stream") && irRenderer.captureViewUsed();
-        if (optionalViewDeclared) {
-            importedSymbols.add(new TypeScriptImportNames.Symbol("java.util.stream.Stream", "$StreamView"));
-        } else if (streamViewDeclared) {
-            importedSymbols.add(new TypeScriptImportNames.Symbol("java.util.Optional", "$OptionalView"));
-        }
-        // Modules that rendered a capture-view reference import exactly that exported name.
-        boolean referencesOptionalView = false;
-        boolean referencesStreamView = false;
+        Map<String, String> captureNames = irRenderer.captureViewNames();
+        Set<String> localCaptureNames = irRenderer.captureLocalNames(packageName);
         for (String simpleName : classNames) {
-            Set<String> names = nameReferenceCache.getOrDefault(packageName + "." + simpleName, Set.of());
-            referencesOptionalView |= names.contains("java.util.Optional->$OptionalView");
-            referencesStreamView |= names.contains("java.util.stream.Stream->$StreamView");
+            Set<String> references = nameReferenceCache.getOrDefault(packageName + "." + simpleName, Set.of());
+            captureNames.forEach((fqn, name) -> {
+                if (references.contains(fqn + "->" + name) && !packageOf(fqn).equals(packageName)) {
+                    importedSymbols.add(new TypeScriptImportNames.Symbol(fqn, name));
+                }
+            });
         }
-        if (referencesOptionalView && !optionalViewDeclared) {
-            importedSymbols.add(new TypeScriptImportNames.Symbol("java.util.Optional", "$OptionalView"));
-        }
-        if (referencesStreamView && !streamViewDeclared) {
-            importedSymbols.add(new TypeScriptImportNames.Symbol("java.util.stream.Stream", "$StreamView"));
+        if (!localCaptureNames.isEmpty()) {
+            // Observe the same complete projection before allocating module-local import bindings.
+            irRenderer.renderCaptureViews(packageName, adapterAliasGenerator.aliasRegistry().withReferences((fqn, name) -> {
+                if (name.startsWith("$") && !packageOf(fqn).equals(packageName) && !hiddenClasses.contains(fqn)) {
+                    importsNeeded.add(fqn);
+                    importedSymbols.add(new TypeScriptImportNames.Symbol(fqn, name));
+                }
+                return name;
+            }));
         }
         Set<String> declaredNames = new LinkedHashSet<>();
         Set<String> authoredImports = new LinkedHashSet<>();
@@ -149,8 +147,7 @@ public final class IndexFileGenerator {
             extraImports.addAll(irRenderer.getExtraImports(packageName + "." + simpleName));
         }
         // The locally declared view names must not be stolen by an import binding.
-        if (optionalViewDeclared) declaredNames.add("$OptionalView");
-        if (streamViewDeclared) declaredNames.add("$StreamView");
+        declaredNames.addAll(localCaptureNames);
         Set<TypeScriptImportNames.Symbol> authoredSymbols = new LinkedHashSet<>();
         for (TypeScriptImportNames.Symbol symbol : importedSymbols) {
             if (authoredImports.contains(symbol.fqn())) authoredSymbols.add(symbol);
@@ -256,11 +253,8 @@ public final class IndexFileGenerator {
                 }
             }
 
-            if (optionalViewDeclared) {
-                sb.append(irRenderer.renderOptionalCaptureViewDeclaration(moduleAliases));
-            }
-            if (streamViewDeclared) {
-                sb.append(irRenderer.renderStreamCaptureViewDeclaration(moduleAliases));
+            if (!localCaptureNames.isEmpty()) {
+                sb.append(irRenderer.renderCaptureViews(packageName, moduleAliases));
             }
 
             sb.append("}\n");

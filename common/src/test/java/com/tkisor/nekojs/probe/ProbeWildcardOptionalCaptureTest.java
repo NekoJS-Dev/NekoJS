@@ -18,15 +18,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Output use sites of {@code Optional<? extends Bound>} reference a member-driven capture view
- * ({@code $OptionalView<B>}/{@code $StreamView<B>}) instead of the flattened invariant
- * {@code $Optional<$Bound>}, so Java-legal covariant overrides stay assignable while the interface
- * result keeps the full public instance surface of {@code java.util.Optional} (including Bean
- * properties and recursive {@code stream()} navigation). Members whose capture semantics have no
- * provably compatible TypeScript shape are excluded by documented rule (or/reduce/sorted/collect/
- * toList/spliterator) and asserted absent here.
- */
+/** Verifies recursive capture navigation, complete public members and precise concrete return types. */
 class ProbeWildcardOptionalCaptureTest {
     public static class ConstDesc { public String label; }
     public static class DynamicDesc extends ConstDesc { public int code; }
@@ -120,9 +112,7 @@ class ProbeWildcardOptionalCaptureTest {
                 const listed: ConstDesc = captureResult.stream().iterator().next();
                 const maxed = captureResult.stream().max(null as never);
 
-                // Multi-overload groups keep their representable overloads: both sorted() and
-                // sorted(comparator), the three-argument reduce, the supplier-collect, and the
-                // covariant spliterator return.
+                // Existing overloads and method-local inference remain available.
                 const natural = captureResult.stream().sorted().count();
                 const ordered = captureResult.stream().sorted((a: ConstDesc, b: ConstDesc): number => 0).count();
                 const reduced: number = captureResult.stream().reduce(
@@ -131,22 +121,10 @@ class ProbeWildcardOptionalCaptureTest {
                     (): string[] => [], (acc: string[], d: ConstDesc): void => {}, (a: string[], b: string[]): void => {});
                 const split = captureResult.stream().spliterator();
 
-                // Rule 1a: or(Supplier<Optional<? extends T>>) nests the capture container in an input
-                // position; the SAM host branch compares the narrowed element in both bivariant
-                // directions, so no parameter shape is provably compatible. It stays on the concrete
-                // implementations only.
-                // @ts-expect-error or is excluded from the capture view by rule 1a.
-                captureResult.or;
-                // Rule 1b: inside a multi-signature group a functional alias returning the bare bound
-                // has an unrepresentable host return (apply(): T compares covariantly), so the two
-                // BinaryOperator reduce overloads stay on the concrete implementations only.
-                // @ts-expect-error reduce(BinaryOperator) is excluded by rule 1b.
-                captureResult.stream().reduce((a: ConstDesc, b: ConstDesc): ConstDesc => a);
-                // @ts-expect-error The two-argument reduce(identity, BinaryOperator) is excluded by rule 1b.
-                captureResult.stream().reduce(upper, (a: ConstDesc, b: ConstDesc): ConstDesc => a);
-                // Rule 3: toList(): $List<B> returns a container TypeScript measures invariant.
-                // @ts-expect-error toList is excluded from the stream capture view by rule 3.
-                captureResult.stream().toList;
+                const fallback: ConstDesc = captureResult.or(() => otherOpt).get();
+                const reducedElement: ConstDesc = captureResult.stream().reduce((a: ConstDesc, b: ConstDesc): ConstDesc => a).get();
+                const reducedSeed: ConstDesc = captureResult.stream().reduce(upper, (a: ConstDesc, b: ConstDesc): ConstDesc => a);
+                const listElement: ConstDesc = captureResult.stream().toList().get(0);
 
                 // The concrete implementation view keeps its narrow result and full container surface.
                 const narrow: DynamicDesc = impl.describeConstable().get();
@@ -180,52 +158,19 @@ class ProbeWildcardOptionalCaptureTest {
                         + "$OptionalView<$ProbeWildcardOptionalCaptureTest$ConstDesc>;"),
                 "implementation keeps its narrow optional before the inherited capture facet: " + implBlock);
 
-        // The view derives from the rendered instance surface of java.util.Optional.
         String optionalView = blockOf(utilFile, "export interface $OptionalView");
-        assertTrue(optionalView.contains("orElseThrow(): B;"), "orElseThrow stays callable: " + optionalView);
-        assertTrue(optionalView.contains("get present(): boolean;"), "Bean property stays readable: " + optionalView);
-        assertTrue(optionalView.contains("get empty(): boolean;"), "Bean property stays readable: " + optionalView);
-        assertTrue(optionalView.contains("filter(arg0: $Predicate_<B, B, boolean>): $OptionalView<B>;"),
-                "filter keeps its bound predicate and re-enters the view: " + optionalView);
-        assertTrue(optionalView.contains(
-                "flatMap<U>(arg0: $Function_<B, $Optional<U>, B, $Optional<U>>): $OptionalView<U>;"),
-                "flatMap keeps the concrete container in parameter position: " + optionalView);
-        assertTrue(optionalView.contains("stream(): $StreamView<B>;"),
-                "stream navigates into the stream view: " + optionalView);
-        assertFalse(optionalView.contains(" or(arg0"), "or is excluded by rule 1: " + optionalView);
-        assertTrue(utilFile.contains("$StreamView") && utilFile.contains("java:java/util/stream"),
-                "java/util imports the stream view it references");
-
         String streamView = blockOf(streamFile, "export interface $StreamView");
-        assertTrue(streamView.contains("findAny(): $OptionalView<B>;"),
-                "terminal optionals re-enter the optional view: " + streamView);
-        assertTrue(streamView.contains(
-                "flatMap<R>(arg0: $Function_<B, $Stream<R>, B, $Stream<R>>): $StreamView<R>;"),
-                "stream flatMap keeps the concrete container in parameter position: " + streamView);
-        assertTrue(streamView.contains("iterator(): $Iterator<B>;"),
-                "covariant iterator return stays: " + streamView);
-        assertTrue(streamView.contains("parallel(): $StreamView<B>"),
-                "inherited BaseStream members are merged: " + streamView);
-        // Both sorted overloads stay, with the zero-argument overload emitted first.
-        int sortedZero = streamView.indexOf("sorted(): $StreamView<B>;");
-        int sortedComparator = streamView.indexOf("sorted(arg0: $Comparator_<B, B, B, number>): $StreamView<B>;");
-        assertTrue(sortedZero >= 0 && sortedComparator > sortedZero,
-                "sorted keeps both overloads with the zero-argument overload first: " + streamView);
-        assertTrue(streamView.contains(
-                "reduce<U>(arg0: U, arg1: $BiFunction_<U, B, U, U, B, U>, arg2: $BinaryOperator_<U, U, U, U>): U;"),
-                "the three-argument reduce overload stays: " + streamView);
-        assertTrue(streamView.contains(
-                "collect<R>(arg0: $Supplier_<R, R>, arg1: $BiConsumer_<R, B, R, B>, arg2: $BiConsumer_<R, R, R, R>): R;"),
-                "the supplier-collect overload stays: " + streamView);
-        assertTrue(streamView.contains("spliterator(): $Spliterator<B>;"),
-                "the covariant spliterator return stays: " + streamView);
-        assertFalse(streamView.contains("$BinaryOperator_<B, B, B, B>"),
-                "rule 1b drops the bare-bound BinaryOperator overloads: " + streamView);
-        assertFalse(streamView.contains("collect<R, A>"),
-                "rule 2 keeps only the first collect overload: " + streamView);
-        assertFalse(streamView.contains("toList"), "toList is excluded by rule 3: " + streamView);
-        assertTrue(streamFile.contains("$OptionalView") && streamFile.contains("java:java/util"),
-                "java/util/stream imports the optional view it references");
+        assertTrue(optionalView.contains("extends $Optional<B>"), "the full edited native instance surface is inherited");
+        assertTrue(streamView.contains("extends $Stream<B>"), "the full edited stream instance surface is inherited");
+        assertTrue(utilFile.contains("get present(): boolean;"), "native Bean aliases remain readable");
+        assertTrue(optionalView.contains("or(arg0:"), "the nested producer operation is restored");
+        assertTrue(optionalView.contains("stream(): $StreamView<B>;"), "stream navigation keeps the complete view");
+        assertTrue(streamView.contains("toList(): $ListView<B>;"), "list navigation keeps every public member");
+        assertTrue(streamView.contains("collect<R, A>"), "the Collector overload keeps both method parameters");
+        assertTrue(streamView.contains("collect<R>"), "the three-argument collect overload stays available");
+        assertTrue(streamView.contains("reduce<U>"), "the three-argument reduce overload keeps its method parameter");
+        assertTrue(streamView.contains("sorted(): $StreamView<B>;"), "natural sorting stays callable");
+        assertTrue(streamView.contains("sorted(arg0:"), "comparator sorting stays callable");
     }
 
     private static String blockOf(String declarations, String header) {

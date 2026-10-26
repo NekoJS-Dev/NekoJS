@@ -836,24 +836,62 @@ declare module "java:java/util" {
     export type $Set_<E> = $Set<E>;
     export type $SortedMap_<K, V> = $SortedMap<K, V>;
     export type $Spliterator_<T> = T[];
-    export interface $OptionalView<B> {
-        get empty(): boolean;
-        isEmpty(): boolean;
-        get present(): boolean;
-        isPresent(): boolean;
-        equals(arg0: unknown): boolean;
-        filter(arg0: $Predicate_<B, B, boolean>): $OptionalView<B>;
-        flatMap<U>(arg0: $Function_<B, $Optional<U>, B, $Optional<U>>): $OptionalView<U>;
-        get(): B;
-        hashCode(): number;
-        ifPresentOrElse(arg0: $Consumer_<B, B>, arg1: $Runnable_): void;
-        ifPresent(arg0: $Consumer_<B, B>): void;
-        map<U>(arg0: $Function_<B, U, B, U>): $OptionalView<U>;
-        orElseGet(arg0: $Supplier_<B, B>): B;
-        orElseThrow<X extends $Throwable>(arg0: $Supplier_<X, X>): B;
-        orElseThrow(): B;
-        orElse(arg0: B): B;
+    type $NekoCaptureCollectionInput<$Value> = globalThis.NoInfer<$Collection<any>> & { readonly "iterator": () => $Iterator<$Value> };
+    type $NekoCaptureOptionalInput<$Value> = globalThis.NoInfer<$Optional<any>> & { readonly "get": () => $Value };
+    type $NekoCaptureStreamInput<$Value> = globalThis.NoInfer<$Stream<any>> & { readonly "iterator": () => $Iterator<$Value> };
+    export interface $CollectionView<B> extends $Collection<B> {
+        addAll(arg0: ($NekoCaptureCollectionInput<B> | (B)[])): boolean;
+        parallelStream(): $StreamView<B>;
+        removeIf(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): boolean;
+        removeIf(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): boolean;
         stream(): $StreamView<B>;
-        toString(): string;
+        forEach(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }): void;
+        forEach(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>): void;
+    }
+    export interface $ListView<B> extends $List<B> {
+        addAll(arg0: number, arg1: ($NekoCaptureCollectionInput<B> | (B)[])): boolean;
+        addAll(arg0: ($NekoCaptureCollectionInput<B> | (B)[])): boolean;
+        listIterator(): $ListIteratorView<B>;
+        listIterator(arg0: number): $ListIteratorView<B>;
+        replaceAll(arg0: $UnaryOperator<B> & { readonly "apply": (arg0: B) => B } & { readonly [Symbol.hasInstance]?: never }): void;
+        replaceAll(arg0: ((arg0: B) => B) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => B } & { readonly [Symbol.hasInstance]?: never }>): void;
+        reversed(): $ListView<B>;
+        sort(arg0: $Comparator<B> & { readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }): void;
+        sort(arg0: ((arg0: B, arg1: B) => number) | globalThis.NoInfer<{ readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }>): void;
+        subList(arg0: number, arg1: number): $ListView<B>;
+        parallelStream(): $StreamView<B>;
+        removeIf(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): boolean;
+        removeIf(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): boolean;
+        stream(): $StreamView<B>;
+        forEach(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }): void;
+        forEach(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>): void;
+    }
+    export interface $ListIteratorView<B> extends $ListIterator<B> {
+        forEachRemaining(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }): void;
+        forEachRemaining(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>): void;
+    }
+    export interface $OptionalView<B> extends $Optional<B> {
+        filter(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): $OptionalView<B>;
+        filter(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): $OptionalView<B>;
+        flatMap<U>(arg0: $Function<B, $NekoCaptureOptionalInput<U>> & { readonly "apply": (arg0: B) => $NekoCaptureOptionalInput<U> } & { readonly [Symbol.hasInstance]?: never }): $OptionalView<U>;
+        flatMap<U>(arg0: ((arg0: B) => $NekoCaptureOptionalInput<U>) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => $NekoCaptureOptionalInput<U> } & { readonly [Symbol.hasInstance]?: never }>): $OptionalView<U>;
+        ifPresentOrElse(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }, arg1: $Runnable_): void;
+        ifPresentOrElse(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>, arg1: $Runnable_): void;
+        ifPresent(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }): void;
+        ifPresent(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>): void;
+        map<U>(arg0: $Function<B, U> & { readonly "apply": (arg0: B) => U } & { readonly [Symbol.hasInstance]?: never }): $OptionalView<U>;
+        map<U>(arg0: ((arg0: B) => U) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => U } & { readonly [Symbol.hasInstance]?: never }>): $OptionalView<U>;
+        or(arg0: $Supplier_<$NekoCaptureOptionalInput<B>, $NekoCaptureOptionalInput<B>>): $OptionalView<B>;
+        stream(): $StreamView<B>;
+    }
+    export interface $SequencedCollectionView<B> extends $SequencedCollection<B> {
+        reversed(): $SequencedCollectionView<B>;
+        addAll(arg0: ($NekoCaptureCollectionInput<B> | (B)[])): boolean;
+        parallelStream(): $StreamView<B>;
+        removeIf(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): boolean;
+        removeIf(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): boolean;
+        stream(): $StreamView<B>;
+        forEach(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }): void;
+        forEach(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>): void;
     }
 }

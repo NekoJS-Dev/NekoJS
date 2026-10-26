@@ -36,8 +36,8 @@ public final class TypeScriptClassRenderer {
     private TypeScriptCaptureReturns captureReturns = new TypeScriptCaptureReturns(Map.of());
     /** Shared across scoped render copies so module generation can observe capture-view usage. */
     private Set<String> captureViewMarks = java.util.concurrent.ConcurrentHashMap.newKeySet();
-    /** Per-run reflection cache of the capture view source declarations; package generation is parallel. */
-    private final Map<String, TypeDecl> captureSourceDecls = new java.util.concurrent.ConcurrentHashMap<>();
+    private TypeScriptCaptureViews captureViews = new TypeScriptCaptureViews(Map.of(), this);
+    private boolean declarationsPrepared;
 
     /** Uses this render's edited declarations; parent lookups never reflect over hidden or authored types. */
     public Set<String> setClassDeclarations(Map<String, TypeDecl> declarations) {
@@ -45,11 +45,14 @@ public final class TypeScriptClassRenderer {
         selectorDeclarations = Map.copyOf(declarations);
         captureReturns = new TypeScriptCaptureReturns(selectorDeclarations);
         refreshMethodSelectors();
+        captureViews = new TypeScriptCaptureViews(selectorDeclarations, this);
+        declarationsPrepared = true;
+        captureViewMarks.clear();
         Set<String> selectorTypes = methodSelectors.affectedTypes();
         Set<String> captureTypes = captureReturns.affectedTypes();
         return declarations.values().stream().filter(declaration -> staticInheritance.project(declaration) != null
                         || hasInheritedBeanProjection(declaration) || selectorTypes.contains(declaration.fqn)
-                        || captureTypes.contains(declaration.fqn))
+                        || captureTypes.contains(declaration.fqn) || captureOutputs(declaration))
                 .map(declaration -> declaration.fqn).collect(Collectors.toUnmodifiableSet());
     }
 
@@ -146,6 +149,10 @@ public final class TypeScriptClassRenderer {
 
     /** Renders with module-local symbol names without changing shared getter overrides or aliases. */
     public String render(TypeDecl decl, TypeAliasRegistry moduleAliases) {
+        return scoped(moduleAliases).render(decl);
+    }
+
+    private TypeScriptClassRenderer scoped(TypeAliasRegistry moduleAliases) {
         TypeScriptClassRenderer scoped = new TypeScriptClassRenderer(moduleAliases);
         scoped.getterOverrides.putAll(getterOverrides);
         scoped.interfaceClassBindings = interfaceClassBindings;
@@ -155,8 +162,23 @@ public final class TypeScriptClassRenderer {
         scoped.methodSelectors = methodSelectors;
         scoped.selectorDeclarations = selectorDeclarations;
         scoped.captureReturns = captureReturns;
+        scoped.captureViews = captureViews;
+        scoped.declarationsPrepared = declarationsPrepared;
         scoped.captureViewMarks = captureViewMarks;
-        return scoped.render(decl);
+        return scoped;
+    }
+
+    String captureInput(TypeSlot slot, TypeAliasRegistry names) {
+        return scoped(names).renderSlot(slot, true);
+    }
+
+    List<String> captureMethodNames(TypeDecl owner, MethodDecl method) {
+        return methodSelectors.names(owner, method);
+    }
+
+    String captureMethod(MethodDecl method, String name, TypeAliasRegistry names,
+                         List<String> parameters, String result) {
+        return scoped(names).formatMethod(method, false, name, parameters, result);
     }
 
     private String renderClass(TypeDecl d) {
@@ -519,6 +541,11 @@ public final class TypeScriptClassRenderer {
     }
 
     private String formatMethod(MethodDecl m, boolean isStatic, String emittedName) {
+        return formatMethod(m, isStatic, emittedName, null, null);
+    }
+
+    private String formatMethod(MethodDecl m, boolean isStatic, String emittedName,
+                                List<String> parameters, String result) {
         StringBuilder sb = new StringBuilder();
         appendDoc(sb, "        ", m.docs);
         sb.append("        ");
@@ -530,8 +557,8 @@ public final class TypeScriptClassRenderer {
                     .collect(Collectors.joining(", "))).append(">");
         }
         sb.append("(");
-        appendParameters(sb, m.params);
-        sb.append("): ").append(renderSlot(m.returnType, false)).append(";\n");
+        appendParameters(sb, m.params, false, parameters);
+        sb.append("): ").append(result == null ? renderSlot(m.returnType, false) : result).append(";\n");
         appendOverloads(sb, m, false, isStatic, emittedName);
         return sb.toString();
     }
@@ -570,6 +597,11 @@ public final class TypeScriptClassRenderer {
     }
 
     private void appendParameters(StringBuilder sb, List<MethodDecl.MethodParam> params, boolean constructor) {
+        appendParameters(sb, params, constructor, null);
+    }
+
+    private void appendParameters(StringBuilder sb, List<MethodDecl.MethodParam> params, boolean constructor,
+                                  List<String> renderedTypes) {
         for (int i = 0; i < params.size(); i++) {
             MethodDecl.MethodParam p = params.get(i);
             if (i > 0) sb.append(", ");
@@ -578,7 +610,9 @@ public final class TypeScriptClassRenderer {
             sb.append(": ");
             boolean unionElement = p.varargs && projectedRef(p.type).kind() == ApiTypeRef.Kind.UNION;
             if (unionElement) sb.append('(');
-            if (constructor && !p.type.overridden && p.type.sourceType != null) {
+            if (renderedTypes != null) {
+                sb.append(renderedTypes.get(i));
+            } else if (constructor && !p.type.overridden && p.type.sourceType != null) {
                 // TypeScript class constructors cannot declare their own type parameters.
                 // Project only those local variables; ordinary class variables and edited slots keep their scope.
                 sb.append(FunctionalInterfaceAliasGenerator.renderJavaTypeInput(
@@ -677,10 +711,10 @@ public final class TypeScriptClassRenderer {
         }
         if (!input && !slot.overridden && slot.sourceType != null) {
             String bound = renderOptionalCaptureBound(slot.sourceType);
-            if (bound != null) {
+            if (bound != null && (!declarationsPrepared || captureViews.available("java.util.Optional"))) {
                 captureViewMarks.add("java.util.Optional");
                 return appendCaptureReturnFacets(slot,
-                        aliases.reference("java.util.Optional", "$OptionalView") + "<" + bound + ">");
+                        aliases.reference("java.util.Optional", captureViews.name("java.util.Optional")) + "<" + bound + ">");
             }
         }
         String rendered = renderTypeRef(projectedRef(slot), slot.overridden ? aliases.withRawValueReferences() : aliases, input);
@@ -688,11 +722,11 @@ public final class TypeScriptClassRenderer {
     }
 
     private String appendCaptureReturnFacets(TypeSlot slot, String rendered) {
-        if (!captureReturns.bounds(slot).isEmpty()) {
+        if ((!declarationsPrepared || captureViews.available("java.util.Optional")) && !captureReturns.bounds(slot).isEmpty()) {
             captureViewMarks.add("java.util.Optional");
             // Keep the concrete return first: direct callers retain their narrower element type.
             String facets = captureReturns.bounds(slot).stream().map(bound ->
-                    aliases.reference("java.util.Optional", "$OptionalView") + "<"
+                    aliases.reference("java.util.Optional", captureViews.name("java.util.Optional")) + "<"
                             + renderTypeRef(bound, aliases, false) + ">")
                     .collect(Collectors.joining(" & "));
             return rendered + " & " + facets;
@@ -727,255 +761,25 @@ public final class TypeScriptClassRenderer {
         return !captureViewMarks.isEmpty();
     }
 
-    /**
-     * Member-driven capture view declarations for output sites of {@code Optional<? extends Bound>}.
-     *
-     * <p>Java hierarchies legally declare such wildcard returns on a base type while implementations
-     * narrow the element ({@code Constable.describeConstable()} vs {@code Boolean}). The flattened
-     * {@code $Optional<$Bound>} is invariant, so every narrowing override fails TS2416. Instead of a
-     * hand-truncated shape, the view re-renders the actual instance surface of {@code java.util.Optional}
-     * (and, through {@code stream()}, of {@code java.util.stream.Stream} plus {@code BaseStream}) with the
-     * owner type variable instantiated at the view parameter. Returns of {@code Optional<X>} and
-     * {@code Stream<X>} re-enter the views, so navigation recurses (for example
-     * {@code stream().findAny().stream()}); parameters keep the concrete containers of method-local
-     * variables exactly as the source class renders them.
-     *
-     * <p>Members and overloads whose capture semantics have no provably compatible TypeScript shape are
-     * excluded by experimentally pinned rules (every branch verified against the real five-node
-     * declaration trees; see the F1 evidence pages): (1a) a parameter nesting the capture container over
-     * the bound — {@code or(Supplier<? extends Optional<? extends T>>)} — fails the SAM host branch in
-     * both bivariant directions; (1b) inside a multi-signature group an overload whose functional alias
-     * returns the bare bound — {@code reduce(BinaryOperator<B>)} — has an unrepresentable host return,
-     * while the same shape stays fine on single signatures ({@code orElseGet}) through method-parameter
-     * bivariance; (2) multi-signature groups keep at most the zero-argument overload (emitted first)
-     * plus the first remaining overload when they mix bound-SAM overloads with a zero-argument one
-     * ({@code sorted}), or just their first overload otherwise ({@code collect}); groups without
-     * bound-SAM overloads keep everything ({@code toArray}, {@code orElseThrow}); (3) a return of
-     * another generic container instantiated at the bound that TypeScript measures invariant
-     * ({@code toList(): $List<B>}), with {@code $Iterator<B>} and {@code $Spliterator<B>} whitelisted
-     * because their element positions stay covariant. Excluded members remain available on the concrete
-     * implementations; wrong element types stay rejected because {@code get()} returns the upper bound.
-     */
-    public String renderOptionalCaptureViewDeclaration(TypeAliasRegistry moduleAliases) {
-        StringBuilder body = new StringBuilder();
-        String optionalView = moduleAliases.reference("java.util.Optional", "$OptionalView");
-        String streamView = moduleAliases.reference("java.util.stream.Stream", "$StreamView");
-        appendCaptureViewMembers(body, java.util.Optional.class.getName(),
-                Map.of("T", "B"), optionalView, streamView, moduleAliases);
-        return "    export interface " + optionalView + "<B> {\n" + body + "    }\n";
+    private boolean captureOutputs(TypeDecl declaration) {
+        return declaration.methods.stream().anyMatch(method -> captureOutput(method.returnType))
+                || declaration.fields.stream().anyMatch(field -> captureOutput(field.type));
     }
 
-    /** Stream half of the capture views; declared in the stream module next to its source interface. */
-    public String renderStreamCaptureViewDeclaration(TypeAliasRegistry moduleAliases) {
-        String optionalView = moduleAliases.reference("java.util.Optional", "$OptionalView");
-        String streamView = moduleAliases.reference("java.util.stream.Stream", "$StreamView");
-        StringBuilder view = new StringBuilder("    export interface " + streamView + "<B> {\n");
-        // BaseStream only contributes inherited members; identical re-declarations would still be
-        // legal overload syntax, so a plain concatenation keeps every overload intact.
-        appendCaptureViewMembers(view, java.util.stream.Stream.class.getName(),
-                Map.of("T", "B"), optionalView, streamView, moduleAliases);
-        appendCaptureViewMembers(view, java.util.stream.BaseStream.class.getName(),
-                Map.of("T", "B", "S", streamView + "<B>"), optionalView, streamView, moduleAliases);
-        return view + "    }\n";
+    private boolean captureOutput(TypeSlot slot) {
+        return slot != null && !slot.overridden && renderOptionalCaptureBound(slot.sourceType) != null;
     }
 
-    /** First identifier of a rendered member line; groups overloads across source classes. */
-    private static String captureMemberToken(String line) {
-        String trimmed = line.trim();
-        int end = 0;
-        while (end < trimmed.length() && (Character.isLetterOrDigit(trimmed.charAt(end))
-                || "[$]_<>".indexOf(trimmed.charAt(end)) >= 0)) {
-            if (trimmed.charAt(end) == '(' || trimmed.charAt(end) == '<') break;
-            end++;
-        }
-        return trimmed.substring(0, end);
+    public Map<String, String> captureViewNames() {
+        return captureViewUsed() ? captureViews.names() : Map.of();
     }
 
-    private void appendCaptureViewMembers(StringBuilder output, String className,
-                                          Map<String, String> substitutions, String optionalView,
-                                          String streamView, TypeAliasRegistry moduleAliases) {
-        TypeDecl declaration = captureSourceDecls.computeIfAbsent(className, name -> {
-            try {
-                return new TypeReflector().reflect(Class.forName(name, false,
-                        Thread.currentThread().getContextClassLoader()));
-            } catch (ClassNotFoundException failure) {
-                throw new IllegalStateException("[NEKO-4039] Capture view source unavailable: " + name, failure);
-            }
-        });
-        String rendered = render(declaration, moduleAliases);
-        List<String> candidates = new java.util.ArrayList<>();
-        boolean inBody = false;
-        for (String line : rendered.split("\n", -1)) {
-            if (!inBody) {
-                // Only the instance body of the declaration: interface statics live in a separate
-                // `export const` object block whose members share the member indent.
-                inBody = line.startsWith("    export ") && line.endsWith(" {");
-                continue;
-            }
-            if (line.equals("    }") || line.equals("    };")) break;
-            if (!line.startsWith("        ")) continue;
-            String stripped = line.strip();
-            // Doc comments (openers and continuation lines) are not members; docs stay on the concrete classes.
-            if (stripped.startsWith("*") || stripped.startsWith("/*")) continue;
-            String member = line.stripTrailing();
-            String trimmed = member.strip();
-            if (trimmed.startsWith("constructor") || trimmed.startsWith("static ")) continue;
-            for (Map.Entry<String, String> substitution : substitutions.entrySet()) {
-                member = member.replaceAll("\\b" + java.util.regex.Pattern.quote(substitution.getKey())
-                                + "\\b", java.util.regex.Matcher.quoteReplacement(substitution.getValue()));
-            }
-            candidates.add(member);
-        }
-        for (String member : selectCaptureViewMembers(candidates)) {
-            String transformed = transformCaptureViewMember(member, optionalView, streamView);
-            if (transformed != null) output.append(transformed).append('\n');
-        }
+    public Set<String> captureLocalNames(String packageName) {
+        return captureViewUsed() ? captureViews.localNames(packageName) : Set.of();
     }
 
-    /**
-     * Applies the overload-level exclusion and selection rules to the collected member lines.
-     * Every rule branch is pinned by a real-tree tsc experiment (see the F1 evidence pages):
-     * single-signature members keep method-parameter bivariance, so a SAM returning the bare bound
-     * still passes ({@code orElseGet}); inside a multi-signature group the comparison is strict,
-     * so such overloads ({@code reduce(BinaryOperator)}) cannot be represented, and the remaining
-     * overload list must keep at most the zero-argument overload (first) plus the first remaining
-     * overload when the group mixes bound-SAM overloads with a zero-argument one
-     * ({@code sorted}), or just the first overload otherwise ({@code collect}). Groups without
-     * bound-SAM overloads keep every overload in source order ({@code toArray}, {@code orElseThrow}).
-     */
-    private static List<String> selectCaptureViewMembers(List<String> candidates) {
-        record Entry(String line, String token, String params, boolean zeroArg, boolean boundSam, boolean unsafe) {}
-        List<Entry> entries = new java.util.ArrayList<>();
-        java.util.regex.Pattern boundSamArgument =
-                java.util.regex.Pattern.compile("\\$[\\w$]+_<[^()]*\\bB\\b");
-        for (String line : candidates) {
-            if (line.strip().startsWith("get ") || line.strip().startsWith("set ")) {
-                entries.add(new Entry(line, "", "", false, false, false));
-                continue;
-            }
-            int open = line.indexOf('(');
-            int close = line.lastIndexOf(')');
-            String params = open >= 0 && close > open ? line.substring(open + 1, close) : "";
-            boolean zeroArg = params.isBlank();
-            boolean boundSam = boundSamArgument.matcher(params).find();
-            entries.add(new Entry(line, captureMemberToken(line), params, zeroArg, boundSam, false));
-        }
-        Map<String, List<Entry>> groups = new LinkedHashMap<>();
-        for (Entry entry : entries) {
-            if (!entry.token().isEmpty()) groups.computeIfAbsent(entry.token(), k -> new java.util.ArrayList<>()).add(entry);
-        }
-        // Rule 1b: within multi-signature groups a functional alias whose type arguments are all the
-        // bare bound (for example $BinaryOperator_<B, B, B, B>) has an unrepresentable host branch:
-        // every slot compares the narrowed element, and the callback-result slot has no bivariant
-        // rescue inside overload-set comparison. Mixed-argument aliases stay ($BiConsumer_<R, B, R, B>).
-        for (List<Entry> group : groups.values()) {
-            if (group.size() <= 1) continue;
-            for (int index = 0; index < group.size(); index++) {
-                if (allBoundSamAlias(group.get(index).params())) {
-                    group.set(index, new Entry(group.get(index).line(), group.get(index).token(),
-                            group.get(index).params(), group.get(index).zeroArg(), group.get(index).boundSam(), true));
-                }
-            }
-        }
-        for (List<Entry> group : groups.values()) {
-            List<Entry> kept = group.stream().filter(entry -> !entry.unsafe()).toList();
-            if (kept.size() > 1) {
-                boolean anyBoundSam = kept.stream().anyMatch(Entry::boundSam);
-                Entry zero = kept.stream().filter(Entry::zeroArg).findFirst().orElse(null);
-                if (anyBoundSam && zero != null) {
-                    // Zero-argument overload first, then the first remaining overload in source order.
-                    List<Entry> selected = new java.util.ArrayList<>();
-                    selected.add(zero);
-                    for (Entry entry : kept) {
-                        if (entry != zero && selected.size() == 1) selected.add(entry);
-                    }
-                    kept = selected;
-                } else if (anyBoundSam || zero == null) {
-                    kept = List.of(kept.getFirst());
-                }
-                // Groups with neither a bound-SAM overload nor a zero-argument overload keep everything.
-            }
-            group.clear();
-            group.addAll(kept);
-        }
-        // A group renders once, at its first source position, in the selected order.
-        List<String> result = new java.util.ArrayList<>();
-        Set<String> rendered = new LinkedHashSet<>();
-        for (Entry entry : entries) {
-            if (entry.token().isEmpty()) {
-                result.add(entry.line());
-                continue;
-            }
-            if (!rendered.add(entry.token())) continue;
-            for (Entry selected : groups.get(entry.token())) result.add(selected.line());
-        }
-        return result;
-    }
-
-    /** True when a functional alias's every type argument is the bare bound, e.g. {@code $BinaryOperator_<B, B, B, B>}. */
-    private static boolean allBoundSamAlias(String params) {
-        java.util.regex.Matcher alias = java.util.regex.Pattern.compile("\\$[\\w$]+_<").matcher(params);
-        while (alias.find()) {
-            int depth = 1;
-            int index = alias.end();
-            List<String> arguments = new java.util.ArrayList<>();
-            StringBuilder current = new StringBuilder();
-            while (index < params.length() && depth > 0) {
-                char c = params.charAt(index);
-                if (c == '<') depth++;
-                else if (c == '>') {
-                    depth--;
-                    if (depth == 0) break;
-                }
-                if (depth == 1 && c == ',') {
-                    arguments.add(current.toString().strip());
-                    current.setLength(0);
-                } else {
-                    current.append(c);
-                }
-                index++;
-            }
-            arguments.add(current.toString().strip());
-            if (!arguments.isEmpty() && arguments.stream().allMatch(argument -> argument.equals("B"))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /** Applies the container-return rewrite plus the parameter and return exclusions; null drops the member. */
-    private static String transformCaptureViewMember(String member, String optionalView, String streamView) {
-        if (member.strip().startsWith("get ") || member.strip().startsWith("set ")) return member;
-        int paramsStart = member.indexOf('(');
-        int paramsEnd = member.lastIndexOf(')');
-        if (paramsStart < 0 || paramsEnd < paramsStart) return member;
-        String head = member.substring(0, paramsStart);
-        String params = member.substring(paramsStart + 1, paramsEnd);
-        String result = member.substring(paramsEnd + 1);
-        boolean returns = result.startsWith(": ");
-        String value = returns ? result.substring(2) : "";
-        if (value.endsWith(";")) value = value.substring(0, value.length() - 1);
-        // Rule 1a: the parameter nests the capture container over the view bound; the SAM host branch
-        // then compares the narrowed element in both bivariant directions.
-        if (params.contains("$Optional<B>") || params.contains("$Stream<B>")) return null;
-        if (returns) {
-            // Returns re-enter the capture views; parameters keep the source's concrete containers.
-            if (value.startsWith("$Optional<")) value = optionalView + value.substring("$Optional".length());
-            else if (value.startsWith("$Stream<")) value = streamView + value.substring("$Stream".length());
-            else {
-                // Rule 3: a non-view generic container of the bound that TypeScript measures invariant
-                // (toList(): $List<B>). $Iterator<B> and $Spliterator<B> are measured covariant and stay.
-                boolean bare = value.equals("B") || value.equals("B[]");
-                boolean view = value.startsWith(optionalView + "<") || value.startsWith(streamView + "<");
-                boolean whitelisted = value.equals("$Iterator<B>") || value.equals("$Spliterator<B>");
-                if (!bare && !view && !whitelisted
-                        && java.util.regex.Pattern.compile("\\bB\\b").matcher(value).find()) {
-                    return null;
-                }
-            }
-            return head + "(" + params + "): " + value + ";";
-        }
-        return member;
+    public String renderCaptureViews(String packageName, TypeAliasRegistry names) {
+        return captureViewUsed() ? captureViews.render(packageName, names) : "";
     }
 
     private static ApiTypeRef projectedRef(TypeSlot slot) {
@@ -1047,7 +851,7 @@ public final class TypeScriptClassRenderer {
         return switch (ref.kind()) {
             case VOID -> "void";
             case PRIMITIVE -> mapPrimT(ref.name());
-            case TYPE_VARIABLE -> ref.name();
+            case TYPE_VARIABLE -> aliases == null ? ref.name() : aliases.typeVariable(ref.name());
             case ARRAY -> {
                 ApiTypeRef element = ref.arguments().getFirst();
                 String rendered = renderTypeRef(element, aliases, input, expandingFunctionalAliases);

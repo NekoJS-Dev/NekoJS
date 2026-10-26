@@ -17,6 +17,7 @@ public final class TypeAliasRegistry {
     private final Map<String, FunctionalInterfaceAlias> functionalAliases = new LinkedHashMap<>();
     private java.util.function.BiFunction<String, String, String> references = (fqn, name) -> name;
     private boolean projectScalarValues = true;
+    private Map<String, String> typeVariables = Map.of();
     /**
      * 枚举输入别名的惰性解析缓存：FQN → {@code $<SimpleName>_}；空串 = 已确认非枚举/不可加载。
      *
@@ -44,7 +45,19 @@ public final class TypeAliasRegistry {
         view.enumAliasCache.putAll(enumAliasCache);
         view.references = references;
         view.projectScalarValues = projectScalarValues;
+        view.typeVariables = typeVariables;
         return view;
+    }
+
+    /** Instantiates owner variables for a derived declaration without rewriting shared Java metadata. */
+    public TypeAliasRegistry withTypeVariables(Map<String, String> variables) {
+        TypeAliasRegistry view = withReferences(references);
+        view.typeVariables = Map.copyOf(variables);
+        return view;
+    }
+
+    public String typeVariable(String name) {
+        return typeVariables.getOrDefault(name, name);
     }
 
     /** Keeps explicit host references free of scalar alternatives while retaining names and input aliases. */
@@ -117,6 +130,7 @@ public final class TypeAliasRegistry {
      * （{@code registerClassAlias} 产物）泄漏到本轮：若某目标类本轮不再生成，其残留别名仍会放宽参数类型。
      */
     public void clear() {
+        typeVariables = Map.of();
         classAliases.clear();
         adapterTypeParameters.clear();
         collectionAliases.clear();
