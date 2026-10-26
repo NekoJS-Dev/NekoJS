@@ -1,12 +1,9 @@
 package com.tkisor.nekojs.probe.ir;
 
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import com.tkisor.nekojs.core.reflect.JavaGenericTypes;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -90,15 +87,7 @@ final class TypeScriptStaticInheritance {
         }
         return new MethodKey(method.name, method.params.stream().<ParameterKey>map(parameter -> {
             Type source = parameter.type.sourceType;
-            return source == null ? new SyntheticParameterKey(parameter.type.ref) : new JavaParameterKey(erased(source));
+            return source == null ? new SyntheticParameterKey(parameter.type.ref) : new JavaParameterKey(JavaGenericTypes.erased(source));
         }).toList());
-    }
-
-    private static Class<?> erased(Type type) {
-        if (type instanceof Class<?> cls) return cls;
-        if (type instanceof ParameterizedType parameterized) return erased(parameterized.getRawType());
-        if (type instanceof GenericArrayType array) return Array.newInstance(erased(array.getGenericComponentType()), 0).getClass();
-        if (type instanceof TypeVariable<?> variable && variable.getBounds().length != 0) return erased(variable.getBounds()[0]);
-        return Object.class;
     }
 }

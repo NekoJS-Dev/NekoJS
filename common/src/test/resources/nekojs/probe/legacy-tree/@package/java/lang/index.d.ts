@@ -9,7 +9,7 @@ import { $CharBuffer } from "java:java/nio";
 import { $Charset } from "java:java/nio/charset";
 import { $ProtectionDomain } from "java:java/security";
 import { $Duration } from "java:java/time";
-import { $Comparator, $Comparator_, $Enumeration, $Iterator, $List, $Locale, $Map, $Optional, $Set, $Spliterator } from "java:java/util";
+import { $Comparator, $Comparator_, $Enumeration, $Iterator, $List, $Locale, $Map, $Optional, $OptionalView, $Set, $Spliterator } from "java:java/util";
 import { $ThreadFactory, $ThreadFactory_ } from "java:java/util/concurrent";
 import { $Consumer, $Consumer_, $Function, $Function_ } from "java:java/util/function";
 import { $IntStream, $Stream } from "java:java/util/stream";
@@ -267,7 +267,7 @@ declare module "java:java/lang" {
         static valueOf(arg0: string): string;
         charValue(): string;
         compareTo(arg0: string): number;
-        describeConstable(): $Optional<$DynamicConstantDesc<string>>;
+        describeConstable(): $Optional<$DynamicConstantDesc<string>> & $OptionalView<(number | string | $ConstantDesc)>;
         equals(arg0: unknown): boolean;
         hashCode(): number;
         toString(): string;
@@ -383,7 +383,7 @@ declare module "java:java/lang" {
         asSubclass<U>(arg0: $Class<U>): $Class<U>;
         cast(arg0: unknown): T;
         componentType(): $Class<any>;
-        describeConstable(): $Optional<$ClassDesc>;
+        describeConstable(): $Optional<$ClassDesc> & $OptionalView<(number | string | $ConstantDesc)>;
         descriptorString(): string;
         desiredAssertionStatus(): boolean;
         getAnnotationsByType<A extends $Annotation>(arg0: $Class<A>): A[];
@@ -479,7 +479,7 @@ declare module "java:java/lang" {
         static valueOf(arg0: string): number;
         byteValue(): number;
         compareTo(arg0: number): number;
-        describeConstable(): $Optional<number>;
+        describeConstable(): $Optional<number> & $OptionalView<(number | string | $ConstantDesc)>;
         doubleValue(): number;
         equals(arg0: unknown): boolean;
         floatValue(): number;
@@ -496,7 +496,7 @@ declare module "java:java/lang" {
         getDeclaringClass(): $Class<E>;
         static valueOf<T extends $Enum<T>>(arg0: $Class<T>, arg1: string): T;
         compareTo(arg0: E): number;
-        describeConstable(): $Optional<$Enum$EnumDesc<E>>;
+        describeConstable(): $Optional<$Enum$EnumDesc<E>> & $OptionalView<(number | string | $ConstantDesc)>;
         equals(arg0: unknown): boolean;
         hashCode(): number;
         name(): string;
@@ -563,7 +563,7 @@ declare module "java:java/lang" {
         static valueOf(arg0: string): number;
         byteValue(): number;
         compareTo(arg0: number): number;
-        describeConstable(): $Optional<number>;
+        describeConstable(): $Optional<number> & $OptionalView<(number | string | $ConstantDesc)>;
         doubleValue(): number;
         equals(arg0: unknown): boolean;
         floatValue(): number;
@@ -631,7 +631,7 @@ declare module "java:java/lang" {
         static valueOf(arg0: number): number;
         byteValue(): number;
         compareTo(arg0: number): number;
-        describeConstable(): $Optional<number>;
+        describeConstable(): $Optional<number> & $OptionalView<(number | string | $ConstantDesc)>;
         doubleValue(): number;
         equals(arg0: unknown): boolean;
         floatValue(): number;
@@ -827,7 +827,7 @@ declare module "java:java/lang" {
         contains(arg0: $CharSequence): boolean;
         contentEquals(arg0: $CharSequence): boolean;
         contentEquals(arg0: $StringBuffer): boolean;
-        describeConstable(): $Optional<string>;
+        describeConstable(): $Optional<string> & $OptionalView<(number | string | $ConstantDesc)>;
         endsWith(arg0: string): boolean;
         equalsIgnoreCase(arg0: string): boolean;
         equals(arg0: unknown): boolean;

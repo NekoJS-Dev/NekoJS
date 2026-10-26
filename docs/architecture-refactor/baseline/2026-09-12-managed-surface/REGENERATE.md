@@ -123,3 +123,9 @@ FunctionalInterfaceAliasGenerator 根据真实 Java SAM 名及既有参数/返�
 真实Graal消费证明Double/Integer/String常量描述为number/number/string，ClassDesc仍为host，数字/字符串和混合数组输入可用，boolean被拒绝。声明在最终值边界表达相应标量/host联合；继承顶部仍引用host，显式adapter与IR覆写保留优先权，不改变Java/Python共享IR。初版提前展开union造成三条adapter优先权消费失败，另有varargs及显式array(union)分组失败，均保留原文，未算作最终绿态。
 
 再生前保存build/constable-value-goldens-before.zip，仅以原生LegacyProbeTreeTest再生。主代理的逐字节/逐行核对得到两个文件八处值类型变化：java.lang.constant的describeConstable、DynamicConstantDesc工厂/参数/返回及Constable输入别名的默认结果，另有java.lang中EnumDesc的派生工厂签名。所有其他行、成员、别名名称/元数、顺序和host继承字节保持，变换逐项对照真实值合同，未手改golden。独立核对报告为build/constable-value-golden-delta.json。随后普通门禁必须独立通过；此技术核对不代签维护者接受，完整安装诊断和最终候选结论另行记录。
+
+## 2026-10-26：继承捕获返回合同
+
+TypeScriptCaptureReturns 从当前可见、编辑后的父类型 IR 收集匹配方法的 Optional wildcard 上界，替换类泛型实参；渲染时在原始窄返回之后附加对应 OptionalView。它为恢复完整公开视图铺路，不改变 Java/Python IR、工厂或运行时行为，隐藏/改名/覆盖返回不从反射恢复。
+
+普通 common/check 先记录两项旧录制树失败，再通过 :common:regenerateGoldens 官方再生。原始字节备份于 build/capture-return-goldens-before.zip；build/check-capture-return-goldens.py 独立核对两文件：java.lang 的七处及 java.lang.invoke 的三处 describeConstable 窄返回保持原文，末尾追加继承上界的 OptionalView；三行导入新增 OptionalView/ConstantDesc 相关名称，其他所有文件及行字节不变。后续普通门禁、严格消费、安装和最终候选结论分别记录；本项技术核对不代签维护者接受。

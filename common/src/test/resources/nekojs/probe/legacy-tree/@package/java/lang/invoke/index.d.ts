@@ -1,8 +1,8 @@
 import { $Serializable } from "java:java/io";
 import { $Class, $ClassLoader, $Enum } from "java:java/lang";
-import { $ClassDesc, $Constable, $Constable_, $DynamicConstantDesc, $MethodHandleDesc, $MethodTypeDesc } from "java:java/lang/constant";
+import { $ClassDesc, $Constable, $Constable_, $ConstantDesc, $ConstantDesc_, $DynamicConstantDesc, $MethodHandleDesc, $MethodTypeDesc } from "java:java/lang/constant";
 import { $Constructor, $Field, $Member, $Method } from "java:java/lang/reflect";
-import { $List, $Optional } from "java:java/util";
+import { $List, $Optional, $OptionalView } from "java:java/util";
 
 declare module "java:java/lang/invoke" {
     export class $MethodHandle implements $Constable {
@@ -16,7 +16,7 @@ declare module "java:java/lang/invoke" {
         asType(arg0: $MethodType): $MethodHandle;
         asVarargsCollector(arg0: $Class<any>): $MethodHandle;
         bindTo(arg0: unknown): $MethodHandle;
-        describeConstable(): $Optional<$MethodHandleDesc>;
+        describeConstable(): $Optional<$MethodHandleDesc> & $OptionalView<(number | string | $ConstantDesc)>;
         invokeExact(arg0?: unknown[]): unknown;
         invokeWithArguments(arg0?: unknown[]): unknown;
         invokeWithArguments(arg0: ($List<any> | (any)[])): unknown;
@@ -116,7 +116,7 @@ declare module "java:java/lang/invoke" {
         appendParameterTypes(arg0: ($List<$Class<any>> | ($Class<any>)[])): $MethodType;
         changeParameterType(arg0: number, arg1: $Class<any>): $MethodType;
         changeReturnType(arg0: $Class<any>): $MethodType;
-        describeConstable(): $Optional<$MethodTypeDesc>;
+        describeConstable(): $Optional<$MethodTypeDesc> & $OptionalView<(number | string | $ConstantDesc)>;
         descriptorString(): string;
         dropParameterTypes(arg0: number, arg1: number): $MethodType;
         equals(arg0: unknown): boolean;
@@ -174,7 +174,7 @@ declare module "java:java/lang/invoke" {
         compareAndExchange(arg0?: unknown[]): unknown;
         compareAndSet(arg0?: unknown[]): boolean;
         coordinateTypes(): $List<$Class<any>>;
-        describeConstable(): $Optional<$VarHandle$VarHandleDesc>;
+        describeConstable(): $Optional<$VarHandle$VarHandleDesc> & $OptionalView<(number | string | $ConstantDesc)>;
         getAcquire(arg0?: unknown[]): unknown;
         getAndAddAcquire(arg0?: unknown[]): unknown;
         getAndAddRelease(arg0?: unknown[]): unknown;

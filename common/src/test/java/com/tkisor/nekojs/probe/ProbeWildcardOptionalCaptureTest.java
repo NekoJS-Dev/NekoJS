@@ -176,8 +176,9 @@ class ProbeWildcardOptionalCaptureTest {
                 "flattened invariant optional no longer appears on the interface: " + interfaceBlock);
         String implBlock = blockOf(declarations, "export class $ProbeWildcardOptionalCaptureTest$BooleanLike");
         assertTrue(implBlock.contains(
-                "describeConstable(): $Optional<$ProbeWildcardOptionalCaptureTest$DynamicDesc>;"),
-                "implementation keeps its narrow optional: " + implBlock);
+                "describeConstable(): $Optional<$ProbeWildcardOptionalCaptureTest$DynamicDesc> & "
+                        + "$OptionalView<$ProbeWildcardOptionalCaptureTest$ConstDesc>;"),
+                "implementation keeps its narrow optional before the inherited capture facet: " + implBlock);
 
         // The view derives from the rendered instance surface of java.util.Optional.
         String optionalView = blockOf(utilFile, "export interface $OptionalView");

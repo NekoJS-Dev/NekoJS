@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.reflect;
 
+import java.lang.reflect.Array;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -14,6 +16,15 @@ import java.util.Set;
 /** Retains captured owner parameters when Java member classes are represented as flat declarations. */
 public final class JavaGenericTypes {
     private JavaGenericTypes() {}
+
+    /** Erases a resolved signature parameter, including generic arrays and the first variable bound. */
+    public static Class<?> erased(Type type) {
+        if (type instanceof Class<?> cls) return cls;
+        if (type instanceof ParameterizedType parameterized) return erased(parameterized.getRawType());
+        if (type instanceof GenericArrayType array) return Array.newInstance(erased(array.getGenericComponentType()), 0).getClass();
+        if (type instanceof TypeVariable<?> variable && variable.getBounds().length != 0) return erased(variable.getBounds()[0]);
+        return Object.class;
+    }
 
     /** Returns outer parameters before member parameters, stopping capture at static boundaries. */
     public static List<TypeVariable<?>> parameters(Class<?> type) {

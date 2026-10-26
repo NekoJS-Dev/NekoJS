@@ -33,6 +33,7 @@ public final class TypeScriptClassRenderer {
     private TypeScriptStaticInheritance staticInheritance = new TypeScriptStaticInheritance(Map.of());
     private TypeScriptMethodSelectors methodSelectors = new TypeScriptMethodSelectors(Map.of());
     private Map<String, TypeDecl> selectorDeclarations = Map.of();
+    private TypeScriptCaptureReturns captureReturns = new TypeScriptCaptureReturns(Map.of());
     /** Shared across scoped render copies so module generation can observe capture-view usage. */
     private Set<String> captureViewMarks = java.util.concurrent.ConcurrentHashMap.newKeySet();
     /** Per-run reflection cache of the capture view source declarations; package generation is parallel. */
@@ -42,10 +43,13 @@ public final class TypeScriptClassRenderer {
     public Set<String> setClassDeclarations(Map<String, TypeDecl> declarations) {
         staticInheritance = new TypeScriptStaticInheritance(declarations);
         selectorDeclarations = Map.copyOf(declarations);
+        captureReturns = new TypeScriptCaptureReturns(selectorDeclarations);
         refreshMethodSelectors();
         Set<String> selectorTypes = methodSelectors.affectedTypes();
+        Set<String> captureTypes = captureReturns.affectedTypes();
         return declarations.values().stream().filter(declaration -> staticInheritance.project(declaration) != null
-                        || hasInheritedBeanProjection(declaration) || selectorTypes.contains(declaration.fqn))
+                        || hasInheritedBeanProjection(declaration) || selectorTypes.contains(declaration.fqn)
+                        || captureTypes.contains(declaration.fqn))
                 .map(declaration -> declaration.fqn).collect(Collectors.toUnmodifiableSet());
     }
 
@@ -150,6 +154,7 @@ public final class TypeScriptClassRenderer {
         scoped.staticInheritance = staticInheritance;
         scoped.methodSelectors = methodSelectors;
         scoped.selectorDeclarations = selectorDeclarations;
+        scoped.captureReturns = captureReturns;
         scoped.captureViewMarks = captureViewMarks;
         return scoped.render(decl);
     }
@@ -674,10 +679,25 @@ public final class TypeScriptClassRenderer {
             String bound = renderOptionalCaptureBound(slot.sourceType);
             if (bound != null) {
                 captureViewMarks.add("java.util.Optional");
-                return aliases.reference("java.util.Optional", "$OptionalView") + "<" + bound + ">";
+                return appendCaptureReturnFacets(slot,
+                        aliases.reference("java.util.Optional", "$OptionalView") + "<" + bound + ">");
             }
         }
-        return renderTypeRef(projectedRef(slot), slot.overridden ? aliases.withRawValueReferences() : aliases, input);
+        String rendered = renderTypeRef(projectedRef(slot), slot.overridden ? aliases.withRawValueReferences() : aliases, input);
+        return input ? rendered : appendCaptureReturnFacets(slot, rendered);
+    }
+
+    private String appendCaptureReturnFacets(TypeSlot slot, String rendered) {
+        if (!captureReturns.bounds(slot).isEmpty()) {
+            captureViewMarks.add("java.util.Optional");
+            // Keep the concrete return first: direct callers retain their narrower element type.
+            String facets = captureReturns.bounds(slot).stream().map(bound ->
+                    aliases.reference("java.util.Optional", "$OptionalView") + "<"
+                            + renderTypeRef(bound, aliases, false) + ">")
+                    .collect(Collectors.joining(" & "));
+            return rendered + " & " + facets;
+        }
+        return rendered;
     }
 
     /**
