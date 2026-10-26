@@ -58,6 +58,6 @@
 
 ## 下一轮受控原型的起点
 
-build/capture-bound-operators-prototype.py保留操作数O域元组检查、只返回B，去掉手工工厂witness，并使用3d2cc1cb公开backend生成的完整SAM别名。首版文本替换曾引入语法错误（只算原型脚本错误）；修复后的operators/supplier两组确切tsc仍分别8/9条失败，未投产。原文在build/capture-bound-operators-v2-20261026：6条合法继承及1条父接口赋值失败；直接operator组另有隐式identity()退为unknown，supplier组再有合法Supplier<Optional<Narrow>>拒绝。
+build/capture-bound-operators-prototype.py保留操作数O域元组检查、只返回B，去掉手工工厂witness，并使用3d2cc1cb公开backend生成的完整SAM别名。首版文本替换曾引入语法错误（只算原型脚本错误）；修复后的operators/supplier两组确切tsc仍分别8/9条失败，未投产。[冻结输入与实际重放证据](../architecture-refactor/evidence/2026-10-26-bound-operator-prototypes/README.md)保留6条合法继承及1条父接口赋值失败；直接operator组另有隐式identity()退为unknown，supplier组再有合法Supplier<Optional<Narrow>>拒绝。
 
 两组保留裸Bound host、窄域host及factory的正负控制，没有强化任何factory；这说明当前变体尚不足以交付。下轮应分离“当前SAM别名”“工厂witness去除”“generic域约束”“Collection.addAll重载”和“工厂上下文推断”等变量，逐项复验，而非把多变量失败归为某一个唯一原因。完整视图不删成员、不放宽结果或错误域控制，尚未证明需要新增工厂贡献API。

@@ -1,0 +1,440 @@
+{
+  "production": false,
+  "baseViewPrototype": "84ae51c1/domain-guard",
+  "functionalModuleProduct": "3d2cc1cb",
+  "typescriptVersion": "5.8.3",
+  "archive": "prototypes.zip",
+  "archiveSha256": "336ed668bdb66b153f54c064a75247f4a895337b59fc4801cd21fbafc5e3c9df",
+  "variants": [
+    {
+      "name": "operators",
+      "files": [
+        "@package/com/index.d.ts",
+        "@package/com/tkisor/index.d.ts",
+        "@package/com/tkisor/nekojs/index.d.ts",
+        "@package/com/tkisor/nekojs/probe/index.d.ts",
+        "@package/index.d.ts",
+        "@package/java/index.d.ts",
+        "@package/java/io/index.d.ts",
+        "@package/java/lang/annotation/index.d.ts",
+        "@package/java/lang/constant/index.d.ts",
+        "@package/java/lang/foreign/index.d.ts",
+        "@package/java/lang/index.d.ts",
+        "@package/java/lang/invoke/index.d.ts",
+        "@package/java/lang/module/index.d.ts",
+        "@package/java/lang/reflect/index.d.ts",
+        "@package/java/net/index.d.ts",
+        "@package/java/nio/channels/index.d.ts",
+        "@package/java/nio/channels/spi/index.d.ts",
+        "@package/java/nio/charset/index.d.ts",
+        "@package/java/nio/file/attribute/index.d.ts",
+        "@package/java/nio/file/index.d.ts",
+        "@package/java/nio/file/spi/index.d.ts",
+        "@package/java/nio/index.d.ts",
+        "@package/java/security/cert/index.d.ts",
+        "@package/java/security/index.d.ts",
+        "@package/java/util/concurrent/index.d.ts",
+        "@package/java/util/function/index.d.ts",
+        "@package/java/util/index.d.ts",
+        "@package/java/util/stream/index.d.ts",
+        "@package/javax/index.d.ts",
+        "@package/javax/security/auth/index.d.ts",
+        "@package/javax/security/index.d.ts",
+        "@side-only/server/bindings/index.d.ts",
+        "@side-only/server/index.d.ts",
+        "@special/dependencies.json",
+        "exercise.ts",
+        "java-time-ambient.d.ts",
+        "tsconfig.json"
+      ],
+      "exitCode": 2,
+      "errorCodes": {
+        "TS2416": 6,
+        "TS2322": 1,
+        "TS2345": 1
+      }
+    },
+    {
+      "name": "supplier",
+      "files": [
+        "@package/com/index.d.ts",
+        "@package/com/tkisor/index.d.ts",
+        "@package/com/tkisor/nekojs/index.d.ts",
+        "@package/com/tkisor/nekojs/probe/index.d.ts",
+        "@package/index.d.ts",
+        "@package/java/index.d.ts",
+        "@package/java/io/index.d.ts",
+        "@package/java/lang/annotation/index.d.ts",
+        "@package/java/lang/constant/index.d.ts",
+        "@package/java/lang/foreign/index.d.ts",
+        "@package/java/lang/index.d.ts",
+        "@package/java/lang/invoke/index.d.ts",
+        "@package/java/lang/module/index.d.ts",
+        "@package/java/lang/reflect/index.d.ts",
+        "@package/java/net/index.d.ts",
+        "@package/java/nio/channels/index.d.ts",
+        "@package/java/nio/channels/spi/index.d.ts",
+        "@package/java/nio/charset/index.d.ts",
+        "@package/java/nio/file/attribute/index.d.ts",
+        "@package/java/nio/file/index.d.ts",
+        "@package/java/nio/file/spi/index.d.ts",
+        "@package/java/nio/index.d.ts",
+        "@package/java/security/cert/index.d.ts",
+        "@package/java/security/index.d.ts",
+        "@package/java/util/concurrent/index.d.ts",
+        "@package/java/util/function/index.d.ts",
+        "@package/java/util/index.d.ts",
+        "@package/java/util/stream/index.d.ts",
+        "@package/javax/index.d.ts",
+        "@package/javax/security/auth/index.d.ts",
+        "@package/javax/security/index.d.ts",
+        "@side-only/server/bindings/index.d.ts",
+        "@side-only/server/index.d.ts",
+        "@special/dependencies.json",
+        "exercise.ts",
+        "java-time-ambient.d.ts",
+        "tsconfig.json"
+      ],
+      "exitCode": 2,
+      "errorCodes": {
+        "TS2416": 6,
+        "TS2322": 1,
+        "TS2345": 2
+      }
+    }
+  ],
+  "entries": [
+    {
+      "path": "inputs/operators/@package/com/index.d.ts",
+      "sha256": "c7e76bf821ef00813ee04a7d9a6fa71d10b593635272f4b8126b6e61cc4f1de7"
+    },
+    {
+      "path": "inputs/operators/@package/com/tkisor/index.d.ts",
+      "sha256": "10925c6e0e405dcdbbef13de5c4f738bbd2b56b8f38604828df28cec44fc520c"
+    },
+    {
+      "path": "inputs/operators/@package/com/tkisor/nekojs/index.d.ts",
+      "sha256": "25466bed0396ef11064e0230232ffa19ab2c1a172bd42a4782686df43f5f0330"
+    },
+    {
+      "path": "inputs/operators/@package/com/tkisor/nekojs/probe/index.d.ts",
+      "sha256": "10cae0e1f2ec9a98cba60513b4d720ab206d240e13a9babf38065189ff96d992"
+    },
+    {
+      "path": "inputs/operators/@package/index.d.ts",
+      "sha256": "d1d71cc7e7fa8b2c191c8370b3a4bc06637b62f4372ad7197df16cfad7cebfcd"
+    },
+    {
+      "path": "inputs/operators/@package/java/index.d.ts",
+      "sha256": "d20cb9d6efead50e20557dfdde5b611f90df6acd6574fec90243936a4d3d898f"
+    },
+    {
+      "path": "inputs/operators/@package/java/io/index.d.ts",
+      "sha256": "00fc348f74e9871615c649171943e315cd6589c0af8b316214c7b131351ee68c"
+    },
+    {
+      "path": "inputs/operators/@package/java/lang/annotation/index.d.ts",
+      "sha256": "0e6511617003fd2ea9c23c55dce76ce8ed9c9ba21e37d6cba318f084bec70d80"
+    },
+    {
+      "path": "inputs/operators/@package/java/lang/constant/index.d.ts",
+      "sha256": "a54e0d7916d716710017eccb3f353215d4f7266285e81a097d777c712561144e"
+    },
+    {
+      "path": "inputs/operators/@package/java/lang/foreign/index.d.ts",
+      "sha256": "e503985f01092f8530999e5ab29173cb6f2a89014614e36e1dc01cfba8dd499a"
+    },
+    {
+      "path": "inputs/operators/@package/java/lang/index.d.ts",
+      "sha256": "f834b48666fbabdba2f3f04113b037a28db059c325962a88692a74c9853d31c2"
+    },
+    {
+      "path": "inputs/operators/@package/java/lang/invoke/index.d.ts",
+      "sha256": "2d18b9449dcfb00215d4e5bda282f904c4dd22abf4a1ed597e19ed4beb8938fa"
+    },
+    {
+      "path": "inputs/operators/@package/java/lang/module/index.d.ts",
+      "sha256": "d1c8e9e6ed2fe52d0b60c38a68706098b0913ef23831aad46337183af2b20496"
+    },
+    {
+      "path": "inputs/operators/@package/java/lang/reflect/index.d.ts",
+      "sha256": "aca010e2ba0f6eecd5b99a2283731b667a71b476e2d66b5c17c52bd142a6939b"
+    },
+    {
+      "path": "inputs/operators/@package/java/net/index.d.ts",
+      "sha256": "37de0bf036bdc6617abc1d5f52d53aa0b9990b6d3c392ff84821e56dca5a9391"
+    },
+    {
+      "path": "inputs/operators/@package/java/nio/channels/index.d.ts",
+      "sha256": "ff752f8310140cabee6b3b231b3040529b7da3db79e1597458ee03787e0fded2"
+    },
+    {
+      "path": "inputs/operators/@package/java/nio/channels/spi/index.d.ts",
+      "sha256": "ed65e845984a83fdf759b5bf00bdf61d3346d462a38ac4057b482dea8154931e"
+    },
+    {
+      "path": "inputs/operators/@package/java/nio/charset/index.d.ts",
+      "sha256": "cd22b42f68445daf449084e17eb6b960db5597be62a0fbfcbe399da9121dffd0"
+    },
+    {
+      "path": "inputs/operators/@package/java/nio/file/attribute/index.d.ts",
+      "sha256": "f4d455715e71ab0a1cd9e88a854db5ceadd3f70dd415e13345eb3caa511ec8c9"
+    },
+    {
+      "path": "inputs/operators/@package/java/nio/file/index.d.ts",
+      "sha256": "aaef1967aa1d7b567fd1b9345df81808c6fc4897b4412b5b4e2dbfaeff4d3341"
+    },
+    {
+      "path": "inputs/operators/@package/java/nio/file/spi/index.d.ts",
+      "sha256": "1906909e33a1aa2fb65d1b66a610ee43983d3c13ac06fde4697a68d56ee1502b"
+    },
+    {
+      "path": "inputs/operators/@package/java/nio/index.d.ts",
+      "sha256": "c6a02d9a91df34b86188d8b9f802729566acdfa5052028e0183043c45f24a491"
+    },
+    {
+      "path": "inputs/operators/@package/java/security/cert/index.d.ts",
+      "sha256": "74563c1d004d3fce528ef0d4c7c135ba63212a1aa050d5cc0b913ebe7f7a5e03"
+    },
+    {
+      "path": "inputs/operators/@package/java/security/index.d.ts",
+      "sha256": "0694a4471d3c5bcec3e55f68b2090e929055fcc1d54de6458e7fa158deb4d050"
+    },
+    {
+      "path": "inputs/operators/@package/java/util/concurrent/index.d.ts",
+      "sha256": "820aa3d5125a17f452d239c61af6caeaeaad2e20a0ae04237248d1263b259718"
+    },
+    {
+      "path": "inputs/operators/@package/java/util/function/index.d.ts",
+      "sha256": "0fea044f6c88d98f1a1744e0384dede7b3d0ed394289e0d8f712b2c93e678bae"
+    },
+    {
+      "path": "inputs/operators/@package/java/util/index.d.ts",
+      "sha256": "1f2b5e97e5bd47af5aa0161bc119cc9d1ac4d024968dbebc1700ede9c20d8b40"
+    },
+    {
+      "path": "inputs/operators/@package/java/util/stream/index.d.ts",
+      "sha256": "cc40d4b0049c773d65c48db53d4e134e64a7a86157507f1847eba846fd2e2f0b"
+    },
+    {
+      "path": "inputs/operators/@package/javax/index.d.ts",
+      "sha256": "1a6307ce8817423674b87b57427d7452f30f073e10eaab69b0adb586dbe7c4aa"
+    },
+    {
+      "path": "inputs/operators/@package/javax/security/auth/index.d.ts",
+      "sha256": "7bd66d9bb4fe2a1be4ebbe69747c3d72bdc96fa9c488f8710c8c955de010808f"
+    },
+    {
+      "path": "inputs/operators/@package/javax/security/index.d.ts",
+      "sha256": "8a721451374224ef493e28fe24452f522cfd754db6d779cb6da9e696510d5dab"
+    },
+    {
+      "path": "inputs/operators/@side-only/server/bindings/index.d.ts",
+      "sha256": "8022b7bd5fc5b14ad4fe92eefb38f4195902c36e822e46c35b60d9b0c05900eb"
+    },
+    {
+      "path": "inputs/operators/@side-only/server/index.d.ts",
+      "sha256": "2e49cd286b987e7b16ee753a248ded106d28eb8da82a9481bd925b76afa29b84"
+    },
+    {
+      "path": "inputs/operators/@special/dependencies.json",
+      "sha256": "7c9cfc5eff9de8e4e3d819a81deb6367e1b2aac2cef07e9efedc1a1e4bee7ef5"
+    },
+    {
+      "path": "inputs/operators/exercise.ts",
+      "sha256": "6e9e430b34121ccdaa1791fe905af38ae75b1f0be304d755abd1ee4b2d328ec0"
+    },
+    {
+      "path": "inputs/operators/java-time-ambient.d.ts",
+      "sha256": "0883593b0b19f9e8624054d09b6eecef514a018f8662d67e946e9bd13b2d6bd2"
+    },
+    {
+      "path": "inputs/operators/tsconfig.json",
+      "sha256": "fe3d0b821bed3fe80621ee63ff73128470017e0a1cf2f27292714dfb3416a636"
+    },
+    {
+      "path": "logs/operators/tsc.txt",
+      "sha256": "24164ad1b4f97b9a114d4b603909518498f079ab555c9524cfb0a6db2f35e884"
+    },
+    {
+      "path": "logs/operators/tsc-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "inputs/supplier/@package/com/index.d.ts",
+      "sha256": "c7e76bf821ef00813ee04a7d9a6fa71d10b593635272f4b8126b6e61cc4f1de7"
+    },
+    {
+      "path": "inputs/supplier/@package/com/tkisor/index.d.ts",
+      "sha256": "10925c6e0e405dcdbbef13de5c4f738bbd2b56b8f38604828df28cec44fc520c"
+    },
+    {
+      "path": "inputs/supplier/@package/com/tkisor/nekojs/index.d.ts",
+      "sha256": "25466bed0396ef11064e0230232ffa19ab2c1a172bd42a4782686df43f5f0330"
+    },
+    {
+      "path": "inputs/supplier/@package/com/tkisor/nekojs/probe/index.d.ts",
+      "sha256": "10cae0e1f2ec9a98cba60513b4d720ab206d240e13a9babf38065189ff96d992"
+    },
+    {
+      "path": "inputs/supplier/@package/index.d.ts",
+      "sha256": "d1d71cc7e7fa8b2c191c8370b3a4bc06637b62f4372ad7197df16cfad7cebfcd"
+    },
+    {
+      "path": "inputs/supplier/@package/java/index.d.ts",
+      "sha256": "d20cb9d6efead50e20557dfdde5b611f90df6acd6574fec90243936a4d3d898f"
+    },
+    {
+      "path": "inputs/supplier/@package/java/io/index.d.ts",
+      "sha256": "00fc348f74e9871615c649171943e315cd6589c0af8b316214c7b131351ee68c"
+    },
+    {
+      "path": "inputs/supplier/@package/java/lang/annotation/index.d.ts",
+      "sha256": "0e6511617003fd2ea9c23c55dce76ce8ed9c9ba21e37d6cba318f084bec70d80"
+    },
+    {
+      "path": "inputs/supplier/@package/java/lang/constant/index.d.ts",
+      "sha256": "a54e0d7916d716710017eccb3f353215d4f7266285e81a097d777c712561144e"
+    },
+    {
+      "path": "inputs/supplier/@package/java/lang/foreign/index.d.ts",
+      "sha256": "e503985f01092f8530999e5ab29173cb6f2a89014614e36e1dc01cfba8dd499a"
+    },
+    {
+      "path": "inputs/supplier/@package/java/lang/index.d.ts",
+      "sha256": "f834b48666fbabdba2f3f04113b037a28db059c325962a88692a74c9853d31c2"
+    },
+    {
+      "path": "inputs/supplier/@package/java/lang/invoke/index.d.ts",
+      "sha256": "2d18b9449dcfb00215d4e5bda282f904c4dd22abf4a1ed597e19ed4beb8938fa"
+    },
+    {
+      "path": "inputs/supplier/@package/java/lang/module/index.d.ts",
+      "sha256": "d1c8e9e6ed2fe52d0b60c38a68706098b0913ef23831aad46337183af2b20496"
+    },
+    {
+      "path": "inputs/supplier/@package/java/lang/reflect/index.d.ts",
+      "sha256": "aca010e2ba0f6eecd5b99a2283731b667a71b476e2d66b5c17c52bd142a6939b"
+    },
+    {
+      "path": "inputs/supplier/@package/java/net/index.d.ts",
+      "sha256": "37de0bf036bdc6617abc1d5f52d53aa0b9990b6d3c392ff84821e56dca5a9391"
+    },
+    {
+      "path": "inputs/supplier/@package/java/nio/channels/index.d.ts",
+      "sha256": "ff752f8310140cabee6b3b231b3040529b7da3db79e1597458ee03787e0fded2"
+    },
+    {
+      "path": "inputs/supplier/@package/java/nio/channels/spi/index.d.ts",
+      "sha256": "ed65e845984a83fdf759b5bf00bdf61d3346d462a38ac4057b482dea8154931e"
+    },
+    {
+      "path": "inputs/supplier/@package/java/nio/charset/index.d.ts",
+      "sha256": "cd22b42f68445daf449084e17eb6b960db5597be62a0fbfcbe399da9121dffd0"
+    },
+    {
+      "path": "inputs/supplier/@package/java/nio/file/attribute/index.d.ts",
+      "sha256": "f4d455715e71ab0a1cd9e88a854db5ceadd3f70dd415e13345eb3caa511ec8c9"
+    },
+    {
+      "path": "inputs/supplier/@package/java/nio/file/index.d.ts",
+      "sha256": "aaef1967aa1d7b567fd1b9345df81808c6fc4897b4412b5b4e2dbfaeff4d3341"
+    },
+    {
+      "path": "inputs/supplier/@package/java/nio/file/spi/index.d.ts",
+      "sha256": "1906909e33a1aa2fb65d1b66a610ee43983d3c13ac06fde4697a68d56ee1502b"
+    },
+    {
+      "path": "inputs/supplier/@package/java/nio/index.d.ts",
+      "sha256": "c6a02d9a91df34b86188d8b9f802729566acdfa5052028e0183043c45f24a491"
+    },
+    {
+      "path": "inputs/supplier/@package/java/security/cert/index.d.ts",
+      "sha256": "74563c1d004d3fce528ef0d4c7c135ba63212a1aa050d5cc0b913ebe7f7a5e03"
+    },
+    {
+      "path": "inputs/supplier/@package/java/security/index.d.ts",
+      "sha256": "0694a4471d3c5bcec3e55f68b2090e929055fcc1d54de6458e7fa158deb4d050"
+    },
+    {
+      "path": "inputs/supplier/@package/java/util/concurrent/index.d.ts",
+      "sha256": "820aa3d5125a17f452d239c61af6caeaeaad2e20a0ae04237248d1263b259718"
+    },
+    {
+      "path": "inputs/supplier/@package/java/util/function/index.d.ts",
+      "sha256": "0fea044f6c88d98f1a1744e0384dede7b3d0ed394289e0d8f712b2c93e678bae"
+    },
+    {
+      "path": "inputs/supplier/@package/java/util/index.d.ts",
+      "sha256": "2866dbeb6b8a2f186400cdd9ee3e3599f9261b50ea5b690446598d0d789b737d"
+    },
+    {
+      "path": "inputs/supplier/@package/java/util/stream/index.d.ts",
+      "sha256": "cc40d4b0049c773d65c48db53d4e134e64a7a86157507f1847eba846fd2e2f0b"
+    },
+    {
+      "path": "inputs/supplier/@package/javax/index.d.ts",
+      "sha256": "1a6307ce8817423674b87b57427d7452f30f073e10eaab69b0adb586dbe7c4aa"
+    },
+    {
+      "path": "inputs/supplier/@package/javax/security/auth/index.d.ts",
+      "sha256": "7bd66d9bb4fe2a1be4ebbe69747c3d72bdc96fa9c488f8710c8c955de010808f"
+    },
+    {
+      "path": "inputs/supplier/@package/javax/security/index.d.ts",
+      "sha256": "8a721451374224ef493e28fe24452f522cfd754db6d779cb6da9e696510d5dab"
+    },
+    {
+      "path": "inputs/supplier/@side-only/server/bindings/index.d.ts",
+      "sha256": "8022b7bd5fc5b14ad4fe92eefb38f4195902c36e822e46c35b60d9b0c05900eb"
+    },
+    {
+      "path": "inputs/supplier/@side-only/server/index.d.ts",
+      "sha256": "2e49cd286b987e7b16ee753a248ded106d28eb8da82a9481bd925b76afa29b84"
+    },
+    {
+      "path": "inputs/supplier/@special/dependencies.json",
+      "sha256": "7c9cfc5eff9de8e4e3d819a81deb6367e1b2aac2cef07e9efedc1a1e4bee7ef5"
+    },
+    {
+      "path": "inputs/supplier/exercise.ts",
+      "sha256": "23926dfc67b5000113f6da917ec043928992becc969407c15a8bb44206417a73"
+    },
+    {
+      "path": "inputs/supplier/java-time-ambient.d.ts",
+      "sha256": "0883593b0b19f9e8624054d09b6eecef514a018f8662d67e946e9bd13b2d6bd2"
+    },
+    {
+      "path": "inputs/supplier/tsconfig.json",
+      "sha256": "fe3d0b821bed3fe80621ee63ff73128470017e0a1cf2f27292714dfb3416a636"
+    },
+    {
+      "path": "logs/supplier/tsc.txt",
+      "sha256": "bf7ecd6afa3b826bae0a0592b9b450f081f5c429d304581e94151bb60046adde"
+    },
+    {
+      "path": "logs/supplier/tsc-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/capture-bound-operators-prototype-v1.py",
+      "sha256": "a4f2baee7a2707abe99c4373bb1fda442061e3e33387b658d5c114ac181d6d50"
+    },
+    {
+      "path": "tools/capture-bound-operators-prototype.py",
+      "sha256": "d5adf200bd170bd5f4383380c7b85519e8b707e08b27a63b695776a46a05dc00"
+    },
+    {
+      "path": "harness-syntax-error/operators-tsc.txt",
+      "sha256": "8f0732f2d9417e1589f8a133da61e15cc0212497596ba3f984269df6080b147f"
+    },
+    {
+      "path": "harness-syntax-error/supplier-tsc.txt",
+      "sha256": "75bb77e7f227ec2f6c803443f1206c9190959ef318653ed2a0f5491475bae2f9"
+    },
+    {
+      "path": "source/functional-module-3d2cc1cb.d.ts",
+      "sha256": "0fea044f6c88d98f1a1744e0384dede7b3d0ed394289e0d8f712b2c93e678bae"
+    }
+  ]
+}
