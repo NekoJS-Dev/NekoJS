@@ -710,11 +710,12 @@ public final class TypeScriptClassRenderer {
                     slot.sourceType, aliases, new LinkedHashSet<>());
         }
         if (!input && !slot.overridden && slot.sourceType != null) {
-            String bound = renderOptionalCaptureBound(slot.sourceType);
-            if (bound != null && (!declarationsPrepared || captureViews.available("java.util.Optional"))) {
-                captureViewMarks.add("java.util.Optional");
+            String container = TypeScriptCaptureReturns.container(slot);
+            String bound = renderCaptureBound(slot);
+            if (bound != null && (!declarationsPrepared || captureViews.available(container))) {
+                captureViewMarks.add(container);
                 return appendCaptureReturnFacets(slot,
-                        aliases.reference("java.util.Optional", captureViews.name("java.util.Optional")) + "<" + bound + ">");
+                        aliases.reference(container, captureViews.name(container)) + "<" + bound + ">");
             }
         }
         String rendered = renderTypeRef(projectedRef(slot), slot.overridden ? aliases.withRawValueReferences() : aliases, input);
@@ -722,11 +723,12 @@ public final class TypeScriptClassRenderer {
     }
 
     private String appendCaptureReturnFacets(TypeSlot slot, String rendered) {
-        if ((!declarationsPrepared || captureViews.available("java.util.Optional")) && !captureReturns.bounds(slot).isEmpty()) {
-            captureViewMarks.add("java.util.Optional");
+        String container = TypeScriptCaptureReturns.container(slot);
+        if (container != null && (!declarationsPrepared || captureViews.available(container)) && !captureReturns.bounds(slot).isEmpty()) {
+            captureViewMarks.add(container);
             // Keep the concrete return first: direct callers retain their narrower element type.
             String facets = captureReturns.bounds(slot).stream().map(bound ->
-                    aliases.reference("java.util.Optional", captureViews.name("java.util.Optional")) + "<"
+                    aliases.reference(container, captureViews.name(container)) + "<"
                             + renderTypeRef(bound, aliases, false) + ">")
                     .collect(Collectors.joining(" & "));
             return rendered + " & " + facets;
@@ -735,28 +737,21 @@ public final class TypeScriptClassRenderer {
     }
 
     /**
-     * Bound of an unedited output {@code Optional<? extends Bound>} use site, or null.
+     * Bound of an unedited Optional or Stream output capture, or null.
      * The wildcard must have a single non-Object upper bound and no lower bound; everything
      * else keeps the ordinary flattened rendering.
      */
-    private String renderOptionalCaptureBound(Type source) {
-        if (!(source instanceof ParameterizedType parameterized)) return null;
-        if (!(parameterized.getRawType() instanceof Class<?> raw) || raw != java.util.Optional.class) return null;
-        List<Type> arguments = com.tkisor.nekojs.core.reflect.JavaGenericTypes.arguments(parameterized);
-        if (arguments.size() != 1 || !(arguments.getFirst() instanceof WildcardType wildcard)) {
-            return null;
-        }
-        if (List.of(wildcard.getLowerBounds()).size() > 0
-                || wildcard.getUpperBounds().length != 1
-                || wildcard.getUpperBounds()[0] == Object.class) {
-            return null;
-        }
+    private String renderCaptureBound(TypeSlot slot) {
+        ApiTypeRef reference = TypeScriptCaptureReturns.captureBound(slot);
+        if (reference == null) return null;
+        var parameterized = (ParameterizedType) slot.sourceType;
+        var wildcard = (WildcardType) parameterized.getActualTypeArguments()[0];
         Type bound = wildcard.getUpperBounds()[0];
         return renderTypeRef(JavaTypeScriptProjection.project(bound,
-                TypeReflector.toRef(bound)), aliases, false);
+                reference), aliases, false);
     }
 
-    /** True when any rendered class used the {@code $OptionalView} capture projection. */
+    /** True when a declaration references one of the complete capture views. */
     public boolean captureViewUsed() {
         return !captureViewMarks.isEmpty();
     }
@@ -767,7 +762,7 @@ public final class TypeScriptClassRenderer {
     }
 
     private boolean captureOutput(TypeSlot slot) {
-        return slot != null && !slot.overridden && renderOptionalCaptureBound(slot.sourceType) != null;
+        return TypeScriptCaptureReturns.captureBound(slot) != null;
     }
 
     public Map<String, String> captureViewNames() {

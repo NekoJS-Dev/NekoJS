@@ -17,6 +17,7 @@ import java.util.Set;
 
 /** Keeps a narrow Java return alongside the capture contracts inherited by that receiver. */
 final class TypeScriptCaptureReturns {
+    private static final Set<String> CONTAINERS = Set.of("java:java.util.Optional", "java:java.util.stream.Stream");
     private record Target(TypeDecl receiver, MethodDecl method) {}
     private final Map<TypeSlot, List<ApiTypeRef>> bounds = new IdentityHashMap<>();
     private final Set<String> affectedTypes = new LinkedHashSet<>();
@@ -27,10 +28,10 @@ final class TypeScriptCaptureReturns {
         for (TypeDecl receiver : declarations.values()) {
             if (receiver.hidden) continue;
             for (MethodDecl method : receiver.methods) {
-                if (!eligible(method) || optionalArgument(method.returnType) == null) continue;
+                if (!eligible(method) || captureArgument(method.returnType) == null) continue;
                 Set<ApiTypeRef> inherited = new LinkedHashSet<>();
                 collect(receiver, new Target(receiver, method), Map.of(), new LinkedHashSet<>(), inherited);
-                inherited.remove(optionalArgument(method.returnType));
+                inherited.remove(captureArgument(method.returnType));
                 if (!inherited.isEmpty()) {
                     bounds.put(method.returnType, List.copyOf(inherited));
                     affectedTypes.add(receiver.fqn);
@@ -67,10 +68,11 @@ final class TypeScriptCaptureReturns {
                 if (!sameSignature(target, method)) continue;
                 declares = true;
                 if (!eligible(method) || !target.method().effectiveName().equals(method.effectiveName())) continue;
+                if (!container(target.method().returnType).equals(container(method.returnType))) continue;
                 ApiTypeRef bound = captureBound(method.returnType);
                 if (bound == null) {
                     // A concrete intermediate override still inherits its own capture facets.
-                    if (optionalArgument(method.returnType) != null) {
+                    if (captureArgument(method.returnType) != null) {
                         collect(parent, target, arguments, new LinkedHashSet<>(visiting), result);
                     }
                     continue;
@@ -110,17 +112,22 @@ final class TypeScriptCaptureReturns {
                 resolved.parameterTypes().stream().map(JavaGenericTypes::erased).toArray(Class<?>[]::new));
     }
 
-    private static ApiTypeRef optionalArgument(TypeSlot slot) {
+    static String container(TypeSlot slot) {
         if (slot == null || slot.overridden || slot.ref.kind() != ApiTypeRef.Kind.SYMBOL
-                || !slot.ref.name().equals("java:java.util.Optional") || slot.ref.arguments().size() != 1) return null;
+                || !CONTAINERS.contains(slot.ref.name()) || slot.ref.arguments().size() != 1) return null;
+        return slot.ref.name().substring("java:".length());
+    }
+
+    private static ApiTypeRef captureArgument(TypeSlot slot) {
+        if (container(slot) == null) return null;
         return slot.ref.arguments().getFirst();
     }
 
     /** Uses reflection only to distinguish a wildcard; its effective bound comes from the edited IR. */
-    private static ApiTypeRef captureBound(TypeSlot slot) {
-        ApiTypeRef bound = optionalArgument(slot);
+    static ApiTypeRef captureBound(TypeSlot slot) {
+        ApiTypeRef bound = captureArgument(slot);
         if (bound == null || !(slot.sourceType instanceof ParameterizedType source)
-                || source.getRawType() != java.util.Optional.class
+                || !(source.getRawType() instanceof Class<?> raw) || !raw.getName().equals(container(slot))
                 || source.getActualTypeArguments().length != 1
                 || !(source.getActualTypeArguments()[0] instanceof WildcardType wildcard)
                 || wildcard.getLowerBounds().length != 0 || wildcard.getUpperBounds().length != 1
