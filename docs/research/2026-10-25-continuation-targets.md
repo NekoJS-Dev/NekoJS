@@ -10,6 +10,8 @@
 
 完整视图公开方法恢复已经有实际新安装证明；其余边界与其他族不得被诊断清零掩盖。
 
+2026-10-27下一步调查已确认五节点SectionPos的Bean读取与方法直接调用不同，`["x()"]()`真实失败；不能套用真实字段选择器。[精确迁移提案](2026-10-27-section-pos-bean-decision.md)仅涉及15处TS坐标方法，隔离副本997→973、完整块−24/+0，尚待用户决定，未改产品。F13余12条未解决。F11当前缺失模块中，core.villager的DeclarationEventJS/ReloadEventJS/QuerySurface及core.modification.ModificationCandidatePlan被dependencies.json明确记为excluded；不能绕过排除直接补导出。另有startup的DocumentedRecipes导入但零命名空间时辅助模块不生成，需单独核对内建getter覆写与模块生成生命周期，不能伪造空壳来消除引用。
+
 2026-10-26阶段5280d20b仅完成返回合同基础及common/定向TS验证，[该阶段冻结证据](../architecture-refactor/evidence/2026-10-26-capture-return-contracts/README.md)不覆盖新五节点安装或性能。后续完整视图及新安装见[2026-10-27证据](../architecture-refactor/evidence/2026-10-27-transitive-capture-facets/README.md)；其他族及最终候选继续推进，早期JS数组调用触发ClassCastException的扩展失败仍保留。
 
 ## 枚举接口修复：实现及局部门禁

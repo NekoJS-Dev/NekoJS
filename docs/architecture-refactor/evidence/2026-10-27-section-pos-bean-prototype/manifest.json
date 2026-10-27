@@ -1,0 +1,165 @@
+{
+  "sourceRevision": "11c9a180668800bdea856dd3cd7ef89152022075",
+  "state": "proposal-only-not-production",
+  "archiveSha256": "b2bcde24433ece6cd3f86513f1a530a13173c93785183b6e7bac8799bdcf9dd1",
+  "baselineArchive": "../2026-10-27-stream-capture-11c9a180/artifacts.zip",
+  "baselineSha256": "dad451ce39057e04ac20ef93f2e7960ba8c574b1f62c14a686da1aa7bdeb05f6",
+  "entries": [
+    {
+      "path": "diagnostics/1.21.1-server-tsc.txt",
+      "sha256": "e1f7692dda61535fb8d4ed7eff8d23399d0bd74fe54f67fd832743f8c8cb1c14"
+    },
+    {
+      "path": "diagnostics/1.21.1-startup-tsc.txt",
+      "sha256": "5c42f1978267226a6ee45d4c933092d4b1cc1bfc69d2c412294fc91571f2eb25"
+    },
+    {
+      "path": "diagnostics/26.1.2-fabric-server-tsc.txt",
+      "sha256": "33c8584700590e46391e20dab5cd4abe442c06d9646d446c727d87f90e7e6dc0"
+    },
+    {
+      "path": "diagnostics/26.1.2-fabric-startup-tsc.txt",
+      "sha256": "7e8f74264838b6baf28bcde80ce751f7c95243ad13fdf8a00e674a0c3860150c"
+    },
+    {
+      "path": "diagnostics/26.1.2-server-tsc.txt",
+      "sha256": "ce2445c9c3abcbdd5e7ba969f749776ac2d2d7aed06695ac55dca8268a7b7936"
+    },
+    {
+      "path": "diagnostics/26.1.2-startup-tsc.txt",
+      "sha256": "b9d89b07fa65980ebfefcf2cf418320d63cf5ad49bb13ef85eadc5acadc8f280"
+    },
+    {
+      "path": "diagnostics/26.2.0-fabric-server-tsc.txt",
+      "sha256": "9bde20199d70e982b719bd20e065de7b37cfeab29433f7d6766bf2deb97ba880"
+    },
+    {
+      "path": "diagnostics/26.2.0-fabric-startup-tsc.txt",
+      "sha256": "49e6f4fd8651a7c2237c50b200ed960ba2970a6975f3a0f22922b2eec5d6ea1e"
+    },
+    {
+      "path": "diagnostics/26.2.0-server-tsc.txt",
+      "sha256": "9ed954e96c4d565f53643637f45c148c01b15dc33f1dea09d192948ce695fa77"
+    },
+    {
+      "path": "diagnostics/26.2.0-startup-tsc.txt",
+      "sha256": "efe0338ff2983a0303e3dcfd4cdde715e4edb155ba42d508eea35867254ed045"
+    },
+    {
+      "path": "driver/BeanPriorityPrototypeTest.java",
+      "sha256": "1d2763a22dd5c25c0dc9ff59a4a9fdb56b47c7e0777610d1d735758c6ab24823"
+    },
+    {
+      "path": "driver/bean-migration-classification.log",
+      "sha256": "a8176780a25061a74e44550b5c8f63e05a7fbc5be142d1e28e0ad3a2c80389e8"
+    },
+    {
+      "path": "driver/bean-migration-prototype.log",
+      "sha256": "1db6051bda30c4074a04ce4fbfc13547351c73c0faa30acccb05c107c64f63fc"
+    },
+    {
+      "path": "driver/bean-migration-prototype.py",
+      "sha256": "6749690d8f83da69f41c8cbfaeadf038455ce7484bdd5f83677a19f4808e521b"
+    },
+    {
+      "path": "driver/bean-priority-es5-failure.xml",
+      "sha256": "f630bda0a2f391c271795e6f682ca774cb2df7b01baa6a1555553bdfa2a0f3aa"
+    },
+    {
+      "path": "driver/bean-priority-five-node.log",
+      "sha256": "c197f3616149f1dae79c4f702dde3a0cf812b3113affbb5f2f9773d11924e85b"
+    },
+    {
+      "path": "driver/bean-priority-invocation-producer.log",
+      "sha256": "0cb244fc070f5e34cdc37069c1ac1048a5e925edd208a49e74b32d39fad57621"
+    },
+    {
+      "path": "driver/bean-priority-producer-fixed.log",
+      "sha256": "6a97779837fc8143773d84c4f1293df9c7ef17761e70009efeadb28173dbad0e"
+    },
+    {
+      "path": "driver/bean-priority-producer.log",
+      "sha256": "d5964ae09e287711abfae8d71a5bd596dfce60587fd5bb08f8ce95dd9c6c54f2"
+    },
+    {
+      "path": "driver/bean-priority.init.gradle",
+      "sha256": "faedbac0091af04c3e86f35dc8965314e4d93332386a66da2e6d1e26f0172414"
+    },
+    {
+      "path": "driver/sam-proxy-test-isolation.init.gradle",
+      "sha256": "2f7ee88931e36be6aeb46ca61eedeb73695555044d5f9579ea7707f493041122"
+    },
+    {
+      "path": "modified/1.21.1-core.d.ts",
+      "sha256": "154b36a9912c2f9732293b3e78fa646bb496543b3fd4b679bcd92f87446fef5d"
+    },
+    {
+      "path": "modified/26.1.2-core.d.ts",
+      "sha256": "d65ff4c3113ad895f1652d6a1a04d25e328d21f31eaf1a8256c98ae01e67eb96"
+    },
+    {
+      "path": "modified/26.1.2-fabric-core.d.ts",
+      "sha256": "e301484e2ca8182281455f967c3db95a246c90a38e085f36c9a9bebc37fb1f20"
+    },
+    {
+      "path": "modified/26.2.0-core.d.ts",
+      "sha256": "f0d49f12fa3e9cff41c165be256a6f41cafb062cdef8660c3ddcce60fbef5356"
+    },
+    {
+      "path": "modified/26.2.0-fabric-core.d.ts",
+      "sha256": "1c59cd26a9a3a5ce70492f9018d3fdec5bec55a8023c54fb96d683c11e82d40d"
+    },
+    {
+      "path": "reports/diagnostic-delta.json",
+      "sha256": "b2285de44d6f118e80f7e2a1e49d416eb7164c012125ae3fe321da97d959d223"
+    },
+    {
+      "path": "reports/proposal.json",
+      "sha256": "fdd6cd05eee205776a640fc5485e0f3dadb523dbebbb7b1a7bcc97a3d43730db"
+    },
+    {
+      "path": "reports/root-cause-mapping.json",
+      "sha256": "cb6a74a9f03733b9b07392d7fa25c15b3fc5235dd79b3e308bac983db9ca6df1"
+    },
+    {
+      "path": "runtime/1.21.1-test.xml",
+      "sha256": "b70034c69b18a9f87a459f93e5e8316c2e61844040273554d998fb0c85bb1ff8"
+    },
+    {
+      "path": "runtime/1.21.1.json",
+      "sha256": "4ce976f0659d728c373ef312e0d5d77359cfd7f1ec27a10a56777065c3615f09"
+    },
+    {
+      "path": "runtime/26.1.2-fabric-test.xml",
+      "sha256": "e404c3e5264b32f62674d5a4b606573b201ba88d8497345313a28823b4a7509b"
+    },
+    {
+      "path": "runtime/26.1.2-fabric.json",
+      "sha256": "4ce976f0659d728c373ef312e0d5d77359cfd7f1ec27a10a56777065c3615f09"
+    },
+    {
+      "path": "runtime/26.1.2-test.xml",
+      "sha256": "66fe3ab5f63b3b34c347285da55691ce854c812d991fce84ec3b3b9863b2ef04"
+    },
+    {
+      "path": "runtime/26.1.2.json",
+      "sha256": "4ce976f0659d728c373ef312e0d5d77359cfd7f1ec27a10a56777065c3615f09"
+    },
+    {
+      "path": "runtime/26.2.0-fabric-test.xml",
+      "sha256": "8ccf94777609b421f8ca19da0da787c12db325a16cfc46b7cb1a172fc428e76d"
+    },
+    {
+      "path": "runtime/26.2.0-fabric.json",
+      "sha256": "4ce976f0659d728c373ef312e0d5d77359cfd7f1ec27a10a56777065c3615f09"
+    },
+    {
+      "path": "runtime/26.2.0-test.xml",
+      "sha256": "930199aafbce171b2b5fa8e2963b9a6e3bd429d8ece77f62b329ed78b0a7e30c"
+    },
+    {
+      "path": "runtime/26.2.0.json",
+      "sha256": "4ce976f0659d728c373ef312e0d5d77359cfd7f1ec27a10a56777065c3615f09"
+    }
+  ]
+}
