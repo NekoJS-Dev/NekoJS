@@ -4,7 +4,7 @@
 
 完整捕获视图和连续 wildcard 合同已实现、提交并通过五节点新安装，15c4d9a6 的完整严格 TS 仍为 1029。下一目标是 F6 Recipe 约束族 488 条；优先追踪真实 Java wildcard 返回和嵌套 Codec，不改工厂、不删成员或泛型参数，也不全局放宽 Codec 的方差。
 
-调查由 Luna 子代理只读执行；主代理核对原始源码签名和摘要后记录。没有为该族修改产品或运行红证，以下夹具仍是待验证的候选，不能写成已通过或全族已定位。
+来源调查由 Luna 子代理只读执行；主代理核对原始源码签名和摘要后记录。随后主代理已取得公开 backend 的真实 DFU 红证，以及 Java 正负捕获编译对照，[五组冻结实验](../architecture-refactor/evidence/2026-10-27-recipe-capture-prototypes/README.md)均仍失败。不透明标记遗漏独立捕获身份，never方案泄漏底类型，全部未投产；未修改本族产品或宣称全族已定位。
 
 ## 已核实来源
 
@@ -27,7 +27,9 @@ DFU `datafixerupper-10.0.21-sources.jar`，SHA256 `ecac55047605b48de872ebf804101
 
 ## 实施顺序与验收
 
-1. 建立真实 public backend 红证：Recipe<I>、带 `T extends Recipe<?>` 的 Serializer、双向 MapCodec/Codec、wildcard 中间覆盖及具体叶子覆盖。夹具应保留触发当前错误的泛型 SAM 链；只保留普通 encode/decode 方法可能因 TS 的方法参数规则而不足以复现，必须实际运行后再确认最小形状。
+1. 已建立真实 public backend 红证：Recipe<I>、带 `T extends Recipe<?>` 的 Serializer、真实DFU MapCodec/Codec/DataResult、wildcard中间覆盖及具体叶子覆盖。简化Codec确实不能复现继承错误；真实DFU基线12条错误，加强独立捕获控制后13条。已保留完整输入和原文，不删除导致困难的成员。
 2. 正例保留具体 recipe 到两级父接口赋值、父级 codec 解码得到父 bound、具体返回的窄读取，以及合法的同一捕获域往返；负例拒绝将任意父对象编码到可能捕获更窄类型的 codec，拒绝不相关 serializer、错误 SAM 参数域和错误结果。
 3. 基于来源与公开消费选择现有 IR/返回 facet/实例面生成接缝；authored、hide、exclude、rename、局部泛型变量及 backend 重用均需保留。若候选无法同时表达完整读写合同，记录失败，不以 any、删成员或全局协变掩盖。
 4. 定向红绿之后执行 common/check、严格消费链、官方 golden 再生与差异审阅、受影响平台矩阵；新制品五节点十入口重采并按完整诊断块和互斥分类比较。性能和最终候选门禁仍独立验收。
+
+当前先推进 F8 的 Stream wildcard 返回合同（32条），复用已有完整StreamView和继承facet，不借此关闭F6。F6继续要求有作用域捕获/等价安全表示的真实正负证明，现有近似不能因其余错误消失就进入产品。

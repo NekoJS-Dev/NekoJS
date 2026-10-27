@@ -1,0 +1,9 @@
+REPLAY: baseline exit 2 {'TS2578': 1}
+REPLAY: baseline-dfu-complete exit 2 {'TS2430': 1, 'TS2344': 5, 'TS2416': 2, 'TS2322': 2, 'TS2345': 1, 'TS2578': 1}
+REPLAY: baseline-control exit 2 {'TS2430': 1, 'TS2344': 5, 'TS2416': 2, 'TS2322': 2, 'TS2345': 1, 'TS2578': 2}
+REPLAY: opaque-facets exit 2 {'TS2578': 1}
+REPLAY: bottom-facets exit 2 {'TS2578': 2, 'TS2339': 1}
+JAVA: Positive exit 0
+JAVA: Negative exit 1
+Artifacts: C:\Users\11515\.codex\worktrees\capture-views\NekoJS-mult\build\recipe-capture-replay-ac1ujbxl
+PASS: exact failure evidence reproduced; all capture proposals remain rejected

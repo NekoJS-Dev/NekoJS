@@ -1,5 +1,7 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-27 F6 [真实DFU捕获实验](../evidence/2026-10-27-recipe-capture-prototypes/README.md)已取得公开backend继承红证及Java CAP#1/CAP#2正负编译对照；五组冻结TypeScript输入精确复现失败，不透明标记仍合并独立捕获，never方案还泄漏底类型，全部未投产。生产1029不变，F6保持开放，先推进可复用完整StreamView/返回facet的F8；没有全局协变、any或成员删除。
+
 2026-10-27 完整捕获视图恢复（产品 `8f71ca31`，连续 wildcard 祖先合同修复 `15c4d9a6`，[最终证据](../evidence/2026-10-27-transitive-capture-facets/README.md)）：从可见编辑 IR 继承完整原始实例面，恢复 or、全部 reduce、Collector collect、toList 及 List/Collection 递归导航，保留输入域负例、工厂签名和隐藏/排除/手写替代权威。前驱新安装 1037 的 8 条遗漏已保留[失败证据](../evidence/2026-10-27-complete-capture-views/README.md)，补回归修复后，完整矩阵5200 tests /271 skipped /零失败错误、TS全链和四项CI gate通过；新五节点均正常停服，25类与制品匹配，十入口回到1029，对3d2cc1cb完整诊断块−0/+0，各族及逐入口不变且零UNMAPPED。F1/F2/F4诊断为零，F1公开方法缺口已补；host结构身份、JS数组桥异常、其余严格TS族及最终候选门禁继续开放，未push、PR、发布或代签。
 
 2026-10-26 继承捕获返回合同基础（产品 `5280d20b`，[冻结证据](../evidence/2026-10-26-capture-return-contracts/README.md)）：从可见编辑IR给窄Optional返回追加继承facet，保留直接窄读取及较宽fallback；支持泛型参数/数组专化、继承实现、中间重复覆盖和wildcard窄返回，隐藏/改名/覆盖返回不从反射恢复。两轴复查的两项P2各自先红后绿并复查通过；common/check+guardLint（2478 tests /4 skipped /零失败错误）、完整npm链和确切生成消费者通过，移除facet对照严格报5条TS2345。完整视图公开方法恢复仍开放；没有新安装/十入口/性能，1029仍仅绑定3d2cc1cb。JS数组触发ClassCastException的扩展失败保留，未宣称修复，票保持in-progress。
