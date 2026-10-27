@@ -13,7 +13,7 @@
 - 父级输出完整StreamView，具体实现保留原始Stream<Child>并附加父级facet；连续wildcard中间覆盖继续携带祖先合同。
 - 两组strict/skipLibCheck=false消费通过：正常完整合同及手写Stream替代。隐藏来源报告unavailable，父IR的hide/rename/return覆写保持权威。
 - 真实NekoSharedHostAccess执行两个入口的Java host reducer和JavaScript map/toList读取，结果`child+child|child`；未改变运行时。
-- 新消费已接入npm test:probe-types。定向Java/严格TS通过，完整common与五节点矩阵正在执行，尚未新安装，不宣称32条已清零。
+- 新消费已接入npm test:probe-types。最终完整common/处理器/guard及五节点build通过（9m9s，922 suites /5206 tests /271 skipped /零失败错误），完整npm链与四项CI gate通过，无golden差异。
 
 第一轮完整矩阵通过（9m42s，922 suites /5205 tests /271 skipped /零失败），未产生golden差异。只读规范复审指出新消费目录未清理，主代理注入孤儿声明后，旧生成器重跑仍留下两份文件，孤儿import可编译通过；清理helper增加build范围和实际解析路径校验、逆序删除旧输出后，两份孤儿消失，独立import按预期报TS2307。随后完整common/check+guard通过（4m22s）。
 
@@ -25,4 +25,6 @@ F6已取得真实DFU红证，但不透明标记合并独立捕获、never泄漏�
 
 ## 剩余门禁
 
-完成完整common/check、处理器、guard与五节点构建，确认或通过官方流程再生有意golden差异；完整npm链及只读两轴复审后本地提交。再用确切新JAR五节点隔离安装、十入口重采、完整诊断块及互斥族比较，冻结正负输入和结果。最终性能、Python默认安装、客户端/TCP/分离回退与维护者结论仍另行验收。
+产品11c9a180已本地提交并快进stonecutter。确切五节点JAR新安装全部正常停服、无kill、锁释放；8份来源/25份编译类逐类绑定。十入口1029→997，完整诊断块−32/+0，F8归零，F1/F2/F4仍零，其余族逐入口不变、零UNMAPPED。[冻结输入及独立重放](../architecture-refactor/evidence/2026-10-27-stream-capture-11c9a180/README.md)保留全部历史红证，严格TS整体仍FAIL。
+
+最终性能、Python默认安装、客户端/TCP/分离回退、包装、内存预算与维护者结论仍另行验收。F13下一步先以真实Graal证明Bean/同名方法行为，原真实字段选择器授权不自动扩张至派生Bean属性迁移。
