@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BeanAliasExclusionCatalogEntry;
+import com.tkisor.nekojs.api.catalog.BeanMethodProjectionCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
@@ -61,6 +62,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
     private final List<ManualDeclarationCatalogEntry> manualDeclarations;
     private final List<ClassDeclarationCatalogEntry> classDeclarations;
     private final List<BeanAliasExclusionCatalogEntry> beanAliasExclusions;
+    private final List<BeanMethodProjectionCatalogEntry> beanMethodProjections;
     private final List<RegistryBuilderSurfaceEntry> registryBuilderSurfaces;
     private final Map<String, String> nodeModules;
     private final Map<String, RecipeNamespaceEntry> recipeNamespaces;
@@ -82,6 +84,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         this.manualDeclarations = mergedManualDeclarations();
         this.classDeclarations = mergedClassDeclarations();
         this.beanAliasExclusions = mergedBeanAliasExclusions();
+        this.beanMethodProjections = mergedBeanMethodProjections();
         this.registryBuilderSurfaces = mergedRegistryBuilderSurfaces();
         this.nodeModules = product(NodeModulesPoint.ID);
         this.recipeNamespaces = product(RecipeNamespacesPoint.ID);
@@ -346,6 +349,18 @@ public final class NekoPluginRuntime implements IPluginRuntime {
     }
 
     /** type_docs 与 node_type_docs 两点 builder 契约条目的合并（ticket 15，与手写声明同序合并）。 */
+    private List<BeanMethodProjectionCatalogEntry> mergedBeanMethodProjections() {
+        List<BeanMethodProjectionCatalogEntry> merged = new ArrayList<>(
+                typeDocsSnapshot(TypeDocsPoint.ID).beanMethodProjections());
+        merged.addAll(typeDocsSnapshot(NodeTypeDocsPoint.ID).beanMethodProjections());
+        return merged.stream().distinct().toList();
+    }
+
+    @Override
+    public List<BeanMethodProjectionCatalogEntry> beanMethodProjections() {
+        return beanMethodProjections;
+    }
+
     private List<RegistryBuilderSurfaceEntry> mergedRegistryBuilderSurfaces() {
         List<RegistryBuilderSurfaceEntry> merged = new ArrayList<>(
                 typeDocsSnapshot(TypeDocsPoint.ID).registryBuilderSurfaces());

@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BeanAliasExclusionCatalogEntry;
+import com.tkisor.nekojs.api.catalog.BeanMethodProjectionCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.data.Binding;
@@ -42,6 +43,11 @@ public interface IPluginRuntime {
 
     /** Returns exact TypeScript Bean alias exclusions collected during bootstrap. */
     default List<BeanAliasExclusionCatalogEntry> beanAliasExclusions() {
+        return List.of();
+    }
+
+    /** Returns exact TypeScript method-to-Bean projections collected during bootstrap. */
+    default List<BeanMethodProjectionCatalogEntry> beanMethodProjections() {
         return List.of();
     }
 

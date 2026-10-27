@@ -2,6 +2,7 @@ package com.tkisor.nekojs.probe.ir;
 
 import com.google.gson.JsonPrimitive;
 import com.tkisor.nekojs.api.catalog.BeanAliasExclusionCatalogEntry;
+import com.tkisor.nekojs.api.catalog.BeanMethodProjectionCatalogEntry;
 import com.tkisor.nekojs.probe.backend.typescript.IndexFileGenerator;
 import com.tkisor.nekojs.probe.backend.typescript.FunctionalInterfaceAliasGenerator;
 import com.tkisor.nekojs.probe.backend.typescript.JavaTypeScriptProjection;
@@ -29,6 +30,7 @@ public final class TypeScriptClassRenderer {
     private final TypeAliasRegistry aliases;
     private Set<String> interfaceClassBindings = Set.of();
     private Set<BeanAliasExclusionCatalogEntry> beanAliasExclusions = Set.of();
+    private Set<BeanMethodProjectionCatalogEntry> beanMethodProjections = Set.of();
     private Map<String, Set<String>> covariantTypeParameters = Map.of();
     private TypeScriptStaticInheritance staticInheritance = new TypeScriptStaticInheritance(Map.of());
     private TypeScriptMethodSelectors methodSelectors = new TypeScriptMethodSelectors(Map.of());
@@ -52,7 +54,8 @@ public final class TypeScriptClassRenderer {
         Set<String> captureTypes = captureReturns.affectedTypes();
         return declarations.values().stream().filter(declaration -> staticInheritance.project(declaration) != null
                         || hasInheritedBeanProjection(declaration) || selectorTypes.contains(declaration.fqn)
-                        || captureTypes.contains(declaration.fqn) || captureOutputs(declaration))
+                        || captureTypes.contains(declaration.fqn) || captureOutputs(declaration)
+                        || beanMethodProjections.stream().anyMatch(rule -> rule.targetType() == declaration.sourceClass))
                 .map(declaration -> declaration.fqn).collect(Collectors.toUnmodifiableSet());
     }
 
@@ -68,6 +71,12 @@ public final class TypeScriptClassRenderer {
         refreshMethodSelectors();
     }
 
+    /** Replaces exact method-to-Bean rules for this snapshot without editing shared declarations. */
+    public void setBeanMethodProjections(List<BeanMethodProjectionCatalogEntry> projections) {
+        beanMethodProjections = Set.copyOf(projections);
+        refreshMethodSelectors();
+    }
+
     private void refreshMethodSelectors() {
         methodSelectors = new TypeScriptMethodSelectors(selectorDeclarations, this::emitsInstanceMethod);
     }
@@ -78,10 +87,53 @@ public final class TypeScriptClassRenderer {
     }
 
     private boolean emitsInstanceMethod(TypeDecl declaration, MethodDecl method) {
-        return declaration.kind != TypeDecl.Kind.CLASS || !method.isGetter
+        return !projectsBeanMethod(declaration, method) && (declaration.kind != TypeDecl.Kind.CLASS || !method.isGetter
                 || !isValidTsIdentifier(method.property) || beanPropertyConflicts(declaration).contains(method.property)
                 || excludesBeanAlias(declaration, method)
-                || !getterOverrides.getOrDefault(declaration.fqn, Map.of()).containsKey(method.property);
+                || !getterOverrides.getOrDefault(declaration.fqn, Map.of()).containsKey(method.property));
+    }
+
+    /** The retained getter must come from the visible edited lineage, never fresh reflection. */
+    private boolean projectsBeanMethod(TypeDecl declaration, MethodDecl method) {
+        if (beanMethodProjections.isEmpty() || method.hidden || method.isStatic || method.isConstructor || method.isGetter || method.explicitlyEdited
+                || method.sourceMethod == null || method.sourceMethod.getParameterCount() != 0
+                || !method.params.isEmpty() || !method.typeParams.isEmpty() || !method.overloads.isEmpty()
+                || !method.name.equals(method.effectiveName())) return false;
+        for (var rule : beanMethodProjections) {
+            if (rule.targetType() != declaration.sourceClass || !rule.methodName().equals(method.name)
+                    || method.sourceMethod.getDeclaringClass() != rule.targetType() || !unchangedResult(method)) continue;
+            List<TypeDecl> lineage = new java.util.ArrayList<>();
+            lineage.add(declaration);
+            lineage.addAll(staticInheritance.parents(declaration));
+            for (TypeDecl owner : lineage) {
+                if (owner.fields.stream().anyMatch(field -> !field.hidden && !field.isStatic
+                        && rule.methodName().equals(field.effectiveName()))) return false;
+                for (MethodDecl getter : owner.methods) {
+                    if (getter.sourceMethod == null && !getter.hidden && !getter.isStatic
+                            && (getter.isGetter && rule.methodName().equals(getter.property)
+                                || getter.params.isEmpty() && rule.getterName().equals(getter.effectiveName()))) return false;
+                    if (getter.sourceMethod == null || getter.sourceMethod.getParameterCount() != 0
+                            || !getter.sourceMethod.getName().equals(rule.getterName())) continue;
+                    // Unedited inherited copies defer to the declaring ancestor's edited IR.
+                    if (getter.sourceMethod.getDeclaringClass() != owner.sourceClass && !getter.explicitlyEdited) continue;
+                    return !getter.hidden && !getter.isStatic && getter.isGetter && !getter.explicitlyEdited
+                            && rule.getterName().equals(getter.effectiveName()) && rule.methodName().equals(getter.property)
+                            && !beanPropertyConflicts(owner).contains(getter.property) && !excludesBeanAlias(owner, getter)
+                            && !getterOverrides.getOrDefault(owner.fqn, Map.of()).containsKey(getter.property)
+                            && getter.params.isEmpty() && getter.typeParams.isEmpty() && getter.overloads.isEmpty()
+                            && unchangedResult(getter)
+                            && method.returnType.ref.equals(getter.returnType.ref);
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean unchangedResult(MethodDecl method) {
+        return method.returnType != null && !method.returnType.overridden
+                && method.returnType.sourceType != null && method.sourceMethod != null
+                && method.returnType.sourceType.equals(method.sourceMethod.getGenericReturnType())
+                && method.returnType.ref.equals(TypeReflector.toRef(method.sourceMethod.getGenericReturnType()));
     }
 
     // 覆盖 getter 的返回类型 (fqn -> getter 属性名 -> { returnType, importStatement })
@@ -157,6 +209,7 @@ public final class TypeScriptClassRenderer {
         scoped.getterOverrides.putAll(getterOverrides);
         scoped.interfaceClassBindings = interfaceClassBindings;
         scoped.beanAliasExclusions = beanAliasExclusions;
+        scoped.beanMethodProjections = beanMethodProjections;
         scoped.covariantTypeParameters = covariantTypeParameters;
         scoped.staticInheritance = staticInheritance;
         scoped.methodSelectors = methodSelectors;
@@ -363,7 +416,7 @@ public final class TypeScriptClassRenderer {
     private void appendInstanceMethods(StringBuilder sb, TypeDecl d) {
         // Explicit setters remain callable even when their Bean alias conflicts or no getter exists.
         appendProjectedMethods(sb, d, methodSelectors.methods(d).stream().filter(method -> !method.hidden
-                && !method.isConstructor && !method.isStatic && !method.isGetter).toList());
+                && !method.isConstructor && !method.isStatic && !method.isGetter && !projectsBeanMethod(d, method)).toList());
     }
 
     private record NamedMethod(String name, MethodDecl method) {}

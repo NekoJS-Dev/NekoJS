@@ -98,6 +98,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         tsClassRenderer.setCovariantTypeParameters(fastutilResultVariance());
         NekoScriptCatalogSnapshot snapshot = ctx.snapshot();
         tsClassRenderer.setBeanAliasExclusions(snapshot.beanAliasExclusions());
+        tsClassRenderer.setBeanMethodProjections(snapshot.beanMethodProjections());
         Set<String> interfaceClassBindings = new LinkedHashSet<>();
         for (BindingCatalogEntry binding : snapshot.bindings()) {
             if (!binding.emit()) continue;

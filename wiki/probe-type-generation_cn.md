@@ -496,6 +496,18 @@ NeoForge 1.21.1、26.1.2、26.2.0 及 Fabric 26.1.2、26.2.0 的生成声明采�
 
 运行 `/nekojs probe` 刷新声明。此迁移解决 Entity 的 boolean 属性与 LivingEntity 同名方法在 TypeScript 继承及泛型约束中的冲突。Java/Graal 运行时仍可使用原有成员；Python 声明保持原样。
 
+**SectionPos 坐标的 TypeScript 迁移**
+
+以上五节点的 `net.minecraft.core.SectionPos` 使用以下坐标读法：
+
+| 原来的 TypeScript 用法 | 迁移后的用法 |
+|---|---|
+| `section.x()` | `section.x` 或 `section.getX()` |
+| `section.y()` | `section.y` 或 `section.getY()` |
+| `section.z()` | `section.z` 或 `section.getZ()` |
+
+仅省略这三个零参实例方法的 TS 声明，保留继承的数字 Bean、真实 getter 和静态 `SectionPos.x(long)` 等方法。JavaScript 原来的直接方法调用继续可用；`section["x()"]()` 在这些节点会读取数字后调用失败，不能用作替代写法。刷新声明即可使用新合同；其他类、Java/Python 和运行时行为保持。
+
 <a id="wiki-section-29"></a>
 ## Probe 的当前局限
 

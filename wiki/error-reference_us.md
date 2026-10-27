@@ -116,6 +116,7 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-4050` | Dynamic item fire resistance value rejected before activation | 动态物品火抗值不是规范的 `true` / `false`，激活前拒绝 |
 | `NEKO-4051` | Manual declaration type reference rejected | 手写声明的类型引用别名无效，或同名别名的目标类型、输入模式冲突 |
 | `NEKO-4052` | Registry type catalog rejected conflicting sources or symbols | 注册表类型目录存在同名异来源，或与标签/命名空间类型名冲突 |
+| `NEKO-4053` | Bean method projection rejected | Bean方法投影的真实来源、零参签名或收集器无效 |
 
 <a id="wiki-section-6"></a>
 ## Recipes and data

@@ -504,6 +504,18 @@ Generated declarations for NeoForge 1.21.1, 26.1.2, 26.2.0 and Fabric 26.1.2, 26
 
 Run `/nekojs probe` to refresh declarations. This resolves the conflict between Entity's boolean property and LivingEntity's same-name method in TypeScript inheritance and generic constraints. Java/Graal retains the original runtime members; Python declarations remain unchanged.
 
+**SectionPos coordinate migration in TypeScript**
+
+The same five nodes use these coordinate reads for `net.minecraft.core.SectionPos`:
+
+| Previous TypeScript usage | Updated usage |
+|---|---|
+| `section.x()` | `section.x` or `section.getX()` |
+| `section.y()` | `section.y` or `section.getY()` |
+| `section.z()` | `section.z` or `section.getZ()` |
+
+Only these three zero-argument instance method declarations are omitted in TS. Inherited numeric Beans, real getters and static methods such as `SectionPos.x(long)` remain. Existing direct JavaScript calls still work. On these nodes, `section["x()"]()` reads a number and fails when called, so it is not a replacement. Regenerate declarations to use the updated contract. Other classes, Java/Python and runtime behavior remain unchanged.
+
 <a id="wiki-section-29"></a>
 ## Current Probe limitations
 

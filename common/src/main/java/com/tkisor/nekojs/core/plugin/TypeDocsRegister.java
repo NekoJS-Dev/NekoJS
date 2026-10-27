@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.ClassDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BeanAliasExclusionCatalogEntry;
+import com.tkisor.nekojs.api.catalog.BeanMethodProjectionCatalogEntry;
 
 public interface TypeDocsRegister {
     void register(TypeDocCatalogEntry entry);
@@ -21,6 +22,12 @@ public interface TypeDocsRegister {
     default void registerBeanAliasExclusion(BeanAliasExclusionCatalogEntry entry) {
         throw new UnsupportedOperationException("[NEKO-4047] Bean alias exclusion rejected: "
                 + "this type-docs collector does not support exclusions");
+    }
+
+    /** Registers an exact TypeScript method projection onto its retained Bean getter. */
+    default void registerBeanMethodProjection(BeanMethodProjectionCatalogEntry entry) {
+        throw new UnsupportedOperationException("[NEKO-4053] Bean method projection rejected: "
+                + "this type-docs collector does not support projections");
     }
 
     /**
