@@ -3,14 +3,14 @@
 起点：dbdfcfeb（产品 dad806fa）；主代理实现、验证及本地提交，不 push、不发 PR。
 
 1. 完整捕获视图及连续 wildcard 祖先合同已实现（8f71ca31 /15c4d9a6），恢复 or、全部 reduce、Collector collect、toList 与递归导航，保留编辑后的可见 IR、工厂及全部正负合同；host 结构身份和 JS 数组桥异常继续记录，不能把它们写成已修复。
-2. 当前正式安装11c9a180为997条完整严格TS错误，对15c4d9a6完整块−32/+0，F1/F2/F4/F8均零，其余族逐入口不变。F8已完成确切安装与冻结输入重放；F6 Recipe约束488条真实DFU原型未通过捕获身份/底类型控制，全部未投产。继续调查F13 Bean/方法冲突的真实运行行为，再处理F6/F7/F5等共享原因；不全局协变、不漏检或删除成员换取计数。
+2. 当前正式安装3f9f1b0a为973条完整严格TS错误，对11c9a180完整块−24/+0，F1/F2/F4/F8仍零，F13 36→12，其余族逐入口不变。获批15处SectionPos迁移已完成，保留数字Bean/getter及静态方法；冻结输入独立重放另存。F6 Recipe约束488条真实DFU原型未通过捕获身份/底类型控制，全部未投产。继续处理其他共享原因，Shelf.level尚未获本批迁移授权；不全局协变、不漏检或任意删除成员换取计数。
 3. 修改遵循编辑后的 IR；保留枚举静态工厂与 Enum<Self> 实例继承分离、重命名和隐藏。用合法默认方法、接口赋值及错误载荷验证。
 4. 定向回归通过后执行 common/check、严格 TS 链；有意 golden 变化通过现有生成器再生并审查。确切产物需新的五节点十入口证明，不能借用旧安装结果。
 5. 每阶段记录 passed/failed/not-run、诊断增减和未解决合同。最后候选性能、客户端/TCP/分离回退与维护者接受仍独立验收。
 
 完整视图公开方法恢复已经有实际新安装证明；其余边界与其他族不得被诊断清零掩盖。
 
-2026-10-27下一步调查已确认五节点SectionPos的Bean读取与方法直接调用不同，`["x()"]()`真实失败；不能套用真实字段选择器。[精确迁移提案](2026-10-27-section-pos-bean-decision.md)仅涉及15处TS坐标方法，隔离副本997→973、完整块−24/+0，尚待用户决定，未改产品。F13余12条未解决。F11当前缺失模块中，core.villager的DeclarationEventJS/ReloadEventJS/QuerySurface及core.modification.ModificationCandidatePlan被dependencies.json明确记为excluded；不能绕过排除直接补导出。另有startup的DocumentedRecipes导入但零命名空间时辅助模块不生成，需单独核对内建getter覆写与模块生成生命周期，不能伪造空壳来消除引用。
+2026-10-28已完成[SectionPos精确迁移实施](../architecture-refactor/evidence/2026-10-28-section-pos-bean-implementation/README.md)，用户批准的15处已落地且新安装997→973；显式选择器真实失败仍保留。F13余12条Shelf冲突未解决。F11缺失模块中，core.villager的DeclarationEventJS/ReloadEventJS/QuerySurface及core.modification.ModificationCandidatePlan被dependencies.json明确记为excluded；不能绕过排除直接补导出。另有startup的DocumentedRecipes导入但零命名空间时辅助模块不生成，需单独核对内建getter覆写与模块生成生命周期，不能伪造空壳来消除引用。
 
 2026-10-26阶段5280d20b仅完成返回合同基础及common/定向TS验证，[该阶段冻结证据](../architecture-refactor/evidence/2026-10-26-capture-return-contracts/README.md)不覆盖新五节点安装或性能。后续完整视图及新安装见[2026-10-27证据](../architecture-refactor/evidence/2026-10-27-transitive-capture-facets/README.md)；其他族及最终候选继续推进，早期JS数组调用触发ClassCastException的扩展失败仍保留。
 

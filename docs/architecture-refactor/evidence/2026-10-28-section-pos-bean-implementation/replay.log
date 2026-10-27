@@ -1,0 +1,15 @@
+REPLAY: plain exit 0 {}
+REPLAY: before-projection exit 2 {'TS2416': 1, 'TS2426': 1, 'TS2322': 2, 'TS2344': 1, 'TS2578': 1}
+PASS: 34 files; named declaration moves only, same-name overload order retained
+INSTALLED REPLAY: 1.21.1-server exit 2 diagnostics 52
+INSTALLED REPLAY: 1.21.1-startup exit 2 diagnostics 53
+INSTALLED REPLAY: 26.1.2-server exit 2 diagnostics 111
+INSTALLED REPLAY: 26.1.2-startup exit 2 diagnostics 112
+INSTALLED REPLAY: 26.2.0-server exit 2 diagnostics 105
+INSTALLED REPLAY: 26.2.0-startup exit 2 diagnostics 106
+INSTALLED REPLAY: 26.1.2-fabric-server exit 2 diagnostics 111
+INSTALLED REPLAY: 26.1.2-fabric-startup exit 2 diagnostics 112
+INSTALLED REPLAY: 26.2.0-fabric-server exit 2 diagnostics 105
+INSTALLED REPLAY: 26.2.0-fabric-startup exit 2 diagnostics 106
+Artifacts: C:\Users\11515\.codex\worktrees\capture-views\NekoJS-mult\build\bean-method-replay-xwsomymf
+PASS: frozen SectionPos Bean projection evidence; full strict TS remains FAIL (973)

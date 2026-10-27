@@ -1,5 +1,7 @@
 # 37: 1.2.0 clean cutover 与发布交接
 
+2026-10-28 获批SectionPos精确迁移（产品 `3f9f1b0a`，[正式证据](../evidence/2026-10-28-section-pos-bean-implementation/README.md)）：五节点仅省略15处TS零参x/y/z方法，保留数字Bean、getter、静态方法、JS/Java/Python及编辑IR权威；现有TypeDocs渠道收集精确投影。完整矩阵5226 tests /271 skipped /零失败错误，完整TS消费链、四项CI及五节点source-roots通过，无golden变化；确切新JAR均正常停服，十入口997→973、完整诊断块−24/+0，F13 36→12，其余族逐入口不变、零UNMAPPED。完整严格TS仍FAIL；Shelf及其余族、最终候选门禁保持开放，未push、PR或代签。
+
 2026-10-27 Stream捕获返回（产品 `11c9a180`，[冻结证据](../evidence/2026-10-27-stream-capture-11c9a180/README.md)）：复用完整StreamView及继承facet，保留窄返回、操作数域和编辑IR权威，异种容器不串用facet。最终完整矩阵5206 tests /271 skipped /零失败错误，完整TS链和四项CI gate通过，无golden变化；五节点确切JAR新安装均正常停服，十入口1029→997，完整诊断块−32/+0，F8清零、F1/F2/F4仍零，其余族逐入口不变、零UNMAPPED。孤儿消费清理及同容器guard均有先红后绿证据。完整严格TS仍FAIL；F6、host结构身份、JS数组桥异常及最终候选门禁仍开放，未push、PR或代签。
 
 2026-10-27 F6 [真实DFU捕获实验](../evidence/2026-10-27-recipe-capture-prototypes/README.md)已取得公开backend继承红证及Java CAP#1/CAP#2正负编译对照；五组冻结TypeScript输入精确复现失败，不透明标记仍合并独立捕获，never方案还泄漏底类型，全部未投产。生产1029不变，F6保持开放，先推进可复用完整StreamView/返回facet的F8；没有全局协变、any或成员删除。
@@ -70,7 +72,7 @@
 
 **Blocked by:** [34: P4 五节点整体验证与能力矩阵收口](34-release-p4-validation.md)、[35: P4 性能复测与政策对照](35-release-perf-compare.md)、[36: P4 维护者与脚本作者真实试做](36-release-maintainer-trials.md)
 
-**Status:** in-progress（2026-10-27：11c9a180新安装十入口严格TS 997，对15c4d9a6完整诊断块−32/+0，F1/F2/F4/F8为零；完整捕获视图公开方法已恢复。完整严格TS仍FAIL，host结构身份、JS数组桥异常及其余族开放。d06cd961原政策性能PASS不外推新候选；最终客户端/TCP/分离回退、Python默认复验、内存预算、包装与维护者/发布门禁未完成。）
+**Status:** in-progress（2026-10-28：3f9f1b0a新安装十入口严格TS 973，对11c9a180完整诊断块−24/+0，F13降至12，F1/F2/F4/F8仍为零；获批15处SectionPos迁移已完成。完整严格TS仍FAIL，host结构身份、JS数组桥异常及其余族开放。d06cd961原政策性能PASS不外推新候选；最终客户端/TCP/分离回退、Python默认复验、内存预算、包装与维护者/发布门禁未完成。）
 
 **Assignee:** main-session agent（stonecutter；写集：必要源码/测试修复、迁移与数据保护交接、票据和证据记录）
 

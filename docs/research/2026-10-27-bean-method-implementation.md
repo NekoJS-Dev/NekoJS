@@ -1,6 +1,6 @@
 # SectionPos精确Bean方法投影实施记录
 
-范围：用户明确批准五节点15处SectionPos零参x/y/z的TS方法声明迁移。主代理实现、验证及本地提交；不push、不发PR、不发布或代签。原型973不是当前生产验收，正式基线仍绑定11c9a180的997。
+范围：用户明确批准五节点15处SectionPos零参x/y/z的TS方法声明迁移。主代理实现、验证及本地提交；不push、不发PR、不发布或代签。原型证据保留；2026-10-28产品3f9f1b0a新安装已取得正式973条FAIL验收。
 
 ## 实现
 
@@ -19,4 +19,8 @@
 
 ## 当前门禁及下一步
 
-最终完整common/check、处理器、guard及五节点build已通过（5m48s，929 suites /5226 tests /271 skipped /零失败错误）；无golden变化。完整TS链及四项CI门禁均通过；提交确切产品后，用新JAR逐节点安装、十入口严格重采和完整多行诊断比较，再冻结证据。最终候选性能、Python默认安装、客户端/TCP/回退/包装/内存预算与维护者结论继续独立开放。
+最终完整common/check、处理器、guard及五节点build已通过（5m48s，929 suites /5226 tests /271 skipped /零失败错误）；完整TS链、四项CI及五节点source-roots均通过，无golden变化。产品3f9f1b0a已提交并本地快进stonecutter。五节点确切新JAR全部正常停服、无kill、锁释放，17份来源/38份common类及逐节点贡献类绑定；十入口997→973、完整块−24/+0，F13 36→12，其余族逐入口不变、零UNMAPPED。
+
+实际MC声明仅移除15条获批方法，五份core模块其余内容逐字保持；34份其他声明仅独立命名项移动，同名重载顺序经AST保持；1.21.1同一不可用客户端类型的底层错误文字变化另行保留。[冻结输入与独立重放](../architecture-refactor/evidence/2026-10-28-section-pos-bean-implementation/README.md)包含历史失败和精确复现命令。完整严格TS仍FAIL，未关闭票37。
+
+后续继续剩余诊断族；Shelf.level不在本次批准范围。最终候选性能、Python默认安装、客户端/TCP/回退/包装/内存预算与真实维护者结论仍独立开放。未push、PR、发布或代签。
