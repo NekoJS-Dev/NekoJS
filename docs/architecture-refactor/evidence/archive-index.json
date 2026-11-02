@@ -1,0 +1,2442 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "421e9ee2c80d0cb04d3c67a50021837cbc292543",
+  "storage": {
+    "kind": "external-directory",
+    "status": "local-only; not published",
+    "environmentVariable": "NEKOJS_EVIDENCE_ARCHIVE",
+    "objectPath": "sha256/<sha256>"
+  },
+  "recovery": "python tools/evidence_archive.py restore --archive-dir <archive-directory> [--path <evidence-folder>]",
+  "files": [
+    {
+      "path": "docs/architecture-refactor/evidence/2026-09-29-golden-decl-prep/events-declared-goldens.diff",
+      "gitBlob": "8f529768dc975925e0954ee59cce2e8c549c0473",
+      "gitBytes": 1239189,
+      "bytes": 1245673,
+      "sha256": "27fa87111e14ab8fb71fa037721ffaf7ea35fca796ce0b1691d35fe60a358f45"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-06-ticket48-e2e/combined-final-session.log",
+      "gitBlob": "2f900fce17115fe5524261c02c920caaf4e6df9f",
+      "gitBytes": 651088,
+      "bytes": 652397,
+      "sha256": "a41617b82b9cda67743a466423fbb95a59fbe9a1409d8e5f57c51b85152e03c6"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-15-domain-closeout/domain-evidence.zip",
+      "gitBlob": "d2b7941f28e27be161b7f21e65634e162edbe0af",
+      "gitBytes": 8708533,
+      "bytes": 8708533,
+      "sha256": "be77bbd8713bb9c8368c227bf12beeccf35054001455f50c0d0f90d75b9248ce"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-15-domain-closeout/manifest.json",
+      "gitBlob": "977c720d514cdd284858db64faa4a07a70343e84",
+      "gitBytes": 720774,
+      "bytes": 725091,
+      "sha256": "839c067c772d6dad67d2958e84ded294d924be5d26ebf3de9142b427965133e3"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-15-reload-performance/baseline-evidence.zip",
+      "gitBlob": "79139ff84fdfead60bd852fd184d5216ec9037f2",
+      "gitBytes": 1360100,
+      "bytes": 1360100,
+      "sha256": "1a13e512cef72b8492d23a6461ffb951a8697615c324c6c1d4ed7fa06a3330ca"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-15-reload-performance/candidate-evidence.zip",
+      "gitBlob": "e73ac87dd5dae56432b6002932ed66d24abf680f",
+      "gitBytes": 1458890,
+      "bytes": 1458890,
+      "sha256": "0bd1ac10ea41d8059c5d151765744f9408edf26a94c99875192ca26bbb6a0c07"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-15-reload-performance/diagnostics.zip",
+      "gitBlob": "e80a7515e4af1ef07cd43bf056c4e54f3f4ee210",
+      "gitBytes": 2036650,
+      "bytes": 2036650,
+      "sha256": "e319005d69e875904808a2e287d946d7b374236f2a71c807829f49b7743f5797"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-15-reload-performance/summary.json",
+      "gitBlob": "8dd7e678a8fbf3da9e04f9abc1774640f6963d9c",
+      "gitBytes": 293044,
+      "bytes": 295116,
+      "sha256": "ac7596fdb91dabd1634b508ef8bfff4698e6b76cd253cc6cc6882ad18a61863c"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/entity-bean-evidence.zip",
+      "gitBlob": "400617ca252ad573ac7b034d3754dad7b9322462",
+      "gitBytes": 9059529,
+      "bytes": 9059529,
+      "sha256": "9837c25684b5cbde8739488bc635314db78e5ff83d008778d6079c17345d8615"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/entity-bean-manifest.json",
+      "gitBlob": "ee6906ce294a4f2648cf6b360839f16cbb3efd41",
+      "gitBytes": 729236,
+      "bytes": 733622,
+      "sha256": "6df4a06ec55b1a8c5a3d75fdb235fac6bc8e9ee07e9e2eb53bd0028db2c6b519"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/entity-bean-summary.json",
+      "gitBlob": "1ff1987d03bea28f2d996198b51673c1287379b1",
+      "gitBytes": 474021,
+      "bytes": 478464,
+      "sha256": "807610211de283cd81c45e8dd78bcc3956f49a595d288785519a95108ab4fa26"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/enum-evidence.zip",
+      "gitBlob": "c2f876763cae363797146ec9193b838b050f1636",
+      "gitBytes": 8936682,
+      "bytes": 8936682,
+      "sha256": "a22a11ab9f9938a1c46b7a347a16bb67e147490a8c8dd1fda744e99abf69de4a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/enum-manifest.json",
+      "gitBlob": "99cf63380eef97b3d0229aad94c7ec69770c54fa",
+      "gitBytes": 732293,
+      "bytes": 736707,
+      "sha256": "c9900894c6f5fb4d68ce37a3dd039ce58c2faec8f8df08aab6ad81b5d441d7d3"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/enum-summary.json",
+      "gitBlob": "f25de5d7e11bd078c97f9ad99f0d8a4e3d41ee48",
+      "gitBytes": 469494,
+      "bytes": 473768,
+      "sha256": "575339b11d0f1441ea0001cff040f90dd9196bc70b1c82ccae7625d477d2724d"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/frame-evidence.zip",
+      "gitBlob": "722f5a99e011ffef1eacc0f34621ad75d2b31c78",
+      "gitBytes": 3828702,
+      "bytes": 3828702,
+      "sha256": "0b36e65f19ceab3a567c841dade397a5e4611cf497acfd91ff2322eaa34bb676"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/generic-evidence.zip",
+      "gitBlob": "4fb8d5d50c33561e1ee3b6719981138affb12d07",
+      "gitBytes": 8548784,
+      "bytes": 8548784,
+      "sha256": "f9829d8f962ed834df14d9d0443516f5326e39e54b3463ea28320adee044559a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/generic-manifest.json",
+      "gitBlob": "6171b93783ff98e83191e3b93b70084ede54d294",
+      "gitBytes": 730583,
+      "bytes": 734979,
+      "sha256": "fee9338b078409208f2c7936a0901884866401e4571af778266183283bd0c2cb"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/generic-summary.json",
+      "gitBlob": "91b247fdf3ce1e37e10a761d1310795d69510bb8",
+      "gitBytes": 465617,
+      "bytes": 469819,
+      "sha256": "a8f46f69525a322524a1738f7899a1043c73a53a5c53822ba253ccbb2e26eb1a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/investigation-evidence.zip",
+      "gitBlob": "831a3884ea23ecddde033d8a54c07f1243be3335",
+      "gitBytes": 333952,
+      "bytes": 333952,
+      "sha256": "afe3841cc6791154703d842ec155e608205ac741efe8b6fce414d15770205e64"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/performance-evidence.zip",
+      "gitBlob": "71db24beb7458b82a5ca20cacfd8b96399202e74",
+      "gitBytes": 1745711,
+      "bytes": 1745711,
+      "sha256": "25c4219e7c5c7dd7d59f73eae8cc202f131fccf99e92a56dcaea9aa2d1a96d58"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/raw-input-evidence.zip",
+      "gitBlob": "1a8e6d7bff97320c7585ab07a21696d07bc628eb",
+      "gitBytes": 8564947,
+      "bytes": 8564947,
+      "sha256": "a87a4face32b60bd7c1180c7b94dbfd3b56c1634939ac55a081ee51826c6f9d6"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/raw-input-manifest.json",
+      "gitBlob": "0c504c778b381443f2dfdb64ea6c5a0e34cfff18",
+      "gitBytes": 729189,
+      "bytes": 733575,
+      "sha256": "2a4db23819d87d8f97e44f25343d498fe78bb763448bc11c4df1902383177c5e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/raw-input-summary.json",
+      "gitBlob": "a9b0708d7627b145d8bea741f4038b0d9c004cea",
+      "gitBytes": 465442,
+      "bytes": 469637,
+      "sha256": "f70f8e808ba70f11da3154d0f238cf2e8f15774bfc8a3806ae58d7aa568f86b4"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/resolver-evidence.zip",
+      "gitBlob": "2622c5d1a09adb21fb85a623e1a01d9b429c0fa9",
+      "gitBytes": 9954588,
+      "bytes": 9954588,
+      "sha256": "e65bafa678929e83a1896953c489f997c6616ab91683dea915c3c9139c9e349e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/resolver-manifest.json",
+      "gitBlob": "eccc753c0553fcdcc75d9f256341ed4981ba8765",
+      "gitBytes": 731485,
+      "bytes": 735891,
+      "sha256": "2ca968c3b1a12a417759004b70a29ddf5ebe7ba6f468ed30bf3240512a6515a7"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/resolver-summary.json",
+      "gitBlob": "ec7130fca48b4032a72a38f308256de12a23fd53",
+      "gitBytes": 468688,
+      "bytes": 472978,
+      "sha256": "56cad2f54f5d4bde2c81c545296d9cb2b8a1d969e4200b205ec8775385af35f7"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/return-contract-evidence.zip",
+      "gitBlob": "de90b83357f68de6a3ab70f8c0e0c88129af81b1",
+      "gitBytes": 8614732,
+      "bytes": 8614732,
+      "sha256": "781728e2d2d0a7d997d3634f5f9b7ba2183891b9cad98c5b5229ea08d2d67f92"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/return-contract-manifest.json",
+      "gitBlob": "102db8858f7fe1d346f2d8ddcd158caa6b165b53",
+      "gitBytes": 728264,
+      "bytes": 732633,
+      "sha256": "b81a63378718cfb39e9536faf7f21b089d8013276543253e0e9e7545cb1f510f"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/return-contract-summary.json",
+      "gitBlob": "0cddad57b68277a2f3fca5201cb660853346d482",
+      "gitBytes": 466087,
+      "bytes": 470295,
+      "sha256": "0f49f2ff6fce2da993d4dad5b30c4f03a6908edfc9503ee65b6722015d2eb235"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/reviewed-evidence.zip",
+      "gitBlob": "372d9ac132fdedea0930444d4b4c311414ec25bf",
+      "gitBytes": 8145310,
+      "bytes": 8145310,
+      "sha256": "4af4dab4d183baa1352a4204de67997be4ca53454002e1ece50f820224e71bcb"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/reviewed-manifest.json",
+      "gitBlob": "550ec80b66615f27d16f00e0819ef8b11235180f",
+      "gitBytes": 723425,
+      "bytes": 727759,
+      "sha256": "6116b824f2f7d73a0a0c800ae4e76b41219619ee049e74f43496917738f3172c"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-16-followup-acceptance/rollback-evidence.zip",
+      "gitBlob": "55e7eb425c3bb5a11f494ea896b600126fe5952f",
+      "gitBytes": 55722,
+      "bytes": 55722,
+      "sha256": "169a64d770067ffe721e5dbb2112b7efb63223a6f4409b2cba2e030b3347af15"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-reload-performance/cpu-and-preflight/evidence.zip",
+      "gitBlob": "5f738c4a437cce73954b21c916a106f2edf20f2a",
+      "gitBytes": 744538,
+      "bytes": 744538,
+      "sha256": "1830ecfe23438490649852b9e0168444fd349250db280860868c1e2b28c28683"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-reload-performance/cpu-placement/evidence.zip",
+      "gitBlob": "ba2ba5276345a05fa781cd50feb3ff8b0bc91243",
+      "gitBytes": 427630,
+      "bytes": 427630,
+      "sha256": "b7606aaf1ef7daf76f0bb5174d009f61a48e4255fffb77d390bd2aef49f10f11"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-reload-performance/current-phase-profile/evidence.zip",
+      "gitBlob": "017777a2bb17b926bd3a2670475a3e332e3b22d8",
+      "gitBytes": 241874,
+      "bytes": 241874,
+      "sha256": "7bd231561e4afa74a5e344ea27516594128eddb34eac3e7fd75f6afae25b8afe"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-reload-performance/diagnostic-controls/evidence.zip",
+      "gitBlob": "26d8507a431c81d39e2fca7550ec7cc6c4bea486",
+      "gitBytes": 64253,
+      "bytes": 64253,
+      "sha256": "c49b9874accf70ba5772ec8a464c616e07a944f46fdfad93b605f52084f86e72"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-reload-performance/evidence.zip",
+      "gitBlob": "c7d23f31b1b43ed730d4dd8cb2f5352173263bab",
+      "gitBytes": 4531909,
+      "bytes": 4531909,
+      "sha256": "f4ba0ff9b51de98337be69006d73267708c05def0da7f5a69e96e784a62bfc2a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-reload-performance/historical-reference-3400/evidence.zip",
+      "gitBlob": "aebe9f3186ce1b85877099316efd66003dd8c7ab",
+      "gitBytes": 5115440,
+      "bytes": 5115440,
+      "sha256": "a2bd15758243d45ffc73874e6973b9037e50d48cb9abda4f9b26703b52e57ffc"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-reload-performance/invocation-controls/evidence.zip",
+      "gitBlob": "671ed76482c422dc1e39bf1453d054edfae6b543",
+      "gitBytes": 21789,
+      "bytes": 21789,
+      "sha256": "e0f82f3d52790aa82ada8038a1516d93ea8f9d5b5442d2c31a6db20311ea6634"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-reload-performance/output-visibility/evidence.zip",
+      "gitBlob": "8175b3c6bdacba0c3b93d764225f1ed3119f88a0",
+      "gitBytes": 648753,
+      "bytes": 648753,
+      "sha256": "bc4942319b10ac6e96e74dbea47a2c216df704622b6656d9fedb1ca5663ffd33"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-reload-performance/real-invocation-control/evidence.zip",
+      "gitBlob": "fe35186af9b53576671b23ef20bc2f44dae15a89",
+      "gitBytes": 314418,
+      "bytes": 314418,
+      "sha256": "a5fdf40244ea10baee8a20a37a7cdcb8c5a2a8756eb25b4e557f07c59546adbb"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-reload-performance/trust-6e5bb8f0/evidence.zip",
+      "gitBlob": "0d51636ddc62b94e05c8c60ea3f6037c0dce8f87",
+      "gitBytes": 2308125,
+      "bytes": 2308125,
+      "sha256": "b22f7876f7731cc152774b6361e7c61f16eecbeb9edafc939993afd57b51b628"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-tsc-closeout/character-evidence.zip",
+      "gitBlob": "fa4a6a4db53a04a0c2f555146ce9d99e34b81514",
+      "gitBytes": 13494897,
+      "bytes": 13494897,
+      "sha256": "9cd84be538967d665c025756ba50524abf88cfb558ef517d2c033b501f18aba6"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-tsc-closeout/character-manifest.json",
+      "gitBlob": "d47fe2094f470925e6d0e753f9f3a07a6886cb18",
+      "gitBytes": 1107984,
+      "bytes": 1107984,
+      "sha256": "cd36031db83fe38e3abd9cfdb1fca86514702778b5b192b0e078cf784c33cdd6"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-tsc-closeout/character-summary.json",
+      "gitBlob": "18168477bad32b05b1a772fea86120f51fc95709",
+      "gitBytes": 1594350,
+      "bytes": 1594350,
+      "sha256": "edd9fd963ff3e15beb07848f2890a627c78d17b94b987bc93c2ce6f264549b42"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-tsc-closeout/dependency-evidence.zip",
+      "gitBlob": "7ee3fb149ef5a855ad6688a2ee37fe029da7fef4",
+      "gitBytes": 11193041,
+      "bytes": 11193041,
+      "sha256": "55dfddeddf4de4a62ee4dae978c63257a9e32c6eac4f97d2169d4af59d2af106"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-tsc-closeout/dependency-manifest.json",
+      "gitBlob": "15577e7a580f9a1c13c9587548e068492d5903a4",
+      "gitBytes": 931508,
+      "bytes": 931508,
+      "sha256": "11bd0e01b5b892cb5fbbc6a99e9756d0a7a099b0808fc4a35f302233d337ba8a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-17-tsc-closeout/dependency-summary.json",
+      "gitBlob": "9611c20687fb289613c69135ccf7d5ac77f3a4d8",
+      "gitBytes": 1145879,
+      "bytes": 1145879,
+      "sha256": "83996696cf1275eba737513506a0fd9a0449ac162967beb7064d3edaae038d20"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-18-client-world-login/evidence.zip",
+      "gitBlob": "1e3dba63efb913186e9e483e98e2ee515aa5937a",
+      "gitBytes": 1596666,
+      "bytes": 1596666,
+      "sha256": "b5159d765f184adb4cd0ed0bb1b08c6e8fe7cefd0d6174c1e9136145cccd7dc4"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-18-community61-interface/evidence.zip",
+      "gitBlob": "76488ae6780c9a36e496dc8120524341abfc2c99",
+      "gitBytes": 331956,
+      "bytes": 331956,
+      "sha256": "7203889ff03599cfb7e21c5b72353a6f135f94969095bc86925636d125baacbc"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-18-controlled-performance/evidence.zip",
+      "gitBlob": "0bd30e6cb4a877966dad7012368de60d8d7d5f44",
+      "gitBytes": 23305323,
+      "bytes": 23305323,
+      "sha256": "148de3879132347ad8a2bc12a013a56ec646de0d77266cdd5ad8d689fc5d00c9"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-18-pack-live-acceptance/evidence.zip",
+      "gitBlob": "4f2ffde35c6df741c9f0708baa91f2a677313872",
+      "gitBytes": 2325895,
+      "bytes": 2325895,
+      "sha256": "6b65111638f86b762b1b9418c44d497d81b5445bfca100ae6c8e41776c6d438c"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-18-pack-native-memory/evidence.zip",
+      "gitBlob": "3209e98d9d1ad846f2d1f3eccf264c34a8d55dfe",
+      "gitBytes": 2283239,
+      "bytes": 2283239,
+      "sha256": "45f087ccac369de8e84735999b08f3a8d9546a5a073d4a72d4ae1e5c2864c5df"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-18-pack-resource-acceptance/evidence.zip",
+      "gitBlob": "00dd8b560a02046925f7d54f28140ee119efd282",
+      "gitBytes": 681233,
+      "bytes": 681233,
+      "sha256": "bf2a7c6a788b96f8c08ba7f8764294bb23d792085b18904bb22201d2ea9b2db1"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-19-implementation-checks/evidence.zip",
+      "gitBlob": "2455d76390f68d4c5d55627cd3e8247c1fd8b2db",
+      "gitBytes": 1054782,
+      "bytes": 1054782,
+      "sha256": "26e97a73e48e946f49fe24b9a8b09cb5157b6e26e02f7ddcd031f3d291ba5868"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-19-preflight-performance/evidence.zip",
+      "gitBlob": "85b1aa56684d4770bbae64417d9fe7ad7f01bf91",
+      "gitBytes": 18036768,
+      "bytes": 18036768,
+      "sha256": "acee36d9b82eb82627392a46de9a80ed9dc428e1bab6f2e2ed859649c24e76d5"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-19-project-location/evidence.zip",
+      "gitBlob": "6333a342325d080ad7663198929cd6affff03ee8",
+      "gitBytes": 1410665,
+      "bytes": 1410665,
+      "sha256": "1cc5b40b614cf4fbc2aebd855c46fcce37d9f0fd5b7ebbf96ee005eecf43a65e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-19-redundant-work-checks/evidence.zip",
+      "gitBlob": "e10745f8410bdf59e0be72c873dea43310b97dd6",
+      "gitBytes": 1048752,
+      "bytes": 1048752,
+      "sha256": "b6ff210b55f5ced1536509925c09a7394a877ebdcfc602590557ec72c519a530"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-19-redundant-work-performance/evidence.zip",
+      "gitBlob": "8ea48e2d19e97e0748c62ca095d9dfbc3804054e",
+      "gitBytes": 18127043,
+      "bytes": 18127043,
+      "sha256": "cbb3f6556078259b7643b3673c4f30779cec97fe78649253452dcf9c0c9a5ea6"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-19-reload-stage-jfr/evidence.zip",
+      "gitBlob": "1355408acafa8ffd57c7ed33b112f13e20ebf2b8",
+      "gitBytes": 404486,
+      "bytes": 404486,
+      "sha256": "09a5aba9ae125afe93bb5f43c55d6cd0ea6af00daea60390ae7fe4e95d683749"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-19-scoped-reload-policy/evidence.zip",
+      "gitBlob": "b810ec3967040d403ff0b57121e9bc364a6f0f0e",
+      "gitBytes": 18867269,
+      "bytes": 18867269,
+      "sha256": "5801b28d521d553d4d38b1d56edac723720f32c96231b82e4431de81b4b414e9"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-19-source-map-decoder/evidence.zip",
+      "gitBlob": "822bd2de5ee61b9c966d1542b58c69e5e48daf3d",
+      "gitBytes": 19021822,
+      "bytes": 19021822,
+      "sha256": "c69845cf9f6aaaabc707a08c19c72dfc4b6334190f75cf6a668ea85efb56830e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-19-startup-boundaries/evidence.zip",
+      "gitBlob": "141c04fa64b316dc21011fa2ae09710d33f4f70e",
+      "gitBytes": 516965,
+      "bytes": 516965,
+      "sha256": "1479028865cd790f88fcc06b6e322f6911feb04d617ea50827df807eb8d077dc"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-binding-preflight-checks/evidence.zip",
+      "gitBlob": "a16b2b6b1bd1d3cb510c27a9a105511b48f2932e",
+      "gitBytes": 430972,
+      "bytes": 430972,
+      "sha256": "c071693689ce2af6f5523b2b26a290c9e6060c81cfb4b7c12ea5a3e545b3d66b"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-binding-preflight-performance/evidence.zip",
+      "gitBlob": "7e18e7817b2b91bd20205648d184f722559867d0",
+      "gitBytes": 18119562,
+      "bytes": 18119562,
+      "sha256": "a126edba4a941a13f534b4a1c72845b0be02ad36aafcc146c32a70c0f61c5a07"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-current-reload-stages/evidence.zip",
+      "gitBlob": "e2589dc9366efaa8dab25de0478a80979ea33c6d",
+      "gitBytes": 594712,
+      "bytes": 594712,
+      "sha256": "16d11c296f4a4db2c39484c297ff1c4120054511fcf5a60adbbfd2a8c3362db2"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-fabric-client-preparation/evidence.zip",
+      "gitBlob": "75602d1e36a852436a7c121af5a831933fdeb905",
+      "gitBytes": 185226,
+      "bytes": 185226,
+      "sha256": "17a9e5dd945300014d5e52646f1fe3a0a2eb71aa717379428d1f62169a3ebf2a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-fabric-client-preparation/v3-evidence.zip",
+      "gitBlob": "c3f642ae84439f728fef5d0fbeec86af794a7236",
+      "gitBytes": 295732,
+      "bytes": 295732,
+      "sha256": "0df3c0a467fd454158f3919ee1949686e12c75085c9326add4a24b7944513592"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-fabric-client-preparation/v4-evidence.zip",
+      "gitBlob": "f130c2eb106ea1c33caa6f8fdbeca9d9f547bd38",
+      "gitBytes": 526298,
+      "bytes": 526298,
+      "sha256": "a9a16d0e3fd0a87aa77d3bb8d9485d212d642f0971a73de0602a3db8810936b3"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-fabric-client-preparation/v5-evidence.zip",
+      "gitBlob": "263c3e92fa509ef692160f4aab4824d1c6d4250e",
+      "gitBytes": 181043,
+      "bytes": 181043,
+      "sha256": "4396bdcf81417be85ba3f088a5a6e9c4b44255edce4ad5b3eca528a9f88b6267"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-fabric-directory-server/evidence.zip",
+      "gitBlob": "77d4df0de54bfcd086091ea9dbbf27679cb46fa4",
+      "gitBytes": 34008000,
+      "bytes": 34008000,
+      "sha256": "fb18cbbf78f53c9dd8a26d6fd6396def32cb034f588ec58518f065517dc9dc5e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-fabric-final-checks/evidence.zip",
+      "gitBlob": "3470139c96c0f2372aaf63a01b4c2ab23f7dbd07",
+      "gitBytes": 349530,
+      "bytes": 349530,
+      "sha256": "48a07e81a07e3477348758a8f60f1e6fc3a16f5a388e33a8962000d310bdde34"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-fabric-server-timers/evidence.zip",
+      "gitBlob": "15a2809280cb41fd5add142a6b4bf1d39a532347",
+      "gitBytes": 228569,
+      "bytes": 228569,
+      "sha256": "daf9316daab3314b67a2df023c8c323370dd35890496c6f8383c14e30890a1de"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-pack-game-pause/evidence.zip",
+      "gitBlob": "1b7fe772778285b99258e6605186651468bab0ba",
+      "gitBytes": 122603,
+      "bytes": 122603,
+      "sha256": "329f796a3af7e1289b0a62ea022286b815d63246c44d01b1acd32f9ad63f51a0"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-pack-game-resources/evidence.zip",
+      "gitBlob": "c9a33e695c58794e73b75c9e848a70fc7de9646d",
+      "gitBytes": 146571,
+      "bytes": 146571,
+      "sha256": "8c44c5d5a4a5c700cb1d70ab17eb516388ec2705b634a1259297b7b9a4ca67ce"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-source-map-storage-checks/evidence.zip",
+      "gitBlob": "dcfe6655fad61422d2aa580d5bd6ac36c1cf111b",
+      "gitBytes": 1101393,
+      "bytes": 1101393,
+      "sha256": "6b313532d893e56a6165e702353408329f6c5a8bde1591aecdb3f8016c35bf89"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-source-map-storage-performance/evidence.zip",
+      "gitBlob": "ec910df8b9c1ae21c5f7b396dd080ae4806aa223",
+      "gitBytes": 18119730,
+      "bytes": 18119730,
+      "sha256": "485e5a3afd8db99543aa32776127025072b41bc1bcebdbdc774bf09292c00da2"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-20-syntax-reuse-decision/evidence.zip",
+      "gitBlob": "4e072e758ed7f80aa80371aeb6d9a51baa66fdc2",
+      "gitBytes": 239588,
+      "bytes": 239588,
+      "sha256": "f9c03b07f9d8bc05cc7acedc51e2b706a2b681592142908e52340e0d8e2d1f67"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-21-fabric-directory-client/evidence.zip",
+      "gitBlob": "c43a59a0bcf2f186e257373484deae0b8de050ec",
+      "gitBytes": 1574061,
+      "bytes": 1574061,
+      "sha256": "adb51eb19b517969c742f0d126498411988efd7f9db6324cfef8459589524fe4"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-21-posteffects-native/evidence.zip",
+      "gitBlob": "64ef43b863470a7db40935bd28f88eabd09e083d",
+      "gitBytes": 11345962,
+      "bytes": 11345962,
+      "sha256": "bd84632d45dc732618be599186f22be2f53a4d873c16e9cd94d62a70c468d93e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-21-probe-closeout/evidence.zip",
+      "gitBlob": "77ba06acdb674cdd7b1b93ad1900c41e409a4129",
+      "gitBytes": 9182406,
+      "bytes": 9182406,
+      "sha256": "00e4d2929f1ea5bc3dcdc0693969c33f56687589f93cd452bffafd73be38bb97"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-21-probe-closeout/manifest.json",
+      "gitBlob": "3d58fcdac781de03ae2b1b650a80ceb0f53a2bac",
+      "gitBytes": 1019352,
+      "bytes": 1039100,
+      "sha256": "485c8343722372fc757803688cef9704d78b4a29bf9f2ee20269696d766e3872"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-candidate-checks/evidence.zip",
+      "gitBlob": "f6a43354b2c5f18b0d23f665838d73b53e291034",
+      "gitBytes": 9299749,
+      "bytes": 9299749,
+      "sha256": "865609704dbff640222ad2752adf011c85ce4c0e9460f89439f46aa9154cd614"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-candidate-checks/manifest.json",
+      "gitBlob": "e8f0b71736ff157808d673dea0c82e0b7695686e",
+      "gitBytes": 1143047,
+      "bytes": 1163188,
+      "sha256": "e03296f75874380a5689f147d260b50813cf324c9e4a75e63b58b0f9e536bb3f"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-candidate-performance/evidence.zip",
+      "gitBlob": "91b1ea55ba3d2e1b5222075d40266df322d9a2cb",
+      "gitBytes": 18144241,
+      "bytes": 18144241,
+      "sha256": "b2a5225bf03f794e0819b5a2830677e99836daa5b9a08bfc6029414fb2b81911"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-candidate-rollback/evidence.zip",
+      "gitBlob": "8585944c7f0a4618ef702967126a625506926591",
+      "gitBytes": 50002,
+      "bytes": 50002,
+      "sha256": "7c79f23d7e52c652aa0beceb1c81de4b1f88df8038addcc4faca3cc2b64d2e2f"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-dynamic-tcp/evidence.zip",
+      "gitBlob": "1d8e75208b877a86ae6166e51e51805ba1032267",
+      "gitBytes": 543356,
+      "bytes": 543356,
+      "sha256": "d698311b50cf96a777ee0802ca9f963a1a268f33ee44ca742e0b0cba4ed61932"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-posteffects-262-installed/evidence.zip",
+      "gitBlob": "a70711be4478f583c6a41ee49b2f5ac0ab48591a",
+      "gitBytes": 1657607,
+      "bytes": 1657607,
+      "sha256": "8034cee5f82aa87c302839294ea3c7c60a43690e4a4dba9a4b2f870362ab1957"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-posteffects-legacy-installed/evidence.zip",
+      "gitBlob": "bc7bd768abba8d6b141342e89e96864d06bafaf1",
+      "gitBytes": 1626325,
+      "bytes": 1626325,
+      "sha256": "9e1463536f9873ecbe5a7cdb73e776d0148265de4b98dc04543126b7b1ab7cca"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-reload-diagnostic/evidence.zip",
+      "gitBlob": "a6a15f41af91bbe0348961fd80e17ce89a2776c5",
+      "gitBytes": 387670,
+      "bytes": 387670,
+      "sha256": "1e62a8e9b058196e043055e1979541cab2d5accf6c3715e8f2c64baf6df1a746"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-source-facts-performance/evidence.zip",
+      "gitBlob": "aa6166f3d6ab011cd753f15118a3c68a5bff7179",
+      "gitBytes": 18146858,
+      "bytes": 18146858,
+      "sha256": "9acef9987b44676508013d95a115db24c13e02329d00ffe558656694b8d427af"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-source-facts/evidence.zip",
+      "gitBlob": "2b8339080b6b4c30bc5bac45c4b21cea88e0b37e",
+      "gitBytes": 538245,
+      "bytes": 538245,
+      "sha256": "e911e8dec5cc561385e20943aad8b0c89530f13bfa8bdba4aee26c83001494bf"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-source-facts/manifest.json",
+      "gitBlob": "9509f9e0a346f627098de54f992e3af7f9bd0864",
+      "gitBytes": 302604,
+      "bytes": 304761,
+      "sha256": "ab1d0faa6ebd29b2a8f576591730c1bcb3d15e3a5b4dada0ea97e196b170fe69"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-static-inheritance/evidence.zip",
+      "gitBlob": "c035df4f506125935d7f1df925922c95b710fcb0",
+      "gitBytes": 14920619,
+      "bytes": 14920619,
+      "sha256": "144d4725e23234c00ee3fd300215b42f0e2b9a5dea71879d8114e312f9b23445"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-static-inheritance/manifest.json",
+      "gitBlob": "ad87fea75129f7ff1374366653edc4d3ac199975",
+      "gitBytes": 1566596,
+      "bytes": 1593568,
+      "sha256": "18557bef35fa28059d425a0e2ed9a08bcc9fd6bc6bba2c2334b259bb9003c4ef"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-22-unified-client-native/evidence.zip",
+      "gitBlob": "35c9dd8ff8b5fd315160bafe3edd2760389ad7aa",
+      "gitBytes": 3326533,
+      "bytes": 3326533,
+      "sha256": "7c195fd21a99098694ba6e8793ac2c9520cc3e968df87c5114056c7d9226eb6b"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-bean-member-semantics/evidence.zip",
+      "gitBlob": "1a3d1193d6c3fa4d1addd3835f8e9fde742127d9",
+      "gitBytes": 6328,
+      "bytes": 6328,
+      "sha256": "5a3ebe08e0cf0ba58c7b0da34a1ca0bb9aab1a9b04601ba0fb97415ab65379b4"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-class-bounds/evidence.zip",
+      "gitBlob": "108baf5909e4e90bca28c82092767c9356fa45c8",
+      "gitBytes": 9454786,
+      "bytes": 9454786,
+      "sha256": "971cae13aa47d743672bfc8503d1ad10ba16cabea7cb17acf3e3823c4824f92f"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-class-bounds/manifest.json",
+      "gitBlob": "574639ae8f51be76f135f5809688993f970c053d",
+      "gitBytes": 1110215,
+      "bytes": 1131026,
+      "sha256": "9afac068d5874d20f2f6c8901af6c017e4bac36bc1ecfdcc5f5d6ca2d62a597a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-current-candidate-checks/evidence.zip",
+      "gitBlob": "f53a545cda4ab6c663d789f3c4a6f41ec18b2baf",
+      "gitBytes": 9128801,
+      "bytes": 9128801,
+      "sha256": "f48950a944dcf48c692ebc27311be954c4405e6e64e2689ceae0c14aaa12c326"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-current-candidate-checks/manifest.json",
+      "gitBlob": "0841df04ae48a357ded584ce0aa5e0290f8e5918",
+      "gitBytes": 1063697,
+      "bytes": 1083718,
+      "sha256": "6dd6d0211da0f7545a35e4b015728ad3fbe59b3e8346744a6e9c064e7eeec9ed"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-dynamic-commit-recovery/evidence.zip",
+      "gitBlob": "cf107b6912e37e0a0cec3ed90d8dd721a9d0458a",
+      "gitBytes": 509889,
+      "bytes": 509889,
+      "sha256": "44f7c70ef220f896fa455a7d2616d03501bf6d73c843efb7b5e329a0d44f0062"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-dynamic-commit-red/evidence.zip",
+      "gitBlob": "55dd3bf3433a4ed56f8fb688b46e9b1608ba13e0",
+      "gitBytes": 509595,
+      "bytes": 509595,
+      "sha256": "18b1a8f4cc08f16d9e88f90e9c657e3c7d2b842c7b15736dc695089de86ce071"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-event-dependencies/evidence.zip",
+      "gitBlob": "7e89d351f57b0ded35f58c9dfabb432ef853d151",
+      "gitBytes": 353187,
+      "bytes": 353187,
+      "sha256": "b070bc24ab944d4f9ab1cff290d9c196ae9bec5a2f730bb9f037f5f049166e56"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-event-installed/evidence.zip",
+      "gitBlob": "d449d314a07312d12e9eb0a3facfc431adcbaf0b",
+      "gitBytes": 8240272,
+      "bytes": 8240272,
+      "sha256": "a4733d5cd680d8bcba210edfe39ec9ca6f91067203d768e5d92992f2de795446"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-event-installed/manifest.json",
+      "gitBlob": "269302c76e24e34bbceb7a4c1b1da7c4662283e7",
+      "gitBytes": 873068,
+      "bytes": 889531,
+      "sha256": "eb48c3559a43202bb8feca9e7766d1bb7c58aacb49863f59cd28397a81500f97"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-event-node-followup/evidence.zip",
+      "gitBlob": "04dfb2ffc7af0e4f25636bbfa7e2b39df648541b",
+      "gitBytes": 43985,
+      "bytes": 43985,
+      "sha256": "852926ff5e5b7d04634688537a59c88df49ff2623751c9403539cd39fe4b0f99"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-holder-modern-builds/evidence.zip",
+      "gitBlob": "5ccabecd775cf38ec0687ada78c8f18de073ca97",
+      "gitBytes": 760402,
+      "bytes": 760402,
+      "sha256": "39bd76dfc42d52f20767bad153c90f5b277bfd5b56e12aaaa385ddd6afd24255"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-intrusive-holder-fix/evidence.zip",
+      "gitBlob": "a4ed8f0d170b2474a6e7a72add6049dc4a6ce8ed",
+      "gitBytes": 23744,
+      "bytes": 23744,
+      "sha256": "a1aea4c63bce007399a5f24e5b8cada369e5b8d0d238e6740ed9bc44692b89c5"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-loader-preparation-diagnostic/evidence.zip",
+      "gitBlob": "690cd8217bf2bbae622c9ad1c3e68181d004352e",
+      "gitBytes": 471211,
+      "bytes": 471211,
+      "sha256": "fb13c3355e62af467a50d0158d07f2acf680fe99e7803f7486659d1d0d7deddc"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-posteffects-closeout/evidence.zip",
+      "gitBlob": "099c172325db5f1fc2f29778c997ceb128e7c2d5",
+      "gitBytes": 83494,
+      "bytes": 83494,
+      "sha256": "c5573ec5d2176b75e96986c5a6e0e2f5cca05b3ebdf064278e1e2d7f6bb717d4"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-raw-generic-output/evidence.zip",
+      "gitBlob": "b7c2612075ea8a4f35d3fdde5918a4f04a768797",
+      "gitBytes": 433043,
+      "bytes": 433043,
+      "sha256": "7f7a73487c17121b35fbd56b103c9f9b98c7a6dd354f82414ee086f19ab75447"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-registry-catalog/evidence.zip",
+      "gitBlob": "713ddf5ec95525c1a2b80b4ee808d2bcad64170b",
+      "gitBytes": 1088823,
+      "bytes": 1088823,
+      "sha256": "ece91cd3f240aef50787ce19f277ab46d29b0f63a0fcc58fb033470b3a2bbd10"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-registry-installed/evidence.zip",
+      "gitBlob": "8f9fd56d90d1f72c487a79393a0fee297ca1e238",
+      "gitBytes": 8408540,
+      "bytes": 8408540,
+      "sha256": "246467d648bc0029424e74163f142c65e8db4ce6e0aa5a4b759b435a015670e3"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-registry-installed/manifest.json",
+      "gitBlob": "a00f2e03727474a7c206aa1e61f8b54886ecfe88",
+      "gitBytes": 874843,
+      "bytes": 891350,
+      "sha256": "a2601ec1531365ababf0511d1a9c3c78fc88f1a8fd8a4c7645ca8f3d4fd11982"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-reload-cadence-diagnostic/evidence.zip",
+      "gitBlob": "6bc06a3237603f7abb92b5a361344f82513ac2e7",
+      "gitBytes": 459861,
+      "bytes": 459861,
+      "sha256": "19ed54892cf21ca20fea7e74a7811a9ec357bc7449fd1371e85962c7232d88d7"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-synthetic-contract/evidence.zip",
+      "gitBlob": "ef6ea8b0342f86dfabe46dc003c0d2634c93ca71",
+      "gitBytes": 9387719,
+      "bytes": 9387719,
+      "sha256": "44346f68033d81a9857d0a0dc702f395396d8ed878c89463dd556cde57123cc8"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-synthetic-contract/manifest.json",
+      "gitBlob": "91d2611d3daaaad1217ce7674de9d84064467644",
+      "gitBytes": 1094103,
+      "bytes": 1114410,
+      "sha256": "9afd5828831ecf99a3ddf3b7e1ea586a820873ff413caa51ac3136ab9ea2b423"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-23-wiki-review/evidence.zip",
+      "gitBlob": "51456938fb624502892794a9c325fef24801dfc6",
+      "gitBytes": 110104,
+      "bytes": 110104,
+      "sha256": "d0228a778a422afc1668dbeff611ed164c6c35aafba66e25137dcd01d4fba0cb"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-candidate-render/evidence.zip",
+      "gitBlob": "b0af189c794a7e199b1c4e6f9c273c3c1196b125",
+      "gitBytes": 24982875,
+      "bytes": 24982875,
+      "sha256": "281f3cc0046309f9af43024cea2e30e3b7c7cd89c2750083468e76e07f19a244"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-candidate-rollback/evidence.zip",
+      "gitBlob": "7b3140f70ecf8dc6078b97eaf8745196c2117d6f",
+      "gitBytes": 16934617,
+      "bytes": 16934617,
+      "sha256": "b376e7a05148b4de1416075fe056f7a1b277c43380240a23e2368a9ec2766ec7"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-candidate-tcp/evidence.zip",
+      "gitBlob": "464f6f5c69df2e73051335dcedcefc46ca749f98",
+      "gitBytes": 18344087,
+      "bytes": 18344087,
+      "sha256": "57b53321d596fb74bab9f2dfcc0d412073955cc5e6d86b680347eac685d414bc"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-declaration-prototypes/evidence.zip",
+      "gitBlob": "a0e93b9c7ef3bb4b7ba0438183177f0b53886a66",
+      "gitBytes": 21451,
+      "bytes": 21451,
+      "sha256": "e6e8f1f79b0a46be6ba24841d000d4f23aed38ffabe6bb0b10597f0698e20bf0"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-inherited-bean-performance/evidence.zip",
+      "gitBlob": "16453099e84f9f6ce85764f98dd3f64bc7fe51f6",
+      "gitBytes": 18163375,
+      "bytes": 18163375,
+      "sha256": "4f288de2fa0c96f1195f3e998917d185a05faa801c5b588cd877a7168c68f50e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-inherited-bean/evidence.zip",
+      "gitBlob": "7e1104f82a20f0a9c7b2737b6d9e7e2441a59e87",
+      "gitBytes": 9361875,
+      "bytes": 9361875,
+      "sha256": "d580c70df6fe3a49cac607ba5f2cadec291b297581265d37436b32c8924bb510"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-inherited-bean/manifest.json",
+      "gitBlob": "3dc304178fa04c6d89753f0363ecbb54eb66540d",
+      "gitBytes": 1075488,
+      "bytes": 1095766,
+      "sha256": "b8afe95c93978fc088cd2e67a46bcb02b4f1b715bb8228072faadc13d63b90f9"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-managed-schema-diagnostic/evidence.zip",
+      "gitBlob": "e0a03a0ac48709ee1774c87aa528b55b7940f66a",
+      "gitBytes": 519713,
+      "bytes": 519713,
+      "sha256": "4031fb74f24bb1afb8ab59a8a904264712d340b05fb4d416cf6d49444c75ac0e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-method-bounds-performance/evidence.zip",
+      "gitBlob": "e9fdb620132d32ec7643f90a1af91a1c6b30b7ea",
+      "gitBytes": 18162631,
+      "bytes": 18162631,
+      "sha256": "fd06117be248b8c6de605c5ffc23cb9b0dd5e640f06ec434e6e4abf526d55f28"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-method-bounds/evidence.zip",
+      "gitBlob": "1f62549de137b43b31de4b0f7a65bcaa005114f1",
+      "gitBytes": 9412210,
+      "bytes": 9412210,
+      "sha256": "4db83d5416f8159c8928c5308cbc3a523984180cd53372369debf98f45d30884"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-method-bounds/manifest.json",
+      "gitBlob": "1fce9dd7def6884d7081766ecf0804a0110fd964",
+      "gitBytes": 1100194,
+      "bytes": 1120737,
+      "sha256": "0f614483e7c013bd4ce253c103b1903f4a6bb06b4642396578ba1bf1946a5543"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-method-selectors/evidence-v2.zip",
+      "gitBlob": "430b08d98658b3afa71890df0b1e89e29852018c",
+      "gitBytes": 82167,
+      "bytes": 82167,
+      "sha256": "57737df28bbcaf6643fa63c414d4656de4b54a43cf03ec25740c6727ab9a94d6"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-owner-map-diagnostic/evidence.zip",
+      "gitBlob": "73896cd315029ba65b93996cb14f91697f99849c",
+      "gitBytes": 325674,
+      "bytes": 325674,
+      "sha256": "85b71f3d60bbdb54ba15fb859d9efdfa2e3dfe7f8fde42fc38b4829b9258258d"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-owner-path-diagnostic/evidence.zip",
+      "gitBlob": "12b2cdcc6150c4581e8c5e8b3cd21a1a0590d307",
+      "gitBytes": 618514,
+      "bytes": 618514,
+      "sha256": "24995beb88dbeab542cd2a4e11114541b613e2cd09b82cd43a37243908791704"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-owner-recipe-diagnostic/evidence.zip",
+      "gitBlob": "16c2a27bc7665acc137e83e6d88aa0a7881b18ab",
+      "gitBytes": 746645,
+      "bytes": 746645,
+      "sha256": "9e4bdf91822512785e41118d19c29c164e07710e5b370999affd78fec0acc613"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-owner-source-diagnostic/evidence.zip",
+      "gitBlob": "941745411468f3dbf16f4efa12e0798dc106ea94",
+      "gitBytes": 332302,
+      "bytes": 332302,
+      "sha256": "e3cd70ba76ce18f22f97d49e28fe6c9d61e9c980d2f1ff4d8aee51780fb43a36"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-owner-stamp-acceptance/evidence.zip",
+      "gitBlob": "d1a5850b70f6ba183a13c7a7af69bc5227fba2dd",
+      "gitBytes": 410583,
+      "bytes": 410583,
+      "sha256": "3d74906e92174a3f186768294607d1360d82a1f23fcf8f355f7f6c7663485fb9"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-owner-stamp-handoff/evidence.zip",
+      "gitBlob": "2a34d71189249e8753c682d1cbc2c4e09a2a5abc",
+      "gitBytes": 405253,
+      "bytes": 405253,
+      "sha256": "6693ff1539e209e3a33054c5592b45894ecf80ceac44205eb661bba1ede8428f"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-owner-stamp-performance/evidence.zip",
+      "gitBlob": "96b067c22b9c8303113596ee2c6438b5fe93e060",
+      "gitBytes": 18168257,
+      "bytes": 18168257,
+      "sha256": "37a1e62646398c6998ffd36b0c59e4b97cc2dbaec56f2de3e9885ce735d39d82"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-owner-stamp-render/evidence.zip",
+      "gitBlob": "e2d9ff9966c8bc1a242b4f2157f9179667c119bb",
+      "gitBytes": 25002021,
+      "bytes": 25002021,
+      "sha256": "dce8cf3d85383b2850139be0abfc9e225bf63794c423dc4eca90bf4ddbe45563"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-owner-stamp-rollback/evidence.zip",
+      "gitBlob": "6825283da878b0a9437d40a9613ec651e36ca5b6",
+      "gitBytes": 16938938,
+      "bytes": 16938938,
+      "sha256": "aed32fe5ea93d1d40a4323c5a0775526b839c8654a7817fa8934e6c332b2c7e7"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-owner-stamp-tcp/evidence.zip",
+      "gitBlob": "968c07dabaf2d8950aceb7299a92e88ac8a773e6",
+      "gitBytes": 18346340,
+      "bytes": 18346340,
+      "sha256": "18bf67d9e4eac68803dc145ac19fb36f976fbee82764dc91240b68b138845983"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-owner-stamp/evidence.zip",
+      "gitBlob": "1ae4a2f8e30508adf99d97504a852b6559454e2e",
+      "gitBytes": 9508142,
+      "bytes": 9508142,
+      "sha256": "1fc7538fc9adc05adaec76f1727a17d1e1bfbf4dd82d65514182749ec7d101a8"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-owner-stamp/manifest.json",
+      "gitBlob": "86048bc07e2104ad490c5a57baeb5178d01334cd",
+      "gitBytes": 1095849,
+      "bytes": 1116567,
+      "sha256": "4d4f21dc4a9d48dcc1e442b134ebe1c241e9cebef9c5cab1d086ed6cd5ab971e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-reload-stage-profile/evidence.zip",
+      "gitBlob": "53618a6c95949a84829e7553dd233ba940f7895c",
+      "gitBytes": 519832,
+      "bytes": 519832,
+      "sha256": "02ef9f756c60ba3aea827a441f94bf4fcad46f15aaa0160fc18b02ffa64d980e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-selector-backend/evidence.zip",
+      "gitBlob": "db20a7a1dbdac659e6cd0a50ddf7797c72788889",
+      "gitBytes": 964357,
+      "bytes": 964357,
+      "sha256": "662040d092641b7e594c91dc0a74c7d2567254929686bacd450c2b9bcfb54804"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-selector-closure/evidence.zip",
+      "gitBlob": "566f3d82e3cd338f29ba7a2c37c60c82492afe43",
+      "gitBytes": 1347599,
+      "bytes": 1347599,
+      "sha256": "04f75f03c329aee589cafff18510f94875f8478797625ea2d8e2e01b256e3eee"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-24-selector-closure/preserved-ordinary.zip",
+      "gitBlob": "3275018b9c3641d2a07e8cba6e220b60146255e9",
+      "gitBytes": 1103945,
+      "bytes": 1103945,
+      "sha256": "8ce15f64138002ac7d6a0a49bae622570f2a502ff15ad1fc3407ae2abc980852"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-25-enum-interface-84ae51c1/validation.zip",
+      "gitBlob": "49f09161f671aff2b7aaffdeb282490b31f9ef94",
+      "gitBytes": 1191559,
+      "bytes": 1191559,
+      "sha256": "c43b3979802761849a7103aa6075d67ad7476fe6754d5564c36b9b65e6b30bae"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-25-primary-erased-method-dad806fa/validation.zip",
+      "gitBlob": "efb724f43d2b5c7634e5cb3be62249fd709e3f36",
+      "gitBytes": 1208075,
+      "bytes": 1208075,
+      "sha256": "9d831ad0834f261736c9de4f400de4a357b890b541092be93eb54dc39e599f3a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-25-strict-ts-f1v2-member-view-fab58a7d/root-cause-mapping-f1v2.json",
+      "gitBlob": "fa289f345af287a8a0383395dfe6a6b3b9c34321",
+      "gitBytes": 603599,
+      "bytes": 603599,
+      "sha256": "c56526b245fc2b0d38c34928630ceef004b5278611ba96872b603267b05b2ec4"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-26-bound-operator-prototypes/prototypes.zip",
+      "gitBlob": "8f84687112a1eb770dfc4aa712b1cc753601ea9a",
+      "gitBytes": 101225,
+      "bytes": 101225,
+      "sha256": "336ed668bdb66b153f54c064a75247f4a895337b59fc4801cd21fbafc5e3c9df"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-26-capture-protocol-prototypes/prototypes.zip",
+      "gitBlob": "26c8581197aace12b83eae5e6d9e2e04dbbfbd92",
+      "gitBytes": 203895,
+      "bytes": 203895,
+      "sha256": "76291220d864d1db051b976227cd334bbd27f4ad1c44b142859c6706134537cd"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-26-capture-return-contracts/validation.zip",
+      "gitBlob": "174bbd56b9527f0f863f1cd2539b120f4af20193",
+      "gitBytes": 647973,
+      "bytes": 647973,
+      "sha256": "92797993966c5b5092ec820a41b6fa8da8fe50ee6366190eae59fc4c50139e87"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-26-capture-return-facets/validation.zip",
+      "gitBlob": "610f5442029fd4b1520754829ba6b017ddc13326",
+      "gitBytes": 243252,
+      "bytes": 243252,
+      "sha256": "d704fc198d5f2432b8a87be18bfc5e3f4669fe56c335228923247afa3eb5507b"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-26-constable-values-3d2cc1cb/validation.zip",
+      "gitBlob": "f61c3bfddd3d8ac42ec46844c8d8a8e13e65c2c0",
+      "gitBytes": 1559680,
+      "bytes": 1559680,
+      "sha256": "490fe32ed37bf2174dccad8a7c531e0e07a286b286b2fc2ffb73be4b1b0b377e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-26-sam-proxy-1a1660b6/validation.zip",
+      "gitBlob": "6c5875759a0c9ecf8f14d69013d7a9ecab00b116",
+      "gitBytes": 1294285,
+      "bytes": 1294285,
+      "sha256": "4489ada312d0819f414284f87aa553d55a1672423e1b63061fed0ca4973e61bc"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-27-complete-capture-views/artifacts.zip",
+      "gitBlob": "7765d8a75da1aad2a165932d0f7f75c459aa625c",
+      "gitBytes": 6619094,
+      "bytes": 6619094,
+      "sha256": "059224ec3e621ff4769c201845d4a9b9a1c7cb826bba725bc6b2f3d83644e9f2"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-27-complete-capture-views/baseline-diagnostics.zip",
+      "gitBlob": "d6a12a06d99048ac10675af155de015f8e66fc87",
+      "gitBytes": 91320,
+      "bytes": 91320,
+      "sha256": "62f6ce396610d420b3ed963ef498994598285e2e62637ab564787cc1ff275f67"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-27-complete-capture-views/manifest.json",
+      "gitBlob": "6d34f89f449460952d0aaa5f8edfa2f4f0cc386f",
+      "gitBytes": 781249,
+      "bytes": 781249,
+      "sha256": "c9df45f00f234ca4f9a3c710f39b6b665e33183abe78cfe0ad7cc98a972f002b"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-27-recipe-capture-prototypes/experiments.zip",
+      "gitBlob": "63b74e8ab1c8a43ce72077bbf523776c6d3bd894",
+      "gitBytes": 275270,
+      "bytes": 275270,
+      "sha256": "9bea55220e6b274ba3a09e22699cb71322de5995e7351866a805d5736c21b17e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-27-section-pos-bean-prototype/artifacts.zip",
+      "gitBlob": "ebc5a6d2c0648a14461a7eed7f44b44e4d79b85a",
+      "gitBytes": 153645,
+      "bytes": 153645,
+      "sha256": "b2bcde24433ece6cd3f86513f1a530a13173c93785183b6e7bac8799bdcf9dd1"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-27-stream-capture-11c9a180/artifacts.zip",
+      "gitBlob": "7108cd25253f863ecf121dfb93dd1924d73a0c39",
+      "gitBytes": 6944203,
+      "bytes": 6944203,
+      "sha256": "dad451ce39057e04ac20ef93f2e7960ba8c574b1f62c14a686da1aa7bdeb05f6"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-27-stream-capture-11c9a180/manifest.json",
+      "gitBlob": "8964ef3b0b3d754072a2106f27cf4f637034a807",
+      "gitBytes": 774659,
+      "bytes": 774659,
+      "sha256": "2803eac0ed352f1741fced4ede4d61d4be3b94c6fa842d365b11d33404da654a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-27-transitive-capture-facets/artifacts.zip",
+      "gitBlob": "91ceb7c5e2b05aa2cb1e3dd567aaf0f424b7bd92",
+      "gitBytes": 6631192,
+      "bytes": 6631192,
+      "sha256": "5e4a073353835e3a74868b11087a3589f83d0d8a3b7c2a1db8cc6d71a8701f35"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-27-transitive-capture-facets/baseline-diagnostics.zip",
+      "gitBlob": "d6a12a06d99048ac10675af155de015f8e66fc87",
+      "gitBytes": 91320,
+      "bytes": 91320,
+      "sha256": "62f6ce396610d420b3ed963ef498994598285e2e62637ab564787cc1ff275f67"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-27-transitive-capture-facets/manifest.json",
+      "gitBlob": "e8cecd758766e7a267bf55e2836388e3622d99e6",
+      "gitBytes": 783403,
+      "bytes": 783403,
+      "sha256": "5108a16de63c62dc3a6785737ccc42494886871b8b2415313beb3bbadf6c672b"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-28-section-pos-bean-implementation/artifacts.zip",
+      "gitBlob": "5324039a75599dbd49e9b4a364956d1aef088421",
+      "gitBytes": 6173446,
+      "bytes": 6173446,
+      "sha256": "3e51bd03d4df75f60a6014bdfd7195f7d3d3d8954aeeee6792c3c1d2e86145dc"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/2026-10-28-section-pos-bean-implementation/manifest.json",
+      "gitBlob": "1119278c1f43a105a63f30cc13f365aea78d6af4",
+      "gitBytes": 758266,
+      "bytes": 758266,
+      "sha256": "5f753e75a7f64b678035166dadd38b8120b70f778b9a3eb526e5c4dfe3865379"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket15-startup-event-declarations/initial-bdfd7777-actual-probe.zip",
+      "gitBlob": "b7c05508222915a4875ab789fceb19e5d123c5dd",
+      "gitBytes": 1181176,
+      "bytes": 1181176,
+      "sha256": "169a42c6f4eae80e1a23c39be143622cb8191b0fc4a5fb5dcb71ba6d5103d217"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket15-startup-event-declarations/initial-bdfd7777-installed-evidence.zip",
+      "gitBlob": "d94fef54f456e3214b2e93ccaef65ed31da7e47b",
+      "gitBytes": 29989,
+      "bytes": 29989,
+      "sha256": "3f8fe1cd176dbce0c888b07011bc170641c8c2c8360484a572764896f21eec02"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket15-startup-event-declarations/matrix-capture.zip",
+      "gitBlob": "d7508fe336182b1f1275ef0f82e251b239f5db6d",
+      "gitBytes": 446650,
+      "bytes": 446650,
+      "sha256": "0a9d5cf8b615b9bebb0d813abeb7814277c556844f57d43bf2dce0955ac4a983"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket15-startup-event-declarations/reviewed-4431faeb-actual-probe.zip",
+      "gitBlob": "d280d0959f35d34d264214758ada31954266bfeb",
+      "gitBytes": 1181146,
+      "bytes": 1181146,
+      "sha256": "2075ac1851f4dd353f8a59383b4ff827f26df8722bc624bc658a30b54a801422"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket15-startup-event-declarations/reviewed-4431faeb-installed-evidence.zip",
+      "gitBlob": "1c35926efa5c41c68a4427543e99e6c3e247421c",
+      "gitBytes": 29609,
+      "bytes": 29609,
+      "sha256": "5adb7cea3ca4539ce41457c891a53b58838b24b7fa964fde44063f242f139fed"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket15-startup-event-declarations/reviewed-matrix-capture.zip",
+      "gitBlob": "d7508fe336182b1f1275ef0f82e251b239f5db6d",
+      "gitBytes": 446650,
+      "bytes": 446650,
+      "sha256": "0a9d5cf8b615b9bebb0d813abeb7814277c556844f57d43bf2dce0955ac4a983"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket15-startup-event-declarations/validation.zip",
+      "gitBlob": "debf71044a9c03396383be1d98ffe350d2836d2a",
+      "gitBytes": 2271978,
+      "bytes": 2271978,
+      "sha256": "2f6a23d19f6f5e63c3744810d00448563185b8e8ebd36db7f354def60df955d0"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket16-default-proxy-declarations/typecheck/actual-generated-output.zip",
+      "gitBlob": "0c646871801b90bf9896ba37363e6b5befed4633",
+      "gitBytes": 61670,
+      "bytes": 61670,
+      "sha256": "24158372796bdbe5c6663291668be067032b7f9dc6bdcf29be5b6e435f24bebf"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket16-default-proxy-declarations/validation/full-matrix-xml.zip",
+      "gitBlob": "8fb4beab9834d22ac842a8554fdd82bfc9f35e6d",
+      "gitBytes": 801707,
+      "bytes": 801707,
+      "sha256": "8579fb5d4eab04fac5463c2a154ac4324f5b490ae24ffe9ba8acaccd0a383e9c"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-0856-performance/20261008T180914Z-reload-26.1.2-raw.zip",
+      "gitBlob": "6bfea5a089e46d5917bbaea09b163f5830a73334",
+      "gitBytes": 132430,
+      "bytes": 132430,
+      "sha256": "95a8166e8f5505784e5ac8c08f67b6d1b308aff381b9661da05029a137d21bac"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-0856-performance/20261008T181201Z-reload-26.1.2-raw.zip",
+      "gitBlob": "2e6f4c621807777b8ecca98b4650b641a423df6b",
+      "gitBytes": 131240,
+      "bytes": 131240,
+      "sha256": "54b037662a1d6debf151500b98753dd91f551057ad9f13af17029f5212f79736"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-0856-performance/20261008T181248Z-reload-26.1.2-raw.zip",
+      "gitBlob": "21a404008e2bd15211f202c3465d37ed35e81b54",
+      "gitBytes": 131152,
+      "bytes": 131152,
+      "sha256": "c5a60814bb5adc077a2706d50762b0f1d26966a5850dbbe544067bc59f769d1e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-0856-performance/20261008T181331Z-startup-26.1.2-raw.zip",
+      "gitBlob": "a38139a3ba4efa77fc6cf069fbe2be70c12623e9",
+      "gitBytes": 911382,
+      "bytes": 911382,
+      "sha256": "ef1ba4fe279528acc1706b3438c443e99c9290e56149d365ab7e9ca27bcafbbc"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-2a421-performance/2a421-performance-evidence.zip",
+      "gitBlob": "1c173aee2102289f5095eb1445fd77b8ea726da1",
+      "gitBytes": 1192500,
+      "bytes": 1192500,
+      "sha256": "b49a4fedf7ac8daf694ff56dba1e35bfc56415e781d1a65b5aa7421760fa87cf"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-4431-performance/reload-1-raw.zip",
+      "gitBlob": "815c2c106dfd6eb33c67c78edb310c8b00a0b14b",
+      "gitBytes": 133341,
+      "bytes": 133341,
+      "sha256": "1241185b8c6ec98a96ff2d8c7bb639ee8d1353934f9c3ccb0498a531fceb6f74"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-4431-performance/reload-2-raw.zip",
+      "gitBlob": "3696654665c31bf769806fc491a121e981288ec1",
+      "gitBytes": 131006,
+      "bytes": 131006,
+      "sha256": "fae1bc985870a0c721853eff7ed8c59b13b48afc630c3a295182a3762bd9f24a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-4431-performance/startup-raw.zip",
+      "gitBlob": "d75f771aecd3003941e52c4e2d048993d42b6880",
+      "gitBytes": 910029,
+      "bytes": 910029,
+      "sha256": "4a97c8c0083fa16c7d1db849b37b86d144a2df29470bca89a5881c29ebe6c01c"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-4431-runtime-followup/runtime-followup.zip",
+      "gitBlob": "99b3972ca3b5188d197edd4e4733002c490d860a",
+      "gitBytes": 189349,
+      "bytes": 189349,
+      "sha256": "8501f90790b8ebfe2e4aa7d4f0a8ef75ca34d2fb89d4bb1abba563971d764f30"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-892-installed-validation/installed-evidence.zip",
+      "gitBlob": "4ec3401f12d9204eaf82ffc7947c436594b8b83b",
+      "gitBytes": 13844332,
+      "bytes": 13844332,
+      "sha256": "523e675cf809e33b25a1b86b3ffde73ad210ccf6fc260615a0d8abb1da166890"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-892-installed-validation/manifest.json",
+      "gitBlob": "7511b165bdacd24aa76130f310feaba3c20d264a",
+      "gitBytes": 1714450,
+      "bytes": 1749851,
+      "sha256": "2d06c932afe4932dd9d498816c379192f1872429cfc80074bd99ad253cae0764"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-b7-candidate-validation/20261007T163039Z-startup-26.1.2/raw-logs.zip",
+      "gitBlob": "aed92a2d33d7ae4f639338d5154e47648b423e92",
+      "gitBytes": 875804,
+      "bytes": 875804,
+      "sha256": "a1e73cf5effc4dc59fd199931edfcaf27617e162790adf1968f85601618eed78"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-b7-candidate-validation/20261007T163426Z-reload-26.1.2/raw-logs.zip",
+      "gitBlob": "2ae6f6229a69383bd9c1c526ef26778cff491ff7",
+      "gitBytes": 125526,
+      "bytes": 125526,
+      "sha256": "4b68d43677dd4d31823348d39c895933ec21a1aa984891b3020739efe09540c2"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-b7-candidate-validation/20261007T163516Z-reload-26.1.2/raw-logs.zip",
+      "gitBlob": "e4a0a655d585e4ca0e24aaff3c095db27282aed4",
+      "gitBytes": 125180,
+      "bytes": 125180,
+      "sha256": "56bbafc9b24ae44bfe74b397b2d6967d42ba0035439eb42b1beb3562a6ca3a4b"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-b7-candidate-validation/installed-26.2/actual-live-probe-output.zip",
+      "gitBlob": "8f3453089d87802435e2b948e824c2d994b384ba",
+      "gitBytes": 1158329,
+      "bytes": 1158329,
+      "sha256": "a045465b0aca478f5ed52e8237188bdd72cc85c0bef98221a68e5d4aead31e86"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-b7-candidate-validation/installed-26.2/command-proofs.zip",
+      "gitBlob": "058709d9d512c22c71f64b3f85b168f764a30c11",
+      "gitBytes": 1822,
+      "bytes": 1822,
+      "sha256": "60ba1967cfcff705ebd662de2b523292ca79fe1185c9455dfe770ffc6f315d38"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-b7-candidate-validation/installed-26.2/raw-server-logs.zip",
+      "gitBlob": "48940e8a0e0bc5e3a49a1f1b6750f31159523dc2",
+      "gitBytes": 10271,
+      "bytes": 10271,
+      "sha256": "64a489f855ac9f2bd44af317bf732979d7239083b9b16ba387fdccaaeef33da4"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-b7-candidate-validation/installed-26.2/ticket37-live-ts-strict-output.txt",
+      "gitBlob": "a132d2e516bad27ff8554a8d682523dc4fa14d75",
+      "gitBytes": 813162,
+      "bytes": 813162,
+      "sha256": "04df7db5a2cd6f1287389aa8b8c10ea7d8baa44a38272f01c7fa7cf3c7df103a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-cb5-performance/cb5-performance-evidence.zip",
+      "gitBlob": "c04daf499297d9d75349e77aa4f77c04d11d0026",
+      "gitBytes": 1196431,
+      "bytes": 1196431,
+      "sha256": "a6fc831fdf5c3be8b67ee4f27cd69c083ef4b477e7409e7a297007328a70174f"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-client-lifecycle-d109/lifecycle-evidence.zip",
+      "gitBlob": "a912976467fc6d244cc11534bef8e12728a6d7f7",
+      "gitBytes": 2565726,
+      "bytes": 2565726,
+      "sha256": "fd1c68169d83905c3f525e3f5c671bd5f02d5b0263c45768461463ba590c330b"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-client93-visual/client-evidence.zip",
+      "gitBlob": "2a649a77ab1a02559e9a67c1e427ec071bf6f545",
+      "gitBytes": 3062995,
+      "bytes": 3062995,
+      "sha256": "19f99ed0d5a97607d2540fd42fb77f94de2ce1a30d5e36583f1eee4e45006091"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-configuration-sync/configuration-sync-evidence.zip",
+      "gitBlob": "b5d2dfa82cf272406b2bf0f4d470ef536fa359f4",
+      "gitBytes": 872796,
+      "bytes": 872796,
+      "sha256": "28eb92fd0d0d3ba5d7dbd04ad2b7fed79f4ffe52dc2b3d968e68c1a7820e27d4"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-constructor-performance/constructor-performance-evidence.zip",
+      "gitBlob": "4b5f562d072b1e4e9bf9e871b66cf007710e289c",
+      "gitBytes": 1195454,
+      "bytes": 1195454,
+      "sha256": "e2af5853872a0077885f0f49379397474ae8b3049dbe4b236e75fcc3ecad45bb"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-current-client-7d/current-client-evidence.zip",
+      "gitBlob": "967411ce2d18a81e3f2b7223c518b38a5e20cf7c",
+      "gitBytes": 4536623,
+      "bytes": 4536623,
+      "sha256": "16597a681e47e44aa524e7d610d6bb042fc3490ab11f12aac64506e90f61f7b5"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-current-d109-ide/current-d109-ide-evidence.zip",
+      "gitBlob": "d3d86455547f99a8f4156dbea6d63b34d0302b9c",
+      "gitBytes": 6903333,
+      "bytes": 6903333,
+      "sha256": "0fb7bc600c344697ecfab77351313302cc6b6a297ba8341fd11c081bc1683e30"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-current-d109-ide/manifest.json",
+      "gitBlob": "6d712c2fa8087872bb171eef4d9e3a1d04593c5b",
+      "gitBytes": 781251,
+      "bytes": 798460,
+      "sha256": "0420b2ec9d394d3ac9110a591e0cfda6eec653d4e73ba1974ab1736bc3d210cb"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-current-d109-ide/runtime-summary.json",
+      "gitBlob": "1c514c14148881d9f2b8d18573ef7f11c6e3603e",
+      "gitBytes": 1112561,
+      "bytes": 1121125,
+      "sha256": "1ff1a2636ced230d48ebffea00cda769ef412346ba50f20c1d39da9fd1dc240f"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-current-d109-performance/current-d109-performance-evidence.zip",
+      "gitBlob": "c43ac8a9753dcd6e14902a37471a6a4ab9c984ad",
+      "gitBytes": 1189763,
+      "bytes": 1189763,
+      "sha256": "94a19bec35a4193b6e16257ca98a3e9fd73258a48625123faae911ed41669dbc"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-current-d109-performance/summary.json",
+      "gitBlob": "616a07615cb40ced7dbc542c54b4fecb745eeb72",
+      "gitBytes": 436204,
+      "bytes": 444913,
+      "sha256": "20dcb1f71ee091049a871465fa22cd53bfbd1486023882c2e5a77423a3054710"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-current-download-7d/current-download-evidence.zip",
+      "gitBlob": "492f6d273fb760578f5c71f39eceb692554d5d3b",
+      "gitBytes": 586874,
+      "bytes": 586874,
+      "sha256": "f4c49ab5b4f6dcda6fb7f6a1fc7ef8a52e0d5f1b3e4c85c98ecde7798b593f80"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-current-perf/20261007T094306Z-startup-26.1.2/raw-logs.zip",
+      "gitBlob": "9f1a01c522e267fb335ca9ff71e83214503aeabf",
+      "gitBytes": 879703,
+      "bytes": 879703,
+      "sha256": "e7bb5b5606acfcb6be3d4c855776ad3203ba7590f086d6c49f45e63d4486f672"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-current-perf/20261007T123902Z-startup-26.1.2/raw-logs.zip",
+      "gitBlob": "179590c2bb9732fb06fcf75326dfe33462c9f734",
+      "gitBytes": 874423,
+      "bytes": 874423,
+      "sha256": "efc23c88ff4980bdb666f77e5be1b7d52085f2781d17f8467c440f6451f531e8"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-current-perf/20261007T125114Z-startup-26.1.2/raw-logs.zip",
+      "gitBlob": "a47b000c9b55bf9106aabb03bacf10c09c14b9ad",
+      "gitBytes": 876557,
+      "bytes": 876557,
+      "sha256": "efbb8f66914e6ba072fd5a8653983723553967d90b6327db58c4ccd246ddec36"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-current-perf/20261007T130505Z-reload-26.1.2/raw-logs.zip",
+      "gitBlob": "5ab58217087ff731ed823a29a13e1b89540e06b6",
+      "gitBytes": 126062,
+      "bytes": 126062,
+      "sha256": "7343f24409a4e4c67433a1922acd2149b7b4af9c2b6f718a08a23b0fdf44b354"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-current-window-7d/current-window-evidence.zip",
+      "gitBlob": "c11382cbdab60f9a0f4c91204aa54b21a3c49a0f",
+      "gitBytes": 321556,
+      "bytes": 321556,
+      "sha256": "a5b279e763b9240b63db6e1900749b270ebec4d1f3321f983b700288bbfa4a45"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ec7-performance/reload-1-raw.zip",
+      "gitBlob": "3c25e3aff859c4fa40adea2a3e47a277f500192e",
+      "gitBytes": 133078,
+      "bytes": 133078,
+      "sha256": "08365b3de62406c90df052e9e61749b67ab24fd9140929335d1e7b12f227d1f3"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ec7-performance/reload-2-raw.zip",
+      "gitBlob": "7b1cb54180fc3ea2119f607e2c73aa1d9f4b9a83",
+      "gitBytes": 131061,
+      "bytes": 131061,
+      "sha256": "90da77fc5d78740ff20137781bac8ad997e8897cbe60cd01813d400030d5f9b7"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ec7-performance/startup-raw.zip",
+      "gitBlob": "2cb036da7e0ae2e444b1418352914e91625e44c6",
+      "gitBytes": 913475,
+      "bytes": 913475,
+      "sha256": "2f461e75d85dd852a5db9e21cb49dbc7d9edd291f78ca36203be3cb32ca8450e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-f236-performance/evidence.zip",
+      "gitBlob": "b8ba9240eac932eaae3714dd7c72b9d75c824874",
+      "gitBytes": 1186315,
+      "bytes": 1186315,
+      "sha256": "9b4d0e01279b69aabe19ddb5b18438b145f4cd681f24983d491df4e0213388b6"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-f236-performance/summary.json",
+      "gitBlob": "230cb642b1ef7081548657b24b3ab8ea73369ea8",
+      "gitBytes": 350661,
+      "bytes": 357556,
+      "sha256": "84b38148d0ad8fd9d91d86e7c334f5f16e118034a86a276308e356b5650a49e1"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-f84-performance/f84-performance-evidence.zip",
+      "gitBlob": "99cf23044580bdfeb93a32ede9fc3c1294446039",
+      "gitBytes": 1195062,
+      "bytes": 1195062,
+      "sha256": "a797a2049d583a6de4310399351b13fcb53b0ba12809ca51acc9ac3eae1b06d4"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ide-input-closure-repair/evidence.zip",
+      "gitBlob": "8ca35f72c53cef13c219a3fd06fbfd5831e71879",
+      "gitBytes": 8850020,
+      "bytes": 8850020,
+      "sha256": "fb9d4795b5087ec7e479b055744df44ba71cda6b66e2f85f5de4b6a785337700"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ide-input-closure-repair/manifest.json",
+      "gitBlob": "7b5cddda2580963b269581b5c5ac00030674ea83",
+      "gitBytes": 922318,
+      "bytes": 926943,
+      "sha256": "0de1e985726cafe2ebd5af055ab76ae4769b63b64abce0b71af317934f985c73"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-accessor-candidate/comparison-7e98.json",
+      "gitBlob": "c603f12e19151a728e1a107acbe522ce58ba2229",
+      "gitBytes": 4073369,
+      "bytes": 4154995,
+      "sha256": "522b22819b012eac9bafadcb3a995a78baeed2df07be7c1d145cd8d3a290ad21"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-accessor-candidate/comparison-ec765.json",
+      "gitBlob": "6957e2da31f348f698e8032ca3f0528dc923e345",
+      "gitBytes": 430337,
+      "bytes": 439678,
+      "sha256": "d10054a6935fdbdcd9785dfe85414bda8eaacf17b30bb415ec56e89aac1783f4"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-accessor-candidate/comparison-f469.json",
+      "gitBlob": "157235d18e5c468a7f615620676d6a0c59a49f22",
+      "gitBytes": 775032,
+      "bytes": 792210,
+      "sha256": "fae98a02fd4889e5ac201f2ba2ca693df1ccac0883e0887c5a0923f6ade94039"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-accessor-candidate/comparison-rejected-candidate.json",
+      "gitBlob": "a99b76e18b521b103f2263079f5399d9d6bc1024",
+      "gitBytes": 1567172,
+      "bytes": 1600290,
+      "sha256": "edf2feaa508be221e19b7e99e2c36396b2e5071813853af8137c70f64963fab3"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-accessor-candidate/inherited-accessor-candidate.zip",
+      "gitBlob": "fbaf00e43b5dc796dfc7792163fb8e3bbf3320b7",
+      "gitBytes": 14409703,
+      "bytes": 14409703,
+      "sha256": "6d9ed9a1c81e183fc15d0f6fda2901c21adaff300bacecdb8754f55fad76992b"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-accessor-candidate/manifest.json",
+      "gitBlob": "98db90420fd56790a72f8a684364792c8b1adb9f",
+      "gitBytes": 1050115,
+      "bytes": 1071477,
+      "sha256": "043a7d14babf584174e26084c3f8bad68281f4cda9c01a4fb5c79bcc4a53c824"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-accessor-incomplete-archive/comparison-7e98.json",
+      "gitBlob": "c603f12e19151a728e1a107acbe522ce58ba2229",
+      "gitBytes": 4073369,
+      "bytes": 4154995,
+      "sha256": "522b22819b012eac9bafadcb3a995a78baeed2df07be7c1d145cd8d3a290ad21"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-accessor-incomplete-archive/comparison-ec765.json",
+      "gitBlob": "6957e2da31f348f698e8032ca3f0528dc923e345",
+      "gitBytes": 430337,
+      "bytes": 439678,
+      "sha256": "d10054a6935fdbdcd9785dfe85414bda8eaacf17b30bb415ec56e89aac1783f4"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-accessor-incomplete-archive/comparison-f469.json",
+      "gitBlob": "157235d18e5c468a7f615620676d6a0c59a49f22",
+      "gitBytes": 775032,
+      "bytes": 792210,
+      "sha256": "fae98a02fd4889e5ac201f2ba2ca693df1ccac0883e0887c5a0923f6ade94039"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-accessor-incomplete-archive/comparison-rejected-candidate.json",
+      "gitBlob": "a99b76e18b521b103f2263079f5399d9d6bc1024",
+      "gitBytes": 1567172,
+      "bytes": 1600290,
+      "sha256": "edf2feaa508be221e19b7e99e2c36396b2e5071813853af8137c70f64963fab3"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-accessor-incomplete-archive/inherited-accessor-candidate.zip",
+      "gitBlob": "52c8fc874c664b763dc6ab82c807a38e97c74368",
+      "gitBytes": 14407413,
+      "bytes": 14407413,
+      "sha256": "07c74a850428fbd54e6cb4a005b8f805234ec5d8f03513f25fe3647a28cb43fa"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-accessor-incomplete-archive/manifest.json",
+      "gitBlob": "dc0a4b241e14880d535e135631338ca66226ce3c",
+      "gitBytes": 1049739,
+      "bytes": 1071091,
+      "sha256": "612ba51492bc6ad2dfb1e07119ba1f96993638eb33702b60d8e6ca6023ff7f48"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-boundary-candidate/comparison-03cc.json",
+      "gitBlob": "d738ab5cd08ec6a8a2af8f1110966857bf7bd03e",
+      "gitBytes": 466431,
+      "bytes": 476516,
+      "sha256": "f20c8e32e2dfd35af7e11bab9fcb28fe5fc009bbe8930357a365eda855dae580"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-boundary-candidate/comparison-7e98.json",
+      "gitBlob": "b47e3fac61e33515c56d2cbfd8d949b30e6f54ec",
+      "gitBytes": 4488749,
+      "bytes": 4579189,
+      "sha256": "aab15b12b19e0e00f9dbc0b467a330e95a51d3b5ad9ac0836f81ca9d4be5c511"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-boundary-candidate/comparison-f469.json",
+      "gitBlob": "9db69f982b1bfa1c3005a4f76b9e4ea83bb0fab6",
+      "gitBytes": 1187927,
+      "bytes": 1213909,
+      "sha256": "34acdf3b2ffe0ac45d0da38038bf709aa1fe61912e4623bb1f8e2c066d31c289"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-boundary-candidate/comparison-rejected-candidate.json",
+      "gitBlob": "faf9ca6b2c1e5d32e1f6b3b71ae7bcb8b3aa3ab0",
+      "gitBytes": 1980065,
+      "bytes": 2021987,
+      "sha256": "3ee00c314acb96eb0528c857c4ce561e58c82efcf61f2d1397b7f3d011ffb133"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-boundary-candidate/inherited-boundary-candidate.zip",
+      "gitBlob": "0977ea2c2bfd80bf3ea6aeb7e779b652b3b445ef",
+      "gitBytes": 11288991,
+      "bytes": 11288991,
+      "sha256": "595da900b756a403cbac9828469b6f9588c1de6c1e1dcb0290ec0d02bbfc1b9b"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-boundary-candidate/manifest.json",
+      "gitBlob": "98ee6ead52ea5541be3365062947aa24437bce12",
+      "gitBytes": 1006188,
+      "bytes": 1026356,
+      "sha256": "0bd6d58e2125424618d93cf8d00a73db75b0bab97f8c9078facadca7ee3942cd"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-closure-candidate/comparison-7e98.json",
+      "gitBlob": "6ed25ad655f5ee893e711f839bd7c20f12be58af",
+      "gitBytes": 4075718,
+      "bytes": 4157377,
+      "sha256": "c97c81a1702ae41e820afb39c9a75bf960a95f78d13c006f8202cb4e13ba2b76"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-closure-candidate/comparison-ec765.json",
+      "gitBlob": "8686bebec48268ec37a1c159c17c46e930f39d56",
+      "gitBytes": 432671,
+      "bytes": 442043,
+      "sha256": "4c91165ffd1e11c5131f68fc3e1404039c1130058d275790aade5c0875172049"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-closure-candidate/comparison-f469.json",
+      "gitBlob": "7703d23b8c5403707863d8fd43bedbcedcc366c7",
+      "gitBytes": 777366,
+      "bytes": 794575,
+      "sha256": "5e192f6a3486ba1dc879c72ac995daece434e7b4cf1598daa0ad02cf4f5b41a7"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-closure-candidate/comparison-rejected-candidate.json",
+      "gitBlob": "066cd1c164b0db63b6615f1b670a6bdc745510dc",
+      "gitBytes": 1568307,
+      "bytes": 1601452,
+      "sha256": "d4f7165d20318c0d8d742837323c842d28a4fe362f3bad03635cd2519484d115"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-closure-candidate/inherited-closure-candidate.zip",
+      "gitBlob": "d36fdfb098e27103dae95df7d020380cbe74808b",
+      "gitBytes": 12957639,
+      "bytes": 12957639,
+      "sha256": "8bdc3f80a8211bba492163a19f1086332323161354b4b7f06f9b576d3bde59c7"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-closure-candidate/manifest.json",
+      "gitBlob": "7b8e077e352e7c2cbc76cb5333659472bb7f0fab",
+      "gitBytes": 1024061,
+      "bytes": 1044817,
+      "sha256": "f269cbf08a31e6f2e6d55dfa23fc95c20f8d50eb158998c69ea53323363f75b5"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-final-candidate/comparison-7e98.json",
+      "gitBlob": "ed9ecf59e5f45195d2329dd3f10f9f4e07a664fb",
+      "gitBytes": 4062709,
+      "bytes": 4144107,
+      "sha256": "dc82b9d24afeaf832bb7f68d932408b2d5a6de6ccd3c9da7e980d26b60364c83"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-final-candidate/comparison-f469.json",
+      "gitBlob": "b6f6afb03d5e1e521700744d3d274839274ed901",
+      "gitBytes": 741926,
+      "bytes": 758408,
+      "sha256": "59e22650c68841bccaeaacea5776dd22fb5a12fbe79e9c04c24505fd2f0cd7c2"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-final-candidate/comparison-rejected-candidate.json",
+      "gitBlob": "a4a763d343f6bbd7b8153109645c57eaf13862b4",
+      "gitBytes": 1556021,
+      "bytes": 1588899,
+      "sha256": "a37daecb2636ab3aea08d93d81fef97a4cd22a586dfc9bfef7b385ba0acef39e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-final-candidate/inherited-final-candidate.zip",
+      "gitBlob": "25f14deceec9ef9d6848eac6ca891219ae3712f9",
+      "gitBytes": 9421849,
+      "bytes": 9421849,
+      "sha256": "2b04ba11729727171df6d8de17f080b8e6761bea7dc84bb7b3f27302bd2f37b1"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-final-candidate/manifest.json",
+      "gitBlob": "8d301e0cb6aee531cc8318089b5122def0b74c1c",
+      "gitBytes": 982960,
+      "bytes": 1002781,
+      "sha256": "7a0515621bdca5fe6d8c3055948668aee8d962e0b93e28f9ca171def8a93acf5"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-methods/ide-comparison.json",
+      "gitBlob": "db1a50b5fe170402c33e59cb7fbcc86f6df53be8",
+      "gitBytes": 2935870,
+      "bytes": 2992385,
+      "sha256": "5418bedf03eb38a87dab2eff749e8a51e3e9b58b830af48af19f325bae8a8c6e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-methods/inherited-method-evidence.zip",
+      "gitBlob": "77acbadc154dd6bff0ed404869638fd584b035d5",
+      "gitBytes": 9347346,
+      "bytes": 9347346,
+      "sha256": "0d0bc5d2234c6928a3d6a7687524bb56e30ecb889dc9f84e64b9ba6bed80bdaf"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-methods/manifest.json",
+      "gitBlob": "31d00fd2b119ff641fbf5d42050ee3985fbc6843",
+      "gitBytes": 930047,
+      "bytes": 949094,
+      "sha256": "1847b1860db1e66c9e32a2b21047ee2df39fd23b2b803e3fc26b78af3bc5c9c2"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-repaired-candidate/comparison-7e98.json",
+      "gitBlob": "a07d3f3c47b8d0a8583bd77a23d94897739e2b34",
+      "gitBytes": 3730093,
+      "bytes": 3803122,
+      "sha256": "a40fd9449c8e9ad42df602c0152f1048df18948b826d577a25ca420c62b74ea3"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-repaired-candidate/comparison-rejected-candidate.json",
+      "gitBlob": "9b0851ab84719187312f53475add1f9725bc5c91",
+      "gitBytes": 1260450,
+      "bytes": 1285997,
+      "sha256": "9f9fd868a545298a5931d0b9ff91a34acca4944fb0fde2a342933df016044127"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-repaired-candidate/inherited-repaired-candidate.zip",
+      "gitBlob": "016af78ce09f7e70f1e83f0e8821144236ff661d",
+      "gitBytes": 8668435,
+      "bytes": 8668435,
+      "sha256": "0e3584978b3c4fdb91eddada627d4facafc5edb2862f8dad4e0ff9c0771b6587"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-repaired-candidate/manifest.json",
+      "gitBlob": "ab7fb1e0968cfd6676abb3f13ff2e1b9534bfdbd",
+      "gitBytes": 980581,
+      "bytes": 1000045,
+      "sha256": "7bf62a937441f74b1d2377d1a71e0de9f0c660e869d64bcea574da8429cef3e2"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-selective-candidate/comparison-7e98.json",
+      "gitBlob": "8414720b6ccb5411f06ecc69e7b83063040fa169",
+      "gitBytes": 4075815,
+      "bytes": 4157451,
+      "sha256": "905e212639523795ad2fba91043d78a468eb5dc4d3e70b919b629df4f4457943"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-selective-candidate/comparison-ec765.json",
+      "gitBlob": "8d9b2c13a7a4eadf6cabd36b3d893fd0ac14e3ad",
+      "gitBytes": 430291,
+      "bytes": 439632,
+      "sha256": "5f82f3dc9afb49b4636dad1c5573b00745543a9392aacecb399482f798432fdc"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-selective-candidate/comparison-f469.json",
+      "gitBlob": "38613b9e8a550ced566dd6c6af2c6be429371aa2",
+      "gitBytes": 774986,
+      "bytes": 792164,
+      "sha256": "0228e70c4a72fe8cf96bcce4a64ad86b7f2d4a10913872de2931294e1a4e060b"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-selective-candidate/comparison-rejected-candidate.json",
+      "gitBlob": "bfa436842a01356f8ff3d6f0195e6d7fb30329b1",
+      "gitBytes": 1565928,
+      "bytes": 1599042,
+      "sha256": "5eefbcd0b8b467a17bbc11d10fbad480bdcbcab857c6b7c3dfd5ca22e0ffb4f8"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-selective-candidate/inherited-selective-candidate.zip",
+      "gitBlob": "e10a693e5238a4dab48fe837d5e913c6e22433fe",
+      "gitBytes": 12277998,
+      "bytes": 12277998,
+      "sha256": "aa954e383bb1a78c1dfe16fd3435c959d56ef69017d069e64f340c9597b7d267"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-inherited-selective-candidate/manifest.json",
+      "gitBlob": "3bf0c5037a5b67e33f8515aadf2f8151ce7fa0b7",
+      "gitBytes": 1022581,
+      "bytes": 1043106,
+      "sha256": "c61ddc873976126e4764239bbae710e5249212618fcd1cd2c57838c15daf9b98"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-interface-console-repair/caller-inputs.zip",
+      "gitBlob": "f8fc247ff63a2ec65a2097bbd59618eb97a8c20b",
+      "gitBytes": 8542,
+      "bytes": 8542,
+      "sha256": "ba66f319b8f1db898c686f8cb0add34d3037ea34b09202d5d7bd94e1dad63571"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-interface-console-repair/evidence.zip",
+      "gitBlob": "e1d739e5d6bb51eb9e924f366c55a329ccf1fc85",
+      "gitBytes": 25591916,
+      "bytes": 25591916,
+      "sha256": "3ea1a9ede8265ffa4e763d6913a0a0ac868ba0b6b36ed9f638e4bf80920db367"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-interface-console-repair/manifest.json",
+      "gitBlob": "4c761e11c0f5fb2fa4206598f673d5a6cf27958c",
+      "gitBytes": 2742614,
+      "bytes": 2755459,
+      "sha256": "5557a80d6302f465bd9714d370d9a925dd181a55c7ee6620e9508fffdb2529b5"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-interface-static-surface/ide-comparison.json",
+      "gitBlob": "410147f41ab23eff30b1702bf16a166299ceaca4",
+      "gitBytes": 328683,
+      "bytes": 335874,
+      "sha256": "3c589ec1d4b0be7c474bc2e3842b1d5f2ba4c79cd9bd378663a681290d5349bc"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-interface-static-surface/interface-static-evidence.zip",
+      "gitBlob": "4ef21ca9d2735faa0fb17e48030dcf45025ed79b",
+      "gitBytes": 7419547,
+      "bytes": 7419547,
+      "sha256": "cddbd9800ca1bee8b8f11feb865177561faab49a14449ad1cc812f2a4ca775f6"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-interface-static-surface/manifest.json",
+      "gitBlob": "8825b7993f6d05904d125ab8095029dab5c44aa6",
+      "gitBytes": 946114,
+      "bytes": 964913,
+      "sha256": "3035dada8ea446b381bde33e25b1bb77e3def82107899f36bf91b3aede6cb6db"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-legacy-probe-linkage/manifest.json",
+      "gitBlob": "b0084f61afed3f17c4da0ace37ecdc053fc4ea80",
+      "gitBytes": 399580,
+      "bytes": 407629,
+      "sha256": "56fafc68f458665aee5b831d19b5701634f4729e1f32bc294b12d37b4776e4ab"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-legacy-probe-linkage/other-node-replay-manifest.json",
+      "gitBlob": "1f79f414c30f744cf0d1b104dbf8f4c8f8581c9d",
+      "gitBytes": 813525,
+      "bytes": 829636,
+      "sha256": "3ad15553748d3f620b2c63fe10811c2f1288809023991b3686f774d686ea6795"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-legacy-probe-linkage/other-node-replay.zip",
+      "gitBlob": "11212fd0688b3a098849403a294e4b2b39773076",
+      "gitBytes": 5452450,
+      "bytes": 5452450,
+      "sha256": "adf3c061850a0e7cbbb77fe02c657bb5981d29413df8b41cccd82b9ae67f2cd9"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-legacy-probe-linkage/probe-linkage-evidence.zip",
+      "gitBlob": "8138826b4b03f01574f5930753b5f544462ea763",
+      "gitBytes": 3571230,
+      "bytes": 3571230,
+      "sha256": "6337ca6a25fac687449e8fda13a0e24ce6b0778a89721af5724b95178ac7d81a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-legacy-probe-linkage/source-and-golden-diff.patch",
+      "gitBlob": "b68e7bfe7b8d24ed6554fcecc607b80ad890a326",
+      "gitBytes": 1247688,
+      "bytes": 1247688,
+      "sha256": "e43c79aeaa164f6e511ac964058a3926e3b016127ca95e86e09e7e9192974d20"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-legacy-server-icu/full-matrix-ordinary-xml.zip",
+      "gitBlob": "077199db98271812663312e8c52c42d41429e802",
+      "gitBytes": 810433,
+      "bytes": 810433,
+      "sha256": "4356e0b8c0a5d23fca2012231478f132dfa121496e9ea91c53887e049ea3359c"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-legacy-server-icu/installed-node-evidence.zip",
+      "gitBlob": "7e69e51b4d6194446042e00130f4130c0be7932a",
+      "gitBytes": 5524237,
+      "bytes": 5524237,
+      "sha256": "6c276d83ebdd88ea1f573aa21aa2b277c7c4bf8522549d43d7140d8cfa4f5ff8"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-legacy-server-icu/manifest.json",
+      "gitBlob": "ba733149546453d4e24eb4f7a3abc47471d73980",
+      "gitBytes": 744505,
+      "bytes": 744505,
+      "sha256": "d5ec8aa5b067df2e4c34b49ca26640c0b80aaa75f4d73efbc87243c8762fadcd"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-live-7e98/live-evidence.zip",
+      "gitBlob": "144748cab455de06eca624ed8192e99da03d0801",
+      "gitBytes": 941380,
+      "bytes": 941380,
+      "sha256": "ebf59e9f6f8c835ce97757a74f5e350fcf101ad7bcff2fb0eac9aec7d4ab3267"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-manual-item-performance/manual-item-performance-evidence.zip",
+      "gitBlob": "03c17c4f22fee8a9e48c71cd902792e3c09f47ff",
+      "gitBytes": 1191204,
+      "bytes": 1191204,
+      "sha256": "328c03382f7e81e767e4d2921cd146b39b596af539ecce36ef885a12b4f7e140"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-manual-item-performance/summary.json",
+      "gitBlob": "800a6c5c0e507f1a16fcbeca92beb217fda75ca5",
+      "gitBytes": 436375,
+      "bytes": 445089,
+      "sha256": "572d08a8d631e7225c6789b9230e772dffbb2d4e863285a664f82a83316f934f"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-manual-item-repair/manifest.json",
+      "gitBlob": "cf378dfbdc0f51d2f8536850c3c0247f9f25972d",
+      "gitBytes": 997677,
+      "bytes": 1019121,
+      "sha256": "016316222d6b9e6145adaa6b050272990a1987b336ae5e3329a385e74387e01d"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-manual-item-repair/manual-item-evidence.zip",
+      "gitBlob": "ae44721cb16c922727bcf7574a008d9b14e14ece",
+      "gitBytes": 7808262,
+      "bytes": 7808262,
+      "sha256": "996eacfc663e8e29e9b0fc06d30bc8e2d6cd50a4d11a6ac9f07bc3fb8972f84c"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-manual-item-repair/runtime-summary.json",
+      "gitBlob": "f009084e5b8479e4f049f6268ed720e727f662ab",
+      "gitBytes": 1115594,
+      "bytes": 1124241,
+      "sha256": "12bfcab573bb9956f82f3b9785c9d731072431f41a53f24a3ba35a62d47531a4"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-native-focus-d109/native-focus-evidence.zip",
+      "gitBlob": "0223e0d177f7acba0c55668c20098f29b336422c",
+      "gitBytes": 62516,
+      "bytes": 62516,
+      "sha256": "9d4b60a824673bdc8088b53ffa0f7f52d227d79ff5dd4225cf3cc4e48ce604e3"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-node-ambient-classes/manifest.json",
+      "gitBlob": "68ff0346addb297af97cd13c63bb1d2f6389b291",
+      "gitBytes": 913594,
+      "bytes": 933304,
+      "sha256": "d716eee0de46111e33a1c2afdf1d53353f9c21c72736702d505f4c71148f3ac8"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-node-ambient-classes/node-ambient-candidate.zip",
+      "gitBlob": "56ace55e7c86151f56d80f7ed3786fc738fe129b",
+      "gitBytes": 7697324,
+      "bytes": 7697324,
+      "sha256": "847999ce70d4fe624695aab6ee4c9c32a540049aa8fe42b7075cf66a1d69aec5"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-node-assert-performance/node-assert-performance-evidence.zip",
+      "gitBlob": "16068787642e8bced28865feff4390878534b98b",
+      "gitBytes": 1191721,
+      "bytes": 1191721,
+      "sha256": "de14ec5c3a012669402b8a13657db0d65fb7da14c54d27fcffe86b6ad6921141"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-node-assert-performance/summary.json",
+      "gitBlob": "32f4dc7ba7fdf5f2287576a6d6bcecfcb633ec91",
+      "gitBytes": 436195,
+      "bytes": 444904,
+      "sha256": "effe294469f710601ccece8941381b27914674e37f0a2cf445a43b9deb2a6c7e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-node-assert-repair/manifest.json",
+      "gitBlob": "407202056e7d29591bf58a4e7e2ac27e6dd8eeee",
+      "gitBytes": 1006723,
+      "bytes": 1028437,
+      "sha256": "115bdc9d09148ff0ee286d8bf874f95e9018db4bdee79f8d6dd98b6a36c0e5d3"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-node-assert-repair/node-assert-evidence.zip",
+      "gitBlob": "425e62fdb17be59e085b6871058fca411c961348",
+      "gitBytes": 7847790,
+      "bytes": 7847790,
+      "sha256": "35203739f3390f862606af9da467fc9f45e490ebd2ca8562c915d9b9910c9f1e"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-node-assert-repair/runtime-summary.json",
+      "gitBlob": "543e1281d8ea45cd3fc9a9a21b27387da8b66130",
+      "gitBytes": 1119879,
+      "bytes": 1128636,
+      "sha256": "7201f63fb50496688e3fd316da71edb5b60e7bc99c9ab9a91a010951e011b871"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-node-util-predicate/manifest.json",
+      "gitBlob": "b84ac32030f859285141b000949046b282bd243d",
+      "gitBytes": 904932,
+      "bytes": 924480,
+      "sha256": "6013b121f3f160f768c9b674eee1e1cb47e5bdd6601eb142bd0fd1488299a122"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-node-util-predicate/node-util-predicate.zip",
+      "gitBlob": "953f57e612bd2ac3cae74e469a66638a0c7df27c",
+      "gitBytes": 8271876,
+      "bytes": 8271876,
+      "sha256": "2d74e2bca40e8b8db5bc39adc8daffe7b9938e94b29bcf9f7037b8a17b6d9a9c"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-pack-reload-stage-guard/pack-stage-evidence.zip",
+      "gitBlob": "c723986489b6f888c90ac311d9ed17c7c77e06a3",
+      "gitBytes": 21788,
+      "bytes": 21788,
+      "sha256": "1d5cbd01beede80c418614b1ede9f816de327d33610bdc8b0d4098588be4b082"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-python-field-method/field-method-diagnosis.zip",
+      "gitBlob": "2975621505c2c8e3b8775b4f4792e08144258812",
+      "gitBytes": 284476,
+      "bytes": 284476,
+      "sha256": "35f2a535884cb3d106abe94baa4953ceaf39ca19740fa0364add2ff1df7607fe"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-python-heritage-order/manifest.json",
+      "gitBlob": "fe6f9ba7c93f9656d3146a662dabaf0aa4cbd30f",
+      "gitBytes": 870327,
+      "bytes": 889443,
+      "sha256": "e371728dccebb4a1964378b60caf175fcd02f4cc5f5e9631e908064155304697"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-python-heritage-order/python-heritage-candidate.zip",
+      "gitBlob": "2a0c8d23be6e8cdaac6fd7136acb879557835998",
+      "gitBytes": 8086190,
+      "bytes": 8086190,
+      "sha256": "d9df75c1f5b5f71c0b04c193c6bc0d0023d4dd09c2a0f95a85c0f4a46e5b03a1"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-python-identifier-repair/installed-26.2/actual-live-probe-output.zip",
+      "gitBlob": "eadc4da98fde7861cebe26d21f9f423caa79d894",
+      "gitBytes": 1158255,
+      "bytes": 1158255,
+      "sha256": "98f9ece9f115163db03a49aa9666ee8f412747a36b101358d4c83d98b4709b97"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-python-identifier-repair/installed-26.2/raw-server-command-logs.zip",
+      "gitBlob": "3fc9088f7fb7a8b034313df4cd68e1dad285c532",
+      "gitBytes": 6663,
+      "bytes": 6663,
+      "sha256": "aaf62d65efa3f0b2d17b2f1bffc875abe85fed24f1f917388f28d136f51c00bf"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-python-identifier-repair/validation/full-matrix-xml.zip",
+      "gitBlob": "4230931ad366fe6a04329e75ba650117e76d6cc7",
+      "gitBytes": 802239,
+      "bytes": 802239,
+      "sha256": "9a09c6855915a3a3c311cfd9ab4aacddfe97514ed0d9a6e423a38921f6abc93d"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-python-member-collisions/filesystem-diagnostic-evidence.zip",
+      "gitBlob": "cfe1473f6b2f8c2956ec55636f88adbb61c127a6",
+      "gitBytes": 35897,
+      "bytes": 35897,
+      "sha256": "bed5af78869333a2de3abe8f97870382f73c875ee71399564f949b09ed0f4ae7"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-python-member-collisions/manifest.json",
+      "gitBlob": "d8298659573ddca8c9150bfc9a36067a0f54b997",
+      "gitBytes": 914532,
+      "bytes": 932633,
+      "sha256": "b8dce12de7bb28a298d2615428a42ea33edbcf83cbb963ce4e3b3ac4af2e07b9"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-python-member-collisions/python-member-evidence.zip",
+      "gitBlob": "0535f2ce43d0e8739a7ef7a2a5b58c28edc8f71b",
+      "gitBytes": 8521889,
+      "bytes": 8521889,
+      "sha256": "53aec1ed8d02d172c3e4d8d62c4256b392fc8e85e086eaa301e6f9f799a43699"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-python-module-names/manifest.json",
+      "gitBlob": "8e3dd2c4da59313050d088ae9068d6b7c147fcfb",
+      "gitBytes": 982639,
+      "bytes": 1004099,
+      "sha256": "176a95bc1f22b966459dd29f4a6d0d56afb189520e9b5fc6119c16233e7d1046"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-python-module-names/python-module-candidate.zip",
+      "gitBlob": "050b56827db1c6429eab315b7d1cbc5b443b5867",
+      "gitBytes": 8377758,
+      "bytes": 8377758,
+      "sha256": "09cafc3bd8810cf173fab89059c94d4fca92d21bd5570455dfcd55d5f346ae68"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-python-typing-callable/manifest.json",
+      "gitBlob": "a92222b5accf74ceadda7925dbaee112c25ed242",
+      "gitBytes": 888347,
+      "bytes": 907838,
+      "sha256": "4c6a79ec5c6f62a78b1f77430116b093933c41ecd7b0e9bf4e3c7ffe8d09274d"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-python-typing-callable/python-typing-callable-candidate.zip",
+      "gitBlob": "47033ba58739413d2ec278333c2c18eaf82b40de",
+      "gitBytes": 8144540,
+      "bytes": 8144540,
+      "sha256": "6c2314ef59d38d9cdc989bd67c77ad86528c69463c33e3387d36989a24f650d7"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-confirmation/20261007T153633Z-reload-26.1.2/raw-logs.zip",
+      "gitBlob": "d4f5af23dd979d24ecd198b5014941d49402a96e",
+      "gitBytes": 125598,
+      "bytes": 125598,
+      "sha256": "5724cee31c750b1c94fed8c0b4507c92d797f0538515c1052a55e0bef64cc0f7"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-confirmation/20261007T154016Z-reload-26.1.2/raw-logs.zip",
+      "gitBlob": "d64a11446707a350c2548eea2114529bd864a14d",
+      "gitBytes": 125187,
+      "bytes": 125187,
+      "sha256": "d939ca9f0239afd048042ac8c7af414098cd996bf18b70bab2f91cdaf14c31ec"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-confirmation/20261007T154100Z-reload-26.1.2/raw-logs.zip",
+      "gitBlob": "238281d8a161e7cc317d2c507213132419b1d0e9",
+      "gitBytes": 125294,
+      "bytes": 125294,
+      "sha256": "9d254acc0548ea5f769970d3b0f5c888824c6b9b93b8d7cb895f3b0e41126ec5"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-confirmation/profiling/safe-profile.jfr",
+      "gitBlob": "05a3b7971d912e9d8a92b29b2342de2b46ecc90e",
+      "gitBytes": 737487,
+      "bytes": 737487,
+      "sha256": "4d02a94f12eb2055d3617351c89df2d9fe15e149aad1be4ba89e21f6e73c294b"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-environment-diagnosis/reload-environment-evidence.zip",
+      "gitBlob": "ba63ac142c4daeb2e0ac241945b2d20482071843",
+      "gitBytes": 440401,
+      "bytes": 440401,
+      "sha256": "dc926f26979b341be6186df5142bc55336023aa13568b5a90bdc20cbb1e6753f"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-execution-7d/reload-execution-evidence.zip",
+      "gitBlob": "6da0e88cbdf7331ad7018632615ecc71a52be90a",
+      "gitBytes": 269618,
+      "bytes": 269618,
+      "sha256": "e5c1011ef072af7236d75f6e403de76412fabf0df9b069c8e5b315325cd9843f"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-module-7d/reload-module-evidence.zip",
+      "gitBlob": "1552f247bc304720b5ba3648c99e9f035618a55c",
+      "gitBytes": 354704,
+      "bytes": 354704,
+      "sha256": "8213171280cc1fee52245c5beaed73085652e875d2caf4eb4d1ea24b697cdaea"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-module-7d/summary.json",
+      "gitBlob": "6a86847617e74afc2f30dd459730c2a8a4b3528f",
+      "gitBytes": 396070,
+      "bytes": 409725,
+      "sha256": "db2a79d84e5b6ac2ae54566015b5c09d9390851ddfa18ba871dc431199ca4f09"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-optimization/20261007T132310Z-reload-26.1.2/raw-logs.zip",
+      "gitBlob": "f5c98d3d50107bf32d46bd162408156d841e1499",
+      "gitBytes": 126194,
+      "bytes": 126194,
+      "sha256": "7b987a67c3b6e9652acce55d01976b0fbc0ee7114fd8f2ac58fc740b10ead58d"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-optimization/20261007T132518Z-reload-26.1.2/raw-logs.zip",
+      "gitBlob": "05367465230ef71d64dcb57d88c2f4997737e3af",
+      "gitBytes": 125752,
+      "bytes": 125752,
+      "sha256": "681103a29430c87878391e3e6e91af3f2843b75f46ec0de7ded907598c144e24"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-optimization/20261007T141029Z-reload-26.1.2/raw-logs.zip",
+      "gitBlob": "d3483767750c729b3a660e400f5c03fb2696c2c6",
+      "gitBytes": 125926,
+      "bytes": 125926,
+      "sha256": "732a6d7fbec74d483e5f3b5ccd0c9e46860c6366c857e8965634c0f3f46be4f8"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-optimization/20261007T145020Z-reload-26.1.2/raw-logs.zip",
+      "gitBlob": "df4daf002ab31ffbd3e1b666fd828efe26a597d1",
+      "gitBytes": 125823,
+      "bytes": 125823,
+      "sha256": "616c554a5ac88c1089776795eabd89eab999c71ab84035fc6a5817bea51f71cb"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-optimization/20261007T145113Z-startup-26.1.2/raw-logs.zip",
+      "gitBlob": "3ab25efbb465ab571edcd84043a32b2f9470793c",
+      "gitBytes": 874514,
+      "bytes": 874514,
+      "sha256": "a4bf5a4dec63442e30414d76e4baac51e54854d9f5daf778023163f40597674d"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-optimization/profiling/safe-profile.jfr",
+      "gitBlob": "9e0fb25db714a72211ad99e629e3771d82e2ca70",
+      "gitBytes": 875277,
+      "bytes": 875277,
+      "sha256": "a0d3153463ed44b906cc4a6f233d03e09b253b401ae3bf19de081730c0a2bd01"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-phase-7d/reload-phase-evidence.zip",
+      "gitBlob": "1d25e3841915089f8d1361545cc0258a9b40f4c1",
+      "gitBytes": 176682,
+      "bytes": 176682,
+      "sha256": "2d539989ab59566632d53eebd7f636aad938b4062fcfbe8f5e31d991a48eb405"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-preparation-7d/reload-preparation-evidence.zip",
+      "gitBlob": "b8bd7517c9754bbf779bb442cb069bd574a0046a",
+      "gitBytes": 477870,
+      "bytes": 477870,
+      "sha256": "9684b5a11a51e88e4c110dd23d4913bffec9affe039819a6d22e8b2a1de5903a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-reload-preparation-7d/summary.json",
+      "gitBlob": "a11426b3ca2370f62a8edcee9710b47d281cebfd",
+      "gitBytes": 697129,
+      "bytes": 717604,
+      "sha256": "6a4004323d6dbe7e86d7e364672c0e573bfd4bbf880e3a4131b4f239bc8a7141"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-sam-module-import-repair/manifest.json",
+      "gitBlob": "63c6c6e633b4c40483d7fc01060070c372c47150",
+      "gitBytes": 1002533,
+      "bytes": 1024107,
+      "sha256": "14905d87d84e78a95df6c87d514e2ff7428878c255686c37c160ee94f109b18d"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-sam-module-import-repair/runtime-summary.json",
+      "gitBlob": "c49d7e9d973f2c642faab8b4f8fdb97fedd0e24b",
+      "gitBytes": 1261994,
+      "bytes": 1273797,
+      "sha256": "2362f20e7f31df999362a108553f054cad1fa1d63e2d6604d22211d314f13dcf"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-sam-module-import-repair/sam-module-evidence.zip",
+      "gitBlob": "e9216f1c717d40df349a26e7157dfd107da4a935",
+      "gitBytes": 7825634,
+      "bytes": 7825634,
+      "sha256": "c44316c35649faa4c57f25c8fa7b202721ef559194011cc7cb2b6e5c2222104f"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-same-name-performance/same-name-performance-evidence.zip",
+      "gitBlob": "46ea86d3bddea07a3e1bba1ee21f6395e5d3c575",
+      "gitBytes": 1195557,
+      "bytes": 1195557,
+      "sha256": "da37b810c7c3621483e52e3e5972673b21e3afd029d0d51cbec553e3b270d799"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-semantic-pair-d109/semantic-pair-evidence.zip",
+      "gitBlob": "d3c6fd9d62e9d48bce49680f78575eb4294a3328",
+      "gitBytes": 3699678,
+      "bytes": 3699678,
+      "sha256": "a4bc2b6d42333f156c27a2f9376ac0a7e39232ca37df93aaa0c9de32974d6b28"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-signed-workspace-repair/manifest.json",
+      "gitBlob": "f4cba3b2141b065f029184639f596cb5c3e50c48",
+      "gitBytes": 1014911,
+      "bytes": 1036806,
+      "sha256": "ef2e728d585e6f2b939675c1b65ee4213c8fad25dcc1614d52b578308463b014"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-signed-workspace-repair/runtime-summary.json",
+      "gitBlob": "50e0a492bbff1e7d4ef24a4cb4355e2e837c97c6",
+      "gitBytes": 1123246,
+      "bytes": 1132213,
+      "sha256": "b4bb66353800c0078523e54e1cf904eda64d220bda6d28bf4da9062faaa7d21f"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-signed-workspace-repair/signed-workspace-evidence.zip",
+      "gitBlob": "5e915d2f0718e3b43bfb5c867da28f0b5357f134",
+      "gitBytes": 7983702,
+      "bytes": 7983702,
+      "sha256": "848ce22a6e18ca2d102e3e75f0c2b862e682abe30e9c5e4e78ad16381b6fa8fa"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ts-constructor-member-diagnosis/constructor-member-diagnosis.zip",
+      "gitBlob": "2ba3cdd06169959131d7c1a19c67c7ddb9264079",
+      "gitBytes": 64336,
+      "bytes": 64336,
+      "sha256": "0d1f02056e90934427a10f692cac8b9a93dea517d0fe0a0ed9e9563928bbfaf1"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ts-constructor-member-repair/constructor-member.zip",
+      "gitBlob": "0ef9c41b492cce4594ae75303e758989a0abcd8f",
+      "gitBytes": 7644018,
+      "bytes": 7644018,
+      "sha256": "bebb316822b6ae414c1f6f25a37e6f618b2d2e44c1570d88567e909eac116715"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ts-constructor-member-repair/manifest.json",
+      "gitBlob": "b120457a1fb8c27860a4c791f77715f9b17e4a4b",
+      "gitBytes": 919256,
+      "bytes": 939013,
+      "sha256": "b31fa2f19fe7447733834e842703ef41d666708abd9c7535148aa5c614fa54d7"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ts-event-dependencies/installed-26.2/actual-live-probe-output.zip",
+      "gitBlob": "dfc3def6ab147ce415cd4c3213d06efa68e575e5",
+      "gitBytes": 1179025,
+      "bytes": 1179025,
+      "sha256": "85c09d13032c77a37aa7a4edca296491bd7c7fc7878715948a5725bf463acbae"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ts-event-dependencies/installed-26.2/live-strict-output.txt",
+      "gitBlob": "4b07973b553796ee1ad08ef141bb905209b4bfef",
+      "gitBytes": 811407,
+      "bytes": 811407,
+      "sha256": "d338c0c811f15e9dc800469d7d83d18cfed715c8ce2eb644a21db05b240ebd1d"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ts-event-dependencies/installed-26.2/raw-server-command-logs.zip",
+      "gitBlob": "6a66665b0cf00beacca871a90baf1219c5926150",
+      "gitBytes": 26414,
+      "bytes": 26414,
+      "sha256": "3fc9f693d6e1a30605206fc66b5f1d92fd94330e45a91094cf2b6b9adc7380a1"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ts-event-dependencies/validation/combined-capture.zip",
+      "gitBlob": "fd6b686e2beaee9bb5b611763bd411108da3c2f1",
+      "gitBytes": 30673,
+      "bytes": 30673,
+      "sha256": "e16ae264db07cc154831f03deb3437c6c20ebea208c1c5fecac09daca3841b4a"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ts-event-dependencies/validation/full-matrix-xml.zip",
+      "gitBlob": "3ce6872b2efa303a91ca78ca50ad4d0d08c96565",
+      "gitBytes": 798568,
+      "bytes": 798568,
+      "sha256": "4019dc2f541a7859af7d2678255fb99190aa024fdf1b193511784be8f1ddb545"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ts-event-dependencies/validation/probe-types-raw.zip",
+      "gitBlob": "4f23fa20b09b65483483dd60148267ca5ae3fe76",
+      "gitBytes": 201,
+      "bytes": 201,
+      "sha256": "a62ce6c81a2f14cb4d3b7fa439e4ff2c6029bb2df155277a9bd6539e90d96033"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ts-same-name-heritage/same-name-heritage.zip",
+      "gitBlob": "38dd5c6a383e5fae7889a94d334e289bf20dfa1d",
+      "gitBytes": 1095916,
+      "bytes": 1095916,
+      "sha256": "db71d2e81fffc7c6b38d97c494a69486fe2c17a9e7a35e193f0f492c1739c571"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ts-same-name-import-repair/manifest.json",
+      "gitBlob": "9ed3b4325c80233385eb2e0eb135b9bce9fde87a",
+      "gitBytes": 1102332,
+      "bytes": 1126589,
+      "sha256": "1d954e91deefa5642097f92a6dd8c6d7b537681eabe086e73202ea37506beea1"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-ts-same-name-import-repair/same-name-import.zip",
+      "gitBlob": "6db24fd303abaf70f69b4512ad30bf5155e6ad42",
+      "gitBytes": 9684489,
+      "bytes": 9684489,
+      "sha256": "97f85611c00de21bef8d30326673c10ed7e9692f8088d9572192181506ed5a8f"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-typescript-member-names/manifest.json",
+      "gitBlob": "007bc6b3f1f68a4053aebe8c46b6a5ecb7fc3bdf",
+      "gitBytes": 903371,
+      "bytes": 921565,
+      "sha256": "36726a85d316e22cff11f864adab623679e45e6fbc08745bfc0fdd960685642b"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-typescript-member-names/ts-member-evidence.zip",
+      "gitBlob": "748a0279df2206d80c55d2e7d2f40617fea0ca61",
+      "gitBytes": 7232849,
+      "bytes": 7232849,
+      "sha256": "7ca1d262f28719a70473327d9e8454e95e42e836f274b74e2a213a4a90546ed3"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-typescript-member-names/ts-member-syntax-before.json",
+      "gitBlob": "a19f90f352863c901667e925a6215bf910afdc19",
+      "gitBytes": 265525,
+      "bytes": 265525,
+      "sha256": "e196ddb766d37bd082bbb53f1a3046536f62da21d4f89774ec97a9fa63ef30a5"
+    },
+    {
+      "path": "docs/architecture-refactor/evidence/ticket37-util-performance/util-performance-evidence.zip",
+      "gitBlob": "feb927514024054294fe35e7e9127620a5326d1c",
+      "gitBytes": 1195052,
+      "bytes": 1195052,
+      "sha256": "9e5fc7069ca67498a34b4c08955491f4306aa0482ff6898cce4e563ac8b69b77"
+    }
+  ]
+}

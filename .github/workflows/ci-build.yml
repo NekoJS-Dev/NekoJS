@@ -89,6 +89,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Guard historical evidence storage
+        # Bulky evidence is restored from external content-addressed storage when needed.
+        run: python3 tools/evidence_archive.py check
+
       - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:

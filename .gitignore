@@ -29,3 +29,11 @@ node_modules/
 
 # 遗留归档工作区：自成一个独立仓库（见其 README），不得作为子仓库/gitlink 提交
 NekoJS-mult/
+
+# Externalized historical evidence payloads; restore from NEKOJS_EVIDENCE_ARCHIVE when needed.
+/docs/architecture-refactor/evidence/**/*.zip
+/docs/architecture-refactor/evidence/**/*.jfr
+/docs/architecture-refactor/evidence/**/*.gz
+/docs/architecture-refactor/evidence/**/*.7z
+/docs/architecture-refactor/evidence/**/*.tar
+/docs/architecture-refactor/evidence/**/*.hprof
