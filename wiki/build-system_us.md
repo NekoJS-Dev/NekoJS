@@ -10,7 +10,7 @@
 <a id="wiki-section-2"></a>
 ## Repository layout
 
-A Stonecutter multi-version, multi-loader **single repository**: one shared version tree, per-node parameter directories, and two convention plugins. The version graph in settings.gradle.kts is:
+A Stonecutter multi-version, multi-loader **single repository**: one shared version tree, per-node parameters, two loader convention plugins, and a shared source-selection convention. The version graph in `settings.gradle.kts` is:
 
 ```kotlin
 stonecutter {
@@ -33,6 +33,7 @@ Each of the two entry scripts contains one declaration line:
 |---|---|---|
 | `build.gradle.kts` | `buildSrc/.../nekojs.neoforge-node.gradle.kts` | MDG (`neoForge` block/runs), supplying AT and mods.toml, era-specific resource layers, fat-jar, `verifyDevModSourceSets`, compile/test conventions |
 | `fabric.gradle.kts` | `nekojs.fabric-node.gradle.kts` | loom-back-compat (applied inside the plugin, reading the Loom version from the controller's `apply false` declaration), ICU4J class extraction, bundled night-config, Fabric fat-jar, `verifyFabricRuntimeArtifact` |
+| Applied by both loader conventions | `nekojs.node-sources.gradle.kts` | Node-local same-relative-path Java/resources take precedence over shared, raw Fabric, and generated Stonecutter roots, including the active node |
 
 Three established rules, based on past build failures, are enforced in the plugin implementation and documented beside the code:
 
@@ -81,7 +82,7 @@ Scan scopes differ: guard rules inspect only `src/**/*.java` (the shared tree); 
 ./gradlew guardLint                          # Guard and boundary lint (seconds)
 ./gradlew :26.1.2:build                      # Single-node build (active node compiles directly in the IDE)
 ./gradlew :26.1.2-fabric:verifyFabricRuntimeArtifact # Verify Fabric fat-jar entry points and loader isolation
-./gradlew :26.2.0-fabric:build              # Verify the 26.2 Fabric source bridge
+./gradlew :26.2.0-fabric:build                # Build the 26.2 Fabric node
 ./gradlew sandboxCheck                       # All-node gate before submitting
 ./gradlew switchVersion -Pnode=26.2.0        # Change active node, then resync the IDE
 ./gradlew :common:check                      # Engine checks
@@ -101,12 +102,14 @@ The active node is the node compiled/run directly in the IDE, selected by `stone
 
 `.github/workflows/ci-build.yml` uses a handwritten node matrix: `:common:check` → `guardLint` → NeoForge `nbtSmokeTest` → `npm run test:probe-types` → node `build` tasks, including Fabric 26.1.2/26.2.0 → each Fabric matrix leg verifies the downloaded Fabric jar and then runs a development-server smoke test. A commit title of `update <版本>` triggers release publication. GitHub Release and CurseForge tasks depend on both Fabric smoke legs; Fabric files remain explicitly excluded until publication is enabled separately. Runtime smoke uses versioned fixtures and stops after seeing startup/server-started markers. CI obtains JDKs through `actions/setup-java`; the repository no longer fixes `org.gradle.java.home`. Local users configure it in user-level `~/.gradle/gradle.properties` or export `JAVA_HOME`.
 
+CI also runs `python tools/test_active_node_sources.py` and `python tools/verify-active-node-sources.py`. The regression suite covers restoration, failure/stale-summary detection, and preservation of existing probe paths; the verifier checks actual compile/resource task inputs through `tools/verify-node-source-selection.init.gradle`. A version node must select its own override, not silently compile the shared twin.
+
 <a id="wiki-section-9"></a>
 ## Known boundaries
 
-- Fabric tests still cover a subset: the 6 classes / 26 cases run so far cover pdata and three neutral adapters; the other shared tests remain NeoForge-guarded. CI builds 26.1.2-fabric and 26.2.0-fabric, verifies each downloaded Fabric jar, and runs a development-server smoke test in each matrix leg. Both legs must pass before the release job can run. The two Fabric nodes share the raw loader root `src/fabric` (moved in ticket 31 and explicitly mounted by the Fabric convention). `deps.fabric_source_node` remains transitional bridge metadata pending removal in ticket 32. `verifyFabricRuntimeArtifact` is already a release-artifact gate under `check`.
+- Fabric has a deliberately smaller loader/API and test surface than NeoForge. Both Fabric nodes mount the raw loader root `src/fabric` without Stonecutter preprocessing; the former `deps.fabric_source_node` bridge has been removed. Version differences use node overrides/facades. CI checks downloaded artifacts and development-server smoke per Fabric leg, and `verifyFabricRuntimeArtifact` remains a `check` gate. These checks are not visual/gameplay acceptance for every API.
 - Forge 1.20.1 is unsupported. Its API differs from the shared tree by an entire era, beyond what guards and replacements can bridge. Supporting it would effectively mean maintaining a second codebase, so its skeleton has been removed; it can be recovered from git history if needed.
-- Cleanroom 1.12.2 is not built in this repository; a separate legacy branch maintains it.
+- Cleanroom 1.12.2 is outside this repository's current build graph; its separate-branch behavior is not verified here.
 
 - [Project architecture](project-architecture_us): the design behind the modules.
 

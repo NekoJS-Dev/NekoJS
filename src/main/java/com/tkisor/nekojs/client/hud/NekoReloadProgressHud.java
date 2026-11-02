@@ -84,7 +84,7 @@ public final class NekoReloadProgressHud {
 //? if >=26 {
         graphics.text(minecraft.font, label, left + PADDING, top + 7, COLOR_TEXT, true);
 //?} else {
-/*        graphics.drawString(minecraft.font, label, left + PADDING, top + 7, COLOR_TEXT, true);
+        /*graphics.drawString(minecraft.font, label, left + PADDING, top + 7, COLOR_TEXT, true);
 *///?}
     }
 }

@@ -12,13 +12,17 @@
 ## 脚本作者
 
 - [脚本基础](script-basics_cn)
+- [脚本 API 约定](script-api-style_cn)
 - [脚本属性](script-properties_cn)
 - [全局绑定](global-bindings_cn)
+- [数据、状态与持久化](data-and-state_cn)
 - [Python 脚本](python-scripts_cn)
 - [Python 特性清单](python-feature-support_cn)
 - [事件参考](event-reference_cn)
+- [AI 辅助脚本编写](ai-support_cn)
 - [命令](commands_cn)
 - [错误与日志参考](error-reference_cn)
+- [客户端绘制与后处理](client-rendering_cn)
 
 ## 整合包作者
 
@@ -55,13 +59,17 @@
 ## Script authors
 
 - [Script basics](script-basics_us)
+- [Script API conventions](script-api-style_us)
 - [Script properties](script-properties_us)
 - [Global bindings](global-bindings_us)
+- [Data, state and persistence](data-and-state_us)
 - [Python scripts](python-scripts_us)
 - [Python feature support](python-feature-support_us)
 - [Event reference](event-reference_us)
+- [AI-assisted authoring](ai-support_us)
 - [Commands](commands_us)
 - [Error and log reference](error-reference_us)
+- [Client rendering and post effects](client-rendering_us)
 
 ## Modpack authors
 

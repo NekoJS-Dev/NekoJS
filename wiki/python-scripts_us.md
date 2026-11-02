@@ -9,6 +9,8 @@ NekoJS has **built-in** support for a Python subset. You can write scripts direc
 
 > This is a **subset transpiler**, not a full Python interpreter. Python source is parsed into an AST, lowered to JavaScript, and executed by GraalJS. You can therefore use all NekoJS JS bindings directly (`Item`, `Utils`, `ServerEvents`, ...), but only the Python syntax and built-in functions listed below.
 
+Python scripts still require the matching **GraalMC** dependency that supplies GraalJS. They do not use CPython, GraalPy, `pip`, or a separately installed Python interpreter. Available NekoJS bindings still depend on Script Type, loader, and Minecraft version; “direct JS bindings” does not mean every binding exists on every platform. See [Platforms and compatibility](platform-compatibility_us).
+
 <a id="wiki-section-2"></a>
 ## Quick start
 
@@ -74,7 +76,7 @@ ServerEvents.recipes(lambda event: (
 |---|---|
 | Functions `def f(a, b=1, *args, **kwargs):` (default parameters, `*args`, `**kwargs`) | Supported, lowered to `function` (hoisted); `**kwargs` triggers prologue rebinding |
 | `if` / `elif` / `else` | Supported, lowered to `if / else if / else` |
-| `match` / `case` (structural pattern matching: literal/wildcard/capture/`|`/sequence/mapping/class patterns + `if guard`) | Supported, lowered to an if/else chain |
+| `match` / `case` (structural pattern matching: literal/wildcard/capture/`\|`/sequence/mapping/class patterns + `if guard`) | Supported, lowered to an if/else chain |
 | `for x in iter:` / `while cond:` | Supported, `for...of` / `while` |
 | Assignment: `=`, augmented `+=`/...`//=`/`**=`, tuple unpacking `a, b = ...`, multiple targets `a = b = v`, walrus `:=` | Supported |
 | `lambda` (default parameters and `*args` supported; **`**kwargs` unsupported**) | Supported, lowered to an arrow function |
@@ -257,7 +259,7 @@ class Bag:
 Bag(apple=1, banana=2).total(bonus=10)   # 13
 ```
 
-> Limit: keyword arguments can only be passed to targets **declaring `**kwargs`** (functions, methods, class `__init__`), or to `print`/`sorted` (which have special handling). Ordinary functions without `**kwargs` report an explicit error when given keyword arguments. `lambda` does not support `**kwargs` (arrow functions do not have `arguments`).
+> Limit: keyword arguments can only be passed to targets **declaring `**kwargs`** (functions, methods, class `__init__`), or to `print`/`sorted`/`min`/`max` (which have special handling). Ordinary functions without `**kwargs` report an explicit error when given keyword arguments. `lambda` does not support `**kwargs` (arrow functions do not have `arguments`).
 
 <a id="wiki-section-15"></a>
 ### Classes
@@ -376,7 +378,7 @@ def describe(point):
             return 'other'
 ```
 
-Supported patterns: literals (`1`/`'x'`/`True`/`None`/`-1`), wildcard `_`, name captures, `|` OR patterns (`1 | 2 | 3`), sequence patterns (`[a, *r, b]`, with `*` in any position), mapping patterns (`{'k': v, **rest}`), class patterns (`Cls()` or keyword forms such as `Cls(x=p)`), and `case ... if guard`.
+Supported patterns: literals (`1`/`'x'`/`True`/`None`/`-1`), wildcard `_`, name captures, `\|` OR patterns (`1 | 2 | 3`), sequence patterns (`[a, *r, b]`, with `*` in any position), mapping patterns (`{'k': v, **rest}`), class patterns (`Cls()` or keyword forms such as `Cls(x=p)`), and `case ... if guard`.
 
 > Limits: class patterns support only **keyword** subpatterns `Cls(attr=pat)` (positional subpatterns require `__match_args__`, which is unsupported). `match` is a soft keyword: it is treated as a match statement only if the line can be scanned as `<subject> :`, so `match` can still be an ordinary variable name (`match = 5`, bare `match`, or a `match(x)` call).
 
@@ -418,39 +420,41 @@ Key points:
 |---|---|---|
 | `range(stop)` / `range(start, stop[, step])` | `Array.from({length: ...}, ...)` | |
 | `len(x)` | `__nekoLen(x)` | Array/string `.length`, `Map`/`Set` `.size`, dict (JS object) `Object.keys().length`; no workaround needed for dict/set |
-| `print(...)` | `console.log([...].join(sep))` | `sep=` keyword supported; `end=` ignored |
+| `print(...)` | Converts each argument with `__nekoPyStr`, then joins and logs | `sep=` supported; `end=` ignored |
 | `abs(x)` | `Math.abs(x)` | |
 | `min(...)` / `min(iterable[, key=])` | `Math.min(...)` (or `reduce` with key) | A single iterable argument is spread automatically; `key=` supported |
 | `max(...)` / `max(iterable[, key=])` | `Math.max(...)` (or `reduce` with key) | Same as above |
 | `sum(iterable)` | `([...iterable]).reduce((a,b)=>a+b, 0)` | Spreads first; can consume generators |
-| `str(x)` | `String(x)` | |
+| `str(x)` | `__nekoPyStr(x)` | Python spellings for None/booleans and supported container formatting; not full CPython representation parity |
 | `int(x[, base])` | `parseInt(x, base)` | Optional base |
 | `float(x)` | `Number(x)` | |
-| `bool(x)` | `Boolean(x)` | |
+| `bool(x)` | `__nekoTruthy(x)` | Empty supported containers are false |
 | `list()` / `list(iterable)` | `[]` / `[...iterable]` | |
 | `dict()` / `dict(iterable)` | `({})` / `Object.fromEntries(iterable)` | |
 | `set()` / `set(iterable)` | `new Set()` / `new Set(iterable)` | |
 | `tuple(iterable)` | `[...iterable]` | Note: returns a mutable array (JS has no immutable tuple) |
 | `sorted(iterable[, reverse=][, key=])` | `[...iterable].sort(comparator)` | Both `reverse`/`key` supported |
-| `any(iterable)` / `all(iterable)` | `.some(x=>x)` / `.every(x=>x)` | Spreads first; can consume generators |
+| `any(iterable)` / `all(iterable)` | Tests elements with `__nekoTruthy` | Spreads first; can consume generators |
 | `enumerate(iterable)` | `([...iterable]).map((v, i) => [i, v])` | Returns `[index, value]` pairs |
 | `reversed(iterable)` | `[...iterable].reverse()` | |
 | `map(f, iterable)` | `[...iterable].map(f)` | **Function first** (as in Python); returns an eager array |
-| `filter(pred, iterable)` | `[...iterable].filter(pred)` | **Predicate first** |
+| `filter(pred, iterable)` | Filters using Python-style truthiness | `None` keeps truthy values; otherwise tests the predicate result |
 | `zip(*iterables)` | Pairs up to the shortest input | Multiple iterables; returns an array of `[a,b]` tuples |
 | `round(x[, n])` | `Math.round` (scaled by 10^n when n is provided) | Unlike Python's **banker's rounding** (ties to even), JS `Math.round` rounds ties toward positive infinity: `round(-1.5)` returns `-1`, not `-2`. |
-| `divmod(a, b)` | `[Math.floor(a/b), a % b]` | |
+| `divmod(a, b)` | `[__nekoFloorDiv(a,b), __nekoMod(a,b)]` | Floor division, divisor-sign modulo, zero checks |
 | `ord(c)` / `chr(n)` | `codePointAt(0)` / `String.fromCodePoint(n)` | |
 | `pow(x, y)` | `Math.pow(x, y)` | Three-argument modular exponentiation unsupported |
 | `hex(n)` / `oct(n)` / `bin(n)` | `"-0x"+abs.toString(16)`, etc. | Negative numbers use a `-` prefix |
 | `repr(x)` | `JSON.stringify(x)` | Approximation |
 | `format(x, spec)` | `__nekoFmt(x, spec, null)` | Same rules as f-string format specifiers |
-| `isinstance(x, T)` / `isinstance(x, (A,B))` / `isinstance(x, [A,B])` | `x instanceof T` (tuple/list→chain) | Built-in exception names use the prelude class hierarchy (`isinstance(e, ValueError)` → `e instanceof ValueError`, exact matching) |
+| `isinstance(x, T)` / `isinstance(x, (A,B))` / `isinstance(x, [A,B])` | Built-in type probes, exception helper, or custom `instanceof` | Built-in probes reflect JS representations, not distinct CPython runtime types |
 | `type(x)` | `(x).constructor` | |
 | `callable(x)` | `typeof x === "function"` | |
 | `getattr(o, name[, d])` / `hasattr` / `setattr` / `delattr` | `o[name]` bracket access (with defaults/existence checks/assignment/delete) | |
 | `iter(x)` / `next(it)` | `x[Symbol.iterator]()` / `it.next().value` | Interoperates with generators/iterators |
 | `frozenset(x)` | `new Set(x)` | JS has no immutable set; returns an ordinary Set |
+
+Built-in `isinstance` probes use JS storage: `float` accepts all JS numbers (including integer-valued ones), list/tuple share arrays, set/frozenset share `Set`, and dict checks a plain object constructor. These are not separate CPython object types.
 
 > Common **str/list/dict/set methods** are mapped to JS equivalents (see "Method mappings" below). Unmapped methods pass through unchanged as `obj.method(args)` (and still work if JS has a method with the same name).
 
@@ -507,7 +511,7 @@ Lowered to JS `try/catch[/else]/finally`. Key points:
 - **Python built-in exception names** (`Exception`, `ValueError`, `TypeError`, `KeyError`, etc.) are defined by the **prelude class hierarchy** injected at the top of the module (`class Exception extends Error`, with built-in exceptions extending it and `prototype.name` corrected). `raise ValueError('x')` → `throw new ValueError("x")`, `except ValueError` → `instanceof ValueError` with **exact matching** (native JS `TypeError` can also be caught by `except TypeError` through a `.name` fallback); `isinstance(e, ValueError)` is exact as well.
 - The `e` bound by `as e` is the underlying JS error object.
 
-> Note: `raise 42` (throwing a non-Error value) does **not** match `except Exception` (`42 instanceof Error` is false), and the exception is rethrown. This follows Python semantics. Use bare `except:` to catch arbitrary values.
+> Note: `raise 42` (throwing a non-Error value) does **not** match `except Exception` (`42 instanceof Error` is false), and the exception is rethrown. This is a JS-interoperability difference: CPython rejects raising a non-exception value. Use bare `except:` to catch arbitrary JS values.
 
 <a id="wiki-section-25"></a>
 ## Decorators
@@ -523,24 +527,24 @@ The transpiler tries to follow Python semantics, but the underlying runtime is J
 |---|---|
 | **`self` → `this`** | Rewritten only inside **instance method bodies**; `self` in ordinary functions is not replaced. `@staticmethod` methods are not rewritten. |
 | **dict is a JS object** | Keys can only be strings (numeric keys are coerced to strings, and integer-like keys such as `"10"` are moved forward in numeric order by JS). Arbitrary hashable objects, such as tuples, cannot be keys. |
-| **`//` floor division** | `a // b` → `Math.floor(a / b)`, rounding toward negative infinity as in Python (`-7 // 2 == -4`). |
+| **`//` floor division** | `__nekoFloorDiv(a,b)` rounds toward negative infinity (`-7 // 2 == -4`) and rejects zero divisors with `ZeroDivisionError`. |
 | **`**` exponentiation** | `a ** b` passes directly through to JS `**`, with the same semantics. |
 | **`in` / `not in`** | `x in coll` → `__nekoIn(x, coll)`: array/string `.includes`, own keys of dict (JS objects), `Map`/`Set` `.has`. **No workaround is needed** for dictionary key membership (chained membership `a in b in c` also uses the helper). |
 | **`is` / `is not`** | Passes through as JS `===` / `!==` (strict equality). `None` maps to `null`, so `x is None` is equivalent to `x === null`. |
-| **`==` / `!=`** | Maps to JS **strict equality** `===` / `!==` (`"1" == 1` is false, as in Python). |
+| **`==` / `!=`** | JS strict equality `===` / `!==`; arrays/dictionaries compare by identity, not Python structural equality. |
 | **`and` / `or`** | `__nekoAnd` / `__nekoOr` helpers: short-circuit evaluation + operand values returned + **Python truthiness** (`[] or 'y'` yields `'y'`). |
 | **Integer precision** | Python `int` has arbitrary precision; JS only has double-precision floating-point Number. Integers `> 2^53` lose precision, and `int(x)` has this limit too. Ordinary integer arithmetic is unaffected. |
 | **Variable scope** | All assignments emit `var` (function-scoped, redeclarable, hoisted), not `let`/`const`. There is no block scope or TDZ: values assigned in loops/branches remain visible in the enclosing function scope. |
 | **Truthiness** | Conditions (`if`/`while`/`not`/`and`/`or`/conditional expressions/`assert`/comprehension filters/`match` guards) all use `__nekoTruthy`: `[]`/`{}`/`''`/`0`/`None` are false, as in Python. **You do not need `len(xs)==0` to check empty containers**. |
 | **`None` / `True` / `False`** | Map to JS `null` / `true` / `false` respectively (not `undefined`). |
-| **List `+` concatenation (pitfall)** | `[1,2] + [3]` uses JS `+` → string `"1,23"` (Python concatenates lists). The same applies to `+=`. Use `a.extend(b)` / `[*a, *b]` for now. |
-| **`"%s" % x` formatting (pitfall)** | Takes the numeric remainder path → silently yields `NaN`. Use f-strings / `format(x, spec)` instead. |
-| **set/dict bitwise operators (pitfall)** | `s1 \| s2`, `d1 \| d2`, `&`, `^`, `-` on containers use JS bitwise operations → silently yield `0`. Use methods (`union` is not yet available; convert to a list first) or a form such as `dict(d1, **d2)`. |
+| **List `+` / `+=`** | Array operands are concatenated by `__nekoAdd`; other operands follow the implemented JS-interoperability rules. |
+| **Percent string formatting** | A string left operand uses `__nekoPyPercent`: supports `%s`, `%r`, `%d`/`%i`, `%f`, `%g`, `%x`/`%X`, `%o`, `%%` and a width/precision subset, not every CPython format. |
+| **set/dict operators (pitfall)** | Container `\|`, `&`, and `^` use JS bitwise coercion; `-` is JS subtraction, not set difference. Results are not Python container operations. Merge dictionaries with `{**d1, **d2}` instead. |
 | **`set.update` (pitfall)** | Currently affected by the dict update mapping (`Object.assign` on a Set object). Use `for x in other: s.add(x)`. |
-| **`print(dict)` (pitfall)** | Dictionaries print as `[object Object]`; use `print(list(d.items()))` to inspect them. |
+| **`print(dict)`** | Uses the Python string helper for supported dictionaries, lists, booleans, and None; arbitrary host objects need not have CPython representations. |
 | **Non-literal negative indices (pitfall)** | `xs[-1]` (literal) correctly selects the last element; however, `xs[i]` when runtime `i<0` → JS property access silently yields `undefined`. For negative indices in loops, use `xs[len(xs)+i]`. |
 | **`next(gen)` past the end (pitfall)** | Once an iterator is exhausted, `next()` returns `undefined` (Python raises `StopIteration`). Use a `for` loop instead. |
-| **`split(sep, maxsplit)` / `replace(old, new, count)` (pitfall)** | The third argument is ignored by native JS methods: `split` discards the remaining part rather than retaining the tail, and `replace` replaces all occurrences rather than the first count. Write a loop when precise control is required. |
+| **`split(sep, maxsplit)` / `replace(old, new, count)`** | Implemented mappings retain the unsplit tail and honor a replacement count. String replacement is literal, not regex-based; this is not a promise of every CPython edge case. |
 | **`str(e)`** | For built-in exceptions, `str(e)` is `"ValueError: msg"` (with the class name prefix, JS Error.toString style); Python returns only `msg`. Use `e.message` for the message itself. |
 
 <a id="wiki-section-27"></a>
@@ -552,7 +556,7 @@ The following syntax/features are **unsupported** in the current version. Some p
 - Matrix multiplication `@` / `@=`
 - Parameterized decorators `@deco(...)`, other class method decorators (except `@staticmethod`/`@classmethod`/`@property`)
 - `**kwargs` in `lambda`
-- Keyword arguments passed to ordinary functions **not declaring `**kwargs`** (only `print`/`sorted` have special handling)
+- Keyword arguments passed to ordinary functions **not declaring `**kwargs`** (only `print`/`sorted`/`min`/`max` have special handling)
 
 Others produce only **generic parse errors** (no specific message), or **silent lowering**:
 
@@ -624,9 +628,10 @@ You can mix `.js`, `.ts`, and `.py` in one modpack without interference.
 - [Probe type generation](probe-type-generation_us) - Python stubs, editor configuration, and completion troubleshooting.
 - [TypeScript and JSX](typescript-and-jsx_us) - Another built-in language frontend.
 - [FAQ](faq_us) - Troubleshooting errors.
+- [Script API style](script-api-style_us) - Keep event, Binding, builder, Bean-property, and data-object conventions in Python too.
 
 <!-- wiki-nav -->
 
 ---
 
-[Previous: Global bindings](global-bindings_us) · [Contents](Home) · [Next: Python feature support](python-feature-support_us)
+[Previous: Data, state and persistence](data-and-state_us) · [Contents](Home) · [Next: Python feature support](python-feature-support_us)

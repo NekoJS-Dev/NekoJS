@@ -40,7 +40,7 @@ This Wiki is organized by use case:
 console.info('[NekoJS] Server script loaded')
 ```
 
-4. Enter a world or run `/nekojs reload`. Once you see the log output, continue with [Quick start](quick-start_us).
+4. Enter a world or run `/nekojs reload server`. Once you see the log output, continue with [Quick start](quick-start_us).
 
 <a id="wiki-section-4"></a>
 ## Current platforms
@@ -50,9 +50,9 @@ console.info('[NekoJS] Server script loaded')
 | NeoForge 1.21.1 | Currently supported, Java 21 |
 | NeoForge 26.1.2 | Currently supported, Java 25 |
 | NeoForge 26.2.0 | Currently supported, Java 25 |
-| Fabric 26.1.2 | Build and runtime smoke coverage exists; not yet published as an official artifact; the API is a subset |
-| Fabric 26.2.0 | Build and runtime isolation gates exist; not yet published as an official artifact; the API is a subset |
-| Cleanroom 1.12.2 | Separate legacy branch, not part of the current repository's version graph |
+| Fabric 26.1.2 | Current repository node, Java 25; loader API subset |
+| Fabric 26.2.0 | Current repository node, Java 25; loader API subset |
+
 
 See [Platforms and compatibility](platform-compatibility_us) for detailed differences. Refer to [Releases](https://github.com/NekoJS-Dev/NekoJS/releases) for publication status.
 
@@ -62,10 +62,14 @@ See [Platforms and compatibility](platform-compatibility_us) for detailed differ
 - **Writing your first script**: [Quick start](quick-start_us)
 - **Understanding when scripts run**: [Script basics](script-basics_us)
 - **Looking up bindings and methods**: [Global bindings](global-bindings_us)
+- **Giving an AI the current instance API**: [AI-assisted authoring](ai-support_us)
 - **Listening to or canceling events**: [Event reference](event-reference_us)
 - **Changing recipes**: [Recipe system](recipe-system_us)
 - **Registering items, blocks, or entities**: [Registering new content](registering-new-content_us)
 - **Writing client Screens with JSX**: [JSX client UI](jsx-client-ui_us)
+- **Drawing HUD/world overlays or post effects**: [Client rendering](client-rendering_us)
+- **Distinguishing event, Binding, builder, and data-object syntax**: [Script API style](script-api-style_us)
+- **Choosing saved, synchronized, or generation-local state**: [Data and state](data-and-state_us)
 - **Splitting modules or using npm packages**: [Module system](module-system_us)
 - **Troubleshooting errors**: [FAQ](faq_us)
 - **Writing Java plugins**: [Plugin development](plugin-development_us)
@@ -73,7 +77,7 @@ See [Platforms and compatibility](platform-compatibility_us) for detailed differ
 <a id="wiki-section-6"></a>
 ## Maintenance notes
 
-The Wiki still contains some Cleanroom legacy material and English pages that are being translated. For platform differences, refer to [Platforms and compatibility](platform-compatibility_us), the platform labels on the relevant reference page, and the current Release.
+The support matrix here is limited to the five current repository nodes. Cleanroom 1.12.2 behavior and release availability are not established by this codebase. For API availability, use the platform notes and the current instance's generated declarations; release pages determine which artifacts are actually published.
 
 <!-- wiki-nav -->
 

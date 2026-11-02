@@ -144,6 +144,11 @@ jobs:
         # 单个 build 已按依赖链覆盖 compileJava → test → check（隔离门禁/verifyDevModSourceSets）
         run: ./gradlew :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build --console=plain
 
+      - name: Verify source overrides for every active node
+        run: |
+          python3 -m unittest discover -s tools -p test_active_node_sources.py
+          python3 tools/verify-active-node-sources.py --target build/active-source-matrix
+
       - name: Ticket-33 build/CI and non-processor coverage gates
         # 工单 33：CI 子集用途一致性、Fabric processor 延期、三类非 processor 覆盖 gate
         # （contract/spec、event/surface、declaration）与五节点 check/artifact/source trace。

@@ -20,7 +20,7 @@ public abstract class ReloadableServerResourcesMixin {
     @Inject(method = "updateComponentsAndStaticRegistryTags", at = @At("TAIL"))
     private void onTagsAndComponentsBound(CallbackInfo ci) {
 //?} else {
-/*    @Inject(
+    /*@Inject(
             method = "updateRegistryTags()V",
             at = @At("TAIL")
     )

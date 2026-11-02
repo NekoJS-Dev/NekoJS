@@ -17,7 +17,7 @@
 <a id="wiki-section-3"></a>
 ### `Item`
 
-物品助手。`of`/`empty` 走助手函数，其余成员委托给 MC 的 `Item` 类（可直接访问原版物品常量）。
+物品助手。`of`、`empty`、`id`、`idOf` 走助手函数，其余成员委托给 MC 的 `Item` 类。Bean 访问器按可读/可写能力使用属性，见 [Script API 风格](script-api-style_cn)。
 
 | 方法 | 说明 |
 |---|---|
@@ -26,6 +26,10 @@
 | `Item.of(stack: ItemStack) → ItemStack` | 透传 |
 | `Item.of(stack: ItemStack, count: int) → ItemStack` | 复制并改数量 |
 | `Item.empty() → ItemStack` | `ItemStack.EMPTY` |
+| `Item.id(id: string) → Item \| null` | 查询物品（省略命名空间时使用 `minecraft`），未知 id 返回 `null` |
+| `Item.idOf(item: Item) → Identifier` | 原生 Item 的注册 id，不接受 ItemStack |
+
+`Block.id(id: string) → Block | null` 与 `Block.idOf(block: Block) → Identifier` 提供对应的方块查询；`Blocks` 是独立的原版常量绑定。这些助手在 NeoForge 与 Fabric 均可用。
 
 **`ItemStack` 扩展方法**（NekoJS 通过 Mixin 注入平台扩展）：
 
@@ -49,6 +53,8 @@
 
 <a id="wiki-section-4"></a>
 ### `PersistentDataJS` 的实体/玩家边界
+
+下述同步生命周期适用于已安装的实体平台存储。Fabric 现与 NeoForge 使用一致的容器/载荷边界，回归覆盖桥接层往返与同步；旧 Fabric 双层存档保持嵌套、不自动迁移，不能把夹具结果当作真实多人/重启验收。ItemStack PData 拥有整个 `CUSTOM_DATA` payload，clear 会删除该组件；继承的 `markDirty()`/`sync()` 是 no-op，不触发实体同步包。参见[数据与状态](data-and-state_cn)。
 
 `entity.pdata()`（玩家继承实体扩展）写入实体的 `NekoJSPersistentData` 子键，并在服务端写入后自动进入下一次 server tick 的同步队列。`sync()` 可立即向跟踪该实体的客户端发送当前快照。客户端脚本读取的是只读 mirror；任何 `put*`、`remove`、`merge`、`edit`、`clear`、`replaceTag`、`markDirty` 或 `sync` 写入口都会抛出异常，不会伪装成成功。
 
@@ -249,7 +255,11 @@ binary NBT 持久化固定在 `<gameDir>/nekojs/data/`。path 必须是 forward-
 <a id="wiki-section-18"></a>
 ### `Registry`
 
+**后端可用性：** 当前 NeoForge 提供实际查询服务。Fabric 虽注册此 Binding，但尚未提供 registry service；空后端会返回 `exists() === false`、空 id/tag/map 和 `null` map 值。不能把 Binding 存在或空返回值当作实际注册表不存在的证据。
+
 只读注册表查询。`Registry.get(registryId)` 返回 `RegistryView`，注册表不存在时 `exists()` 为 `false`。所有方法只返回基础类型（字符串/布尔/数组），不暴露 MC 原生对象。
+
+该视图实现 `Iterable<String>`：`for (const id of Registry.get('minecraft:item')) console.info(id)` 可遍历注册 id。
 
 | 方法 | 说明 |
 |---|---|
@@ -307,21 +317,29 @@ console.info(VillagerTrades.query().describe())
 
 普通遗漏记为 unrestored；`ServerEvents.tradeReload(event => event.declareObsolete(id))` 显式 retire 交易集。NeoForge 的 `VillagerTrades` 仅提供 query/describe，写入统一通过声明事件。旧 add/pendingCount 和暂存 Manager 已移除。Fabric 无 `VillagerTrades` global，非空交易声明会明确拒绝。
 
+**`DataMap`（仅 NeoForge）**
+
+只读内置 data map 助手：`DataMap.furnaceFuel(Item.of('minecraft:coal'))` 返回燃烧 tick 数（`Integer | null`）；`DataMap.compostable(Item.of('minecraft:wheat_seeds'))` 返回概率（`Float | null`）。缺失值（包括空物品栈）返回 `null`，可用 `??` 兜底。这些查询不会修改配方或注册内容。NeoForge 上其他 map 可用 `Registry.get(registryId).dataMapValue(mapTypeId, entryId)` 查询 JSON 文本；这不是 Fabric 后端的可用替代方案。Fabric 不注册 `DataMap`。
+
 <a id="wiki-section-22"></a>
 ### `EntitySelectors`
 
-纯代码构造原版实体选择器（等价 `@a[...]` 选择器引擎，无需拼字符串；服务端脚本）：
+在 SERVER/TEST 脚本中构造原版选择器（NeoForge 26.x/1.21.1）。以下完整服务端脚本在之后的玩家登录时，查询玩家附近最多五只已加载的牛：
 
 ```javascript
-const cows = EntitySelectors.find(level,
-  EntitySelectors.create(b => b.type('minecraft:cow').distance(0, 32).limit(5)), x, y, z)
-const nearest = EntitySelectors.find(level, EntitySelectors.nearestPlayer().create(), px, py, pz)
+PlayerEvents.loggedIn(event => {
+  const player = event.player
+  const selector = EntitySelectors.allEntities()
+    .type('minecraft:cow').isAlive().distance(0, 32)
+    .orderNearest().limit(5).create()
+  const cows = EntitySelectors.find(player.level(), selector, player.x, player.y, player.z)
+  console.info('Nearby loaded cows: ' + cows.size())
+})
 ```
 
-构建器支持 `type/typeTag/inverse/name/gamemode/team/tag`（等级 xp）、`distance(min,max)`、
-`x/y/z/dx/dy/dz` 体积框、`limit`、`order({Arbitrary,Nearest,Furthest,Random})`；预设
-`allPlayers/allEntities/nearestPlayer/nearestEntity/randomPlayer/randomEntity`。排序类选择器
-记得传锚点坐标。仅 NeoForge（26.x/1.21.1）。
+`builder()` 和 `create(build => ...)` 默认以**玩家集合**为基座；在该基座上调用 `type('minecraft:cow')` 不会切换为实体集合。非玩家实体应从 `allEntities()`、`nearestEntity()` 或 `randomEntity()` 开始；另有 `allPlayers()`、`nearestPlayer()`、`randomPlayer()` 预设。
+
+过滤方法为 `type/typeTag/name/gamemode/team/tag(value[, inverse])`（可选第二个布尔参数用于反选）、玩家经验等级 `level(min,max)`、`isAlive()`、`distance(min,max)`、`distanceBelow(max)`、`distanceAbove(min)`。体积范围使用 `x/y/z/dx/dy/dz`，数量使用 `limit(n)`。排序方法为 `orderArbitrary()`、`orderNearest()`、`orderFurthest()`、`orderRandom()`，不存在 `inverse()` 或 `order({...})`。`find` 应显式传入锚点坐标；短重载默认 `(0,0,0)`，builder 的 `x/y/z` 会覆盖对应坐标。未知实体类型 tag 当前匹配空集合而不抛错；查询不会加载区块。
 
 <a id="wiki-section-23"></a>
 ### `PostEffects`（客户端，仅 NeoForge 26.x/1.21.1）
@@ -369,19 +387,25 @@ once('warmup', () => console.info('只在第一次 reload 后打印'))
 ### `ClientData` / `clientData`
 
 服务端→客户端的轻量 KV 数据通道（值为 JSON 类型：字符串/数字/布尔/对象/数组/null，
-单个值序列化上限 32KB；同 key 重复推送后者覆盖；退出世界/断线时客户端侧清空）。
+单个值序列化上限为 32768 个 Java 字符串字符，并非 32KB；同 key 重复推送后者覆盖；退出世界/断线时客户端侧清空）。
 服务端脚本用 `ClientData` 推送，客户端脚本用只读的 `clientData` 读取——是后续 HUD
 脚本的数据来源。
 
 ```javascript
-// server_scripts/boss.js —— 服务端推送
-ClientData.sync('boss_hp', { name: '灾厄魔像', hp: 0.42 })
-ClientData.syncTo(player, 'personal_quest', { stage: 3 })
+// server_scripts/boss.js
+PlayerEvents.loggedIn(event => {
+  ClientData.sync('boss_hp', { name: 'Example Golem', hp: 0.42 })
+  ClientData.syncTo(event.player, 'personal_quest', { stage: 3 })
+})
 
-// client_scripts/hud.js —— 客户端读取
-const info = clientData.get('boss_hp')
-if (clientData.has('boss_hp')) { /* ... */ }
+// client_scripts/state.js
+console.info(clientData.get('boss_hp'))
+console.info(clientData.has('boss_hp'))
+console.info(clientData.keys())
+console.info(clientData.size())
 ```
+
+key 必须非空白且不超过 256 个字符。缺失 key 和存储的 JSON `null` 都由 `get(key)` 返回 `null`，用 `has(key)` 区分。`keys()` 返回分离的 `Set<String>`，`size()` 返回已存储 key 数；CLIENT 读取端不能写入。持久化与同步选择参见[数据与状态](data-and-state_cn)。
 
 <a id="wiki-section-26"></a>
 ### `Capabilities`
@@ -630,9 +654,9 @@ const serverReady = shared.serverReady
 
 | 绑定 | 说明 |
 |---|---|
-| `Minecraft` | `net.minecraft.client.Minecraft` 实例 |
+| `Minecraft` | `net.minecraft.client.Minecraft` 类/静态 Binding；通过 `Minecraft.getInstance()` 取得实例 |
 | `Screen` | `net.minecraft.client.gui.screens.Screen` 类 |
-| `Window` | 客户端窗口 |
+| `Window` | `Window` 类，不是当前窗口对象 |
 | `KeyMapping` | 按键绑定类 |
 | `InputConstants` | GLFW 输入常量 |
 
@@ -729,4 +753,4 @@ MyEvents.bossKilled.post({ boss: 'ender_dragon' })
 
 ---
 
-[上一篇: 脚本属性](script-properties_cn) · [目录](Home) · [下一篇: Python 脚本](python-scripts_cn)
+[上一篇: 脚本属性](script-properties_cn) · [目录](Home) · [下一篇: 数据、状态与持久化](data-and-state_cn)

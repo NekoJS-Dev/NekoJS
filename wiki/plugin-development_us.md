@@ -12,16 +12,20 @@
 
 NekoJS follows a **plugins-as-API** extension model: built-in features (`NekoJSCorePlugin`) and third-party plugins implement the same `NekoJSPlugin` interface and use the same hooks.
 
-A plugin consists of:
-1. A class that implements `NekoJSPlugin`.
-2. The `@RegisterNekoJSPlugin` annotation.
-3. Implementations of the hooks you need. All default methods are empty, so override only what you use.
+A plugin is a concrete `NekoJSPlugin` class with a no-argument constructor and the hooks it needs. Discovery is loader-specific:
 
-During bootstrap, NekoJS automatically discovers, instantiates, and sorts your plugin classes, then calls their hooks.
+- **NeoForge:** annotate it with `@RegisterNekoJSPlugin` for FML annotation scanning.
+- **Fabric:** declare the class in the `nekojs` entrypoint of your addon's `fabric.mod.json`; an annotation alone does not discover a third-party addon. The manager accepts missing annotation metadata and defaults priority to 1000.
 
-**These four requirements are enforced** (`NekoJSBasePluginManager.registerClass`; there are no other constraints): the annotation must be present (platform loaders scan only classes annotated with `@RegisterNekoJSPlugin`; without it, the class is never discovered and no message is logged), the class must `implements NekoJSPlugin`, it must be concrete (interfaces and abstract classes are rejected), and it must have a no-argument constructor. If any of the last three requirements is not met, the plugin is skipped and an `error` is logged, but the game still starts. The symptom is therefore a missing binding rather than a crash; search for the plugin class name first.
+```json
+{"entrypoints":{"nekojs":["com.example.myaddon.MyPlugin"]}}
+```
+
+This JSON is a fragment to merge into a complete Fabric mod manifest, not a replacement manifest. The manager validates the interface/concrete class and instantiates it during bootstrap; a missing/unusable no-argument constructor logs an error and skips the plugin. Annotation metadata still controls priority, required mods and client-only filtering when present.
 
 There are **no constraints** on package names, class names, source directories, or the number of plugin classes in one mod. A class name does not need to end in `Plugin`, and plugins do not have to share a particular package. Layouts such as `com.example.myaddon` in this page's examples are simply conventions for readability.
+
+Script-facing contributions should follow [Script API style](script-api-style_us): named bindings for helpers, event groups for subscriptions, readable/writable properties only where actually supported, and callback-last configuration where the current API implements it. Arbitrary JSON/input data is not a universal builder configuration map.
 
 <a id="wiki-section-3"></a>
 ## Minimal plugin

@@ -122,7 +122,7 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 MyEvents.PLAYER_GREET.post(new PlayerGreetEvent(player, "Hello"));
 
 // Dispatch event, with a key
-MyEvents.CUSTOM.post(someIdentifier, new MyCustomEvent(...));
+MyEvents.CUSTOM.post(new MyCustomEvent(...), someIdentifier);
 ```
 
 > `post(...)` returns a boolean indicating cancellation. **A non-cancellable bus always returns false**, even if a script returns true. `GROUP.server(name, eventClass)` uses `EventBusJS.of(type)`, whose `eventCancellability(type)` check on NeoForge asks whether the event class `implements ICancellableEvent` (`NeoForgeRuntimeBootstrap`). A POJO such as the `PlayerGreetEvent` above is therefore non-cancellable.

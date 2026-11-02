@@ -79,7 +79,7 @@ GraalJS Polyglot `Context` 的装配与生命周期：
 
 - **`NekoSharedEngine`**：进程级单例 Graal `Engine`，所有 Context 共享。
 - **`NekoCoreContext`**：不可变 record，打包 engine + sandboxConfig + classFilter + errorTracker。
-- **`NekoSandboxFactory`**：ContextBuilder，每 ScriptType 构建一个 Context。设 `HostAccess`、`ClassFilter`、IO（jail 到游戏目录）、JS 选项（`js.ecmascript-version=latest`、`js.commonjs-require=true` 等）。
+- **`NekoSandboxFactory`**：配置 `HostAccess`、`ClassFilter`、游戏目录文件系统限制与 JS 选项并创建 Context。普通脚本类型拥有活动代，完整重载期间还可能暂时拥有候选 Context；版本化包按包、来源和会话拥有独立 Context，并非每个 ScriptType 永久只有一个 Context。`NekoRuntimeRoot` 持有 Plugin Runtime、manager 与 root 资源，普通代切换不会重建它们。
 - **`NekoSharedHostAccess`**：构建 `HostAccess`，把所有 `JSTypeAdapter` 注册为 `targetTypeMapping`。
 - **`ClassFilter`**：`Predicate<String>`，高危 Java 类黑名单（Runtime/Process/ClassLoader/反射/io/nio/net/polyglot 本身等）。
 
@@ -88,7 +88,7 @@ GraalJS Polyglot `Context` 的装配与生命周期：
 
 - **TypeScript**：`NekoTypeScriptCompiler` 是手写的 lexer 基础**可擦除 TS**前端，擦除类型注解、`type`/`interface`、泛型、`as`/`satisfies`，把 `enum`/`namespace` 转 IIFE。
 - **JSX**：`NekoJsxCompiler` 把 JSX lowering 到 `__nekoJsxFactory` 调用（classic runtime）。
-- **ESM**：`core/module/esm/` 是完整的 native ESM 实现，自带 lexer/parser/linker，状态依次为 NEW、LINKING、LINKED、EVALUATING、EVALUATED，支持热重载（`ModuleReloadCoordinator`）。
+- **ESM**：`core/module/esm/` 提供原生 lexer/parser/linker/evaluator。`ModuleReloadCoordinator` 使受影响模块的代内 CJS/ESM 身份、链接与依赖记录失效。这是缓存操作，不是事务式运行时切换或文件监视器；仅保存文件不会激活改动。完整代重载、旧式文件重跑与独立的数据或资源重载见[命令](commands_cn)。
 - **Node shim**：`core/node/` 提供 fs/path/buffer/crypto/process/timers/util/events/assert/os/test 的 Java+JS 实现。
 - **`java:` 模块**：`NekoModuleResolver` 把 `java:package/path` 解析为合成 ESM 模块。
 

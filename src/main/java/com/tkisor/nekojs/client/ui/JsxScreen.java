@@ -32,7 +32,7 @@ public final class JsxScreen extends Screen {
         if (disposed) return;
         paintCount++;
         if (adapter.roots().isEmpty()) return;
-        for (JsxHostTree.Node node : adapter.roots()) adapter.paintNode(graphics, node, mouseX, mouseY);
+        adapter.paintNodes(graphics, mouseX, mouseY);
     }
 
     @Override

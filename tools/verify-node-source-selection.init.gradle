@@ -1,0 +1,57 @@
+import groovy.json.JsonOutput
+
+// Inspect actual compiler/resource inputs after Stonecutter has generated the node sources.
+gradle.projectsEvaluated {
+    gradle.rootProject.tasks.register('verifySwitchTaskModel') {
+        doLast {
+            def task = gradle.rootProject.tasks.named('switchVersion').get()
+            def dependencies = task.taskDependencies.getDependencies(task)
+            if (!gradle.rootProject.hasProperty('node') && !dependencies.isEmpty()) {
+                throw new GradleException('A switch without a target must not select a version dependency.')
+            }
+            println('switchVersion task dependencies can be inspected without executing a switch.')
+        }
+    }
+    gradle.rootProject.subprojects { node ->
+        if (!node.hasProperty('deps.minecraft')) return
+        node.tasks.register('verifyNodeSourceSelection') {
+            dependsOn(node.tasks.matching {
+                it.name == 'stonecutterGenerate' || it.name == 'stonecutterGenerateTest'
+            })
+            doLast {
+                def checks = []
+                def failures = []
+                node.sourceSets.each { sourceSet ->
+                    ['java', 'resources'].each { kind ->
+                        def localRoot = new File(node.projectDir, "src/${sourceSet.name}/${kind}")
+                        if (!localRoot.isDirectory()) return
+                        def taskName = kind == 'java' ? sourceSet.compileJavaTaskName : sourceSet.processResourcesTaskName
+                        def selected = node.tasks.named(taskName).get().source.files.collect { it.canonicalFile }.toSet()
+                        def sharedRoots = [
+                            new File(node.rootDir, "src/${sourceSet.name}/${kind}"),
+                            new File(node.rootDir, "src/fabric/${kind}"),
+                            new File(node.layout.buildDirectory.get().asFile, "generated/stonecutter/${sourceSet.name}/${kind}")
+                        ]
+                        node.fileTree(localRoot).files.sort().each { local ->
+                            def relative = localRoot.toPath().relativize(local.toPath()).toString()
+                            def shadows = sharedRoots.collect { new File(it, relative) }.findAll { it.isFile() }
+                            if (shadows.isEmpty()) return
+                            def duplicates = shadows.findAll { selected.contains(it.canonicalFile) }
+                            def present = selected.contains(local.canonicalFile)
+                            checks.add([sourceSet: sourceSet.name, kind: kind, path: relative.replace('\\', '/'),
+                                        localSelected: present, sharedSelected: duplicates.collect { it.toString() }])
+                            if (!present || !duplicates.isEmpty()) {
+                                failures.add("${sourceSet.name}/${kind}/${relative}: local=${present}, shared=${duplicates}")
+                            }
+                        }
+                    }
+                }
+                def output = new File(node.layout.buildDirectory.get().asFile, 'node-source-selection.json')
+                output.parentFile.mkdirs()
+                output.text = JsonOutput.prettyPrint(JsonOutput.toJson([node: node.name, checks: checks, failures: failures])) + '\n'
+                println("${node.path}: ${checks.size()} source overrides, ${failures.size()} failures")
+                if (!failures.isEmpty()) throw new GradleException(failures.join('\n'))
+            }
+        }
+    }
+}

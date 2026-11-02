@@ -109,7 +109,7 @@ class DataSyncGenerationBoundaryTest {
 //? if >=26 {
             return tag().getIntOr(key, -1);
 //?} else {
-/*            return tag().getInt(key);
+            /*return tag().getInt(key);
 *///?}
         }
 
@@ -242,7 +242,7 @@ class DataSyncGenerationBoundaryTest {
 //? if >=26 {
                 return container(entityId).getCompound(key).orElseGet(CompoundTag::new).copy();
 //?} else {
-/*                return container(entityId).getCompound(key).copy();
+                /*return container(entityId).getCompound(key).copy();
 *///?}
             }
 
@@ -533,7 +533,7 @@ class DataSyncGenerationBoundaryTest {
             assertEquals(2, EntityPDataStore.get().get(42, EntityExtension.NEKO_PDATA_KEY).getIntOr("k", -1),
                     "and keeps hitting the same container");
 //?} else {
-/*            assertEquals(2, EntityPDataStore.get().get(42, EntityExtension.NEKO_PDATA_KEY).getInt("k"),
+            /*assertEquals(2, EntityPDataStore.get().get(42, EntityExtension.NEKO_PDATA_KEY).getInt("k"),
                     "and keeps hitting the same container");
 *///?}
         }

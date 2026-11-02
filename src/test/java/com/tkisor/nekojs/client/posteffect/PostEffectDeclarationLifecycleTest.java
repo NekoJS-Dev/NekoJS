@@ -69,7 +69,7 @@ class PostEffectDeclarationLifecycleTest {
         return com.tkisor.nekojs.core.posteffect.PostEffectChainJson
                 .simpleBlitChainModern(shaderOrProgram, null);
 //?} else {
-/*        return com.tkisor.nekojs.core.posteffect.PostEffectChainJson
+        /*return com.tkisor.nekojs.core.posteffect.PostEffectChainJson
                 .simpleBlitChainLegacy(shaderOrProgram);
 *///?}
     }

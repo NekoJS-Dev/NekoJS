@@ -23,7 +23,7 @@ console.info('hello')
 
 **Placement matters**: the scanner (`ScriptContainer.preload`) reads downward from the first line of the file and stops with `break` at the first line that is neither empty nor starts with `//`. Properties must therefore be in the **opening comment block**. Empty lines and other `//` comments may appear between them, but once an `import`, a `/* */` block comment, or any code appears, later `// priority:` lines are no longer read. Incorrect placement produces **no error or log message**; the property simply uses its default, causing symptoms such as an unexpected load order or an ineffective `disable`.
 
-Unknown keys are also silently ignored (property names come from a registry; plugins can add them through `registerScriptProperty`, see [Plugin development](plugin-development_us)). Misspelling `priorty:` therefore fails silently too. Failed value parsing produces a warning.
+Unknown keys are also silently ignored (property names come from a registry; plugins can add them through `registerScriptProperty`, see [Plugin development](plugin-development_us)). Misspelling `priorty:` therefore fails silently too. Failed value parsing falls back to the property default without a guaranteed warning. The whole trimmed value is parsed: put explanations on a separate comment line, not after an integer directive.
 
 <a id="wiki-section-3"></a>
 ## Property overview
@@ -39,7 +39,8 @@ Unknown keys are also silently ignored (property names come from a registry; plu
 ## priority: control load order
 
 ```javascript
-// priority: 1000   // Runs first
+// Runs before lower-priority scripts
+// priority: 1000
 ```
 
 Higher numbers run first. This is often used for library scripts that initialize shared data or register global events, ensuring they execute before application scripts.
@@ -111,15 +112,10 @@ The most common reason for an ineffective `after` with no log messages is that t
 // This script:
 // 1. Has priority=500 and runs before default scripts
 // 2. Runs only when Create is installed
-// 3. Runs after lib/init.js
-// 4. Loads Create integration recipes
+// 3. Runs after lib/init.js only when it is enabled and also has priority=500
+// 4. Logs integration initialization
 
-ServerEvents.recipes(event => {
-  event.recipes.create.mixing(
-    'create:brass_ingot',
-    ['minecraft:copper_ingot', 'create:zinc_ingot']
-  )
-})
+console.info('Create integration initialized')
 ```
 
 <a id="wiki-section-9"></a>
@@ -134,6 +130,8 @@ ServerEvents.recipes(event => {
 
 The recommendation to use `priority` for broad batches and `after` for precise ordering within a batch follows from these rules: `after` cannot cross priority groups.
 
+For versioned packs, manifest/package prerequisites are enforced after these file preferences and cannot be bypassed by raising `priority`. A property is not a filesystem watch subscription: edits take effect when the relevant scripts are rediscovered/reloaded, not merely when the file is saved. Use full type/package reload for changed enablement or ordering; see [Script basics](script-basics_us) and [Script packs](script-packs_us).
+
 <a id="wiki-section-10"></a>
 ## Next steps
 
@@ -144,4 +142,4 @@ The recommendation to use `priority` for broad batches and `after` for precise o
 
 ---
 
-[Previous: Script basics](script-basics_us) · [Contents](Home) · [Next: Global bindings](global-bindings_us)
+[Previous: Script API conventions](script-api-style_us) · [Contents](Home) · [Next: Global bindings](global-bindings_us)

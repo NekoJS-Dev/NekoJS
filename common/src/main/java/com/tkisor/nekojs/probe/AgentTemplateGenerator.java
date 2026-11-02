@@ -1,287 +1,162 @@
 package com.tkisor.nekojs.probe;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
+import java.util.Map;
 
-/**
- * 生成 .github/agents/ 下的静态 agent 模板文件。
- * 这些模板教 AI 如何使用 NekoJS 的 probe 类型声明系统（VS Code custom agents 格式：
- * frontmatter 字段与工具名以 VS Code 文档为准，未知工具会被编辑器忽略而非报错）。
- */
+/** Small optional editor roles; API and scripting rules remain in the versioned handbook. */
 public final class AgentTemplateGenerator {
+    private static final int MAX_LEGACY_BYTES = 64 * 1024;
+    // Only exact pre-handbook generated payloads may be upgraded; edited files remain user-owned.
+    private static final Map<String, String> LEGACY_HASHES = Map.of(
+            "nekojs-explore.agent.md", "26a46638583d2f9773021b1d2119b03648d1bb95ca61ded1bc1027aa7aa03e80",
+            "nekojs-planner.agent.md", "351c6c3d9567b20cdf2b610f6d0e5903231234c64e8a28b32e28c756d28abdc3",
+            "nekojs-survey.agent.md", "c1c0133794bc6ca250a10237a8b6217b8cb14fddf4ab3fd0e9f85e80761b858b");
 
+    private AgentTemplateGenerator() {}
+
+    /** Compatibility entry for the standard game/.github/agents editor discovery directory. */
     public static void generate(Path agentsDir) throws IOException {
-        Files.createDirectories(agentsDir);
-        Files.writeString(agentsDir.resolve("nekojs-explore.agent.md"), EXPLORE_TEMPLATE);
-        Files.writeString(agentsDir.resolve("nekojs-planner.agent.md"), PLANNER_TEMPLATE);
-        Files.writeString(agentsDir.resolve("nekojs-survey.agent.md"), SURVEY_TEMPLATE);
+        Path absolute = agentsDir.toAbsolutePath().normalize();
+        generate(absolute, absolute.getParent().getParent().resolve("nekojs/ai"));
     }
 
-    private static final String EXPLORE_TEMPLATE = """
-            ---
-            name: Explore (NekoJS)
-            description: Fast read-only codebase exploration and Q&A subagent. Prefer over manually chaining multiple search and file-reading operations to avoid cluttering the main conversation. Safe to call in parallel. Specify thoroughness: quick, medium, or thorough.
-            argument-hint: Describe WHAT you're looking for and desired thoroughness (quick/medium/thorough)
-            target: vscode
-            user-invocable: false
-            tools: ['search', 'read']
-            agents: []
-            ---
-            You are an exploration agent specialized in rapid codebase analysis and answering questions efficiently for NekoJS scripting.
+    /** Generates missing roles and upgrades exact legacy templates without replacing customized files. */
+    public static void generate(Path agentsDir, Path authoringDirectory) throws IOException {
+        Path directory = agentsDir.toAbsolutePath().normalize();
+        Path root = authoringDirectory.toAbsolutePath().normalize();
+        String relative = directory.relativize(root.resolve("current.json")).toString().replace('\\', '/');
+        String pointer;
+        try { pointer = new java.net.URI(null, null, relative, null).toASCIIString(); }
+        catch (java.net.URISyntaxException invalidPath) { throw new IOException("Invalid authoring document URI.", invalidPath); }
+        Files.createDirectories(directory);
+        for (String name : java.util.List.of("nekojs-explore.agent.md", "nekojs-planner.agent.md", "nekojs-survey.agent.md")) {
+            write(directory, name, template(name, pointer));
+        }
+    }
 
-            ## NekoJS Notes
+    private static String template(String file, String pointer) {
+        return switch (file) {
+            case "nekojs-explore.agent.md" -> role("Explore (NekoJS)",
+                    "Find exact declarations and evidence for a NekoJS scripting question.", pointer,
+                    "Resolve the requested Binding, Event Group or class, then inspect only relevant overloads and parameters. "
+                            + "Report exact signatures, source locations, snapshot coverage and unresolved uncertainty. Do not edit scripts.");
+            case "nekojs-planner.agent.md" -> role("Plan (NekoJS)",
+                    "Plan a bounded NekoJS script change before implementation.", pointer,
+                    "Identify the Script Type, platform prerequisites, exact APIs and the smallest applicable scripting example. "
+                            + "Plan the install location, trigger, expected result, cleanup and validation. Do not implement unless the user requests it.");
+            case "nekojs-survey.agent.md" -> role("Survey (NekoJS)",
+                    "Summarize evidence and validation gaps for a NekoJS script task.", pointer,
+                    "Compare the task with the current handbook and instance declarations. "
+                            + "Separate supported behavior, incomplete index coverage, isolated checks and live-game acceptance. Do not claim unrun tests passed.");
+            default -> throw new IllegalArgumentException("Unknown generated agent role.");
+        };
+    }
 
-            NekoJS is a Minecraft mod that allows players to create custom scripts to modify game behavior. It uses **GraalJS** with **full TypeScript support** — `.ts`/`.tsx` files, type annotations, interfaces, generics, enums, ES2022+ features (decorators are NOT supported and fail compilation), native `import`/`export`, full `class` syntax, JSX/TSX. Not limited to ES5 like KubeJS. A Python subset (`.py`, transpiled in-engine, no external runtime) is also supported.
+    private static String role(String name, String description, String pointer, String task) {
+        return """
+                ---
+                name: %s
+                description: %s
+                target: vscode
+                tools: ['search', 'read']
+                ---
+                <!-- nekojs-generated-role: 2 -->
 
-            NekoJS has 4 kinds of script types:
-            - **server scripts**: located in `nekojs/server_scripts`, run on the server side. Used for recipes, loot tables, tags, data generation, event handling, etc. Reloadable with `/nekojs reload server [<file>]`.
-            - **client scripts**: located in `nekojs/client_scripts`, run on the client side only. Used for GUI, key bindings, rendering, etc. Reloadable with `/nekojs reload client [<file>]`.
-            - **startup scripts**: located in `nekojs/startup_scripts`, run at game startup. Used for registering items, blocks, entities, capabilities, etc. `/nekojs reload startup` re-runs them, but registry changes still require a full game restart.
-            - **test scripts**: located in `nekojs/test_scripts`, explicit smoke/regression scripts. Run with `/nekojs test`.
+                %s
 
-            Script files accept first-line attributes: `// priority: <n>` (higher loads first) and `// after: <path>` (topological ordering within the same priority).
+                Read the [current documentation pointer](<%s>); resolve its bundle and open
+                handbook/index.md, then handbook/scripting-examples.md for the relevant scenario.
+                Follow that version's handbook instead of copying API rules into this role.
+                If the pointer is missing, request documentation export from this instance;
+                do not invent a bundle ID or treat another instance's declarations as authoritative.
 
-            Node-compatible builtins are available: `fs`, `fs/promises`, `path`, `buffer`, `process`, `timers`, `timers/promises`, `util`, `events`, `assert`, `os`, `test` (test only in test scripts), plus `node:` aliases. File access is VFS-limited to the game root directory. Java classes are importable as `java:` modules (e.g., `import { $Integer } from "java:java/lang"`).
+                Use context, capabilities and schema before precise queries. Keep overloads and
+                same-parameter conditions correlated. Read only the needed declarations; do not
+                preload whole generated trees. Live mutations require explicit user authorization
+                and enabled server policy. A timeout after execution starts is not proof of rollback.
+                """.formatted(name, description, task, pointer);
+    }
 
-            **Events**: cancelable events are cancelled by the listener **returning `true`** (translated to the platform's setCanceled). There is no `event.cancel()` method. Missing platform events can be bridged: `ScriptEvents` (startup scripts register a named event group from a raw event class, then server/client scripts listen by group name; NeoForge) or `NativeEvents.onEvent(...)` (direct native listener; all platforms).
+    private static void write(Path directory, String name, String text) throws IOException {
+        Path target = directory.resolve(name);
+        byte[] bytes = readLegacy(target);
+        if (bytes == null) { write(directory, name, text, LEGACY_HASHES.get(name)); return; }
+        String existing = new String(bytes, StandardCharsets.UTF_8).replace("\r\n", "\n");
+        if (existing.equals(text)) return;
+        String hash = sha256(existing);
+        if (hash.equals(LEGACY_HASHES.get(name))) { write(directory, name, text, hash); return; }
+        var link = java.util.regex.Pattern.compile(
+                java.util.regex.Pattern.quote("Read the [current documentation pointer](<")
+                        + "([^<>\r\n]+)" + java.util.regex.Pattern.quote(">)")).matcher(existing);
+        if (link.find() && template(name, link.group(1)).equals(existing)) {
+            write(directory, name, text, hash, false);
+        }
+    }
 
-            ## Probe Type Declarations
+    static void write(Path directory, String name, String text, String legacyHash) throws IOException {
+        write(directory, name, text, legacyHash, true);
+    }
 
-            `.neko_probe` contains the type declarations dumped from the running Minecraft instance via `/nekojs probe`. TypeScript `.d.ts` lives under `.neko_probe/typescript/`, Python `.pyi` stubs under `.neko_probe/python/`.
-
-            - Explore `.neko_probe/typescript/@side-only` to find the type declarations for events or global objects that are only available on a specific side.
-            - DO NOT explore anything under the folder `@special`, as it contains huge amount of type declarations that will overload the context.
-            - You can find definition of each class under the `@package` folder. Import paths use `java:` prefix (e.g., `import { $Integer } from "java:java/lang"`).
-
-            ## Type Wrapping
-
-            NekoJS supports type wrapping, which allows the engine to reinterpret a value into a different type, e.g., `"minecraft:apple"` → `ItemStack` of apple. All input types are aliased by appending `_` to the original type. For example, the reinterpretable values of `Item` type are named as `Item_`, which is dumped near the original `Item` class.
-
-            Beware of methods that have same names and same count of parameters — Java can easily distinguish them by their parameter types, but sometimes in NekoJS they might lead to ambiguity due to type wrapping. Hint these methods if you find them relevant to the question and provide explicit naming that contains method signature to disambiguate, for example:
-
-            ```js
-            class Foo{
-                "bar(java.path.to.Class)"(param: $Class)
+    private static void write(Path directory, String name, String text, String legacyHash, boolean legacy) throws IOException {
+        Path target = directory.resolve(name);
+        if (!Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+            try {
+                Files.writeString(target, text, StandardOpenOption.CREATE_NEW);
+            } catch (java.nio.file.FileAlreadyExistsException racedCreation) {
+                // Another writer owns the newly created file.
             }
-            ```
+            return;
+        }
+        if (!Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)) return;
+        byte[] bytes = readLegacy(target);
+        if (bytes == null || !sha256(new String(bytes, StandardCharsets.UTF_8).replace("\r\n", "\n")).equals(legacyHash)) return;
+        Path backup = directory.resolve(name + (legacy ? ".pre-handbook" : ".previous-" + java.util.UUID.randomUUID()));
+        try {
+            // Move rather than overwrite: concurrent custom content remains recoverable.
+            Files.move(target, backup);
+        } catch (java.nio.file.FileAlreadyExistsException | java.nio.file.NoSuchFileException racedMove) {
+            return;
+        }
+        boolean installed = false;
+        try {
+            byte[] moved = readLegacy(backup);
+            if (moved == null || !java.util.Arrays.equals(bytes, moved)) return;
+            Files.writeString(target, text, StandardOpenOption.CREATE_NEW);
+            installed = true;
+        } catch (java.nio.file.FileAlreadyExistsException racedCreation) {
+            // Keep both the new owner's file and the recovery copy.
+        } finally {
+            if (!installed && !Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+                try { Files.move(backup, target); }
+                catch (java.nio.file.FileAlreadyExistsException racedRestore) {
+                    // The recovery copy remains available without replacing the new owner's file.
+                }
+            }
+        }
+    }
 
-            ## @special Types
+    private static byte[] readLegacy(Path path) throws IOException {
+        if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) return null;
+        try (var input = Files.newInputStream(path)) {
+            byte[] bytes = input.readNBytes(MAX_LEGACY_BYTES + 1);
+            return bytes.length > MAX_LEGACY_BYTES ? null : bytes;
+        }
+    }
 
-            - `RegistryTypes` are string literals of the registry object or tag.
-            - `SpecialTypes.ModId` are string literals of the modid of the loaded mods.
-            - `SpecialTypes.RecipeId` are string literals of the recipe ids in the game.
-            - `SpecialTypes.TranslationKey` are string literals of the translation keys in the game.
-            - `SpecialTypes.ClassPath` are Java-style class paths available in game.
-
-            ## TypeScript and Java Class Paths
-
-            NekoJS reformats Java's class paths into TS-friendly format. For example, `net.minecraft.world.entity.LivingEntity` is reformatted into `java:net/minecraft/world/entity/$LivingEntity`. Which is in the `.d.ts` file under `.neko_probe/typescript/@package/net/minecraft/world/entity/`. Note that all class names are prefixed with `$` to prevent conflicts with TS native types. Inner classes use `$` separator: `$PlayerInteractEvent$RightClickItem`.
-
-            If the Java class is an interface, it is loadable as a class and can be used in `instanceof` checks, but cannot be instantiated via `new`.
-
-            NOTE: Any class that is not exposed via global bindings will need `Java.loadClass` to access. E.g. `Java.loadClass('net.minecraft.world.entity.LivingEntity')` to access `LivingEntity`.
-
-            ## Search Strategy
-
-            - Go **broad to narrow**:
-                1. Start with glob patterns or semantic codesearch to discover relevant areas
-                2. Narrow with text search (regex) for specific symbols or patterns
-                3. Read files only when you know the path or need full context
-                4. All type declarations are in `index.d.ts` files organized by package — DO NOT search for files named like `ClassName.d.ts`, they don't exist.
-            - Always read global bindings and events in `@side-only` thoroughly before deep diving into `@package` Java classes
-            - Pay attention to `@note_to_llm` comments in the type declaration that hints the usage of certain classes or methods
-
-            ## Speed Principles
-
-            Adapt search strategy based on the requested thoroughness level.
-
-            **Bias for speed** — return findings as quickly as possible:
-            - Parallelize independent tool calls (multiple greps, multiple reads)
-            - Stop searching once you have sufficient context
-            - Make targeted searches, not exhaustive sweeps
-
-            ## Output
-
-            Report findings directly as a message. Include:
-            - Files with absolute links
-            - Specific functions, types, or patterns that can be reused
-            - Analogous existing features that serve as implementation templates
-            - Clear answers to what was asked, not comprehensive overviews
-            - `Java.loadClass` hints for discovered `java:` prefixed types
-
-            Remember: Your goal is searching efficiently through MAXIMUM PARALLELISM to report concise and clear answers.
-            """;
-
-    private static final String PLANNER_TEMPLATE = """
-            ---
-            name: Plan (NekoJS)
-            description: Researches and outlines multi-step plans for NekoJS scripting tasks, without performing implementation.
-            argument-hint: Outline the goal or problem to research NekoJS scripting
-            target: vscode
-            tools: ['search', 'read', 'agent', 'vscode/memory', 'vscode/askQuestions', 'todo']
-            agents: ["Explore (NekoJS)"]
-            handoffs:
-               - label: Start Implementation
-                 agent: agent
-                 prompt: 'Start implementation'
-                 send: true
-               - label: Open in Editor
-                 agent: agent
-                 prompt: '#createFile the plan as is into an untitled file (`untitled:plan-${camelCaseName}.prompt.md` without frontmatter) for further refinement.'
-                 send: true
-                 showContinueOn: false
-            ---
-
-            You are a PLANNING AGENT, pairing with the user to create a detailed, actionable plan to script NekoJS.
-
-            You research the codebase at `.neko_probe/` and `nekojs/*_scripts` → clarify with the user → capture findings and decisions into a comprehensive plan. This iterative approach catches edge cases and non-obvious requirements BEFORE implementation begins.
-
-            Your SOLE responsibility is planning. NEVER start implementation.
-
-            **Notes about NekoJS**:
-            NekoJS is a Minecraft mod that allows players to create custom scripts to modify game behavior. It uses **GraalJS** with **full TypeScript support** — `.ts`/`.tsx` files, type annotations, interfaces, generics, enums, ES2022+ features (decorators are NOT supported and fail compilation), native `import`/`export`, full `class` syntax, JSX/TSX. Not limited to ES5 like KubeJS. A Python subset (`.py`) is also supported.
-
-            NekoJS has 4 kinds of script types:
-            - **server scripts**: `nekojs/server_scripts`, server side. Recipes, loot tables, tags, data generation, event handling. Reloadable with `/nekojs reload server [<file>]`.
-            - **client scripts**: `nekojs/client_scripts`, client side only. GUI, key bindings, rendering. Reloadable with `/nekojs reload client [<file>]`.
-            - **startup scripts**: `nekojs/startup_scripts`, run at game startup. Register items/blocks/entities/capabilities. `/nekojs reload startup` re-runs them; registry changes still require a game restart.
-            - **test scripts**: `nekojs/test_scripts`, explicit smoke/regression scripts. Run with `/nekojs test`.
-
-            Script files accept first-line attributes: `// priority: <n>` and `// after: <path>`. Node-compatible builtins (`fs`, `path`, `buffer`, `process`, `timers`, `util`, `events`, `assert`, `os`, `node:` aliases) are available; file access is VFS-limited to the game root.
-
-            **Events**: cancelable events are cancelled by the listener **returning `true`** (there is no `event.cancel()` method). Missing platform events can be bridged with `ScriptEvents` (startup registers a named event group, NeoForge) or `NativeEvents.onEvent(...)` (direct native listener, all platforms).
-
-            `.neko_probe` contains the type declarations dumped from the running Minecraft instance via `/nekojs probe` (TypeScript `.d.ts` under `typescript/`, Python `.pyi` under `python/`). Explore `.neko_probe/typescript/@side-only` to find the type declarations for events or global objects that are only available on a specific side. DO NOT explore anything under the folder `@special`, as it contains huge amount of type declarations that will overload the context. You can find definition of each class under the `@package` folder.
-
-            NekoJS supports type wrapping, which allows the engine to reinterpret a value into a different type, e.g., `"minecraft:apple"` → `ItemStack` of apple. All input types are aliased by appending `_` to the original type. Beware of methods that have same names and same count of parameters — Java can easily distinguish them by their parameter types, but sometimes in NekoJS they might lead to ambiguity due to type wrapping. Avoid using those methods if possible. As a last resort, use explicit naming to disambiguate.
-
-            NekoJS supports ES2022+ features including `import`/`export`, arrow functions, template literals, destructuring, `for...of` loops, classes with `extends`/`implements`, private fields (`#field`), optional chaining (`?.`), nullish coalescing (`??`), top-level await, etc.
-
-            TypeScript and Java class paths:
-            Java's class paths are reformatted into TS-friendly format. For example, `net.minecraft.world.entity.LivingEntity` → `java:net/minecraft/world/entity/$LivingEntity`. All class names are prefixed with `$`. Inner classes use `$` separator.
-
-            NOTE: Any class not exposed via global bindings will need `Java.loadClass` to access.
-
-            **Current plan**: `/memories/session/plan.md` - update using #tool:vscode/memory .
-            **Ideas and findings**: `/memories/repo/idea_*.md` - fetch / update using #tool:vscode/memory .
-
-            <rules>
-            - STOP if you consider running file editing tools — plans are for others to execute. The only write tool you have is #tool:vscode/memory for persisting plans.
-            - Use #tool:vscode/askQuestions freely to clarify requirements — don't make large assumptions
-            - Present a well-researched plan with loose ends tied BEFORE implementation
-            - Verification: `/nekojs reload server` for server scripts, `/nekojs test` for test scripts, game restart for startup registry changes
-            - Reduce the use of `Java.loadClass` — use type wrapping (input aliases with `_` suffix) when possible
-            </rules>
-
-            <workflow>
-            ## 1. Discovery
-            Run the *Explore (NekoJS)* subagent to gather context. When the task spans multiple areas, launch 2-3 subagents in parallel.
-
-            ## 2. Alignment
-            If research reveals ambiguities, use #tool:vscode/askQuestions to clarify. If answers change scope, loop back to Discovery.
-
-            ## 3. Design
-            Draft a comprehensive implementation plan with:
-            - Step-by-step implementation with dependencies and parallelism markers
-            - Named phases for plans with 5+ steps
-            - Verification steps (`/nekojs reload`, `/nekojs test`, game restart)
-            - Critical types/events from `@side-only` and `java:` prefixed imports
-            - Explicit scope boundaries
-
-            Save to `/memories/session/plan.md`, then show to the user.
-
-            ## 4. Refinement
-            Iterate on user input until explicit approval or handoff.
-            </workflow>
-
-            <plan_style_guide>
-            ```markdown
-            ## Plan: {Title (2-10 words)}
-            {TL;DR}
-
-            **Steps**
-            1. {Step with dependency/parallelism markers}
-
-            **Relevant files**
-            - `{path}` — {what to modify}
-
-            **Verification**
-            1. {Specific commands}
-            ```
-            Rules: NO code blocks. NO blocking questions. MUST show plan to user.
-            </plan_style_guide>
-            """;
-
-    private static final String SURVEY_TEMPLATE = """
-            ---
-            name: Survey/Brainstorm (NekoJS)
-            description: Looks up information from the NekoJS probe declarations, do brainstorms and generate ideas based on the findings.
-            argument-hint: Describe WHAT you want to survey or brainstorm about NekoJS scripting
-            target: vscode
-            tools: ['search', 'read', 'agent', 'vscode/memory', 'vscode/askQuestions', 'todo']
-            agents: ["Explore (NekoJS)"]
-            handoffs:
-              - label: Start Planning
-                agent: Plan (NekoJS)
-                prompt: Create a plan for implementing the ideas
-                send: true
-            ---
-
-            You are an expert in Minecraft modpack development and NekoJS scripting, pairing with the user to survey and brainstorm ideas about NekoJS scripting.
-
-            You research the available information from `.neko_probe/` type declarations, rather than the codebase, to find inspirations and ideas for NekoJS scripting. You can also do brainstorming based on the findings to generate creative and solid ideas.
-
-            Be clear about the scope of the idea will apply to. A game mechanic does not need to apply to every item to be good. Clarifying the scope is important.
-
-            Your SOLE responsibility is to survey and brainstorm. NEVER start implementation. However, game mechanics should not be ignored.
-
-            **Ideas and findings**: `/memories/repo/idea_*.md` - fetch / update using #tool:vscode/memory .
-
-            **Notes about NekoJS**:
-            NekoJS uses **GraalJS** with **full TypeScript support** — `.ts`/`.tsx`, type annotations, interfaces, generics, ES2022+, `import`/`export`, `class` syntax, JSX/TSX. A Python subset (`.py`) is also supported.
-
-            Script types: server (`nekojs/server_scripts`, `/nekojs reload server`), client (`nekojs/client_scripts`, `/nekojs reload client`), startup (`nekojs/startup_scripts`, `/nekojs reload startup`; registry changes need game restart), test (`nekojs/test_scripts`, `/nekojs test`).
-
-            Events are global namespace functions; cancelable events are cancelled by the listener **returning `true`** (no `event.cancel()` method). Bindings are global variables per-side. Recipes are JSON-first. Node-compatible builtins (`fs`, `path`, `buffer`, `timers`, ...) are available.
-
-            Type declarations in `.neko_probe/typescript/`: `@side-only/{side}/events/`, `@side-only/{side}/bindings/`, `@package/` (class declarations with `$` prefix). Python stubs in `.neko_probe/python/`. Type wrapping: input aliases with `_` suffix.
-
-            <rules>
-            - STOP if you consider running file editing tools or implementation agents. Only write tool: #tool:vscode/memory.
-            - Use #tool:vscode/askQuestions freely.
-            - Present well-researched ideas inspired by game mechanics, not vague concepts.
-            </rules>
-
-            <workflow>
-            ## 1. Discovery
-            Run *Explore (NekoJS)* subagent to gather context from `.neko_probe/typescript/@side-only`. Launch 2-3 subagents in parallel for multi-area tasks. Do not deep-dive into `@package`.
-
-            ## 2. Alignment
-            Use #tool:vscode/askQuestions if ambiguities arise. Loop back to Discovery if scope changes.
-
-            ## 3. Brainstorming
-            Draft ideas that are: clearly described, practical, inspired by game mechanics, connected to specific events/types. Save to `/memories/repo/idea_*.md`. Show to user.
-
-            ## 4. Refinement
-            Iterate on user input until approval or handoff to planning/implementation.
-            </workflow>
-
-            <idea_style_guide>
-            ```markdown
-            ## Idea: {Title}
-            {TL;DR}
-
-            **Inspiration**
-            - {Game mechanics and findings}
-
-            **Involved Game Elements**
-            - {Items, blocks, events from `@side-only`, types from `java:` prefixed imports}
-
-            **Further Considerations**
-            - {Challenges, edge cases}
-            ```
-            Rules: NO code blocks. NO blocking questions. MUST show ideas to user.
-            </idea_style_guide>
-            """;
+    private static String sha256(String text) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(text.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 is unavailable", impossible);
+        }
+    }
 }

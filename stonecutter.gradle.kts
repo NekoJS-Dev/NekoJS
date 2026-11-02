@@ -370,30 +370,16 @@ val externalAddonIsolation = tasks.register("verifyExternalAddonIsolation") {
 }
 tasks.named("sandboxCheck") { dependsOn(externalAddonIsolation) }
 
-// ---- switchVersion：切换 active 节点 -----------------------------------------------
-// 用法：gradlew switchVersion -Pnode=26.2.0。改控制器脚本的 active 行，执行后需在 IDE
-// 重新 Gradle sync 才生效（本任务在配置完成后执行，改写对本次构建无影响）。
-// 可用节点 = versions/ 下的目录。
+// Delegate switching to Stonecutter so shared sources and the active declaration move together.
 tasks.register("switchVersion") {
     group = "nekojs"
-    description = "Switches the stonecutter active node: gradlew switchVersion -Pnode=<node>."
-    outputs.upToDateWhen { false }   // 每次执行都改写控制器行
+    description = "Switches the Stonecutter active node and shared sources: switchVersion '-Pnode=<node>'."
+    val target = providers.gradleProperty("node")
+    dependsOn(provider {
+        target.orNull?.let { listOf(project.tasks.named("stonecutterSwitchTo$it")) }.orEmpty()
+    })
     doLast {
-        val versionsDir = rootDir.resolve("versions")
-        val available = versionsDir.listFiles { f -> f.isDirectory }?.map { it.name }?.sorted().orEmpty()
-        val target = (findProperty("node") as String?)
-            ?: throw GradleException("用法：gradlew switchVersion -Pnode=<节点名>（可用：$available）")
-        if (target !in available) {
-            throw GradleException("未知节点 $target——可用：$available")
-        }
-        val controller = rootDir.resolve("stonecutter.gradle.kts")
-        // 按行前缀定位声明；不写含 `stonecutter active "26.1.2-fabric"` 字样的正则——正则字面量与
-        // 第 10 行声明同形，对本文件做全局替换时会连坐改坏
-        val text = controller.readText()
-        val activeLine = text.lineSequence().firstOrNull { it.startsWith("stonecutter active ") }
-            ?: throw GradleException("stonecutter.gradle.kts 里找不到 `stonecutter active \"…\"` 声明")
-        val at = text.indexOf(activeLine)
-        controller.writeText(text.replaceRange(at, at + activeLine.length, "stonecutter active \"$target\""))
-        println("switchVersion: active 节点已切换为 $target（IDE 重新 Gradle sync 后生效）")
+        val node = target.orNull ?: throw GradleException("Use switchVersion '-Pnode=<node>'.")
+        println("switchVersion: active node is $node; reload the Gradle project in the IDE.")
     }
 }

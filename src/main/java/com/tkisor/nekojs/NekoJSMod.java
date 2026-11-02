@@ -98,7 +98,7 @@ public class NekoJSMod extends NekoJS {
 //? if >=26 {
                 return container.getCompound(key).orElseGet(net.minecraft.nbt.CompoundTag::new).copy();
 //?} else {
-/*                return container.getCompound(key).copy();
+                /*return container.getCompound(key).copy();
 *///?}
             }
 
@@ -118,7 +118,7 @@ public class NekoJSMod extends NekoJS {
 //? if >=26 {
                 return entity.getPersistentData().getCompound(key).orElseGet(net.minecraft.nbt.CompoundTag::new).copy();
 //?} else {
-/*                return entity.getPersistentData().getCompound(key).copy();
+                /*return entity.getPersistentData().getCompound(key).copy();
 *///?}
             }
 
@@ -176,6 +176,10 @@ public class NekoJSMod extends NekoJS {
                 }).root();
         // 票 39：Item/Block modification domain owner 注册进 root（进程级基线由 root
         // 生命周期持有；收集/应用挂 reload 的 DOMAIN_PLAN 阶段与服务器启动收集点）。
+        root.installAuthoringControlHost(new com.tkisor.nekojs.authoring.MinecraftAuthoringControlHost(
+                root, net.neoforged.neoforge.server.ServerLifecycleHooks::getCurrentServer,
+                McPlatformCompat.get().isClientDist()
+                        ? com.tkisor.nekojs.authoring.AuthoringClientPlatform.create(root) : null));
         root.registerDomainCollector(new com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner());
         // 票 16：动态注册 facade 的候选域收集器（进程级单例）注册进同一 root 接缝——
         // reload 的 DOMAIN_PLAN 阶段统一收集 inert 定义计划。facade 是 26.x NeoForge 面

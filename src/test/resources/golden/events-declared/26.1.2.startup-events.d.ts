@@ -1,5 +1,6 @@
 import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
 import { $PostEffectEventJS } from "java:com/tkisor/nekojs/client/posteffect";
+import { $HudRenderContextJS, $WorldRenderContextJS } from "java:com/tkisor/nekojs/client/render";
 import { $VillagerTradeDeclarationEventJS, $VillagerTradeReloadEventJS } from "java:com/tkisor/nekojs/core/villager";
 import { $BlockEntityTickEvent, $RandomTickEvent } from "java:com/tkisor/nekojs/event/level";
 import { $DataGeneratorJS, $LangGeneratorJS } from "java:com/tkisor/nekojs/wrapper";
@@ -11,6 +12,7 @@ import { $CapabilityRegistryEventJS } from "java:com/tkisor/nekojs/wrapper/event
 import { $BlockModificationEventJS, $ItemModificationEventJS, $LootTableEventJS, $RecipeEventJS, $TagEventJS } from "java:com/tkisor/nekojs/wrapper/event/server";
 import { $RecipeViewerCategoryListJS, $RecipeViewerEntryListJS, $RecipeViewerInformationJS, $RecipeViewerRecipeListJS } from "java:com/tkisor/nekojs/wrapper/viewer";
 import { $String } from "java:java/lang";
+import { $GuiGraphicsExtractor } from "java:net/minecraft/client/gui";
 import { $Identifier } from "java:net/minecraft/resources";
 import { $EntityType } from "java:net/minecraft/world/entity";
 import { $Item } from "java:net/minecraft/world/item";
@@ -90,8 +92,10 @@ declare global {
         function postEffects(handler: ((event: $PostEffectEventJS) => void)): void;
         function hud(handler: ((event: $PainterJS) => void)): void;
         function screenRender(handler: ((event: $ScreenRenderEventJS) => void)): void;
-        function hudRender(handler: ((event: $Object) => void)): void;
-        function worldRender(handler: ((event: $Object) => void)): void;
+        function hudRender(id: string, callback: (ctx: $HudRenderContextJS, graphics: $GuiGraphicsExtractor) => void): boolean;
+        function hudRender(id: string, options: ({ layer?: ("background" | "normal" | "foreground"), priority?: number } | ("background" | "normal" | "foreground") | number), callback: (ctx: $HudRenderContextJS, graphics: $GuiGraphicsExtractor) => void): boolean;
+        function worldRender(id: string, callback: (ctx: $WorldRenderContextJS) => void): boolean;
+        function worldRender(id: string, options: ({ layer?: ("early" | "normal" | "late"), priority?: number } | ("early" | "normal" | "late") | number), callback: (ctx: $WorldRenderContextJS) => void): boolean;
     }
 
     namespace CommandEvents {

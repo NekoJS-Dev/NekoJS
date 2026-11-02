@@ -12,16 +12,20 @@
 
 NekoJS 的扩展模型是**插件即 API**：内置功能（`NekoJSCorePlugin`）和第三方插件实现同一个接口 `NekoJSPlugin`，走同一套钩子。
 
-一个插件就是：
-1. 一个实现 `NekoJSPlugin` 的类。
-2. 标 `@RegisterNekoJSPlugin` 注解。
-3. 实现 你需要的钩子（default 方法全是空实现，按需覆盖）。
+插件是具体的 `NekoJSPlugin` 实现类，需要无参构造器，并按需实现钩子。发现方式取决于加载器：
 
-NekoJS 会在 bootstrap 时自动发现、实例化、排序你的插件类，并调用它的钩子。
+- **NeoForge：** 标注 `@RegisterNekoJSPlugin`，由 FML 注解扫描发现。
+- **Fabric：** 在 addon 的 `fabric.mod.json` 中声明 `nekojs` entrypoint；只有注解不会发现第三方 addon。管理器允许没有注解元数据，默认优先级为 1000。
 
-**这四条是真的硬要求**（`NekoJSBasePluginManager.registerClass`，其余全无约束）：注解必须存在（平台加载器只扫描带 `@RegisterNekoJSPlugin` 的类，没标就永远不会被发现，也没有日志）、必须 `implements NekoJSPlugin`、必须是具体类（interface/abstract 被拒）、必须有无参构造器。后三条不满足时插件被跳过并在日志打一条 `error`，游戏照常启动——所以症状是「绑定没出现」而不是崩溃，排查时先搜插件类名。
+```json
+{"entrypoints":{"nekojs":["com.example.myaddon.MyPlugin"]}}
+```
+
+上述 JSON 仅是合并到完整 Fabric mod manifest 的片段，不是完整替代文件。管理器检查接口/具体类并在 bootstrap 时实例化；缺失或不可用的无参构造器会记录错误并跳过插件。有注解时仍使用其 priority、requiredMods 和 clientOnly 元数据。
 
 包名、类名、源码目录、一个 mod 放几个插件类都**没有任何约束**：类名不必以 `Plugin` 结尾，也不必集中放在某个包下。本页示例里 `com.example.myaddon` 这种排布只是可读性习惯。
+
+脚本侧贡献遵循[脚本 API 风格](script-api-style_cn)：辅助函数使用命名 Binding，订阅使用事件组，仅在实际支持时使用可读/可写属性，已有 builder API 的配置回调放最后。任意 JSON/输入数据并不等于通用 builder 配置对象。
 
 <a id="wiki-section-3"></a>
 ## 最小插件

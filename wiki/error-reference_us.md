@@ -9,6 +9,8 @@ Messages that report a problem carry a stable code and a short English summary.
 The Chinese text is unchanged apart from the code prefix and the summary.
 The code is the lookup key and does not change when the wording does.
 
+This page indexes NekoJS developer diagnostics, not every Java, mod or network exception. Structured HTTP/MCP machine codes such as `CONTROL_DISABLED` and `INDEX_UNAVAILABLE`, and operation states, are documented under [AI support](ai-support_us#wiki-live-controls); they are distinct from logged `NEKO-xxxx` identifiers. Include Script Type, source/line, phase and actual commit outcome in reports. A queueing message alone does not establish reload success.
+
 ```
 [NEKO-2002] 脚本语句累计数达到 scriptStatementLimit（50000000），… — script statement limit exceeded
 ```
@@ -42,6 +44,12 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-1016` | versioned pack descriptor or entry validation rejected | 新版脚本包描述或入口校验被拒绝 |
 | `NEKO-1017` | package activation, capability, operation or resource release rejected/failed | 包激活、能力、操作或资源释放被拒绝或失败 |
 | `NEKO-1018` | package author tool or embedded content admission failed | 包创建、校验、归档、安装、JAR 或已加载模组内容接入失败 |
+| `NEKO-1019` | Authoring bundle, configuration, snapshot or local service setup failed | AI 文档包、配置、声明快照或本地服务初始化失败；已有资料按具体错误保留 |
+| `NEKO-1020` | admitted authoring owner callback failed | 已接纳的 AI 所有者线程回调异常；未自动重放 |
+| `NEKO-1021` | authoring command rejected inside an active command context | 已有命令上下文时拒绝 AI 命令，避免排队后迟执行 |
+| `NEKO-1022` | authoring SERVER committed but postprocessing failed | SERVER 脚本已提交，但配方、脚本包或资源后处理失败 |
+| `NEKO-1023` | authoring live control requires server owner thread | 实时 AI 控制未在服务器所有者线程执行，操作被拒绝 |
+| `NEKO-1024` | authoring live server runtime is no longer current | 实时服务器已停止或更换，旧操作不得在新世界继续执行 |
 
 <a id="wiki-section-3"></a>
 ## Sandbox and resource limits
@@ -117,6 +125,13 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-4051` | Manual declaration type reference rejected | 手写声明的类型引用别名无效，或同名别名的目标类型、输入模式冲突 |
 | `NEKO-4052` | Registry type catalog rejected conflicting sources or symbols | 注册表类型目录存在同名异来源，或与标签/命名空间类型名冲突 |
 | `NEKO-4053` | Bean method projection rejected | Bean方法投影的真实来源、零参签名或收集器无效 |
+| `NEKO-4054` | Item component string conversion failed | 物品组件字符串无法解析或序列化 |
+| `NEKO-4055` | Authoring query or transport request rejected | AI 查询或传输请求被拒绝；响应的机器码和 JSON 路径提供具体原因 |
+
+| `NEKO-4060` | Script options rejected | Unknown fields, incorrect types, or out-of-range values reject registration |
+| `NEKO-4061` | Post-effect builder rejected | A sealed or invalid builder rejects the candidate declaration |
+| `NEKO-4062` | Render registration rejected | Invalid rendering arguments, callback, or declaration metadata reject registration |
+| `NEKO-4063` | Script input declaration rejected | The input-shape provider cannot be constructed, returns an invalid shape, or requires a missing adapter target |
 
 <a id="wiki-section-6"></a>
 ## Recipes and data
@@ -136,6 +151,7 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-6009` | Automatic item asset generation failed; publication failures attempt rollback and attach restoration failures as suppressed causes. |
 | `NEKO-6010` | Item asset ownership index cannot be read or validated; generation rejected without replacing it. |
 | `NEKO-6011` | Directory pack client resource reload failed; inspect the cause and native resource recovery. |
+| `NEKO-6012` | The native UI host rejected invalid or unknown read-only item configuration (resource id, non-air item, count or tooltip props); a failed candidate update retains the active UI. |
 
 | NEKO-6001 | A UI color prop is not a controlled color form (ARGB/RGB int, `#RGB`/`#RRGGBB`/`#AARRGGBB`, CSS basic named color). |
 | NEKO-6002 | A UI visual prop value is out of range or has the wrong type (`opacity`, `fontSize`, `borderWidth`, `radius`, `fit`, `crop`). |
@@ -156,7 +172,10 @@ Codes from #58 that have no call site on this branch are not used:
 | NEKO-7004 | UI mutation attempted off the client owner thread without explicit queueing. |
 | NEKO-7005 | UI root release failed during generation teardown; teardown continued. |
 | NEKO-7006 | Deferred UI work dropped: its generation never committed or was superseded. |
-| NEKO-7007 | JSX UI phase failure (render/layout/event/host) recorded into the diagnostics chain. |
+| NEKO-7007 | JSX UI phase failure (render/layout/event/host) recorded into the diagnostics chain, including host clipboard read/write failure. |
+| NEKO-7008 | The native host rejected a control appearance outside the controlled color/state-field grammar. |
+| NEKO-7011 | The native host rejected an invalid slider configuration (non-finite range/value, non-positive step or out-of-range value). |
+| NEKO-7012 | The native host rejected invalid dialog props (missing/blank id, non-string title or non-boolean close flags). Common component/layout validation may instead report the phase through `NEKO-7007`. |
 
 <a id="wiki-section-9"></a>
 ## JSX UI inspector

@@ -31,7 +31,7 @@ NekoJS registers many adapters; see `src/main/java/com/tkisor/nekojs/js/type_ada
 | `ComponentAdapter` | `Component` | String, `MutableComponent` |
 | `FluidStackAdapter` / `FluidIngredientAdapter` / `SizedFluidIngredientAdapter` | Fluid types | String, `{fluid, amount}` |
 | `IdentifierAdapter` | `Identifier`/`ResourceLocation` | String |
-| `TagKeyAdapter` | `TagKey` | `"#namespace:path"` |
+| `TagKeyAdapter` | `TagKey` | `"namespace:path"`, optional `#`, `"registry\|tag"`, or `{type, tag}` (default registry: item) |
 | `EntityTypeAdapter` | `EntityType` | String id |
 | `MobEffectAdapter` / `PotionAdapter` / `ParticleTypeAdapter` / `SoundEventAdapter` / `CreativeModeTabAdapter` / `BlockEntityTypeAdapter` | Corresponding registry types | String id |
 | `CodecAdapter` | Any codec type | Parsed through the codec |
@@ -64,6 +64,14 @@ The base class is a convenience template, **not a requirement**: the registry ac
 
 <a id="wiki-section-6"></a>
 ## Write a custom adapter
+
+The three adapter classes below are **alternatives**, not classes to compile together. Each uses this separate `MyPos.java` in the same package:
+
+```java
+package com.example.myaddon;
+
+public record MyPos(int x, int y) {}
+```
 
 <a id="wiki-section-7"></a>
 ### Step 1 (legacy SPI): implement `JSTypeAdapter<T>`
@@ -118,31 +126,34 @@ public class MyPosAdapter implements JSTypeAdapter<MyPos> {
 ### Step 2 (legacy SPI): alternatively, extend `AbstractJSTypeAdapter` (convenient template methods)
 
 ```java
+package com.example.myaddon;
+
+import com.tkisor.nekojs.api.data.AbstractJSTypeAdapter;
+import graal.graalvm.polyglot.Value;
+
 public class MyPosAdapter extends AbstractJSTypeAdapter<MyPos> {
     @Override public Class<MyPos> getTargetClass() { return MyPos.class; }
 
-    @Override protected boolean acceptNull() { return false; }
-
     @Override
-    protected MyPos fromString(String s) {
-        // Convert "1,2" to MyPos(1,2)
-        String[] parts = s.split(",");
+    protected MyPos fromString(String text) {
+        String[] parts = text.split(",");
         return new MyPos(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
     }
 
     @Override
     protected MyPos fromHostObject(Object host) {
-        // Already a Java MyPos, Map, or another host object
-        if (host instanceof MyPos p) return p;
-        if (host instanceof java.util.Map<?,?> m) {
-            return new MyPos((int) m.get("x"), (int) m.get("y"));
-        }
-        throw new ValueConversionException("Cannot convert to MyPos: " + host);
+        return host instanceof MyPos position ? position : null;
     }
 
     @Override
     protected boolean acceptOther(Value value) {
-        return value.isString() || (value.hasMembers() && value.hasMember("x"));
+        return value.hasMembers() && value.hasMember("x") && value.hasMember("y")
+                && value.getMember("x").fitsInInt() && value.getMember("y").fitsInInt();
+    }
+
+    @Override
+    protected MyPos fromOther(Value value) {
+        return new MyPos(value.getMember("x").asInt(), value.getMember("y").asInt());
     }
 }
 ```
@@ -155,6 +166,14 @@ public class MyPosAdapter extends AbstractJSTypeAdapter<MyPos> {
 The new SPI base class `BaseJsTypeAdapter<T>`, also in the `api.data` contract package with no Minecraft/Graal dependency, supplies the same template methods. `supports` / `convert` are already implemented using `JsValueView` + `ConversionContext`:
 
 ```java
+package com.example.myaddon;
+
+import com.tkisor.nekojs.api.AdapterInputShape;
+import com.tkisor.nekojs.api.data.BaseJsTypeAdapter;
+import com.tkisor.nekojs.api.data.ConversionPrecedence;
+import com.tkisor.nekojs.api.data.JsValueView;
+import java.util.List;
+
 public class MyPosAdapter extends BaseJsTypeAdapter<MyPos> {
     public MyPosAdapter() {
         super(MyPos.class);
@@ -215,7 +234,7 @@ public void registerAdapters(JSTypeAdapterRegistry registry) {
 
 > `registerAdapters` receives `JSTypeAdapterRegistry`, which has overloads for both `register(JSTypeAdapter<T>)` and `register(JsTypeAdapter<T>)`. Either generation shown above can be passed directly.
 
-Any Java method declaring `void foo(MyPos pos)` can then receive `{x: 1, y: 2}` or `"1,2"` from a script.
+A Java method declaring `void foo(MyPos pos)` can receive `{x: 1, y: 2}` after registration. The two base-class alternatives also implement `"1,2"`; the first interface-only example intentionally accepts objects only. These are input data shapes, not callback-builder configuration.
 
 <a id="wiki-section-11"></a>
 ## AdapterInputShape (probe aliases)

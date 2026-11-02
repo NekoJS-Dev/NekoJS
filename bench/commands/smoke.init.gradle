@@ -1,0 +1,20 @@
+// The additional source set is run-only and never enters the production jar.
+gradle.beforeProject { node ->
+    def target = gradle.startParameter.projectProperties.getOrDefault('informationSmokeNode', '26.1.2')
+    if (node.path != ':' + target) return
+    node.plugins.withId('net.neoforged.moddev') {
+        def smoke = node.sourceSets.create('informationSmoke')
+        smoke.java.srcDir(new File(node.rootProject.projectDir,
+                target == '1.21.1' ? 'bench/commands/java-1.21.1' : 'bench/commands/java'))
+        smoke.compileClasspath += node.sourceSets.main.output + node.sourceSets.main.compileClasspath
+        smoke.runtimeClasspath += node.sourceSets.main.runtimeClasspath
+        node.neoForge.mods.configureEach { mod ->
+            if (mod.name == 'nekojs') mod.sourceSet(smoke)
+        }
+        node.neoForge.runs.create('informationSmoke') {
+            server()
+            gameDirectory = node.layout.buildDirectory.dir('information-command-smoke/game')
+            programArgument('--nogui')
+        }
+    }
+}

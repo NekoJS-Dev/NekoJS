@@ -10,6 +10,7 @@
 ## Language
 
 - Write authored source comments, documentation comments, developer-facing log templates, and developer-facing exception messages in English.
+- Write all bundled AI-facing material in English: handbooks, Markdown references, Skill instructions, AGENTS templates, example explanations, and API/MCP documentation.
 - Keep literal fixtures, protocol values, and diagnostic identifiers unchanged when their exact content is required. This exception covers data, not explanatory prose, and does not require copying that data into comments or logs.
 - Use the existing localization mechanism for player-facing text; translation values use the target language. Follow the existing language of prose documentation and the user's language in conversation.
 
@@ -35,6 +36,12 @@
 - Select checks by the affected behavior using [the verification table](docs/agents/coding.md#verification). For common changes, `:common:test` alone does not replace `:common:check`, which includes isolation checks.
 - Review the final diff for scope, language, architecture, public contracts, and generated files. Explain intentional golden or snapshot changes; never weaken a gate solely to make a failure disappear.
 - Deliver four things: what changed, affected behavior/contracts, verification commands and results, and remaining gaps. Distinguish passed, failed, and not run. Human acceptance must record a real maintainer conclusion.
+
+## Bundled AI documentation and version updates
+
+- Before any version bump or release, review the production changes since the previous version and update the canonical bundled handbook, examples, Skills, and AGENTS templates for every affected behavior, API, configuration, platform, and limitation. Make these updates part of the same version delivery; wiki updates are not a substitute.
+- Refresh the documentation bundle's version metadata for the target release, regenerate derived resources through the existing workflow, and verify references, executable examples, API/profile consistency, and inclusion in the release artifacts. Record the commands, results, and remaining gaps. If no content changes are needed, record the reviewed scope and the reason while still updating the bundle metadata.
+- Complete this documentation review and its required checks before finalizing the version bump or publishing artifacts. Report missing documentation or failed checks as release blockers; never claim the handbook is current without evidence.
 
 ## Collaboration
 

@@ -67,9 +67,50 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
     // rawJsons 是每次 applyScripts 的工作集（会被条件过滤 mutate、末尾 clear），baseJsons 只在 prepare 时整体重建。
     @Unique
     private final Map<Identifier, JsonElement> nekojs$baseJsons = new HashMap<>();
+    @Unique
+    private final Object nekojs$replayLock = new Object();
+    @Unique
+    private long nekojs$completedReplays;
+    @Unique
+    private long nekojs$failedReplays;
+
+    @Unique
+    @Override
+    public ReplayObservation nekojs$observeScriptReplays() {
+        synchronized (this.nekojs$replayLock) {
+            long completed = this.nekojs$completedReplays;
+            long failed = this.nekojs$failedReplays;
+            return () -> {
+                synchronized (this.nekojs$replayLock) {
+                    return this.nekojs$completedReplays > completed && this.nekojs$failedReplays == failed;
+                }
+            };
+        }
+    }
+
+    @Unique
+    @Override
+    public boolean nekojs$scriptReplaysSucceededSinceCreation() {
+        synchronized (this.nekojs$replayLock) {
+            return this.nekojs$completedReplays > 0 && this.nekojs$failedReplays == 0;
+        }
+    }
+
+    @Unique
+    private void nekojs$recordScriptReplay(boolean successful) {
+        synchronized (this.nekojs$replayLock) {
+            this.nekojs$completedReplays++;
+            if (!successful) this.nekojs$failedReplays++;
+        }
+    }
+
+    @Unique
+    private boolean nekojs$sourceJsonsValid = true;
+
 
     @Inject(method = "prepare(Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/util/profiling/ProfilerFiller;)Lnet/minecraft/world/item/crafting/RecipeMap;", at = @At("HEAD"))
     private void nekojs$cacheRawJsons(ResourceManager manager, ProfilerFiller profiler, CallbackInfoReturnable<RecipeMap> cir) {
+        this.nekojs$sourceJsonsValid = true;
         nekojs$rawJsons.clear();
         FileToIdConverter converter = FileToIdConverter.registry(Registries.RECIPE);
         for (Map.Entry<Identifier, Resource> entry : converter.listMatchingResources(manager).entrySet()) {
@@ -77,6 +118,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
             try (Reader reader = entry.getValue().openAsReader()) {
                 nekojs$rawJsons.put(id, JsonParser.parseReader(reader));
             } catch (Exception e) {
+                this.nekojs$sourceJsonsValid = false;
                 // 坏配方 JSON 不再静默丢弃：告警并附 id，方便整合包作者定位
                 NekoJS.LOGGER.warn("Failed to parse recipe JSON '{}'; it will be skipped", id, e);
             }
@@ -89,90 +131,109 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
     @Unique
     @Override
     public void nekojs$applyScripts() {
-        // 从永久缓存重建工作集，使本方法可被 /nekojs reload server 反复调用。
-        // rawJsons 在下方会被条件过滤 mutate、末尾 clear，故每次入口都从 baseJsons 重新拷贝。
-        this.nekojs$rawJsons.clear();
-        this.nekojs$rawJsons.putAll(this.nekojs$baseJsons);
-        int beforeCount = this.nekojs$rawJsons.size();
-//? if neoforge {
-        // 相当于: ! ICondition.conditionsMatched(JsonOps.INSTANCE, entry.getValue())
-        // 这么写只是为了避免重复创建 ConditionalOps
-        var conditionalCodec = ConditionalOps.createConditionalCodec(Unit.CODEC);
-        this.nekojs$rawJsons.entrySet().removeIf(entry -> ICondition.getWithConditionalCodec(conditionalCodec, JsonOps.INSTANCE, entry.getValue()).isEmpty());
+        nekojs$applyScriptsChecked();
+    }
 
-        int afterCount = this.nekojs$rawJsons.size();
-        NekoJS.LOGGER.debug("Filtered out {} recipes that did not meet conditions", beforeCount - afterCount);
+    @Unique
+    @Override
+    public boolean nekojs$applyScriptsChecked() {
+        boolean[] successful = {this.nekojs$sourceJsonsValid};
+        boolean replaySucceeded = false;
+        try {
+            // 从永久缓存重建工作集，使本方法可被 /nekojs reload server 反复调用。
+            // rawJsons 在下方会被条件过滤 mutate、末尾 clear，故每次入口都从 baseJsons 重新拷贝。
+            this.nekojs$rawJsons.clear();
+            this.nekojs$rawJsons.putAll(this.nekojs$baseJsons);
+            int beforeCount = this.nekojs$rawJsons.size();
+//? if neoforge {
+            // 相当于: ! ICondition.conditionsMatched(JsonOps.INSTANCE, entry.getValue())
+            // 这么写只是为了避免重复创建 ConditionalOps
+            var conditionalCodec = ConditionalOps.createConditionalCodec(Unit.CODEC);
+            this.nekojs$rawJsons.entrySet().removeIf(entry -> ICondition.getWithConditionalCodec(conditionalCodec, JsonOps.INSTANCE, entry.getValue()).isEmpty());
+
+            int afterCount = this.nekojs$rawJsons.size();
+            NekoJS.LOGGER.debug("Filtered out {} recipes that did not meet conditions", beforeCount - afterCount);
 //?}
 
-        RecipeEventJS eventJS = new RecipeEventJS(this.nekojs$rawJsons, this.registries, RecipeTypeDefinitionStorage.current());
-        try {
-            // 原料动作（damage/keep/replaceIngredient）是纯脚本状态：脚本重跑前整表清空，
-            // 由本次脚本执行期间 RecipeJsonBuilder 的动作调用重建——删掉的脚本动作随之消失
-            com.tkisor.nekojs.api.recipe.IngredientActionRegistry.clear();
-            NekoRuntimeAccess.get().beforeRecipeLoading(eventJS);
-            ServerEvents.RECIPES.post(eventJS);
-        } catch (PolyglotException e) {
-            // 错误上报经 ScriptErrorReporter 门面（root-owned ErrorTracker 的静态报告面，
-            // 由共享装配函数安装）——mixin 静态上下文无法注入 root，不再直读 static root
-            ScriptErrorReporter.recordEventError(ScriptType.SERVER, e);
-        } catch (Exception e) {
-            com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("Recipe script execution crashed", e);
-        }
-
-        List<RecipeHolder<?>> newHolders = new ArrayList<>();
-        // Keep registry lookup reuse within this decode pass and after the modification hooks.
-        RegistryOps<JsonElement> recipeOps = null;
-        for (Map.Entry<Identifier, JsonElement> entry : eventJS.getFinalJsons().entrySet()) {
+            RecipeEventJS eventJS = new RecipeEventJS(this.nekojs$rawJsons, this.registries, RecipeTypeDefinitionStorage.current());
             try {
-                if (recipeOps == null) {
-                    recipeOps = this.registries.createSerializationContext(JsonOps.INSTANCE);
-                }
-                Recipe<?> recipe = Recipe.CODEC.parse(recipeOps, entry.getValue()).getOrThrow(JsonParseException::new);
-                newHolders.add(new RecipeHolder<>(ResourceKey.create(Registries.RECIPE, entry.getKey()), recipe));
+                // 原料动作（damage/keep/replaceIngredient）是纯脚本状态：脚本重跑前整表清空，
+                // 由本次脚本执行期间 RecipeJsonBuilder 的动作调用重建——删掉的脚本动作随之消失
+                com.tkisor.nekojs.api.recipe.IngredientActionRegistry.clear();
+                NekoRuntimeAccess.get().beforeRecipeLoading(eventJS);
+                if (!ServerEvents.RECIPES.postChecked(eventJS)) successful[0] = false;
+            } catch (PolyglotException e) {
+                successful[0] = false;
+                // 错误上报经 ScriptErrorReporter 门面（root-owned ErrorTracker 的静态报告面，
+                // 由共享装配函数安装）——mixin 静态上下文无法注入 root，不再直读 static root
+                ScriptErrorReporter.recordEventError(ScriptType.SERVER, e);
             } catch (Exception e) {
-                if (entry.getValue().isJsonObject()) {
-                    NekoJS.LOGGER.error("{}", eventJS.formatRecipeError("Invalid recipe after script processing", entry.getKey(), entry.getValue().getAsJsonObject(), e));
-                } else {
-                    NekoJS.LOGGER.error("Invalid recipe after script processing (id={}): {}", entry.getKey(), e.getMessage());
-                }
+                successful[0] = false;
+                com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("Recipe script execution crashed", e);
             }
-        }
 
-        // ticket 23（AC3）：整批解析完成后一次性替换 RecipeMap（单引用提交，无半更新）；
-        // afterRecipes（脚本事件与插件 hook）只在提交之后触发——此前它先于 codec 解析，
-        // 消费者会观察到未提交的旧配方表。afterRecipes 阶段的修改不再进入本次提交。
-        this.recipes = RecipeMap.create(newHolders);
-        try {
-            ServerEvents.AFTER_RECIPES.post(eventJS);
-            NekoRuntimeAccess.get().afterRecipes(eventJS);
-        } catch (PolyglotException e) {
-            ScriptErrorReporter.recordEventError(ScriptType.SERVER, e);
-        } catch (Exception e) {
-            com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("afterRecipes lifecycle phase crashed", e);
-        }
-        this.nekojs$rawJsons.clear();
-
-        com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).debug("Script execution completed, total recipes: {}", this.recipes.values().size());
-//? if neoforge {
-        List<ServerPlayer> players = null;
-        if (ServerLifecycleHooks.getCurrentServer() != null) {
-            players = ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers();
-//?} else {
-/*        List<ServerPlayer> players = null;
-        net.minecraft.server.MinecraftServer nekojs$server = FabricServerEventBindings.currentServer();
-        if (nekojs$server != null) {
-            players = nekojs$server.getPlayerList().getPlayers();
-*///?}
-            players.forEach(player -> {
-                if (Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {
-                    if (!ScriptErrorReporter.hasErrors()) {
-                        player.sendSystemMessage(NekoErrorUIHelper.getSuccessComponent());
+            List<RecipeHolder<?>> newHolders = new ArrayList<>();
+            // Keep registry lookup reuse within this decode pass and after the modification hooks.
+            RegistryOps<JsonElement> recipeOps = null;
+            for (Map.Entry<Identifier, JsonElement> entry : eventJS.getFinalJsons().entrySet()) {
+                try {
+                    if (recipeOps == null) {
+                        recipeOps = this.registries.createSerializationContext(JsonOps.INSTANCE);
+                    }
+                    Recipe<?> recipe = Recipe.CODEC.parse(recipeOps, entry.getValue()).getOrThrow(JsonParseException::new);
+                    newHolders.add(new RecipeHolder<>(ResourceKey.create(Registries.RECIPE, entry.getKey()), recipe));
+                } catch (Exception e) {
+                    successful[0] = false;
+                    if (entry.getValue().isJsonObject()) {
+                        NekoJS.LOGGER.error("{}", eventJS.formatRecipeError("Invalid recipe after script processing", entry.getKey(), entry.getValue().getAsJsonObject(), e));
                     } else {
-                        player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent(
-                                ScriptErrorReporter.errorCount()));
+                        NekoJS.LOGGER.error("Invalid recipe after script processing (id={}): {}", entry.getKey(), e.getMessage());
                     }
                 }
-            });
+            }
+
+            // ticket 23（AC3）：整批解析完成后一次性替换 RecipeMap（单引用提交，无半更新）；
+            // afterRecipes（脚本事件与插件 hook）只在提交之后触发——此前它先于 codec 解析，
+            // 消费者会观察到未提交的旧配方表。afterRecipes 阶段的修改不再进入本次提交。
+            this.recipes = RecipeMap.create(newHolders);
+            try {
+                if (!ServerEvents.AFTER_RECIPES.postChecked(eventJS)) successful[0] = false;
+                NekoRuntimeAccess.get().afterRecipes(eventJS);
+            } catch (PolyglotException e) {
+                successful[0] = false;
+                ScriptErrorReporter.recordEventError(ScriptType.SERVER, e);
+            } catch (Exception e) {
+                successful[0] = false;
+                com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("afterRecipes lifecycle phase crashed", e);
+            }
+
+            com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).debug("Script execution completed, total recipes: {}", this.recipes.values().size());
+//? if neoforge {
+            List<ServerPlayer> players = null;
+            if (ServerLifecycleHooks.getCurrentServer() != null) {
+                players = ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers();
+//?} else {
+/*        List<ServerPlayer> players = null;
+            net.minecraft.server.MinecraftServer nekojs$server = FabricServerEventBindings.currentServer();
+            if (nekojs$server != null) {
+                players = nekojs$server.getPlayerList().getPlayers();
+*///?}
+                players.forEach(player -> {
+                    if (Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {
+                        if (!ScriptErrorReporter.hasErrors()) {
+                            player.sendSystemMessage(NekoErrorUIHelper.getSuccessComponent());
+                        } else {
+                            player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent(
+                                    ScriptErrorReporter.errorCount()));
+                        }
+                    }
+                });
+            }
+            replaySucceeded = successful[0];
+            return replaySucceeded;
+        } finally {
+            this.nekojs$rawJsons.clear();
+            nekojs$recordScriptReplay(replaySucceeded);
         }
     }
 }

@@ -45,6 +45,8 @@ nekojs/
                               (legacy config/nekojs-engine.toml is a read-only fallback)
 ```
 
+The separate AI documentation root defaults to `.github/neko_ai` and is selected by `[output].directory` in `nekojs/config/ai.toml`; `nekojs/config/ai-location.json` locates it. The private token stays under `nekojs/config/`, not `.neko_probe`. See [AI-assisted authoring](ai-support_us); do not commit the token.
+
 All four script directories support `.js`, `.mjs`, `.cjs`, `.ts`, `.jsx`, `.tsx`, and `.py`. `.py` files are transpiled from NekoJS's Python subset and do not require an external Python runtime. See [Script basics](script-basics_us).
 
 <a id="wiki-section-4"></a>
@@ -93,7 +95,7 @@ allowUnsigned = false   # Whether to accept unsigned packs
 - **Trust**: a client connecting to an untrusted server for the first time is **disconnected** and shown its address. Run
   `/nekojs trust <address>` in a single-player world on that client, then reconnect to receive packs. Trust also pins the server's current signing public key (silent key rotation is rejected).
 - **Cache**: packs are cached in `nekojs/server_packs/`, bucketed by a hash of the server address. The local cache is reused if the hash has not changed.
-- The Cleanroom legacy branch has no configuration phase, so it falls back to synchronization after login and only synchronizes scripts. The current repository does not verify that branch's behavior.
+- Cleanroom 1.12.2 is outside the current five-node graph; this repository does not establish its synchronization behavior.
 
 <a id="wiki-section-6"></a>
 ## 3. Your first script
@@ -103,13 +105,10 @@ Create `hello.js` under `nekojs/server_scripts/`:
 ```javascript
 // server_scripts/hello.js
 
-// Listen for the server-started event
-ServerEvents.started(event => {
-  console.info('[NekoJS] 服务端脚本已加载！')
-})
+console.info('[NekoJS] Server script loaded')
 ```
 
-Enter a world and wait for the server to finish starting; the log should show `[NekoJS] 服务端脚本已加载！`. If you add this example after the world has started, reopen the world to trigger `started`. An ordinary `/nekojs reload` re-registers the listener but does not fire this lifecycle event again.
+Enter a world, or run `/nekojs reload server` in an already running world. The log should show `[NekoJS] Server script loaded`. Remove this file and reload SERVER when finished. A `ServerEvents.started` listener is different: ordinary reload does not replay server startup.
 
 <a id="wiki-section-7"></a>
 ## 4. Change a recipe
@@ -130,7 +129,7 @@ ServerEvents.recipes(event => {
 })
 ```
 
-Run `/nekojs reload`. Both NeoForge and Fabric 26.x support server recipe hot reload. NeoForge's recipe viewer may require a client refresh; on Fabric, refer to the current node implementation and platform compatibility notes.
+In a disposable world, run **whole-type** `/nekojs reload server`; single-file reload does not run the same recipe follow-up. Put one cobblestone in the crafting grid: this example yields four sticks and removes other stick outputs. Inspect actual crafting, not only a recipe viewer. Remove this file and reload SERVER to restore the baseline; a viewer may require its own refresh.
 
 See [Recipe system](recipe-system_us).
 
@@ -150,6 +149,8 @@ RegistryEvents.register(event => {
 
 > Note: startup scripts execute during game startup. Registration changes require a game restart; `/nekojs reload startup` currently does not support reloading STARTUP scripts through an in-game command.
 
+Try this in a disposable world with matching client/server definitions. After restart, `/give @s mymod:cool_gem` checks registration; no texture/model or creative-tab entry is supplied here. Remove the file and restart only after discarding that test world/items; removing saved registry IDs can break existing data.
+
 See [Registering new content](registering-new-content_us).
 
 <a id="wiki-section-9"></a>
@@ -168,6 +169,9 @@ See [Registering new content](registering-new-content_us).
 - [Event reference](event-reference_us): all available events.
 - [Module system](module-system_us): split files, use npm dependencies, and import with `java:`.
 - [TypeScript and JSX](typescript-and-jsx_us): write scripts in TS.
+- [Script API style](script-api-style_us): events, Bindings, builders, Bean properties, and data objects.
+- [Data and state](data-and-state_us): choose persistence and synchronization deliberately.
+- [Client rendering](client-rendering_us): HUD, Screen overlays, world rendering, and post effects.
 
 <!-- wiki-nav -->
 

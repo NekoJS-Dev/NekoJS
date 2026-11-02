@@ -45,7 +45,7 @@ NekoJS 把脚本按 **脚本类型（ScriptType）** 分到不同目录，每种
 
 1. **`priority` 属性**（数字越大越先跑，默认 0）。
 2. **`after` 属性**（声明依赖，详见 [脚本属性](script-properties_cn)）。
-3. 同优先级按路径名排序。
+3. 同优先级内先按 `after` 排序会执行的脚本，其余按发现或路径顺序处理。版本化包的前置依赖可以覆盖文件优先级偏好，见[脚本包](script-packs_cn)。
 
 ```javascript
 // priority: 100
@@ -58,13 +58,23 @@ NekoJS 把脚本按 **脚本类型（ScriptType）** 分到不同目录，每种
 <a id="wiki-section-7"></a>
 ### 服务端 / 客户端 / 测试
 
-**事务式热重载**：NekoJS 会先把脚本加载进一个候选 Context，全部成功后才替换并关闭旧 Context；如果加载失败，旧 Context 保留，服务器不会进入半坏状态。
+**完整 generation 重载**先准备和执行候选，再替换健康的活动代。失败候选会释放自己的 Context、监听器与定时器并保留活动代。普通重载不会重建 runtime root 或 Plugin Runtime。下述旧式单文件路径不具备这一保障。
 
 - `/nekojs reload`（默认 reload `server`）
 - `/nekojs reload server` / `client` / `test`
-- `/nekojs reload server path/to/file.js`（只重载单个文件，路径相对该脚本类型根目录，支持 TAB 补全）
+
+| 操作 | 边界 |
+|---|---|
+| 完整类型重载 | 候选代；TEST 走重载并运行流程，不代表断言全部通过 |
+| `/nekojs reload server path/to/file.js` | 旧式活动 Context 内重跑，已跟踪的依赖入口也可能重跑，没有候选回滚 |
+| 版本化包重载 | 按包或类型执行，考虑依赖和领域影响集，不是单文件重跑 |
+| 原版 `/reload` / F3+T | 服务端数据包或客户端资源，独立于脚本 generation |
+
+文件路径相对脚本类型根目录，支持 TAB 补全。仅保存文件不会触发自动重载。归属线程限制与提交后的配方或数据刷新见[命令](commands_cn)。
 
 > 事务重载保护的是受管脚本 generation 的提交。候选失败会保留当前环境，但脚本对世界、文件或任意 Java 对象的外部副作用不一定可回滚；不要把重载当作游戏状态事务。
+
+受管生命周期操作按 ScriptType manager 串行执行，并发请求不会重叠构建候选。在受管事件或定时器回调内重载会因重入而被拒绝。这不代表 guest 自建线程或任意 Java 对象自动安全；内部同步的归属方入口也不会自动把工作切换到专用线程。
 
 <a id="wiki-section-8"></a>
 ### 启动脚本
@@ -87,9 +97,13 @@ NekoJS 把脚本按 **脚本类型（ScriptType）** 分到不同目录，每种
 - **`global`** 是当前 `ScriptType` 内共享、并在普通 reload 后保留的状态容器。SERVER 的 `global.counter` 不会自动出现在 CLIENT 的 `global.counter` 中。
 - **`shared`** 是同一个 NekoJS runtime 内显式跨脚本类型共享的状态容器。它只表示进程内存共享，不是网络同步，也不是存档持久化。
 
+这些是运行时所属的状态容器，不保证 guest 对象或函数能在其 Context 关闭后继续使用。应存储简单值，不要保留旧事件、玩家或模块引用。旧式类型状态随 runtime root 存活，包括普通重载与世界切换；root 关闭后清空。版本化包的 `global` 以包、来源和会话为作用域，随会话结束释放，见[脚本包](script-packs_cn)。定时器归属与文件系统读写限制见 [Node.js 兼容](nodejs-compatibility_cn)。
+
+`global` 不等于 `globalThis`。重载会重跑初始化语句，因此示例只在标量尚不存在时初始化。候选中的 `global/shared` 顶层写入可读己写，仅在成功提交时发布；这不保证嵌套对象的深度回滚。
+
 ```javascript
 // server_scripts/a.js
-global.counter = 0
+global.counter = global.counter ?? 0
 shared.message = 'server is ready'
 
 // server_scripts/b.js（普通 reload 后仍可读）
@@ -110,7 +124,7 @@ const message = shared.message
 - 错误报告带定位：文件、行号、列号，并附上出错位置的代码片段（`>` 标记错误行、`^` 指向错误列）。语法错误（SyntaxError）同样会定位到出错行/列。
 - 用 `/nekojs error` 查看当前是否有脚本错误。
 - 用 `/nekojs view_all_errors` 把完整错误列表发到聊天栏。
-- 出错的脚本会被标记为 disabled，不会反复报错；修好后 reload 会清除错误标记。
+- 入口求值失败会把该入口标为 disabled。事件或定时器回调异常另行记录，不代表整份脚本一定被禁用。watchdog 或资源上限终止可能隔离活动环境，直至显式完整重载。
 
 <a id="wiki-section-12"></a>
 ### 加载前静态检查（preflight）
@@ -144,4 +158,4 @@ const message = shared.message
 
 ---
 
-[上一篇: 常见问题](faq_cn) · [目录](Home) · [下一篇: 脚本属性](script-properties_cn)
+[上一篇: 常见问题](faq_cn) · [目录](Home) · [下一篇: 脚本 API 约定](script-api-style_cn)

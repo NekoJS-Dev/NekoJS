@@ -413,10 +413,12 @@ DynamicRegistryEvents.dynamicRegistry(event => {
 
 Builder 使用 Bean 属性或显式 setter（`build.mode = 'world'` / `build.setMode('world')`），不返回立即注册的 handle。`/nekojs registry` 查看已激活的认领状态；遗漏项标记 stale 并保留实际注册。无效或变更定义会拒绝整批候选并保留旧 active。旧 `DynamicRegistry` Binding 和链式 Builder 已移除。
 
+此运行时事件只有 `item`、`soundEvent`、`mobEffect`，没有通用 `register(type, ...)`，也没有 block/fluid/entity 入口或对象配置重载。`world`（默认）与 `reloadable` 当前只是记账模式，**实际都保留 stale 条目**；脚本重载不会注销内容，预期的世界结束清理尚未接入生命周期事件。不能把 mode 当成删除或替换支持。无效回调输入会毒化整批候选。实验时使用新 id/可丢弃世界，保持服务端与客户端 opt-in/定义一致。这与仍需进程重启的 STARTUP `RegistryEvents.register` 不同。参见[脚本 API 风格](script-api-style_cn)。
+
 <a id="wiki-section-16"></a>
 ## 从旧写法迁移
 
-现在 `RegistryEvents` 只有 `register` 一个入口，builder 的数据属性也全部改成直接给 public field 赋值：
+现在 `RegistryEvents` 只有 `register` 一个入口，builder 的数据通过公开属性赋值（包括 Bean/proxy setter），不代表都是 Java public field：
 
 | 旧写法 | 新写法 |
 |---|---|
@@ -444,7 +446,7 @@ Builder 使用 Bean 属性或显式 setter（`build.mode = 'world'` / `build.set
 ## 平台差异
 
 - **NeoForge 1.21.1**：支持本页的大部分 builder；附魔 builder 仅在此版本的运行时注册面可用。
-- **NeoForge 26.x**：支持动态注册 builder 的主要面，但附魔改为数据驱动注册，不能使用 `event.enchantment(...)`。
+- **NeoForge 26.x**：支持 STARTUP 注册 builder 的主要面，但附魔改为数据驱动注册，不能使用 `event.enchantment(...)`。
 - **Fabric 26.x**：支持注册 builder 的子集；实体类型 builder 使用可见的人形模型/64×64 僵尸纹理，可配置原生 renderer；GoalBuilder 支持内置脚本配置和原生 factory/类自定义入口。`Capabilities` / `CapabilityEvents` 已接入真实 Fabric Lookup/Transfer，不等同于 NeoForge 原生类型或标准跨模组能量 API。FluidBuilder、VillagerTrades、附魔和若干平台专属注册面仍不可用。详见 [平台与兼容性](platform-compatibility_cn)。
 - Cleanroom 1.12.2 使用独立 legacy 分支的旧管线；当前仓库不验证本页写法在该分支的可用性。
 

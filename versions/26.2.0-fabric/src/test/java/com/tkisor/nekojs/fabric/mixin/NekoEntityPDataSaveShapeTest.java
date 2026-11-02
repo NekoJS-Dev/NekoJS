@@ -10,7 +10,6 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -87,10 +86,10 @@ class NekoEntityPDataSaveShapeTest {
         return output.buildResult();
     }
 
-    private static void writeRoot(DrivenMixin mixin, CompoundTag pdata) throws Exception {
-        Field root = NekoEntityPDataMixin.class.getDeclaredField("neko$pdataTag");
-        root.setAccessible(true);
-        root.set(mixin, pdata);
+    private static void writeRoot(DrivenMixin mixin, CompoundTag pdata) {
+        if (!pdata.isEmpty()) {
+            mixin.neko$getPDataRoot().put(EntityExtension.NEKO_PDATA_KEY, pdata);
+        }
     }
 
     // ---- 回读：旧存档 fixture → pdata 内容不变 ----
@@ -100,7 +99,10 @@ class NekoEntityPDataSaveShapeTest {
         DrivenMixin mixin = new DrivenMixin();
         load(mixin, oldNeoForgeSave());
 
-        CompoundTag pdata = mixin.neko$getPDataRoot();
+        CompoundTag root = mixin.neko$getPDataRoot();
+        assertEquals(oldNeoForgeSave().getCompound("NeoForgeData").orElseThrow(), root,
+                "the duck root must retain the entire persistence container");
+        CompoundTag pdata = root.getCompound(EntityExtension.NEKO_PDATA_KEY).orElseThrow();
         assertEquals(303, pdata.getIntOr("mana", -1));
         assertEquals("neko", pdata.getStringOr("name", ""));
         assertEquals(1_700_000_000_000L, pdata.getLongOr("seen", -1L));
@@ -158,7 +160,7 @@ class NekoEntityPDataSaveShapeTest {
 
         DrivenMixin reader = new DrivenMixin();
         load(reader, saved);
-        assertEquals(pdata, reader.neko$getPDataRoot());
+        assertEquals(pdata, reader.neko$getPDataRoot().getCompound(EntityExtension.NEKO_PDATA_KEY).orElseThrow());
     }
 
     /** 防御拷贝语义：容器写回后改源头不影响已存内容（与平台 Access 面同契约）。 */

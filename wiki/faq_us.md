@@ -39,7 +39,7 @@ A: Check the following:
 2. Is the extension correct (`.js`/`.mjs`/`.cjs`/`.ts`/`.jsx`/`.tsx`/`.py`)?
 3. Is the script disabled by `// disable:`? See [Script properties](script-properties_us).
 4. Are all mods listed by `// modloaded:` installed?
-5. Did you run `/nekojs reload` after changing server/client scripts?
+5. Did you reload the matching type (`/nekojs reload server` or `/nekojs reload client`) on its owner? Bare `/nekojs reload` defaults to SERVER.
 6. Did you **restart the game** after changing startup registrations (new items/blocks)?
 7. Run `/nekojs error` to check for errors.
 
@@ -56,7 +56,7 @@ A: This is usually caused by the wrong script type or a misspelled event name:
 
 A:
 - **Shared state**: `global` is shared only within the current script type and survives ordinary reload. Use `shared` for sharing across script types such as SERVER/CLIENT. Both exist only in the same NekoJS runtime process; neither provides network synchronization.
-- **Event listeners**: reload clears old listeners, but a previous registration problem may have prevented complete cleanup. Try reloading again.
+- **Event listeners**: a successful full-type reload replaces generation-owned listeners. If candidate loading fails, the previous active generation intentionally remains. Inspect `/nekojs error` and fix the failing source instead of assuming a second reload will clean it up. External Java/world/file effects are not automatically undone.
 - **Recipes**: NeoForge and Fabric 26.x both support `/nekojs reload server` for recipe scripts. NeoForge's JEI/REI recipe viewer may need a client refresh. Cleanroom behavior belongs to a separate legacy branch and is not verified by the current repository. See [Commands](commands_us).
 - **Registries (startup)**: reloading startup registrations does not actually add new content to the game; a restart is required.
 
@@ -112,7 +112,8 @@ If completion is still missing, confirm that Pylance is enabled in VS Code, the 
 
 A:
 - **NeoForge**: `/nekojs reload` reruns recipe scripts and rebuilds recipes from the cache (server crafting behavior takes effect immediately); JEI/REI viewers may need a client refresh, such as rejoining the world or refreshing the viewer. See [Commands](commands_us).
-- **Cleanroom 1.12.2**: full hot reload is supported, with HEI/JEI refreshed automatically after reload. If it does not refresh, confirm that you installed HEI (`had-enough-items`) rather than another mod.
+- **Fabric 26.x**: use the full `/nekojs reload server` path, then inspect real crafting results and current client resources. Recipe-viewer integration is not the same as server recipe application.
+- **Cleanroom 1.12.2**: outside the current version graph; this repository does not establish HEI/JEI refresh behavior.
 
 <a id="wiki-section-19"></a>
 ### Q: `event.recipes.create.mixing(...)` fails
@@ -194,12 +195,12 @@ A: Run `/nekojs probe` to regenerate them. Adding a mod or registering new conte
 <a id="wiki-section-33"></a>
 ### Q: My tick event is very slow
 
-A: `ServerEvents.tickPre`/`tickPost` runs every tick (50ms). Avoid heavy work such as large amounts of file IO or complex loops inside scripts. Consider caching, throttling, or reducing frequency with `setTimeout`/a counter for expensive operations.
+A: `ServerEvents.tickPre`/`tickPost` runs on server ticks (nominally 20 TPS, not a guaranteed 50ms wall-clock interval). Keep owner-thread callbacks short. Cache or split work across ticks; timers do not move blocking work onto a safe worker thread.
 
 <a id="wiki-section-34"></a>
 ### Q: Script loading is slow
 
-A: NekoJS uses GraalJS, so initial loading has a warm-up cost. Execution is fast afterward. If loading remains slow, check whether you are loading many npm dependencies or doing heavy IO at the top level.
+A: GraalJS startup and script compilation can have warm-up costs; later speed depends on the workload. Check package count and top-level I/O before drawing conclusions, and measure the actual slow path.
 
 <a id="wiki-section-35"></a>
 ## Security
@@ -213,6 +214,8 @@ A: This is a sandbox restriction: access is limited to the game directory. See [
 ### Q: Is NekoJS safe on multiplayer servers?
 
 A: Treat scripts as **semi-trusted code**: only run scripts you trust. The sandbox restricts Java class access and file scope, but a name-based blacklist only blocks class lookup. Object graphs returned by Java methods are controlled by Graal's `HostAccess` (currently `HostAccess.ALL`), so instances of blacklisted classes may still reach scripts through method return values. Client script uploads through the in-game editor have been removed. The read-only error UI and script network events are not remote editing services; trusted maintainers must still deploy server scripts.
+
+AI authoring HTTP and batch queries are read-only, but separately authorized live MCP tools can execute allowlisted commands or reload a selected runtime. Keep default-off controls off unless deliberately needed, never expose or commit the bearer token, and do not retry a timed-out action whose effects are unknown. See [AI authoring security and live controls](ai-support_us).
 
 <a id="wiki-section-38"></a>
 ## Still unresolved?

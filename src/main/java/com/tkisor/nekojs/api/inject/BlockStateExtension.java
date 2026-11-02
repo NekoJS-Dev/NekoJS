@@ -24,7 +24,7 @@ public interface BlockStateExtension extends BlockStateSpec {
 //? if >=26 {
         return self().typeHolder().is(tagKey);
 //?} else {
-/*        return self().is(tagKey);
+        /*return self().is(tagKey);
 *///?}
     }
 

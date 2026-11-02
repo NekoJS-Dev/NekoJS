@@ -412,10 +412,12 @@ DynamicRegistryEvents.dynamicRegistry(event => {
 
 Builders use Bean properties or explicit setters (`build.mode = 'world'` / `build.setMode('world')`). No immediate registration handle is returned. `/nekojs registry` reports committed activation claims; omitted entries become stale and remain physically registered. Invalid or changed definitions reject the batch and retain the previous active state. The old `DynamicRegistry` binding and fluent builders have been removed.
 
+Only `item`, `soundEvent`, and `mobEffect` exist on this runtime event; there is no generic `register(type, ...)`, block/fluid/entity entry or object-config overload. `world` (default) and `reloadable` are currently bookkeeping modes with the **same stale-retain behavior**. Neither mode unregisters content on script reload; the intended world-end cleanup is not wired to a lifecycle event. Do not rely on a mode as removal or replacement support. Invalid callback input poisons the whole candidate batch. Use fresh ids/disposable worlds when experimenting, and keep server/client opt-in and definitions consistent. This is distinct from STARTUP `RegistryEvents.register`, which still requires a process restart. See [Script API style](script-api-style_us).
+
 <a id="wiki-section-16"></a>
 ## Migrating from older syntax
 
-`RegistryEvents` now has only the `register` entry point, and builder data properties are assigned directly to public fields:
+`RegistryEvents` now has only the `register` entry point, and builder data uses exposed properties (including Bean/proxy-backed setters), not necessarily public Java fields:
 
 | Old syntax | New syntax |
 |---|---|
@@ -443,7 +445,7 @@ Builders use Bean properties or explicit setters (`build.mode = 'world'` / `buil
 ## Platform differences
 
 - **NeoForge 1.21.1**: supports most builders on this page; the enchantment builder is available only on this version's runtime registration surface.
-- **NeoForge 26.x**: supports the main dynamic registration builder surface, but enchantments use data-driven registration and cannot use `event.enchantment(...)`.
+- **NeoForge 26.x**: supports the main STARTUP registration builder surface, but enchantments use data-driven registration and cannot use `event.enchantment(...)`.
 - **Fabric 26.x**: supports a subset of registration builders. The entity type builder uses a visible humanoid model/64×64 zombie texture and allows native renderer configuration. GoalBuilder supports built-in script configuration and native factory/class entry points for custom goals. `Capabilities` / `CapabilityEvents` are connected to real Fabric Lookup/Transfer, which does not mean NeoForge native types or a standard cross-mod energy API. FluidBuilder, VillagerTrades, enchantments, and some platform-specific registration surfaces remain unavailable. See [Platforms and compatibility](platform-compatibility_us).
 - Cleanroom 1.12.2 uses the older pipeline on a separate legacy branch; this repository does not verify whether the syntax on this page works there.
 

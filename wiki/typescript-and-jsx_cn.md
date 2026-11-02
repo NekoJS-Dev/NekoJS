@@ -115,7 +115,7 @@ NekoJS 内置 JSX lowering，默认 **classic runtime**：JSX 元素重写为 `g
 | 字符串/布尔/表达式属性、spread 属性 `{...obj}` | 支持 |
 | 文本子节点、表达式子节点 `{expr}`、嵌套元素 | 支持 |
 | 大写组件 `<Foo/>`（作引用）、小写 `<div/>`（作字符串）、成员表达式 `<Foo.Bar/>` | 支持 |
-| **HTML 实体解码**（`&amp;` 转成 `&`、`&lt;` 转成 `<`、`&#39;` 转成 `'`、`&quot;` 转成 `"`，以及数字/十六进制实体） | 支持在元素文本内解码；字符串属性值原样保留 |
+| **HTML 实体解码**（`&amp;` 转成 `&`、`&lt;` 转成 `<`、`&#39;` 转成 `'`、`&quot;` 转成 `"`，以及数字/十六进制实体） | 支持的实体会在元素文本和带引号的字符串属性值中解码 |
 | **命名空间标签** `<svg:rect/>` | 支持，名称整段透传给 factory |
 | **泛型组件** `<Foo<number>/>`（TSX） | 支持，JSX 层透传 `Foo<number>`，TS 擦除阶段去掉 `<number>` |
 | 表达式内的嵌套 JSX（`{cond && <X/>}`、`{arr.map(x => <X/>)}`） | 支持 |
@@ -159,6 +159,8 @@ const element = <Panel title="状态">内容</Panel>
 ```
 
 automatic runtime 会把 JSX 子节点放进 `props.children`：零个或一个子节点调用 `jsx`，多个子节点调用 `jsxs`，片段使用 `Fragment`。如果你需要完全自定义渲染行为，请使用默认的 classic runtime，并提供 `globalThis.__nekoJsxFactory` / `globalThis.__nekoJsxFragment`。
+
+JSX 的 `key` 在 automatic runtime 中被提取为调用的第三参数；classic lowering 则保留为 prop。语法接受不等于当前 host 理解该标签/prop。内置 Screen host 有固定 primitive/prop 白名单（仅 NeoForge 26.x）；自定义 classic factory 也可只返回普通数据。见 [脚本 API 风格](script-api-style_cn)，区分 props/数据对象与 NekoJS callback-last 定义 builder；非 JSX 绘制见 [客户端绘制](client-rendering_cn)。
 
 > JSX 本身只负责语法 lowering 和 VNode 生成。需要在 Minecraft 中创建可交互 Screen 时，请使用 [JSX 客户端 UI](jsx-client-ui_cn)；普通 JSX 仍可用于自定义树状数据、渲染配置等场景，不会自动创建 Screen。
 

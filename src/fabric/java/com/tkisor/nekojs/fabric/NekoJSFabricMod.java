@@ -155,6 +155,10 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
                     this.scriptEventsRegistrar.bindRuntime(pluginRuntime);
                 }).root();
         // 票 39：Item/Block modification domain owner 注册进 root（与 NekoJSMod 同构）。
+        runtimeRoot.installAuthoringControlHost(new com.tkisor.nekojs.authoring.MinecraftAuthoringControlHost(
+                runtimeRoot, com.tkisor.nekojs.fabric.event.FabricServerEventBindings::currentServer,
+                Platform.instance().isClient()
+                        ? com.tkisor.nekojs.authoring.AuthoringClientPlatform.create(runtimeRoot) : null));
         runtimeRoot.registerDomainCollector(new com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner());
         // 票 22：Villager Trades 在 fabric 没有注册表 mutation 适配器，注册的是**显式 unavailable**
         // owner（收集期仍走同一事件面与联合边界，preflight 以不可用原因整批拒绝——不是无错误 no-op）。

@@ -15,10 +15,12 @@ NekoJS 当前代码库包含 NeoForge 和 Fabric 两组节点。本文是平台�
 | NeoForge | 1.21.1 | 支持 | 21 | 稳定维护的旧版本节点 |
 | NeoForge | 26.1.2 | 支持 | 25 | 主力版本节点 |
 | NeoForge | 26.2.0 | 支持 | 25 | 主力版本节点 |
-| Fabric | 26.1.2 | 已有构建节点，暂未作为正式制品发布 | 25 | 已通过构建和运行冒烟，API 仍是子集 |
-| Fabric | 26.2.0 | 已有构建节点，暂未作为正式制品发布 | 25 | 已有构建和运行时隔离门禁，API 仍是子集 |
+| Fabric | 26.1.2 | 当前仓库构建节点 | 25 | Loader 专属 API 子集；核对安装制品与 profile |
+| Fabric | 26.2.0 | 当前仓库构建节点 | 25 | Loader 专属 API 子集；核对安装制品与 profile |
 
 Fabric 节点已经覆盖脚本加载、配方、网络、probe、注册表的一部分、常用事件和按键绑定，但不等于与 NeoForge 功能完全相同。发布状态以 [Releases](https://github.com/NekoJS-Dev/NekoJS/releases) 为准。
+
+节点图是源码/构建证据，不等于已发布或通过实机验收。包括 Python→JS 执行在内，脚本需要匹配的 **GraalMC** 依赖（见 [快速开始](quick-start_cn)）；安装 Python、GraalPy 或 GraalVM JDK 不能替代它。本次审计未运行 Minecraft。
 
 <a id="wiki-section-3"></a>
 ## 主要功能差异
@@ -26,11 +28,12 @@ Fabric 节点已经覆盖脚本加载、配方、网络、probe、注册表的�
 | 功能 | NeoForge 1.21.1 / 26.x | Fabric 26.x |
 |---|---|---|
 | JS/TS/JSX/Python 脚本 | 支持 | 支持 |
-| ESM、CommonJS、Node 核心模块 | 支持 | 支持 |
+| ESM、CommonJS、Node 核心模块适配 | 已实现子集，不是完整 Node.js 进程 | 已实现子集，不是完整 Node.js 进程 |
 | 配方脚本与 `reload server` | 支持 | 支持；配方 API 仍以当前实现为准 |
 | `/nekojs probe` 与 TypeScript/Python 声明 | 支持 | 支持 |
 | 网络通道 `Network` / `NetworkEvents` | 支持 | 支持 |
 | 基础注册 builder | 支持 | 部分支持 |
+| `Registry` 运行时视图 | 原生查询服务 | Binding 存在，但查询使用空 fallback；不是可用的跨加载器查表替代 |
 | JSX 客户端 Screen UI | NeoForge 26.x | 暂未移植 |
 | `ClientEvents` HUD/Screen Painter | 支持 | 支持 `hud` 与 `screenRender`；`hudRender` / `worldRender` 注册式渲染仍未移植 |
 | `ServerEvents.tags` | 支持 | 暂未移植 |
@@ -45,8 +48,10 @@ Fabric 节点已经覆盖脚本加载、配方、网络、probe、注册表的�
 
 26.x 的附魔是数据驱动注册表，不能沿用 1.21.1 的运行时注册 builder；请使用数据包方案。源码中保留的 builder 不代表 26.x 注册通道可用。
 
+**客户端绘制不是单一功能开关。** Fabric 也有 Painter `hud` / `screenRender`；命名 `hudRender` / `worldRender` 和后处理仅 NeoForge。NeoForge 26.2 的 `ctx.line` / `ctx.box` 已使用独立 staged buffer 提交；1.21.1/26.1.2 使用各自实现路径。绘制提交回归不代表 GPU 画面验收。JSX `ClientUI` 仅 NeoForge 26.x。启用方式、生命周期和限制见 [客户端绘制与后处理](client-rendering_cn)、[JSX 客户端 UI](jsx-client-ui_cn)。
+
 <a id="wiki-section-3-issue4"></a>
-## Issue #4 已实现能力
+**Issue #4 已实现能力**
 
 以下能力已在 NeoForge 1.21.1、NeoForge 26.x 和 Fabric 26.x 的对应实现中补齐；Fabric 仍只承诺本文和参考页明确列出的子集：
 
@@ -57,7 +62,7 @@ Fabric 节点已经覆盖脚本加载、配方、网络、probe、注册表的�
 | Persistent Data | 服务端实体/玩家 PData 自动 dirty flush、登录/追踪快照、重生/克隆复制；客户端镜像只读；ItemStack 使用原版 `CUSTOM_DATA` 组件 | [全局绑定](global-bindings_cn#wiki-section-4) |
 | Capability | NeoForge 使用原生 capability 与事务 handler；Fabric 使用真实 Transfer/Lookup；provider 生命周期是 STARTUP，一次提交，owner 自己负责保存和同步 | [全局绑定](global-bindings_cn#wiki-section-26)、[事件参考](event-reference_cn#wiki-section-15) |
 
-Painter 和客户端 PData mirror 只在对应客户端回调/连接生命周期内有效。Capability provider 不会自动替 owner 保存任意存储；Fabric 的能量接口也不是跨模组标准能量协议。
+Fabric 的实体 PData 容器根已与桥接层对齐；旧双层存档保持原样，需要备份后人工确认迁移，不能把回归夹具视为真实重启/多人验收；参见[数据、生命周期与权限](data-and-state_cn)。Painter 和客户端 PData mirror 只在对应客户端回调/连接生命周期内有效。Capability provider 不会自动替 owner 保存任意存储；Fabric 的能量接口也不是跨模组标准能量协议。
 
 实体类型 builder 在上述 NeoForge/Fabric 节点使用可见的人形 renderer，默认匹配 64×64 原版僵尸纹理；`renderer`、`texture` 与 `shadowRadius` 可配置。原生实体构造和自定义 Goal factory 必须是独立于 guest Context 的 Java 实现；内置 Goal 配置仍可通过脚本回调使用。
 

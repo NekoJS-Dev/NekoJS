@@ -146,7 +146,7 @@ public final class AdapterAliasGenerator {
         ShapeContext context = new ShapeContext(
                 aliasRegistry.reference(target.getName(), "$" + selfSimple) + argumentList,
                 aliasRegistry.reference(target.getName(), "$" + selfSimple + "_") + argumentList,
-                selfPackage, imports, usedRegistries, references);
+                selfPackage, imports, usedRegistries, references, true);
         Set<String> rendered = new LinkedHashSet<>();
         for (AdapterInputShape shape : entry.shapes()) {
             rendered.add(render(shape, context, false));
@@ -181,10 +181,22 @@ public final class AdapterAliasGenerator {
         }
     }
 
+    /** Renders explicit callable shapes with the same host references as adapter aliases. */
+    public static RenderedShape renderShape(AdapterInputShape shape, TypeAliasRegistry aliases, boolean input) {
+        Set<String> references = new LinkedHashSet<>();
+        Set<String> registries = new LinkedHashSet<>();
+        ShapeContext context = new ShapeContext(null, null, "", new LinkedHashSet<>(), registries, references, input);
+        String type = new AdapterAliasGenerator(aliases).render(shape, context, true);
+        return new RenderedShape(type, java.util.Collections.unmodifiableSet(references), !registries.isEmpty());
+    }
+
+    public record RenderedShape(String type, Set<String> referenceFqns, boolean usesRegistry) {}
+
     // ===================== 形状渲染 =====================
 
     private record ShapeContext(String hostSelf, String inputSelf, String selfPackage,
-                                Set<String> imports, Set<String> usedRegistries, Set<String> references) {}
+                                Set<String> imports, Set<String> usedRegistries, Set<String> references,
+                                boolean inputHosts) {}
 
     /**
      * @param nested 是否处于嵌套位置（数组元素 / 对象槽位 / 联合成员 / 模板洞）。嵌套位置的
@@ -198,7 +210,9 @@ public final class AdapterAliasGenerator {
             case AdapterInputShape.LiteralValue v -> "\"" + v.text().replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
             case AdapterInputShape.NumberValue v -> "number";
             case AdapterInputShape.BooleanValue v -> "boolean";
-            case AdapterInputShape.SelfValue v -> nested ? context.inputSelf() : context.hostSelf();
+            case AdapterInputShape.SelfValue v -> java.util.Objects.requireNonNull(
+                    nested ? context.inputSelf() : context.hostSelf(),
+                    "NEKO-4063: Self input shape requires an adapter target");
             case AdapterInputShape.HostValue v -> {
                 Class<?> hostCls = v.cls();
                 context.references().add(hostCls.getName());
@@ -207,7 +221,7 @@ public final class AdapterAliasGenerator {
                 if (!hostPkg.equals(context.selfPackage())) {
                     context.imports().add(hostCls.getName());
                 }
-                String hostAlias = nested ? aliasRegistry.getAlias(hostCls.getName()) : null;
+                String hostAlias = nested && context.inputHosts() ? aliasRegistry.getAlias(hostCls.getName()) : null;
                 yield hostAlias != null ? hostAlias : aliasRegistry.reference(hostCls.getName(), "$" + tsClassName(hostCls));
             }
             case AdapterInputShape.ArrayOfValue v ->

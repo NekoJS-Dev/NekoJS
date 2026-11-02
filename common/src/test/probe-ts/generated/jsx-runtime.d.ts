@@ -2,13 +2,20 @@ declare module 'nekojs/jsx-runtime' {
     export const jsx: NekoUiJsxFactory;
     export const jsxs: NekoUiJsxFactory;
     export const Fragment: NekoUiFragment;
+    export const Toggle: NekoUiToggle;
+    export const Slider: NekoUiSlider;
+    export const Select: NekoUiSelect;
+    export const Tabs: NekoUiTabs;
+    export const Dialog: NekoUiDialog;
+    export const validateForm: NekoUiValidateForm;
+    export const Validators: NekoUiValidators;
     export const UI: NekoUiApi;
     type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
-    type NekoUiPrimitive = 'screen' | 'panel' | 'row' | 'column' | 'stack' | 'scroll' | 'label' | 'button' | 'input' | 'image' | 'spacer'
+    type NekoUiPrimitive = 'screen' | 'panel' | 'row' | 'column' | 'stack' | 'scroll' | 'label' | 'button' | 'input' | 'slider' | 'image' | 'spacer' | 'dialog' | 'item'
     type NekoUiJsxType = NekoUiPrimitive | NekoUiComponent | symbol
     type NekoUiLayoutSize = number | 'auto' | 'fill' | `${number}%`
     type NekoUiResponsive<T> = T | { readonly base?: T; readonly profiles?: Partial<Record<NekoUiProfile, T>> }
-    type NekoUiEventName = 'onClick' | 'onRelease' | 'onScroll' | 'onKey' | 'onTextInput' | 'onFocus' | 'onBlur' | 'onChange' | 'onSubmit'
+    type NekoUiEventName = 'onClick' | 'onRelease' | 'onScroll' | 'onKey' | 'onTextInput' | 'onFocus' | 'onBlur' | 'onChange' | 'onSubmit' | 'onDismiss'
     type NekoUiDirection = 'row' | 'column'
     type NekoUiAnchor = 'topLeft' | 'top' | 'topRight' | 'left' | 'center' | 'right' | 'bottomLeft' | 'bottom' | 'bottomRight'
     interface NekoUiSafeArea {
@@ -48,6 +55,7 @@ declare module 'nekojs/jsx-runtime' {
         readonly button?: number
         readonly key?: string
         readonly value?: string
+        readonly reason?: 'escape' | 'backdrop'
         readonly delta?: number
       }
     interface NekoVNode {
@@ -59,6 +67,7 @@ declare module 'nekojs/jsx-runtime' {
       }
     type NekoUiComponent = Function
     type NekoUiCallback = Function
+    type NekoUiEventCallback = (event: NekoUiEvent) => void
     interface NekoUiDiagnostic {
         readonly rootId: string
         readonly phase: 'render' | 'component' | 'layout' | 'event' | 'host-update'
@@ -152,15 +161,106 @@ declare module 'nekojs/jsx-runtime' {
         anchor?: NekoUiResponsive<NekoUiAnchor>
         coordinateSpace?: 'logical' | 'design'
         visible?: NekoUiResponsive<boolean>
-        onClick?: NekoUiCallback
-        onRelease?: NekoUiCallback
-        onScroll?: NekoUiCallback
-        onKey?: NekoUiCallback
-        onTextInput?: NekoUiCallback
-        onFocus?: NekoUiCallback
-        onBlur?: NekoUiCallback
-        onChange?: NekoUiCallback
-        onSubmit?: NekoUiCallback
+        onClick?: NekoUiEventCallback
+        onRelease?: NekoUiEventCallback
+        onScroll?: NekoUiEventCallback
+        onKey?: NekoUiEventCallback
+        onTextInput?: NekoUiEventCallback
+        onFocus?: NekoUiEventCallback
+        onBlur?: NekoUiEventCallback
+        onChange?: NekoUiEventCallback
+        onSubmit?: NekoUiEventCallback
+        onDismiss?: NekoUiEventCallback
+      }
+    type NekoUiColor = string | number
+    interface NekoUiControlColors {
+        background?: NekoUiColor
+        borderColor?: NekoUiColor
+        color?: NekoUiColor
+        placeholderColor?: NekoUiColor
+        selectionColor?: NekoUiColor
+        cursorColor?: NekoUiColor
+        trackColor?: NekoUiColor
+        thumbColor?: NekoUiColor
+      }
+    interface NekoUiControlAppearance extends NekoUiControlColors {
+        hover?: NekoUiControlColors
+        focused?: NekoUiControlColors
+        pressed?: NekoUiControlColors
+        disabled?: NekoUiControlColors
+      }
+    type NekoUiControlProps = Omit<NekoUiSharedProps, NekoUiEventName | 'id' | 'children'> & {
+        id: string
+        disabled?: boolean
+        tooltip?: string
+        appearance?: NekoUiControlAppearance
+      }
+    type NekoUiToggleProps = NekoUiControlProps & {
+        checked: boolean
+        label?: string
+        text?: string
+        onChange: (checked: boolean) => void
+      }
+    type NekoUiSliderProps = NekoUiControlProps & {
+        value: number
+        min?: number
+        max?: number
+        step?: number
+        onChange: (value: number) => void
+      }
+    interface NekoUiSelectOption {
+        value: string
+        label: string
+        disabled?: boolean
+      }
+    type NekoUiSelectProps = NekoUiControlProps & {
+        value: string
+        options: readonly NekoUiSelectOption[]
+        expanded: boolean
+        onExpandedChange: (expanded: boolean) => void
+        onChange: (value: string) => void
+      }
+    type NekoUiToggle = (props: NekoUiToggleProps) => NekoVNode
+    type NekoUiSlider = (props: NekoUiSliderProps) => NekoVNode
+    type NekoUiSelect = (props: NekoUiSelectProps) => NekoVNode
+    type NekoUiRenderable = NekoVNode | string | number | boolean | null | undefined | readonly NekoUiRenderable[]
+    interface NekoUiTab {
+        value: string
+        label: string
+        disabled?: boolean
+        render: () => NekoUiRenderable
+      }
+    type NekoUiTabsProps = NekoUiControlProps & {
+        value: string
+        tabs: readonly NekoUiTab[]
+        onChange: (value: string) => void
+      }
+    type NekoUiTabs = (props: NekoUiTabsProps) => NekoVNode
+    interface NekoUiDialogProps {
+        id: string
+        open: boolean
+        onOpenChange: (open: boolean) => void
+        title?: string
+        children?: NekoUiRenderable
+        width?: NekoUiResponsive<NekoUiLayoutSize>
+        height?: NekoUiResponsive<NekoUiLayoutSize>
+        closeOnEscape?: boolean
+        closeOnBackdrop?: boolean
+      }
+    type NekoUiDialog = (props: NekoUiDialogProps) => NekoVNode | null
+    type NekoUiFormValue = string | number | boolean | null
+    type NekoUiFormValues = Readonly<Record<string, NekoUiFormValue>>
+    type NekoUiValidator = (value: NekoUiFormValue | undefined, values: NekoUiFormValues) => string | null | undefined
+    interface NekoUiValidationResult {
+        readonly valid: boolean
+        readonly errors: Readonly<Record<string, readonly string[]>>
+      }
+    type NekoUiValidateForm = (values: NekoUiFormValues, rules: Readonly<Record<string, readonly NekoUiValidator[]>>) => NekoUiValidationResult
+    interface NekoUiValidators {
+        required(message?: string): NekoUiValidator
+        minLength(length: number, message?: string): NekoUiValidator
+        maxLength(length: number, message?: string): NekoUiValidator
+        numberRange(min: number, max: number, message?: string): NekoUiValidator
       }
     type NekoUiCrop = { readonly x: number; readonly y: number; readonly width: number; readonly height: number } | readonly [number, number, number, number]
     type NekoUiPrimitivePropsByType = {
@@ -171,13 +271,16 @@ declare module 'nekojs/jsx-runtime' {
         stack: NekoUiSharedProps
         scroll: NekoUiSharedProps & { scrollX?: NekoUiResponsive<boolean>; scrollY?: NekoUiResponsive<boolean>; scrollOffset?: NekoUiResponsive<number> }
         label: NekoUiSharedProps & { text?: string; color?: string | number; fontSize?: NekoUiResponsive<number>; font?: NekoUiResponsive<string>; wrap?: boolean; truncate?: boolean }
-        button: NekoUiSharedProps & { text?: string; disabled?: boolean; tooltip?: string }
-        input: NekoUiSharedProps & { value?: string; placeholder?: string; maxLength?: number; disabled?: boolean }
+        button: NekoUiSharedProps & { text?: string; disabled?: boolean; tooltip?: string; appearance?: NekoUiControlAppearance }
+        input: NekoUiSharedProps & { value?: string; placeholder?: string; maxLength?: number; disabled?: boolean; tooltip?: string; appearance?: NekoUiControlAppearance }
+        slider: NekoUiSharedProps & { value?: number; min?: number; max?: number; step?: number; disabled?: boolean; tooltip?: string; appearance?: NekoUiControlAppearance }
         image: NekoUiSharedProps & { resource?: string; fit?: 'contain' | 'cover' | 'stretch'; opacity?: number; icon?: string; crop?: NekoUiCrop }
         spacer: NekoUiSharedProps
+        dialog: NekoUiSharedProps & { id: string; title?: string; closeOnEscape?: boolean; closeOnBackdrop?: boolean; onDismiss?: NekoUiEventCallback }
+        item: NekoUiSharedProps & { item: string; count?: number; itemTooltip?: boolean; tooltip?: string }
       }
     type NekoUiPrimitiveProps = NekoUiPrimitivePropsByType[NekoUiPrimitive]
-    type NekoUiElementProps<T extends NekoUiJsxType> = T extends NekoUiPrimitive ? NekoUiPrimitivePropsByType[T] : object
+    type NekoUiElementProps<T extends NekoUiJsxType> = T extends NekoUiPrimitive ? NekoUiPrimitivePropsByType[T] : T extends (props: infer P) => unknown ? P : object
     type NekoUiJsxFactory = <T extends NekoUiJsxType>(type: T, props: NekoUiElementProps<T> | null, key?: string | number) => NekoVNode
     interface NekoUiFragment {
         (props: object): NekoVNode
@@ -195,8 +298,11 @@ declare module 'nekojs/jsx-runtime' {
           label: NekoUiPrimitivePropsByType['label']
           button: NekoUiPrimitivePropsByType['button']
           input: NekoUiPrimitivePropsByType['input']
+          slider: NekoUiPrimitivePropsByType['slider']
           image: NekoUiPrimitivePropsByType['image']
           spacer: NekoUiPrimitivePropsByType['spacer']
+          dialog: NekoUiPrimitivePropsByType['dialog']
+          item: NekoUiPrimitivePropsByType['item']
         }
       }
     interface NekoUiRootOptions {

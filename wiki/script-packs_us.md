@@ -74,6 +74,8 @@ World/session teardown and provider failure stop the affected activations, then 
 
 STARTUP changes require restart. Legacy single-file reruns retain their active-Context semantics; versioned files require package reload. Client operations retain existing client/owner-thread restrictions.
 
+Saving pack files does not trigger a filesystem watcher. Script activation, native server data `/reload`, and client resource F3+T are separate operations; a successful script commit does not roll back if a later recipe/data refresh fails. Root `shared` is in-process state, not client/server networking. File and host effects remain subject to the limits in [Node.js compatibility](nodejs-compatibility_us); neither pack signatures nor sandbox settings make untrusted code safe.
+
 A root close requested inside a managed callback immediately blocks new pack callbacks and defers release until the outermost callback returns. Deferred failures log `NEKO-1017`. Closed timer runtimes reject registration and clear their queue, then wait up to 2 seconds for the scheduler to exit. Timeout or interruption reports incomplete cleanup while other owned resources continue to release.
 
 <a id="wiki-section-5"></a>

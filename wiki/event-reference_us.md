@@ -25,19 +25,24 @@ PlayerEvents.loggedIn(event => { /* ... */ })
 ## Basic event listener forms
 
 ```javascript
-// Ordinary event
-事件组.事件名(event => { /* Handler logic */ })
+// Ordinary event: listener, or priority + listener
+PlayerEvents.loggedIn('HIGH', event => {
+  console.info('Player logged in')
+})
 
-// Dispatched event: the first argument is a dispatch key, such as a block/item/entity type id
-BlockEvents.broken('minecraft:stone', event => { /* Trigger only when stone is broken */ })
-ItemEvents.foodEaten('minecraft:apple', event => { /* Trigger only after eating an apple */ })
-EntityEvents.death('minecraft:zombie', event => { /* Trigger only when a zombie dies */ })
+// Dispatch event: key + listener, or priority + key + listener
+BlockEvents.broken('HIGH', 'minecraft:stone', event => {
+  console.info('Blocked stone breaking')
+  return true
+})
 
-// Cancellable event: return true to cancel
-BlockEvents.broken('minecraft:stone', event => {
-  if (某种条件) return true   // Cancel block breaking
+// Dispatch event without a key: listen to all dispatched values
+ItemEvents.foodEaten(event => {
+  console.info('An item was eaten')
 })
 ```
+
+Priorities are `HIGHEST`, `HIGH`, `NORMAL`, `LOW`, and `LOWEST` (case-insensitive); omitted priority means `NORMAL`. On a dispatched event, `eventBus('HIGH', listener)` means the **key** `HIGH`, not a priority. An explicit priority requires all three arguments `(priority, key, listener)`. Returning `true` cancels only a cancellable bus. Use readable event properties such as `event.player`, not invented getters; properties do not imply that a setter exists. See [Script API style](script-api-style_us).
 
 > **Important**: register listeners in the **top-level script scope**, during script loading. Registering another event inside an event callback fails.
 
@@ -52,6 +57,8 @@ BlockEvents.broken('minecraft:stone', event => {
 | `tickPost` | `ServerTickEvent.Post` | After each server tick. |
 | **`recipes`** | [`RecipeEventJS`](recipe-system_us) | **Recipe modification**, the most commonly used event. |
 | `afterRecipes` | `RecipeEventJS` | After the entire recipe data batch is parsed and committed to the `RecipeManager` (postprocessing/queries; JSON changes at this stage no longer take effect, so make changes in `recipes`). |
+| `tradeDeclaration` | `VillagerTradeDeclarationEventJS` | Ordinary SERVER bus; collects candidate trade definitions, not keyed dispatch. |
+| `tradeReload` | `VillagerTradeReloadEventJS` | Ordinary SERVER bus; candidate trade reload lifecycle. |
 | `aboutToStart` | `ServerAboutToStartEvent` | The server is about to start. |
 | `starting` | `ServerStartingEvent` | The server is starting. |
 | `started` | `ServerStartedEvent` | Server startup is complete (registries are ready, so `Item.of(...)` can safely be called). |
@@ -75,6 +82,8 @@ ServerEvents.tags('minecraft:item', event => {
 ```
 
 > `lootTables`, `tags`, and `generateData` in the table above are currently registered only on NeoForge. Fabric's `ServerEvents` primarily provides `recipes`, `afterRecipes`, and ported lifecycle events. Do not call these NeoForge events in Fabric scripts.
+
+`tradeDeclaration`/`tradeReload` are registered on Fabric too, but its unavailable trade-domain owner rejects the collected declaration batch during preflight. Being able to subscribe does not mean trade mutation succeeds. Existing active state is retained; this is an explicit failure, not a silent no-op.
 
 <a id="wiki-section-4"></a>
 ### ServerEvents.lootTables - loot table JSON management
@@ -760,7 +769,7 @@ ClientEvents.hudRender('boss_bar', { layer: 'normal', priority: 0 }, (ctx, gui) 
   ctx.fillRect(8, 20, Math.floor(120 * hp.hp), 6, 0xFF5DBB63)
 })
 
-// client_scripts/lines.js: world-space lines/wireframes (gracefully skipped on 26.2)
+// client_scripts/lines.js: world-space lines/wireframes (staged submission on 26.2)
 ClientEvents.worldRender('quest_path', { layer: 'normal', priority: 0 }, ctx => {
   ctx.box(10, 70, 10, 12, 72, 12, 0xFF00FF00)
   ctx.line(0, 64, 0, 10, 70, 10, 0xFFFFFF00, 2)
@@ -984,4 +993,4 @@ Known limits: checking uses the simplified ValParser. If a file contains syntax 
 
 ---
 
-[Previous: Python feature support](python-feature-support_us) · [Contents](Home) · [Next: Commands](commands_us)
+[Previous: Python feature support](python-feature-support_us) · [Contents](Home) · [Next: AI-assisted authoring](ai-support_us)

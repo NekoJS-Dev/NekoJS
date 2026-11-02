@@ -327,7 +327,17 @@ class NodeModuleTypeDocsTest {
         assertTrue(all.contains("type NekoUiPrimitiveProps = NekoUiPrimitivePropsByType[NekoUiPrimitive]"), all);
         assertTrue(all.contains("export namespace JSX {"), all);
         assertTrue(all.contains("row: NekoUiPrimitivePropsByType['row']"), all);
-        assertTrue(all.contains("onClick?: NekoUiCallback"), all);
+        assertTrue(all.contains("onClick?: NekoUiEventCallback"), all);
+        assertTrue(all.contains("type NekoUiEventCallback = (event: NekoUiEvent) => void"), all);
+        assertTrue(all.contains("export const Toggle: NekoUiToggle;"), all);
+        assertTrue(all.contains("export const Slider: NekoUiSlider;"), all);
+        assertTrue(all.contains("export const Select: NekoUiSelect;"), all);
+        assertTrue(all.contains("export const Tabs: NekoUiTabs;"), all);
+        assertTrue(all.contains("export const Dialog: NekoUiDialog;"), all);
+        assertTrue(all.contains("export const validateForm:"), all);
+        assertTrue(all.contains("export const Validators:"), all);
+        assertTrue(all.contains("dialog: NekoUiPrimitivePropsByType['dialog']"), all);
+        assertTrue(all.contains("item: NekoUiPrimitivePropsByType['item']"), all);
         assertTrue(all.contains("interface NekoUiSignal"), all);
         assertTrue(all.contains("interface NekoUiStore"), all);
         assertTrue(all.contains("interface NekoUiRootHandle"), all);

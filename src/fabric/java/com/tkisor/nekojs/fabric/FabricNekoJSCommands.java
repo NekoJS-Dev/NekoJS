@@ -11,6 +11,7 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.command.AddressArgument;
+import com.tkisor.nekojs.command.InformationCommands;
 import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
@@ -21,15 +22,18 @@ import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.probe.ProbeBackendSelector;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.core.registries.BuiltInRegistries;
+
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Inventory;
+
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
@@ -65,7 +69,7 @@ public final class FabricNekoJSCommands {
     }
 
     private static void register(CommandDispatcher<CommandSourceStack> dispatcher, Supplier<NekoRuntimeRoot> rootProvider) {
-        dispatcher.register(
+        dispatcher.register(InformationCommands.addTo(
                 Commands.literal("nekojs")
                         .requires(source -> Commands.LEVEL_GAMEMASTERS.check(source.permissions()))
                         .executes(context -> sendRootUsage(context.getSource(), dispatcher))
@@ -76,11 +80,10 @@ public final class FabricNekoJSCommands {
                         .then(viewAllErrorsCommand(rootProvider))
                         .then(packsCommand(rootProvider))
                         .then(registryCommand())
-                        .then(handCommand())
-                        .then(inventoryCommand())
                         .then(trustCommand())
-                        .then(probeCommand())
-        );
+                        .then(probeCommand()),
+                FabricNekoJSCommands::containedFluid
+        ));
     }
 
     // ------------------------------------------------------------------
@@ -548,7 +551,7 @@ public final class FabricNekoJSCommands {
     }
 
     // ------------------------------------------------------------------
-    //  registry / hand / inventory
+    //  Registry health and read-only fluid inspection
     // ------------------------------------------------------------------
 
     /** /nekojs registry：动态注册健康快照。fabric 上动态注册面未移植，快照恒为空。 */
@@ -576,61 +579,17 @@ public final class FabricNekoJSCommands {
                         }));
     }
 
-    private static LiteralArgumentBuilder<CommandSourceStack> handCommand() {
-        return Commands.literal("hand")
-                .executes(context -> {
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    showHand(context.getSource(), player.getMainHandItem());
-                    return 1;
-                });
-    }
-
-    private static void showHand(CommandSourceStack source, ItemStack stack) {
-        if (stack.isEmpty()) {
-            source.sendSystemMessage(Component.literal("Empty hand"));
-            return;
-        }
-        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
-        MutableComponent line = Component.literal(id)
-                .withStyle(style -> style
-                        .withClickEvent(new ClickEvent.CopyToClipboard(id))
-                        .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to copy"))))
-                .append(Component.literal(" x" + stack.getCount()));
-        source.sendSystemMessage(line);
-        if (stack.isDamageableItem()) {
-            source.sendSystemMessage(Component.literal("  damage: " + stack.getDamageValue() + "/" + stack.getMaxDamage()));
-        }
-        source.sendSystemMessage(Component.literal("  components: " + compactComponents(stack)));
-    }
-
-    private static String compactComponents(ItemStack stack) {
-        String text = stack.getComponentsPatch().toString().replace('\n', ' ');
-        return text.length() > 300 ? text.substring(0, 300) + "..." : text;
-    }
-
-    private static LiteralArgumentBuilder<CommandSourceStack> inventoryCommand() {
-        return Commands.literal("inventory")
-                .executes(context -> {
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    listInventory(context.getSource(), player.getInventory());
-                    return 1;
-                });
-    }
-
-    private static void listInventory(CommandSourceStack source, Inventory inventory) {
-        int used = 0;
-        for (int slot = 0; slot < Inventory.INVENTORY_SIZE; slot++) {
-            ItemStack stack = inventory.getItem(slot);
-            if (stack.isEmpty()) {
-                continue;
+    private static Fluid containedFluid(ItemStack stack) {
+        var storage = ContainerItemContext.withConstant(stack)
+                .find(FluidStorage.ITEM);
+        if (storage != null) {
+            for (var view : storage) {
+                if (!view.isResourceBlank() && view.getAmount() > 0) {
+                    return view.getResource().getFluid();
+                }
             }
-            source.sendSystemMessage(Component.literal("slot " + slot + ": "
-                    + BuiltInRegistries.ITEM.getKey(stack.getItem()).toString() + " x" + stack.getCount()));
-            used++;
         }
-        if (used == 0) {
-            source.sendSystemMessage(Component.literal("Inventory is empty."));
-        }
+        return null;
     }
 
     // ------------------------------------------------------------------

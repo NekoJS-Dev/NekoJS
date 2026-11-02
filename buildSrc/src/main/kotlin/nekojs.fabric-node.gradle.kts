@@ -13,6 +13,7 @@ import java.util.zip.ZipFile
 
 plugins {
     id("java-library")
+    id("nekojs.node-sources")
 }
 
 val libs = the<LibrariesForLibs>()

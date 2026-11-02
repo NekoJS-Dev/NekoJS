@@ -9,6 +9,8 @@ NekoJS **本体内置** Python 子集支持，可以直接用 `.py` 写脚本，
 
 > 这是一个**子集转译器（transpiler）**，不是完整的 Python 解释器。Python 源码会被解析成 AST、lowering 成 JavaScript，最终交给 GraalJS 执行。所以你能直接用 NekoJS 的全部 JS 绑定（`Item`、`Utils`、`ServerEvents` ...），但只能用下文列出的那部分 Python 语法和内置函数。
 
+Python 脚本仍需匹配的 **GraalMC** 前置提供 GraalJS，不使用 CPython、GraalPy、`pip` 或单独安装的 Python 解释器。NekoJS 绑定是否可用仍取决于 Script Type、加载器及 Minecraft 版本；“直接使用 JS 绑定”不是全部平台都有全部绑定的承诺。见 [平台与兼容性](platform-compatibility_cn)。
+
 <a id="wiki-section-2"></a>
 ## 快速上手
 
@@ -74,7 +76,7 @@ ServerEvents.recipes(lambda event: (
 |---|---|
 | 函数 `def f(a, b=1, *args, **kwargs):`（默认参数、`*args`、`**kwargs`） | 支持，降级为 `function`（hoisted）；`**kwargs` 触发 prologue 重 binding |
 | `if` / `elif` / `else` | 支持，降级为 `if / else if / else` |
-| `match` / `case`（结构化模式匹配：字面量/通配符/捕获/`|`/序列/映射/类模式 + `if guard`） | 支持，降级为 if/else 链 |
+| `match` / `case`（结构化模式匹配：字面量/通配符/捕获/`\|`/序列/映射/类模式 + `if guard`） | 支持，降级为 if/else 链 |
 | `for x in iter:` / `while cond:` | 支持，`for...of` / `while` |
 | 赋值：`=`、增强 `+=`/...`//=`/`**=`、元组解包 `a, b = ...`、多目标 `a = b = v`、海象 `:=` | 支持 |
 | `lambda`（支持默认参数、`*args`，**不支持 `**kwargs`**） | 支持，降级为箭头函数 |
@@ -257,7 +259,7 @@ class Bag:
 Bag(apple=1, banana=2).total(bonus=10)   # 13
 ```
 
-> 限制：关键字实参只能传给**声明了 `**kwargs`** 的目标（函数、方法、类的 `__init__`），或 `print`/`sorted`（这二者有特例处理）。普通无 `**kwargs` 的函数收到关键字实参会清晰报错。`lambda` 不支持 `**kwargs`（箭头函数没有 `arguments`）。
+> 限制：关键字实参只能传给**声明了 `**kwargs`** 的目标（函数、方法、类的 `__init__`），或 `print`/`sorted`/`min`/`max`（这二者有特例处理）。普通无 `**kwargs` 的函数收到关键字实参会清晰报错。`lambda` 不支持 `**kwargs`（箭头函数没有 `arguments`）。
 
 <a id="wiki-section-15"></a>
 ### 类
@@ -376,7 +378,7 @@ def describe(point):
             return 'other'
 ```
 
-支持的 pattern：字面量（`1`/`'x'`/`True`/`None`/`-1`）、通配符 `_`、名字捕获、`|` 或模式（`1 | 2 | 3`）、序列模式（`[a, *r, b]`，`*` 可在任意位置）、映射模式（`{'k': v, **rest}`）、类模式（`Cls()` 或 `Cls(x=p)` 关键字形式），以及 `case ... if guard`。
+支持的 pattern：字面量（`1`/`'x'`/`True`/`None`/`-1`）、通配符 `_`、名字捕获、`\|` 或模式（`1 | 2 | 3`）、序列模式（`[a, *r, b]`，`*` 可在任意位置）、映射模式（`{'k': v, **rest}`）、类模式（`Cls()` 或 `Cls(x=p)` 关键字形式），以及 `case ... if guard`。
 
 > 限制：类模式只支持**关键字**子模式 `Cls(attr=pat)`（位置子模式需要 `__match_args__`，未支持）；`match` 是软关键字——只有当本行能扫成 `<subject> :` 时才视作 match 语句，所以把 `match` 当普通变量名（`match = 5`、裸 `match`、`match(x)` 调用）仍可用。
 
@@ -418,39 +420,41 @@ print(circle_area(2))                    # 12.56
 |---|---|---|
 | `range(stop)` / `range(start, stop[, step])` | `Array.from({length: ...}, ...)` | |
 | `len(x)` | `__nekoLen(x)` | 数组/字符串 `.length`、`Map`/`Set` `.size`、dict（JS 对象）`Object.keys().length`——dict/set 无需再绕开 |
-| `print(...)` | `console.log([...].join(sep))` | 支持 `sep=` 关键字；`end=` 被忽略 |
+| `print(...)` | 每个参数经 `__nekoPyStr` 转换后拼接并记录 | 支持 `sep=`；忽略 `end=` |
 | `abs(x)` | `Math.abs(x)` | |
 | `min(...)` / `min(iterable[, key=])` | `Math.min(...)`（或 `reduce` 带 key） | 单 iterable 参数自动 spread；`key=` 支持 |
 | `max(...)` / `max(iterable[, key=])` | `Math.max(...)`（或 `reduce` 带 key） | 同上 |
 | `sum(iterable)` | `([...iterable]).reduce((a,b)=>a+b, 0)` | 先 spread，可消费生成器 |
-| `str(x)` | `String(x)` | |
+| `str(x)` | `__nekoPyStr(x)` | None/布尔和受支持容器使用 Python 风格表示；不承诺完整 CPython repr 兼容 |
 | `int(x[, base])` | `parseInt(x, base)` | 可选进制 |
 | `float(x)` | `Number(x)` | |
-| `bool(x)` | `Boolean(x)` | |
+| `bool(x)` | `__nekoTruthy(x)` | 受支持的空容器为假 |
 | `list()` / `list(iterable)` | `[]` / `[...iterable]` | |
 | `dict()` / `dict(iterable)` | `({})` / `Object.fromEntries(iterable)` | |
 | `set()` / `set(iterable)` | `new Set()` / `new Set(iterable)` | |
 | `tuple(iterable)` | `[...iterable]` | 注意：返回的是可变数组（JS 无不可变元组） |
 | `sorted(iterable[, reverse=][, key=])` | `[...iterable].sort(比较器)` | `reverse`/`key` 均支持 |
-| `any(iterable)` / `all(iterable)` | `.some(x=>x)` / `.every(x=>x)` | 先 spread，可消费生成器 |
+| `any(iterable)` / `all(iterable)` | 经 `__nekoTruthy` 测试元素 | 先 spread，可消费生成器 |
 | `enumerate(iterable)` | `([...iterable]).map((v, i) => [i, v])` | 返回 `[index, value]` 对 |
 | `reversed(iterable)` | `[...iterable].reverse()` | |
 | `map(f, iterable)` | `[...iterable].map(f)` | **函数在前**（与 Python 一致）；返回急切数组 |
-| `filter(pred, iterable)` | `[...iterable].filter(pred)` | **谓词在前** |
+| `filter(pred, iterable)` | 使用 Python 风格真值过滤 | `None` 保留真值元素；否则测试谓词结果 |
 | `zip(*iterables)` | 配对取最短 | 多个可迭代对象，返回 `[a,b]` 元组数组 |
 | `round(x[, n])` | `Math.round`（带 n 时按 10^n 缩放） | 与 Python 的**银行家舍入**（五取偶）不同：JS `Math.round` 的半值向正无穷方向取整，例如 `round(-1.5)` 得到 `-1`，不是 `-2`。 |
-| `divmod(a, b)` | `[Math.floor(a/b), a % b]` | |
+| `divmod(a, b)` | `[__nekoFloorDiv(a,b), __nekoMod(a,b)]` | 地板除、与除数同号的模、零除检查 |
 | `ord(c)` / `chr(n)` | `codePointAt(0)` / `String.fromCodePoint(n)` | |
 | `pow(x, y)` | `Math.pow(x, y)` | 不支持三参数模幂 |
 | `hex(n)` / `oct(n)` / `bin(n)` | `"-0x"+abs.toString(16)` 等 | 负数带 `-` 前缀 |
 | `repr(x)` | `JSON.stringify(x)` | 近似 |
 | `format(x, spec)` | `__nekoFmt(x, spec, null)` | 与 f-string 格式说明符同一套规则 |
-| `isinstance(x, T)` / `isinstance(x, (A,B))` / `isinstance(x, [A,B])` | `x instanceof T`（元组/列表→链） | 内置异常名走 prelude 类层次（`isinstance(e, ValueError)` → `e instanceof ValueError`，精确匹配） |
+| `isinstance(x, T)` / `isinstance(x, (A,B))` / `isinstance(x, [A,B])` | 内置类型 probe、异常 helper 或自定义 `instanceof` | 内置检查反映 JS 表示，不是不同的 CPython 运行时类型 |
 | `type(x)` | `(x).constructor` | |
 | `callable(x)` | `typeof x === "function"` | |
 | `getattr(o, name[, d])` / `hasattr` / `setattr` / `delattr` | `o[name]` 括号访问（带默认值/存在判断/赋值/delete） | |
 | `iter(x)` / `next(it)` | `x[Symbol.iterator]()` / `it.next().value` | 与生成器/迭代器互通 |
 | `frozenset(x)` | `new Set(x)` | JS 无不可变集合，返回普通 Set |
+
+内置 `isinstance` 检查基于 JS 存储：`float` 接受所有 JS number（包括整数值），list/tuple 都是数组，set/frozenset 都是 `Set`，dict 检查普通对象 constructor。这些不是不同的 CPython 对象类型。
 
 > 常用 **str/list/dict/set 方法**已映射到 JS 等价写法（见下节「方法映射」）；未映射的方法原样透传 `obj.method(args)`（若 JS 侧恰好有同名方法仍可用）。
 
@@ -507,7 +511,7 @@ finally:
 - **Python 内置异常名**（`Exception`、`ValueError`、`TypeError`、`KeyError` 等）由模块头注入的 **prelude 类层次** 定义（`class Exception extends Error`，各内置异常继承之，`prototype.name` 已修正）。`raise ValueError('x')` → `throw new ValueError("x")`，`except ValueError` → `instanceof ValueError` **精确匹配**（JS 原生 `TypeError` 也可经 `.name` 兜底被同名 `except TypeError` 捕获）；`isinstance(e, ValueError)` 同样精确。
 - `as e` 绑定的 `e` 是底层 JS 错误对象。
 
-> 注意：`raise 42`（抛非 Error 值）配合 `except Exception` **不会**匹配（`42 instanceof Error` 为假），异常会被重新抛出——这与 Python 语义一致。要捕获任意值用裸 `except:`。
+> 注意：`raise 42`（抛非 Error 值）配合 `except Exception` **不会**匹配（`42 instanceof Error` 为假），异常会被重新抛出。这是 JS 互操作差异：CPython 不允许抛出非异常值。捕获任意 JS 值可用裸 `except:`。
 
 <a id="wiki-section-25"></a>
 ## 装饰器
@@ -523,24 +527,24 @@ finally:
 |---|---|
 | **`self` → `this`** | 仅在**实例方法体**内改写；普通函数里的 `self` 不替换。`@staticmethod` 方法不改写。 |
 | **dict 是 JS 对象** | 键只能是字符串（数字键会被强制成字符串，且形如 `"10"` 的整数键会被 JS 按数值排序提前）。不能用任意可哈希对象（如元组）当键。 |
-| **`//` 地板除** | `a // b` → `Math.floor(a / b)`，与 Python 一样向负无穷取整（`-7 // 2 == -4`）。 |
+| **`//` 地板除** | `__nekoFloorDiv(a,b)` 向负无穷取整（`-7 // 2 == -4`），除数为零时抛 `ZeroDivisionError`。 |
 | **`**` 幂** | `a ** b` 直接透传给 JS `**`，语义一致。 |
 | **`in` / `not in`** | `x in coll` → `__nekoIn(x, coll)` 助手：数组/字符串 `.includes`、dict（JS 对象）自有键、`Map`/`Set` `.has`——dict 键判断**无需绕开**（链式成员 `a in b in c` 同样走助手）。 |
 | **`is` / `is not`** | 透传成 JS `===` / `!==`（严格相等）。`None` 映射为 `null`，所以 `x is None` 等价于 `x === null`。 |
-| **`==` / `!=`** | 映射为 JS **严格相等** `===` / `!==`（`"1" == 1` 为假，与 Python 一致）。 |
+| **`==` / `!=`** | JS 严格相等 `===` / `!==`；数组/字典比较引用身份，不是 Python 的结构相等。 |
 | **`and` / `or`** | `__nekoAnd` / `__nekoOr` 助手：短路求值 + 返回操作数值 + **Python 真值语义**（`[] or 'y'` 得 `'y'`）。 |
 | **整数精度** | Python 的 `int` 是任意精度，JS 只有双精度浮点 Number。`> 2^53` 的整数会丢精度，`int(x)` 也受此限制。常规整数运算无差异。 |
 | **变量作用域** | 所有赋值都 emit 成 `var`（函数作用域、可重复声明、被提升），不是 `let`/`const`。没有块级作用域和 TDZ——循环/分支里赋的值会「漏」到外层函数作用域。 |
 | **布尔真值** | 条件（`if`/`while`/`not`/`and`/`or`/三元/`assert`/推导式 filter/`match` guard）都经 `__nekoTruthy` 助手判定：`[]`/`{}`/`''`/`0`/`None` 均为假，与 Python 一致——**空容器判断无需写 `len(xs)==0`**。 |
 | **`None` / `True` / `False`** | 分别映射为 JS `null` / `true` / `false`（注意不是 `undefined`）。 |
-| **列表 `+` 拼接（坑）** | `[1,2] + [3]` 走 JS `+` → 得到字符串 `"1,23"`（Python 是拼接列表）。`+=` 同理。当前请用 `a.extend(b)` / `[*a, *b]` 替代。 |
-| **`"%s" % x` 格式化（坑）** | 走数值取模路径 → 静默 `NaN`。请用 f-string / `format(x, spec)` 替代。 |
-| **set/dict 位运算符（坑）** | `s1 \| s2`、`d1 \| d2`、`&`、`^`、`-` 对容器走 JS 按位运算 → 静默 `0`。请用方法（`union` 暂缺，可先转 list）或 `dict(d1, **d2)` 式写法。 |
+| **列表 `+` / `+=`** | 数组操作数经 `__nekoAdd` 拼接；其他操作数遵循已实现的 JS 互操作规则。 |
+| **百分号字符串格式化** | 左操作数为字符串时使用 `__nekoPyPercent`：支持 `%s`、`%r`、`%d`/`%i`、`%f`、`%g`、`%x`/`%X`、`%o`、`%%` 和部分宽度/精度语法，不等于支持全部 CPython 格式。 |
+| **set/dict 运算符（坑）** | 容器的 `\|`、`&`、`^` 走 JS 按位强制转换；`-` 是 JS 减法，不是集合差集。结果并非 Python 容器运算。字典合并请用 `{**d1, **d2}`。 |
 | **`set.update`（坑）** | 当前被 dict 的 update 映射误伤（`Object.assign` 到 Set 对象上）。请用 `for x in other: s.add(x)`。 |
-| **`print(dict)`（坑）** | dict 打印为 `[object Object]`；需要查看请 `print(list(d.items()))`。 |
+| **`print(dict)`** | 受支持字典、列表、布尔与 None 经 Python 字符串 helper 转换；任意 host 对象不保证 CPython 表示。 |
 | **非字面负索引（坑）** | `xs[-1]`（字面量）正确取尾；但 `xs[i]` 当运行时 `i<0` → JS 属性访问静默 `undefined`。循环负索引请用 `xs[len(xs)+i]`。 |
 | **`next(gen)` 越界（坑）** | 迭代器耗尽后 `next()` 返回 `undefined`（Python 抛 `StopIteration`）。请配合 `for` 循环使用。 |
-| **`split(sep, maxsplit)` / `replace(old, new, count)`（坑）** | 第三参被 JS 原生方法忽略：`split` 丢弃剩余部分而非保留尾巴、`replace` 替换全部而非前 count 次。需要精确控制请手写循环。 |
+| **`split(sep, maxsplit)` / `replace(old, new, count)`** | 已实现映射会保留未拆分尾部并遵守替换次数；字符串替换是字面替换而非正则。并非承诺全部 CPython 边界行为。 |
 | **`str(e)`** | 内置异常的 `str(e)` 是 `"ValueError: msg"`（带类名前缀，JS Error.toString 风格），Python 是裸 `msg`。消息本体可用 `e.message`。 |
 
 <a id="wiki-section-27"></a>
@@ -552,7 +556,7 @@ finally:
 - 矩阵乘 `@` / `@=`
 - 带参数的装饰器 `@deco(...)`、其它类方法装饰器（`@staticmethod`/`@classmethod`/`@property` 除外）
 - `lambda` 里的 `**kwargs`
-- 关键字实参传给**未声明 `**kwargs`** 的普通函数（仅 `print`/`sorted` 特例）
+- 关键字实参传给**未声明 `**kwargs`** 的普通函数（仅 `print`/`sorted`/`min`/`max` 特例）
 
 另有一些只会产生**通用解析错误**（非专门提示），或**静默降级**：
 
@@ -624,9 +628,10 @@ Python 脚本和 JS/TS 脚本共享：
 - [Probe 类型生成](probe-type-generation_cn) —— Python stub、编辑器配置与补全排错。
 - [TypeScript 与 JSX](typescript-and-jsx_cn) —— 另一种本体语言前端。
 - [常见问题](faq_cn) —— 报错排查。
+- [脚本 API 风格](script-api-style_cn) - Python 也遵循事件、Binding、builder、Bean 属性和数据对象的区分。
 
 <!-- wiki-nav -->
 
 ---
 
-[上一篇: 全局绑定](global-bindings_cn) · [目录](Home) · [下一篇: Python 特性清单](python-feature-support_cn)
+[上一篇: 数据、状态与持久化](data-and-state_cn) · [目录](Home) · [下一篇: Python 特性清单](python-feature-support_cn)

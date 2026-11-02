@@ -6,15 +6,18 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Minecraft-independent retained host nodes and atomic reconciliation transaction. */
+/** Retained host nodes, prepared visual references, and an atomic reconciliation transaction. */
 final class JsxHostTree {
     private Map<Long, Node> nodes = new LinkedHashMap<>();
     private List<Node> roots = List.of();
     private long nextIdentity = 1;
     private Long capturedIdentity;
     private int capturedButton;
+    private String capturedType;
 
     List<Node> roots() { return roots; }
+
+    Node retained(long identity) { return retained(roots, identity); }
 
     Node retained(Node expected) {
         return expected == null ? null : retained(roots, expected.identity);
@@ -35,13 +38,14 @@ final class JsxHostTree {
         if (!nodes.containsKey(node.identity)) return;
         capturedIdentity = node.identity;
         capturedButton = button;
+        capturedType = node.type;
         nodes.get(node.identity).pressed = true;
     }
 
     Node captured(int button) {
         if (capturedIdentity == null || capturedButton != button) return null;
         Node captured = retained(nodes.get(capturedIdentity));
-        if (captured == null) {
+        if (captured == null || !captured.type.equals(capturedType)) {
             cancelCapture();
             return null;
         }
@@ -110,6 +114,14 @@ final class JsxHostTree {
             if ("input".equals(type) && node.props.containsKey("value")) {
                 node.setInputValue(text(node.props.get("value")));
             }
+            node.configureAppearance();
+            if ("dialog".equals(type)) JsxModalScope.validate(node.props);
+            if ("slider".equals(type)) node.configureSlider();
+        }
+
+        void itemVisual(Object handle, JsxItemVisual.Resolved visual) {
+            requireOpen();
+            node(handle).itemVisual = visual;
         }
 
         void order(Object parent, List<?> children) {
@@ -166,6 +178,10 @@ final class JsxHostTree {
         Map<String, Object> props;
         List<Node> children = new ArrayList<>();
         String inputValue;
+        int inputScroll;
+        double sliderValue;
+        SliderRange sliderRange;
+        com.tkisor.nekojs.api.ui.UiControlAppearance appearance;
         int cursor;
         int selectionStart;
         int selectionEnd;
@@ -183,6 +199,7 @@ final class JsxHostTree {
         boolean hasClip;
         double scrollRange;
         com.tkisor.nekojs.api.ui.VisualSpec visual;
+        JsxItemVisual.Resolved itemVisual;
         UiTextureBlitPlan texturePlan;
         UiBoxPaintPlan boxPlan;
         com.tkisor.nekojs.api.ui.TextLayout textLayout;
@@ -198,6 +215,54 @@ final class JsxHostTree {
             this.cursor = this.inputValue == null ? 0 : this.inputValue.length();
             this.selectionStart = this.cursor;
             this.selectionEnd = this.cursor;
+            configureAppearance();
+            if ("dialog".equals(type)) JsxModalScope.validate(props);
+            if ("slider".equals(type)) configureSlider();
+        }
+
+        private void configureAppearance() {
+            if (props.containsKey("appearance") && props.get("appearance") == null) {
+                throw new IllegalArgumentException("[NEKO-7008] appearance invalid: expected a map");
+            }
+            appearance = com.tkisor.nekojs.api.ui.UiControlAppearance.parse(props.get("appearance"));
+        }
+
+        void configureSlider() {
+            sliderRange = SliderRange.parse(props);
+            sliderValue = SliderRange.finite(props, "value", 0);
+            if (sliderValue < sliderRange.min || sliderValue > sliderRange.max) {
+                throw new IllegalArgumentException("[NEKO-7011] Slider value must be within min and max");
+            }
+        }
+
+        boolean updateSlider(double value, boolean snap) {
+            if (Double.isNaN(value)) return false;
+            double next = Math.max(sliderRange.min, Math.min(sliderRange.max, value));
+            if (snap && next > sliderRange.min && next < sliderRange.max) {
+                double units = Math.floor((next - sliderRange.min) / sliderRange.step + 0.5);
+                double offset = Math.min(sliderRange.max - sliderRange.min, units * sliderRange.step);
+                next = Math.max(sliderRange.min, Math.min(sliderRange.max, sliderRange.min + offset));
+            }
+            if (next == sliderValue) return false;
+            sliderValue = next;
+            props.put("value", next);
+            return true;
+        }
+
+        double sliderAt(double mouseX) {
+            double ratio = Math.max(0, Math.min(1, (mouseX - x - 4) / Math.max(1, width - 8)));
+            if (ratio <= 0) return sliderRange.min;
+            if (ratio >= 1) return sliderRange.max;
+            return sliderRange.min + ratio * (sliderRange.max - sliderRange.min);
+        }
+
+        void followInputCursor(java.util.function.ToIntFunction<String> measure) {
+            int viewport = Math.max(0, width - 9);
+            int caret = measure.applyAsInt(inputValue.substring(0, cursor));
+            if (caret < inputScroll) inputScroll = caret;
+            else if (caret > (long) inputScroll + viewport) inputScroll = Math.max(0, caret - viewport);
+            int maximum = Math.max(0, measure.applyAsInt(inputValue) - viewport);
+            inputScroll = Math.max(0, Math.min(inputScroll, maximum));
         }
 
         boolean hasSelection() { return selectionStart != selectionEnd; }
@@ -270,6 +335,12 @@ final class JsxHostTree {
         }
 
         void insertText(String value, int maxLength) {
+            StringBuilder filtered = new StringBuilder();
+            value.codePoints().filter(codepoint -> !Character.isISOControl(codepoint)
+                    && !(codepoint >= Character.MIN_SURROGATE && codepoint <= Character.MAX_SURROGATE))
+                    .forEach(filtered::appendCodePoint);
+            value = filtered.toString();
+            if (value.isEmpty()) return;
             int start = selectionStart();
             int end = selectionEnd();
             int retainedLength = inputValue.codePointCount(0, start)
@@ -298,6 +369,9 @@ final class JsxHostTree {
         Node copy() {
             Node copy = new Node(identity, type, key, new LinkedHashMap<>(props));
             copy.inputValue = inputValue;
+            copy.inputScroll = inputScroll;
+            copy.sliderValue = sliderValue;
+            copy.sliderRange = sliderRange;
             copy.cursor = cursor;
             copy.selectionStart = selectionStart;
             copy.selectionEnd = selectionEnd;
@@ -315,12 +389,35 @@ final class JsxHostTree {
             copy.hasClip = hasClip;
             copy.scrollRange = scrollRange;
             copy.visual = visual;
+            copy.itemVisual = itemVisual;
             copy.texturePlan = texturePlan;
             copy.boxPlan = boxPlan;
             copy.textLayout = textLayout;
             copy.textFont = textFont;
             copy.textScale = textScale;
             return copy;
+        }
+    }
+
+    record SliderRange(double min, double max, double step) {
+        static SliderRange parse(Map<String, Object> props) {
+            double min = finite(props, "min", 0);
+            double max = finite(props, "max", 100);
+            double step = finite(props, "step", 1);
+            double span = max - min;
+            if (!(min < max) || step <= 0 || !Double.isFinite(span) || !Double.isFinite(span / step)) {
+                throw new IllegalArgumentException("[NEKO-7011] Slider requires min < max, step > 0 and a finite span and step ratio");
+            }
+            return new SliderRange(min, max, step);
+        }
+
+        static double finite(Map<String, Object> props, String key, double fallback) {
+            if (!props.containsKey(key)) return fallback;
+            Object raw = props.get(key);
+            if (!(raw instanceof Number number) || !Double.isFinite(number.doubleValue())) {
+                throw new IllegalArgumentException("[NEKO-7011] Slider " + key + " must be a finite number");
+            }
+            return number.doubleValue();
         }
     }
 

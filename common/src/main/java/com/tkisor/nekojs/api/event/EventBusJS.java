@@ -3,6 +3,7 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.probe.backend.typescript.TypeScriptProbeBackend;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.catalog.EventCallSignature;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.api.event.CancellableEventBus;
@@ -40,6 +41,11 @@ import java.util.function.Predicate;
  */
 public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     private static Predicate<Class<?>> externalCancellabilityPredicate = c -> false;
+
+    /** Explicit callable declarations; an empty list retains the ordinary event handler signature. */
+    public List<EventCallSignature> callSignatures() {
+        return List.of();
+    }
 
     /**
      * 设置外部可取消性判定，供 {@link #of(Class)} 工厂决定是否默认创建可取消总线。
@@ -88,6 +94,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     private final EventBus<EVENT> bus;
     private final ThreadLocal<Boolean> collectionDispatch = new ThreadLocal<>();
+    private final ThreadLocal<boolean[]> checkedDispatch = new ThreadLocal<>();
     /**
      * 按 ScriptType 分桶的 JS 侧监听器镜像。注册（脚本加载线程）与 {@link #hasListeners()}
      * 迭代（probe 等）可能并发，必须用并发 Map；内层 List 用 CopyOnWriteArrayList
@@ -261,6 +268,28 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         else collectionDispatch.set(previous);
     }
 
+    /**
+     * Dispatches normally and returns success rather than cancellation. Reported listener failures
+     * do not stop later listeners; nested checked dispatches have independent outcomes.
+     */
+    public boolean postChecked(EVENT event) {
+        boolean[] previous = checkedDispatch.get();
+        boolean[] outcome = {true};
+        checkedDispatch.set(outcome);
+        try {
+            post(event);
+            return outcome[0];
+        } finally {
+            if (previous == null) checkedDispatch.remove();
+            else checkedDispatch.set(previous);
+        }
+    }
+
+    private void markCheckedDispatchFailed() {
+        boolean[] outcome = checkedDispatch.get();
+        if (outcome != null) outcome[0] = false;
+    }
+
     /** Dispatches a normal event, reports callback failures, and returns its cancellation result. */
     public boolean post(EVENT event) {
         Boolean previous = collectionDispatch.get();
@@ -268,6 +297,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         try {
             return this.bus.post(event);
         } catch (Exception e) {
+            markCheckedDispatchFailed();
             NekoJS.LOGGER.error("Error during CancellableEventBus execution", e);
             return false;
         } finally {
@@ -289,6 +319,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             try {
                 return ((DispatchEventBus<EVENT, KEY>) bus).post(event, key);
             } catch (Exception e) {
+                markCheckedDispatchFailed();
                 NekoJS.LOGGER.error("Error during EventBus execution", e);
             } finally {
                 restoreDispatchMode(previous);
@@ -711,6 +742,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     private boolean skipDeadContext(Context context) {
         if (ScriptManager.isCandidateContext(context) && !Boolean.TRUE.equals(collectionDispatch.get())) return true;
         if (!ScriptManager.isContextDead(context)) return false;
+        markCheckedDispatchFailed();
         if (Boolean.TRUE.equals(collectionDispatch.get())) throw new IllegalStateException();
         return true;
     }
@@ -891,6 +923,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     private void recordListenerError(Context context, ScriptType type, String scriptId, String mode,
                                      Object dispatchKey, EVENT event, Throwable throwable) {
+        markCheckedDispatchFailed();
         String eventClass = event == null ? "null" : event.getClass().getName();
         String keyText = dispatchKey == null ? "" : " key=" + dispatchKey;
         String kind = "event mode=" + mode

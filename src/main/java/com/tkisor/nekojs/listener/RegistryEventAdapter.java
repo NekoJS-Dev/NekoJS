@@ -84,7 +84,7 @@ public final class RegistryEventAdapter {
 //? if >=26 {
         var tabId = event.getTabKey().identifier();
 //?} else {
-/*        var tabId = event.getTabKey().location();
+        /*var tabId = event.getTabKey().identifier();
 *///?}
         ItemBuilder.GROUP_ASSIGNMENTS.entrySet().stream()
                 .filter(entry -> entry.getValue().equals(tabId))
@@ -96,7 +96,7 @@ public final class RegistryEventAdapter {
 //? if >=26 {
         Item item = BuiltInRegistries.ITEM.get(itemId).map(Holder::value).orElse(null);
 //?} else {
-/*        Item item = BuiltInRegistries.ITEM.get(itemId);
+        /*Item item = BuiltInRegistries.ITEM.get(itemId);
 *///?}
         if (item != null && item != Items.AIR) {
             event.accept(new net.minecraft.world.item.ItemStack(item),

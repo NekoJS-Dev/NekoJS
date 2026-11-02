@@ -542,7 +542,7 @@ class NekoTypeScriptJsxRuntimeTest {
         Value exports = asValue(host.loadEntry("./server_scripts/src/ui-core.tsx"));
         Value proof = exports.getMember("uiCoreProof");
         assertEquals(true, proof.getMember("passed").asBoolean());
-        assertEquals(11, proof.getMember("primitives").asInt());
+        assertEquals(14, proof.getMember("primitives").asInt());
         assertEquals("b,a,c", proof.getMember("keyedOrder").asString());
         assertEquals("render,component,layout,host-update,event", proof.getMember("diagnostics").asString());
         assertEquals(true, proof.getMember("visualProps").asBoolean(),

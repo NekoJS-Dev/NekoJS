@@ -121,7 +121,7 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
         List<ItemStack> result = unwrap().items().map(ItemStack::new).toList();
         return result;
 //?} else {
-/*        return List.of(unwrap().getItems());
+        /*return List.of(unwrap().getItems());
 *///?}
     }
 
@@ -134,7 +134,7 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
     }
 
 //? if <26 {
-/*    public ItemStack[] getItems() {
+    /*public ItemStack[] getItems() {
         return unwrap().getItems();
     }
 *///?}

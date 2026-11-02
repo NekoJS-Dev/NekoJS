@@ -80,7 +80,7 @@ event.remove({ output: 'minecraft:diamond_sword' })
 <a id="wiki-section-5"></a>
 ## 原料写法（Ingredient）
 
-凡是参数类型写作 `Ingredient` 的位置（`event.shapeless` 的原料数组、`event.recipes.minecraft.blasting` 的第二个参数、`replaceInput` 的 `match` 等），都接受下面这些写法：
+凡是参数类型写作 `Ingredient` 的位置（`event.shapeless` 的原料数组、直接方法 `event.blasting` 的第二个参数、`replaceInput` 的 `match` 等），都接受下面这些写法：
 
 | 写法 | 含义 | 编辑器补全 |
 |---|---|---|
@@ -131,46 +131,31 @@ event.shapeless('minecraft:dirt', ['minecraft:sand', 'minecraft:gravel'])
 ```
 
 <a id="wiki-section-8"></a>
-### 方式二：`event.recipes.<namespace>.<type>(...)`（推荐）
+### 方式二：`event.recipes.<namespace>.<type>(...)`
 
-按命名空间和类型访问，支持 schema 驱动的位置参数。解析时依次尝试 handler 方法、schema 定义，最后使用原始 JSON 兜底。
+解析顺序为已注册 handler、schema、原始 JSON。**不能把直接快捷方法的参数顺序套用到所有命名空间方法。** 内置 handler 只提供 `crafting_shaped`/`crafting_shapeless`；烹饪和锻造走当前 schema。兜底烹饪 schema 的顺序是 `ingredient, result, experience?, cookingtime?`，与结果优先的 `event.smelting` 不同。有 schema 时优先使用命名字段，并检查当前节点的 probe/schema。
+
+将完整示例放入 `server_scripts/namespace-recipes.js`：
 
 ```javascript
-// minecraft 命名空间下的方法（handler）
-event.recipes.minecraft.crafting_shaped(
-  Item.of('minecraft:stick', 2),
-  ['B'],
-  { B: Ingredient.of('minecraft:bamboo') }
-).id('nekojs:bamboo_to_sticks')
+ServerEvents.recipes(event => {
+  event.recipes.minecraft.crafting_shaped(
+    Item.of('minecraft:stick', 2), ['B'],
+    { B: Ingredient.of('minecraft:bamboo') }
+  ).id('nekojs_example:bamboo_to_sticks')
 
-event.recipes.minecraft.crafting_shapeless(
-  Item.of('minecraft:stone_button'),
-  [Ingredient.of('minecraft:stone')]
-)
-
-// schema 驱动（位置参数，字段名/顺序由 schema 定义）
-event.recipes.minecraft.smelting('minecraft:iron_ingot', 'minecraft:iron_ore')
-  .id('nekojs:smelt_iron')
-
-event.recipes.minecraft.smelting(
-  Item.of('minecraft:gold_ingot'),
-  Ingredient.of('minecraft:gold_ore'),
-  1.5,    // experience
-  300     // cookingtime
-)
-
-event.recipes.minecraft.smithingtransform(
-  Item.of('minecraft:netherite_ingot'),
-  Ingredient.of('minecraft:netherite_upgrade_smithing_template'),
-  Ingredient.of('minecraft:diamond_sword'),
-  Ingredient.of('minecraft:netherite_ingot')
-)
-
-// 第三方 mod（Create）
-event.recipes.create.mixing('create:brass_ingot', ['minecraft:copper_ingot', 'create:zinc_ingot'])
+  event.recipes.minecraft.smelting({
+    ingredient: Ingredient.of('minecraft:gold_ore'),
+    result: Item.of('minecraft:gold_ingot'),
+    experience: 1.0,
+    cookingtime: 200
+  }).id('nekojs_example:smelt_gold')
+})
 ```
 
-> 配方 id 不指定时自动生成为 `nekojs:<prefix>_<8位hash>`。
+配方对象、原料映射、过滤器和 schema JSON 是结构化数据，不是通用 builder 配置约定。装有某个 mod 并不能证明特定 schema/构造器存在；使用该 mod 当前 serializer/schema 文档，不要假设 `create.mixing(result, inputs)` 或拼错的 `smithingtransform` 可用。链式 `.id(...)` 是当前受支持 API，不表示已经有回调 builder 替代形式。参见[脚本 API 风格](script-api-style_cn)。
+
+> 自动 id 是实现派生的 `nekojs:<prefix>_<8位十六进制hash>`，可能追加冲突后缀；整合包应使用显式唯一 id。
 
 <a id="wiki-section-9"></a>
 ### 方式三：`event.custom(...)` / `event.builder(...)` —— 原始 JSON

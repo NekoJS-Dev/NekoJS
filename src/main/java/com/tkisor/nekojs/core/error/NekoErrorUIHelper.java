@@ -19,7 +19,7 @@ public class NekoErrorUIHelper {
                         .withHoverEvent(new HoverEvent.ShowText(Component.translatable("nekojs.error.tracker.hover_hint")))
                         .withClickEvent(new ClickEvent.RunCommand("/nekojs view_all_errors"))
 //?} else {
-/*                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("nekojs.error.tracker.hover_hint")))
+                        /*.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("nekojs.error.tracker.hover_hint")))
                         .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/nekojs view_all_errors"))
 *///?}
                 );

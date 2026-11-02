@@ -55,7 +55,7 @@ public final class EntityPDataStore {
 //? if >=26 {
                 return container.getCompound(key).orElseGet(CompoundTag::new).copy();
 //?} else {
-/*                return container.getCompound(key).copy();
+                /*return container.getCompound(key).copy();
 *///?}
             }
 

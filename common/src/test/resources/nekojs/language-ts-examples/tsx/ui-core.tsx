@@ -129,7 +129,7 @@ const snapshotVNode = UI.element('label', inputProps, 'snapshot-key');
 inputProps.data.value = 2;
 check(Object.isFrozen(snapshotVNode.props) && snapshotVNode.props.data.value === 1, 'VNode props are immutable snapshots');
 check(snapshotVNode.key === 'snapshot-key', 'automatic runtime preserves keys');
-check(UI.primitives().join(',') === 'screen,panel,row,column,stack,scroll,label,button,input,image,spacer', 'primitive registry is complete');
+check(UI.primitives().slice().sort().join(',') === 'button,column,dialog,image,input,item,label,panel,row,screen,scroll,slider,spacer,stack', 'primitive registry is complete');
 const profileWidths = [100, 320, 480, 640, 854, 1280];
 const profileHeights = [100, 180, 240, 360, 480, 720];
 const selectedProfiles = profileWidths.map((width, index) => UI.profileFor({ width, height: profileHeights[index] }));

@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe;
 
-import com.tkisor.nekojs.probe.AgentTemplateGenerator;
+import com.tkisor.nekojs.authoring.AuthoringPaths;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.WorkspaceGenerator;
 
 import java.nio.file.Path;
@@ -13,10 +14,20 @@ public interface ProbeExternalArtifacts {
 
     void generate(Path outputDir) throws Exception;
 
-    ProbeExternalArtifacts DEFAULT = outputDir -> {
-        Path agentsDir = outputDir.getParent().resolve(".github").resolve("agents");
-        AgentTemplateGenerator.generate(agentsDir);
-        WorkspaceGenerator.createWorkspaceConfigs();
+    /** Keeps existing functional-interface implementations source-compatible. */
+    default void generate(Path outputDir, AuthoringPaths authoringPaths) throws Exception {
+        generate(outputDir);
+    }
+
+    ProbeExternalArtifacts DEFAULT = new ProbeExternalArtifacts() {
+        @Override public void generate(Path outputDir) throws Exception {
+            generate(outputDir, AuthoringPaths.resolve(NekoJSPaths.get().gameDir(), AuthoringPaths.DEFAULT_DIRECTORY));
+        }
+
+        @Override public void generate(Path outputDir, AuthoringPaths authoringPaths) throws Exception {
+            AgentTemplateGenerator.generate(authoringPaths.verify(authoringPaths.agents()), authoringPaths.root());
+            WorkspaceGenerator.createWorkspaceConfigs();
+        }
     };
 
     ProbeExternalArtifacts NONE = outputDir -> {};

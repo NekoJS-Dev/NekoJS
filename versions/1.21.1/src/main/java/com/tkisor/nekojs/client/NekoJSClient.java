@@ -14,9 +14,11 @@ import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
 import com.tkisor.nekojs.wrapper.clientdata.ClientDataStore;
 import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
+import net.minecraft.commands.Commands;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
 import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -30,6 +32,9 @@ import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 public class NekoJSClient {
 
     public static void register(IEventBus modEventBus, NekoRuntimeRoot root) {
+        NeoForge.EVENT_BUS.addListener((RegisterClientCommandsEvent event) ->
+                event.getDispatcher().register(Commands.literal("nekojs")
+                        .then(Commands.literal("browse").executes(context -> BrowseCommand.open()))));
         modEventBus.addListener((FMLConstructModEvent event) -> onClientSetup(event, root));
         modEventBus.addListener((RegisterClientReloadListenersEvent event) -> onClientResourceReload(event, root));
         modEventBus.addListener(NekoJSClient::onRegisterEntityRenderers);

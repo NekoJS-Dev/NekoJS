@@ -32,9 +32,12 @@ final class JsxHostLayout {
                 throw new IllegalStateException("[NEKO-8001] JSX host layout rejected: measured and retained node types differ");
             }
             Object previousOffset = node.props.get("scrollOffset");
-            InspectorNode.Rect rect = new InspectorNode.Rect(source.rect().x() + horizontalShift,
-                    source.rect().y() + verticalShift, source.rect().width(), source.rect().height());
-            InspectorNode.Rect ancestralClip = parentClip == null ? source.clip() : parentClip;
+            boolean portal = "dialog".equals(node.type);
+            double effectiveHorizontalShift = portal ? 0 : horizontalShift;
+            double effectiveVerticalShift = portal ? 0 : verticalShift;
+            InspectorNode.Rect rect = new InspectorNode.Rect(source.rect().x() + effectiveHorizontalShift,
+                    source.rect().y() + effectiveVerticalShift, source.rect().width(), source.rect().height());
+            InspectorNode.Rect ancestralClip = portal || parentClip == null ? source.clip() : parentClip;
             InspectorNode.Rect clip = intersect(rect, ancestralClip);
             node.x = (int) Math.round(rect.x());
             node.y = (int) Math.round(rect.y());
@@ -48,8 +51,8 @@ final class JsxHostLayout {
             node.props = new LinkedHashMap<>(source.style());
             node.props.put("visible", source.visible());
             Double offset = source.scrollOffset();
-            double childHorizontalShift = horizontalShift;
-            double childVerticalShift = verticalShift;
+            double childHorizontalShift = effectiveHorizontalShift;
+            double childVerticalShift = effectiveVerticalShift;
             if ("scroll".equals(node.type)) {
                 boolean horizontal = "row".equals(source.style().get("direction"));
                 double scale = "design".equals(source.style().get("coordinateSpace")) ? designScale : 1;
@@ -60,6 +63,7 @@ final class JsxHostLayout {
                 double extent = horizontal ? source.rect().width() : source.rect().height();
                 double contentEnd = origin;
                 for (InspectorNode child : source.children()) {
+                    if ("dialog".equals(child.type())) continue;
                     double end = horizontal ? child.rect().x() + child.rect().width()
                             : child.rect().y() + child.rect().height();
                     contentEnd = Math.max(contentEnd, end + authoredOffset * scale);

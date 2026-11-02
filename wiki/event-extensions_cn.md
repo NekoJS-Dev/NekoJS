@@ -122,7 +122,7 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 MyEvents.PLAYER_GREET.post(new PlayerGreetEvent(player, "你好"));
 
 // dispatch 事件（带 key）
-MyEvents.CUSTOM.post(someIdentifier, new MyCustomEvent(...));
+MyEvents.CUSTOM.post(new MyCustomEvent(...), someIdentifier);
 ```
 
 > `post(...)` 返回 boolean（是否被取消）。**不可取消的总线永远返回 false**，脚本 `return true` 也不会让它变 true——`GROUP.server(name, eventClass)` 走 `EventBusJS.of(type)`，可取消性由 `eventCancellability(type)` 判定，而该判定在 NeoForge 上是「事件类 `implements ICancellableEvent`」（`NeoForgeRuntimeBootstrap`）。上面 `PlayerGreetEvent` 那样的 POJO 因此是不可取消的。

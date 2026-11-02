@@ -2,6 +2,8 @@ package com.tkisor.nekojs.api.catalog;
 
 import com.tkisor.nekojs.api.ScriptTypePredicate;
 
+import java.util.List;
+
 public record EventCatalogEntry(
         String group,
         String name,
@@ -10,8 +12,23 @@ public record EventCatalogEntry(
         Class<?> dispatchKeyType,
         boolean cancellable,
         boolean dispatchable,
-        String snippet
+        String snippet,
+        List<EventCallSignature> callSignatures
 ) {
+    public EventCatalogEntry {
+        callSignatures = List.copyOf(callSignatures);
+    }
+
+    public EventCatalogEntry(String group, String name, ScriptTypePredicate scriptType, Class<?> eventType,
+                             Class<?> dispatchKeyType, boolean cancellable, boolean dispatchable, String snippet) {
+        this(group, name, scriptType, eventType, dispatchKeyType, cancellable, dispatchable, snippet, List.of());
+    }
+
+    public EventCatalogEntry withCallSignatures(List<EventCallSignature> signatures) {
+        return new EventCatalogEntry(group, name, scriptType, eventType, dispatchKeyType, cancellable, dispatchable,
+                snippet, signatures);
+    }
+
     public static EventCatalogEntry of(
             String group,
             String name,

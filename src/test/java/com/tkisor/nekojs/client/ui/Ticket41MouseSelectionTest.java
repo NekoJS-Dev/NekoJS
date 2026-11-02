@@ -348,6 +348,12 @@ class Ticket41MouseSelectionTest {
         public void outline(int left, int top, int right, int bottom, int color) { }
 
         @Override
+        public void enableScissor(int left, int top, int right, int bottom) { }
+
+        @Override
+        public void disableScissor() { }
+
+        @Override
         public void text(Font font, String text, int x, int y, int color, boolean shadow) {
             this.text = text;
             this.textY = y;

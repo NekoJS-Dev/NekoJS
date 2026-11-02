@@ -36,17 +36,18 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
         return List.of(
                 self(),
                 registry("Item"),
+                raw("`${string}[${string}]`"),
                 host(Item.class),
                 host(NekoId.class),
                 object(
-                        Slot.opt("item", registry("Item")),
-                        Slot.opt("id", registry("Item")),
+                        Slot.opt("item", union(registry("Item"), raw("`${string}[${string}]`"))),
+                        Slot.opt("id", union(registry("Item"), raw("`${string}[${string}]`"))),
                         Slot.opt("count", number())));
     }
 
     @Override
     public Optional<String> syntaxDoc() {
-        return Optional.of("item:id | RegistryTypes.Item | $Item | $NekoId | { item?|id?, count? }");
+        return Optional.of("item:id[component=value,!removed] | Nx item:id[components] | item:id | RegistryTypes.Item | $Item | $NekoId | { item?|id?, count? }");
     }
 
     @Override
@@ -88,6 +89,10 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 
     public static ItemStack stringToItemStack(String raw) {
         if (isEmptyStackString(raw)) return ItemStack.EMPTY;
+
+        if (raw.indexOf('[') >= 0) {
+            return ItemStackStrings.parse(raw, ItemStackStringRegistries.current());
+        }
 
         String idText = raw.trim();
         int count = 1;

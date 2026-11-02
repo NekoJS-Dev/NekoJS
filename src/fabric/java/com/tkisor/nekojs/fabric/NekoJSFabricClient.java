@@ -1,6 +1,9 @@
 package com.tkisor.nekojs.fabric;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.client.BrowseCommand;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import com.tkisor.nekojs.client.renderer.NekoEntityRenderers;
 import com.tkisor.nekojs.fabric.event.FabricClientEventBindings;
 import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
@@ -23,6 +26,10 @@ public final class NekoJSFabricClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+                dispatcher.register(ClientCommands.literal("nekojs")
+                        .then(ClientCommands.literal("browse")
+                                .executes(context -> BrowseCommand.open()))));
         LOGGER.info("NekoJS fabric client entrypoint reached.");
         registerScriptEntityRenderers();
         Runnable refreshPackResources = com.tkisor.nekojs.fabric.resource.FabricClientPackResources.register(

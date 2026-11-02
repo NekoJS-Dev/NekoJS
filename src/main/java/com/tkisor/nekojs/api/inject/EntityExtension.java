@@ -24,7 +24,7 @@ public interface EntityExtension extends EntitySpec {
 //? if >=26 {
         return self().entityTags().contains(tag);
 //?} else {
-/*        return self().getTags().contains(tag);
+        /*return self().getTags().contains(tag);
 *///?}
     }
 
@@ -34,7 +34,7 @@ public interface EntityExtension extends EntitySpec {
 //? if >=26 {
             self().kill(serverLevel);
 //?} else {
-/*            self().kill();
+            /*self().kill();
 *///?}
             return true;
         }

@@ -79,7 +79,7 @@ Assembly and lifecycle of GraalJS Polyglot `Context`:
 
 - **`NekoSharedEngine`**: a process-wide singleton Graal `Engine`, shared by all Contexts.
 - **`NekoCoreContext`**: an immutable record containing engine + sandboxConfig + classFilter + errorTracker.
-- **`NekoSandboxFactory`**: a ContextBuilder that creates one Context per ScriptType. It configures `HostAccess`, `ClassFilter`, IO restricted to the game directory, and JS options such as `js.ecmascript-version=latest` and `js.commonjs-require=true`.
+- **`NekoSandboxFactory`**: builds Contexts with `HostAccess`, `ClassFilter`, game-directory filesystem limits and JS options. Ordinary script types own an active generation and may temporarily own a candidate Context during full reload; versioned packs have separate Contexts per pack/source/session. It is not a permanent single Context per ScriptType. `NekoRuntimeRoot` owns the Plugin Runtime, managers and root resources across ordinary generation swaps.
 - **`NekoSharedHostAccess`**: builds `HostAccess` and registers all `JSTypeAdapter` instances as `targetTypeMapping`.
 - **`ClassFilter`**: `Predicate<String>`, blocking high-risk Java classes such as Runtime/Process/ClassLoader/reflection/io/nio/net/polyglot itself.
 
@@ -88,7 +88,7 @@ Assembly and lifecycle of GraalJS Polyglot `Context`:
 
 - **TypeScript**: `NekoTypeScriptCompiler` is a handwritten lexer-based **erasable TS** frontend. It removes type annotations, `type` / `interface`, generics, `as` / `satisfies`, and lowers `enum` / `namespace` to IIFEs.
 - **JSX**: `NekoJsxCompiler` lowers JSX to `__nekoJsxFactory` calls using the classic runtime.
-- **ESM**: `core/module/esm/` is a complete native ESM implementation with its own lexer/parser/linker. Its states progress through NEW, LINKING, LINKED, EVALUATING, and EVALUATED. It supports hot reload through `ModuleReloadCoordinator`.
+- **ESM**: `core/module/esm/` supplies the native lexer/parser/linker/evaluator. `ModuleReloadCoordinator` invalidates generation-owned CJS/ESM identities, links and dependency records for affected modules. This cache operation is not a transactional runtime swap or a filesystem watcher; saving a file alone does not activate changes. See [Commands](commands_us) for full generation reload, legacy file rerun and separate data/resource reload.
 - **Node shims**: `core/node/` supplies Java+JS implementations of fs/path/buffer/crypto/process/timers/util/events/assert/os/test.
 - **`java:` modules**: `NekoModuleResolver` resolves `java:package/path` into synthetic ESM modules.
 

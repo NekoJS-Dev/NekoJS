@@ -24,7 +24,7 @@ public interface PlayerExtension extends PlayerSpec {
 //? if >=26 {
         return Commands.LEVEL_GAMEMASTERS.check(neko$self().permissions());
 //?} else {
-/*        return neko$self().hasPermissions(2);
+        /*return neko$self().hasPermissions(2);
 *///?}
     }
 

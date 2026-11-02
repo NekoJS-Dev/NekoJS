@@ -31,7 +31,7 @@ NekoJS 已注册了大量适配器（见 `src/main/java/com/tkisor/nekojs/js/typ
 | `ComponentAdapter` | `Component` | 字符串、`MutableComponent` |
 | `FluidStackAdapter` / `FluidIngredientAdapter` / `SizedFluidIngredientAdapter` | 流体类型 | 字符串、`{fluid, amount}` |
 | `IdentifierAdapter` | `Identifier`/`ResourceLocation` | 字符串 |
-| `TagKeyAdapter` | `TagKey` | `"#namespace:path"` |
+| `TagKeyAdapter` | `TagKey` | `"namespace:path"`、可选 `#`、`"registry\|tag"` 或 `{type, tag}`（默认物品注册表） |
 | `EntityTypeAdapter` | `EntityType` | 字符串 id |
 | `MobEffectAdapter` / `PotionAdapter` / `ParticleTypeAdapter` / `SoundEventAdapter` / `CreativeModeTabAdapter` / `BlockEntityTypeAdapter` | 各注册表类型 | 字符串 id |
 | `CodecAdapter` | 任意 codec 类型 | 按 codec 解析 |
@@ -64,6 +64,14 @@ NekoJS 已注册了大量适配器（见 `src/main/java/com/tkisor/nekojs/js/typ
 
 <a id="wiki-section-6"></a>
 ## 写一个自定义适配器
+
+下面三种 adapter 是**替代实现**，不要作为同名类一起编译。每个实现都使用同包下单独的 `MyPos.java`：
+
+```java
+package com.example.myaddon;
+
+public record MyPos(int x, int y) {}
+```
 
 <a id="wiki-section-7"></a>
 ### 步骤 1（旧 SPI）：实现 `JSTypeAdapter<T>`
@@ -118,31 +126,34 @@ public class MyPosAdapter implements JSTypeAdapter<MyPos> {
 ### 步骤 2（旧 SPI）：或继承 `AbstractJSTypeAdapter`（模板方法，更省事）
 
 ```java
+package com.example.myaddon;
+
+import com.tkisor.nekojs.api.data.AbstractJSTypeAdapter;
+import graal.graalvm.polyglot.Value;
+
 public class MyPosAdapter extends AbstractJSTypeAdapter<MyPos> {
     @Override public Class<MyPos> getTargetClass() { return MyPos.class; }
 
-    @Override protected boolean acceptNull() { return false; }
-
     @Override
-    protected MyPos fromString(String s) {
-        // 将 "1,2" 转为 MyPos(1,2)
-        String[] parts = s.split(",");
+    protected MyPos fromString(String text) {
+        String[] parts = text.split(",");
         return new MyPos(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
     }
 
     @Override
     protected MyPos fromHostObject(Object host) {
-        // 已是 Java MyPos/Map/等
-        if (host instanceof MyPos p) return p;
-        if (host instanceof java.util.Map<?,?> m) {
-            return new MyPos((int) m.get("x"), (int) m.get("y"));
-        }
-        throw new ValueConversionException("无法转成 MyPos: " + host);
+        return host instanceof MyPos position ? position : null;
     }
 
     @Override
     protected boolean acceptOther(Value value) {
-        return value.isString() || (value.hasMembers() && value.hasMember("x"));
+        return value.hasMembers() && value.hasMember("x") && value.hasMember("y")
+                && value.getMember("x").fitsInInt() && value.getMember("y").fitsInInt();
+    }
+
+    @Override
+    protected MyPos fromOther(Value value) {
+        return new MyPos(value.getMember("x").asInt(), value.getMember("y").asInt());
     }
 }
 ```
@@ -155,6 +166,14 @@ public class MyPosAdapter extends AbstractJSTypeAdapter<MyPos> {
 新 SPI 的基类 `BaseJsTypeAdapter<T>`（同在契约包 `api.data`，无 MC/Graal 依赖）提供同一套模板方法，`supports`/`convert` 已按 `JsValueView` + `ConversionContext` 实现好：
 
 ```java
+package com.example.myaddon;
+
+import com.tkisor.nekojs.api.AdapterInputShape;
+import com.tkisor.nekojs.api.data.BaseJsTypeAdapter;
+import com.tkisor.nekojs.api.data.ConversionPrecedence;
+import com.tkisor.nekojs.api.data.JsValueView;
+import java.util.List;
+
 public class MyPosAdapter extends BaseJsTypeAdapter<MyPos> {
     public MyPosAdapter() {
         super(MyPos.class);
@@ -215,7 +234,7 @@ public void registerAdapters(JSTypeAdapterRegistry registry) {
 
 > `registerAdapters` 的参数是 `JSTypeAdapterRegistry`，它同时有 `register(JSTypeAdapter<T>)` 和 `register(JsTypeAdapter<T>)` 两个重载——上面两代适配器都能直接传进去。
 
-之后任何 Java 方法声明 `void foo(MyPos pos)` 都能从脚本接收 `{x: 1, y: 2}` 或 `"1,2"`。
+注册后，声明 `void foo(MyPos pos)` 的 Java 方法可接收 `{x: 1, y: 2}`。两个基类实现还支持 `"1,2"`；第一个直接实现接口的示例仅接收对象。这些是输入数据形状，不是回调 builder 配置。
 
 <a id="wiki-section-11"></a>
 ## AdapterInputShape（probe 别名）

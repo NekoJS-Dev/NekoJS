@@ -79,7 +79,7 @@ class PainterJSScriptColorBoundaryTest {
         }
     }
 //?} else {
-/*    private static final class RecordingGraphics extends net.minecraft.client.gui.GuiGraphics {
+    /*private static final class RecordingGraphics extends net.minecraft.client.gui.GuiGraphicsExtractor {
         // Records the colors reaching the platform graphics sink (1.21.1 model).
         Integer lastText;
         Integer lastFill;

@@ -10,7 +10,7 @@ NekoJS 同时支持**原生 ESM** 和 **CommonJS**，并且能把 Java 包/类�
 <a id="wiki-section-2"></a>
 ## ESM（推荐）
 
-支持完整的现代 ESM：
+NekoJS 提供原生 ESM 加载器；下列语法与行为不等于完整的 Node.js 或浏览器兼容性：
 
 ```javascript
 // math_utils.mjs
@@ -57,7 +57,7 @@ ServerEvents.tickPre(event => {
 })
 ```
 
-`require()` 走 GraalJS 的 CommonJS 实现，`js.commonjs-require=true`，cwd 是 `nekojs/` 根目录。
+脚本入口及其依赖由 NekoJS 模块加载器、解析器与 generation 所属缓存处理。Context 也启用了工作目录为 `nekojs/` 的 GraalJS CommonJS 支持，但该选项本身不能说明 NekoJS 的依赖身份或重载行为。相对 import/require 从导入模块的位置解析。
 
 <a id="wiki-section-4"></a>
 ## 扩展名与模块模式
@@ -66,15 +66,17 @@ ServerEvents.tickPre(event => {
 
 | 扩展名 | 模块模式 |
 |---|---|
-| `.mjs` | 强制 ESM |
+| `.mjs` | `enableEsmAuthoring` 开启时请求 ESM |
 | `.cjs` | 强制 CJS |
-| `.js` | `AUTO`——按内容判定（通常按 ESM 处理；`nekojs/config/engine.toml` 的 `enableEsmAuthoring` 可关掉 ESM 改写，此时退回纯 CommonJS） |
+| `.js` | `AUTO`：编译结果具有模块语法时选 ESM，非模块程序选 CommonJS |
 | `.ts` | 可擦除 TypeScript（擦除后按上面规则，`AUTO`） |
 | `.jsx`/`.tsx` | JSX lowering（classic runtime），模块模式同 `AUTO` |
 
-改不了这套映射：`.cjs` 里写 `export` 不会因为你希望它是 ESM 就变成 ESM。而目录名（`server_scripts` / `client_scripts` / `startup_scripts` / `test_scripts`）与 `nekojs/` 根同样是硬编码的（`NekoJSPaths`），没有配置项可以改。
+`enableEsmAuthoring=false` 会让 `.mjs` 也走 CommonJS 准备路径，并不提供将 import/export 自动改写为 CommonJS 的兼容转换。开启 ESM 时，`.cjs` 里写 `export` 不会因为你希望它是 ESM 就变成 ESM。而目录名（`server_scripts` / `client_scripts` / `startup_scripts` / `test_scripts`）与 `nekojs/` 根同样是硬编码的（`NekoJSPaths`），没有配置项可以改。
 
 详见 [TypeScript 与 JSX](typescript-and-jsx_cn)。
+
+模块缓存与依赖记录属于脚本 generation。显式旧式单文件重载会使改动模块及已知受影响的依赖或入口失效，然后在活动 Context 中重新执行入口；重跑失败不会撤销副作用。完整代重载使用新的候选 Context 与缓存，在提交后释放旧代。不要把旧代 namespace 或 exports 引用当作持久状态保留。仅保存模块不会自动重载。旧式脚本根目录下的辅助模块也会作为入口被发现，因此辅助模块顶层应避免注册事件或执行本应只运行一次的副作用。版本化包内文件要求包或类型重载，见[命令](commands_cn)与[脚本包](script-packs_cn)。
 
 <a id="wiki-section-5"></a>
 ## 引用 npm 依赖
@@ -82,16 +84,21 @@ ServerEvents.tickPre(event => {
 把**纯 JS** 的 npm 包放进 `nekojs/node_modules/`，然后像在 Node 里一样 `require`/`import`：
 
 ```javascript
-// 假设你装了 lodash 到 nekojs/node_modules/lodash/
-const _ = require('lodash')
-console.info(_.chunk([1,2,3,4], 2))   // [[1,2],[3,4]]
+// nekojs/node_modules/greeting/index.cjs
+module.exports = name => `Hello, ${name}!`
+```
+
+```javascript
+// server_scripts/use_greeting.cjs
+const greet = require('greeting/index.cjs')
+console.info(greet('NekoJS')) // Hello, NekoJS!
 ```
 
 <a id="wiki-section-6"></a>
 ### 限制
 
 - 注意：**只支持纯 JS 包**。包含原生 bindings（C/C++ 编译产物）的包**不能用**（如 `node-sass`、`sharp`、`better-sqlite3`）。
-- 这是 shim，**不等于完整 Node.js 运行时**。能用的核心模块见 [Node.js 兼容](nodejs-compatibility_cn)。
+- 这是 shim，**不等于完整 Node.js 运行时**。能用的核心模块见 [Node.js 兼容](nodejs-compatibility_cn)。纯 JS 不保证兼容：未实现 package.json `main` 或 `exports` 解析，因此示例提供了完整模块及其明确入口。同步 `require()` 会拒绝尚未完成求值且含顶层 await 或异步静态依赖的 ESM，应改用 `import()`。
 - 文件访问限制在游戏目录内，有符号链接逃逸检查。
 
 <a id="wiki-section-7"></a>
@@ -161,7 +168,7 @@ NekoJS 限制脚本访问范围：
 - **Java 类**：高危类被过滤（`java.lang.Runtime`、`Process`、`ClassLoader`、`System`、`java.io.*`、`java.nio.*`、反射、net、lwjgl、polyglot 本身，以及 `java.awt`/`javax.swing`/`javax.imageio`、`javax.naming`、`java.rmi`、`java.sql`/`javax.sql`、`java.lang.Module`、`org.graalvm`/`com.oracle.truffle`、NekoJS 内部实现 `com.tkisor.nekojs.core` 等）。具体黑名单见 `common/.../core/fs/ClassFilter.java`。
 - **文件系统**：访问范围限制在游戏目录内，符号链接逃逸检查。
 - **配置**：`nekojs/config/engine.toml`（与 probe.toml 同目录；旧 `config/nekojs-engine.toml` 仅作只读回退）可调 `allowThreads`、`allowReflection`、`allowAsm`、`enableEsmAuthoring` 等。
-- **失控保护**：`scriptRunawayTimeoutSeconds`（默认 0 禁用；建议显式开启，如 10）——同步脚本持续执行超过该秒数未让出（判定为失控循环，如 `while(true){}`）即中止并自动重建脚本环境；每次让出（事件间隙/长宿主调用）都会重新计时，长驻环境无论累计执行多少语句都不会被误杀。另有可选的 `scriptStatementLimit`（**默认 0 禁用**）：单个脚本源连续执行过的语句总量硬上限，仅在需要硬性预算时启用。
+- **失控保护**：`scriptRunawayTimeoutSeconds` 与 `scriptStatementLimit` 是可选执行预算，默认均为 0（禁用）。watchdog 终止可能隔离活动代；恢复需要显式完整重载，不能靠单文件重跑，也不会自动重建。宿主调用与任意外部副作用不会回滚。
 - **HostAccess 边界**：按名黑名单只拦截 `Java.type` 一类的**类查找**；Java 方法返回值的对象图由 Graal `HostAccess` 控制（当前 `HostAccess.ALL`），黑名单类的实例仍可能经方法返回值进入脚本。
 
 > 脚本仍应视为**半可信代码**——不应运行不受信任的第三方脚本，多人服务器里用网络同步功能时尤其如此。
@@ -196,13 +203,13 @@ nekojs/server_scripts/
 
 ```javascript
 // lib/constants.js
-export const ORES = ['minecraft:iron_ore', 'minecraft:gold_ore', 'minecraft:diamond_ore']
+export const ORES = ['minecraft:iron_ore', 'minecraft:gold_ore']
 ```
 
 ```javascript
 // lib/recipe_helpers.js
 export function dustify(event, ore, output) {
-  event.recipes.minecraft.smelting(output, ore).id(`nekojs:dust_${ore.split(':')[1]}`)
+  event.smelting(Item.of(output), Ingredient.of(ore)).id(`nekojs:smelt_${ore.split(':')[1]}`)
 }
 ```
 

@@ -100,7 +100,7 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
 //? if >=26 {
         return registry.get(tagKey)
 //?} else {
-/*        return registry.getTag(tagKey)
+        /*return registry.getTag(tagKey)
 *///?}
                 .map(holders -> holders.stream()
                         .map(holder -> holder.unwrapKey()
@@ -178,7 +178,7 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
 //? if >=26 {
         return REGISTRY_ACCESS.lookup((ResourceKey) key);
 //?} else {
-/*        return REGISTRY_ACCESS.registry((ResourceKey) key);
+        /*return REGISTRY_ACCESS.registry((ResourceKey) key);
 *///?}
     }
 

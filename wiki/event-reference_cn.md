@@ -25,19 +25,24 @@ PlayerEvents.loggedIn(event => { /* ... */ })
 ## 事件监听基本形式
 
 ```javascript
-// 普通事件
-事件组.事件名(event => { /* 处理逻辑 */ })
+// Ordinary event: listener, or priority + listener
+PlayerEvents.loggedIn('HIGH', event => {
+  console.info('Player logged in')
+})
 
-// 分发事件（dispatched）：第一个参数是「分发键」，比如方块/物品/实体类型的 id
-BlockEvents.broken('minecraft:stone', event => { /* 只在石头被破坏时触发 */ })
-ItemEvents.foodEaten('minecraft:apple', event => { /* 只在吃苹果时触发 */ })
-EntityEvents.death('minecraft:zombie', event => { /* 只在僵尸死亡时触发 */ })
+// Dispatch event: key + listener, or priority + key + listener
+BlockEvents.broken('HIGH', 'minecraft:stone', event => {
+  console.info('Blocked stone breaking')
+  return true
+})
 
-// 可取消的事件：return true 取消
-BlockEvents.broken('minecraft:stone', event => {
-  if (某种条件) return true   // 取消方块破坏
+// Dispatch event without a key: listen to all dispatched values
+ItemEvents.foodEaten(event => {
+  console.info('An item was eaten')
 })
 ```
+
+优先级为 `HIGHEST`、`HIGH`、`NORMAL`、`LOW`、`LOWEST`（不区分大小写）；省略时为 `NORMAL`。分发事件的 `eventBus('HIGH', listener)` 中，`HIGH` 是**分发键**而不是优先级；显式优先级需要完整的 `(priority, key, listener)` 三个参数。只有可取消总线才能通过返回 `true` 取消。事件使用 `event.player` 等可读属性；属性存在并不代表可以赋值，也不要发明 getter。见 [Script API 风格](script-api-style_cn)。
 
 > **重要**：事件监听必须在**顶层脚本作用域**注册（脚本加载阶段）。不能在事件回调内部再注册事件，会报错。
 
@@ -52,6 +57,8 @@ BlockEvents.broken('minecraft:stone', event => {
 | `tickPost` | `ServerTickEvent.Post` | 每个服务端 tick 之后 |
 | **`recipes`** | [`RecipeEventJS`](recipe-system_cn) | **配方修改**（最常用） |
 | `afterRecipes` | `RecipeEventJS` | 配方数据整批解析并提交到 `RecipeManager` 之后触发（后处理/查询；此阶段的 JSON 修改不再生效，修改请在 `recipes` 中完成） |
+| `tradeDeclaration` | `VillagerTradeDeclarationEventJS` | 普通 SERVER 总线，收集交易候选定义，不是按 key 分发。 |
+| `tradeReload` | `VillagerTradeReloadEventJS` | 普通 SERVER 总线，交易候选 reload 生命周期。 |
 | `aboutToStart` | `ServerAboutToStartEvent` | 服务端即将启动 |
 | `starting` | `ServerStartingEvent` | 服务端启动中 |
 | `started` | `ServerStartedEvent` | 服务端启动完成（注册表已就绪，可安全调用 `Item.of(...)`） |
@@ -75,6 +82,8 @@ ServerEvents.tags('minecraft:item', event => {
 ```
 
 > 上表中 `lootTables`、`tags` 和 `generateData` 当前仅在 NeoForge 注册。Fabric 的 `ServerEvents` 主要提供 `recipes`、`afterRecipes` 和已移植的生命周期事件；Fabric 脚本不要调用这些 NeoForge 事件。
+
+Fabric 也注册 `tradeDeclaration`/`tradeReload`，但当前 unavailable trade-domain owner 在 preflight 显式拒绝收集到的整批声明。可订阅不代表交易修改成功；失败会保留旧 active，不是静默 no-op。
 
 <a id="wiki-section-4"></a>
 ### ServerEvents.lootTables —— 战利品表 JSON 管理
@@ -755,7 +764,7 @@ ClientEvents.hudRender('boss_bar', { layer: 'normal', priority: 0 }, (ctx, gui) 
   ctx.fillRect(8, 20, Math.floor(120 * hp.hp), 6, 0xFF5DBB63)
 })
 
-// client_scripts/lines.js —— 世界空间线条/线框（26.2 上优雅降级为跳过）
+// client_scripts/lines.js —— 世界空间线条/线框（26.2 使用 staged 提交）
 ClientEvents.worldRender('quest_path', { layer: 'normal', priority: 0 }, ctx => {
   ctx.box(10, 70, 10, 12, 72, 12, 0xFF00FF00)
   ctx.line(0, 64, 0, 10, 70, 10, 0xFFFFFF00, 2)
@@ -978,4 +987,4 @@ NekoJS 的事件契约由当前启动时注册的 `EventGroup` 反射构建，�
 
 ---
 
-[上一篇: Python 特性清单](python-feature-support_cn) · [目录](Home) · [下一篇: 命令](commands_cn)
+[上一篇: Python 特性清单](python-feature-support_cn) · [目录](Home) · [下一篇: AI 辅助脚本编写](ai-support_cn)

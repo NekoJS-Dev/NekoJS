@@ -47,7 +47,7 @@ public final class NekoJSCommands {
     public static void register(RegisterCommandsEvent event, NekoRuntimeRoot root) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 
-        dispatcher.register(
+        dispatcher.register(InformationCommands.addTo(
                 Commands.literal("nekojs")
                         .requires(source -> source.hasPermission(2))
                         .executes(context -> sendRootUsage(context.getSource(), dispatcher))
@@ -99,8 +99,9 @@ public final class NekoJSCommands {
                                 .then(Commands.argument("address", AddressArgument.address())
                                         .executes(context -> trustServer(context.getSource(), AddressArgument.getAddress(context, "address")))))
 
-                        .then(probeCommand())
-        );
+                        .then(probeCommand()),
+                NeoForgeInformationCommands::containedFluid
+        ));
     }
 
     /** Bare /nekojs: list the registered subtree instead of brigadier's "Unknown or incomplete command". */

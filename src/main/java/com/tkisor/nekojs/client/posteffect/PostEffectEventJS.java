@@ -6,6 +6,12 @@
 package com.tkisor.nekojs.client.posteffect;
 
 import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.HideFromJS;
+import graal.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.proxy.ProxyExecutable;
+import graal.graalvm.polyglot.proxy.ProxyObject;
+import com.tkisor.nekojs.api.annotation.ScriptInput;
+import java.util.function.Consumer;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.core.posteffect.PostEffectCandidatePlan;
@@ -40,7 +46,7 @@ import java.util.Map;
  * </pre>
  */
 @Doc("Post-effect declaration event: register/unregister runtime post-effect chains for the next client generation.")
-public final class PostEffectEventJS {
+public final class PostEffectEventJS implements ProxyObject {
 
     private final PostEffectCandidatePlan plan;
 
@@ -69,18 +75,115 @@ public final class PostEffectEventJS {
     @Param(name = "id", value = "effect id, e.g. 'nekojs:my_invert'")
     @Param(name = "options", value = "{ chainJson?: string, fragmentShader?: string, fragmentShaderId?: string, fragmentShaders?: object, vertexShaders?: object, uniformsJson?: string, blurRadius?: number, blurRounds?: number }")
     @Return("true when the declaration was collected; false when the payload is invalid (fails the whole batch)")
-    public boolean register(String id, Map<String, Object> options) {
-        Identifier effectId = Identifier.tryParse(id == null ? "" : id);
-        if (effectId == null) {
-            plan.fail("invalid effect id: " + id);
+    public boolean register(String id, @ScriptInput(PostEffectOptions.class) Map<String, Object> options) {
+        try {
+            return collect(id, PostEffectOptions.SCHEMA.validate(options));
+        } catch (RuntimeException invalid) {
+            plan.fail("[NEKO-4060] Invalid post-effect declaration for " + id + ": " + invalid.getMessage());
             return false;
         }
-        Map<String, Object> opts = options == null ? Map.of() : options;
+    }
+
+    /** Collects a callback-last declaration; captured builders are sealed when the callback exits. */
+    @Doc("Declares an inert post-effect chain using callback-scoped builder properties.")
+    @Param(name = "id", value = "effect id")
+    @Param(name = "builder", value = "declaration configuration; invoked exactly once before collection")
+    @Return("true when collected; false when invalid (fails the whole candidate)")
+    public boolean register(String id, Consumer<PostEffectBuilder> builder) {
+        PostEffectBuilder options = new PostEffectBuilder();
+        try {
+            if (builder == null) throw new IllegalArgumentException("[NEKO-4061] Post-effect builder callback is required");
+            builder.accept(options);
+            return collect(id, options.finish());
+        } catch (RuntimeException invalid) {
+            plan.fail("[NEKO-4061] Invalid post-effect builder for " + id + ": " + invalid.getMessage());
+            return false;
+        } finally {
+            options.seal();
+        }
+    }
+
+    /** Routes guest functions before object conversion; Java overload selection otherwise treats them as maps. */
+    private Object invokeGuest(String method, Value[] arguments) {
+        try {
+            int expected = switch (method) {
+                case "register" -> 2;
+                case "unregister" -> 1;
+                default -> 0;
+            };
+            if (arguments.length != expected) {
+                throw new IllegalArgumentException("[NEKO-4061] Invalid argument count for post-effect " + method);
+            }
+            if (method.equals("getDeclaredCount")) return getDeclaredCount();
+            if (!arguments[0].isString()) {
+                throw new IllegalArgumentException("[NEKO-4061] Post-effect id must be a string");
+            }
+            String id = arguments[0].asString();
+            if (method.equals("unregister")) return unregister(id);
+            Value input = arguments[1];
+            if (input.canExecute()) return register(id, builder -> input.executeVoid(builder));
+            return register(id, PostEffectOptions.SCHEMA.read(input));
+        } catch (RuntimeException invalid) {
+            plan.fail("[NEKO-4061] Invalid post-effect " + method + " invocation: " + invalid.getMessage());
+            return false;
+        }
+    }
+
+    @HideFromJS
+    @Override
+    public Object getMember(String name) {
+        return switch (name) {
+            case "register", "unregister", "getDeclaredCount" ->
+                    (ProxyExecutable) arguments -> invokeGuest(name, arguments);
+            case "declaredCount" -> getDeclaredCount();
+            default -> null;
+        };
+    }
+
+    @HideFromJS
+    @Override
+    public Object getMemberKeys() { return new String[] {"register", "unregister", "getDeclaredCount", "declaredCount"}; }
+
+    @HideFromJS
+    @Override
+    public boolean hasMember(String name) {
+        return switch (name) {
+            case "register", "unregister", "getDeclaredCount", "declaredCount" -> true;
+            default -> false;
+        };
+    }
+
+    @HideFromJS
+    @Override
+    public void putMember(String name, Value value) {
+        String message = "[NEKO-4061] Post-effect event members are read-only: " + name;
+        plan.fail(message);
+        throw new IllegalArgumentException(message);
+    }
+
+    @HideFromJS
+    @Override
+    public boolean removeMember(String name) {
+        String message = "[NEKO-4061] Post-effect event members cannot be deleted: " + name;
+        plan.fail(message);
+        throw new IllegalArgumentException(message);
+    }
+
+    private boolean collect(String id, Map<String, Object> opts) {
+        Identifier effectId = Identifier.tryParse(id == null ? "" : id);
+        if (effectId == null) {
+            plan.fail("[NEKO-4060] Invalid effect id: " + id);
+            return false;
+        }
 
         String chainJson = asString(opts.get("chainJson"));
-        Map<Identifier, String> fragmentShaders = PostEffectManager.parseShaderMap(asStringMap(opts.get("fragmentShaders")));
-        Map<Identifier, String> vertexShaders = PostEffectManager.parseShaderMap(asStringMap(opts.get("vertexShaders")));
+        Map<Identifier, String> fragmentShaders = parseShaderMap(asStringMap(opts.get("fragmentShaders")));
+        Map<Identifier, String> vertexShaders = parseShaderMap(asStringMap(opts.get("vertexShaders")));
 
+        String explicitShaderId = asString(opts.get("fragmentShaderId"));
+        if (explicitShaderId != null && Identifier.tryParse(explicitShaderId) == null) {
+            throw new IllegalArgumentException("[NEKO-4060] Invalid fragment shader id: " + explicitShaderId);
+        }
         if (chainJson == null) {
             String fragmentShader = asString(opts.get("fragmentShader"));
             Number blurRadius = asNumber(opts.get("blurRadius"));
@@ -91,7 +194,7 @@ public final class PostEffectEventJS {
                 }
                 Identifier parsedShaderId = Identifier.tryParse(shaderId);
                 if (parsedShaderId == null) {
-                    plan.fail("invalid fragment shader id for " + effectId + ": " + shaderId);
+                    plan.fail("[NEKO-4060] Invalid fragment shader id for " + effectId + ": " + shaderId);
                     return false;
                 }
                 fragmentShaders = new LinkedHashMap<>(fragmentShaders);
@@ -102,7 +205,7 @@ public final class PostEffectEventJS {
                 chainJson = PostEffectChainJson.boxBlurChainModern(
                         blurRadius.doubleValue(), rounds == null ? 1 : rounds.intValue());
             } else {
-                plan.fail("post-effect declaration for " + effectId
+                plan.fail("[NEKO-4060] Post-effect declaration for " + effectId
                         + " needs chainJson, fragmentShader or blurRadius");
                 return false;
             }
@@ -124,7 +227,7 @@ public final class PostEffectEventJS {
     public boolean unregister(String id) {
         Identifier effectId = Identifier.tryParse(id == null ? "" : id);
         if (effectId == null) {
-            plan.fail("invalid effect id: " + id);
+            plan.fail("[NEKO-4060] Invalid effect id: " + id);
             return false;
         }
         plan.retireDeclared(effectId.toString());
@@ -161,6 +264,16 @@ public final class PostEffectEventJS {
             return result;
         }
         return null;
+    }
+
+    private static Map<Identifier, String> parseShaderMap(@Nullable Map<String, String> sources) {
+        Map<Identifier, String> result = new LinkedHashMap<>();
+        if (sources != null) sources.forEach((id, source) -> {
+            Identifier parsed = Identifier.tryParse(id);
+            if (parsed == null) throw new IllegalArgumentException("[NEKO-4060] Invalid shader id: " + id);
+            result.put(parsed, source);
+        });
+        return result;
     }
 
     private static Map<String, String> toIdMap(Map<Identifier, String> sources) {

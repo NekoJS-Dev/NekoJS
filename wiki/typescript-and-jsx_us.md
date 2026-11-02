@@ -115,7 +115,7 @@ NekoJS includes JSX lowering and defaults to the **classic runtime**: JSX elemen
 | String/boolean/expression attributes, spread attributes `{...obj}` | Supported |
 | Text children, expression children `{expr}`, nested elements | Supported |
 | Uppercase components `<Foo/>` (as references), lowercase `<div/>` (as strings), member expressions `<Foo.Bar/>` | Supported |
-| **HTML entity decoding** (`&amp;` becomes `&`, `&lt;` becomes `<`, `&#39;` becomes `'`, `&quot;` becomes `"`, plus numeric/hexadecimal entities) | Decoded in element text; string attribute values are retained unchanged |
+| **HTML entity decoding** (`&amp;` becomes `&`, `&lt;` becomes `<`, `&#39;` becomes `'`, `&quot;` becomes `"`, plus numeric/hexadecimal entities) | Supported entities decode in both element text and quoted string attribute values |
 | **Namespaced tags** `<svg:rect/>` | Supported, the entire name is passed through to the factory |
 | **Generic components** `<Foo<number>/>` (TSX) | Supported, the JSX layer passes through `Foo<number>` and TS erasure removes `<number>` |
 | Nested JSX inside expressions (`{cond && <X/>}`, `{arr.map(x => <X/>)}`) | Supported |
@@ -159,6 +159,8 @@ const element = <Panel title="状态">内容</Panel>
 ```
 
 The automatic runtime puts JSX children in `props.children`: zero or one child uses `jsx`, multiple children use `jsxs`, and fragments use `Fragment`. If you need fully custom rendering behavior, use the default classic runtime and provide `globalThis.__nekoJsxFactory` / `globalThis.__nekoJsxFragment`.
+
+A JSX `key` is extracted into the automatic runtime call's third argument; in classic lowering it remains a prop. Syntax acceptance is not a promise that the selected host understands a tag/prop. The built-in Screen host has its own fixed primitive/prop allowlist (NeoForge 26.x only); a custom classic factory can instead produce ordinary data. Use [Script API style](script-api-style_us) to distinguish data/props objects from callback-last NekoJS definition builders; see [Client rendering](client-rendering_us) for non-JSX drawing.
 
 > JSX itself handles only syntax lowering and VNode generation. To create an interactive Minecraft Screen, use [JSX client UI](jsx-client-ui_us). Ordinary JSX can still describe custom data trees or rendering configuration; it does not create a Screen automatically.
 

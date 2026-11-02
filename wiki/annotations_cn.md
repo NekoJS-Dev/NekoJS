@@ -18,14 +18,14 @@
 | `@RemapByPrefix({"get", "is"})` | TYPE/METHOD/FIELD | 按前缀批量重命名 |
 | `@HideFromJS` | TYPE/METHOD/FIELD | 对 JS 不可见 |
 | `@CalledByDynamicCode` | TYPE/METHOD/CONSTRUCTOR | 标记被生成的 JS 调用（`RetentionPolicy.SOURCE`，IDE 不报 unused） |
-| `@PlatformAvailability(Scope.ALL\|NF_ONLY\|CR_ONLY)` | TYPE/METHOD | Spec 接口的平台可用性声明 |
+| `@PlatformAvailability(Scope.ALL\|NF_ONLY\|NF26_ONLY\|CR_ONLY)` | TYPE/METHOD | Spec 接口的平台可用性声明 |
 | `@Doc("...")` | TYPE/METHOD/CONSTRUCTOR/FIELD | 英文文档，渲染为 probe `.d.ts` JSDoc；可重复 |
 | `@Param(name, value)` | METHOD/CONSTRUCTOR | 参数文档 → `@param` 行；可重复 |
 | `@Return("...")` | METHOD | 返回值文档 → `@returns` 行 |
 | `@Overload({"id: string"})` | METHOD/CONSTRUCTOR | 手写 `.d.ts` 附加签名；可重复 |
 | `@DeprecatedNekojs` | TYPE/METHOD/CONSTRUCTOR/FIELD | 脚本面弃用 → JSDoc `@deprecated`（编辑器划线） |
 
-所有注解都是 `@Retention(RUNTIME)`（除 `@CalledByDynamicCode` 是 `SOURCE`）+ `@Documented`。
+除 `@CalledByDynamicCode` 使用 `SOURCE` 外，保留策略为 `RUNTIME`。并非每个注解都有 `@Documented`；命名/可见性/插件/平台注解不能一概而论，该元注解也不决定脚本可调用性。
 
 <a id="wiki-section-3"></a>
 ## 哪些注解有强制力
@@ -39,7 +39,7 @@
 | 只影响生成的文档 | `@Doc`、`@Param`、`@Return`、`@Overload`、`@DeprecatedNekojs` | 不写就是 JSDoc 为空 / 无附加签名。对能不能调用毫无影响；`@Overload` 会影响类型检查（多了可用的签名） |
 | 完全无运行时消费 | `@CalledByDynamicCode` | `RetentionPolicy.SOURCE`，只为了让 IDE 不报 unused。漏标不影响任何行为 |
 
-`@RegisterNekoJSPlugin` 是唯一「必须存在」的那个：平台加载器只扫描带它的类（见 [插件开发](plugin-development_cn)）。
+`@RegisterNekoJSPlugin` 用于 NeoForge 注解发现；Fabric addon 需要 manifest 的 `nekojs` entrypoint，共享管理器允许缺失注解元数据。见[插件开发](plugin-development_cn)。
 
 ---
 
@@ -65,10 +65,10 @@ public class FooJS {
 <a id="wiki-section-6"></a>
 ## `@RemapByPrefix({"get", "is"})`
 
-按前缀批量重命名一个类里的成员。`value()` 是要**剥离**的前缀列表。常用于把 `getXXX`/`isXXX` 转成属性式名，以及 spec 接口的 `neko$` 前缀映射：
+剥离 `value()` 中的前缀，但**保留剩余部分的大小写**：`getX` 变成 `X`，不是 `x`。这是成员重命名，不是 Bean 属性别名生成；需要精确的 `x` 名称时使用逐成员的 `@Remap("x")`。另一用途是剥离 Spec 接口的 `neko$` 前缀；见 [Script API 风格](script-api-style_cn)。
 
 ```java
-@RemapByPrefix({"get", "is"})   // 将 getX → x、isX → x
+@RemapByPrefix({"get", "is"})   // Strip getX to X and isX to X; casing is preserved
 public class FooJS { ... }
 
 // Spec 接口模式：neko$ 前缀在平台 Extension 上批量剥离为 JS 名

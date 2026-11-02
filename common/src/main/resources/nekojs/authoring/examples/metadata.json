@@ -1,0 +1,357 @@
+{
+  "schemaVersion": 1,
+  "examples": [
+    {
+      "id": "greeting",
+      "file": "greeting.js",
+      "scriptType": "SERVER",
+      "language": "javascript",
+      "verification": "isolated-contract",
+      "requires": [
+        "console.info"
+      ],
+      "install": [
+        {
+          "file": "greeting.js",
+          "destination": "nekojs/server_scripts/authoring-examples/greeting.js"
+        }
+      ],
+      "trigger": "/nekojs reload server",
+      "expected": "Exactly one authoring-load message is logged per successful script execution.",
+      "assertion": "The isolated console captures one exact load message.",
+      "cleanup": "Remove this script and reload SERVER."
+    },
+    {
+      "id": "event-subscription",
+      "file": "event-subscription.js",
+      "scriptType": "SERVER",
+      "language": "javascript",
+      "verification": "isolated-contract",
+      "requires": [
+        "ServerEvents.recipes",
+        "console.info"
+      ],
+      "install": [
+        {
+          "file": "event-subscription.js",
+          "destination": "nekojs/server_scripts/authoring-examples/event-subscription.js"
+        }
+      ],
+      "trigger": "/nekojs reload server; wait for recipe processing to finish.",
+      "expected": "One message when the recipe callback fires; no recipe is changed.",
+      "assertion": "One callback is registered; logging is deferred until it is invoked.",
+      "cleanup": "Remove this script and reload SERVER."
+    },
+    {
+      "id": "player-login",
+      "file": "server/player-login.js",
+      "scriptType": "SERVER",
+      "language": "javascript",
+      "verification": "isolated-contract",
+      "requires": [
+        "PlayerEvents.loggedIn",
+        "event.player",
+        "player.sendMessage"
+      ],
+      "install": [
+        {
+          "file": "server/player-login.js",
+          "destination": "nekojs/server_scripts/authoring-examples/player-login.js"
+        }
+      ],
+      "trigger": "/nekojs reload server, then log in or reconnect.",
+      "expected": "Each future login receives Welcome to NekoJS! once.",
+      "assertion": "The callback reads the player Bean property and sends the exact greeting once.",
+      "cleanup": "Remove this script and reload SERVER; existing players are not retrospectively greeted."
+    },
+    {
+      "id": "recipes",
+      "file": "server/recipes.js",
+      "scriptType": "SERVER",
+      "language": "javascript",
+      "verification": "isolated-contract",
+      "requires": [
+        "ServerEvents.recipes",
+        "Item.of",
+        "Ingredient.of",
+        "event.remove",
+        "event.shaped",
+        "event.shapeless",
+        "event.smelting",
+        "RecipeJsonBuilder.id"
+      ],
+      "install": [
+        {
+          "file": "server/recipes.js",
+          "destination": "nekojs/server_scripts/authoring-examples/recipes.js"
+        }
+      ],
+      "trigger": "/nekojs reload server; wait for script and recipe processing completion.",
+      "expected": "The vanilla stick recipe is removed; two oak planks vertically produce four sticks; two gravel produce flint; sand smelts to glass with 0.1 XP and 200 ticks under three explicit example recipe IDs.",
+      "assertion": "The fixture records one precise removal and three builders with exact inputs, counts, patterns, XP, time and IDs.",
+      "cleanup": "In a disposable world remove this script and reload SERVER; verify vanilla stick recipe is restored and the three example IDs disappear."
+    },
+    {
+      "id": "item-tags",
+      "file": "server/item-tags.js",
+      "scriptType": "SERVER",
+      "language": "javascript",
+      "verification": "isolated-contract",
+      "requires": [
+        "NeoForge tag-reload path",
+        "ServerEvents.tags",
+        "minecraft:item",
+        "TagEventJS.add",
+        "TagEventJS.remove"
+      ],
+      "install": [
+        {
+          "file": "server/item-tags.js",
+          "destination": "nekojs/server_scripts/authoring-examples/item-tags.js"
+        }
+      ],
+      "trigger": "/nekojs reload server, then vanilla /reload; wait for both to finish.",
+      "expected": "The item tag nekojs_example:stones includes stone, not granite, after datapack tag rebuilding.",
+      "assertion": "The callback targets the item registry and queues add stone, add granite and remove granite with plain IDs.",
+      "cleanup": "Remove this script, reload SERVER, then /reload; verify the example tag no longer gains these entries."
+    },
+    {
+      "id": "block-tags",
+      "file": "server/block-tags.js",
+      "scriptType": "SERVER",
+      "language": "javascript",
+      "verification": "isolated-contract",
+      "requires": [
+        "NeoForge tag-reload path",
+        "ServerEvents.tags",
+        "minecraft:block",
+        "TagEventJS.add"
+      ],
+      "install": [
+        {
+          "file": "server/block-tags.js",
+          "destination": "nekojs/server_scripts/authoring-examples/block-tags.js"
+        }
+      ],
+      "trigger": "/nekojs reload server, then vanilla /reload; wait for both to finish.",
+      "expected": "The block tag nekojs_example:stones includes stone independently of the same-named item tag.",
+      "assertion": "The callback targets the block registry and queues one plain stone ID.",
+      "cleanup": "Remove this script, reload SERVER, then /reload; inspect the block tag separately."
+    },
+    {
+      "id": "registry",
+      "file": "startup/registry.js",
+      "scriptType": "STARTUP",
+      "language": "javascript",
+      "verification": "isolated-contract",
+      "requires": [
+        "RegistryEvents.register",
+        "event.item",
+        "event.block",
+        "ItemBuilder.maxStackSize",
+        "ItemBuilder.rarity",
+        "BlockBuilder.hardness",
+        "BlockBuilder.resistance",
+        "BlockBuilder.lightLevel",
+        "matching client and server definitions"
+      ],
+      "install": [
+        {
+          "file": "startup/registry.js",
+          "destination": "nekojs/startup_scripts/authoring-examples/registry.js"
+        }
+      ],
+      "trigger": "Restart the entire game/server process with this script installed; do not use startup reload.",
+      "expected": "The example ruby has stack limit 16 and rare rarity; ruby_block has hardness 2, resistance 6, light 3 and an automatically derived same-ID BlockItem. Assets, loot, models and localization are not supplied.",
+      "assertion": "Two configuration-last builders receive the exact properties and distinct IDs; no duplicate item is explicitly registered for the block.",
+      "cleanup": "Discard the disposable world before removing registered content; removing definitions from an existing used world is not a safe migration."
+    },
+    {
+      "id": "item-components",
+      "file": "server/item-components.js",
+      "scriptType": "SERVER",
+      "language": "javascript",
+      "verification": "isolated-contract",
+      "requires": [
+        "Item.of(String,int)",
+        "component item-string parser",
+        "console.info"
+      ],
+      "install": [
+        {
+          "file": "server/item-components.js",
+          "destination": "nekojs/server_scripts/authoring-examples/item-components.js"
+        }
+      ],
+      "trigger": "/nekojs reload server on an instance supporting the component syntax.",
+      "expected": "An in-memory iron sword with damage 2 and an in-memory stone stack with count 4 are created and logged; nothing is given to players.",
+      "assertion": "The fixture checks the exact component string, explicit constructor counts and four log calls; the real registry/codec still requires game acceptance.",
+      "cleanup": "Remove this script and reload SERVER; no inventory or world data is written."
+    },
+    {
+      "id": "state-and-timer",
+      "file": "server/state-and-timer.js",
+      "scriptType": "SERVER",
+      "language": "javascript",
+      "verification": "isolated-contract",
+      "requires": [
+        "STARTUP shared configuration",
+        "global",
+        "shared",
+        "setTimeout",
+        "console.info"
+      ],
+      "install": [
+        {
+          "file": "startup/shared-config.js",
+          "destination": "nekojs/startup_scripts/authoring-examples/shared-config.js"
+        },
+        {
+          "file": "server/state-and-timer.js",
+          "destination": "nekojs/server_scripts/authoring-examples/state-and-timer.js"
+        }
+      ],
+      "trigger": "Install both files, restart once, then /nekojs reload server for each later load.",
+      "expected": "SERVER load count increases within the same root; the STARTUP primitive is read through shared; a one-shot message becomes eligible after 1000 ms and runs on an owner-thread flush, not an exact wall-clock deadline.",
+      "assertion": "Top-level primitive keys and exact counter messages are checked; a queued callback logs only when invoked by the fixture.",
+      "cleanup": "Remove both scripts and restart for a clean root; reload cancels retired-generation timers. This is neither networking nor disk persistence."
+    },
+    {
+      "id": "commonjs",
+      "file": "modules/hello.cjs",
+      "scriptType": "SERVER",
+      "language": "javascript",
+      "verification": "real-engine",
+      "requires": [
+        "CommonJS require",
+        "module.exports",
+        "console.info"
+      ],
+      "install": [
+        {
+          "file": "modules/hello.cjs",
+          "destination": "nekojs/server_scripts/authoring-examples/modules/hello.cjs"
+        },
+        {
+          "file": "modules/lib/message.cjs",
+          "destination": "nekojs/server_scripts/authoring-examples/modules/lib/message.cjs"
+        }
+      ],
+      "trigger": "Copy both files with their relative layout, then /nekojs reload server.",
+      "expected": "Hello, NekoJS! is logged; the entry exports the same message. The pure helper is harmless if separately discovered.",
+      "assertion": "The actual module pipeline loads the shipped entry/helper and preserves module identity.",
+      "cleanup": "Remove the entire example modules directory and reload SERVER."
+    },
+    {
+      "id": "assertions",
+      "file": "test/assertions.js",
+      "scriptType": "TEST",
+      "language": "javascript",
+      "verification": "real-engine",
+      "requires": [
+        "Test.section",
+        "Test.assertEquals",
+        "Test.assertTrue",
+        "Test.assertThrows",
+        "Test.summary"
+      ],
+      "install": [
+        {
+          "file": "test/assertions.js",
+          "destination": "nekojs/test_scripts/authoring-examples/assertions.js"
+        }
+      ],
+      "trigger": "/nekojs test",
+      "expected": "Three passed assertions and zero failures are reported for this file.",
+      "assertion": "The shipped source executes against real TestJS and its pass/fail counters.",
+      "cleanup": "Remove this file from test_scripts. Server reload alone does not execute it."
+    },
+    {
+      "id": "client-counter",
+      "file": "client/counter.tsx",
+      "scriptType": "CLIENT",
+      "language": "tsx",
+      "verification": "real-engine-with-platform-fixture",
+      "requires": [
+        "NeoForge 26.x ClientUI profile only",
+        "nekojs/jsx-runtime",
+        "UI.createSignal",
+        "UI.createRoot",
+        "ClientUI.screen",
+        "host.bindRoot",
+        "host.open"
+      ],
+      "install": [
+        {
+          "file": "client/counter.tsx",
+          "destination": "nekojs/client_scripts/authoring-examples/counter.tsx"
+        }
+      ],
+      "trigger": "Only on the supported CLIENT profile, /nekojs reload client. Never install on Fabric or 1.21.1 profiles lacking ClientUI.",
+      "expected": "A screen opens at count 0; Increment clicks produce 1, 2, and so on. Client reload replaces the generation and resets the signal.",
+      "assertion": "The actual TSX compiler and UI runtime render the tree and handle a click with only the platform screen host substituted; no real rendering acceptance is claimed.",
+      "cleanup": "Close the screen; remove this script and reload CLIENT to dispose the generation. This is NekoJS UI, not React or DOM."
+    },
+    {
+      "id": "client-controls",
+      "file": "client/controls.tsx",
+      "scriptType": "CLIENT",
+      "language": "tsx",
+      "verification": "real-engine-with-platform-fixture",
+      "requires": [
+        "NeoForge 26.x ClientUI profile only",
+        "nekojs/jsx-runtime",
+        "UI.createSignal",
+        "UI.createRoot",
+        "Toggle",
+        "Slider",
+        "Select",
+        "ClientUI.screen",
+        "host.bindRoot",
+        "host.open"
+      ],
+      "install": [
+        {
+          "file": "client/controls.tsx",
+          "destination": "nekojs/client_scripts/authoring-examples/controls.tsx"
+        }
+      ],
+      "trigger": "Only on a supported NeoForge 26.x CLIENT profile, /nekojs reload client. Do not install on Fabric, 1.21.1 or dedicated-server profiles lacking ClientUI.",
+      "expected": "Authoring controls opens with enabled=true; volume=40; quality=balanced. Toggle controls slider availability; the numeric slider changes in steps of five; the inline selector can choose Fast but not Unavailable. The single-line input accepts text and uses a 160-code-point limit.",
+      "assertion": "The actual TSX compiler and UI runtime render the shipped controls and handle typed controlled callbacks, disabled dispatch and selection with only the platform screen host substituted. Native clipboard, cursor clipping and GPU acceptance are separate checks.",
+      "cleanup": "Close the Screen, remove this script and reload CLIENT. Fresh execution resets all five signals and disposes retired-generation callbacks; no persistent or multiplayer state is written."
+    },
+    {
+      "id": "client-forms-and-dialogs",
+      "file": "client/forms-and-dialogs.tsx",
+      "scriptType": "CLIENT",
+      "language": "tsx",
+      "verification": "real-engine-with-platform-fixture",
+      "requires": [
+        "NeoForge 26.x ClientUI profile only",
+        "nekojs/jsx-runtime",
+        "UI.createSignal",
+        "UI.createRoot",
+        "Tabs",
+        "Dialog",
+        "validateForm",
+        "Validators",
+        "dialog and item primitives",
+        "ClientUI.screen",
+        "host.bindRoot",
+        "host.open"
+      ],
+      "install": [
+        {
+          "file": "client/forms-and-dialogs.tsx",
+          "destination": "nekojs/client_scripts/authoring-examples/forms-and-dialogs.tsx"
+        }
+      ],
+      "trigger": "Only on a supported NeoForge 26.x CLIENT profile, /nekojs reload client. Install this scenario alone; skip Fabric, 1.21.1 and dedicated servers without ClientUI.",
+      "expected": "Authoring forms and dialogs opens on Profile with Nothing confirmed and Background clicks: 0. Invalid name/quantity produces errors without a dialog. Alex and 3 open local confirmation; Confirm changes the status to Confirmed Alex x3. Preview displays a read-only diamond icon; Locked is disabled.",
+      "assertion": "The actual TSX compiler and UI runtime exercise lazy tabs, synchronous immutable validation, controlled dialog and background dispatch rejection with only the platform screen host substituted. Native modal focus, item rendering/tooltips and live client acceptance require separate checks.",
+      "cleanup": "Close the Screen, remove this script and reload CLIENT. All eight signals reset on fresh execution; no persistent data, inventory or server/network authority is changed."
+    }
+  ],
+  "limitations": "Sources are opt-in reference examples, never auto-installed. Isolated platform fixtures and real common-engine tests do not certify Minecraft codecs, tag rebuilding, registry realization, GUI rendering or all loader/version profiles. Validate required declarations and use a disposable instance; live game acceptance remains not run."
+}

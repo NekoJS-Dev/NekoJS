@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.probe;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.authoring.AuthoringPaths;
+
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
@@ -10,6 +12,7 @@ import com.tkisor.nekojs.probe.events.ProbeEvents;
 import com.tkisor.nekojs.probe.events.ProbeOverrides;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -86,6 +89,33 @@ public final class ProbeCoordinator {
 
     /* ================= 静态兼容层（旧静态调用点不变） ================= */
     private static volatile ProbeCoordinator DEFAULT;
+    private static final Object AUTHORING_PATHS_LOCK = new Object();
+    private static AuthoringPathsRegistration authoringPathsRegistration;
+
+    /** Binds one runtime root; an old registration cannot unbind a newer root. */
+    public static AutoCloseable bindAuthoringPaths(AuthoringPaths paths) {
+        AuthoringPathsRegistration registration = new AuthoringPathsRegistration(Objects.requireNonNull(paths, "paths"));
+        synchronized (AUTHORING_PATHS_LOCK) {
+            authoringPathsRegistration = registration;
+        }
+        return () -> {
+            synchronized (AUTHORING_PATHS_LOCK) {
+                if (authoringPathsRegistration == registration) authoringPathsRegistration = null;
+            }
+        };
+    }
+
+    private record AuthoringPathsRegistration(AuthoringPaths paths) {}
+
+    private AuthoringPaths captureAuthoringPaths() throws IOException {
+        synchronized (AUTHORING_PATHS_LOCK) {
+            if (authoringPathsRegistration != null
+                    && authoringPathsRegistration.paths().gameDirectory().equals(paths.gameDir().toRealPath())) {
+                return authoringPathsRegistration.paths();
+            }
+        }
+        return AuthoringPaths.resolve(paths.gameDir(), AuthoringPaths.DEFAULT_DIRECTORY);
+    }
 
     /** 惰性创建绑定全局 {@link NekoJSPaths#get()} 的默认协调器。 */
     private static ProbeCoordinator defaultCoordinator() {
@@ -206,6 +236,14 @@ public final class ProbeCoordinator {
                     .toList();
         }
 
+        final AuthoringPaths authoringPaths;
+        try {
+            authoringPaths = captureAuthoringPaths();
+        } catch (IOException failure) {
+            NekoJS.LOGGER.error("[NEKO-1019] Probe authoring destinations could not be resolved; generation was skipped", failure);
+            return backends.stream().map(backend -> ProbeBackend.GenerateResult.failureOf(failure)).toList();
+        }
+
         List<String> runWarnings = new ArrayList<>();
         LinkedHashSet<Class<?>> collected = ProbeClassCollector.collect(snapshot, cfg, runWarnings);
         NekoJSPaths paths = this.paths;
@@ -235,7 +273,7 @@ public final class ProbeCoordinator {
             // 外部基础配置（WorkspaceGenerator 写 jsconfig 等）先执行一次，供 backend 的 contributeEditorConfig 合并
             try {
                 Path baseDir = paths.gameDir().resolve(cfg.baseDir());
-                externalArtifacts.generate(baseDir);
+                externalArtifacts.generate(baseDir, authoringPaths);
             } catch (Exception e) {
                 NekoJS.LOGGER.error("Probe external artifacts failed", e);
             }
@@ -264,7 +302,8 @@ public final class ProbeCoordinator {
                         langDir,
                         sharedIr,
                         overrides,
-                        sharedPool);
+                        sharedPool,
+                        authoringPaths);
                 ProbeBackend.GenerateResult result;
                 try {
                     result = backend.generate(ctx);

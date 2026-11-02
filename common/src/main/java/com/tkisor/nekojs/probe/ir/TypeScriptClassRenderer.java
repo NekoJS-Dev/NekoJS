@@ -40,6 +40,8 @@ public final class TypeScriptClassRenderer {
     private Set<String> captureViewMarks = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private TypeScriptCaptureViews captureViews = new TypeScriptCaptureViews(Map.of(), this);
     private boolean declarationsPrepared;
+    private TypeScriptAuthoringEmission authoringEmission;
+    private boolean authoringStaticValue;
 
     /** Uses this render's edited declarations; parent lookups never reflect over hidden or authored types. */
     public Set<String> setClassDeclarations(Map<String, TypeDecl> declarations) {
@@ -204,6 +206,15 @@ public final class TypeScriptClassRenderer {
         return scoped(moduleAliases).render(decl);
     }
 
+    /** Captures member records at the same emission sites as the returned declaration text. */
+    public TypeScriptAuthoringEmission.Declaration renderIndexed(TypeDecl declaration, TypeAliasRegistry names) {
+        TypeScriptClassRenderer scoped = scoped(names);
+        scoped.authoringEmission = new TypeScriptAuthoringEmission(declaration.fqn);
+        if (declaration.kind == TypeDecl.Kind.ENUM) scoped.authoringEmission.incomplete();
+        String text = scoped.render(declaration);
+        return scoped.authoringEmission.finish(text);
+    }
+
     private TypeScriptClassRenderer scoped(TypeAliasRegistry moduleAliases) {
         TypeScriptClassRenderer scoped = new TypeScriptClassRenderer(moduleAliases);
         scoped.getterOverrides.putAll(getterOverrides);
@@ -320,12 +331,15 @@ public final class TypeScriptClassRenderer {
                 String readType = override == null ? renderSlot(getter.returnType, false) : override.returnType();
                 TypeSlot writeType = d.beanFieldWriteType(f, getter);
                 if (appendInheritedBeanProperty(sb, d, f.effectiveName(), readType, writeType)) continue;
+                int propertyStart = sb.length();
                 sb.append("        get ").append(tsMemberName(f.effectiveName())).append("(): ")
                         .append(readType).append(";\n");
                 if (writeType != null) {
                     sb.append("        set ").append(tsMemberName(f.effectiveName())).append("(value: ")
                             .append(renderSlot(writeType, true)).append(");\n");
                 }
+                if (authoringEmission != null) authoringEmission.property(f.effectiveName(), false, readType,
+                        writeType == null ? null : renderSlot(writeType, true), sb.substring(propertyStart));
             }
         }
         Set<String> propertyConflicts = beanPropertyConflicts(d);
@@ -343,14 +357,19 @@ public final class TypeScriptClassRenderer {
             if (ov != null) {
                 if (!appendInheritedBeanProperty(sb, d, m.property, ov.returnType(), null)) {
                     sb.append("        get ").append(tsMemberName(m.property)).append("(): ").append(ov.returnType()).append(";\n");
+                    if (authoringEmission != null) authoringEmission.property(m.property, false, ov.returnType(), null, "get " + tsMemberName(m.property) + "(): " + ov.returnType() + ";");
                 }
                 continue;
             }
             String type = renderSlot(m.returnType, false);
             boolean fieldProperty = appendInheritedBeanProperty(sb, d, m.property, type, m.setterParamType);
+            if (!fieldProperty && authoringEmission != null) authoringEmission.property(m.property, false, type,
+                    m.setterParamType == null ? null : renderSlot(m.setterParamType, true), "get " + tsMemberName(m.property) + "(): " + type + ";");
             if (!fieldProperty) sb.append("        get ").append(tsMemberName(m.property)).append("(): ").append(type).append(";\n");
             for (String name : methodSelectors.names(d, m)) {
-                sb.append("        ").append(tsMemberName(name)).append("(): ").append(type).append(";\n");
+                String signature = "        " + tsMemberName(name) + "(): " + type + ";\n";
+                sb.append(signature);
+                if (authoringEmission != null) authoringEmission.method(m, name, false, List.of(), type, signature);
             }
             if (!fieldProperty && m.setterParamType != null) {
                 sb.append("        set ").append(tsMemberName(m.property)).append("(value: ")
@@ -362,8 +381,11 @@ public final class TypeScriptClassRenderer {
     private boolean appendInheritedBeanProperty(StringBuilder sb, TypeDecl declaration, String name,
                                                 String readType, TypeSlot writeType) {
         if (!inheritsFieldProperty(declaration, name, readType, writeType)) return false;
+        int propertyStart = sb.length();
         sb.append("        ").append(writeType == null ? "readonly " : "")
                 .append(tsMemberName(name)).append(": ").append(readType).append(";\n");
+        if (authoringEmission != null) authoringEmission.property(name, false, readType,
+                writeType == null ? null : renderSlot(writeType, true), sb.substring(propertyStart));
         return true;
     }
 
@@ -449,6 +471,7 @@ public final class TypeScriptClassRenderer {
             // Keep literal overload fragments in their authored module and generic scope. Indexed access
             // specializes the existing ancestor operation without parsing or guessing TypeScript strings.
             sb.append("        ").append(tsMemberName(entry.name())).append(": ");
+            if (authoringEmission != null) authoringEmission.incomplete();
             sb.append(overloads.stream().map(overload -> {
                 MethodDecl method = overload.method();
                 ApiTypeRef owner = methodSelectors.inheritedOwner(method);
@@ -497,16 +520,20 @@ public final class TypeScriptClassRenderer {
         // TypeScript interfaces describe instances; Java.type exposes static members on a separate value.
         // A merged object declaration retains quoted names and overloads without inheriting interface factories.
         sb.append("    export const $").append(effectiveClassName(d)).append(": {\n");
+        authoringStaticValue = true;
         for (MethodDecl m : d.methods) {
             if (!m.hidden && m.isStatic) sb.append(formatMethod(m, false));
         }
         for (FieldDecl f : d.fields) {
             if (!f.hidden && f.isStatic && f.isFinal) {
                 appendDoc(sb, "        ", f.docs);
+                String type = renderSlot(f.type, false);
                 sb.append("        readonly ").append(tsMemberName(f.effectiveName())).append(": ")
-                        .append(renderSlot(f.type, false)).append(";\n");
+                        .append(type).append(";\n");
+                if (authoringEmission != null) authoringEmission.property(f.effectiveName(), true, type, null, "readonly " + tsMemberName(f.effectiveName()) + ": " + type + ";");
             }
         }
+        authoringStaticValue = false;
         sb.append("    };\n");
         return sb.toString();
     }
@@ -576,6 +603,8 @@ public final class TypeScriptClassRenderer {
         sb.append("        constructor(");
         appendParameters(sb, c.params, true);
         sb.append(");\n");
+        if (authoringEmission != null) authoringEmission.method(c, "constructor", false,
+                renderedParameters(c.params, true, null), null, sb.toString());
         appendOverloads(sb, c, true, false);
         return sb.toString();
     }
@@ -585,7 +614,9 @@ public final class TypeScriptClassRenderer {
         appendDoc(sb, "        ", f.docs);
         sb.append("        ");
         if (isStatic) sb.append("static ");
-        sb.append(tsMemberName(f.effectiveName())).append(": ").append(renderSlot(f.type, false)).append(";\n");
+        String type = renderSlot(f.type, false);
+        sb.append(tsMemberName(f.effectiveName())).append(": ").append(type).append(";\n");
+        if (authoringEmission != null) authoringEmission.field(f, isStatic, type, sb.toString());
         return sb.toString();
     }
 
@@ -611,7 +642,10 @@ public final class TypeScriptClassRenderer {
         }
         sb.append("(");
         appendParameters(sb, m.params, false, parameters);
-        sb.append("): ").append(result == null ? renderSlot(m.returnType, false) : result).append(";\n");
+        String returnType = result == null ? renderSlot(m.returnType, false) : result;
+        sb.append("): ").append(returnType).append(";\n");
+        if (authoringEmission != null) authoringEmission.method(m, emittedName, isStatic || authoringStaticValue,
+                renderedParameters(m.params, false, parameters), returnType, sb.toString());
         appendOverloads(sb, m, false, isStatic, emittedName);
         return sb.toString();
     }
@@ -661,21 +695,29 @@ public final class TypeScriptClassRenderer {
             sb.append(tsParamName(p.name));
             if (p.varargs || p.optional) sb.append("?");
             sb.append(": ");
-            boolean unionElement = p.varargs && projectedRef(p.type).kind() == ApiTypeRef.Kind.UNION;
-            if (unionElement) sb.append('(');
-            if (renderedTypes != null) {
-                sb.append(renderedTypes.get(i));
-            } else if (constructor && !p.type.overridden && p.type.sourceType != null) {
-                // TypeScript class constructors cannot declare their own type parameters.
-                // Project only those local variables; ordinary class variables and edited slots keep their scope.
-                sb.append(FunctionalInterfaceAliasGenerator.renderJavaTypeInput(
-                        ConstructorInputTypes.project(p.type.sourceType), aliases, new LinkedHashSet<>()));
-            } else {
-                sb.append(renderSlot(p.type, true));
-            }
-            if (unionElement) sb.append(')');
-            if (p.varargs) sb.append("[]");
+            sb.append(renderParameterType(p, i, constructor, renderedTypes));
         }
+    }
+
+    private List<String> renderedParameters(List<MethodDecl.MethodParam> parameters, boolean constructor,
+                                            List<String> renderedTypes) {
+        List<String> result = new java.util.ArrayList<>();
+        for (int i = 0; i < parameters.size(); i++) result.add(renderParameterType(parameters.get(i), i, constructor, renderedTypes));
+        return result;
+    }
+
+    private String renderParameterType(MethodDecl.MethodParam parameter, int index, boolean constructor,
+                                       List<String> renderedTypes) {
+        String type;
+        if (!parameter.type.overridden && parameter.type.inputShape != null) type = renderSlot(parameter.type, true);
+        else if (renderedTypes != null) type = renderedTypes.get(index);
+        else if (constructor && !parameter.type.overridden && parameter.type.inputShape == null
+                && parameter.type.sourceType != null) {
+            type = FunctionalInterfaceAliasGenerator.renderJavaTypeInput(
+                    ConstructorInputTypes.project(parameter.type.sourceType), aliases, new LinkedHashSet<>());
+        } else type = renderSlot(parameter.type, true);
+        if (parameter.varargs && projectedRef(parameter.type).kind() == ApiTypeRef.Kind.UNION) type = "(" + type + ")";
+        return parameter.varargs ? type + "[]" : type;
     }
 
     /** Preserve member names, separating ordinary constructor members from class constructor syntax. */
@@ -758,6 +800,10 @@ public final class TypeScriptClassRenderer {
     /** Renders edits from IR; ordinary input slots retain reflection generics for callback substitution. */
     private String renderSlot(TypeSlot slot, boolean input) {
         if (slot == null) return "any";
+        if (input && !slot.overridden && slot.inputShape != null) {
+            return com.tkisor.nekojs.probe.backend.typescript.AdapterAliasGenerator
+                    .renderShape(slot.inputShape, aliases, true).type();
+        }
         if (input && !slot.overridden && slot.sourceType != null) {
             return FunctionalInterfaceAliasGenerator.renderJavaTypeInput(
                     slot.sourceType, aliases, new LinkedHashSet<>());

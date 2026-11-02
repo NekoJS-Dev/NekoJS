@@ -23,6 +23,115 @@ jsxAutomaticRuntime = true
 
 NekoJS uses the built-in `nekojs/jsx-runtime` and updates the script directories' `jsconfig.json` to the automatic JSX configuration during workspace/probe processing. You do not need to create a runtime file with the same name in `node_modules/`.
 
+**Complete forms, tabs, dialog and read-only item example**
+
+Save the following complete script as `nekojs/client_scripts/authoring-examples/forms-and-dialogs.tsx` and run `/nekojs reload client` on a supported NeoForge 26.x client. Remove other example scripts that open a Screen before this exercise; they otherwise compete for the visible Screen. This is the exact bundled `examples/client/forms-and-dialogs.tsx`. Signals live outside render, including tab/form values and the confirmed snapshot.
+
+```tsx
+// CLIENT only: requires the ClientUI binding published on NeoForge 26.x.
+import { UI, Tabs, Dialog, validateForm, Validators } from "nekojs/jsx-runtime";
+
+const tab = UI.createSignal("profile");
+const name = UI.createSignal("");
+const quantity = UI.createSignal("1");
+const errors = UI.createSignal("");
+const dialogOpen = UI.createSignal(false);
+const reviewed = UI.createSignal({ name: "", quantity: 1 });
+const status = UI.createSignal("Nothing confirmed");
+const backgroundClicks = UI.createSignal(0);
+
+function review() {
+    const values = { name: name.get(), quantity: quantity.get() };
+    const result = validateForm(values, {
+        name: [Validators.required("Enter a name"), Validators.maxLength(24, "Use at most 24 characters")],
+        quantity: [
+            Validators.required("Enter a quantity"),
+            Validators.numberRange(1, 64, "Quantity must be between 1 and 64"),
+            value => Number.isInteger(Number(value)) ? null : "Quantity must be a whole number"
+        ]
+    });
+    errors.set(Object.keys(result.errors).map(field => result.errors[field].join("; ")).join(" | "));
+    if (!result.valid) return;
+    reviewed.set({ name: values.name.trim(), quantity: Number(values.quantity) });
+    dialogOpen.set(true);
+}
+
+const tabs = [
+    {
+        value: "profile", label: "Profile", render: () => (
+            <column gap={6} width="fill">
+                <label>Name and requested quantity (local preview only)</label>
+                <input id="forms-name" width="fill" height={20} value={name.get()} maxLength={24}
+                    placeholder="Name" onChange={event => name.set(event.value || "")} />
+                <input id="forms-quantity" width="fill" height={20} value={quantity.get()} maxLength={8}
+                    placeholder="Whole number 1..64" onChange={event => quantity.set(event.value || "")} />
+                <label id="forms-errors">{errors.get()}</label>
+                <button id="forms-review" height={20} onClick={review}>Review</button>
+            </column>
+        )
+    },
+    {
+        value: "preview", label: "Preview", render: () => (
+            <column gap={6}>
+                <item id="forms-preview-item" item="minecraft:diamond" count={1} itemTooltip={true}
+                    width={32} height={32} />
+                <label>Read-only icon and tooltip; no inventory is changed.</label>
+            </column>
+        )
+    },
+    { value: "locked", label: "Locked", disabled: true, render: () => <label>Not selectable</label> }
+];
+
+const host = ClientUI.screen("Authoring forms and dialogs", false);
+const root = UI.createRoot(() => (
+    <screen padding={12}>
+        <scroll id="forms-scroll" width="fill" height="fill">
+            <column gap={8} width="fill">
+                <Tabs id="forms-tabs" width="fill" height={190} value={tab.get()} tabs={tabs}
+                    onChange={value => tab.set(value)} />
+                <button id="forms-background" height={20}
+                    onClick={() => backgroundClicks.update(value => value + 1)}>Background action</button>
+                <label id="forms-background-count">{"Background clicks: " + backgroundClicks.get()}</label>
+                <label id="forms-status">{status.get()}</label>
+            </column>
+        </scroll>
+        <Dialog id="forms-dialog" open={dialogOpen.get()} title="Confirm local profile"
+            onOpenChange={value => dialogOpen.set(value)}>
+            <scroll id="forms-dialog-scroll" width="fill" height="fill">
+                <column gap={8} width="fill">
+                    <label>{reviewed.get().name + " x" + reviewed.get().quantity}</label>
+                    <label>Confirmation changes only this screen, not a world or inventory.</label>
+                    <button id="forms-cancel" height={20} onClick={() => dialogOpen.set(false)}>Cancel</button>
+                    <button id="forms-confirm" height={20} onClick={() => {
+                        status.set("Confirmed " + reviewed.get().name + " x" + reviewed.get().quantity);
+                        dialogOpen.set(false);
+                    }}>Confirm</button>
+                </column>
+            </scroll>
+        </Dialog>
+    </screen>
+), host);
+host.bindRoot(root);
+host.open();
+```
+
+**Run and observe:** initially Profile is selected, name is blank, quantity is `1`, errors are empty, status is `Nothing confirmed`, and the background counter is zero. Review with a blank name: validation shows errors and does not open a dialog. Try quantity `0`, `65`, text or `1.5`: range/integer validation rejects it. Enter `Alex` and `3`, click Review, then Cancel or dismiss with Escape/backdrop: status stays unchanged. Review again and Confirm: status becomes `Confirmed Alex x3`; no world, inventory or network state changes. Preview shows a read-only diamond and tooltip; Locked cannot be selected. Returning to Profile retains the external signal values. Closing/removing the script and reloading CLIENT disposes the root and callbacks; reloading resets this example, not persistent storage.
+
+**Pending native acceptance checklist — not run**
+
+Before treating this UI as accepted, record the exact node, loader, GUI scale, viewport, actual outcomes and a maintainer conclusion for every row. In-memory native/common-engine fixtures are not live-client evidence.
+
+| Check | Expected observation | Status |
+|---|---|---|
+| Invalid/valid form | Invalid values do not open a dialog; Alex/3 can cancel or confirm the local snapshot | Not run |
+| Tabs | Pointer and arrows/Home/End skip Locked; selected pane alone is mounted and values survive switching | Not run |
+| Modal boundary | Background action/scroll, keyboard and manual background dispatch stay blocked; any older pointer/slider capture is cancelled | Not run |
+| Focus/dismissal | Tab/Shift+Tab stay in the top modal, Escape/backdrop follow flags without closing the Screen; eligible prior focus is restored | Not run |
+| Read-only item | Real item/model/count and vanilla or overriding custom tooltip appear with no inventory mutation | Not run |
+| Viewport/lifecycle | Short windows, scale changes and nested scrolling preserve the portal and reachable content; close/reload/invalid-candidate retention leave no stale callbacks/modal state | Not run |
+
+Maintainer conclusion: **pending**. Use the earlier controls example for real slider/OS clipboard checks; the forms example has no slider. Actual GPU visuals, native focus/narration, tooltip behavior, IME and multiplayer acceptance remain unverified.
+
 <a id="wiki-section-4"></a>
 ### 2. Create a Screen
 
@@ -62,6 +171,74 @@ Key steps:
 
 UI roots must be created from a managed CLIENT script context, and all creation, state updates, and closing operations should run on the client owner thread.
 
+**Complete controls example: input, toggle, slider and inline select**
+
+Save this complete script as `nekojs/client_scripts/authoring-examples/controls.tsx`, then run `/nekojs reload client` only on a supported NeoForge 26.x client. Create signals outside the render callback so reconciliation does not reset state. The code matches `examples/client/controls.tsx` in the bundled AI documentation.
+
+```tsx
+// CLIENT only: requires the ClientUI binding published on NeoForge 26.x.
+import { UI, Toggle, Slider, Select } from "nekojs/jsx-runtime";
+
+const text = UI.createSignal("Paste or type a long single-line message here.");
+const enabled = UI.createSignal(true);
+const volume = UI.createSignal(40);
+const quality = UI.createSignal("balanced");
+const expanded = UI.createSignal(false);
+const options = [
+    { value: "balanced", label: "Balanced" },
+    { value: "fast", label: "Fast" },
+    { value: "unavailable", label: "Unavailable", disabled: true }
+];
+const appearance = {
+    background: "#20252B",
+    borderColor: "#708090",
+    color: "#FFFFFF",
+    placeholderColor: "#A0A0A0",
+    selectionColor: "#804488CC",
+    cursorColor: "#FFFFFF",
+    trackColor: "#4C566A",
+    thumbColor: "#88C0D0",
+    hover: { background: "#303B46" },
+    focused: { borderColor: "#88C0D0" },
+    pressed: { background: "#405466" },
+    disabled: { color: "#777777", background: "#181C20" }
+};
+
+const host = ClientUI.screen("Authoring controls", false);
+const root = UI.createRoot(() => (
+    <screen padding={12}>
+        <scroll id="controls-scroll" width="fill" height="fill">
+            <column gap={8} width={280}>
+                <label>Clipboard and controlled components</label>
+                <input id="controls-text" width="fill" height={20}
+                    value={text.get()} maxLength={160} appearance={appearance}
+                    onChange={event => text.set(event.value || "")} />
+                <Toggle id="controls-enabled" width="fill" height={20}
+                    checked={enabled.get()} label="Enable volume"
+                    appearance={appearance} onChange={value => enabled.set(value)} />
+                <Slider id="controls-volume" width="fill" height={20}
+                    value={volume.get()} min={0} max={100} step={5}
+                    disabled={!enabled.get()} appearance={appearance}
+                    onChange={value => volume.set(value)} />
+                <Select id="controls-quality" width="fill"
+                    value={quality.get()} options={options} expanded={expanded.get()}
+                    onExpandedChange={value => expanded.set(value)}
+                    appearance={appearance} onChange={value => quality.set(value)} />
+                <label id="controls-summary">{
+                    "enabled=" + String(enabled.get()) + "; volume=" + String(volume.get())
+                    + "; quality=" + quality.get()
+                }</label>
+                <label>Close this screen, then reload CLIENT to reset the example.</label>
+            </column>
+        </scroll>
+    </screen>
+), host);
+host.bindRoot(root);
+host.open();
+```
+
+**Observe and clean up:** the initial summary is `enabled=true; volume=40; quality=balanced`. Enable volume disables/re-enables the slider; drag it or focus it and use arrows/Home/End. Choose Fast in the selector and check `quality=fast`; Unavailable cannot be selected. The input supports long single-line text, selection and clipboard operations with horizontal caret following. Close the Screen, remove the script and reload CLIENT; reloading resets signals and disposes retired-generation callbacks. Engine/platform-fixture tests do not replace real-client rendering, clipboard and focus acceptance.
+
 <a id="wiki-section-5"></a>
 ## First, this is not HTML/CSS
 
@@ -93,7 +270,7 @@ Use primitives to describe a stable interface structure directly:
 </panel>
 ```
 
-Lowercase tags must come from these 11 primitives: `screen`, `panel`, `row`, `column`, `stack`, `scroll`, `label`, `button`, `input`, `image`, and `spacer`. Use `UI.primitives()` to query the current runtime's registered set.
+Lowercase tags must come from these 14 primitives: `screen`, `panel`, `row`, `column`, `stack`, `scroll`, `label`, `button`, `input`, `slider`, `image`, `item`, `dialog`, and `spacer`. Use `UI.primitives()` to query the current runtime's registered set.
 
 <a id="wiki-section-8"></a>
 ### 2. Function components
@@ -183,7 +360,10 @@ Lowercase JSX tags can only use host primitives registered by NekoJS. Arbitrary 
 | `scroll` | Scrollable container | `scrollX`, `scrollY`, `scrollOffset` |
 | `label` | Text | `text`, `color`, `fontSize`, `font`, `wrap`, `truncate` |
 | `button` | Clickable button | `text`, `disabled`, `tooltip` |
-| `input` | Text input | `value`, `placeholder`, `maxLength`, `disabled` |
+| `input` | Single-line text input | `value`, `placeholder`, `maxLength`, `disabled`, `appearance` |
+| `slider` | Numeric slider | `value`, `min`, `max`, `step`, `disabled`, `appearance` |
+| `item` | Read-only item visual | `item`, `count`, `itemTooltip`, `tooltip` |
+| `dialog` | Modal viewport portal | `open`, `title`, `width`, `height`, `closeOnEscape`, `closeOnBackdrop`, `onDismiss` |
 | `image` | Image or icon | `resource`, `fit`, `opacity`, `icon`, `crop` |
 | `spacer` | Placeholder and space filler | Shared layout props |
 
@@ -199,6 +379,24 @@ function Section({ title, children }) {
   )
 }
 ```
+
+**Controlled components and native editing boundaries**
+
+Import `{ UI, Toggle, Slider, Select }` from `nekojs/jsx-runtime`. `Toggle` requires `id`, `checked: boolean`, `onChange(boolean)` and optional `label` / `text`; `Slider` requires `id`, `value: number`, `onChange(number)`; `Select` requires `id`, `value: string`, `options: readonly { value, label, disabled? }[]`, `expanded: boolean`, `onExpandedChange(boolean)`, `onChange(string)`. Components own no hidden signals: supply current state on every render. Option values must be unique and include the selected value; empty options permit only `value=""`. Select is an **inline**, scrollable list of at most six 20-pixel rows, not a floating native popup.
+
+IDs must be root-unique. Toggle/Slider use their base IDs; Select uses its base trigger ID and reserves `id:root`, `id:options`, and `id:option:` plus `encodeURIComponent(value)`. Disabled controls also reject manual `root.dispatch`; dispatch cannot bypass disabled state.
+
+Native `input` counts `maxLength` in Unicode code points. Control/Super+A selects all and Shift+Left/Right/Home/End extends selection. Control or Super + C/X/V copy/cut/paste; cut writes the clipboard before deleting, and clipboard failure preserves input. Paste filters ISO control characters (including CR/LF, tab and DEL) and unpaired surrogates while retaining valid supplementary characters. The single-line editor uses the same pixel offset for caret following, mouse hit testing, selection and clipping, clamped again when value/width shrinks. It does not provide multiline or IME composition contracts.
+
+Native `slider` value/min/max/step default to 0/0/100/1. Values, span and span/step ratio must be finite, `min < max`, `step > 0`, and value must be in range. Interior interaction snaps to `min + round((raw-min)/step)*step` and clamps; dragging to endpoints and Home/End reach exact bounds even if off-step. Assigning a value does not auto-snap it. Left/Down subtract a step, Right/Up add, Home/End choose endpoints. Primary-button dragging captures only that slider, not generic drag/drop. **Lowercase primitive `onChange` receives an event with a string `event.value`; uppercase `Slider` calls back with a number.**
+
+**Tabs, validation, genuine Dialog and read-only item contracts**
+
+- Import named `{ Tabs, Dialog, validateForm, Validators }`; there are no `UI.Tabs`/`UI.Dialog` aliases. Tabs takes `id`, controlled `value`, unique `tabs: [{ value, label, disabled?, render: () => ... }]`, and `onChange(string)`. Tabs must be nonempty and contain the selected value. The selected header has a `[Label]` text marker; selection does not force an appearance override, and there is no roving-focus API. Only the selected renderer runs/mounts; external signals survive switching. It defaults to fill width/height, so specify an embedding height as in the example. Root-unique IDs reserve `id:tabs`, `id:tab:` + `encodeURIComponent(value)`, and `id:content`. Arrow/Home/End navigation skips disabled tabs.
+- `validateForm(values, rules)` explicitly returns deeply frozen `{ valid, errors }`, with readonly message arrays for failed fields only, in field/rule order. It does not render errors, submit, normalize or contact a server. Values are a plain record of flat string/boolean/null/finite-number scalars; explicit undefined is invalid, while a missing rule field is passed to its rules as undefined. All rules run, fields can have multiple messages, and even an empty message string is an error. Built-ins: `Validators.required(message?)`, `minLength(n, message?)`, `maxLength(n, message?)`, `numberRange(min, max, message?)`. Required rejects missing/null/blank strings, not `0`/`false`; length rules require strings and count JavaScript UTF-16 code units, unlike native input maxLength code points. Number range accepts finite numbers or nonblank strings via `Number`, not integers only. A custom `(value, frozenValues) => message | null | undefined` rule supplies the integer check; promises or other return types are invalid. Nested/async validation is not supported.
+- Dialog takes `id`, controlled `open`, `onOpenChange(boolean)`, optional `title`, `children`, `width`, `height`, `closeOnEscape`, `closeOnBackdrop`. Closed returns no nodes. Open creates a viewport portal with a centered 80% × 80% panel by default, not an in-flow styled panel. Width/height size the panel; add an explicit scroll child for overflowing content. Reserve `id:panel` and `id:content`. Both close flags default true; dismissal requests `false`, and your signal update actually closes it.
+- The last visible dialog in depth-first order is the top modal. Common dispatch rejects background IDs, including queued events after opening; native pointer/capture/wheel/key/text/Tab/narration remain in its subtree. Escape is consumed before Screen closure even if dismissal is disabled; only primary clicks outside the panel request backdrop dismissal. Modal changes cancel old captures and focus an enabled modal descendant; closure restores prior focus only if still retained, visible and enabled. Parent clipping/scroll does not confine the portal. This behavior needs the native checklist, not just a panel screenshot.
+- `<item item="minecraft:diamond" count={1} itemTooltip={true} />` accepts an item resource ID, not an ItemStack or component descriptor. Count is integer 1..99, default 1; the display limit is not a stack-limit guarantee. `itemTooltip` defaults true; custom `tooltip: string` overrides the vanilla tooltip. A known non-air item resolves once per staged native create/update; invalid/missing IDs reject the candidate, retaining the active tree. It paints a centered fixed 16×16 icon and count in its bounds; it is not an inventory Slot and grants no mutation/network authority. Only the topmost eligible hovered item shows a tooltip; background items under a modal do not. Native item rejection uses `NEKO-6012`; earlier common layout validation may instead report `NEKO-7007`.
 
 <a id="wiki-section-12"></a>
 ## Layout
@@ -287,6 +485,8 @@ function Surface({ children }) {
 ```
 
 Do not write `<panel style={COLORS}>`. `style` is not a registered prop and causes an `Unsupported prop` layout error.
+
+**Control appearance:** `button`, `input`, `slider` and the components above accept a reusable `appearance` object. Only eight color fields are allowed: `background`, `borderColor`, `color`, `placeholderColor`, `selectionColor`, `cursorColor`, `trackColor`, `thumbColor`. Its `hover`, `focused`, `pressed`, `disabled` objects may contain only those color fields, not nested states. Precedence is base → hover → focused → pressed → disabled. Unknown keys, nulls and responsive color objects are invalid; pass layout props separately. This finite color configuration is not CSS and does not turn an input into another primitive. Colors follow the ARGB/named-color rules above, including signed/unsigned 32-bit ARGB integers.
 
 <a id="wiki-section-16"></a>
 ### Resource IDs
@@ -425,6 +625,10 @@ Common diagnostics include:
 - `NEKO-7004`: the operation is not running on the client owner thread.
 - `NEKO-7006`: deferred work from an old generation was dropped.
 - `NEKO-7007`: a render, layout, event, or host-update phase failed.
+- `NEKO-7008`: native host validation rejects control appearance fields, types or colors.
+- `NEKO-7011`: native host validation rejects slider bounds, step or value.
+
+The common JSX runtime may reject malformed props earlier during layout, reporting `NEKO-7007` with the layout diagnostic rather than those native codes. Do not assume every invalid prop produces one specific native code. Clipboard host failures also enter `NEKO-7007`.
 
 Render or layout failures do not commit an incomplete tree. If a valid tree already exists, the runtime attempts to retain the last valid result and sends the error through the existing error-reporting chain.
 
@@ -463,8 +667,8 @@ ClientEvents.hud(painter => {
 })
 
 ClientEvents.screenRender(event => {
-  const painter = event.getPainter()
-  painter.text(`鼠标：${event.getMouseX()}, ${event.getMouseY()}`, 8, 8)
+  const painter = event.painter
+  painter.text(`鼠标：${event.mouseX}, ${event.mouseY}`, 8, 8)
 })
 ```
 
@@ -488,6 +692,8 @@ ClientEvents.worldRender('quest-path', { layer: 'normal', priority: 0 }, ctx => 
 ```
 
 These entry points are registered and replaced together by the CLIENT generation and are suitable for HUD/world overlays. They remain render callbacks, not interactive Screens or JSX host trees.
+
+These **registered** entry points are NeoForge-only, unlike Painter HUD/Screen events that also exist on Fabric. NeoForge 26.2 `ctx.line` / `ctx.box` now submit through an independently owned staged buffer; source/geometry regressions still do not establish visual acceptance. Layer order, priority, replacement/cleanup, and post-effect declaration versus activation are covered in [Client rendering and post effects](client-rendering_us). The options map above is the current runtime contract, not a newly invented builder overload; JSX props are data, not NekoJS definition builders. See [Script API style](script-api-style_us).
 
 <a id="wiki-section-29"></a>
 ### Approach D: Native Java Screen / Widget
@@ -520,6 +726,7 @@ JSX client UI does not currently provide:
 - React/Preact hooks, DOM, a CSS parser, CSS Grid, or full browser layout;
 - `className`, `style`, CSS selectors/cascade, margins, shadows, gradients, transforms, z-index, or font weight/style/family;
 - Remote UI downloads, network resource proxies, a general animation system, or arbitrary shaders.
+- Generic drag/drop, virtualized lists, IME composition, or a floating native Select popup.
 
 Existing `ClientEvents.hud`, `hudRender`, `worldRender`, `screenRender`, and handwritten Java Screens continue to work through their original APIs. Enabling JSX UI does not migrate them automatically.
 
@@ -535,4 +742,4 @@ Existing `ClientEvents.hud`, `hudRender`, `worldRender`, `screenRender`, and han
 
 ---
 
-[Previous: TypeScript and JSX](typescript-and-jsx_us) · [Contents](Home) · [Next: Node.js compatibility](nodejs-compatibility_us)
+[Previous: TypeScript and JSX](typescript-and-jsx_us) · [Contents](Home) · [Next: Client rendering and post effects](client-rendering_us)

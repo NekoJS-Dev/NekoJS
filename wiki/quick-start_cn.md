@@ -45,6 +45,8 @@ nekojs/
                               （旧 config/nekojs-engine.toml 仅作只读回退）
 ```
 
+独立的 AI 文档根默认为 `.github/neko_ai`，由 `nekojs/config/ai.toml` 的 `[output].directory` 控制，可通过 `nekojs/config/ai-location.json` 定位。私有 token 保留在 `nekojs/config/`，不是 `.neko_probe`。见 [AI 创作支持](ai-support_cn)，不要提交 token。
+
 四个脚本目录都支持 `.js`、`.mjs`、`.cjs`、`.ts`、`.jsx`、`.tsx` 和 `.py`。`.py` 是 NekoJS 的 Python 子集转译脚本，不需要外部 Python 运行时。详见 [脚本基础](script-basics_cn)。
 
 <a id="wiki-section-4"></a>
@@ -93,7 +95,7 @@ allowUnsigned = false   # 是否接受无签名包
 - **信任**：客户端首次连入未信任的服务器会被**断开**并提示地址；在该客户端的单人世界里执行
   `/nekojs trust <地址>` 后重连即可收包。信任会同时 pin 该服务器当前签名公钥（密钥静默轮换会被拒绝）。
 - **缓存**：包按服务器地址哈希分桶缓存在 `nekojs/server_packs/`，哈希不变则复用本地缓存。
-- Cleanroom legacy 分支没有配置阶段，只能退化成登录后同步，而且只同步纯脚本；当前仓库不验证该分支行为。
+- Cleanroom 1.12.2 不在当前五节点版本图内；当前仓库无法确认其同步行为。
 
 <a id="wiki-section-6"></a>
 ## 3. 第一个脚本
@@ -103,13 +105,10 @@ allowUnsigned = false   # 是否接受无签名包
 ```javascript
 // server_scripts/hello.js
 
-// 监听「服务端启动完成」事件
-ServerEvents.started(event => {
-  console.info('[NekoJS] 服务端脚本已加载！')
-})
+console.info('[NekoJS] Server script loaded')
 ```
 
-进入世界并等待服务端启动完成后，日志里应出现 `[NekoJS] 服务端脚本已加载！`。如果在已启动的世界中才添加本例，重新进入世界以触发 `started`；普通 `/nekojs reload` 只重新注册监听器，不会再次触发这个生命周期事件。
+进入世界，或在已运行的世界执行 `/nekojs reload server`，日志应出现 `[NekoJS] Server script loaded`。试完删除文件并 reload SERVER。`ServerEvents.started` 监听器则不同：普通 reload 不会重放开服阶段。
 
 <a id="wiki-section-7"></a>
 ## 4. 改一个配方
@@ -130,7 +129,7 @@ ServerEvents.recipes(event => {
 })
 ```
 
-执行 `/nekojs reload`。NeoForge 和 Fabric 26.x 都支持服务端配方热重载；NeoForge 的配方查看器可能需要客户端刷新，Fabric 以当前节点实现和平台兼容性说明为准。
+请在一次性测试世界执行**整类** `/nekojs reload server`；单文件 reload 不执行同样的配方后处理。合成格放入一个圆石应得到四根木棍，其他木棍输出配方被移除。验证实际合成，不只看配方查看器。试完删除该文件并 reload SERVER 恢复基线；查看器可能还需自行刷新。
 
 详见 [配方系统](recipe-system_cn)。
 
@@ -150,6 +149,8 @@ RegistryEvents.register(event => {
 
 > 注意：启动脚本由游戏启动阶段执行。修改注册内容后必须重启游戏；当前 `/nekojs reload startup` 不支持从运行中的命令重载 STARTUP 脚本。
 
+请使用一次性世界，并保持客户端/服务端定义一致。重启后用 `/give @s mymod:cool_gem` 检查注册；此例不提供纹理/模型或创造标签页条目。放弃测试世界及物品后再删文件并重启；移除已保存的注册 ID 可能破坏既有数据。
+
 详见 [注册新内容](registering-new-content_cn)。
 
 <a id="wiki-section-9"></a>
@@ -168,6 +169,9 @@ RegistryEvents.register(event => {
 - [事件参考](event-reference_cn) —— 所有可用事件。
 - [模块系统](module-system_cn) —— 拆分多文件、引用 npm 依赖、`java:` 导入。
 - [TypeScript 与 JSX](typescript-and-jsx_cn) —— 用 TS 写脚本。
+- [脚本 API 风格](script-api-style_cn)：事件、Binding、builder、Bean 属性与数据对象。
+- [数据与状态](data-and-state_cn)：明确选择持久化与同步边界。
+- [客户端绘制](client-rendering_cn)：HUD、Screen 叠加、世界绘制与后处理。
 
 <!-- wiki-nav -->
 

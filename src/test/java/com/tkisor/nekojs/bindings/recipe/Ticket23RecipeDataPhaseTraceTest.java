@@ -99,8 +99,8 @@ class Ticket23RecipeDataPhaseTraceTest {
 
     private static void assertAfterRecipesPostCommit(String mixin, String commitMarker) {
         int commit = mixin.indexOf(commitMarker);
-        int recipes = mixin.indexOf("ServerEvents.RECIPES.post(eventJS)");
-        int afterScript = mixin.indexOf("ServerEvents.AFTER_RECIPES.post(eventJS)");
+        int recipes = mixin.indexOf("ServerEvents.RECIPES.postChecked(eventJS)");
+        int afterScript = mixin.indexOf("ServerEvents.AFTER_RECIPES.postChecked(eventJS)");
         int afterHook = mixin.indexOf(".afterRecipes(eventJS)");
 
         assertTrue(commit >= 0, "recipe batch commit point disappeared: " + commitMarker);

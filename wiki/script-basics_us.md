@@ -45,7 +45,7 @@ Scripts are sorted and loaded according to these rules:
 
 1. **`priority` property** (higher numbers run first; default 0).
 2. **`after` property** (declares dependencies; see [Script properties](script-properties_us)).
-3. Scripts with the same priority are sorted by path name.
+3. Within a priority group, `after` orders enabled scripts; remaining ties use discovery/path order. Versioned pack prerequisites can override file-priority preferences; see [Script packs](script-packs_us).
 
 ```javascript
 // priority: 100
@@ -58,13 +58,23 @@ Scripts are sorted and loaded according to these rules:
 <a id="wiki-section-7"></a>
 ### Server / client / test
 
-**Transactional hot reload**: NekoJS first loads scripts into a candidate Context. Only after all scripts succeed does it replace and close the old Context. If loading fails, the old Context is retained, keeping the server out of a partially broken state.
+**Full generation reload** prepares and executes a candidate before replacing a healthy active generation. Failed candidates release their own Context/listeners/timers and preserve the active generation. Ordinary reload does not rebuild the runtime root or Plugin Runtime. This guarantee does not apply to the legacy single-file path below.
 
 - `/nekojs reload` (defaults to reloading `server`)
 - `/nekojs reload server` / `client` / `test`
-- `/nekojs reload server path/to/file.js` (reloads only one file; the path is relative to the script type's root directory; supports TAB completion)
+
+| Operation | Boundary |
+|---|---|
+| Full type reload | Candidate generation; TEST uses the reload-and-run flow, not an assertion-pass guarantee |
+| `/nekojs reload server path/to/file.js` | Legacy active-Context rerun; tracked dependants may rerun too, with no candidate rollback |
+| Versioned pack reload | Package/type operation, with dependency/domain affected sets; not a file rerun |
+| Native `/reload` / F3+T | Server data packs / client resources, separate from script generations |
+
+File paths are relative to the script type root and support TAB completion. Saving a file alone does not trigger auto-reload. See [Commands](commands_us) for owner-thread restrictions and post-commit recipe/data refresh.
 
 > Transactional reload protects the commit of a managed script generation. A failed candidate retains the active environment, but external effects on the world, files, or arbitrary Java objects are not necessarily rolled back. Reload is not a transaction over game state.
+
+Managed lifecycle operations are serialized per ScriptType manager; concurrent requests do not build overlapping candidates. Reload from inside a managed event/timer callback is rejected as reentrant. This does not make guest-created threads or arbitrary Java objects safe, and the internal synchronized owner entry does not automatically marshal work to a dedicated thread.
 
 <a id="wiki-section-8"></a>
 ### Startup scripts
@@ -87,9 +97,11 @@ Startup scripts execute only during game startup. Registration changes require a
 - **`global`** is a state container shared within the current `ScriptType` and retained after ordinary reload. A SERVER `global.counter` does not automatically appear as CLIENT `global.counter`.
 - **`shared`** is an explicit state container for sharing across script types within the same NekoJS runtime. It only provides in-process memory sharing, not network synchronization or save persistence.
 
+These are runtime-owned stores, not a promise that guest objects/functions survive a Context closing. Store simple durable values, not old event/player/module references. Legacy type state lasts for the runtime root, including ordinary reload/world switches; root close clears it. Versioned pack `global` is scoped to the pack/source/session and ends with that session; see [Script packs](script-packs_us). See [Node.js compatibility](nodejs-compatibility_us) for timer ownership and filesystem read/write limits.
+
 ```javascript
 // server_scripts/a.js
-global.counter = 0
+global.counter = global.counter ?? 0
 shared.message = 'server is ready'
 
 // server_scripts/b.js (still readable after ordinary reload)
@@ -101,6 +113,8 @@ ServerEvents.tickPost(event => {
 const message = shared.message
 ```
 
+`global` is not `globalThis`. Reload reruns initializers, so the example initializes the scalar only when absent. Candidate top-level `global`/`shared` writes read their own staged values and publish only on successful commit; this is not deep rollback of nested objects.
+
 See the `global` and `shared` entries in [Global bindings](global-bindings_us).
 
 <a id="wiki-section-11"></a>
@@ -110,7 +124,7 @@ See the `global` and `shared` entries in [Global bindings](global-bindings_us).
 - Error reports include the file, line, and column, along with a source excerpt (`>` marks the error line and `^` points to the error column). Syntax errors (SyntaxError) also identify the relevant line/column.
 - Use `/nekojs error` to check whether there are any script errors.
 - Use `/nekojs view_all_errors` to send the full error list to chat.
-- A script with an error is marked disabled so it does not repeatedly report errors; reloading after fixing it clears the error marker.
+- Entry-evaluation failures mark that entry disabled. Event/timer callback errors are recorded separately; they do not guarantee that the whole script is disabled. Watchdog/resource-limit termination can isolate the active environment until explicit full reload.
 
 <a id="wiki-section-12"></a>
 ### Static checks before loading (preflight)
@@ -144,4 +158,4 @@ Automatic execution of the default TS probe on server startup is controlled by `
 
 ---
 
-[Previous: FAQ](faq_us) · [Contents](Home) · [Next: Script properties](script-properties_us)
+[Previous: FAQ](faq_us) · [Contents](Home) · [Next: Script API conventions](script-api-style_us)

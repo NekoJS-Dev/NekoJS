@@ -25,7 +25,7 @@ public class NetworkJS {
 //? if >=26 {
         ClientPacketDistributor.sendToServer(payload);
 //?} else {
-/*        PacketDistributor.sendToServer(payload);
+        /*PacketDistributor.sendToServer(payload);
 *///?}
 //?} else {
 /*        ClientPlayNetworking.send(payload);

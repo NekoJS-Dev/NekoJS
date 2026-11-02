@@ -23,6 +23,7 @@ import java.util.zip.ZipFile
 
 plugins {
     id("java-library")
+    id("nekojs.node-sources")
     id("net.neoforged.moddev")
 }
 

@@ -105,7 +105,7 @@ public class LootEntryJS {
 //? if >=26 {
         return stack.typeHolder().unwrapKey().map(key -> key.identifier().toString()).orElse(null);
 //?} else {
-/*        return stack.getItemHolder().unwrapKey().map(key -> key.location().toString()).orElse(null);
+        /*return stack.getItemHolder().unwrapKey().map(key -> key.location().toString()).orElse(null);
 *///?}
     }
 }

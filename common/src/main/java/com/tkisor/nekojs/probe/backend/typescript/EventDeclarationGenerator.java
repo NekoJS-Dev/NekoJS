@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe.backend.typescript;
 
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
+import com.tkisor.nekojs.api.catalog.EventCallSignature;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry.EventPayload;
 import com.tkisor.nekojs.probe.EventPayloadDeclarations;
@@ -59,6 +60,10 @@ public final class EventDeclarationGenerator {
             sb.append("/// <reference path=\"../../../@event-builders/index.d.ts\" />\n\n");
         }
 
+        if (events.stream().flatMap(event -> callShapes(event, aliasRegistry).stream())
+                .anyMatch(AdapterAliasGenerator.RenderedShape::usesRegistry)) {
+            sb.append("import type { RegistryTypes } from \"@special/types\";\n\n");
+        }
         Set<String> imports = referencedClasses(events, payloads);
         Set<TypeScriptImportNames.Symbol> symbols = new LinkedHashSet<>();
         for (String fqn : imports) {
@@ -160,6 +165,27 @@ public final class EventDeclarationGenerator {
             return sb.toString();
         }
 
+        if (!event.callSignatures().isEmpty()) {
+            for (EventCallSignature signature : event.callSignatures()) {
+                List<String> parameters = new ArrayList<>();
+                for (EventCallSignature.Parameter input : signature.inputs()) {
+                    parameters.add(input.name() + ": " + AdapterAliasGenerator
+                            .renderShape(input.shape(), moduleAliases, true).type());
+                }
+                List<String> callbackParameters = new ArrayList<>();
+                for (EventCallSignature.Parameter parameter : signature.callbackParameters()) {
+                    callbackParameters.add(parameter.name() + ": " + AdapterAliasGenerator
+                            .renderShape(parameter.shape(), moduleAliases, false).type());
+                }
+                parameters.add("callback: (" + String.join(", ", callbackParameters) + ") => void");
+                sb.append("        function ").append(event.name()).append("(")
+                        .append(String.join(", ", parameters)).append("): ")
+                        .append(AdapterAliasGenerator.renderShape(signature.returns(), moduleAliases, false).type())
+                        .append(";\n");
+            }
+            return sb.toString();
+        }
+
         // 事件类类型
         String eventType = "any";
         if (payload != null) {
@@ -205,10 +231,32 @@ public final class EventDeclarationGenerator {
         Set<String> imports = new LinkedHashSet<>();
         for (EventCatalogEntry event : events) {
             if (event.scriptDefined()) continue;
+            if (!event.callSignatures().isEmpty()) {
+                for (AdapterAliasGenerator.RenderedShape shape : callShapes(event, aliasRegistry)) {
+                    imports.addAll(shape.referenceFqns());
+                }
+                continue;
+            }
             if (event.eventType() != null && !payloads.containsKey(event.eventType())) collectImports(event.eventType(), imports);
             if (event.dispatchable() && event.dispatchKeyType() != null) collectImports(event.dispatchKeyType(), imports);
         }
         return imports;
+    }
+
+    private static List<AdapterAliasGenerator.RenderedShape> callShapes(
+            EventCatalogEntry event, TypeAliasRegistry aliases) {
+        List<AdapterAliasGenerator.RenderedShape> shapes = new ArrayList<>();
+        if (event.scriptDefined()) return shapes;
+        for (EventCallSignature signature : event.callSignatures()) {
+            for (EventCallSignature.Parameter parameter : signature.inputs()) {
+                shapes.add(AdapterAliasGenerator.renderShape(parameter.shape(), aliases, true));
+            }
+            for (EventCallSignature.Parameter parameter : signature.callbackParameters()) {
+                shapes.add(AdapterAliasGenerator.renderShape(parameter.shape(), aliases, false));
+            }
+            shapes.add(AdapterAliasGenerator.renderShape(signature.returns(), aliases, false));
+        }
+        return shapes;
     }
 
     private void collectImports(Class<?> cls, Set<String> imports) {

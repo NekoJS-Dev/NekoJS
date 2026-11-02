@@ -59,6 +59,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
     /** 内建 getter 覆盖只应用一次（实例是注册表单例，render 每轮调用）。 */
     private volatile boolean builtinOverridesApplied;
+    private boolean generatingAuthoringIndex;
+    private com.google.gson.JsonObject pendingAuthoringSnapshot;
 
     @Override
     public String languageId() {
@@ -82,9 +84,26 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     /** Merges render-time degradations into the result's warning channel; failures keep their message. */
     @Override
     public GenerateResult generate(ProbeContext ctx) {
-        GenerateResult result = ProbeBackend.super.generate(ctx);
-        return result.success() && !renderWarnings.isEmpty()
-                ? GenerateResult.withWarnings(result, List.copyOf(renderWarnings)) : result;
+        generatingAuthoringIndex = true;
+        pendingAuthoringSnapshot = null;
+        try {
+            GenerateResult result = ProbeBackend.super.generate(ctx);
+            if (result.success() && pendingAuthoringSnapshot != null) {
+                try {
+                    var authoringPaths = ctx.authoringPaths();
+                    com.tkisor.nekojs.authoring.AuthoringSnapshotFiles.publish(
+                            authoringPaths.verify(authoringPaths.snapshots()), pendingAuthoringSnapshot);
+                } catch (IOException | RuntimeException failure) {
+                    NekoJS.LOGGER.warn("[NEKO-1019] Authoring snapshot publication failed; the previous snapshot remains current", failure);
+                    result = GenerateResult.withWarnings(result, List.of("Authoring snapshot publication failed; the previous snapshot remains current."));
+                }
+            }
+            return result.success() && !renderWarnings.isEmpty()
+                    ? GenerateResult.withWarnings(result, List.copyOf(renderWarnings)) : result;
+        } finally {
+            generatingAuthoringIndex = false;
+            pendingAuthoringSnapshot = null;
+        }
     }
 
     /**
@@ -94,6 +113,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     @Override
     public Map<String, String> render(ProbeContext ctx) {
         renderWarnings.clear();
+        if (generatingAuthoringIndex) indexFileGenerator.enableAuthoringIndex();
         applyBuiltinGetterOverrides();
         tsClassRenderer.setCovariantTypeParameters(fastutilResultVariance());
         NekoScriptCatalogSnapshot snapshot = ctx.snapshot();
@@ -233,6 +253,13 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
             // 10. 渲染 probe.add_global 全局声明（@manual/globals.d.ts，已被 jsconfig include 覆盖）
             renderGlobalsDeclarations(ctx.overrides().globals(), files);
+            if (generatingAuthoringIndex) {
+                var authoringDeclarations = indexFileGenerator.takeAuthoringDeclarations();
+                // Rendering is complete; retain emitted records without keeping the reflection and render caches alive.
+                indexFileGenerator.clearCaches();
+                declarations.clearCaches();
+                pendingAuthoringSnapshot = TypeScriptAuthoringIndex.consumeOwnedEmissions(ctx, files, authoringDeclarations);
+            }
 
             return files;
         } finally {

@@ -221,7 +221,8 @@ public final class NekoScriptCatalog {
                         : null;
                 entries.add(EventCatalogEntry.of(
                         group.name(), entry.getKey(), holder.scriptType(),
-                        bus.bus().eventType(), dispatchKeyType, bus.canCancel(), bus.canDispatch()));
+                        bus.bus().eventType(), dispatchKeyType, bus.canCancel(), bus.canDispatch())
+                        .withCallSignatures(bus.callSignatures()));
             }
         }
         // ScriptEvents 动态注册的事件组并列进目录：probe 才能为它们生成声明，payload
@@ -256,7 +257,8 @@ public final class NekoScriptCatalog {
                         : null;
                 entries.add(EventCatalogEntry.of(
                         group.name(), entry.getKey(), scriptType,
-                        bus.bus().eventType(), dispatchKeyType, bus.canCancel(), bus.canDispatch()));
+                        bus.bus().eventType(), dispatchKeyType, bus.canCancel(), bus.canDispatch())
+                        .withCallSignatures(bus.callSignatures()));
             }
         }
         // 动态脚本事件：与静态组一致的 side 过滤语义（canApplyOn），标签用查询侧 ScriptType。

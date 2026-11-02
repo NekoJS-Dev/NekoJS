@@ -180,7 +180,7 @@ public class LootTableEventJS {
             });
         }
 //?} else {
-/*        BuiltInRegistries.BLOCK.getTag(tagKey).ifPresent(holders -> {
+        /*BuiltInRegistries.BLOCK.getTag(tagKey).ifPresent(holders -> {
             for (Holder<Block> holder : holders) {
                 holder.unwrapKey().ifPresent(key -> {
                     Identifier location = key.location();
@@ -228,7 +228,7 @@ public class LootTableEventJS {
 //? if >=26 {
         return event.getRegistries();
 //?} else {
-/*        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        /*MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return null;
         return server.reloadableRegistries().lookup() instanceof HolderLookup.Provider provider ? provider : null;
 *///?}

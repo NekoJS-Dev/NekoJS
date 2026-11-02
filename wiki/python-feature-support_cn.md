@@ -25,7 +25,7 @@
 
 | 特性 | PEP | 语法示例 | 对 JS 转译 | NekoJS 状态 |
 |---|---|---|---|---|
-| 结构化模式匹配 `match`/`case` | PEP 634 | `match x:\n  case 1: ...` | 中（可降级为 if/else 链） | ✅（PEP 634，字面量/通配/捕获/`|`/序列/映射/类模式 + guard） |
+| 结构化模式匹配 `match`/`case` | PEP 634 | `match x:\n  case 1: ...` | 中（可降级为 if/else 链） | ✅（PEP 634，字面量/通配/捕获/`\|`/序列/映射/类模式 + guard） |
 | 括号化多上下文管理器 | — | `with (a as x, b as y):` | 易（已支持多项 `with`） | ✅（等价 `with a as x, b as y:`） |
 | `X \| Y` 联合类型注解 | PEP 604 | `def f(x: int \| str)` | 易（注解直接丢弃） | ✅（注解已丢弃） |
 | 更精确的错误定位（带 `^` 指示） | — | — | 与转译无关 | — |
@@ -38,7 +38,7 @@
 | 异常组 `ExceptionGroup` + `except*` | PEP 654 | `raise ExceptionGroup(...)` / `except* ValueError:` | 难（JS 无原生对应，需模拟） | ❌ |
 | `asyncio.TaskGroup`（结构化并发） | — | `async with asyncio.TaskGroup() as tg:` | 属于 stdlib/async | ❌ |
 | `add_note`（异常附加说明） | — | `e.add_note('...')` | 易（对象属性） | ❌（未映射） |
-| `typing.Self` / `typing.override` 装饰器 | PEP 673 | — | 注解，丢弃即可 | ❌（注解未识别这些名字） |
+| `typing.Self` 注解 | PEP 673 | `def copy(self) -> Self:` | 解析后的注解被丢弃，不解析名字指向 | ✅ 仅注解擦除，不表示兼容 `typing` 运行时模块 |
 | tomllib（标准库 TOML 解析） | PEP 680 | — | stdlib，无关 | — |
 | 细粒度 traceback 定位、加速（Faster CPython） | — | — | 与转译无关 | — |
 
@@ -107,7 +107,7 @@
 | `return` / `break` / `continue` / `pass` | — | 同名 | ✅ |
 | `import` / `from ... import` | — | ESM `import` | ✅ |
 | 类型注解（参数 / 返回 / 变量） | `x: int = 5` | 解析后丢弃 | ✅（丢弃） |
-| `match` / `case` 模式匹配 | `match x:` | 降级 if/else 链 | ✅（字面量/通配/捕获/`|`/序列/映射/类模式+guard） |
+| `match` / `case` 模式匹配 | `match x:` | 降级 if/else 链 | ✅（字面量/通配/捕获/`\|`/序列/映射/类模式+guard） |
 | `async def` / `await` / `async for` / `async with` | — | JS async/await | ❌（GraalJS 支持但价值低） |
 
 <a id="wiki-section-10"></a>
@@ -119,7 +119,7 @@
 | f-string（含 `:.2f` 等格式说明符、`!r`） | `f'{x:.2f}'` | 模板字面量 + `__nekoFmt` | ✅ |
 | t-string（3.14） | `t"{x}"` | Template 对象 | ❌ |
 | 属性 / 索引 / 调用 | `a.b` / `a[i]` / `f()` | 同名 | ✅ |
-| 关键字调用 | `f(a=1, b=2)` | 尾随带标记对象 + prologue | ✅（目标需 `**kwargs` 或 print/sorted） |
+| 关键字调用 | `f(a=1, b=2)` | 尾随带标记对象 + prologue | ✅（目标需 `**kwargs` 或 print/sorted/min/max 关键字特例） |
 | 算术 / 比较 / 布尔 / 位运算 | `+ - * / // % **`、`and/or/not`、`& \| ^ ~ << >>` | 对应 JS（`//`→`Math.floor`） | ✅ |
 | 三元 `a if c else b` | — | `(c ? a : b)` | ✅ |
 | `in` / `not in` / `is` / `is not` | — | `__nekoIn` / `===` | ✅（数组、字符串、dict 自有键及 Map/Set） |

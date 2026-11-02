@@ -82,6 +82,8 @@ console.info('等了 1 秒')
 
 > 全局 `setTimeout`/`setInterval`/`clearTimeout`/`clearInterval` 在脚本顶层即可用（已 patch 到 `globalThis`）。
 
+上面的正延时示例适用于 SERVER/CLIENT/TEST。STARTUP 拒绝所有 interval 与正延时 timeout，允许零延时或 immediate 回调。调度器只把就绪任务入队：回调在脚本环境归属方冲刷队列时执行（包括等待模块求值期间、生命周期或 tick 分发，或 TEST 流程），不在调度器线程运行，也不保证精确的墙钟触发时刻。失败候选与被替换的代会取消各自的定时器，不应把旧回调当作持久状态。
+
 <a id="wiki-section-7"></a>
 ### `node:test` + `node:assert`
 
@@ -114,9 +116,15 @@ console.info(buf.toString('hex')) // '68656c6c6f'
 <a id="wiki-section-9"></a>
 ## 访问范围限制
 
-- **文件访问**限制在游戏目录内（沙盒）。试图访问游戏目录外的路径会报错。
-- **符号链接逃逸检查**：即使符号链接指向游戏目录外，也会被拒绝。
-- **不允许创建符号链接**。
+| 操作 | 默认边界 |
+|---|---|
+| 读取 | 游戏目录内，并检查规范路径与符号链接逃逸 |
+| 新建、写入、删除、改名目标 | 仅 `nekojs/`；`allowFsWriteOutsideNekojs` 默认为 `false` |
+| 开启 `allowFsWriteOutsideNekojs=true` | 写入范围可扩大到游戏目录，但不能越出游戏目录 |
+| 受保护配置 | 即使开启该选项，`nekojs/config/` 与旧 `config/nekojs-engine.toml` 仍不可写 |
+| 创建符号链接 | 不允许 |
+
+该选项位于 `nekojs/config/engine.toml`。文件系统检查与可选 watchdog 预算不能保证任意 Java 宿主调用或不可信脚本安全。`scriptRunawayTimeoutSeconds` 与 `scriptStatementLimit` 默认为 0（禁用），watchdog 隔离后需显式完整重载恢复。
 
 ```javascript
 import fs from 'node:fs'
@@ -130,13 +138,20 @@ fs.writeFileSync('/etc/passwd', 'hacked')         // 拒绝：超出沙盒范围
 把**纯 JS** 的 npm 包放进 `nekojs/node_modules/`：
 
 ```javascript
-// 假设 nekojs/node_modules/lodash/ 存在
-const _ = require('lodash')
-console.info(_.chunk([1,2,3,4], 2))   // [[1,2],[3,4]]
+// nekojs/node_modules/greeting/index.cjs
+module.exports = name => `Hello, ${name}!`
+```
+
+```javascript
+// server_scripts/use_greeting.cjs
+const greet = require('greeting/index.cjs')
+console.info(greet('NekoJS')) // Hello, NekoJS!
 ```
 
 <a id="wiki-section-11"></a>
 ### npm 依赖限制
+
+纯 JavaScript 只是必要条件，不代表包一定兼容。NekoJS 解析器检查显式文件、扩展名候选与目录 `index` 文件，不实现 Node 的 package.json `main` 或 `exports` 解析；必要时指定兼容的明确入口路径。同步 `require()` 会拒绝尚未完成求值且含顶层 await 或异步静态依赖的 ESM，应改用 `import()`。
 
 | 限制 | 说明 |
 |---|---|
@@ -177,4 +192,4 @@ test('fs 同步与 promises 都能用', async () => {
 
 ---
 
-[上一篇: JSX 客户端 UI](jsx-client-ui_cn) · [目录](Home) · [下一篇: 插件开发](plugin-development_cn)
+[上一篇: 客户端绘制与后处理](client-rendering_cn) · [目录](Home) · [下一篇: 插件开发](plugin-development_cn)

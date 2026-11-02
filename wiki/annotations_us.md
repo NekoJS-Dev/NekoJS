@@ -18,14 +18,14 @@
 | `@RemapByPrefix({"get", "is"})` | TYPE/METHOD/FIELD | Rename members in bulk by prefix |
 | `@HideFromJS` | TYPE/METHOD/FIELD | Hide from JS |
 | `@CalledByDynamicCode` | TYPE/METHOD/CONSTRUCTOR | Mark calls from generated JS (`RetentionPolicy.SOURCE`, suppressing IDE unused warnings) |
-| `@PlatformAvailability(Scope.ALL\|NF_ONLY\|CR_ONLY)` | TYPE/METHOD | Declare platform availability on Spec interfaces |
+| `@PlatformAvailability(Scope.ALL\|NF_ONLY\|NF26_ONLY\|CR_ONLY)` | TYPE/METHOD | Declare platform availability on Spec interfaces |
 | `@Doc("...")` | TYPE/METHOD/CONSTRUCTOR/FIELD | English documentation rendered as probe `.d.ts` JSDoc; repeatable |
 | `@Param(name, value)` | METHOD/CONSTRUCTOR | Parameter documentation rendered as `@param` lines; repeatable |
 | `@Return("...")` | METHOD | Return-value documentation rendered as `@returns` lines |
 | `@Overload({"id: string"})` | METHOD/CONSTRUCTOR | Additional handwritten `.d.ts` signatures; repeatable |
 | `@DeprecatedNekojs` | TYPE/METHOD/CONSTRUCTOR/FIELD | Script-facing deprecation rendered as JSDoc `@deprecated`, shown struck through in editors |
 
-All annotations use `@Retention(RUNTIME)` (except `@CalledByDynamicCode`, which uses `SOURCE`) and `@Documented`.
+Retention is `RUNTIME` except `@CalledByDynamicCode` (`SOURCE`). `@Documented` is not universal: naming/visibility/plugin/platform annotations do not all carry it; inspect the declaration rather than assuming it affects callability.
 
 <a id="wiki-section-3"></a>
 ## Which annotations are enforced?
@@ -39,7 +39,7 @@ They fall into three categories according to what happens when omitted:
 | Generated documentation only | `@Doc`, `@Param`, `@Return`, `@Overload`, `@DeprecatedNekojs` | Without them, JSDoc is empty and there are no extra signatures. They do not affect runtime callability. `@Overload` affects type checking by adding available signatures. |
 | Not consumed at runtime | `@CalledByDynamicCode` | `RetentionPolicy.SOURCE`; only prevents IDE unused warnings. Omitting it changes no behavior. |
 
-`@RegisterNekoJSPlugin` is the only annotation that **must be present**: platform loaders scan only annotated classes; see [Plugin development](plugin-development_us).
+`@RegisterNekoJSPlugin` enables NeoForge annotation discovery. Fabric addons instead need the `nekojs` manifest entrypoint; the shared manager accepts absent annotation metadata. See [Plugin development](plugin-development_us).
 
 ---
 
@@ -65,10 +65,10 @@ public class FooJS {
 <a id="wiki-section-6"></a>
 ## `@RemapByPrefix({"get", "is"})`
 
-Renames members of a class in bulk by prefix. `value()` lists prefixes to **remove**. Common uses include turning `getXXX` / `isXXX` into property-style names and remapping the `neko$` prefix on Spec interfaces:
+Strips the prefixes in `value()` while **preserving the remaining casing**: `getX` becomes `X`, not `x`. This is member renaming, not Bean-property alias generation. Use a per-member `@Remap("x")` for that exact spelling. The `neko$` prefix on Spec interfaces is another use; see [Script API style](script-api-style_us).
 
 ```java
-@RemapByPrefix({"get", "is"})   // Map getX to x and isX to x
+@RemapByPrefix({"get", "is"})   // Strip getX to X and isX to X; casing is preserved
 public class FooJS { ... }
 
 // Spec interface pattern: strip the neko$ prefix on platform Extensions to expose JS names

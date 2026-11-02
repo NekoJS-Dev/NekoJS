@@ -64,7 +64,7 @@ public class PotionBuilder extends RegistryObjectBuilder<Potion> {
 //? if >=26 {
             return BuiltInRegistries.MOB_EFFECT.get(key).map(ref -> (Holder<MobEffect>) ref).orElse(null);
 //?} else {
-/*            MobEffect mobEffect = BuiltInRegistries.MOB_EFFECT.get(key);
+            /*MobEffect mobEffect = BuiltInRegistries.MOB_EFFECT.get(key);
             return mobEffect == null ? null : BuiltInRegistries.MOB_EFFECT.wrapAsHolder(mobEffect);
 *///?}
         }

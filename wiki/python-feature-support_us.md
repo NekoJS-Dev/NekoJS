@@ -25,7 +25,7 @@
 
 | Feature | PEP | Syntax example | JS transpilation | NekoJS status |
 |---|---|---|---|---|
-| Structural pattern matching `match`/`case` | PEP 634 | `match x:\n  case 1: ...` | Moderate (can lower to an if/else chain) | ✅ (PEP 634, literal/wildcard/capture/`|`/sequence/mapping/class patterns + guard) |
+| Structural pattern matching `match`/`case` | PEP 634 | `match x:\n  case 1: ...` | Moderate (can lower to an if/else chain) | ✅ (PEP 634, literal/wildcard/capture/`\|`/sequence/mapping/class patterns + guard) |
 | Parenthesized multiple context managers | — | `with (a as x, b as y):` | Easy (multiple `with` items already supported) | ✅ (equivalent to `with a as x, b as y:`) |
 | `X \| Y` union type annotations | PEP 604 | `def f(x: int \| str)` | Easy (annotations are discarded) | ✅ (annotations discarded) |
 | More precise error locations (with `^` indicators) | — | — | Unrelated to transpilation | — |
@@ -38,7 +38,7 @@
 | Exception groups `ExceptionGroup` + `except*` | PEP 654 | `raise ExceptionGroup(...)` / `except* ValueError:` | Difficult (no native JS equivalent; needs emulation) | ❌ |
 | `asyncio.TaskGroup` (structured concurrency) | — | `async with asyncio.TaskGroup() as tg:` | Part of stdlib/async | ❌ |
 | `add_note` (exception notes) | — | `e.add_note('...')` | Easy (object properties) | ❌ (not mapped) |
-| `typing.Self` / `typing.override` decorator | PEP 673 | — | Annotations can simply be discarded | ❌ (these names are not recognized in annotations) |
+| `typing.Self` annotation | PEP 673 | `def copy(self) -> Self:` | Parsed annotation is discarded without resolving its name | ✅ Annotation erasure only; no `typing` runtime module compatibility implied |
 | tomllib (standard library TOML parsing) | PEP 680 | — | stdlib, unrelated | — |
 | Fine-grained traceback locations, speedups (Faster CPython) | — | — | Unrelated to transpilation | — |
 
@@ -107,7 +107,7 @@ The following table lists capabilities commonly wanted in a practical Python scr
 | `return` / `break` / `continue` / `pass` | — | Same names | ✅ |
 | `import` / `from ... import` | — | ESM `import` | ✅ |
 | Type annotations (parameters / return / variables) | `x: int = 5` | Parsed then discarded | ✅ (discarded) |
-| `match` / `case` pattern matching | `match x:` | Lowered to an if/else chain | ✅ (literal/wildcard/capture/`|`/sequence/mapping/class patterns + guard) |
+| `match` / `case` pattern matching | `match x:` | Lowered to an if/else chain | ✅ (literal/wildcard/capture/`\|`/sequence/mapping/class patterns + guard) |
 | `async def` / `await` / `async for` / `async with` | — | JS async/await | ❌ (GraalJS supports it, but the value is low) |
 
 <a id="wiki-section-10"></a>
@@ -119,7 +119,7 @@ The following table lists capabilities commonly wanted in a practical Python scr
 | f-strings (including format specifiers such as `:.2f`, `!r`) | `f'{x:.2f}'` | Template literals + `__nekoFmt` | ✅ |
 | t-strings (3.14) | `t"{x}"` | Template object | ❌ |
 | Attribute / index / call | `a.b` / `a[i]` / `f()` | Same forms | ✅ |
-| Keyword calls | `f(a=1, b=2)` | Trailing marked object + prologue | ✅ (target requires `**kwargs` or print/sorted) |
+| Keyword calls | `f(a=1, b=2)` | Trailing marked object + prologue | ✅ (target requires `**kwargs` or the print/sorted/min/max keyword special cases) |
 | Arithmetic / comparison / boolean / bitwise operations | `+ - * / // % **`, `and/or/not`, `& \| ^ ~ << >>` | Corresponding JS (`//`→`Math.floor`) | ✅ |
 | Conditional `a if c else b` | — | `(c ? a : b)` | ✅ |
 | `in` / `not in` / `is` / `is not` | — | `__nekoIn` / `===` | ✅ (arrays, strings, dict own keys, and Map/Set) |

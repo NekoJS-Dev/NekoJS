@@ -40,7 +40,7 @@ NekoJS 是一个基于 GraalJS 的 Minecraft 脚本运行时。你可以用 Java
 console.info('[NekoJS] Server script loaded')
 ```
 
-4. 进入世界，或执行 `/nekojs reload`。看到日志输出后，继续阅读 [快速开始](quick-start_cn)。
+4. 进入世界，或执行 `/nekojs reload server`。看到日志输出后，继续阅读 [快速开始](quick-start_cn)。
 
 <a id="wiki-section-4"></a>
 ## 当前平台
@@ -50,9 +50,8 @@ console.info('[NekoJS] Server script loaded')
 | NeoForge 1.21.1 | 当前支持，Java 21 |
 | NeoForge 26.1.2 | 当前支持，Java 25 |
 | NeoForge 26.2.0 | 当前支持，Java 25 |
-| Fabric 26.1.2 | 已有构建和运行冒烟，暂未作为正式制品发布；API 为子集 |
-| Fabric 26.2.0 | 已有构建和运行时隔离门禁，暂未作为正式制品发布；API 为子集 |
-| Cleanroom 1.12.2 | 独立 legacy 分支，不在当前仓库版本图中 |
+| Fabric 26.1.2 | 当前仓库节点，Java 25；加载器 API 为子集 |
+| Fabric 26.2.0 | 当前仓库节点，Java 25；加载器 API 为子集 |
 
 详细差异见 [平台与兼容性](platform-compatibility_cn)。发布状态以 [Releases](https://github.com/NekoJS-Dev/NekoJS/releases) 为准。
 
@@ -62,10 +61,14 @@ console.info('[NekoJS] Server script loaded')
 - **第一次写脚本**： [快速开始](quick-start_cn)
 - **想知道脚本何时运行**： [脚本基础](script-basics_cn)
 - **想查绑定和方法**： [全局绑定](global-bindings_cn)
+- **想让 AI 读取当前实例 API**： [AI 辅助脚本编写](ai-support_cn)
 - **想监听或取消事件**： [事件参考](event-reference_cn)
 - **想改配方**： [配方系统](recipe-system_cn)
 - **想注册物品、方块或实体**： [注册新内容](registering-new-content_cn)
 - **想用 JSX 写客户端 Screen**： [JSX 客户端 UI](jsx-client-ui_cn)
+- **想绘制 HUD/世界覆盖层或使用后处理**： [客户端绘制](client-rendering_cn)
+- **想分清事件、Binding、builder 和数据对象语法**： [脚本 API 风格](script-api-style_cn)
+- **选择持久化、同步或 generation 局部状态**：[数据与状态](data-and-state_cn)
 - **想拆分模块或使用 npm 包**： [模块系统](module-system_cn)
 - **遇到错误**： [常见问题](faq_cn)
 - **想写 Java 插件**： [插件开发](plugin-development_cn)
@@ -73,7 +76,7 @@ console.info('[NekoJS] Server script loaded')
 <a id="wiki-section-6"></a>
 ## 维护说明
 
-Wiki 中仍有部分 Cleanroom legacy 资料和正在翻译的英文页面。涉及平台差异时，以 [平台与兼容性](platform-compatibility_cn)、对应参考页的平台标记和当前 Release 为准。
+本页支持矩阵仅覆盖当前仓库的五个节点；当前代码不能确认 Cleanroom 1.12.2 行为或制品发布状态。API 可用性请结合平台标记与当前实例生成的声明判断；实际发布制品以发布页为准。
 
 <!-- wiki-nav -->
 

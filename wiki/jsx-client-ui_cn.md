@@ -23,6 +23,115 @@ jsxAutomaticRuntime = true
 
 NekoJS 会使用内置的 `nekojs/jsx-runtime`，并在 workspace/probe 过程中把脚本目录的 `jsconfig.json` 更新为 automatic JSX 配置。不需要在 `node_modules/` 中创建同名 runtime 文件。
 
+**完整表单、页签、对话框与只读物品示例**
+
+将下面的完整脚本保存为 `nekojs/client_scripts/authoring-examples/forms-and-dialogs.tsx`，在支持的 NeoForge 26.x 客户端运行 `/nekojs reload client`。先移除其它会打开 Screen 的示例脚本，否则它们会争用当前 Screen。代码与随附的 `examples/client/forms-and-dialogs.tsx` 完全一致；页签、表单值和待确认快照等信号均在 render 之外创建。
+
+```tsx
+// CLIENT only: requires the ClientUI binding published on NeoForge 26.x.
+import { UI, Tabs, Dialog, validateForm, Validators } from "nekojs/jsx-runtime";
+
+const tab = UI.createSignal("profile");
+const name = UI.createSignal("");
+const quantity = UI.createSignal("1");
+const errors = UI.createSignal("");
+const dialogOpen = UI.createSignal(false);
+const reviewed = UI.createSignal({ name: "", quantity: 1 });
+const status = UI.createSignal("Nothing confirmed");
+const backgroundClicks = UI.createSignal(0);
+
+function review() {
+    const values = { name: name.get(), quantity: quantity.get() };
+    const result = validateForm(values, {
+        name: [Validators.required("Enter a name"), Validators.maxLength(24, "Use at most 24 characters")],
+        quantity: [
+            Validators.required("Enter a quantity"),
+            Validators.numberRange(1, 64, "Quantity must be between 1 and 64"),
+            value => Number.isInteger(Number(value)) ? null : "Quantity must be a whole number"
+        ]
+    });
+    errors.set(Object.keys(result.errors).map(field => result.errors[field].join("; ")).join(" | "));
+    if (!result.valid) return;
+    reviewed.set({ name: values.name.trim(), quantity: Number(values.quantity) });
+    dialogOpen.set(true);
+}
+
+const tabs = [
+    {
+        value: "profile", label: "Profile", render: () => (
+            <column gap={6} width="fill">
+                <label>Name and requested quantity (local preview only)</label>
+                <input id="forms-name" width="fill" height={20} value={name.get()} maxLength={24}
+                    placeholder="Name" onChange={event => name.set(event.value || "")} />
+                <input id="forms-quantity" width="fill" height={20} value={quantity.get()} maxLength={8}
+                    placeholder="Whole number 1..64" onChange={event => quantity.set(event.value || "")} />
+                <label id="forms-errors">{errors.get()}</label>
+                <button id="forms-review" height={20} onClick={review}>Review</button>
+            </column>
+        )
+    },
+    {
+        value: "preview", label: "Preview", render: () => (
+            <column gap={6}>
+                <item id="forms-preview-item" item="minecraft:diamond" count={1} itemTooltip={true}
+                    width={32} height={32} />
+                <label>Read-only icon and tooltip; no inventory is changed.</label>
+            </column>
+        )
+    },
+    { value: "locked", label: "Locked", disabled: true, render: () => <label>Not selectable</label> }
+];
+
+const host = ClientUI.screen("Authoring forms and dialogs", false);
+const root = UI.createRoot(() => (
+    <screen padding={12}>
+        <scroll id="forms-scroll" width="fill" height="fill">
+            <column gap={8} width="fill">
+                <Tabs id="forms-tabs" width="fill" height={190} value={tab.get()} tabs={tabs}
+                    onChange={value => tab.set(value)} />
+                <button id="forms-background" height={20}
+                    onClick={() => backgroundClicks.update(value => value + 1)}>Background action</button>
+                <label id="forms-background-count">{"Background clicks: " + backgroundClicks.get()}</label>
+                <label id="forms-status">{status.get()}</label>
+            </column>
+        </scroll>
+        <Dialog id="forms-dialog" open={dialogOpen.get()} title="Confirm local profile"
+            onOpenChange={value => dialogOpen.set(value)}>
+            <scroll id="forms-dialog-scroll" width="fill" height="fill">
+                <column gap={8} width="fill">
+                    <label>{reviewed.get().name + " x" + reviewed.get().quantity}</label>
+                    <label>Confirmation changes only this screen, not a world or inventory.</label>
+                    <button id="forms-cancel" height={20} onClick={() => dialogOpen.set(false)}>Cancel</button>
+                    <button id="forms-confirm" height={20} onClick={() => {
+                        status.set("Confirmed " + reviewed.get().name + " x" + reviewed.get().quantity);
+                        dialogOpen.set(false);
+                    }}>Confirm</button>
+                </column>
+            </scroll>
+        </Dialog>
+    </screen>
+), host);
+host.bindRoot(root);
+host.open();
+```
+
+**运行与观察：**初始选中 Profile，姓名为空、数量为 `1`，错误为空，状态为 `Nothing confirmed`，背景计数为零。空姓名时点 Review，应显示错误且不打开对话框；数量 `0`、`65`、文本或 `1.5` 会被范围/整数校验拒绝。输入 `Alex` 和 `3` 后 Review，再点 Cancel 或按 Escape/点击背景关闭，状态不变；再次 Review 并 Confirm 后，状态变为 `Confirmed Alex x3`。它不修改世界、背包或网络状态。Preview 展示只读钻石和 tooltip，Locked 不可选；切回 Profile 保留外部信号中的字段值。关闭 Screen、移除脚本并 reload CLIENT 会释放 root 与回调；重新加载重置的是本示例状态，不是持久化存储。
+
+**真实客户端待验收清单——尚未运行**
+
+认定 UI 已验收前，应逐项记录节点、loader、GUI scale、视口、实际结果与维护者结论。内存 native/common-engine 替身不是实机证据。
+
+| 检查 | 预期观察 | 状态 |
+|---|---|---|
+| 无效/有效表单 | 无效值不打开对话框；Alex/3 可取消或确认本地快照 | 未运行 |
+| Tabs | 指针及方向键/Home/End 跳过 Locked；仅挂载选中页，切换后字段值保留 | 未运行 |
+| 模态边界 | 背景 action/滚动、键盘及手动背景 dispatch 均被阻止；旧指针/滑块捕获取消 | 未运行 |
+| 焦点与关闭 | Tab/Shift+Tab 留在顶层模态；Escape/背景遵循开关且不关闭 Screen；恢复仍可用的原焦点 | 未运行 |
+| 只读物品 | 实际图标/模型/数量与原版或自定义覆盖 tooltip 可见，背包不变 | 未运行 |
+| 视口与生命周期 | 小窗口、缩放和嵌套滚动不限制 portal，内容仍可达；关闭/重载/失败候选保留不留下旧回调或模态状态 | 未运行 |
+
+维护者结论：**待定**。真实滑块/系统剪贴板检查使用前一个 controls 示例，表单示例没有滑块。实际 GPU 画面、原生焦点/朗读、tooltip、IME 与多人环境验收仍未建立。
+
 <a id="wiki-section-4"></a>
 ### 2. 创建一个 Screen
 
@@ -62,6 +171,74 @@ adapter.open()
 
 UI root 必须从受管的 CLIENT 脚本上下文创建，并且所有创建、状态更新和关闭操作都应发生在客户端 owner thread。
 
+**完整控件示例：输入、开关、滑块和内联选择器**
+
+把下面的完整脚本保存为 `nekojs/client_scripts/authoring-examples/controls.tsx`，仅在支持的 NeoForge 26.x 客户端执行 `/nekojs reload client`。信号必须在 render 回调之外创建；否则重新协调可能把状态重置。此代码与随附 AI 文档中的 `examples/client/controls.tsx` 一致。
+
+```tsx
+// CLIENT only: requires the ClientUI binding published on NeoForge 26.x.
+import { UI, Toggle, Slider, Select } from "nekojs/jsx-runtime";
+
+const text = UI.createSignal("Paste or type a long single-line message here.");
+const enabled = UI.createSignal(true);
+const volume = UI.createSignal(40);
+const quality = UI.createSignal("balanced");
+const expanded = UI.createSignal(false);
+const options = [
+    { value: "balanced", label: "Balanced" },
+    { value: "fast", label: "Fast" },
+    { value: "unavailable", label: "Unavailable", disabled: true }
+];
+const appearance = {
+    background: "#20252B",
+    borderColor: "#708090",
+    color: "#FFFFFF",
+    placeholderColor: "#A0A0A0",
+    selectionColor: "#804488CC",
+    cursorColor: "#FFFFFF",
+    trackColor: "#4C566A",
+    thumbColor: "#88C0D0",
+    hover: { background: "#303B46" },
+    focused: { borderColor: "#88C0D0" },
+    pressed: { background: "#405466" },
+    disabled: { color: "#777777", background: "#181C20" }
+};
+
+const host = ClientUI.screen("Authoring controls", false);
+const root = UI.createRoot(() => (
+    <screen padding={12}>
+        <scroll id="controls-scroll" width="fill" height="fill">
+            <column gap={8} width={280}>
+                <label>Clipboard and controlled components</label>
+                <input id="controls-text" width="fill" height={20}
+                    value={text.get()} maxLength={160} appearance={appearance}
+                    onChange={event => text.set(event.value || "")} />
+                <Toggle id="controls-enabled" width="fill" height={20}
+                    checked={enabled.get()} label="Enable volume"
+                    appearance={appearance} onChange={value => enabled.set(value)} />
+                <Slider id="controls-volume" width="fill" height={20}
+                    value={volume.get()} min={0} max={100} step={5}
+                    disabled={!enabled.get()} appearance={appearance}
+                    onChange={value => volume.set(value)} />
+                <Select id="controls-quality" width="fill"
+                    value={quality.get()} options={options} expanded={expanded.get()}
+                    onExpandedChange={value => expanded.set(value)}
+                    appearance={appearance} onChange={value => quality.set(value)} />
+                <label id="controls-summary">{
+                    "enabled=" + String(enabled.get()) + "; volume=" + String(volume.get())
+                    + "; quality=" + quality.get()
+                }</label>
+                <label>Close this screen, then reload CLIENT to reset the example.</label>
+            </column>
+        </scroll>
+    </screen>
+), host);
+host.bindRoot(root);
+host.open();
+```
+
+**观察与清理：**初始摘要为 `enabled=true; volume=40; quality=balanced`。点击 Enable volume 可禁用/启用滑块；拖动或聚焦后用方向键、Home/End 改值。展开选择器并选择 Fast 后应显示 `quality=fast`，Unavailable 不可选。输入框支持单行长文本、选择与剪贴板操作，光标移动时横向跟随。关闭 Screen，移除脚本，再 reload CLIENT；重新加载重置信号并释放旧 generation 的回调。引擎/平台替身测试不能代替真实客户端的绘制、剪贴板和焦点验收。
+
 <a id="wiki-section-5"></a>
 ## 先明确：这不是 HTML/CSS
 
@@ -93,7 +270,7 @@ JSX 只是语法。`<panel>`、`<row>`、`<button>` 等小写标签不是浏览�
 </panel>
 ```
 
-小写标签必须来自这 11 个 primitive：`screen`、`panel`、`row`、`column`、`stack`、`scroll`、`label`、`button`、`input`、`image`、`spacer`。可以用 `UI.primitives()` 查询当前 runtime 的登记清单。
+小写标签必须来自这 14 个 primitive：`screen`、`panel`、`row`、`column`、`stack`、`scroll`、`label`、`button`、`input`、`slider`、`image`、`item`、`dialog`、`spacer`。可以用 `UI.primitives()` 查询当前 runtime 的登记清单。
 
 <a id="wiki-section-8"></a>
 ### 2. 函数组件
@@ -183,7 +360,10 @@ JSX 小写标签只能使用 NekoJS 登记的 host primitive。任意 Java 类�
 | `scroll` | 可滚动容器 | `scrollX`、`scrollY`、`scrollOffset` |
 | `label` | 文本 | `text`、`color`、`fontSize`、`font`、`wrap`、`truncate` |
 | `button` | 可点击按钮 | `text`、`disabled`、`tooltip` |
-| `input` | 文本输入 | `value`、`placeholder`、`maxLength`、`disabled` |
+| `input` | 单行文本输入 | `value`、`placeholder`、`maxLength`、`disabled`、`appearance` |
+| `slider` | 数值滑块 | `value`、`min`、`max`、`step`、`disabled`、`appearance` |
+| `item` | 只读物品展示 | `item`、`count`、`itemTooltip`、`tooltip` |
+| `dialog` | 模态视口 portal | `open`、`title`、`width`、`height`、`closeOnEscape`、`closeOnBackdrop`、`onDismiss` |
 | `image` | 图片或图标 | `resource`、`fit`、`opacity`、`icon`、`crop` |
 | `spacer` | 占位和撑开空间 | 通用布局属性 |
 
@@ -199,6 +379,24 @@ function Section({ title, children }) {
   )
 }
 ```
+
+**受控组件与原生编辑边界**
+
+从 `nekojs/jsx-runtime` 导入 `{ UI, Toggle, Slider, Select }`。`Toggle` 需要 `id`、`checked: boolean`、`onChange(boolean)`，可选 `label` / `text`；`Slider` 需要 `id`、`value: number`、`onChange(number)`；`Select` 需要 `id`、`value: string`、`options: readonly { value, label, disabled? }[]`、`expanded: boolean`、`onExpandedChange(boolean)`、`onChange(string)`。组件没有隐藏信号；每次 render 都应传入当前状态。选项 value 必须唯一且包含当前值；空选项只允许 `value=""`。Select 是最多六行、每行 20 像素的可滚动**内联列表**，不是悬浮原生下拉框。
+
+ID 必须在 root 内唯一。Toggle/Slider 使用基础 ID；Select 触发按钮使用基础 ID，并保留 `id:root`、`id:options`、`id:option:` 加 `encodeURIComponent(value)` 的派生 ID。禁用控件也会拒绝手动 `root.dispatch`，不能以 dispatch 绕过禁用状态。
+
+原生 `input` 的 `maxLength` 按 Unicode 码点计数；Control/Super+A 全选，Shift+左/右/Home/End 扩展选区；Control 或 Super + C/X/V 可复制/剪切/粘贴。剪切先写剪贴板再删除，剪贴板失败不丢失输入。粘贴过滤 ISO 控制字符（包括 CR/LF、制表符和 DEL）及孤立代理项，保留合法补充字符。输入保持单行，长文本采用同一像素偏移完成光标跟随、鼠标命中、选择和裁剪；值或宽度缩小时会重新限制偏移。没有多行/IME composition 契约。
+
+原生 `slider` 的 value/min/max/step 默认 0/0/100/1，要求有限值、有限跨度及跨度/步长比，`min < max`、`step > 0` 且 value 在范围内。内部位置交互按 `min + round((raw-min)/step)*step` 吸附并限幅；拖到端点或使用 Home/End 会精确到达边界，即使边界不在步长网格上。传值本身不自动吸附。左/下减一步，右/上加一步，Home/End 选端点；主键拖动捕获只属于滑块，不是通用拖放 API。**小写 primitive 的 `onChange` 收到 event，`event.value` 是字符串；大写 `Slider` 的回调直接收到 number。**
+
+**Tabs、校验、真正 Dialog 与只读 item 契约**
+
+- 使用具名导出 `{ Tabs, Dialog, validateForm, Validators }`，没有 `UI.Tabs`/`UI.Dialog` 别名。Tabs 接收 `id`、受控 `value`、value 唯一的 `tabs: [{ value, label, disabled?, render: () => ... }]` 和 `onChange(string)`；tabs 必须非空且包含当前 value。选中标题使用 `[Label]` 文字标记，不会强制覆盖传入的 appearance，也没有 roving-focus API；只执行/挂载选中页的 renderer，外部信号在切页后保留。默认宽高 fill，嵌入其它内容时应像示例那样明确高度。root 内唯一 ID 还需预留 `id:tabs`、`id:tab:` + `encodeURIComponent(value)`、`id:content`。方向键/Home/End 导航跳过禁用页签。
+- 显式调用 `validateForm(values, rules)` 得到深冻结的 `{ valid, errors }`；仅失败字段出现在 errors，其只读消息数组按字段/规则顺序排列。它不渲染错误、不提交、不归一化、不联系服务器。values 必须是普通 record，值为扁平 string/boolean/null/有限 number；显式 undefined 非法，但规则对应的缺失字段会以 undefined 传给规则。所有规则都会执行，一个字段可有多条消息；返回空字符串也算错误。内置规则为 `Validators.required(message?)`、`minLength(n, message?)`、`maxLength(n, message?)`、`numberRange(min, max, message?)`。required 拒绝缺失/null/空白字符串，但接受 `0`/`false`；长度规则要求字符串，按 JavaScript UTF-16 code unit 计数，与原生 input 的 maxLength 码点计数不同。numberRange 接受有限数值或经 `Number` 转换的非空白字符串，不保证整数。自定义 `(value, frozenValues) => message | null | undefined` 负责整数规则；Promise 或其它返回类型非法。不支持嵌套/异步校验。
+- Dialog 接收 `id`、受控 `open`、`onOpenChange(boolean)`，可选 `title`、`children`、`width`、`height`、`closeOnEscape`、`closeOnBackdrop`。关闭时不返回节点；打开时创建覆盖安全视口的 portal 和默认 80% × 80% 居中面板，不是普通流内 panel。宽高调整的是面板；溢出内容需显式放入 scroll。预留 `id:panel`、`id:content`。两个关闭开关默认 true；关闭请求只回调 `false`，仍由调用方更新信号才能关闭。
+- 按深度优先树顺序最后一个可见 dialog 为顶层模态。公共 dispatch 阻止背景 ID，包括打开后才分发的排队事件；原生指针/捕获/滚轮/键盘/文本/Tab/朗读留在其子树内。Escape 在 Screen 关闭前被消费，关闭开关为 false 时也不穿透；仅主键点击面板外才请求背景关闭。模态变化取消旧捕获并聚焦可用后代；关闭仅在原焦点仍保留、可见、启用时恢复。父滚动/裁剪不限制 portal。必须执行原生待验清单，不能用一张 panel 截图代替模态证明。
+- `<item item="minecraft:diamond" count={1} itemTooltip={true} />` 接收物品资源 ID，而不是 ItemStack/组件描述符。count 为 1..99 整数，默认 1；这是显示范围，不保证物品堆叠上限。itemTooltip 默认 true，`tooltip: string` 自定义文本覆盖原版 tooltip。每次 staged native create/update 仅解析一次已知非空气物品；未知/非法 ID 拒绝候选并保留当前树。在边界内居中绘制固定 16×16 图标和数量，不是背包 Slot，也不授予修改/网络权限。仅最上层、符合命中的物品显示 tooltip，模态下的背景物品不会显示。native 物品拒绝为 `NEKO-6012`；更早的公共 layout 校验仍可能为 `NEKO-7007`。
 
 <a id="wiki-section-12"></a>
 ## 布局
@@ -287,6 +485,8 @@ function Surface({ children }) {
 ```
 
 不要写成 `<panel style={COLORS}>`。`style` 不是登记的 prop，会触发 `Unsupported prop` 的 layout 错误。
+
+**控件 appearance：**`button`、`input`、`slider` 及上述组件支持复用的 `appearance` 对象。只允许 `background`、`borderColor`、`color`、`placeholderColor`、`selectionColor`、`cursorColor`、`trackColor`、`thumbColor` 八个颜色字段；`hover`、`focused`、`pressed`、`disabled` 子对象也只能包含这些颜色字段，不能再嵌套状态。优先级为 base → hover → focused → pressed → disabled。不接受未知键、null 或响应式颜色对象；布局 props 仍单独传入。这是有限的颜色配置，不是 CSS，也不会让 input 变成别的 primitive。颜色仍使用上述 ARGB/命名色规则；整数支持有符号/无符号 32 位 ARGB。
 
 <a id="wiki-section-16"></a>
 ### 资源 id
@@ -425,6 +625,10 @@ root 与创建它的 CLIENT generation 绑定：
 - `NEKO-7004`：操作不在客户端 owner thread。
 - `NEKO-7006`：旧 generation 的延迟操作被丢弃。
 - `NEKO-7007`：render、layout、event 或 host-update 阶段失败。
+- `NEKO-7008`：原生 host 校验发现控件 appearance 的字段、类型或颜色不合法。
+- `NEKO-7011`：原生 host 校验发现 slider 的范围、步长或值不合法。
+
+公共 JSX runtime 可能先在 layout 阶段拒绝不合法 props，此时可通过 `NEKO-7007` 携带 layout 诊断，而不是上述原生代码；不能保证每种错误 prop 都产生同一个原生代码。剪贴板 host 失败也会进入 `NEKO-7007`。
 
 render 或布局失败时不会提交半成品树；如果已有有效树，runtime 会尽量保留最后一次有效结果，并把错误交给既有错误报告链路。
 
@@ -463,8 +667,8 @@ ClientEvents.hud(painter => {
 })
 
 ClientEvents.screenRender(event => {
-  const painter = event.getPainter()
-  painter.text(`鼠标：${event.getMouseX()}, ${event.getMouseY()}`, 8, 8)
+  const painter = event.painter
+  painter.text(`鼠标：${event.mouseX}, ${event.mouseY}`, 8, 8)
 })
 ```
 
@@ -488,6 +692,8 @@ ClientEvents.worldRender('quest-path', { layer: 'normal', priority: 0 }, ctx => 
 ```
 
 这两个入口由 CLIENT generation 统一登记和替换，适合 HUD/world overlay；它们仍然是渲染回调，不是可交互 Screen，也不是 JSX host tree。
+
+这些**注册式**入口仅 NeoForge，不同于 Fabric 也具备的 Painter HUD/Screen 事件。NeoForge 26.2 的 `ctx.line` / `ctx.box` 使用独立 staged buffer 提交；源码/几何回归仍不能替代实际画面验收。layer 顺序、priority、替换清理以及后处理声明与激活的区分见 [客户端绘制与后处理](client-rendering_cn)。上面的 options map 是现有运行时契约，不是虚构的 builder 重载；JSX props 是数据，不是 NekoJS 定义 builder。见 [脚本 API 风格](script-api-style_cn)。
 
 <a id="wiki-section-29"></a>
 ### 方案 D：原生 Java Screen / Widget
@@ -520,6 +726,7 @@ JSX 客户端 UI 当前不提供：
 - React/Preact hooks、DOM、CSS parser、CSS Grid 或完整浏览器布局；
 - `className`、`style`、CSS selector/cascade、margin、阴影、渐变、transform、z-index、字体粗细/斜体/字族；
 - 远程 UI 下载、网络资源代理、通用动画系统或任意 shader。
+- 通用拖放、虚拟化列表、IME composition 或悬浮原生 Select popup。
 
 现有 `ClientEvents.hud`、`hudRender`、`worldRender`、`screenRender` 和手写 Java Screen 仍按原有 API 工作，不会因为启用 JSX UI 而自动迁移。
 
@@ -535,4 +742,4 @@ JSX 客户端 UI 当前不提供：
 
 ---
 
-[上一篇: TypeScript 与 JSX](typescript-and-jsx_cn) · [目录](Home) · [下一篇: Node.js 兼容](nodejs-compatibility_cn)
+[上一篇: TypeScript 与 JSX](typescript-and-jsx_cn) · [目录](Home) · [下一篇: 客户端绘制与后处理](client-rendering_cn)

@@ -23,7 +23,7 @@ console.info('hello')
 
 **位置不是随便放的**：扫描器（`ScriptContainer.preload`）从文件第一行往下读，遇到第一个既不是空行也不以 `//` 开头的行就 `break`。所以属性必须写在文件**开头的注释块**里——中间可以夹空行、也可以夹别的 `//` 注释行，但一旦出现 `import`、`/* */` 块注释或任何代码，后面的 `// priority:` 就再也读不到了。写错位置**不报错、不打日志**，属性就是取默认值，症状是「加载顺序不对」或「disable 没生效」。
 
-不认识的 key 同样静默忽略（属性名来自注册表，插件可以经 `registerScriptProperty` 往里加，见 [插件开发](plugin-development_cn)），所以拼错 `priorty:` 也是无声失败。值解析失败会打一条 warn。
+不认识的 key 同样静默忽略（属性名来自注册表，插件可以经 `registerScriptProperty` 往里加，见 [插件开发](plugin-development_cn)），所以拼错 `priorty:` 也是无声失败。值解析失败会回退到属性默认值，不保证有 warning。解析的是整段去空白后的值，因此说明应另起注释行，不能追加在整数属性后面。
 
 <a id="wiki-section-3"></a>
 ## 属性一览
@@ -39,7 +39,8 @@ console.info('hello')
 ## priority —— 控制加载顺序
 
 ```javascript
-// priority: 1000   // 最先跑
+// Runs before lower-priority scripts
+// priority: 1000
 ```
 
 数字越大越先跑。常用于「初始化共享数据/注册全局事件」的库脚本，确保它在业务脚本之前执行。
@@ -108,18 +109,13 @@ console.info('hello')
 // modloaded: create
 // after: lib/init.js
 
-// 这个脚本：
-// 1. priority=500，比默认脚本先跑
-// 2. 仅在安装了 Create 时运行
-// 3. 在 lib/init.js 之后运行
-// 4. 加载 Create 联动配方
+// This script:
+// 1. Has priority=500 and runs before default scripts
+// 2. Runs only when Create is installed
+// 3. Runs after lib/init.js only when it is enabled and also has priority=500
+// 4. Logs integration initialization
 
-ServerEvents.recipes(event => {
-  event.recipes.create.mixing(
-    'create:brass_ingot',
-    ['minecraft:copper_ingot', 'create:zinc_ingot']
-  )
-})
+console.info('Create integration initialized')
 ```
 
 <a id="wiki-section-9"></a>
@@ -134,6 +130,8 @@ ServerEvents.recipes(event => {
 
 「用 `priority` 粗分批次，用 `after` 在同批次内精确定位」是这套规则的推论：`after` 跨不了 priority 组。
 
+版本化包还会在这些文件偏好之后强制执行清单或包的前置依赖，不能提高 `priority` 来绕过。脚本属性不是文件监视订阅：改动在相关脚本重新发现或重载时生效，不是保存即生效。更改启用或排序时使用完整类型或包重载，见[脚本基础](script-basics_cn)与[脚本包](script-packs_cn)。
+
 <a id="wiki-section-10"></a>
 ## 下一步
 
@@ -144,4 +142,4 @@ ServerEvents.recipes(event => {
 
 ---
 
-[上一篇: 脚本基础](script-basics_cn) · [目录](Home) · [下一篇: 全局绑定](global-bindings_cn)
+[上一篇: 脚本 API 约定](script-api-style_cn) · [目录](Home) · [下一篇: 全局绑定](global-bindings_cn)

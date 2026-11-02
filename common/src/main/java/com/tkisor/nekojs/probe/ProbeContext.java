@@ -1,10 +1,14 @@
 package com.tkisor.nekojs.probe;
 
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
+import com.tkisor.nekojs.authoring.AuthoringPaths;
+
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.probe.events.ProbeOverrides;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -31,6 +35,20 @@ public interface ProbeContext {
 
     /** 路径单例。 */
     NekoJSPaths paths();
+
+    /** Captured AI destinations, independent of the declaration output directory. */
+    default AuthoringPaths authoringPaths() {
+        return standaloneAuthoringPaths(paths());
+    }
+
+    /** Resolves defaults for standalone callers without consulting runtime configuration. */
+    static AuthoringPaths standaloneAuthoringPaths(NekoJSPaths paths) {
+        try {
+            return AuthoringPaths.resolve(paths.gameDir(), AuthoringPaths.DEFAULT_DIRECTORY);
+        } catch (IOException failure) {
+            throw new UncheckedIOException("[NEKO-1019] Probe authoring destinations could not be resolved.", failure);
+        }
+    }
 
     /** 当前 backend 的目标语言 id。 */
     String languageId();
@@ -70,7 +88,8 @@ public interface ProbeContext {
             Path languageDir,
             List<TypeDecl> ir,
             ProbeOverrides overrides,
-            ExecutorService sharedPool
+            ExecutorService sharedPool,
+            AuthoringPaths authoringPaths
     ) implements ProbeContext {
         public Of {
             java.util.Objects.requireNonNull(snapshot, "snapshot");
@@ -81,6 +100,25 @@ public interface ProbeContext {
             collectedClasses = List.copyOf(collectedClasses == null ? List.of() : collectedClasses);
             ir = ir == null ? null : List.copyOf(ir);
             overrides = overrides == null ? ProbeOverrides.empty() : overrides;
+        }
+
+        /** Standalone render-only callers need not create a game directory until publication. */
+        @Override public AuthoringPaths authoringPaths() {
+            return authoringPaths == null ? standaloneAuthoringPaths(paths) : authoringPaths;
+        }
+
+        /** Compatibility constructor for callers without root-owned authoring destinations. */
+        public Of(NekoScriptCatalogSnapshot snapshot,
+                  List<Class<?>> collectedClasses,
+                  ProbeConfig config,
+                  NekoJSPaths paths,
+                  String languageId,
+                  Path languageDir,
+                  List<TypeDecl> ir,
+                  ProbeOverrides overrides,
+                  ExecutorService sharedPool) {
+            this(snapshot, collectedClasses, config, paths, languageId, languageDir, ir, overrides, sharedPool,
+                    null);
         }
 
         /** 8 参便利构造（sharedPool = null，兼容旧调用方）。 */

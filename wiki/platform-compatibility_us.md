@@ -15,10 +15,12 @@ The current NekoJS codebase contains two groups of nodes: NeoForge and Fabric. T
 | NeoForge | 1.21.1 | Supported | 21 | An older version node under stable maintenance |
 | NeoForge | 26.1.2 | Supported | 25 | A primary version node |
 | NeoForge | 26.2.0 | Supported | 25 | A primary version node |
-| Fabric | 26.1.2 | Build node exists; not yet published as an official artifact | 25 | Build and runtime smoke checks have passed; the API remains a subset |
-| Fabric | 26.2.0 | Build node exists; not yet published as an official artifact | 25 | Build and runtime isolation gates exist; the API remains a subset |
+| Fabric | 26.1.2 | Current repository build node | 25 | Loader-specific API subset; verify the installed artifact/profile |
+| Fabric | 26.2.0 | Current repository build node | 25 | Loader-specific API subset; verify the installed artifact/profile |
 
 Fabric nodes already cover script loading, recipes, networking, probe, some registry features, common events, and key bindings. This does not mean that they have complete feature parity with NeoForge. Refer to [Releases](https://github.com/NekoJS-Dev/NekoJS/releases) for publication status.
+
+The node graph is source/build evidence, not release or live-game acceptance evidence. Scripts need the matching **GraalMC** dependency (see [Quick start](quick-start_us)), including Python-to-JS execution; installing Python, GraalPy, or a GraalVM JDK is not a substitute. This audit did not run Minecraft.
 
 <a id="wiki-section-3"></a>
 ## Main feature differences
@@ -26,11 +28,12 @@ Fabric nodes already cover script loading, recipes, networking, probe, some regi
 | Feature | NeoForge 1.21.1 / 26.x | Fabric 26.x |
 |---|---|---|
 | JS/TS/JSX/Python scripts | Supported | Supported |
-| ESM, CommonJS, Node core modules | Supported | Supported |
+| ESM, CommonJS, Node core module adapters | Implemented subset, not a full Node.js process | Implemented subset, not a full Node.js process |
 | Recipe scripts and `reload server` | Supported | Supported; the current implementation determines the recipe API |
 | `/nekojs probe` and TypeScript/Python declarations | Supported | Supported |
 | `Network` / `NetworkEvents` network channels | Supported | Supported |
 | Basic registration builders | Supported | Partially supported |
+| `Registry` runtime view | Native query service | Binding exists, but queries use an empty fallback; not a functional cross-loader lookup |
 | JSX client Screen UI | NeoForge 26.x | Not yet ported |
 | `ClientEvents` HUD/Screen Painter | Supported | Supports `hud` and `screenRender`; registered renderers through `hudRender` / `worldRender` have not yet been ported |
 | `ServerEvents.tags` | Supported | Not yet ported |
@@ -45,8 +48,10 @@ Fabric nodes already cover script loading, recipes, networking, probe, some regi
 
 Enchantments in 26.x use data-driven registries. The runtime registration builder from 1.21.1 cannot be reused; use a data pack instead. A builder retained in the source code does not mean that a 26.x registration path is available.
 
+**Client rendering is not one feature flag.** Painter `hud` / `screenRender` exists on Fabric too; named `hudRender` / `worldRender` and post effects are NeoForge-only. NeoForge 26.2 `ctx.line` / `ctx.box` now submit through an independently owned staged buffer; 1.21.1/26.1.2 use their corresponding paths. Submission regressions do not establish GPU visual acceptance. JSX `ClientUI` is NeoForge 26.x only. See [Client rendering and post effects](client-rendering_us) and [JSX client UI](jsx-client-ui_us) for activation, lifecycle, and limits.
+
 <a id="wiki-section-3-issue4"></a>
-## Issue #4 implemented capabilities
+**Issue #4 implemented capabilities**
 
 The following surfaces are implemented in the corresponding NeoForge 1.21.1, NeoForge 26.x, and Fabric 26.x nodes. Fabric still only promises the subset explicitly listed here and on each reference page:
 
@@ -57,7 +62,7 @@ The following surfaces are implemented in the corresponding NeoForge 1.21.1, Neo
 | Persistent Data | Server entity/player PData uses automatic dirty flush, login/tracking snapshots, and respawn/clone copying; client mirrors are read-only; ItemStack data uses vanilla `CUSTOM_DATA` | [Global bindings](global-bindings_us#wiki-section-4) |
 | Capability | NeoForge uses native capabilities and transactional handlers; Fabric uses real Transfer/Lookup APIs; providers commit once during STARTUP and owners retain saving/synchronization responsibility | [Global bindings](global-bindings_us#wiki-section-26), [Event reference](event-reference_us#wiki-section-15) |
 
-Painter objects and client PData mirrors are valid only during their drawing/connection lifecycle. Capability providers do not automatically persist arbitrary owner storage, and Fabric's energy interface is not a cross-mod standard energy protocol.
+The Fabric entity-PData container root is now aligned with its bridge. Historical double-wrapped saves remain intact and require backup and an intentional migration decision; regression fixtures are not real restart/multiplayer acceptance. See [Data, lifetime, and authority](data-and-state_us). Painter objects and client PData mirrors are valid only during their drawing/connection lifecycle. Capability providers do not automatically persist arbitrary owner storage, and Fabric's energy interface is not a cross-mod standard energy protocol.
 
 Entity type builders use a visible humanoid renderer on the NeoForge/Fabric nodes above, matching the vanilla 64×64 zombie texture by default; `renderer`, `texture`, and `shadowRadius` are configurable. Native entity construction and custom Goal factories must be Java implementations independent of the guest Context; built-in Goal configuration can still use script callbacks.
 

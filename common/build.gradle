@@ -289,3 +289,59 @@ tasks.register('generatePackSchema', JavaExec) {
     args 'schema', rootProject.file('docs/schema/script-pack-v1.schema.json').absolutePath
 }
 
+
+// Content identities bind the English handbook and examples to the release version.
+def authoringResources = layout.projectDirectory.dir('src/main/resources/nekojs/authoring')
+def authoringGenerated = layout.buildDirectory.dir('generated/authoring-resources')
+def generateAuthoringManifest = tasks.register('generateAuthoringManifest') {
+    inputs.dir(authoringResources)
+    inputs.property('modVersion', mod_version)
+    outputs.dir(authoringGenerated)
+    doLast {
+        def digest = { byte[] bytes -> java.security.MessageDigest.getInstance('SHA-256').digest(bytes).encodeHex().toString() }
+        def entries = fileTree(authoringResources).files.sort { a, b -> a.path <=> b.path }.collect { source ->
+            [path: authoringResources.asFile.toPath().relativize(source.toPath()).toString().replace('\\', '/'), sha256: digest(source.bytes)]
+        }
+        def identity = groovy.json.JsonOutput.toJson([version: mod_version, files: entries])
+        def manifest = [schemaVersion: '1', version: mod_version, language: 'en', bundleId: digest(identity.getBytes('UTF-8')), files: entries]
+        def output = authoringGenerated.get().file('nekojs/authoring/manifest.json').asFile
+        output.parentFile.mkdirs()
+        output.setText(groovy.json.JsonOutput.toJson(manifest) + '\n', 'UTF-8')
+    }
+}
+sourceSets.main.resources.srcDir(authoringGenerated)
+tasks.named('processResources') { dependsOn generateAuthoringManifest }
+
+// A companion executable contains only the read-only query stack, its documents and Gson.
+configurations { authoringStdioRuntime }
+dependencies { authoringStdioRuntime libs.gson }
+def authoringStdioJar = tasks.register('authoringStdioJar', Jar) {
+    group = 'build'
+    description = 'Builds the standalone read-only MCP stdio companion (Java 21+).'
+    archiveClassifier = 'authoring-stdio'
+    dependsOn classes
+    manifest { attributes 'Main-Class': 'com.tkisor.nekojs.authoring.AuthoringStdioMain' }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(sourceSets.main.output) {
+        include 'com/tkisor/nekojs/authoring/**'
+        include 'nekojs/authoring/**'
+        exclude 'com/tkisor/nekojs/authoring/AuthoringRuntime*'
+        exclude 'com/tkisor/nekojs/authoring/AuthoringHttpServer*'
+        exclude 'com/tkisor/nekojs/authoring/AuthoringConfig*'
+        exclude 'com/tkisor/nekojs/authoring/AuthoringControl*'
+        exclude 'com/tkisor/nekojs/authoring/AuthoringClientExecutor*'
+        exclude 'com/tkisor/nekojs/authoring/AuthoringEnvironment*'
+        exclude 'com/tkisor/nekojs/authoring/AuthoringBundleExporter*'
+    }
+    from({ configurations.authoringStdioRuntime.collect { zipTree(it) } }) {
+        exclude 'module-info.class', 'META-INF/versions/**/module-info.class'
+        exclude 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'META-INF/MANIFEST.MF'
+    }
+}
+tasks.named('assemble') { dependsOn authoringStdioJar }
+// Process tests launch exactly this artifact, never the mod/test runtime classpath.
+tasks.named('test') {
+    dependsOn authoringStdioJar
+    doFirst { systemProperty 'nekojs.authoring.stdio.jar', authoringStdioJar.get().archiveFile.get().asFile.absolutePath }
+}
+

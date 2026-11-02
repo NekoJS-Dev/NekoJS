@@ -128,7 +128,7 @@ public class RecipeViewerJeiPlugin implements IModPlugin {
 //? if >=26 {
             Identifier id = category.getIdentifier(recipe);
 //?} else {
-/*            Identifier id = category.getRegistryName(recipe);
+            /*Identifier id = category.getRegistryName(recipe);
 *///?}
             if (id != null && ids.contains(id)) {
                 toHide.add(recipe);

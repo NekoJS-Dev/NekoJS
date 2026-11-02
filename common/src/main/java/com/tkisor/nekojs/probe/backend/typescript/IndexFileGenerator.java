@@ -36,6 +36,9 @@ public final class IndexFileGenerator {
     private final java.util.concurrent.ConcurrentHashMap<String, Set<String>> referenceCache = new java.util.concurrent.ConcurrentHashMap<>();
     /** fqn → "host->exportedName" rendering references; drives view-name imports precisely. */
     private final java.util.concurrent.ConcurrentHashMap<String, Set<String>> nameReferenceCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Set<String> registryShapeClasses = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private boolean authoringIndexEnabled;
+    private final java.util.concurrent.ConcurrentHashMap<String, com.tkisor.nekojs.probe.ir.TypeScriptAuthoringEmission.Declaration> authoringDeclarations = new java.util.concurrent.ConcurrentHashMap<>();
     private final Set<String> authoredClasses = java.util.concurrent.ConcurrentHashMap.newKeySet();
     /**
      * 枚举输入别名缓存（FQN → 别名名 + 就近发射的声明行）。predeclareClass 时从 {@link TypeDecl}
@@ -90,7 +93,8 @@ public final class IndexFileGenerator {
         }
 
         // 合并适配器输入别名引用的跨包类型（如 $Item、$NekoId），并探测是否引用了 @special 注册表字面量
-        boolean moduleUsesRegistry = false;
+        boolean moduleUsesRegistry = classNames.stream()
+                .anyMatch(name -> registryShapeClasses.contains(packageName + "." + name));
         for (String simpleName : classNames) {
             AdapterAliasGenerator.AdapterAlias alias = adapterAliasGenerator.getAlias(packageName + "." + simpleName);
             if (alias == null) continue;
@@ -208,7 +212,11 @@ public final class IndexFileGenerator {
                 String fullName = packageName + "." + simpleName;
                 String cached = declCache.get(fullName);
                 if (cached != null) {
-                    if (importNames.hasAliases() && irCache.containsKey(fullName)) {
+                    if (authoringIndexEnabled && irCache.containsKey(fullName)) {
+                        var indexed = irRenderer.renderIndexed(irCache.get(fullName), moduleAliases);
+                        cached = indexed.text();
+                        authoringDeclarations.put(fullName, indexed);
+                    } else if (importNames.hasAliases() && irCache.containsKey(fullName)) {
                         cached = irRenderer.render(irCache.get(fullName), moduleAliases);
                     }
                     sb.append(cached);
@@ -497,6 +505,8 @@ public final class IndexFileGenerator {
             return name;
         });
         declCache.put(fqn, irRenderer.render(decl, references));
+        registryShapeClasses.remove(fqn);
+        if (usesRegistryInputShapes(decl)) registryShapeClasses.add(fqn);
         functionalInterfaceAliasGenerator.declaration(fqn, references);
         if (extraImportFqns != null) {
             imports.addAll(extraImportFqns);
@@ -508,6 +518,25 @@ public final class IndexFileGenerator {
         if (decl.sourceClass != null) {
             classCache.put(fqn, decl.sourceClass);
         }
+    }
+
+    private boolean usesRegistryInputShapes(TypeDecl declaration) {
+        List<MethodDecl> methods = new ArrayList<>(declaration.methods);
+        methods.addAll(declaration.constructors);
+        for (MethodDecl method : methods) {
+            if (method.hidden) continue;
+            for (MethodDecl.MethodParam parameter : method.params) {
+                if (usesRegistryInputShape(parameter.type)) return true;
+            }
+            if (usesRegistryInputShape(method.setterParamType)) return true;
+        }
+        return false;
+    }
+
+    private boolean usesRegistryInputShape(TypeSlot slot) {
+        return slot != null && !slot.overridden && slot.inputShape != null
+                && AdapterAliasGenerator.renderShape(slot.inputShape, adapterAliasGenerator.aliasRegistry(), true)
+                .usesRegistry();
     }
 
     /**
@@ -598,6 +627,15 @@ public final class IndexFileGenerator {
         }
     }
 
+    void enableAuthoringIndex() { authoringIndexEnabled = true; }
+
+    /** Transfers member records to their sole owner after all package rendering has joined. */
+    Map<String, com.tkisor.nekojs.probe.ir.TypeScriptAuthoringEmission.Declaration> takeAuthoringDeclarations() {
+        var result = Map.copyOf(authoringDeclarations);
+        authoringDeclarations.clear();
+        return result;
+    }
+
     /** Clears the declaration caches after rendering. */
     public void clearCaches() {
         irRenderer.setClassDeclarations(Map.of());
@@ -608,6 +646,9 @@ public final class IndexFileGenerator {
         irCache.clear();
         referenceCache.clear();
         nameReferenceCache.clear();
+        registryShapeClasses.clear();
         authoredClasses.clear();
+        authoringDeclarations.clear();
+        authoringIndexEnabled = false;
     }
 }

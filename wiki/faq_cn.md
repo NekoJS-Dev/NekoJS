@@ -39,7 +39,7 @@ A: 逐项排查：
 2. 扩展名对么？（`.js`/`.mjs`/`.cjs`/`.ts`/`.jsx`/`.tsx`/`.py`）。
 3. 脚本被 `// disable:` 禁用了么？见 [脚本属性](script-properties_cn)。
 4. `// modloaded:` 列的 mod 都装了么？
-5. 服务端/客户端脚本改了有没有 `/nekojs reload`？
+5. 是否在对应 owner 上重载正确类型（`/nekojs reload server` 或 `/nekojs reload client`）？无参 `/nekojs reload` 默认只重载 SERVER。
 6. 启动脚本注册的内容（新物品/方块）改了**重启游戏**了么？
 7. 跑 `/nekojs error` 看有没有错误。
 
@@ -56,7 +56,7 @@ A: 多半是脚本类型不对或事件名拼错：
 
 A:
 - **共享状态**：`global` 只在当前脚本类型内共享，普通 reload 后仍保留；跨 SERVER/CLIENT 等脚本类型共享请使用 `shared`。两者都只存在于同一 NekoJS runtime 进程内，不是网络同步。
-- **事件监听器**：reload 会清除旧监听器，但如果之前注册时出了问题，监听器可能没清干净。再 reload 一次。
+- **事件监听器**：完整类型 reload 成功会替换代际监听器；候选加载失败时，旧 active generation 会有意保留。先查看 `/nekojs error` 并修复失败源码，不要假设再 reload 一次就会清理。任意 Java/世界/文件副作用不会自动撤销。
 - **配方**：NeoForge 和 Fabric 26.x 都支持 `/nekojs reload server` 处理配方脚本；NeoForge 的 JEI/REI 配方面板可能需要客户端刷新。Cleanroom 的行为属于独立 legacy 分支，当前仓库不验证。详见 [命令](commands_cn)。
 - **注册表（startup）**：启动脚本注册的内容 reload 不会真正加进游戏，需重启。
 
@@ -112,7 +112,8 @@ from nekojs import *
 
 A:
 - **NeoForge**：`/nekojs reload` 会重跑配方脚本并从缓存重建配方（服务端合成逻辑即时生效）；JEI/REI 配方面板可能需要客户端刷新（如重进世界或面板刷新）。详见 [命令](commands_cn)。
-- **Cleanroom 1.12.2**：支持完整热重载，reload 后会自动刷新 HEI/JEI。如果没刷新，确认你装的是 HEI（`had-enough-items`）而不是别的。
+- **Fabric 26.x**：使用完整 `/nekojs reload server`，再检查实际合成结果和客户端资源。配方查看器集成不等于服务端配方应用。
+- **Cleanroom 1.12.2**：不在当前版本图内；当前仓库无法确认 HEI/JEI 刷新行为。
 
 <a id="wiki-section-19"></a>
 ### Q: `event.recipes.create.mixing(...)` 报错
@@ -194,12 +195,12 @@ A: 跑 `/nekojs probe` 重新生成。如果你是新加了 mod 或注册了新�
 <a id="wiki-section-33"></a>
 ### Q: 我的 tick 事件很卡
 
-A: `ServerEvents.tickPre`/`tickPost` 每 tick（50ms）都跑。脚本里别做重活（大量文件 IO、复杂循环）。耗时操作考虑缓存、节流、或用 `setTimeout`/计数器降频。
+A: `ServerEvents.tickPre`/`tickPost` 在服务端 tick 执行（目标为 20 TPS，不保证墙钟每 50ms 一次）。owner thread 回调应保持轻量；可以缓存或把工作拆到多个 tick。timer 不会把阻塞工作自动移到安全的工作线程。
 
 <a id="wiki-section-34"></a>
 ### Q: 脚本加载很慢
 
-A: NekoJS 用 GraalJS，首次加载有预热成本。运行起来后很快。如果持续慢，检查是不是在加载大量 npm 依赖或在顶层做了重 IO。
+A: GraalJS 启动和脚本编译可能有预热成本，后续速度取决于实际工作负载。先检查依赖包数量和顶层 I/O，并测量真正的慢路径。
 
 <a id="wiki-section-35"></a>
 ## 安全
@@ -213,6 +214,8 @@ A: 沙盒限制——只能访问游戏目录内。详见 [Node.js 兼容 - 访�
 ### Q: 多人服务器用 NekoJS 安全吗？
 
 A: 脚本应视为**半可信代码**——只运行你信任的脚本。沙盒限制了 Java 类访问和文件范围，但按名黑名单只拦类查找：Java 方法返回值的对象图由 Graal 的 `HostAccess` 控制（当前是 `HostAccess.ALL`），黑名单里的类的实例仍可能通过某个方法的返回值进入脚本。内置编辑器的客户端脚本上传已移除；不要把只读错误 UI 或脚本网络事件当作远程编辑服务。服务器脚本仍须由可信维护者部署。
+
+AI 创作的 HTTP 与 batch 查询是只读的，但独立授权的 live MCP 工具能够执行白名单命令或重载指定运行时。无明确需求就保持控制开关默认关闭，不要暴露或提交 bearer token，也不要重试效果未知的超时动作。见 [AI 创作安全与 live controls](ai-support_cn)。
 
 <a id="wiki-section-38"></a>
 ## 还没解决？

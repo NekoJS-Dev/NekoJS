@@ -27,15 +27,12 @@ import com.tkisor.nekojs.probe.ProbeBackendSelector;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -52,7 +49,7 @@ public final class NekoJSCommands {
     public static void register(RegisterCommandsEvent event, NekoRuntimeRoot root) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 
-        dispatcher.register(
+        dispatcher.register(InformationCommands.addTo(
                 Commands.literal("nekojs")
                         .requires(source -> Commands.LEVEL_GAMEMASTERS.check(source.permissions()))
                         .executes(context -> sendRootUsage(context.getSource(), dispatcher))
@@ -102,16 +99,13 @@ public final class NekoJSCommands {
 
                         .then(registryCommand())
 
-                        .then(handCommand())
-
-                        .then(inventoryCommand())
-
                         .then(Commands.literal("trust")
                                 .then(Commands.argument("address", AddressArgument.address())
                                         .executes(context -> trustServer(context.getSource(), AddressArgument.getAddress(context, "address")))))
 
-                        .then(probeCommand())
-        );
+                        .then(probeCommand()),
+                NeoForgeInformationCommands::containedFluid
+        ));
     }
 
     /** Bare /nekojs: list the registered subtree instead of brigadier's "Unknown or incomplete command". */
@@ -149,73 +143,6 @@ public final class NekoJSCommands {
                             }
                             return 1;
                         }));
-    }
-
-    /**
-     * /nekojs hand: prints the main-hand item of the executing player (item id, count,
-     * damage if damageable, and the data component patch). Requires a player source.
-     */
-    private static LiteralArgumentBuilder<CommandSourceStack> handCommand() {
-        return Commands.literal("hand")
-                .executes(context -> {
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    showHand(context.getSource(), player.getMainHandItem());
-                    return 1;
-                });
-    }
-
-    private static void showHand(CommandSourceStack source, ItemStack stack) {
-        if (stack.isEmpty()) {
-            source.sendSystemMessage(Component.literal("Empty hand"));
-            return;
-        }
-        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
-        // Item id is click-to-copy: the main dev-loop use is pasting the id into a script
-        MutableComponent line = Component.literal(id)
-                .withStyle(style -> style
-                        .withClickEvent(new ClickEvent.CopyToClipboard(id))
-                        .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to copy"))))
-                .append(Component.literal(" x" + stack.getCount()));
-        source.sendSystemMessage(line);
-        if (stack.isDamageableItem()) {
-            source.sendSystemMessage(Component.literal("  damage: " + stack.getDamageValue() + "/" + stack.getMaxDamage()));
-        }
-        source.sendSystemMessage(Component.literal("  components: " + compactComponents(stack)));
-    }
-
-    /** Single-line component patch summary, flattened and truncated so chat stays readable. */
-    private static String compactComponents(ItemStack stack) {
-        String text = stack.getComponentsPatch().toString().replace('\n', ' ');
-        return text.length() > 300 ? text.substring(0, 300) + "..." : text;
-    }
-
-    /**
-     * /nekojs inventory: lists all non-empty main inventory slots (0-35) of the executing
-     * player, one line per slot. Requires a player source.
-     */
-    private static LiteralArgumentBuilder<CommandSourceStack> inventoryCommand() {
-        return Commands.literal("inventory")
-                .executes(context -> {
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    listInventory(context.getSource(), player.getInventory());
-                    return 1;
-                });
-    }
-
-    private static void listInventory(CommandSourceStack source, Inventory inventory) {
-        int used = 0;
-        for (int slot = 0; slot < Inventory.INVENTORY_SIZE; slot++) {
-            ItemStack stack = inventory.getItem(slot);
-            if (stack.isEmpty()) {
-                continue;
-            }
-            source.sendSystemMessage(Component.literal("slot " + slot + ": "
-                    + BuiltInRegistries.ITEM.getKey(stack.getItem()).toString() + " x" + stack.getCount()));
-            used++;
-        }
-        if (used == 0) {
-            source.sendSystemMessage(Component.literal("Inventory is empty."));
-        }
     }
 
     /**

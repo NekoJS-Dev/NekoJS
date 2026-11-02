@@ -47,6 +47,9 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     private final ScriptEnvironmentFactory environmentFactory;
     private final Map<ScriptType, ScriptManager> scriptManagers;
     private final ResourceTracker resources;
+    private boolean authoringInitialized;
+    private volatile boolean authoringStopping;
+    private volatile com.tkisor.nekojs.authoring.AuthoringRuntime authoringRuntime;
     /**
      * root 拥有的 prepared 模块缓存（票 11 W3）：模块 cache/session 生命周期归属。
      * 与 sandbox factory（module host / filesystem）共享同一实例；跨普通 reload、
@@ -124,6 +127,29 @@ public final class NekoRuntimeRoot implements AutoCloseable {
                 this::scriptManagerOf, type -> com.tkisor.nekojs.core.ScriptLocator.discover(type, scriptProperties),
                 eventBridge, pluginRuntime, domainCollectors);
     }
+
+    /** Starts optional authoring access once; ordinary script reloads retain the same root-owned service. */
+    public synchronized void initializeAuthoring() {
+        if (authoringInitialized) return;
+        authoringInitialized = true;
+        try {
+            var runtime = com.tkisor.nekojs.authoring.AuthoringRuntime.open(
+                    com.tkisor.nekojs.core.fs.NekoJSPaths.get(), com.tkisor.nekojs.probe.ProbeCoordinator.config());
+            authoringRuntime = runtime;
+            resources.track("authoring", runtime);
+        } catch (java.io.IOException | RuntimeException | LinkageError failure) {
+            com.tkisor.nekojs.NekoJS.LOGGER.warn("[NEKO-1019] Authoring initialization failed; game startup continues", failure);
+        }
+    }
+
+    /** Binds the platform live adapter only when optional authoring initialization succeeded. */
+    public void installAuthoringControlHost(com.tkisor.nekojs.api.authoring.AuthoringControlHost host) {
+        var runtime = authoringRuntime;
+        if (runtime != null && !authoringStopping) runtime.installHost(host);
+    }
+
+    /** Invalidates owner-thread callbacks before script teardown starts. */
+    public boolean isAuthoringControlActive() { return !authoringStopping; }
 
     /** 本 root 的 prepared cache，仅供同包生命周期诊断；reload/失效经各 manager 入口。 */
     com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache() {
@@ -446,6 +472,9 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     }
 
     public void closeSilently() {
+        authoringStopping = true;
+        var authoring = authoringRuntime;
+        if (authoring != null) authoring.stopControls();
         packs.requestClose();
         if (closeInProgress) return;
         if (ScriptLifecycleGate.isInCallback()) {

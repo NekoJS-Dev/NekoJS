@@ -17,7 +17,7 @@ Global bindings are objects/functions that NekoJS injects into the script's top-
 <a id="wiki-section-3"></a>
 ### `Item`
 
-An item helper. `of`/`empty` use helper functions; other members delegate to Minecraft's `Item` class (vanilla item constants can be accessed directly).
+An item helper. `of`, `empty`, `id`, and `idOf` use helper functions; other members delegate to Minecraft's `Item` class. Readable/writable Bean accessors use properties according to their access support; see [Script API style](script-api-style_us).
 
 | Method | Description |
 |---|---|
@@ -26,6 +26,10 @@ An item helper. `of`/`empty` use helper functions; other members delegate to Min
 | `Item.of(stack: ItemStack) → ItemStack` | Pass through the stack |
 | `Item.of(stack: ItemStack, count: int) → ItemStack` | Copy and change the count |
 | `Item.empty() → ItemStack` | `ItemStack.EMPTY` |
+| `Item.id(id: string) → Item \| null` | Look up an item (omitted namespace means `minecraft`); unknown ids return `null` |
+| `Item.idOf(item: Item) → Identifier` | Registered id of the native item, not an ItemStack |
+
+`Block.id(id: string) → Block | null` and `Block.idOf(block: Block) → Identifier` provide the corresponding block lookups; `Blocks` is the separate vanilla constants binding. Both helpers are available on NeoForge and Fabric.
 
 **`ItemStack` extension methods** (NekoJS injects platform extensions through Mixins):
 
@@ -49,6 +53,8 @@ An item helper. `of`/`empty` use helper functions; other members delegate to Min
 
 <a id="wiki-section-4"></a>
 ### Entity/player limits of `PersistentDataJS`
+
+The synchronization lifecycle below applies to the installed entity platform store. Fabric now shares the NeoForge container/payload boundary, with bridge round-trip and synchronization regression coverage; historical double-wrapped Fabric saves remain nested without automatic migration. Fixtures are not real multiplayer/restart acceptance. ItemStack PData owns the entire `CUSTOM_DATA` payload: clearing it removes that component, and inherited `markDirty()`/`sync()` are no-ops, not entity packet hooks. See [Data and state](data-and-state_us).
 
 `entity.pdata()` (players inherit the entity extension) writes to the entity's `NekoJSPersistentData` subkey. Server-side writes automatically enter the synchronization queue for the next server tick. `sync()` immediately sends the current snapshot to clients tracking the entity. Client scripts read a read-only mirror; all write entry points, including `put*`, `remove`, `merge`, `edit`, `clear`, `replaceTag`, `markDirty`, and `sync`, throw rather than pretending to succeed.
 
@@ -249,7 +255,11 @@ Default limits are 3 MiB per compressed file, 8 MiB of decoded binary data, 64 l
 <a id="wiki-section-18"></a>
 ### `Registry`
 
+**Backend availability:** NeoForge provides the current registry query service. Fabric currently registers this binding but supplies no registry service; the empty fallback returns `exists() === false`, empty ids/tags/maps and `null` map values. Binding presence is not evidence that a real registry is absent.
+
 Read-only registry queries. `Registry.get(registryId)` returns a `RegistryView`; `exists()` is `false` if the registry does not exist. All methods return only basic types (strings/booleans/arrays), not native Minecraft objects.
+
+The view implements `Iterable<String>`: `for (const id of Registry.get('minecraft:item')) console.info(id)` iterates registered ids.
 
 | Method | Description |
 |---|---|
@@ -307,21 +317,29 @@ Farmer ids use `minecraft:<profession>/level_1..5`. Wandering trader ids differ:
 
 Ordinary omission is recorded as unrestored; `ServerEvents.tradeReload(event => event.declareObsolete(id))` explicitly retires a set. NeoForge exposes only `VillagerTrades.query/describe`; declare writes through the events. The old `add/pendingCount` methods and staging manager are removed. Fabric has no `VillagerTrades` global and rejects nonempty trade declarations explicitly.
 
+**`DataMap` (NeoForge only)**
+
+Read-only built-in data-map helpers: `DataMap.furnaceFuel(Item.of('minecraft:coal'))` returns burn ticks (`Integer | null`); `DataMap.compostable(Item.of('minecraft:wheat_seeds'))` returns a probability (`Float | null`). Missing values, including empty stacks, return `null`, so use `??` for a fallback. These queries do not modify recipes or registration. On NeoForge, other maps can use `Registry.get(registryId).dataMapValue(mapTypeId, entryId)`, which returns JSON text. This is not a functional Fabric backend workaround. Fabric does not register `DataMap`.
+
 <a id="wiki-section-22"></a>
 ### `EntitySelectors`
 
-Build vanilla entity selectors entirely in code (equivalent to the `@a[...]` selector engine, without assembling strings; server scripts):
+Build vanilla selectors in SERVER/TEST scripts (NeoForge 26.x/1.21.1). This complete server script queries up to five loaded cows near a player on future logins:
 
 ```javascript
-const cows = EntitySelectors.find(level,
-  EntitySelectors.create(b => b.type('minecraft:cow').distance(0, 32).limit(5)), x, y, z)
-const nearest = EntitySelectors.find(level, EntitySelectors.nearestPlayer().create(), px, py, pz)
+PlayerEvents.loggedIn(event => {
+  const player = event.player
+  const selector = EntitySelectors.allEntities()
+    .type('minecraft:cow').isAlive().distance(0, 32)
+    .orderNearest().limit(5).create()
+  const cows = EntitySelectors.find(player.level(), selector, player.x, player.y, player.z)
+  console.info('Nearby loaded cows: ' + cows.size())
+})
 ```
 
-The builder supports `type/typeTag/inverse/name/gamemode/team/tag` (xp levels), `distance(min,max)`,
-`x/y/z/dx/dy/dz` volume boxes, `limit`, and `order({Arbitrary,Nearest,Furthest,Random})`. Presets are
-`allPlayers/allEntities/nearestPlayer/nearestEntity/randomPlayer/randomEntity`. Remember to pass anchor coordinates
-for selectors that sort. NeoForge only (26.x/1.21.1).
+`builder()` and `create(build => ...)` start with a **player-only** base; filtering that base with `type('minecraft:cow')` does not switch to entities. Use `allEntities()`, `nearestEntity()`, or `randomEntity()` for non-player entities. Other presets are `allPlayers()`, `nearestPlayer()`, and `randomPlayer()`.
+
+Builder filters are `type/typeTag/name/gamemode/team/tag(value[, inverse])` (the optional second boolean negates that filter), `level(min,max)` for player XP levels, `isAlive()`, `distance(min,max)`, `distanceBelow(max)`, and `distanceAbove(min)`. Volume bounds use `x/y/z/dx/dy/dz`; limits use `limit(n)`. Ordering methods are `orderArbitrary()`, `orderNearest()`, `orderFurthest()`, and `orderRandom()`—there is no `inverse()` or `order({...})` method. Pass explicit anchor coordinates to `find`; the shorter overload anchors at `(0,0,0)`, and builder `x/y/z` overrides those coordinates. Unknown entity-type tags currently match nothing rather than throwing; queries do not load chunks.
 
 <a id="wiki-section-23"></a>
 ### `PostEffects` (client, NeoForge 26.x/1.21.1 only)
@@ -369,19 +387,25 @@ once('warmup', () => console.info('Printed only after the first reload'))
 ### `ClientData` / `clientData`
 
 A lightweight server→client key/value data channel (values are JSON types: strings/numbers/booleans/objects/arrays/null;
-one serialized value is limited to 32KB; later pushes with the same key replace earlier ones; the client clears data on world exit/disconnect).
+one serialized value is limited to 32768 Java-string characters, not 32KB; later pushes with the same key replace earlier ones; the client clears data on world exit/disconnect).
 Server scripts push with `ClientData`, and client scripts read through read-only `clientData`. It supplies data
 for HUD scripts.
 
 ```javascript
-// server_scripts/boss.js - server pushes
-ClientData.sync('boss_hp', { name: 'Calamity Golem', hp: 0.42 })
-ClientData.syncTo(player, 'personal_quest', { stage: 3 })
+// server_scripts/boss.js
+PlayerEvents.loggedIn(event => {
+  ClientData.sync('boss_hp', { name: 'Example Golem', hp: 0.42 })
+  ClientData.syncTo(event.player, 'personal_quest', { stage: 3 })
+})
 
-// client_scripts/hud.js - client reads
-const info = clientData.get('boss_hp')
-if (clientData.has('boss_hp')) { /* ... */ }
+// client_scripts/state.js
+console.info(clientData.get('boss_hp'))
+console.info(clientData.has('boss_hp'))
+console.info(clientData.keys())
+console.info(clientData.size())
 ```
+
+Keys must be nonblank and at most 256 characters. `get(key)` returns `null` for a missing key and for a stored JSON `null`; use `has(key)` to distinguish them. `keys()` returns a detached `Set<String>` and `size()` counts stored keys. CLIENT reads cannot write this channel. See [Data and state](data-and-state_us) for persistence and synchronization choices.
 
 <a id="wiki-section-26"></a>
 ### `Capabilities`
@@ -630,9 +654,9 @@ Bound to the `Platform` class, providing information about the current runtime e
 
 | Binding | Description |
 |---|---|
-| `Minecraft` | `net.minecraft.client.Minecraft` instance |
+| `Minecraft` | `net.minecraft.client.Minecraft` class/static binding; obtain the instance through `Minecraft.getInstance()` |
 | `Screen` | `net.minecraft.client.gui.screens.Screen` class |
-| `Window` | Client window |
+| `Window` | `Window` class, not the current window object |
 | `KeyMapping` | Key binding class |
 | `InputConstants` | GLFW input constants |
 
@@ -729,4 +753,4 @@ The following bindings provide direct access to vanilla Minecraft classes, as co
 
 ---
 
-[Previous: Script properties](script-properties_us) · [Contents](Home) · [Next: Python scripts](python-scripts_us)
+[Previous: Script properties](script-properties_us) · [Contents](Home) · [Next: Data, state and persistence](data-and-state_us)

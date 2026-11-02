@@ -134,6 +134,7 @@ public final class NekoRuntimeAssembly {
 
         root.load(ScriptType.STARTUP);
         NekoRuntimeAccess.get().fireInitStartup();
+        root.initializeAuthoring();
         return new Assembled(root);
     }
 }

@@ -10,7 +10,7 @@ NekoJS supports both **native ESM** and **CommonJS**, and can also import Java p
 <a id="wiki-section-2"></a>
 ## ESM (recommended)
 
-Full modern ESM is supported:
+NekoJS supplies a native ESM loader. The supported syntax and behavior below do not imply full Node.js or browser compatibility:
 
 ```javascript
 // math_utils.mjs
@@ -57,7 +57,7 @@ ServerEvents.tickPre(event => {
 })
 ```
 
-`require()` uses GraalJS's CommonJS implementation with `js.commonjs-require=true`; the cwd is the `nekojs/` root directory.
+Script entries and their dependencies use NekoJS's module loader, resolver and generation-owned cache. The Context also enables GraalJS CommonJS support with a `nekojs/` working directory; that option alone does not describe NekoJS dependency identity or reload behavior. Relative imports/requires resolve from the importing module.
 
 <a id="wiki-section-4"></a>
 ## Extensions and module modes
@@ -66,15 +66,17 @@ This table is not naming advice; it describes the engine's dispatch rules (`Neko
 
 | Extension | Module mode |
 |---|---|
-| `.mjs` | Forces ESM |
+| `.mjs` | Requests ESM when `enableEsmAuthoring` is enabled |
 | `.cjs` | Forces CJS |
-| `.js` | `AUTO`: determined by content (usually treated as ESM; `enableEsmAuthoring` in `nekojs/config/engine.toml` can disable ESM rewriting, falling back to plain CommonJS) |
+| `.js` | `AUTO`: compiled module syntax selects ESM; a non-module program selects CommonJS |
 | `.ts` | Erasable TypeScript (after erasure, follows the rules above: `AUTO`) |
 | `.jsx`/`.tsx` | JSX lowering (classic runtime), with the same module mode as `AUTO` |
 
-This mapping cannot be changed: writing `export` in `.cjs` does not make it ESM because you want it to be. The directory names (`server_scripts` / `client_scripts` / `startup_scripts` / `test_scripts`) and the `nekojs/` root are also hardcoded (`NekoJSPaths`); no configuration option changes them.
+`enableEsmAuthoring=false` selects the CommonJS preparation path even for `.mjs`; it is not an automatic import/export-to-CommonJS compatibility transform. With ESM enabled, writing `export` in `.cjs` does not make it ESM because you want it to be. The directory names (`server_scripts` / `client_scripts` / `startup_scripts` / `test_scripts`) and the `nekojs/` root are also hardcoded (`NekoJSPaths`); no configuration option changes them.
 
 See [TypeScript and JSX](typescript-and-jsx_us).
+
+Module caches and dependency records belong to the script generation. An explicit legacy file reload invalidates the changed module and known affected dependencies/entries, then reruns entries in the active Context; it does not undo side effects if rerunning fails. A full generation reload uses a fresh candidate Context/cache and releases the old generation after commit. Existing namespace/exports references from the old generation must not be retained as durable state. Saving a module alone is not an automatic reload trigger. Helpers under legacy script roots are also discovered as entries: keep helper top-level code free of event registration or other effects that should run only once. Versioned pack files require package/type reload; see [Commands](commands_us) and [Script packs](script-packs_us).
 
 <a id="wiki-section-5"></a>
 ## Using npm dependencies
@@ -82,16 +84,21 @@ See [TypeScript and JSX](typescript-and-jsx_us).
 Place **pure JS** npm packages in `nekojs/node_modules/`, then `require`/`import` them as you would in Node:
 
 ```javascript
-// Assume lodash is installed in nekojs/node_modules/lodash/
-const _ = require('lodash')
-console.info(_.chunk([1,2,3,4], 2))   // [[1,2],[3,4]]
+// nekojs/node_modules/greeting/index.cjs
+module.exports = name => `Hello, ${name}!`
+```
+
+```javascript
+// server_scripts/use_greeting.cjs
+const greet = require('greeting/index.cjs')
+console.info(greet('NekoJS')) // Hello, NekoJS!
 ```
 
 <a id="wiki-section-6"></a>
 ### Limits
 
 - Note: **only pure JS packages are supported**. Packages containing native bindings (compiled C/C++ code) **cannot be used**, such as `node-sass`, `sharp`, and `better-sqlite3`.
-- These are shims, **not a full Node.js runtime**. See [Node.js compatibility](nodejs-compatibility_us) for the available core modules.
+- These are shims, **not a full Node.js runtime**. See [Node.js compatibility](nodejs-compatibility_us) for the available core modules. Pure JS alone does not guarantee compatibility: package.json `main`/`exports` resolution is not implemented, so the example supplies a self-contained module at an explicit entry path. Synchronous `require()` rejects not-yet-evaluated ESM with top-level await or async static descendants; use `import()` instead.
 - File access is limited to the game directory, with symlink escape checks.
 
 <a id="wiki-section-7"></a>
@@ -161,7 +168,7 @@ NekoJS limits what scripts can access:
 - **Java classes**: high-risk classes are filtered (`java.lang.Runtime`, `Process`, `ClassLoader`, `System`, `java.io.*`, `java.nio.*`, reflection, net, lwjgl, polyglot itself, as well as `java.awt`/`javax.swing`/`javax.imageio`, `javax.naming`, `java.rmi`, `java.sql`/`javax.sql`, `java.lang.Module`, `org.graalvm`/`com.oracle.truffle`, and NekoJS internals such as `com.tkisor.nekojs.core`). See `common/.../core/fs/ClassFilter.java` for the specific denylist.
 - **File system**: access is limited to the game directory, with symlink escape checks.
 - **Configuration**: `nekojs/config/engine.toml` (in the same directory as probe.toml; the old `config/nekojs-engine.toml` is a read-only fallback) can configure `allowThreads`, `allowReflection`, `allowAsm`, `enableEsmAuthoring`, etc.
-- **Runaway protection**: `scriptRunawayTimeoutSeconds` (disabled by default at 0; explicitly enabling it, for example at 10, is recommended) aborts and automatically rebuilds the script environment if synchronous script execution exceeds that many seconds without yielding (considered a runaway loop, such as `while(true){}`). Each yield (between events or during a long host call) resets the timer, so a long-lived environment is not terminated merely for executing many statements over time. There is also an optional `scriptStatementLimit` (**disabled by default at 0**): a hard limit on the total statements executed continuously by one script source; enable it only when a hard budget is needed.
+- **Runaway protection**: `scriptRunawayTimeoutSeconds` and `scriptStatementLimit` are optional execution budgets, both disabled by default at 0. A watchdog termination can isolate the active generation; recovery requires an explicit full reload, not a single-file rerun or an automatic rebuild. Host calls and arbitrary external side effects are not rolled back.
 - **HostAccess limits**: the name-based denylist only blocks **class lookup** such as `Java.type`; object graphs returned by Java methods are controlled by Graal `HostAccess` (currently `HostAccess.ALL`), so instances of denylisted classes can still reach scripts through method return values.
 
 > Scripts should still be treated as **partially trusted code**: do not run untrusted third-party scripts, especially when using network synchronization on multiplayer servers.
@@ -196,13 +203,13 @@ nekojs/server_scripts/
 
 ```javascript
 // lib/constants.js
-export const ORES = ['minecraft:iron_ore', 'minecraft:gold_ore', 'minecraft:diamond_ore']
+export const ORES = ['minecraft:iron_ore', 'minecraft:gold_ore']
 ```
 
 ```javascript
 // lib/recipe_helpers.js
 export function dustify(event, ore, output) {
-  event.recipes.minecraft.smelting(output, ore).id(`nekojs:dust_${ore.split(':')[1]}`)
+  event.smelting(Item.of(output), Ingredient.of(ore)).id(`nekojs:smelt_${ore.split(':')[1]}`)
 }
 ```
 

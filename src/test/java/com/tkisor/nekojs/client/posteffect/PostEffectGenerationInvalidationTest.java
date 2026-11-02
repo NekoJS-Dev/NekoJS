@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 定义——正是 AC3 禁止的半更新。本 fixture 钉住「重声明 ⇒ 该 id 必须进失效集」。
  *
  * <p>id 类型写成 {@code Identifier}：本文件住共享测试树，1.21.1 节点由 stonecutter 的
- * {@code !mc_ids} 规则求值成 {@code ResourceLocation}，与孪生实现一致。
+ * {@code !mc_ids} 规则求值成 {@code Identifier}，与孪生实现一致。
  */
 class PostEffectGenerationInvalidationTest {
 
@@ -43,7 +43,7 @@ class PostEffectGenerationInvalidationTest {
 //? if >=26 {
         return PostEffectManager.parseDefinition(id(value), chainJson, Map.of(), Map.of());
 //?} else {
-/*        return PostEffectManager.parseDefinition(id(value), chainJson);
+        /*return PostEffectManager.parseDefinition(id(value), chainJson);
 *///?}
     }
 
@@ -52,7 +52,7 @@ class PostEffectGenerationInvalidationTest {
         return com.tkisor.nekojs.core.posteffect.PostEffectChainJson
                 .simpleBlitChainModern(shaderOrProgram, null);
 //?} else {
-/*        return com.tkisor.nekojs.core.posteffect.PostEffectChainJson
+        /*return com.tkisor.nekojs.core.posteffect.PostEffectChainJson
                 .simpleBlitChainLegacy(shaderOrProgram);
 *///?}
     }

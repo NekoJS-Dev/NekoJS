@@ -50,7 +50,7 @@ public final class SizedIngredientAdapter implements JSTypeAdapter<SizedIngredie
 //? if >=26 {
         return Optional.of("item:id | #tag | @mod | * | /regex/ | { ingredient|item|tag|mod|regex|wildcard|filter|any|all|not, count? }");
 //?} else {
-/*        return Optional.of("item:id | #tag | @mod | * | /regex/ | { ingredient|item|tag|mod|regex|wildcard|filter|any|all|not, count }");
+        /*return Optional.of("item:id | #tag | @mod | * | /regex/ | { ingredient|item|tag|mod|regex|wildcard|filter|any|all|not, count }");
 *///?}
     }
 

@@ -112,12 +112,13 @@ function findIn(nodes, id) {
 
 // ---- Section 5 catalog examples ----
 
-check(UI.primitives().join(',') === 'screen,panel,row,column,stack,scroll,label,button,input,image,spacer',
+check(UI.primitives().slice().sort().join(',') === 'button,column,dialog,image,input,item,label,panel,row,screen,scroll,slider,spacer,stack',
   'primitive registry is complete (catalog-registry)');
 
 const clicked = UI.createSignal(false);
 const lastTarget = UI.createSignal('');
 const name = UI.createSignal('');
+const volume = UI.createSignal(25);
 const lines = ['a', 'b', 'c', 'd', 'e'];
 
 function renderCatalog() {
@@ -146,6 +147,8 @@ function renderCatalog() {
                 onClick={event => lastTarget.set(event.target)}>{'Click'}</button>
         <input id="catalog-name" value={name.get()} placeholder="name" maxLength={32}
                onChange={event => name.set(event.value == null ? '' : event.value)} />
+        <slider id="catalog-volume" value={volume.get()} min={0} max={100} step={5}
+                onChange={event => volume.set(Number(event.value))} />
         <image id="catalog-art" resource="minecraft:block/stone" fit="contain" width={16} height={16} />
         <row id="catalog-spaced" width="100%">
           <label id="catalog-left">{'L'}</label>
@@ -192,6 +195,8 @@ check(root.dispatch('catalog-click', 'click', {}) === true && lastTarget.get() =
   'button-1: onClick receives the frozen event with target id');
 check(root.dispatch('catalog-name', 'change', { value: 'ai' }) === true && name.get() === 'ai',
   'input-1: controlled input round-trips through onChange');
+check(root.dispatch('catalog-volume', 'change', { value: '40' }) === true && volume.get() === 40,
+  'slider-1: the numeric primitive preserves the string event payload contract');
 
 // Shared prop semantics across profiles
 check(root.resize({ width: 1280, height: 720 }) === true && host.layoutSnapshot().profile === 6,
@@ -254,9 +259,14 @@ check(submitting.get() === true && lastSubmitted.get() === 'ai' && error.get() =
   'login-fixture: complete credentials submit and clear the error');
 check(findNodeById(loginHost.layoutSnapshot(), 'login-error').visible === false,
   'login-fixture: the error label hides again after a valid submit');
-loginRoot.dispatch('login-cancel', 'click', {});
-check(username.get() === '' && submitting.get() === false,
-  'login-fixture: cancel resets the form state');
+check(loginRoot.dispatch('login-cancel', 'click', {}) === false
+  && username.get() === 'ai' && submitting.get() === true,
+  'login-fixture: a disabled cancel cannot bypass the submitting state');
+// Complete the simulated request before the form can accept cancellation.
+submitting.set(false);
+check(loginRoot.dispatch('login-cancel', 'click', {}) === true
+  && username.get() === '' && submitting.get() === false,
+  'login-fixture: enabled cancel resets the form state');
 check(findNodeById(loginHost.layoutSnapshot(), 'login-title').style.fontSize === 10,
   'login-fixture: the default profile resolves the base title size');
 check(loginRoot.resize({ width: 1280, height: 720 }) === true

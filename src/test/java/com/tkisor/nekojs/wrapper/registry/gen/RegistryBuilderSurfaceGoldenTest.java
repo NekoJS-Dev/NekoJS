@@ -40,7 +40,7 @@ class RegistryBuilderSurfaceGoldenTest {
 //? if >=26 {
         GOLDEN = "/golden/registry/startup-builders.d.ts";
 //?} else {
-/*        // 1.21.1 的 builder 成员面与 26.x 有真实差异（TaggableBuilder 未实现、painting 无
+        /*// 1.21.1 的 builder 成员面与 26.x 有真实差异（TaggableBuilder 未实现、painting 无
         // author/title、potion effect 重载形状），golden 按版本各冻一份（REPORT 五节点差异表）
         GOLDEN = "/golden/registry/startup-builders-1.21.1.d.ts";
 *///?}

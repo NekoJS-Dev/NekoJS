@@ -5,7 +5,7 @@
 <a id="wiki-section-1"></a>
 # 命令
 
-NekoJS 注册了一个根命令 `/nekojs`，需要权限等级 LEVEL_GAMEMASTERS（op 2 及以上）。
+NekoJS 的服务端根命令 `/nekojs` 需要游戏管理员权限（op 2 及以上）。客户端 `/nekojs browse` 只打开本地目录，无需服务端权限。
 
 <a id="wiki-section-2"></a>
 ## 命令一览
@@ -26,6 +26,10 @@ NekoJS 注册了一个根命令 `/nekojs`，需要权限等级 LEVEL_GAMEMASTERS
 | `/nekojs trust <address>` | 多人脚本包分发：把服务器加入本客户端信任存储（首连未信任会被断开并提示本命令，信任后重连收包；在单人世界或客户端进程中执行） | NeoForge / Fabric 26.x |
 | `/nekojs registry` | 动态注册健康快照；Fabric 当前快照为空 | NeoForge 26.x；Fabric 有命令但能力为空 |
 | `/nekojs registry stale` | 只列出上次 reload 后脚本不再注册的动态条目 | NeoForge 26.x；Fabric 有命令但能力为空 |
+| `/nekojs hand` | 主手物品、组件数据及物品/方块/流体标签，可点击复制 | NeoForge 1.21.1/26.x / Fabric 26.x |
+| `/nekojs hotbar` / `inventory` | 导出快捷栏/主背包的带组件的物品字符串与完整 JSON 列表 | NeoForge 1.21.1/26.x / Fabric 26.x |
+| `/nekojs list-tag <registry> [<tag>]` | 列出注册表标签或指定标签的成员，支持补全 | NeoForge 1.21.1/26.x / Fabric 26.x |
+| `/nekojs browse` | 打开本机 `nekojs` 文件夹；仅客户端、无需管理员权限 | NeoForge 1.21.1/26.x / Fabric 26.x |
 | `/nekojs probe` | 重新生成 TypeScript 声明（`.d.ts`） | NeoForge / Fabric 26.x |
 | `/nekojs probe <语言> [<名字>]` | 指定语言（或精确到 backend 名）生成 | NeoForge / Fabric 26.x |
 | `/nekojs probe all` / `list` / `reload` / `enable` / `disable` / `reset_config` | 跑全部 backend / 列出已注册 backend / 重读 probe.toml / 持久化开关 / 恢复编辑器配置出厂值 | NeoForge / Fabric 26.x |
@@ -38,7 +42,9 @@ NekoJS 注册了一个根命令 `/nekojs`，需要权限等级 LEVEL_GAMEMASTERS
 <a id="wiki-section-4"></a>
 ### `/nekojs reload`（默认 server）
 
-最常用。热重载服务端脚本（配方、事件监听）。**事务式**：先把脚本加载进候选 Context，全部成功才替换旧的；失败则保留旧 Context，不会进入半坏状态。
+此命令显式请求完整的 SERVER generation 重载。普通 SERVER/CLIENT/TEST 重载先在候选 Context 中完成准备与执行，再激活；候选失败会保留健康的活动代。受管理的监听器、定时器和暂存状态在提交点切换，不会重建 runtime root 或 Plugin Runtime。
+
+这不代表能回滚脚本任意 Java 调用、世界修改、文件写入或共享对象的嵌套修改。SERVER 脚本重载成功后，命令另行应用配方并在支持的平台刷新包数据资源；后续资源刷新失败不会撤销脚本提交。版本化脚本包还遵循依赖与领域贡献的影响集规则，见[脚本包](script-packs_cn)。
 
 <a id="wiki-section-5"></a>
 ### `/nekojs reload <type>`
@@ -47,45 +53,67 @@ NekoJS 注册了一个根命令 `/nekojs`，需要权限等级 LEVEL_GAMEMASTERS
 |---|---|
 | `server` | 同上 |
 | `client` | 重载客户端脚本（仅 integrated client 上可用）。命令立即返回，实际 reload **转投客户端主线程**执行——客户端脚本环境（事件/timers）的归属线程就是它，这样 reload 与渲染期事件不会交叉线程 |
-| `test` | 重载测试脚本 |
+| `test` | 与 `/nekojs test` 一样重载并运行 TEST 脚本，然后冲刷定时器。流程完成不等于所有 `Test` 断言通过，仍须查看测试输出与脚本错误。 |
 | `startup` | 当前命令会拒绝执行。启动脚本在游戏启动阶段运行，注册内容改动必须重启游戏。 |
 
 <a id="wiki-section-6"></a>
 ### `/nekojs reload <type> <file>`
 
-只重载单个文件，比全量 reload 快。例：
+在**现有活动 Context** 中重新执行旧式脚本文件。依赖跟踪还可能使模块失效并重新执行受影响的入口，因此不保证只执行一个文件，失败也没有完整 generation 的回滚保障。例：
 
 ```
 /nekojs reload server recipes.js
 /nekojs reload client tooltips.js
 ```
 
-文件路径相对该脚本类型根目录（如 `recipes.js` 相对 `nekojs/server_scripts/`）。文件名支持 TAB 补全。
+文件路径相对该脚本类型根目录（如 `recipes.js` 相对 `nekojs/server_scripts/`）。文件名支持 TAB 补全。版本化包内文件必须使用包或类型重载。依赖无法匹配，或活动代已被 watchdog 隔离时，应执行完整重载；单文件重跑无法恢复被隔离的代。
+
+**这些触发方式彼此独立：**保存文件不会自动重载；当前没有已文档化的文件监视器或自动重载开关。模块依赖失效（内部有时称为 HMR）属于显式重载或加载路径，不是保存监听。原版 `/reload` 刷新服务端数据包，F3+T 刷新客户端资源，两者都不能代替脚本 generation 重载。包的选择与启用配置、包数据或资源刷新，也不同于脚本代的激活。
 
 <a id="wiki-section-7"></a>
-## hand / inventory 详解
+## 物品、标签和本地目录
+
+以下四个服务端信息命令在 NeoForge 1.21.1、NeoForge 26.x、Fabric 26.x 共用实现，沿用 `/nekojs` 管理员权限。
 
 <a id="wiki-section-8"></a>
 ### `/nekojs hand`
 
-开发调试命令：显示执行者主手物品的完整信息。
+查看执行者主手物品。每行都能点击复制，悬停查看说明：
 
-```
-/nekojs hand
-minecraft:diamond_sword x1          <- 物品 id（点击可复制）、数量
-  damage: 5/1561                     <- 仅可损耗物品显示
-  components: {minecraft:enchantments=>{levels={minecraft:sharpness=5}}}   <- 组件补丁（脚本改过的组件在此可见；{} = 无）
-```
+- 物品字符串，如 `"minecraft:iron_sword[damage=2]"` 或 `"3x minecraft:stone"`，可直接传给 `Item.of(...)`。组件值使用原版 SNBT，`!component` 保留组件删除；字符串通过 JSON 引号转义，可直接复制进 JS/TS。
+- 完整物品 JSON，包含数量及组件补丁（包括删除组件），不截断为调试摘要。
+- 物品标签及成员数、模组命名空间及物品数、已构建的创造模式物品栏及其成员数。
+- 方块物品对应的方块 ID/标签；流体容器中的首种流体 ID/标签。流体读取使用各加载器原生容器接口，不消耗物品或流体。
 
-主手为空显示 `Empty hand`。控制台执行会报错（需要玩家）。
+创造模式栏复制的是原始栏 ID；不生成 NekoJS 尚未支持的 KubeJS `%tab` 过滤表达式。
+
+空手显示本地化提示。需要玩家，控制台执行会报错。
+
+完整 JSON 是 Minecraft `ItemStack.CODEC` 数据格式。重建物品优先复制组件字符串行：所有五节点的 `Item.of(string)` 和 ItemStack 字符串适配器均支持该写法，也支持对象形式 `{id: "minecraft:iron_sword[damage=2]", count: 1}`。完整 JSON 对象本身仍不是跨版本 `Item.of` 输入合同；1.21.1 的对象适配器不读取 `components` 字段。
+
+组件按当前服务端或客户端连接的注册表解析；启动阶段尚未建立世界时只能使用内建注册表。未知组件、无效值、重复组件和末尾多余内容会报错，不会退回只有 ID 的物品。`Item.id(...)` 仍仅查询物品类型，不接收组件补丁。
 
 <a id="wiki-section-9"></a>
-### `/nekojs inventory`
+### `/nekojs hotbar` / `/nekojs inventory`
 
-列出执行者主物品栏（0–35 槽位）所有非空槽位，每行 `slot N: <物品id> x<数量>`；全空显示
-`Inventory is empty.`。同样需要玩家身份执行。
+`hotbar` 读取 0–8 槽，`inventory` 读取主背包 0–35 槽，均不含装备和副手。保留非空物品的原顺序及重复项，过滤空槽，空背包输出 `[]`。
 
-两个命令与其它 `nekojs` 子命令一致，需要游戏管理员权限（权限等级 2）。
+每次输出两个可复制列表：带组件的物品字符串数组，以及保留完整组件的物品 JSON 数组。例如数组为 `["2x minecraft:stone","minecraft:apple"]`，可逐项传给 `Item.of`。数组不保留空槽位置。两条命令都需要玩家。
+
+**`/nekojs list-tag <registry> [<tag>]`**
+
+从当前服务器的实时注册表查询；控制台也可执行。注册表和标签参数均支持 TAB 补全，可使用 `minecraft:item`、`minecraft:block` 或其他已加载注册表。
+
+```text
+/nekojs list-tag minecraft:item
+/nekojs list-tag minecraft:item minecraft:logs
+```
+
+只给注册表时列出全部标签和总数，点击标签运行正确的 `/nekojs list-tag ...` 命令查看内容。给出标签时列出可复制的成员 ID 和数量。未知注册表或不存在的标签明确报错；已存在的空标签正常显示 0 个成员。
+
+**`/nekojs browse`**
+
+客户端命令：通过系统文件管理器打开**客户端游戏目录下的 `nekojs` 文件夹**，目录不存在时先创建。多人游戏中仍打开本机目录，不读取或打开远程服务器目录。NeoForge 1.21.1/26.x 与 Fabric 26.x 客户端均提供，无参数、无需管理员权限；专用服务器不注册此命令。
 
 <a id="wiki-section-10"></a>
 ## 配方 reload 的平台差异
@@ -95,7 +123,7 @@ minecraft:diamond_sword x1          <- 物品 id（点击可复制）、数量
 | **Fabric 26.x** | 支持配方热重载；脚本面为当前 Fabric 配方子集。 |
 | **NeoForge（26.x / 1.21.1）** | 支持热重载。`RecipeManagerMixin` 缓存数据包阶段的原始配方 JSON，reload 时重建工作集、重跑 `ServerEvents.recipes`，再替换 `RecipeManager`；配方逻辑即时生效，查看器可能需要客户端刷新。 |
 
-> Cleanroom 1.12.2 的配方行为属于独立 legacy 分支，当前仓库不验证。 |
+> Cleanroom 1.12.2 的配方行为属于独立 legacy 分支，当前仓库不验证。
 
 > NeoForge 的热重载基于 `ReloadableServerResourcesMixin`（资源 reload 收尾时触发）+ `RecipeManagerMixin.nekojs$applyScripts()`（可重入），由 `/nekojs reload server` 在脚本 reload 后主动调用。配方脚本里新增/修改/删除的配方都会重新解析进 `RecipeMap`。
 
@@ -147,7 +175,7 @@ minecraft:diamond_sword x1          <- 物品 id（点击可复制）、数量
 <a id="wiki-section-16"></a>
 ## 权限
 
-所有 `/nekojs` 子命令都需要 **op 2 及以上**（`LEVEL_GAMEMASTERS`）。在单人世界里，开启作弊的玩家自动满足。
+服务端 `/nekojs` 子命令需要 **op 2 及以上**（`LEVEL_GAMEMASTERS`）。在单人世界里，开启作弊的玩家自动满足。客户端本地 `/nekojs browse` 不需要管理员权限。
 
 <a id="wiki-section-17"></a>
 ## 注册自定义命令
@@ -172,4 +200,4 @@ minecraft:diamond_sword x1          <- 物品 id（点击可复制）、数量
 
 ---
 
-[上一篇: 事件参考](event-reference_cn) · [目录](Home) · [下一篇: 错误与日志参考](error-reference_cn)
+[上一篇: AI 辅助脚本编写](ai-support_cn) · [目录](Home) · [下一篇: 错误与日志参考](error-reference_cn)

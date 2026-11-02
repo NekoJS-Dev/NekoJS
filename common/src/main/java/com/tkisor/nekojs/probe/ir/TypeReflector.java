@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe.ir;
 
 import com.tkisor.nekojs.api.JavaMemberIndex;
+import com.tkisor.nekojs.api.annotation.ScriptInput;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
@@ -50,9 +51,11 @@ public final class TypeReflector {
             }
         }
 
-        // 接口
+        // A wholly hidden implementation contract must not restore its methods through heritage.
         for (Type iface : cls.getGenericInterfaces()) {
-            decl.interfaces.add(TypeSlot.of(iface, toRef(iface)));
+            if (!hidesAllInterfaceMethods(cls, iface)) {
+                decl.interfaces.add(TypeSlot.of(iface, toRef(iface)));
+            }
         }
 
         switch (kind) {
@@ -68,6 +71,24 @@ public final class TypeReflector {
         decl.fields.sort(Comparator.comparing(f -> f.name));
         decl.methods.sort(Comparator.comparing(TypeReflector::methodKey));
         return decl;
+    }
+
+    /** Retains marker and partially visible interfaces; only concrete, wholly hidden contracts disappear. */
+    private static boolean hidesAllInterfaceMethods(Class<?> owner, Type interfaceType) {
+        Class<?> contract = FunctionalInterfaceResolver.rawClass(interfaceType);
+        if (contract == null) return false;
+        boolean hasInstanceMethod = false;
+        for (Method method : contract.getMethods()) {
+            if (Modifier.isStatic(method.getModifiers())) continue;
+            hasInstanceMethod = true;
+            try {
+                Method resolved = owner.getMethod(method.getName(), method.getParameterTypes());
+                if (Modifier.isAbstract(resolved.getModifiers()) || jsName(resolved) != null) return false;
+            } catch (NoSuchMethodException unresolved) {
+                return false;
+            }
+        }
+        return hasInstanceMethod;
     }
 
     private static String constructorKey(MethodDecl c) {
@@ -367,7 +388,9 @@ public final class TypeReflector {
                 type = type instanceof GenericArrayType array ? array.getGenericComponentType()
                         : ((Class<?>) type).getComponentType();
             }
-            declaration.params.get(index).type = TypeSlot.of(type, toRef(type));
+            TypeSlot slot = TypeSlot.of(type, toRef(type));
+            slot.inputShape = declaration.params.get(index).type.inputShape;
+            declaration.params.get(index).type = slot;
         }
     }
 
@@ -585,10 +608,25 @@ public final class TypeReflector {
             }
             MethodDecl.MethodParam mp = new MethodDecl.MethodParam(
                     p.isNamePresent() ? p.getName() : "arg" + i,
-                    TypeSlot.of(sourceType, toRef(sourceType)),
+                    parameterSlot(sourceType, p),
                     varArgs && i == params.length - 1);
             m.params.add(mp);
         }
+    }
+
+    private static TypeSlot parameterSlot(Type type, java.lang.reflect.Parameter parameter) {
+        TypeSlot slot = TypeSlot.of(type, toRef(type));
+        ScriptInput annotation = parameter.getAnnotation(ScriptInput.class);
+        if (annotation != null) {
+            try {
+                slot.inputShape = java.util.Objects.requireNonNull(
+                        annotation.value().getConstructor().newInstance().inputShape(), "inputShape");
+            } catch (ReflectiveOperationException | RuntimeException exception) {
+                throw new IllegalArgumentException("NEKO-4063: Cannot resolve script input shape for "
+                        + parameter.getDeclaringExecutable() + " parameter " + parameter.getName(), exception);
+            }
+        }
+        return slot;
     }
 
     /** Prefers declared setters, then pairs inherited candidates deterministically in the host class. */
@@ -611,7 +649,7 @@ public final class TypeReflector {
         Type t = best.getDeclaringClass() != cls
                 ? inheritedSignature(cls, best).parameterTypes().get(0)
                 : best.getGenericParameterTypes()[0];
-        return TypeSlot.of(t, toRef(t));
+        return parameterSlot(t, best.getParameters()[0]);
     }
 
     private static String beanSetterName(String property) {

@@ -5,6 +5,8 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.bindings.event.client.ClientEvents;
 import com.tkisor.nekojs.core.NekoJSCorePlugin;
+import com.tkisor.nekojs.probe.ir.TypeReflector;
+import graal.graalvm.polyglot.proxy.ProxyObject;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -70,11 +72,19 @@ class PostEffectDeclarationSurfaceTest {
 
     @Test
     void declarationEventOffersRegisterAndUnregisterOnly() {
-        for (var method : PostEffectEventJS.class.getDeclaredMethods()) {
-            if (!java.lang.reflect.Modifier.isPublic(method.getModifiers())) continue;
-            assertTrue(Set.of("register", "unregister", "getDeclaredCount").contains(method.getName()),
-                    "the declaration event only collects declarations, not runtime actions: " + method.getName());
+        // Java proxy hooks are public protocol methods, not script-visible declaration operations.
+        var declaration = new TypeReflector().reflect(PostEffectEventJS.class);
+        Set<String> names = new HashSet<>();
+        for (var method : declaration.methods) {
+            if (!method.hidden) names.add(method.effectiveName());
         }
+        assertEquals(Set.of("register", "unregister", "getDeclaredCount"), names,
+                "the script-visible declaration event must collect declarations without runtime actions");
+        assertEquals(2L, declaration.methods.stream()
+                        .filter(method -> !method.hidden && method.effectiveName().equals("register")).count(),
+                "both callback and legacy object declaration overloads must remain available");
+        assertTrue(declaration.interfaces.stream().noneMatch(slot -> slot.sourceType == ProxyObject.class),
+                "hidden Java proxy hooks must not reappear through authored interface heritage");
     }
 
     @Test

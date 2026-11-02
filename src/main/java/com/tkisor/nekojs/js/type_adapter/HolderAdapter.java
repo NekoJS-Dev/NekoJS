@@ -72,7 +72,7 @@ public final class HolderAdapter extends AbstractJSTypeAdapter<Holder<?>> {
         Identifier identifier = Identifier.tryParse(normalized);
         if (identifier == null) {
 //?} else {
-/*        Identifier location = Identifier.tryParse(normalized);
+        /*Identifier location = Identifier.tryParse(normalized);
         if (location == null) {
 *///?}
             throw new ValueConversionException(Holder.class, EXPECTED, id, "invalid id");
@@ -82,7 +82,7 @@ public final class HolderAdapter extends AbstractJSTypeAdapter<Holder<?>> {
 //? if >=26 {
         for (ResourceKey<? extends Registry<?>> registryKey : registryAccess().listRegistryKeys().toList()) {
 //?} else {
-/*        for (ResourceKey<? extends Registry<?>> registryKey : registryAccess().listRegistries().toList()) {
+        /*for (ResourceKey<? extends Registry<?>> registryKey : registryAccess().listRegistries().toList()) {
 *///?}
             Registry<?> registry = lookup(registryKey);
 //? if >=26 {
@@ -90,7 +90,7 @@ public final class HolderAdapter extends AbstractJSTypeAdapter<Holder<?>> {
             registries.add(registryKey.identifier().toString());
             if (resolved == null) resolved = holderOf(registry, identifier);
 //?} else {
-/*            if (registry == null || !registry.containsKey(location)) continue;
+            /*if (registry == null || !registry.containsKey(location)) continue;
             registries.add(registryKey.location().toString());
             if (resolved == null) resolved = holderOf(registry, location);
 *///?}
@@ -119,7 +119,7 @@ public final class HolderAdapter extends AbstractJSTypeAdapter<Holder<?>> {
 //? if >=26 {
         Optional<Registry<?>> result = registryAccess().lookup((ResourceKey) registryKey);
 //?} else {
-/*        Optional<Registry<?>> result = registryAccess().registry((ResourceKey) registryKey);
+        /*Optional<Registry<?>> result = registryAccess().registry((ResourceKey) registryKey);
 *///?}
         return result.orElse(null);
     }
@@ -128,7 +128,7 @@ public final class HolderAdapter extends AbstractJSTypeAdapter<Holder<?>> {
     private static <T> Holder<T> holderOf(Registry<T> registry, Identifier identifier) {
         return registry.get(identifier).orElse(null);
 //?} else {
-/*    private static <T> Holder<T> holderOf(Registry<T> registry, Identifier location) {
+    /*private static <T> Holder<T> holderOf(Registry<T> registry, Identifier location) {
         return registry.getHolder(ResourceKey.create(registry.key(), location)).orElse(null);
 *///?}
     }

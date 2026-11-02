@@ -1,5 +1,5 @@
 // 26.x/1.21.1 共享测试树：id 构造经版本守卫（26.x RecipeHolder 吃 ResourceKey，1.21.1 吃
-// ResourceLocation）；filter 只读 holder id，recipe 值不参与（传 null，两侧 record 均不校验）。
+// Identifier）；filter 只读 holder id，recipe 值不参与（传 null，两侧 record 均不校验）。
 //? if neoforge {
 package com.tkisor.nekojs.api.recipe;
 
@@ -41,7 +41,7 @@ class RecipeFilterApplicationTest {
                         Identifier.fromNamespaceAndPath(id.substring(0, colon), id.substring(colon + 1))),
                 null);
 //?} else {
-/*        return new RecipeHolder<>(
+        /*return new RecipeHolder<>(
                 Identifier.fromNamespaceAndPath(id.substring(0, colon), id.substring(colon + 1)), null);
 *///?}
     }

@@ -1,133 +1,92 @@
 package com.tkisor.nekojs.client.render;
 
+import com.tkisor.nekojs.api.AdapterInputShape;
+import com.tkisor.nekojs.api.ScriptOptionSchema;
+import com.tkisor.nekojs.api.catalog.EventCallSignature;
+import com.tkisor.nekojs.api.catalog.EventCallSignature.Parameter;
 import com.tkisor.nekojs.api.event.EventBus;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
-/**
- * {@code ClientEvents.hudRender}/{@code worldRender} 的注册入口：挂在事件组上的
- * {@link EventBusJS} 子类，但语义是「按 id 注册常驻渲染器」而非注册一次性监听器，
- * 因此覆写 {@link #execute} 走 {@link ClientRenderRegistry}，底层 bus 仅作占位。
- *
- * <p>脚本调用形态：
- * <ul>
- *   <li>{@code bus('my_hud', callback)}</li>
- *   <li>{@code bus('my_hud', { layer: 'background', priority: -100 }, callback)}</li>
- *   <li>options 也接受裸层名（{@code 'background'}）或裸优先级数字</li>
- * </ul>
- * HUD 层名 {@code background|normal|foreground}（默认 normal，数值越小越先绘制，
- * background 在原版 HUD 之下）；世界层名 {@code early|normal|late}（默认 normal）。
- */
+/** Id-based persistent render registrations, not ordinary one-argument event subscriptions. */
 public class RenderRegistrationBusJS extends EventBusJS<Object, Void> {
-
-    private enum Mode {
-        HUD,
-        WORLD
-    }
-
+    private enum Mode { HUD, WORLD }
     private final Mode mode;
+    private final ScriptOptionSchema options;
 
     private RenderRegistrationBusJS(Mode mode) {
-        // 底层 bus 仅为满足 EventBusJS 构造约束：本总线从不 post，只覆写 execute
         super(EventBus.create(Object.class));
         this.mode = mode;
+        Enum<?>[] layers = mode == Mode.HUD ? ClientRenderRegistry.HudLayer.values() : ClientRenderRegistry.WorldLayer.values();
+        options = new ScriptOptionSchema(
+                ScriptOptionSchema.choice("layer", Arrays.stream(layers)
+                        .map(layer -> layer.name().toLowerCase(Locale.ROOT)).toArray(String[]::new)),
+                ScriptOptionSchema.integer("priority", Integer.MIN_VALUE, Integer.MAX_VALUE));
     }
 
-    /** HUD 渲染器注册总线（{@code ClientEvents.hudRender}）。 */
-    public static RenderRegistrationBusJS hud() {
-        return new RenderRegistrationBusJS(Mode.HUD);
+    public static RenderRegistrationBusJS hud() { return new RenderRegistrationBusJS(Mode.HUD); }
+    public static RenderRegistrationBusJS world() { return new RenderRegistrationBusJS(Mode.WORLD); }
+
+    /** The same schema supplies runtime validation and the catalog's callable declarations. */
+    @Override
+    public List<EventCallSignature> callSignatures() {
+        List<Parameter> callback = mode == Mode.HUD
+                ? List.of(new Parameter("ctx", AdapterInputShape.host(HudRenderContextJS.class)),
+                        new Parameter("graphics", AdapterInputShape.host(hudGraphicsType())))
+                : List.of(new Parameter("ctx", AdapterInputShape.host(WorldRenderContextJS.class)));
+        Parameter id = new Parameter("id", AdapterInputShape.string());
+        return List.of(new EventCallSignature(List.of(id), callback, AdapterInputShape.bool()),
+                new EventCallSignature(List.of(id, new Parameter("options", AdapterInputShape.union(
+                        options.inputShape(), options.fieldShape("layer"), options.fieldShape("priority")))),
+                        callback, AdapterInputShape.bool()));
     }
 
-    /** 世界渲染器注册总线（{@code ClientEvents.worldRender}）。 */
-    public static RenderRegistrationBusJS world() {
-        return new RenderRegistrationBusJS(Mode.WORLD);
+    private static Class<?> hudGraphicsType() {
+        try {
+            // The version-specific context owns the raw graphics type; shared registration stays portable.
+            return HudRenderContextJS.class.getMethod("graphics").getReturnType();
+        } catch (NoSuchMethodException missing) {
+            throw new IllegalStateException("[NEKO-4062] HUD context must expose its graphics type", missing);
+        }
     }
 
     @Override
     public Object execute(Value... args) {
         if (args.length < 2 || args.length > 3) {
-            throw new IllegalArgumentException(
-                    mode == Mode.HUD
-                            ? "hudRender requires (id, callback) or (id, options, callback)"
-                            : "worldRender requires (id, callback) or (id, options, callback)");
+            throw new IllegalArgumentException("[NEKO-4062] Render registration requires (id, callback) or (id, options, callback)");
         }
         Value idValue = args[0];
         Value callback = args[args.length - 1];
-        if (!idValue.isString()) {
-            throw new IllegalArgumentException("renderer id must be a string");
+        if (!idValue.isString() || idValue.asString().isBlank()) {
+            throw new IllegalArgumentException("[NEKO-4062] Renderer id must be a nonblank string");
         }
-        if (!callback.canExecute()) {
-            throw new IllegalArgumentException("renderer requires a callback function as the last argument");
-        }
-        String id = idValue.asString();
-        if (id.isBlank()) {
-            throw new IllegalArgumentException("renderer id must not be blank");
-        }
+        if (!callback.canExecute()) throw new IllegalArgumentException("[NEKO-4062] Renderer requires a callback as the last argument");
 
-        int layer = defaultLayer();
-        int priority = 0;
+        Map<String, Object> parsed = Map.of();
         if (args.length == 3) {
-            Value options = args[1];
-            if (options.isString()) {
-                layer = parseLayer(options.asString());
-            } else if (options.isNumber()) {
-                priority = (int) options.asDouble();
-            } else if (options.hasMembers()) {
-                if (options.hasMember("layer")) {
-                    Value layerValue = options.getMember("layer");
-                    if (layerValue.isString()) {
-                        layer = parseLayer(layerValue.asString());
-                    }
-                }
-                if (options.hasMember("priority") && options.getMember("priority").isNumber()) {
-                    priority = (int) options.getMember("priority").asDouble();
-                }
-            } else {
-                throw new IllegalArgumentException(
-                        "renderer options must be an object { layer, priority }, a layer name or a priority number");
-            }
+            Value input = args[1];
+            parsed = input.isString() ? Map.of("layer", options.readField("layer", input))
+                    : input.isNumber() ? Map.of("priority", options.readField("priority", input)) : options.read(input);
         }
-
+        String layerName = (String) parsed.getOrDefault("layer", "normal");
+        int layer = mode == Mode.HUD ? ClientRenderRegistry.HudLayer.valueOf(layerName.toUpperCase(Locale.ROOT)).ordinal()
+                : ClientRenderRegistry.WorldLayer.valueOf(layerName.toUpperCase(Locale.ROOT)).ordinal();
+        int priority = (Integer) parsed.getOrDefault("priority", 0);
         Context context = callback.getContext();
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
         if (mode == Mode.HUD) {
-            ClientRenderRegistry.registerHud(
-                    id, scriptId, context,
+            ClientRenderRegistry.registerHud(idValue.asString(), scriptId, context,
                     ClientRenderRegistry.HudLayer.values()[layer], priority, callback);
         } else {
-            ClientRenderRegistry.registerWorld(
-                    id, scriptId, context,
+            ClientRenderRegistry.registerWorld(idValue.asString(), scriptId, context,
                     ClientRenderRegistry.WorldLayer.values()[layer], priority, callback);
         }
         return true;
-    }
-
-    private int defaultLayer() {
-        return mode == Mode.HUD
-                ? ClientRenderRegistry.HudLayer.NORMAL.ordinal()
-                : ClientRenderRegistry.WorldLayer.NORMAL.ordinal();
-    }
-
-    private int parseLayer(String name) {
-        String normalized = name.trim().toLowerCase(Locale.ROOT);
-        if (mode == Mode.HUD) {
-            return switch (normalized) {
-                case "background" -> ClientRenderRegistry.HudLayer.BACKGROUND.ordinal();
-                case "normal" -> ClientRenderRegistry.HudLayer.NORMAL.ordinal();
-                case "foreground" -> ClientRenderRegistry.HudLayer.FOREGROUND.ordinal();
-                default -> throw new IllegalArgumentException(
-                        "unknown hud layer '" + name + "' (expected background|normal|foreground)");
-            };
-        }
-        return switch (normalized) {
-            case "early" -> ClientRenderRegistry.WorldLayer.EARLY.ordinal();
-            case "normal" -> ClientRenderRegistry.WorldLayer.NORMAL.ordinal();
-            case "late" -> ClientRenderRegistry.WorldLayer.LATE.ordinal();
-            default -> throw new IllegalArgumentException(
-                    "unknown world layer '" + name + "' (expected early|normal|late)");
-        };
     }
 }

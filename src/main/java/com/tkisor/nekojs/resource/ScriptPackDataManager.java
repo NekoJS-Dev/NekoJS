@@ -63,7 +63,8 @@ public final class ScriptPackDataManager {
 
     private static volatile PackRepository installedRepository;
     private static volatile List<DataEntry> activeEntries = List.of();
-    private static volatile String activeSignature = "";
+    private static final com.tkisor.nekojs.core.pack.ScriptPackResourceState RESOURCE_STATE =
+            new com.tkisor.nekojs.core.pack.ScriptPackResourceState();
 
     private static final RepositorySource REPOSITORY_SOURCE = output -> {
         for (DataEntry entry : activeEntries) {
@@ -89,12 +90,17 @@ public final class ScriptPackDataManager {
      * list from the given packs. Returns true when a resource reload is needed (content
      * signature changed, or the repository changed while entries exist).
      */
-    public static synchronized boolean activateForServer(MinecraftServer server, List<ScriptPack> packs) {
+    public static boolean activateForServer(MinecraftServer server, List<ScriptPack> packs) {
+        return activateForServerChecked(server, packs).reloadRequired();
+    }
+
+    /** Separates a failed mount from an unchanged pack selection for truthful operation results. */
+    public record ActivationResult(boolean success, boolean reloadRequired) {}
+
+    public static synchronized ActivationResult activateForServerChecked(MinecraftServer server, List<ScriptPack> packs) {
         PackRepository repository = server.getPackRepository();
-        boolean repositoryChanged = installedRepository != repository;
-        String previousSignature = activeSignature;
         if (!installRepositorySource(repository)) {
-            return false;
+            return new ActivationResult(false, false);
         }
 
         List<DataEntry> entries = new ArrayList<>();
@@ -108,16 +114,8 @@ public final class ScriptPackDataManager {
                 .map(e -> e.packId() + "\u001e" + e.dataDir() + "\u001e" + e.dataHash())
                 .toList());
 
-        boolean shouldReload;
-        if (repositoryChanged) {
-            shouldReload = !nextSignature.isEmpty() || !previousSignature.isEmpty();
-        } else {
-            shouldReload = !nextSignature.equals(previousSignature);
-        }
-
         activeEntries = List.copyOf(entries);
-        activeSignature = nextSignature;
-        return shouldReload;
+        return new ActivationResult(true, RESOURCE_STATE.select(repository, nextSignature));
     }
 
     /** True when all active nekojs pack ids are currently part of the repository selection. */
@@ -139,7 +137,7 @@ public final class ScriptPackDataManager {
     public static synchronized void reset() {
         installedRepository = null;
         activeEntries = List.of();
-        activeSignature = "";
+        RESOURCE_STATE.reset();
     }
 
     /**
@@ -165,11 +163,40 @@ public final class ScriptPackDataManager {
 
     private static boolean reloadServerResourcesOnServerThread(MinecraftServer server) {
         try {
+            CompletableFuture<Boolean> future = reloadServerResourcesAsync(server, () -> true);
+            waitForReload(server, future);
+            return future.join();
+        } catch (Exception e) {
+            NekoJS.LOGGER.warn("Failed to mount nekojs script pack data", e);
+            return false;
+        }
+    }
+
+    /** Completes after resources and world metadata, without blocking the server owner thread. */
+    public static CompletableFuture<Boolean> reloadServerResourcesAsync(
+            MinecraftServer server, BooleanSupplier stillCurrent) {
+        CompletableFuture<Boolean> result = new CompletableFuture<>();
+        Runnable start = () -> startResourceReload(server, stillCurrent, result);
+        try {
+            if (server.isSameThread()) start.run();
+            else server.execute(start);
+        } catch (RuntimeException failure) {
+            result.completeExceptionally(failure);
+        }
+        return result;
+    }
+
+    private static void startResourceReload(MinecraftServer server, BooleanSupplier stillCurrent,
+                                            CompletableFuture<Boolean> result) {
+        try {
+            if (!stillCurrent.getAsBoolean()) { result.complete(false); return; }
             PackRepository repository = server.getPackRepository();
             if (!installRepositorySource(repository)) {
-                return false;
+                result.complete(false);
+                return;
             }
 
+            var revision = RESOURCE_STATE.capture(repository);
             repository.reload();
             Set<String> requestedIds = new LinkedHashSet<>(repository.getSelectedIds());
             for (DataEntry entry : activeEntries) {
@@ -179,13 +206,26 @@ public final class ScriptPackDataManager {
             List<String> selectedIds = List.copyOf(repository.getSelectedIds());
 
             NekoJS.LOGGER.info("Reloading server resources for {} nekojs script pack(s)", activeEntries.size());
-            CompletableFuture<Void> reloadFuture = server.reloadResources(selectedIds);
-            waitForReload(server, reloadFuture);
-            restoreWorldDataConfiguration(server);
-            return true;
-        } catch (Exception e) {
-            NekoJS.LOGGER.warn("Failed to mount nekojs script pack data", e);
-            return false;
+            server.reloadResources(selectedIds).whenComplete((ignored, failure) -> {
+                if (failure != null) { result.completeExceptionally(failure); return; }
+                Runnable finish = () -> {
+                    try {
+                        if (!stillCurrent.getAsBoolean()) { result.complete(false); return; }
+                        restoreWorldDataConfiguration(server);
+                        result.complete(RESOURCE_STATE.applied(revision));
+                    } catch (RuntimeException finishFailure) {
+                        result.completeExceptionally(finishFailure);
+                    }
+                };
+                try {
+                    if (server.isSameThread()) finish.run();
+                    else server.execute(finish);
+                } catch (RuntimeException dispatchFailure) {
+                    result.completeExceptionally(dispatchFailure);
+                }
+            });
+        } catch (Exception failure) {
+            result.completeExceptionally(failure);
         }
     }
 
@@ -202,7 +242,7 @@ public final class ScriptPackDataManager {
                 new WorldDataConfiguration(new DataPackConfig(enabled, disabled), current.enabledFeatures()));
     }
 
-    private static void waitForReload(MinecraftServer server, CompletableFuture<Void> future) {
+    private static void waitForReload(MinecraftServer server, CompletableFuture<?> future) {
         if (server.isSameThread()) {
             server.managedBlock((BooleanSupplier) future::isDone);
             future.join();

@@ -80,7 +80,7 @@ event.remove({ output: 'minecraft:diamond_sword' })
 <a id="wiki-section-5"></a>
 ## Ingredient syntax (Ingredient)
 
-Anywhere a parameter is typed as `Ingredient` (the ingredient array in `event.shapeless`, the second argument of `event.recipes.minecraft.blasting`, the `match` argument of `replaceInput`, and so on), the following forms are accepted:
+Anywhere a parameter is typed as `Ingredient` (the ingredient array in `event.shapeless`, the second argument of direct `event.blasting`, the `match` argument of `replaceInput`, and so on), the following forms are accepted:
 
 | Form | Meaning | Editor completion |
 |---|---|---|
@@ -131,46 +131,31 @@ event.shapeless('minecraft:dirt', ['minecraft:sand', 'minecraft:gravel'])
 ```
 
 <a id="wiki-section-8"></a>
-### Method 2: `event.recipes.<namespace>.<type>(...)` (recommended)
+### Method 2: `event.recipes.<namespace>.<type>(...)`
 
-Access recipes by namespace and type, with schema-driven positional arguments. Resolution tries handler methods first, then schema definitions, and finally falls back to raw JSON.
+Resolution tries a registered handler first, then a schema, then raw JSON. **Do not copy the direct-helper argument order to every namespace method.** The built-in handler only supplies `crafting_shaped`/`crafting_shapeless`; cooking and smithing use the installed schema. The fallback cooking schema orders `ingredient, result, experience?, cookingtime?`, unlike result-first `event.smelting`. Prefer named fields when a schema is available and inspect the current probe/schema for the installed node.
+
+Place this complete example in `server_scripts/namespace-recipes.js`:
 
 ```javascript
-// Methods in the minecraft namespace (handler)
-event.recipes.minecraft.crafting_shaped(
-  Item.of('minecraft:stick', 2),
-  ['B'],
-  { B: Ingredient.of('minecraft:bamboo') }
-).id('nekojs:bamboo_to_sticks')
+ServerEvents.recipes(event => {
+  event.recipes.minecraft.crafting_shaped(
+    Item.of('minecraft:stick', 2), ['B'],
+    { B: Ingredient.of('minecraft:bamboo') }
+  ).id('nekojs_example:bamboo_to_sticks')
 
-event.recipes.minecraft.crafting_shapeless(
-  Item.of('minecraft:stone_button'),
-  [Ingredient.of('minecraft:stone')]
-)
-
-// Schema-driven (positional arguments; field names/order are defined by the schema)
-event.recipes.minecraft.smelting('minecraft:iron_ingot', 'minecraft:iron_ore')
-  .id('nekojs:smelt_iron')
-
-event.recipes.minecraft.smelting(
-  Item.of('minecraft:gold_ingot'),
-  Ingredient.of('minecraft:gold_ore'),
-  1.5,    // experience
-  300     // cookingtime
-)
-
-event.recipes.minecraft.smithingtransform(
-  Item.of('minecraft:netherite_ingot'),
-  Ingredient.of('minecraft:netherite_upgrade_smithing_template'),
-  Ingredient.of('minecraft:diamond_sword'),
-  Ingredient.of('minecraft:netherite_ingot')
-)
-
-// Third-party mod (Create)
-event.recipes.create.mixing('create:brass_ingot', ['minecraft:copper_ingot', 'create:zinc_ingot'])
+  event.recipes.minecraft.smelting({
+    ingredient: Ingredient.of('minecraft:gold_ore'),
+    result: Item.of('minecraft:gold_ingot'),
+    experience: 1.0,
+    cookingtime: 200
+  }).id('nekojs_example:smelt_gold')
+})
 ```
 
-> If you do not specify a recipe id, one is generated as `nekojs:<prefix>_<8-digit hash>`.
+Recipe objects, ingredient maps, filters, and schema JSON are structured data, not a universal builder-configuration convention. A third-party mod id does not prove a particular schema or constructor exists. Use the installed mod's documented serializer/schema; do not assume `create.mixing(result, inputs)` or a misspelled `smithingtransform` is supported. Fluent `.id(...)` is current supported API; no callback-builder replacement is implied. See [Script API style](script-api-style_us).
+
+> Generated ids are implementation-derived `nekojs:<prefix>_<8-hex hash>` values with collision suffixes; use explicit unique ids for stable pack behavior.
 
 <a id="wiki-section-9"></a>
 ### Method 3: `event.custom(...)` / `event.builder(...)` - raw JSON

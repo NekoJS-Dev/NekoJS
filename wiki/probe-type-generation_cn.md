@@ -32,7 +32,7 @@
 
 `<语言>` 与 `<名字>` 支持 TAB 补全。所有 probe 子命令在服务端线程执行，权限与 `/nekojs` 一致（op 2+）。
 
-**jsconfig 的合并语义**：每次 probe 只**刷新 probe 管理的条目**（`java:*`/`@side-only/*` 路径别名、include/typeRoots 里指向 `.neko_probe/` 的条目、JSX 运行时键），**你手动加的条目和其它键原样保留**——比如自己 include 一个 `./typings/custom.d.ts` 或加自己的 typeRoots，不会被 probe 覆盖。
+**jsconfig 的合并语义**：每次 probe 只**刷新 probe 管理的条目**（`java:*`/`@side-only/*` 路径别名、include/typeRoots 里指向 `.neko_probe/` 的条目、JSX 运行时键），**你手动加的条目和其它键原样保留**——比如自己 include 一个 `./typings/custom.d.ts` 或加自己的 typeRoots，不会被 probe 覆盖。 管理别名也包括 `@special` / `@special/*`；贡献还更新 `typeAcquisition.enable=false` 与六种标准 JS/TS 脚本 include glob。
 
 <a id="wiki-section-3"></a>
 ## 工作流程
@@ -58,12 +58,19 @@
    <baseDir>/<该语言输出子目录>：内容相同的跳过、变化的覆盖写、本次不再产出的删除
    ├─ render 失败 → 完全不触盘，旧产物原样保留；路径越界（绝对路径/..）直接拒绝
    └─ 某个文件被外部进程锁住 → 带退避重试，仍失败则报错点名该文件（陈旧文件删不掉只告警）
+       就地写入不是目录原子替换，I/O 失败可能留下部分已更新的产物。
 
 5. 编辑器配置贡献（各 backend 自报片段，幂等合并）
    ├─ TS：合并各脚本目录 jsconfig.json 的 paths / include / typeRoots（指向 .neko_probe/typescript/）
    ├─ Python：合并各目录 pyrightconfig.json 的 extraPaths（指向 .neko_probe/python），并通过通用注入机制写入各目录 .vscode/settings.json 的 python.analysis.extraPaths / python.languageServer（详见 Python 补全）
    └─ snippets（TS only）：合并进 nekojs/.vscode/nekojs.code-snippets
 ```
+
+**Probe 产物不是 AI 文档根目录**
+
+`.neko_probe` 保存声明和编辑器文件，不决定 AI 根目录：`nekojs/config/ai.toml` 的 `[output].directory` 独立控制 AI 根，默认为 `.github/neko_ai`。内置 TS 声明成功生成后才向所选根的 `snapshots/` 发布 API 快照；声明失败会保留旧快照指针，发布失败只告警，不能视为已产生新快照。修改 probe 的 `baseDir` 或语言 `outputDir` 不会移动 AI bundle。
+
+所选根下的 `agents/` 角色不会被编辑器自动发现。可选的标准 `.github/agents` 桥需要 `[output].editor_agents=true`（默认 false）并开启文档生成；用户修改过的角色文件会保留，也不会更改全局 AI 客户端配置。根目录发现、连接和安全边界见 [AI 创作支持](ai-support_cn)。
 
 <a id="wiki-section-4"></a>
 ## 输出布局
@@ -91,8 +98,12 @@
 │   ├── index.d.ts                  # 手动 .d.ts 声明
 │   └── globals.d.ts                # probe.addGlobal 产出的 declare const（有监听器时）
 ├── @nekojs/managed/<side>/index.d.ts  # managed API 声明
-└── jsconfig.json                   # 内部解析用
+├── @registry-builders/index.d.ts
+├── @event-builders/index.d.ts
+└── @manual/references.d.ts          # 存在手动引用时
 ```
+
+编辑器配置单独贡献：`.neko_probe/jsconfig.json` 在 **probe 根目录**，不是 `typescript/` 内。四种脚本根目录还各有合并的 `jsconfig.json`，指向实际配置的 TypeScript 输出目录。
 
 <a id="wiki-section-6"></a>
 ### Python（默认 `.neko_probe/python/nekojs/`）
@@ -145,7 +156,7 @@ Java 的 `char` 与装箱 `Character` 值在 TS 中表示为 `string`，涵盖�
 
 | 键 | 默认 | 语义 |
 |---|---|---|
-| `enabled` | `true` | 总开关。`false` 时 probe 直接返回失败结果（"probe disabled in probe.toml"）。`/nekojs probe enable|disable` 就是改这个键 |
+| `enabled` | `true` | 总开关。`false` 时 probe 直接返回失败结果（"probe disabled in probe.toml"）。`/nekojs probe enable\|disable` 就是改这个键 |
 | `runAtStartup` | `false` | 开服自动跑一次默认 TS probe（ServerStarted 时，等价 `/nekojs probe`；结果摘要进日志，失败不影响开服）。不想每次手动敲命令就打开它 |
 | `baseDir` | `".neko_probe"` | 输出基目录（相对游戏目录）。每个语言 backend 拥有其下 `<baseDir>/<语言>` 子目录（如 `.neko_probe/typescript`） |
 | `scan.includePackages` | `[]` | 类扫描的包规则白名单。条目为**字面包前缀**（`fqn` 以 `前缀.` 开头）或 **`re:` 正则**（如 `re:com\.example\..*\.api\..*`，对全限定名整体匹配）。**覆盖语义**：非空时**完全取代**默认白名单（`java`、`com.tkisor.nekojs`、平台默认 MC/loader 包）。要**追加**请用 `extraIncludePackages`，不要在此重抄默认值 |
@@ -337,7 +348,7 @@ probe 生成后会把以下配置**幂等合并**进每个脚本目录的 `jscon
 |---|---|---|
 | `ProbeCoordinator` | `common/.../probe/` | 协调器：共享类收集（BFS）、按需共享 IR、事件触发、派发 backend、外部副作用 |
 | `ProbeBackendRegistry` | `common/.../probe/` | backend 按 `(语言, 名字)` 二维登记；lock 时冲突崩溃；命令解析与补全 |
-| `ProbeBackend` / `ProbeContext` | `common/.../probe/` | 单语言生成器接口（`render` 渲染到内存 + 默认 `generate` 原子提交/`contributeEditorConfig`/`outputDir`/`requiresIr`）；共享上下文 |
+| `ProbeBackend` / `ProbeContext` | `common/.../probe/` | 单语言生成器接口（`render` 渲染到内存 + 默认 `generate` 就地逐文件同步/`contributeEditorConfig`/`outputDir`/`requiresIr`）；共享上下文 |
 | `ProbeBackendSelector` | `common/.../probe/` | `/nekojs probe` 的 backend 解析（语言默认/per-language 配置覆盖/全选/补全），三平台命令层共用 |
 | `ProbeOutputCommitter` | `common/.../probe/` | 产物落盘的唯一实现（就地逐文件同步/陈旧清理/遗留目录清理/render 产物路径校验） |
 | `TypeScriptProbeBackend` | `common/.../probe/backend/typescript/` | 内置 TS backend：`.d.ts` 全流程（IR 唯一渲染路径）+ 六个声明生成器 |
@@ -484,6 +495,10 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 
 另外两条是选择而非限制：同语言多 backend 时 `/nekojs probe <语言>` 选 priority 最高者（`probe.toml [languages.<lang>].backend` 可以指定），其余用 `/nekojs probe <语言> <名字>` 显式跑；替换 TS 实现时布局怎么办见上面的命名约定一节。
 
+**渲染输入使用显式声明**
+
+`ClientEvents.hudRender` / `worldRender` 的两参和三参调用会声明真实重载；三参形式的配置使用各自的 `layer` 字面量和可选的 `priority: number`，而不是任意 `Object`。保留 layer 字符串和整数优先级简写，但数值是否为有限的有符号 32 位整数仍由运行时检查。`postEffects` 的 `event.register(id, build => { ... })` 会暴露当前节点支持的 Bean builder；兼容 Map 输入同样使用明确字段。刷新 `/nekojs probe` 后以本实例声明为准，不要混用 1.21.1 的 `program` 与 26.x 的 shader/blur 字段。完整用法与生命周期见[客户端渲染](client-rendering_cn)。
+
 **Entity 属性的 TypeScript 迁移**
 
 NeoForge 1.21.1、26.1.2、26.2.0 及 Fabric 26.1.2、26.2.0 的生成声明采用以下迁移：
@@ -514,7 +529,7 @@ NeoForge 1.21.1、26.1.2、26.2.0 及 Fabric 26.1.2、26.2.0 的生成声明采�
 > 这些是已知边界，列在这里让你知道。
 
 1. **JSDoc 覆盖取决于注解覆盖**：`@Doc`/`@Param`/`@Return` 注解文档与 `@Remap`/`@RemapByPrefix`/`@HideFromJS` 名字/可见性语义均已实现（`TypeReflector` 直接消费，与运行时 Graal remapper 口径一致）；未标注的类靠编程式 `registerTypeDocs` 或 `ProbeEvents.modifyType` 的 `setDoc` 系列补 JSDoc。
-2. **事件 import 可能膨胀**：`EventDeclarationGenerator.collectImports` 递归无深度限制，可能拉进大量无关类（Phase C 修复）。
+2. **声明依赖受当前配置约束**：事件生成器只收集签名直接引用的类型（数组取组件类型），后续由 TypeScript 声明依赖闭包按当前排除和隐藏策略补齐依赖；这不等于无条件导出所有 Java 类。修改配置后应重新生成并检查目标项目的类型诊断。
 3. **第三方类参数名退化**：NekoJS 各模块已在根 build.gradle 统一以 `-parameters` 编译，自身类的声明携带真实参数名；但未开 `-parameters` 的第三方 jar 与 JDK 类（标准 JDK 的 `java.*` class 文件不含 MethodParameters 属性）仍取不到参数名，`TypeReflector` 的 `isNamePresent` 兜底会把这类参数退化为 `arg0`/`arg1`…。
 4. **版本偏差**：probe 是手动触发的，新加 mod/注册内容后类型声明会过期，需重新 `/nekojs probe`。
 5. **Python stub 泛型展平**：类型变量渲染为 `Any`，不保留泛型参数关系（够日常补全，非完整类型）。

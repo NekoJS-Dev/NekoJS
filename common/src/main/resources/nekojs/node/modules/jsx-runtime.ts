@@ -1,9 +1,9 @@
 type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
-  type NekoUiPrimitive = 'screen' | 'panel' | 'row' | 'column' | 'stack' | 'scroll' | 'label' | 'button' | 'input' | 'image' | 'spacer'
+  type NekoUiPrimitive = 'screen' | 'panel' | 'row' | 'column' | 'stack' | 'scroll' | 'label' | 'button' | 'input' | 'slider' | 'image' | 'spacer' | 'dialog' | 'item'
   type NekoUiJsxType = NekoUiPrimitive | NekoUiComponent | symbol
   type NekoUiLayoutSize = number | 'auto' | 'fill' | `${number}%`
   type NekoUiResponsive<T> = T | { readonly base?: T; readonly profiles?: Partial<Record<NekoUiProfile, T>> }
-  type NekoUiEventName = 'onClick' | 'onRelease' | 'onScroll' | 'onKey' | 'onTextInput' | 'onFocus' | 'onBlur' | 'onChange' | 'onSubmit'
+  type NekoUiEventName = 'onClick' | 'onRelease' | 'onScroll' | 'onKey' | 'onTextInput' | 'onFocus' | 'onBlur' | 'onChange' | 'onSubmit' | 'onDismiss'
   type NekoUiDirection = 'row' | 'column'
   type NekoUiAnchor = 'topLeft' | 'top' | 'topRight' | 'left' | 'center' | 'right' | 'bottomLeft' | 'bottom' | 'bottomRight'
 
@@ -48,6 +48,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     readonly button?: number
     readonly key?: string
     readonly value?: string
+    readonly reason?: 'escape' | 'backdrop'
     readonly delta?: number
   }
 
@@ -61,6 +62,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
 
   type NekoUiComponent = Function
   type NekoUiCallback = Function
+  type NekoUiEventCallback = (event: NekoUiEvent) => void
 
   interface NekoUiDiagnostic {
     readonly rootId: string
@@ -165,15 +167,106 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     anchor?: NekoUiResponsive<NekoUiAnchor>
     coordinateSpace?: 'logical' | 'design'
     visible?: NekoUiResponsive<boolean>
-    onClick?: NekoUiCallback
-    onRelease?: NekoUiCallback
-    onScroll?: NekoUiCallback
-    onKey?: NekoUiCallback
-    onTextInput?: NekoUiCallback
-    onFocus?: NekoUiCallback
-    onBlur?: NekoUiCallback
-    onChange?: NekoUiCallback
-    onSubmit?: NekoUiCallback
+    onClick?: NekoUiEventCallback
+    onRelease?: NekoUiEventCallback
+    onScroll?: NekoUiEventCallback
+    onKey?: NekoUiEventCallback
+    onTextInput?: NekoUiEventCallback
+    onFocus?: NekoUiEventCallback
+    onBlur?: NekoUiEventCallback
+    onChange?: NekoUiEventCallback
+    onSubmit?: NekoUiEventCallback
+    onDismiss?: NekoUiEventCallback
+  }
+  type NekoUiColor = string | number
+  interface NekoUiControlColors {
+    background?: NekoUiColor
+    borderColor?: NekoUiColor
+    color?: NekoUiColor
+    placeholderColor?: NekoUiColor
+    selectionColor?: NekoUiColor
+    cursorColor?: NekoUiColor
+    trackColor?: NekoUiColor
+    thumbColor?: NekoUiColor
+  }
+  interface NekoUiControlAppearance extends NekoUiControlColors {
+    hover?: NekoUiControlColors
+    focused?: NekoUiControlColors
+    pressed?: NekoUiControlColors
+    disabled?: NekoUiControlColors
+  }
+  type NekoUiControlProps = Omit<NekoUiSharedProps, NekoUiEventName | 'id' | 'children'> & {
+    id: string
+    disabled?: boolean
+    tooltip?: string
+    appearance?: NekoUiControlAppearance
+  }
+  type NekoUiToggleProps = NekoUiControlProps & {
+    checked: boolean
+    label?: string
+    text?: string
+    onChange: (checked: boolean) => void
+  }
+  type NekoUiSliderProps = NekoUiControlProps & {
+    value: number
+    min?: number
+    max?: number
+    step?: number
+    onChange: (value: number) => void
+  }
+  interface NekoUiSelectOption {
+    value: string
+    label: string
+    disabled?: boolean
+  }
+  type NekoUiSelectProps = NekoUiControlProps & {
+    value: string
+    options: readonly NekoUiSelectOption[]
+    expanded: boolean
+    onExpandedChange: (expanded: boolean) => void
+    onChange: (value: string) => void
+  }
+  type NekoUiToggle = (props: NekoUiToggleProps) => NekoVNode
+  type NekoUiSlider = (props: NekoUiSliderProps) => NekoVNode
+  type NekoUiSelect = (props: NekoUiSelectProps) => NekoVNode
+  type NekoUiRenderable = NekoVNode | string | number | boolean | null | undefined | readonly NekoUiRenderable[]
+  interface NekoUiTab {
+    value: string
+    label: string
+    disabled?: boolean
+    render: () => NekoUiRenderable
+  }
+  type NekoUiTabsProps = NekoUiControlProps & {
+    value: string
+    tabs: readonly NekoUiTab[]
+    onChange: (value: string) => void
+  }
+  type NekoUiTabs = (props: NekoUiTabsProps) => NekoVNode
+  interface NekoUiDialogProps {
+    id: string
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    title?: string
+    children?: NekoUiRenderable
+    width?: NekoUiResponsive<NekoUiLayoutSize>
+    height?: NekoUiResponsive<NekoUiLayoutSize>
+    closeOnEscape?: boolean
+    closeOnBackdrop?: boolean
+  }
+  type NekoUiDialog = (props: NekoUiDialogProps) => NekoVNode | null
+  type NekoUiFormValue = string | number | boolean | null
+  type NekoUiFormValues = Readonly<Record<string, NekoUiFormValue>>
+  type NekoUiValidator = (value: NekoUiFormValue | undefined, values: NekoUiFormValues) => string | null | undefined
+  interface NekoUiValidationResult {
+    readonly valid: boolean
+    readonly errors: Readonly<Record<string, readonly string[]>>
+  }
+  type NekoUiValidateForm = (values: NekoUiFormValues, rules: Readonly<Record<string, readonly NekoUiValidator[]>>) => NekoUiValidationResult
+  interface NekoUiValidators {
+    required(message?: string): NekoUiValidator
+    minLength(length: number, message?: string): NekoUiValidator
+    maxLength(length: number, message?: string): NekoUiValidator
+    numberRange(min: number, max: number, message?: string): NekoUiValidator
   }
   type NekoUiCrop = { readonly x: number; readonly y: number; readonly width: number; readonly height: number } | readonly [number, number, number, number]
   type NekoUiPrimitivePropsByType = {
@@ -184,13 +277,16 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     stack: NekoUiSharedProps
     scroll: NekoUiSharedProps & { scrollX?: NekoUiResponsive<boolean>; scrollY?: NekoUiResponsive<boolean>; scrollOffset?: NekoUiResponsive<number> }
     label: NekoUiSharedProps & { text?: string; color?: string | number; fontSize?: NekoUiResponsive<number>; font?: NekoUiResponsive<string>; wrap?: boolean; truncate?: boolean }
-    button: NekoUiSharedProps & { text?: string; disabled?: boolean; tooltip?: string }
-    input: NekoUiSharedProps & { value?: string; placeholder?: string; maxLength?: number; disabled?: boolean }
+    button: NekoUiSharedProps & { text?: string; disabled?: boolean; tooltip?: string; appearance?: NekoUiControlAppearance }
+    input: NekoUiSharedProps & { value?: string; placeholder?: string; maxLength?: number; disabled?: boolean; tooltip?: string; appearance?: NekoUiControlAppearance }
+    slider: NekoUiSharedProps & { value?: number; min?: number; max?: number; step?: number; disabled?: boolean; tooltip?: string; appearance?: NekoUiControlAppearance }
     image: NekoUiSharedProps & { resource?: string; fit?: 'contain' | 'cover' | 'stretch'; opacity?: number; icon?: string; crop?: NekoUiCrop }
     spacer: NekoUiSharedProps
+    dialog: NekoUiSharedProps & { id: string; title?: string; closeOnEscape?: boolean; closeOnBackdrop?: boolean; onDismiss?: NekoUiEventCallback }
+    item: NekoUiSharedProps & { item: string; count?: number; itemTooltip?: boolean; tooltip?: string }
   }
   type NekoUiPrimitiveProps = NekoUiPrimitivePropsByType[NekoUiPrimitive]
-  type NekoUiElementProps<T extends NekoUiJsxType> = T extends NekoUiPrimitive ? NekoUiPrimitivePropsByType[T] : object
+  type NekoUiElementProps<T extends NekoUiJsxType> = T extends NekoUiPrimitive ? NekoUiPrimitivePropsByType[T] : T extends (props: infer P) => unknown ? P : object
 
   type NekoUiJsxFactory = <T extends NekoUiJsxType>(type: T, props: NekoUiElementProps<T> | null, key?: string | number) => NekoVNode
 
@@ -211,8 +307,11 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       label: NekoUiPrimitivePropsByType['label']
       button: NekoUiPrimitivePropsByType['button']
       input: NekoUiPrimitivePropsByType['input']
+      slider: NekoUiPrimitivePropsByType['slider']
       image: NekoUiPrimitivePropsByType['image']
       spacer: NekoUiPrimitivePropsByType['spacer']
+      dialog: NekoUiPrimitivePropsByType['dialog']
+      item: NekoUiPrimitivePropsByType['item']
     }
   }
 
@@ -243,10 +342,13 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     stack: [],
     scroll: ['scrollX', 'scrollY', 'scrollOffset'],
     label: ['text', 'color', 'fontSize', 'font', 'wrap', 'truncate'],
-    button: ['text', 'disabled', 'tooltip'],
-    input: ['value', 'placeholder', 'maxLength', 'disabled'],
+    button: ['text', 'disabled', 'tooltip', 'appearance'],
+    input: ['value', 'placeholder', 'maxLength', 'disabled', 'tooltip', 'appearance'],
+    slider: ['value', 'min', 'max', 'step', 'disabled', 'tooltip', 'appearance'],
     image: ['resource', 'fit', 'opacity', 'icon', 'crop'],
-    spacer: []
+    spacer: [],
+    dialog: ['title', 'closeOnEscape', 'closeOnBackdrop', 'onDismiss'],
+    item: ['item', 'count', 'itemTooltip', 'tooltip']
   })
   const SHARED_PROPS = Object.freeze([
     'id', 'width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight',
@@ -255,7 +357,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
   ])
   const EVENT_PROPS = Object.freeze([
     'onClick', 'onRelease', 'onScroll', 'onKey', 'onTextInput',
-    'onFocus', 'onBlur', 'onChange', 'onSubmit'
+    'onFocus', 'onBlur', 'onChange', 'onSubmit', 'onDismiss'
   ])
   const DIMENSIONS = new Set(['width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight'])
   const ALIGNMENTS = new Set(['start', 'center', 'end', 'stretch'])
@@ -412,6 +514,44 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     }
   }
 
+  const CONTROL_COLORS = new Set(['background', 'borderColor', 'color', 'placeholderColor', 'selectionColor', 'cursorColor', 'trackColor', 'thumbColor'])
+  const CONTROL_STATES = new Set(['hover', 'focused', 'pressed', 'disabled'])
+  const NAMED_COLORS = new Set(['transparent', 'black', 'silver', 'gray', 'white', 'maroon', 'red', 'purple', 'fuchsia', 'green', 'lime', 'olive', 'yellow', 'navy', 'blue', 'teal', 'aqua'])
+
+  function validControlColor(value) {
+    if (typeof value === 'number') return Number.isInteger(value) && value >= -2147483648 && value <= 4294967295
+    if (typeof value !== 'string') return false
+    const text = value.trim().toLowerCase()
+    return NAMED_COLORS.has(text) || /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/.test(text)
+  }
+
+  function validateAppearance(value, states) {
+    if (!plainObject(value)) throw fail('layout', 'appearance must be a plain color object')
+    for (const name of Object.keys(value)) {
+      if (CONTROL_COLORS.has(name)) {
+        if (!validControlColor(value[name])) throw fail('layout', 'Invalid appearance color: ' + name)
+      } else if (states && CONTROL_STATES.has(name)) {
+        validateAppearance(value[name], false)
+      } else throw fail('layout', 'Unsupported appearance field: ' + name)
+    }
+  }
+
+  function sliderValues(props) {
+    const result = {
+      value: props.value === undefined ? 0 : props.value,
+      min: props.min === undefined ? 0 : props.min,
+      max: props.max === undefined ? 100 : props.max,
+      step: props.step === undefined ? 1 : props.step
+    }
+    for (const name of Object.keys(result)) {
+      if (typeof result[name] !== 'number' || !Number.isFinite(result[name])) throw fail('layout', 'slider.' + name + ' must be finite')
+    }
+    if (result.min >= result.max || !Number.isFinite(result.max - result.min)) throw fail('layout', 'slider span must be finite and positive')
+    if (result.step <= 0 || !Number.isFinite((result.max - result.min) / result.step)) throw fail('layout', 'slider.step must be positive with a finite step count')
+    if (result.value < result.min || result.value > result.max) throw fail('layout', 'slider.value must be within [min, max]')
+    return result
+  }
+
   function validateProps(type, props) {
     if (!Object.prototype.hasOwnProperty.call(PRIMITIVES, type)) {
       throw fail('layout', 'Unknown JSX primitive: ' + type)
@@ -433,6 +573,20 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       throw fail('layout', 'id must be a non-empty string')
     }
     if (props.disabled != null && typeof props.disabled !== 'boolean') throw fail('layout', 'disabled must be a boolean')
+    if (props.tooltip != null && typeof props.tooltip !== 'string') throw fail('layout', 'tooltip must be a string')
+    if (props.appearance !== undefined) validateAppearance(props.appearance, true)
+    if (type === 'slider') sliderValues(props)
+    if (type === 'dialog') {
+      if (typeof props.id !== 'string' || props.id.length === 0) throw fail('layout', 'dialog.id is required')
+      if (props.title !== undefined && typeof props.title !== 'string') throw fail('layout', 'dialog.title must be a string')
+      for (const name of ['closeOnEscape', 'closeOnBackdrop']) if (props[name] !== undefined && typeof props[name] !== 'boolean') throw fail('layout', name + ' must be a boolean')
+    }
+    if (type === 'item') {
+      if (typeof props.item !== 'string' || !/^[a-z0-9_.-]+:[a-z0-9/._-]+$/.test(props.item) || props.item === 'minecraft:air') throw fail('layout', 'item.item must be a non-air resource ID')
+      if (props.count !== undefined && (!Number.isInteger(props.count) || props.count < 1 || props.count > 99)) throw fail('layout', 'item.count must be an integer in [1, 99]')
+      if (props.itemTooltip !== undefined && typeof props.itemTooltip !== 'boolean') throw fail('layout', 'item.itemTooltip must be a boolean')
+      if (props.tooltip !== undefined && typeof props.tooltip !== 'string') throw fail('layout', 'item.tooltip must be a string')
+    }
     if (props.opacity != null && (typeof props.opacity !== 'number' || !Number.isFinite(props.opacity)
       || props.opacity < 0 || props.opacity > 1)) {
       throw fail('layout', 'opacity must be a number in [0, 1]')
@@ -565,13 +719,16 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     const props = resolvedProps(node.props, viewport)
     if (props.visible === false) return { width: 0, height: 0 }
     const scale = props.coordinateSpace === 'design' ? viewport.designScale : 1
+    if (node.type === 'dialog') return { width: 0, height: 0 }
+    if (node.type === 'item') return { width: 16 * scale, height: 16 * scale }
+    if (node.type === 'slider') return { width: 100 * scale, height: 20 * scale }
     if (node.type === '#text' || TEXT_CHILDREN.has(node.type)) {
       const text = String(props.text == null ? '' : props.text)
       const fontSize = props.fontSize == null ? 9 * scale : props.fontSize * scale
       const measured = textMetrics(adapter, text, fontSize, Math.max(0, availableWidth), props.font)
       return { width: measured.width, height: measured.height }
     }
-    const children = node.children
+    const children = node.children.filter(child => child.type !== 'dialog')
     if (children.length === 0) return { width: 0, height: 0 }
     const direction = props.direction || (node.type === 'row' ? 'row' : node.type === 'column' ? 'column' : 'column')
     const gap = Number(props.spacing == null ? (props.gap == null ? 0 : props.gap) : props.spacing) * scale
@@ -606,6 +763,15 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
 
   function layoutNode(node, x, y, availableWidth, availableHeight, parentClip, viewport, adapter, diagnostics, rootNode, allocated, eventHandlers, ancestorVisible) {
     const props = resolvedProps(node.props, viewport)
+    // Dialog is an out-of-flow portal, independent of ancestor bounds and scroll offsets.
+    if (node.type === 'dialog') {
+      x = viewport.safeArea.left
+      y = viewport.safeArea.top
+      availableWidth = viewport.contentWidth
+      availableHeight = viewport.contentHeight
+      parentClip = {x, y, width: availableWidth, height: availableHeight}
+      allocated = true
+    }
     const scale = props.coordinateSpace === 'design' ? viewport.designScale : 1
     const visible = ancestorVisible !== false && props.visible !== false
     const intrinsic = visible ? intrinsicSize(node, availableWidth, availableHeight, viewport, adapter) : { width: 0, height: 0 }
@@ -638,12 +804,12 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       for (const child of node.children) {
         children.push(layoutNode(child, x, y, 0, 0, layoutClip, viewport, adapter, diagnostics, false, true, eventHandlers, false))
       }
-    } else if (node.children.length > 0 && node.type !== '#text' && node.type !== 'stack' && !TEXT_CHILDREN.has(node.type)) {
+    } else if (node.children.length > 0 && node.type !== '#text' && node.type !== 'stack' && node.type !== 'dialog' && !TEXT_CHILDREN.has(node.type)) {
       const direction = props.direction || (node.type === 'row' ? 'row' : node.type === 'column' ? 'column' : 'column')
       const gap = Number(props.spacing == null ? (props.gap == null ? 0 : props.gap) : props.spacing) * scale
       const mainSize = direction === 'row' ? innerWidth : innerHeight
       const crossSize = direction === 'row' ? innerHeight : innerWidth
-      const childRecords = node.children.map(child => {
+      const childRecords = node.children.filter(child => child.type !== 'dialog').map(child => {
         const childProps = resolvedProps(child.props, viewport)
         const childIntrinsic = intrinsicSize(child, innerWidth, innerHeight, viewport, adapter)
         const rawMain = direction === 'row' ? childProps.width : childProps.height
@@ -705,8 +871,8 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
         children.push(layoutNode(record.child, childX - (direction === 'row' ? scrollOffset : 0), childY - (direction === 'column' ? scrollOffset : 0), childWidth, childHeight, layoutClip, viewport, adapter, diagnostics, false, true, eventHandlers))
         offset += record.main + actualGap
       }
-    } else if (visible && node.type === 'stack') {
-      for (const child of node.children) {
+    } else if (visible && (node.type === 'stack' || node.type === 'dialog')) {
+      for (const child of node.children.filter(child => child.type !== 'dialog')) {
         const childIntrinsic = intrinsicSize(child, innerWidth, innerHeight, viewport, adapter)
         const childProps = resolvedProps(child.props, viewport)
         const childScale = childProps.coordinateSpace === 'design' ? viewport.designScale : 1
@@ -714,10 +880,18 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
           childProps.minWidth, childProps.maxWidth, innerWidth, childScale, 'width')
         const childHeight = clampDimension(dimension(childProps.height, innerHeight, childIntrinsic.height, childScale),
           childProps.minHeight, childProps.maxHeight, innerHeight, childScale, 'height')
-        const anchor = childProps.anchor || props.anchor || 'topLeft'
+        const anchor = childProps.anchor || props.anchor || (node.type === 'dialog' ? 'center' : 'topLeft')
         const position = anchorOffset(anchor, innerWidth, innerHeight, childWidth, childHeight)
         children.push(layoutNode(child, innerX + position.x, innerY + position.y, childWidth, childHeight, layoutClip, viewport, adapter, diagnostics, false, true, eventHandlers))
       }
+    }
+    if (visible && node.children.some(child => child.type === 'dialog')) {
+      const regular = children.slice()
+      children.length = 0
+      let index = 0
+      for (const child of node.children) children.push(child.type === 'dialog'
+        ? layoutNode(child, innerX, innerY, innerWidth, innerHeight, layoutClip, viewport, adapter, diagnostics, false, true, eventHandlers)
+        : regular[index++])
     }
     const bound = id != null ? eventHandlers.get(id) : null
     const bindings = bound == null ? Object.freeze([]) : Object.freeze(Object.keys(bound)
@@ -744,6 +918,30 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     return Object.freeze({ profile: viewport.profile, viewport: viewport, nodes: Object.freeze(layoutNodes), diagnostics: Object.freeze(diagnostics) })
   }
 
+  function modalAllowsDispatch(snapshot, id, eventName, input) {
+    if (snapshot === null) return true
+    let modal = null
+    let target = null
+    function visit(nodes) {
+      for (const node of nodes) {
+        if (!node.visible) continue
+        if (node.type === 'dialog') modal = node
+        if (node.id === id) target = node
+        visit(node.children)
+      }
+    }
+    visit(snapshot.nodes)
+    if (target !== null && target.type === 'dialog' && eventName === 'onDismiss') {
+      const reason = input == null ? undefined : input.reason
+      if (reason === 'escape' && target.style.closeOnEscape === false || reason === 'backdrop' && target.style.closeOnBackdrop === false) return false
+    }
+    if (modal === null) return true
+    function contains(node) {
+      return node.visible && (node.id === id || node.children.some(contains))
+    }
+    return contains(modal)
+  }
+
   function callGuest(callback, args) {
     if (typeof callback === 'function') return callback(...args)
     if (callback != null && typeof callback.execute === 'function') return callback.execute(...args)
@@ -764,6 +962,9 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       children = []
     }
     if (type === 'label' && hostProps.text == null && children.length === 0) hostProps.text = ''
+    if (type === 'slider') Object.assign(hostProps, sliderValues(props))
+    if (type === 'item') { hostProps.count = props.count === undefined ? 1 : props.count; hostProps.itemTooltip = props.itemTooltip !== false }
+    if (type === 'dialog') { hostProps.closeOnEscape = props.closeOnEscape !== false; hostProps.closeOnBackdrop = props.closeOnBackdrop !== false }
     return { props: Object.freeze(hostProps), children: children }
   }
 
@@ -824,7 +1025,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     for (const name of EVENT_PROPS) {
       if (typeof node.props[name] === 'function') callbacks[name] = node.props[name]
     }
-    if (id != null && Object.keys(callbacks).length > 0) eventHandlers.set(id, Object.freeze(callbacks))
+    if (id != null && node.props.disabled !== true && Object.keys(callbacks).length > 0) eventHandlers.set(id, Object.freeze(callbacks))
     const children = normalized.children
     return [Object.freeze({
       type: node.type,
@@ -1125,6 +1326,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
         if (root.disposed) return false
         const callbackName = EVENT_PROPS.find(name => name.slice(2).toLowerCase() === String(eventName).toLowerCase())
         if (callbackName == null) throw new TypeError('Unknown UI event: ' + eventName)
+        if (!modalAllowsDispatch(root.layoutSnapshot, id, callbackName, input)) return false
         const callbacks = root.eventHandlers.get(id)
         const callback = callbacks == null ? null : callbacks[callbackName]
         if (typeof callback !== 'function') return false
@@ -1140,6 +1342,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
           button: input == null ? undefined : input.button,
           key: input == null ? undefined : input.key,
           value: input == null ? undefined : input.value,
+          reason: input == null ? undefined : input.reason,
           delta: input == null ? undefined : input.delta
         })
         try {
@@ -1186,6 +1389,244 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     return handle
   }
 
+  function controlProps(props, fields, callbacks) {
+    if (!plainObject(props)) throw fail('component', 'Control props must be a plain object')
+    const allowed = new Set([...SHARED_PROPS, 'key', 'disabled', 'tooltip', 'appearance', ...fields, ...callbacks])
+    for (const name of Object.keys(props)) {
+      if (!allowed.has(name)) throw fail('component', 'Unsupported control prop: ' + name)
+    }
+    if (typeof props.id !== 'string' || props.id.length === 0) throw fail('component', 'Control id must be a non-empty string')
+    for (const name of callbacks) {
+      if (typeof props[name] !== 'function') throw fail('component', name + ' must be a function')
+    }
+    const forwarded = Object.create(null)
+    for (const name of [...SHARED_PROPS, 'disabled', 'tooltip', 'appearance']) {
+      if (Object.prototype.hasOwnProperty.call(props, name)) forwarded[name] = props[name]
+    }
+    validateProps('button', forwarded)
+    return forwarded
+  }
+
+  function validationMessage(message, fallback) {
+    if (message !== undefined && typeof message !== 'string') throw new TypeError('Validator message must be a string')
+    return message === undefined ? fallback : message
+  }
+
+  function validationLength(length) {
+    if (!Number.isSafeInteger(length) || length < 0) throw new TypeError('Validator length must be a non-negative safe integer')
+    return length
+  }
+
+  const Validators: NekoUiValidators = Object.freeze({
+    required: function (message) {
+      const error = validationMessage(message, 'Required')
+      return value => value == null || typeof value === 'string' && value.trim().length === 0 ? error : null
+    },
+    minLength: function (length, message) {
+      validationLength(length)
+      const error = validationMessage(message, 'Minimum length is ' + length)
+      return value => typeof value === 'string' && value.length >= length ? null : error
+    },
+    maxLength: function (length, message) {
+      validationLength(length)
+      const error = validationMessage(message, 'Maximum length is ' + length)
+      return value => typeof value === 'string' && value.length <= length ? null : error
+    },
+    numberRange: function (min, max, message) {
+      if (typeof min !== 'number' || typeof max !== 'number' || !Number.isFinite(min) || !Number.isFinite(max) || min > max) {
+        throw new TypeError('Validator number range must have finite ordered endpoints')
+      }
+      const error = validationMessage(message, 'Number must be between ' + min + ' and ' + max)
+      return value => {
+        if (typeof value !== 'number' && (typeof value !== 'string' || value.trim().length === 0)) return error
+        const number = Number(value)
+        return Number.isFinite(number) && number >= min && number <= max ? null : error
+      }
+    }
+  })
+
+  const validateForm: NekoUiValidateForm = function (values, rules) {
+    if (!plainObject(values) || !plainObject(rules)) throw new TypeError('Form values and rules must be plain objects')
+    const snapshot = Object.create(null)
+    for (const name of Object.keys(values)) {
+      const value = values[name]
+      if (value !== null && typeof value !== 'string' && typeof value !== 'boolean' && (typeof value !== 'number' || !Number.isFinite(value))) {
+        throw new TypeError('Form values must be finite scalar values: ' + name)
+      }
+      snapshot[name] = value
+    }
+    Object.freeze(snapshot)
+    // Snapshot every rule list before executing user callbacks, so mutation cannot change this validation pass.
+    const fields = Object.keys(rules).map(name => {
+      const callbacks = rules[name]
+      if (!Array.isArray(callbacks) || callbacks.some(callback => typeof callback !== 'function')) throw new TypeError('Form rules must be arrays of functions: ' + name)
+      return {name, callbacks: callbacks.slice()}
+    })
+    const errors = Object.create(null)
+    for (const field of fields) {
+      const failures = []
+      for (const callback of field.callbacks) {
+        const result = callback(snapshot[field.name], snapshot)
+        if (result !== null && result !== undefined && typeof result !== 'string') throw new TypeError('Form validators must return a string, null or undefined')
+        if (typeof result === 'string') failures.push(result)
+      }
+      if (failures.length > 0) errors[field.name] = Object.freeze(failures)
+    }
+    return Object.freeze({valid: Object.keys(errors).length === 0, errors: Object.freeze(errors)})
+  }
+
+  const Toggle: NekoUiToggle = function (props) {
+    const forwarded = controlProps(props, ['checked', 'label', 'text'], ['onChange'])
+    if (typeof props.checked !== 'boolean') throw fail('component', 'Toggle.checked must be a boolean')
+    if (props.label !== undefined && typeof props.label !== 'string') throw fail('component', 'Toggle.label must be a string')
+    if (props.text !== undefined && typeof props.text !== 'string') throw fail('component', 'Toggle.text must be a string')
+    return UI.element('button', Object.assign(forwarded, {
+      text: (props.checked ? '[x] ' : '[ ] ') + (props.label === undefined ? (props.text || '') : props.label),
+      onClick: () => { if (!props.disabled) props.onChange(!props.checked) }
+    }))
+  }
+
+  const Slider: NekoUiSlider = function (props) {
+    const forwarded = controlProps(props, ['value', 'min', 'max', 'step'], ['onChange'])
+    if (props.value === undefined) throw fail('component', 'Slider.value is required')
+    const values = sliderValues(props)
+    return UI.element('slider', Object.assign(forwarded, values, {
+      onChange: event => {
+        if (props.disabled) return
+        if (typeof event.value !== 'string' || event.value.trim().length === 0) throw fail('event', 'Slider change value must be a numeric string')
+        const value = Number(event.value)
+        sliderValues(Object.assign({}, values, { value }))
+        props.onChange(value)
+      }
+    }))
+  }
+
+  // Select expands inline; controlled state belongs to the caller, not this render.
+  const Select: NekoUiSelect = function (props) {
+    const forwarded = controlProps(props, ['value', 'options', 'expanded'], ['onChange', 'onExpandedChange'])
+    if (typeof props.value !== 'string') throw fail('component', 'Select.value must be a string')
+    if (typeof props.expanded !== 'boolean') throw fail('component', 'Select.expanded must be a boolean')
+    if (!Array.isArray(props.options)) throw fail('component', 'Select.options must be an array')
+    const values = new Set()
+    let selected = null
+    for (const option of props.options) {
+      if (!plainObject(option) || Object.keys(option).some(name => !['value', 'label', 'disabled'].includes(name))) throw fail('component', 'Select options must be plain value/label/disabled objects')
+      if (typeof option.value !== 'string' || typeof option.label !== 'string') throw fail('component', 'Select option value and label must be strings')
+      if (option.disabled !== undefined && typeof option.disabled !== 'boolean') throw fail('component', 'Select option disabled must be a boolean')
+      if (values.has(option.value)) throw fail('component', 'Duplicate Select option value: ' + option.value)
+      values.add(option.value)
+      if (option.value === props.value) selected = option
+    }
+    if (selected == null && (props.options.length !== 0 || props.value !== '')) throw fail('component', 'Select.value must identify an option')
+    const visual = { disabled: props.disabled === true }
+    if (props.tooltip !== undefined) visual.tooltip = props.tooltip
+    if (props.appearance !== undefined) visual.appearance = props.appearance
+    if (props.coordinateSpace !== undefined) visual.coordinateSpace = props.coordinateSpace
+    const trigger = UI.element('button', Object.assign({}, visual, {
+      id: props.id, width: 'fill', height: 20, text: selected == null ? '' : selected.label,
+      onClick: () => { if (!props.disabled) props.onExpandedChange(!props.expanded) }
+    }))
+    const options = props.expanded ? UI.element('scroll', {
+      id: props.id + ':options', width: 'fill', height: Math.min(props.options.length, 6) * 20, scrollY: true,
+      coordinateSpace: props.coordinateSpace || 'logical',
+      children: props.options.map(option => UI.element('button', Object.assign({}, visual, {
+        id: props.id + ':option:' + encodeURIComponent(option.value), key: option.value,
+        width: 'fill', height: 20, text: option.label, disabled: props.disabled === true || option.disabled === true,
+        onClick: () => {
+          if (!props.disabled && !option.disabled) UI.batch(() => {
+            props.onChange(option.value)
+            props.onExpandedChange(false)
+          })
+        }
+      })))
+    }) : null
+    const layout = Object.create(null)
+    for (const name of SHARED_PROPS) if (Object.prototype.hasOwnProperty.call(forwarded, name)) layout[name] = forwarded[name]
+    layout.id = props.id + ':root'
+    // Only Select supplies its natural height; shared container measurement stays unchanged.
+    const heights = Object.create(null)
+    for (let profile = 1; profile <= 6; profile++) {
+      const explicitHeight = resolveResponsiveValue(layout.height, profile, undefined)
+      const padding = resolveResponsiveValue(layout.padding, profile, 0)
+      const spacing = resolveResponsiveValue(layout.spacing, profile, undefined)
+      const gap = spacing === undefined ? resolveResponsiveValue(layout.gap, profile, 0) : spacing
+      const direction = resolveResponsiveValue(layout.direction, profile, 'column')
+      const listHeight = Math.min(props.options.length, 6) * 20
+      const contentHeight = !props.expanded ? 20 : direction === 'row' ? Math.max(20, listHeight) : 20 + listHeight + gap
+      heights[profile] = explicitHeight === undefined || explicitHeight === 'auto' ? contentHeight + padding * 2 : explicitHeight
+    }
+    layout.height = { profiles: heights }
+    layout.children = [trigger, options]
+    return UI.element('column', layout)
+  }
+
+  const Tabs: NekoUiTabs = function (props) {
+    const forwarded = controlProps(props, ['value', 'tabs'], ['onChange'])
+    if (typeof props.value !== 'string' || !Array.isArray(props.tabs) || props.tabs.length === 0) throw fail('component', 'Tabs requires a string value and an array of tabs')
+    const values = new Set()
+    let selected = null
+    for (const tab of props.tabs) {
+      if (!plainObject(tab) || Object.keys(tab).some(name => !['value', 'label', 'disabled', 'render'].includes(name))) throw fail('component', 'Tabs entries must contain only value, label, disabled and render')
+      if (typeof tab.value !== 'string' || typeof tab.label !== 'string' || typeof tab.render !== 'function') throw fail('component', 'Tabs entries require string value/label and a render function')
+      if (tab.disabled !== undefined && typeof tab.disabled !== 'boolean') throw fail('component', 'Tabs disabled must be a boolean')
+      if (values.has(tab.value)) throw fail('component', 'Duplicate Tabs value: ' + tab.value)
+      values.add(tab.value)
+      if (tab.value === props.value) selected = tab
+    }
+    if (selected === null) throw fail('component', 'Tabs.value must identify a tab')
+    const change = value => { if (!props.disabled && value !== props.value) props.onChange(value) }
+    const keyChange = event => {
+      if (props.disabled || typeof event.key !== 'string') return
+      const enabled = props.tabs.filter(tab => !tab.disabled)
+      if (enabled.length === 0) return
+      const key = event.key.toLowerCase()
+      const current = enabled.findIndex(tab => tab.value === props.value)
+      let next = current
+      if (key === 'home') next = 0
+      else if (key === 'end') next = enabled.length - 1
+      else if (key === 'right' || key === 'down') next = (current + 1) % enabled.length
+      else if (key === 'left' || key === 'up') next = ((current < 0 ? enabled.length : current) + enabled.length - 1) % enabled.length
+      else return
+      change(enabled[next].value)
+    }
+    const visual = {coordinateSpace: props.coordinateSpace || 'logical'}
+    if (props.tooltip !== undefined) visual.tooltip = props.tooltip
+    if (props.appearance !== undefined) visual.appearance = props.appearance
+    const headers = UI.element('row', {id: props.id + ':tabs', width: 'fill', height: 20, coordinateSpace: visual.coordinateSpace,
+      children: props.tabs.map(tab => UI.element('button', Object.assign({}, visual, {
+        id: props.id + ':tab:' + encodeURIComponent(tab.value), key: tab.value,
+        width: Math.max(40, (tab.label.length + 2) * 6 + 16), height: 20, text: tab.value === props.value ? '[' + tab.label + ']' : tab.label,
+        disabled: props.disabled === true || tab.disabled === true,
+        onClick: () => { if (!tab.disabled) change(tab.value) }, onKey: keyChange
+      })))
+    })
+    const content = UI.element('column', {id: props.id + ':content', width: 'fill', height: 'fill', coordinateSpace: visual.coordinateSpace,
+      children: selected === null ? null : selected.render()})
+    const layout = Object.create(null)
+    for (const name of SHARED_PROPS) if (Object.prototype.hasOwnProperty.call(forwarded, name)) layout[name] = forwarded[name]
+    if (layout.width === undefined) layout.width = 'fill'
+    if (layout.height === undefined) layout.height = 'fill'
+    layout.children = [headers, content]
+    return UI.element('column', layout)
+  }
+
+  const Dialog: NekoUiDialog = function (props) {
+    if (!plainObject(props) || Object.keys(props).some(name => !['id', 'key', 'open', 'onOpenChange', 'title', 'children', 'width', 'height', 'closeOnEscape', 'closeOnBackdrop'].includes(name))) throw fail('component', 'Unsupported Dialog props')
+    if (typeof props.id !== 'string' || props.id.length === 0 || typeof props.open !== 'boolean' || typeof props.onOpenChange !== 'function') throw fail('component', 'Dialog requires id, open and onOpenChange')
+    if (props.title !== undefined && typeof props.title !== 'string') throw fail('component', 'Dialog.title must be a string')
+    for (const name of ['closeOnEscape', 'closeOnBackdrop']) if (props[name] !== undefined && typeof props[name] !== 'boolean') throw fail('component', name + ' must be a boolean')
+    const panel = {id: props.id + ':panel', anchor: 'center', width: props.width === undefined ? '80%' : props.width,
+      height: props.height === undefined ? '80%' : props.height, padding: 8,
+      background: '#202020', borderColor: '#808080', borderWidth: 1,
+      children: [props.title === undefined ? null : UI.element('label', {text: props.title, height: 12, width: 'fill'}),
+        UI.element('column', {id: props.id + ':content', width: 'fill', height: 'fill', children: props.children === undefined ? null : props.children})]}
+    validateProps('panel', panel)
+    if (!props.open) return null
+    return UI.element('dialog', {id: props.id, title: props.title === undefined ? '' : props.title,
+      closeOnEscape: props.closeOnEscape !== false, closeOnBackdrop: props.closeOnBackdrop !== false,
+      onDismiss: () => props.onOpenChange(false), children: UI.element('panel', panel)})
+  }
+
   const UI: NekoUiApi = Object.freeze({
     primitives: function () { return Object.freeze(Object.keys(PRIMITIVES)) },
     resolveViewport: resolveViewport,
@@ -1204,6 +1645,13 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     jsx: typedJsx,
     jsxs: typedJsxs,
     Fragment: FRAGMENT,
+    Toggle: Toggle,
+    Slider: Slider,
+    Select: Select,
+    Tabs: Tabs,
+    Dialog: Dialog,
+    validateForm: validateForm,
+    Validators: Validators,
     UI: UI
   })
 })()

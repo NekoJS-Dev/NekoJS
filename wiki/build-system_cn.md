@@ -10,7 +10,7 @@
 <a id="wiki-section-2"></a>
 ## 仓库形态
 
-stonecutter 多版本 × 多加载器**单仓**：一棵版本共享树 + 每节点参数目录 + 两个 convention plugin。settings.gradle.kts 里的版本图：
+Stonecutter 多版本 × 多加载器**单仓**：一棵版本共享树、每节点参数、两个加载器 convention plugin，以及共享源码选择 convention。`settings.gradle.kts` 里的版本图：
 
 ```kotlin
 stonecutter {
@@ -33,6 +33,7 @@ stonecutter {
 |---|---|---|
 | `build.gradle.kts` | `buildSrc/.../nekojs.neoforge-node.gradle.kts` | MDG（neoForge 块/runs）、AT 与 mods.toml 喂送、era 资源分层、fat-jar、`verifyDevModSourceSets`、编译/测试约定 |
 | `fabric.gradle.kts` | `nekojs.fabric-node.gradle.kts` | loom-back-compat（体内 apply，从控制器 `apply false` 声明读 Loom 版本）、ICU4J 类提取、night-config bundled、Fabric fat-jar、`verifyFabricRuntimeArtifact` |
+| 由两个加载器 convention 应用 | `nekojs.node-sources.gradle.kts` | 节点内同相对路径 Java/资源优先于共享、raw Fabric 与 Stonecutter 生成根，包括 active 节点 |
 
 约定俗成的三条纪律（历史上踩过的坑，已封死在插件体并就地注释）：
 
@@ -81,7 +82,7 @@ stonecutter {
 ./gradlew guardLint                          # 守卫 + 边界 lint（秒级）
 ./gradlew :26.1.2:build                      # 单节点构建（active 节点 IDE 直编）
 ./gradlew :26.1.2-fabric:verifyFabricRuntimeArtifact # 校验 Fabric fat jar 的入口和 loader 隔离
-./gradlew :26.2.0-fabric:build              # 验证 26.2 Fabric source bridge
+./gradlew :26.2.0-fabric:build                # 构建 26.2 Fabric 节点
 ./gradlew sandboxCheck                       # 全节点门禁（提交前）
 ./gradlew switchVersion -Pnode=26.2.0        # 切 active 节点（后需 IDE 重新 sync）
 ./gradlew :common:check                      # 引擎层测试
@@ -101,12 +102,14 @@ active 节点 = IDE 里直接编译/运行的节点（`stonecutter.gradle.kts` �
 
 `.github/workflows/ci-build.yml`（手写节点矩阵）：`:common:check` → `guardLint` → NeoForge `nbtSmokeTest` → `npm run test:probe-types` → 各节点 `build`（含 Fabric 26.1.2/26.2.0）→ 每个 Fabric matrix leg 先校验下载的 Fabric jar，再运行 development server smoke。发版由提交标题 `update <版本>` 触发，GitHub Release 和 CurseForge 任务都依赖两个 Fabric smoke leg；Fabric 文件仍明确排除，直到单独开启发布。runtime smoke 使用版本库中的 fixture，看到 startup/server-started markers 后主动停止。JDK 供给：CI 由 `actions/setup-java` 提供，仓库不再钉 `org.gradle.java.home`；本机用户在用户级 `~/.gradle/gradle.properties` 设置或导出 `JAVA_HOME`。
 
+CI 还运行 `python tools/test_active_node_sources.py` 与 `python tools/verify-active-node-sources.py`。回归覆盖恢复、失败/陈旧摘要检测及保留已有 probe 路径；验证器通过 `tools/verify-node-source-selection.init.gradle` 检查真实 compile/resource 任务输入。版本节点必须选择自己的覆盖文件，不能静默编译共享孪生。
+
 <a id="wiki-section-9"></a>
 ## 已知边界
 
-- Fabric 测试面仍是子集：已运行的 6 个类/26 个用例覆盖 pdata 与三个中立 adapter；其余共享测试仍受 NeoForge 守卫。CI 构建 26.1.2-fabric 与 26.2.0-fabric，每个 matrix leg 校验下载的 Fabric jar 并运行 development server smoke；两个 leg 都通过后才允许进入发布 job。两个 Fabric 节点共享 raw loader root `src/fabric`（票 31 迁入，fabric convention 显式挂载；`deps.fabric_source_node` 键保留为过渡 bridge 元数据，待票 32 删除）。`verifyFabricRuntimeArtifact` 已作为 `check` 的发布制品门禁。
+- Fabric 的加载器/API 与测试面有意小于 NeoForge。两个 Fabric 节点均挂载不经过 Stonecutter 预处理的 raw loader root `src/fabric`；原 `deps.fabric_source_node` bridge 已删除。版本差异走节点覆盖/facade。CI 按 Fabric leg 校验下载制品与 development-server smoke，`verifyFabricRuntimeArtifact` 仍是 `check` 门禁；这些检查不等于所有 API 的画面/玩法验收。
 - 不支持 Forge 1.20.1。它的 API 与共享树差了一个时代，守卫和 replacements 桥接不了，硬做等于维护第二套代码库，所以骨架已经从仓库里移除（需要的话可以从 git 历史找回）。
-- Cleanroom 1.12.2 不在本仓构建，它由独立的旧版分支维护。
+- Cleanroom 1.12.2 不在当前仓库构建图内；此处不验证其他分支的行为。
 
 - [项目架构](project-architecture_cn) —— 模块背后的设计。
 

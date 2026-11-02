@@ -244,7 +244,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
 //? if >=26 {
         registry.register(new IdentifierAdapter());
 //?} else {
-/*        registry.register(new ResourceLocationAdapter());
+        /*registry.register(new ResourceLocationAdapter());
 *///?}
         registry.register(new HolderAdapter());
         registry.register(new RecipeFilterAdapter());

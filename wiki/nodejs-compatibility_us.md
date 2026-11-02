@@ -82,6 +82,8 @@ console.info('等了 1 秒')
 
 > Global `setTimeout`/`setInterval`/`clearTimeout`/`clearInterval` are available at script top level (patched onto `globalThis`).
 
+The positive-delay example is for SERVER/CLIENT/TEST scripts. STARTUP rejects every interval and any timeout with a positive delay; zero-delay/immediate callbacks are allowed. The scheduler only queues ready work: callbacks execute when the owning script environment flushes its queue (including module-await pumping, lifecycle/tick dispatch, or the TEST flow), not on the scheduler thread and not at an exact wall-clock instant. Failed candidates and retired generations cancel their timers; old callbacks must not be treated as persistent state.
+
 <a id="wiki-section-7"></a>
 ### `node:test` + `node:assert`
 
@@ -114,9 +116,15 @@ console.info(buf.toString('hex')) // '68656c6c6f'
 <a id="wiki-section-9"></a>
 ## Access limits
 
-- **File access** is restricted to the game directory (sandbox). Attempts to access paths outside it fail.
-- **Symlink escape checks**: access is rejected even when a symlink points outside the game directory.
-- **Creating symlinks is not allowed**.
+| Operation | Default boundary |
+|---|---|
+| Read | Game directory, with canonical-path/symlink escape checks |
+| Create/write/delete/rename targets | `nekojs/` only; `allowFsWriteOutsideNekojs=false` by default |
+| With `allowFsWriteOutsideNekojs=true` | Writes may extend to the game directory, never outside it |
+| Protected configuration | `nekojs/config/` and legacy `config/nekojs-engine.toml` remain unwritable even with the flag enabled |
+| Create symbolic links | Not allowed |
+
+The flag is in `nekojs/config/engine.toml`. Filesystem checks and optional watchdog budgets do not make arbitrary Java host calls or untrusted scripts safe. `scriptRunawayTimeoutSeconds` and `scriptStatementLimit` default to 0 (disabled); watchdog isolation requires explicit full reload to recover.
 
 ```javascript
 import fs from 'node:fs'
@@ -130,13 +138,20 @@ fs.writeFileSync('/etc/passwd', 'hacked')         // Rejected: outside the sandb
 Place **pure JS** npm packages in `nekojs/node_modules/`:
 
 ```javascript
-// Assume nekojs/node_modules/lodash/ exists
-const _ = require('lodash')
-console.info(_.chunk([1,2,3,4], 2))   // [[1,2],[3,4]]
+// nekojs/node_modules/greeting/index.cjs
+module.exports = name => `Hello, ${name}!`
+```
+
+```javascript
+// server_scripts/use_greeting.cjs
+const greet = require('greeting/index.cjs')
+console.info(greet('NekoJS')) // Hello, NekoJS!
 ```
 
 <a id="wiki-section-11"></a>
 ### npm dependency limits
+
+Pure JavaScript is necessary, not sufficient. The NekoJS resolver checks explicit files, extension candidates and directory `index` files; it does not implement Node package.json `main`/`exports` resolution. Choose a compatible explicit entry path where needed. Synchronous `require()` rejects not-yet-evaluated ESM with top-level await, including async static descendants; use `import()` for asynchronous loading.
 
 | Limit | Description |
 |---|---|
@@ -177,4 +192,4 @@ Run with `/nekojs test`.
 
 ---
 
-[Previous: JSX client UI](jsx-client-ui_us) · [Contents](Home) · [Next: Plugin development](plugin-development_us)
+[Previous: Client rendering and post effects](client-rendering_us) · [Contents](Home) · [Next: Plugin development](plugin-development_us)

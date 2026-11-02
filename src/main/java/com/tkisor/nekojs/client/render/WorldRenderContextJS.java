@@ -1,117 +1,47 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
 package com.tkisor.nekojs.client.render;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ui.UiColor;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.phys.Vec3;
-import java.lang.reflect.Method;
 
 /**
- * {@code ClientEvents.worldRender} 回调上下文：相机位置 + partialTick，以及
- * 世界空间 3D 线段绘制助手（移植自 Katton 的 drawLine3D：真实 GPU 网格渲染，
- * VertexConsumer + RenderType，per-vertex 法线取线段方向）。
- *
- * <p>坐标为世界坐标（内部自动减去相机位置）；颜色为 ARGB int。
- *
- * <p>26.1 与 26.2 共用本类，但 26.2 移除了 {@code MultiBufferSource}（渲染管线
- * 改为 GraphicsResourceAllocator/StagedVertexBuffer 模型），无法静态引用
- * buffer source 类型——取 buffer source 的链路（{@code Minecraft#renderBuffers()}
- * → {@code RenderBuffers#bufferSource()}）走反射：26.1 可用，26.2 找不到方法时
- * 优雅降级（告警一次、line/box 静默跳过），HUD 渲染不受影响。
+ * World-render callback context with camera-relative line and box helpers.
+ * Coordinates are world coordinates and colors retain their signed or unsigned ARGB bits.
+ * The node facade owns submission to the current Minecraft rendering pipeline.
  */
 public class WorldRenderContextJS {
     private final Vec3 cameraPos;
     private final float partialTick;
-
-    /** 反射解析的 buffer source 实例（26.1 客户端生命周期内不变）；26.2 为 {@code null}。 */
-    private static volatile Object bufferSource;
-    private static volatile boolean bufferSourceResolved;
-    private static volatile boolean degradeWarned;
 
     public WorldRenderContextJS(Vec3 cameraPos, float partialTick) {
         this.cameraPos = cameraPos;
         this.partialTick = partialTick;
     }
 
-    /** 当前渲染帧的部分插值（0~1）。 */
+    /** Current frame interpolation value. */
     public float getPartialTick() {
         return partialTick;
     }
 
-    /** 相机世界位置（线段绘制的原点参考）。 */
+    /** World-space camera origin used for drawing. */
     public Vec3 getCameraPos() {
         return cameraPos;
     }
 
-    /**
-     * 绘制一条 3D 线段（世界坐标 → 世界空间 GPU 渲染）。
-     *
-     * @param argbColor ARGB 颜色（如 {@code 0xFF00FF00}），{@link Number} 收值按
-     *        uint32 读位（缺陷 D6：≥ 2³¹ 的无符号字面量落入 Java {@code int} 参数
-     *        会被引擎饱和成 {@code 0x7FFFFFFF}）
-     * @param lineWidth 线宽（像素，最小 1）
-     */
+    /** Draws a world-space line with a per-vertex pixel width of at least one. */
     public WorldRenderContextJS line(
             double x1, double y1, double z1,
             double x2, double y2, double z2,
             Number argbColor,
             float lineWidth
     ) {
-        Object source = bufferSource();
-        if (source == null) {
-            warnDegradedOnce();
-            return this;
-        }
         int argb = UiColor.argbBits(argbColor);
-        int a = (argb >>> 24) & 0xFF;
-        int r = (argb >>> 16) & 0xFF;
-        int g = (argb >>> 8) & 0xFF;
-        int b = argb & 0xFF;
-
-        // 线段方向作为 per-vertex 法线（RenderType.LINES 的屏幕空间扩展依据）
-        float dx = (float) (x2 - x1);
-        float dy = (float) (y2 - y1);
-        float dz = (float) (z2 - z1);
-        float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-        float inv = len < 1e-6f ? 0f : 1f / len;
-        float nx = dx * inv;
-        float ny = dy * inv;
-        float nz = dz * inv;
-
-        PoseStack poseStack = new PoseStack();
-        poseStack.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
-        var pose = poseStack.last();
-
-        try {
-            RenderType lines = RenderTypes.linesTranslucent();
-            Method getBuffer = source.getClass().getMethod("getBuffer", RenderType.class);
-            VertexConsumer consumer = (VertexConsumer) getBuffer.invoke(source, lines);
-            float width = Math.max(1f, lineWidth);
-            consumer.addVertex(pose, (float) x1, (float) y1, (float) z1)
-                    .setColor(r, g, b, a)
-                    .setNormal(nx, ny, nz)
-                    .setLineWidth(width);
-            consumer.addVertex(pose, (float) x2, (float) y2, (float) z2)
-                    .setColor(r, g, b, a)
-                    .setNormal(nx, ny, nz)
-                    .setLineWidth(width);
-            Method endBatch = source.getClass().getMethod("endBatch", RenderType.class);
-            endBatch.invoke(source, lines);
-        } catch (ReflectiveOperationException e) {
-            bufferSourceResolved = false; // 实例可能已随渲染重建失效，允许下次重新解析
-            bufferSource = null;
-            warnDegradedOnce();
-        }
+        float width = Math.max(1f, lineWidth);
+        WorldRenderPlatform.draw(consumer -> emitLine(consumer, x1, y1, z1, x2, y2, z2, argb, width));
         return this;
     }
 
-    /** 绘制一条 3D 线段（默认线宽 1）。 */
+    /** Draws a world-space line with a one-pixel width. */
     public WorldRenderContextJS line(
             double x1, double y1, double z1,
             double x2, double y2, double z2,
@@ -120,59 +50,55 @@ public class WorldRenderContextJS {
         return line(x1, y1, z1, x2, y2, z2, argbColor, 1f);
     }
 
-    /** 绘制世界空间长方体边框（12 条棱）。 */
+    /** Draws all twelve edges of a world-space box in one submission. */
     public WorldRenderContextJS box(
             double minX, double minY, double minZ,
             double maxX, double maxY, double maxZ,
             Number argbColor
     ) {
-        line(minX, minY, minZ, maxX, minY, minZ, argbColor);
-        line(maxX, minY, minZ, maxX, minY, maxZ, argbColor);
-        line(maxX, minY, maxZ, minX, minY, maxZ, argbColor);
-        line(minX, minY, maxZ, minX, minY, minZ, argbColor);
-        line(minX, maxY, minZ, maxX, maxY, minZ, argbColor);
-        line(maxX, maxY, minZ, maxX, maxY, maxZ, argbColor);
-        line(maxX, maxY, maxZ, minX, maxY, maxZ, argbColor);
-        line(minX, maxY, maxZ, minX, maxY, minZ, argbColor);
-        line(minX, minY, minZ, minX, maxY, minZ, argbColor);
-        line(maxX, minY, minZ, maxX, maxY, minZ, argbColor);
-        line(maxX, minY, maxZ, maxX, maxY, maxZ, argbColor);
-        line(minX, minY, maxZ, minX, maxY, maxZ, argbColor);
+        int argb = UiColor.argbBits(argbColor);
+        WorldRenderPlatform.draw(consumer -> {
+            emitLine(consumer, minX, minY, minZ, maxX, minY, minZ, argb, 1f);
+            emitLine(consumer, maxX, minY, minZ, maxX, minY, maxZ, argb, 1f);
+            emitLine(consumer, maxX, minY, maxZ, minX, minY, maxZ, argb, 1f);
+            emitLine(consumer, minX, minY, maxZ, minX, minY, minZ, argb, 1f);
+            emitLine(consumer, minX, maxY, minZ, maxX, maxY, minZ, argb, 1f);
+            emitLine(consumer, maxX, maxY, minZ, maxX, maxY, maxZ, argb, 1f);
+            emitLine(consumer, maxX, maxY, maxZ, minX, maxY, maxZ, argb, 1f);
+            emitLine(consumer, minX, maxY, maxZ, minX, maxY, minZ, argb, 1f);
+            emitLine(consumer, minX, minY, minZ, minX, maxY, minZ, argb, 1f);
+            emitLine(consumer, maxX, minY, minZ, maxX, maxY, minZ, argb, 1f);
+            emitLine(consumer, maxX, minY, maxZ, maxX, maxY, maxZ, argb, 1f);
+            emitLine(consumer, minX, minY, maxZ, minX, maxY, maxZ, argb, 1f);
+        });
         return this;
     }
 
-    /**
-     * 解析 immediate buffer source：{@code Minecraft#renderBuffers()} →
-     * {@code RenderBuffers#bufferSource()}（26.1 存在；26.2 均已移除 → null 降级）。
-     */
-    private static Object bufferSource() {
-        if (bufferSourceResolved) {
-            return bufferSource;
-        }
-        synchronized (WorldRenderContextJS.class) {
-            if (bufferSourceResolved) {
-                return bufferSource;
-            }
-            try {
-                Object minecraft = Minecraft.getInstance();
-                Method renderBuffers = minecraft.getClass().getMethod("renderBuffers");
-                Object buffers = renderBuffers.invoke(minecraft);
-                Method bufferSource = buffers.getClass().getMethod("bufferSource");
-                WorldRenderContextJS.bufferSource = bufferSource.invoke(buffers);
-            } catch (ReflectiveOperationException | RuntimeException e) {
-                WorldRenderContextJS.bufferSource = null;
-            }
-            bufferSourceResolved = true;
-            return WorldRenderContextJS.bufferSource;
-        }
-    }
+    private void emitLine(VertexConsumer consumer,
+                          double x1, double y1, double z1,
+                          double x2, double y2, double z2,
+                          int argb, float width) {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double dz = z2 - z1;
+        double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        double inverse = length < 1e-6 ? 0 : 1 / length;
+        float nx = (float) (dx * inverse);
+        float ny = (float) (dy * inverse);
+        float nz = (float) (dz * inverse);
+        int alpha = (argb >>> 24) & 0xFF;
+        int red = (argb >>> 16) & 0xFF;
+        int green = (argb >>> 8) & 0xFF;
+        int blue = argb & 0xFF;
 
-    private static void warnDegradedOnce() {
-        if (!degradeWarned) {
-            degradeWarned = true;
-            NekoJS.LOGGER.warn(
-                    "worldRender line drawing is not supported on this MC version "
-                            + "(immediate buffer source unavailable); HUD renderers are unaffected");
-        }
+        // Subtract in double precision before narrowing, including near the world border.
+        consumer.addVertex((float) (x1 - cameraPos.x), (float) (y1 - cameraPos.y), (float) (z1 - cameraPos.z))
+                .setColor(red, green, blue, alpha)
+                .setNormal(nx, ny, nz)
+                .setLineWidth(width);
+        consumer.addVertex((float) (x2 - cameraPos.x), (float) (y2 - cameraPos.y), (float) (z2 - cameraPos.z))
+                .setColor(red, green, blue, alpha)
+                .setNormal(nx, ny, nz)
+                .setLineWidth(width);
     }
 }

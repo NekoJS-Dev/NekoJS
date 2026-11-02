@@ -87,7 +87,7 @@ public class NeoForgeCatalogPlatformProvider implements NekoCatalogPlatformProvi
         return registry.getTags()
                 .map(named -> named.key().location().toString())
 //?} else {
-/*        return registry.getTagNames()
+        /*return registry.getTagNames()
                 .map(tag -> tag.location().toString())
 *///?}
                 .sorted()

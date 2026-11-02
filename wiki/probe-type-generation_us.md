@@ -34,7 +34,7 @@ does not change JavaScript execution, Java or Python APIs, or hidden/excluded me
 
 `<语言>` and `<名字>` support TAB completion. All probe subcommands run on the server thread and require the same permission as `/nekojs` (op 2+).
 
-**jsconfig merge semantics**: each probe run **refreshes only probe-managed entries**: `java:*` / `@side-only/*` path aliases, include/typeRoots entries pointing into `.neko_probe/`, and JSX runtime keys. **Manually added entries and other keys remain unchanged**. For example, your `./typings/custom.d.ts` include or custom typeRoots entries are not overwritten.
+**jsconfig merge semantics**: each probe run **refreshes only probe-managed entries**: `java:*` / `@side-only/*` path aliases, include/typeRoots entries pointing into `.neko_probe/`, and JSX runtime keys. **Manually added entries and other keys remain unchanged**. For example, your `./typings/custom.d.ts` include or custom typeRoots entries are not overwritten. Managed aliases also include `@special` / `@special/*`; `typeAcquisition.enable=false` and the six standard JS/TS script include globs are refreshed by the contribution.
 
 <a id="wiki-section-3"></a>
 ## Workflow
@@ -62,6 +62,7 @@ When a user runs `/nekojs probe`, `ProbeCoordinator` coordinates a shared collec
    ├─ Render failure → no disk changes, old output retained; escaping paths (absolute paths/..) rejected
    └─ File locked by another process → retry with backoff; report the filename if retries fail
       (failure to remove a stale file only warns)
+      In-place writes are not directory-atomic: an I/O failure can leave partially refreshed output.
 
 5. Editor configuration contributions (each backend supplies fragments, merged idempotently)
    ├─ TS: merge paths / include / typeRoots into each script directory's jsconfig.json
@@ -71,6 +72,12 @@ When a user runs `/nekojs probe`, `ProbeCoordinator` coordinates a shared collec
    │  through the common contribution mechanism (see Python completion)
    └─ Snippets (TS only): merge into nekojs/.vscode/nekojs.code-snippets
 ```
+
+**Probe output is not the AI documentation root**
+
+`.neko_probe` holds declarations and editor files. It does not choose the AI root: `nekojs/config/ai.toml` `[output].directory` independently defaults to `.github/neko_ai`. After successful built-in TS declaration generation, the API snapshot is published to that selected root's `snapshots/`; failed declaration generation keeps the previous snapshot pointer, and publication failure is a warning, not a successful fresh snapshot. Changing probe `baseDir` or a language `outputDir` does not move the AI bundle.
+
+Selected-root `agents/` roles are not automatically discovered by editors. The optional standard `.github/agents` bridge requires `[output].editor_agents=true` (default false) and documentation generation enabled. It preserves user-edited roles and does not change global AI-client settings. See [AI authoring support](ai-support_us) for root discovery, connections, and security.
 
 <a id="wiki-section-4"></a>
 ## Output layout
@@ -98,8 +105,12 @@ The following layouts are **actual output from the built-in backends**, not form
 │   ├── index.d.ts                  # Manual .d.ts declarations
 │   └── globals.d.ts                # declare const output from probe.addGlobal, when listeners exist
 ├── @nekojs/managed/<side>/index.d.ts  # Managed API declarations
-└── jsconfig.json                   # Internal resolution configuration
+├── @registry-builders/index.d.ts
+├── @event-builders/index.d.ts
+└── @manual/references.d.ts          # When manual references exist
 ```
+
+Editor configuration is separate: `.neko_probe/jsconfig.json` is at the **probe root**, not inside `typescript/`. NekoJS also merges a `jsconfig.json` into each of the four script roots, pointing to the actual configured TypeScript output directory.
 
 <a id="wiki-section-6"></a>
 ### Python (default `.neko_probe/python/nekojs/`)
@@ -153,7 +164,7 @@ Java `char` and boxed `Character` values are represented as TypeScript `string`,
 
 | Key | Default | Semantics |
 |---|---|---|
-| `enabled` | `true` | Master switch. `false` makes probe immediately return failure (`"probe disabled in probe.toml"`). `/nekojs probe enable|disable` changes this key. |
+| `enabled` | `true` | Master switch. `false` makes probe immediately return failure (`"probe disabled in probe.toml"`). `/nekojs probe enable\|disable` changes this key. |
 | `runAtStartup` | `false` | Automatically run the default TS probe once when the server starts (ServerStarted, equivalent to `/nekojs probe`). A summary is logged and failure does not prevent startup. Enable it to avoid running the command manually each time. |
 | `baseDir` | `".neko_probe"` | Output base directory, relative to the game directory. Each language backend owns `<baseDir>/<language>`, such as `.neko_probe/typescript`. |
 | `scan.includePackages` | `[]` | Allowlist of class-scanning package rules. An entry is a **literal package prefix** (`fqn` starts with `prefix.`) or a **`re:` regex** such as `re:com\.example\..*\.api\..*`, matched against the complete fully qualified name. **Replacement semantics**: a non-empty list **fully replaces** the default allowlist (`java`, `com.tkisor.nekojs`, and platform-default Minecraft/loader packages). To **append**, use `extraIncludePackages`, not a copy of the defaults here. |
@@ -345,7 +356,7 @@ The constraints are conditional, not universal:
 |---|---|---|
 | `ProbeCoordinator` | `common/.../probe/` | Shared BFS class collection, on-demand shared IR, event firing, backend dispatch, and external side effects |
 | `ProbeBackendRegistry` | `common/.../probe/` | Register backends by `(language, name)`; conflicting registrations fail at lock; command resolution and completion |
-| `ProbeBackend` / `ProbeContext` | `common/.../probe/` | Single-language generator interface (`render` in memory + default atomic `generate` / `contributeEditorConfig` / `outputDir` / `requiresIr`); shared context |
+| `ProbeBackend` / `ProbeContext` | `common/.../probe/` | Single-language generator interface (`render` in memory + default in-place file-synchronizing `generate` / `contributeEditorConfig` / `outputDir` / `requiresIr`); shared context |
 | `ProbeBackendSelector` | `common/.../probe/` | Backend selection for `/nekojs probe`: language defaults, per-language overrides, all backends, and completion; shared by the three platforms' command layers |
 | `ProbeOutputCommitter` | `common/.../probe/` | Sole output-writing implementation: per-file in-place sync, stale cleanup, legacy directory cleanup, and render-output path validation |
 | `TypeScriptProbeBackend` | `common/.../probe/backend/typescript/` | Built-in TS `.d.ts` pipeline, using IR as its only rendering path, plus six declaration generators |
@@ -492,6 +503,10 @@ These three rules are enforced by code:
 
 Two more items describe selection, not restrictions: for a language with multiple backends, `/nekojs probe <语言>` chooses the highest priority (overridable by `probe.toml [languages.<lang>].backend`); other backends can be run explicitly with `/nekojs probe <语言> <名字>`. See the naming-conventions section above for layouts when replacing TS.
 
+**Explicit rendering input declarations**
+
+`ClientEvents.hudRender` / `worldRender` expose their real two- and three-argument overloads. Three-argument options use the appropriate `layer` literals and optional `priority: number`, not an arbitrary `Object`. Layer-string and integer-priority shorthands remain; runtime validation still enforces finite signed 32-bit integers. `postEffects` exposes `event.register(id, build => { ... })` with the node-specific Bean builder, and the compatible Map input also has explicit fields. Regenerate `/nekojs probe` for this instance; do not mix 1.21.1 `program` fields with 26.x shader/blur fields. See [client rendering](client-rendering_us) for usage and lifetimes.
+
 **Entity property migration in TypeScript**
 
 Generated declarations for NeoForge 1.21.1, 26.1.2, 26.2.0 and Fabric 26.1.2, 26.2.0 use this migration:
@@ -522,7 +537,7 @@ Only these three zero-argument instance method declarations are omitted in TS. I
 > These are known boundaries to keep in mind.
 
 1. **JSDoc coverage depends on annotations**: `@Doc` / `@Param` / `@Return` documentation and `@Remap` / `@RemapByPrefix` / `@HideFromJS` naming/visibility are implemented, consumed directly by `TypeReflector` with the same rules as the runtime Graal remapper. For unannotated classes, add JSDoc through programmatic `registerTypeDocs` or the `setDoc` family in `ProbeEvents.modifyType`.
-2. **Event imports may grow excessively**: `EventDeclarationGenerator.collectImports` recurses without a depth limit and may pull in many unrelated classes; addressed in Phase C.
+2. **Declaration dependencies respect the current configuration**: the event generator collects types directly referenced by signatures (array component types), then the TypeScript declaration closure resolves dependencies under the current exclusion and hide policies. This does not unconditionally export every Java class. Regenerate after configuration changes and check the target project’s type diagnostics.
 3. **Third-party parameter names degrade**: NekoJS modules compile with `-parameters`, configured centrally in root build.gradle, so their declarations use real names. Third-party jars compiled without `-parameters` and JDK classes (standard `java.*` class files lack MethodParameters attributes) still lack names. `TypeReflector`'s `isNamePresent` fallback emits `arg0` / `arg1` and so on.
 4. **Version drift**: probe is manually triggered, so adding mods/registered content makes declarations stale. Run `/nekojs probe` again.
 5. **Python stub generics flattening**: type variables render as `Any`, without generic parameter relationships. This is sufficient for everyday completion, not full typing.

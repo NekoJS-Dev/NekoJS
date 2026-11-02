@@ -97,6 +97,9 @@ final class TypeScriptDeclarationClosure {
         }
     }
 
+    /** Releases reflected types after all declaration rendering has completed. */
+    void clearCaches() { declarations.clear(); }
+
     Map<String, String> unavailable() { return Map.copyOf(unavailable); }
 
     boolean includeReference(Set<String> classes, String dependency) {

@@ -12,13 +12,17 @@
 ## 脚本作者 / Script authors
 
 - 脚本基础 / Script basics · [中文](script-basics_cn) · [EN](script-basics_us)
+- 脚本 API 约定 / Script API conventions · [中文](script-api-style_cn) · [EN](script-api-style_us)
 - 脚本属性 / Script properties · [中文](script-properties_cn) · [EN](script-properties_us)
 - 全局绑定 / Global bindings · [中文](global-bindings_cn) · [EN](global-bindings_us)
+- 数据、状态与持久化 / Data, state and persistence · [中文](data-and-state_cn) · [EN](data-and-state_us)
 - Python 脚本 / Python scripts · [中文](python-scripts_cn) · [EN](python-scripts_us)
 - Python 特性清单 / Python feature support · [中文](python-feature-support_cn) · [EN](python-feature-support_us)
 - 事件参考 / Event reference · [中文](event-reference_cn) · [EN](event-reference_us)
+- AI 辅助脚本编写 / AI-assisted authoring · [中文](ai-support_cn) · [EN](ai-support_us)
 - 命令 / Commands · [中文](commands_cn) · [EN](commands_us)
 - 错误与日志参考 / Error and log reference · [中文](error-reference_cn) · [EN](error-reference_us)
+- 客户端绘制与后处理 / Client rendering and post effects · [中文](client-rendering_cn) · [EN](client-rendering_us)
 
 ## 整合包作者 / Modpack authors
 

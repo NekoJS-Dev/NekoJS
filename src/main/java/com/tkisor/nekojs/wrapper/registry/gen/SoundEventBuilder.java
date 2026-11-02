@@ -40,7 +40,7 @@ public final class SoundEventBuilder extends RegistryObjectBuilder<SoundEvent> {
 //? if >=26 {
         return new SoundEvent(id, Optional.ofNullable(fixedRange));
 //?} else {
-/*        return fixedRange == null
+        /*return fixedRange == null
                 ? SoundEvent.createVariableRangeEvent(id)
                 : SoundEvent.createFixedRangeEvent(id, fixedRange);
 *///?}
