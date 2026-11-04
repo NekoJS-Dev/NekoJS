@@ -52,7 +52,7 @@ class TypeScriptUiAuthoringDocsTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        TestPlatformInit.ensureInitialized(gameDir);
+        TestPlatformInit.ensureInitialized();
         paths = pathsFor(gameDir);
         Files.createDirectories(paths.serverScripts().resolve("src"));
         boot();
@@ -98,7 +98,7 @@ class TypeScriptUiAuthoringDocsTest {
         Value proof = exports.getMember("authoringDocsProof");
         assertNotNull(proof, "the proof fixture must export its proof object");
         assertEquals(true, proof.getMember("passed").asBoolean(), "all documented examples must pass");
-        assertEquals(14, proof.getMember("primitives").asInt(), "the primitive catalog must stay complete");
+        assertEquals(16, proof.getMember("primitives").asInt(), "the primitive catalog must stay complete");
         assertEquals("catalog,login-form,card-grid", proof.getMember("fixtures").asString());
         assertEquals(true, proof.getMember("rootsClosed").asBoolean(), "proof roots must close cleanly");
     }

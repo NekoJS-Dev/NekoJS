@@ -270,7 +270,7 @@ Use primitives to describe a stable interface structure directly:
 </panel>
 ```
 
-Lowercase tags must come from these 14 primitives: `screen`, `panel`, `row`, `column`, `stack`, `scroll`, `label`, `button`, `input`, `slider`, `image`, `item`, `dialog`, and `spacer`. Use `UI.primitives()` to query the current runtime's registered set.
+Lowercase tags must come from these 16 primitives: `screen`, `panel`, `row`, `column`, `stack`, `scroll`, `label`, `button`, `input`, `slider`, `image`, `item`, `dialog`, `spacer`, `workspace`, and `window`. Use `UI.primitives()` to query the current runtime's registered set.
 
 <a id="wiki-section-8"></a>
 ### 2. Function components
@@ -366,6 +366,8 @@ Lowercase JSX tags can only use host primitives registered by NekoJS. Arbitrary 
 | `dialog` | Modal viewport portal | `open`, `title`, `width`, `height`, `closeOnEscape`, `closeOnBackdrop`, `onDismiss` |
 | `image` | Image or icon | `resource`, `fit`, `opacity`, `icon`, `crop` |
 | `spacer` | Placeholder and space filler | Shared layout props |
+| `workspace` | One logical desktop, normally controller-managed | Shared logical layout props |
+| `window` | Direct workspace child, normally controller-managed | Numeric normal bounds, `responsiveRect`, `active`, frame capability flags/metrics and controlled resize/minimize/maximize/restore requests; see Workspace below |
 
 Uppercase tags are ordinary JavaScript/TypeScript function components. Components should return VNodes:
 
@@ -590,6 +592,177 @@ Events have no DOM bubbling, capture, `preventDefault()`, or `stopPropagation()`
 
 Elements such as `button`, `input`, and `scroll` manage their own hit testing, focus, disabled state, scrolling, and text editing. Once an old node is deleted or its root is closed, its event callbacks no longer receive input.
 
+**A cooperative region, not another Screen**
+
+`ClientUI.region(int x, int y, int width, int height)` returns a managed JsxHostAdapter without creating or navigating a Screen. Use GUI coordinates and positive representable extents; construction still requires the NeoForge 26.x CLIENT context/owner thread. A caller-owned Screen or non-Screen GUI owner must explicitly cooperate. The construction below is **not a standalone auto-opening script**: a real integration retains the adapter and forwards its frame, input, focus and detach. There is no automatic listener/Widget/third-party UI bridge.
+
+```tsx
+import { UI } from "nekojs/jsx-runtime";
+
+const count = UI.createSignal(0);
+const region = ClientUI.region(24, 24, 180, 100);
+const regionRoot = UI.createRoot(() => (
+    <column width="fill" height="fill" padding={6} gap={6}>
+        <label>Region clicks: {count.get()}</label>
+        <button id="region-click" onClick={() => count.update(value => value + 1)}>Count</button>
+    </column>
+), region);
+region.bindRoot(regionRoot);
+```
+
+Forward the real `render(GuiGraphicsExtractor, int mouseX, int mouseY)`, `mouseClicked(double x, double y, int button, int modifiers)`, `mouseDragged(double x, double y, int button)`, `mouseReleased(double x, double y, int button)`, `mouseScrolled(double x, double y, double delta)`, `keyPressed(int key, int modifiers)` and `charTyped(int codepoint)`. Pass caller GUI coordinates; do not pre-subtract the region origin. Only the committed generation paints/handles input. Rendering translates/clips the tree and restores caller pose/scissor. Each input method returns consumption: forward to the caller own control only when false, never invoke the same action twice.
+
+Use `setRegion(int x, int y, int width, int height)` on resize, and `setFocused(boolean)`/`isFocused()` for the caller focus chain. Outside click clears keyboard focus; continue forwarding captured drag/release outside bounds. Without a modal, edge Tab clears focus and returns false for caller handoff. Losing keyboard focus does not itself cancel pointer capture. A modal preserves its boundary. The caller decides rendering and input order; this API does not automatically occlude arbitrary native controls.
+
+Region `open()` is optional and never navigates/makes the caller visible. Normal `close(): boolean` succeeds only on literal true and remains retryable after failure; terminal detach/removal uses `dispose(): void`. Neither may close the caller Screen or a newer replacement. Reuse the adapter across resize/init rather than installing another input chain. Non-Screen callers need the same owner thread, actual GUI extractor, viewport, ordered input/focus and cleanup; no automatic HUD subscription or generic renderer adapter is provided. Real borrowed/non-Screen integration acceptance remains **not run**.
+
+**One Screen, three logical windows**
+
+The separate `nekojs/jsx-workspace` module manages one root in one host. It is not several active Minecraft Screens, extra OS windows, or a second reconciler. Save this complete bundled example as `nekojs/client_scripts/authoring-examples/workspace.tsx`, remove other auto-opening examples, then run `/nekojs reload client` on NeoForge 26.x with ClientUI. State is allocated outside the window renderers.
+
+```tsx
+// CLIENT only: requires the ClientUI binding published on NeoForge 26.x.
+import { UI } from "nekojs/jsx-runtime";
+import { createWorkspace } from "nekojs/jsx-workspace";
+
+const note = UI.createSignal("Draft note");
+const toolText = UI.createSignal("Tool input");
+const saved = UI.createSignal(0);
+const clicks = UI.createSignal(0);
+const host = ClientUI.screen("Authoring workspace", false);
+const workspace = createWorkspace(host, {
+    minimizedPresentation: "taskbar",
+    taskbarHeight: 28
+});
+
+workspace.add("notes", () => (
+    <scroll width="fill" height="fill">
+        <column padding={6} gap={6} width="fill">
+            <input id="notes-text" width="fill" height={20} maxLength={80}
+                value={note.get()} onChange={event => note.set(event.value || "")} />
+            <button id="notes-save" height={20} onClick={() => saved.update(value => value + 1)}>
+                Save locally
+            </button>
+            <label id="notes-count">{"Notes saved: " + saved.get()}</label>
+        </column>
+    </scroll>
+), {
+    title: "Notes", rect: { x: 12, y: 12, width: 190, height: 136 },
+    responsiveRect: {
+        x: { base: 12, profiles: { 1: 8, 2: 12 } },
+        width: { base: 190, profiles: { 1: "70%", 2: "60%" } },
+        height: "65%"
+    },
+    minWidth: 160, minHeight: 100, maxWidth: 480, maxHeight: 320,
+    resizable: true, minimizable: true, maximizable: true,
+    titlebarHeight: 24, titlebarButtonWidth: 18, titlebarTitle: true
+});
+
+workspace.add("tools", () => (
+    <scroll width="fill" height="fill">
+        <column padding={6} gap={6} width="fill">
+            <input id="tools-text" width="fill" height={20} maxLength={80}
+                value={toolText.get()} onChange={event => toolText.set(event.value || "")} />
+            <button id="tools-click" height={20} onClick={() => clicks.update(value => value + 1)}>
+                Count this window
+            </button>
+            <label id="tools-count">{"Tools clicks: " + clicks.get()}</label>
+        </column>
+    </scroll>
+), {
+    title: "Tools", rect: { x: 90, y: 42, width: 190, height: 136 },
+    minWidth: 140, minHeight: 100,
+    resizable: true, minimizable: true, maximizable: true,
+    titlebarTitle: false
+});
+
+workspace.add("preview", () => (
+    <scroll width="fill" height="fill">
+        <column padding={6} gap={6} width="fill">
+            <item id="preview-item" item="minecraft:diamond" count={1} />
+            <label id="preview-summary">{
+                "Saved=" + saved.get() + "; clicks=" + clicks.get()
+            }</label>
+            <label>Drag a titlebar; close one window without closing the desktop.</label>
+        </column>
+    </scroll>
+), {
+    title: "Preview", rect: { x: 160, y: 72, width: 190, height: 136 },
+    resizable: true, minimizable: true, maximizable: true
+});
+
+workspace.open();
+```
+
+Notes and Tools start with independent text and zero counters; their first buttons update only the corresponding counters and Preview. Edit Notes, minimize it, then use its titled Notes taskbar button to restore the same text/counters and keyed content. Try maximize → minimize → restore, edge/corner resize and GUI profile/scale changes. Notes demonstrates numeric normal restore bounds plus responsive fields and 24/18 titlebar metrics; Tools hides title text only. Preview remains a read-only diamond visual, never an inventory operation. The reserved taskbar reduces available work area even when empty. Close the Screen, remove the script and reload CLIENT to reset the four signals; no disk or world state is saved. These are pending observations, not native/GPU/physical-client acceptance.
+
+**Controller:** `createWorkspace(host, options?)` creates and binds the only root. Use `add(id, render, config?)`, `update(id, patch)`, `activate(id)`, `hide(id)`, `show(id)`, `minimize(id)`, `maximize(id)`, `restore(id)`, `resize(id, rectPatch)`, `closeWindow(id)`, `open()`, `close()`, `isDisposed()`, `snapshot()` and `layout()`. Never bind another root to that host. IDs are stable nonempty strings; configuration is plain data, not a native Widget or operating-system window. Mutations return a boolean on the owner thread or `"queued"` when admitted off-thread; queued is not completion. A rejected refresh preserves the committed window state. Keep renderers pure and mutate through events.
+
+**Window state:** `mode` is `"normal"`, `"minimized"` or `"maximized"`. The immutable back-to-front `snapshot().windows` also records `restoreMode` (`"normal"` or `"maximized"`), visibility, capabilities and normal geometry. `snapshot().activeId` identifies the active window. `layout()` reads actual published constrained geometry and is null after disposal.
+
+| Action | Meaning |
+|---|---|
+| `minimize(id)` | Requires `minimizable: true`; retains the keyed content and remembers whether it came from normal or maximized mode |
+| `maximize(id)` | Requires `maximizable: true`; fills the available work area without replacing the normal restore bounds or responsive policy |
+| `restore(id)` | Minimized returns to its remembered mode; maximized returns to normal |
+| `show(id)` / `activate(id)` | Restore a minimized window, then raise and activate it; show also makes it visible |
+| `hide(id)` | Keeps the mode and keyed content but hides both the window and its minimized presentation |
+| `resize(id, rectPatch)` | Requests a normal-window resize when `resizable: true`; the patch contains numeric rectangle fields, not native edge metadata |
+| `closeWindow(id)` | Removes that logical window; this is distinct from minimize or hide |
+
+Minimize and hide retain local content identity and external signals; neither suspends signal-driven work or persists anything to disk. Only actual removal of the last window can trigger `closeWhenEmpty: true`; ordinary host close remains retryable rather than guaranteed disposal. A fresh CLIENT generation recreates the example's four business signals.
+
+**Normal and responsive geometry:** `rect: { x, y, width, height }` remains numeric requested normal/restore geometry, defaulting to `{ x: 16, y: 16, width: 240, height: 160 }`. It is not the current maximized rectangle. Normal minimum width/height default to 40/20; optional finite `minWidth`, `minHeight`, `maxWidth`, `maxHeight` must be ordered and cannot lower those normal minima. A smaller available work area takes precedence over a normal minimum. Maximized layout fills that work area rather than applying normal min/max constraints.
+
+`responsiveRect` independently specifies `x`, `y`, `width`, `height` using finite numbers, percentage strings, or existing `{ base, profiles: { 1: ..., 6: ... } }` values. Profiles are logical tiers 1–6, not CSS media queries. Numeric width/height must be nonnegative and percentage branches strictly positive. `update(id, { responsiveRect: policy })` replaces the whole policy, not a deep merge; `responsiveRect: null` clears it. Percentages use the workspace work area, not physical display pixels. Missing fields fall back to numeric `rect`. Manual native move/resize materializes the currently shown normal bounds and clears the responsive policy; maximizing alone preserves it. Read `layout()`, not the snapshot's requested rectangle, to inspect the shown result.
+
+**Opt-in frame controls:** `resizable`, `minimizable`, `maximizable` default to false. Legacy windows retain their draggable 20-pixel titlebar and close button. Flat `titlebarHeight`, `titlebarButtonWidth`, `titlebarTitle` configure the frame: defaults are 20, 20, true; height must be an integer at least 0 and button width an integer at least 1. Effective chrome is constrained by the actual window bounds. Height 0 hides every titlebar control and titlebar dragging, not just its text; keep an explicit programmatic restore path if using it. `titlebarTitle: false` hides only the title text. This is finite frame configuration, not CSS or a new window lifecycle owner.
+
+**Raw primitive boundary:** a lowercase `window` accepts native layout `mode="normal"` or `mode="maximized"`; the controller implements its separate `"minimized"` state by retaining hidden keyed content. Raw `onMinimize`, `onMaximize` and `onRestore` are change requests, not automatic state changes. `onResize` carries `{ x, y, width, height, edge }`, where `edge` is `n`, `ne`, `e`, `se`, `s`, `sw`, `w` or `nw`. Let the controller wire these handlers in the complete example. Manual dispatch remains gated by modal/visibility/active-window/capability checks and cannot create missing resize or minimize authority.
+
+**Minimized presentations:** configure `minimizedPresentation` when creating the controller. Its default `"none"` keeps the legacy workspace root unchanged; minimized windows then need your own restore action. `"taskbar"` adds a full-width row of equal-fill titled restore buttons, reserving `taskbarHeight` (default 28, integer at least 1) even when no window is minimized. The workspace gets the remaining nonnegative height. If the safe viewport is shorter than the bar, the bar keeps its requested height but is clipped, and the workspace can have zero height; no minimum-size promise overrides that limit.
+
+`"floating"` instead adds a bottom-left panel, width 220 and height `min(160, 24 * visibleMinimizedCount + 4)`, with a scrollable column of 20-high buttons, gap 4 and padding 4. It reserves no work area. Hidden windows are absent from every minimized presentation; only visible minimized windows receive restore buttons.
+
+A custom callback receives an immutable `{ windows, restore, activate }` context, where `windows` contains only visible minimized snapshots. It must return exactly one direct `panel` VNode with explicit `width`, `height` and `anchor`, or `null`. Child components are allowed; an outer component, array or Fragment is not. The controller marks that panel as the workspace presentation while preserving its key/children, without inserting a fill-size wrapper. Existing responsive panel styles are allowed, but a huge opaque panel can intentionally block underlying windows throughout its bounds. Keep the panel bounded, render it without side effects, and call `restore(id)` only from an event handler.
+
+**Alternative initializers — replace, do not append:** keep the same host, business signals and window definitions. Replace only the shipped `const workspace = createWorkspace(...)` statement with **one** of these initializers. Do not create a second controller/root or install the variants as additional auto-opening scripts.
+
+```tsx
+const workspace = createWorkspace(host, { minimizedPresentation: "floating" });
+```
+
+```tsx
+const workspace = createWorkspace(host, {
+    minimizedPresentation: context => {
+        if (context.windows.length === 0) return null;
+        return (
+            <panel width={220} height={32} anchor="bottomRight" background="#202020">
+                <row padding={4} gap={4} width="fill" height="fill">
+                    {context.windows.map(window => (
+                        <button key={window.id} id={`demo-workspace-restore:${window.id}`}
+                            width="fill" height="fill"
+                            onClick={() => context.restore(window.id)}>{window.title}</button>
+                    ))}
+                </row>
+            </panel>
+        );
+    }
+});
+```
+
+The callback type is `(context: NekoWorkspaceMinimizedContext) => NekoVNode | null`; it receives no native Screen or inventory authority. This small replacement panel has no hidden full-screen wrapper; empty space outside its bounds is not its input surface. A zero-height titlebar or `"none"` presentation still needs an explicit controller restore action. Every interactive raw button needs an explicit stable `id`; `key` supplies reconciliation identity, not event registration. Presentation panels are outside window scopes, so these IDs must be root-unique. Keep the example’s `demo-workspace-restore:` prefix distinct from the application’s own window/node IDs.
+
+Use a fresh managed host. Binding the identical guest root handle again is idempotent; `bindRoot` rejects another handle, and layout rejects a mismatched root ID before publication (`NEKO-7014`). These checks do not make a host shareable by separately constructed roots with matching ID text. Only one workspace is allowed, as the root or a direct child of root `screen`; direct children must be windows, with at most one active window. Geometry including ancestors must be logical, not design-space. `show` raises/activates; `hide` keeps identity and signal updates but blocks input. `closeWhenEmpty: true` requests normal host close, not guaranteed disposal on failure. Root-publication/nested-render controller mutations are rejected. Descendant explicit IDs are scoped after component expansion: different windows may reuse local IDs, but duplicates in one window fail; native window IDs remain exact. For manual dispatch read the opaque actual ID from published layout/native props, never construct its serialized format.
+
+Titlebar/resize capture, activation, active-window keyboard focus and opaque-window/presentation occlusion belong to the shared host; do not install independent global input listeners per window. Minimize/hide retain keyed content and signal updates but do not suspend background work or persist data. This is still not snapping, layout persistence, arbitrary Screen/Widget embedding, server inventory authority or a measured speedup. Real GPU, physical input, focus/occlusion and accessibility acceptance remain **not run**.
+
+| Pending workspace check | Observe through real client input | Status |
+|---|---|---|
+| Retained minimize/restore | Edited Notes and counters survive; hidden content cannot receive input; a minimized maximized window returns maximized first | Not run |
+| Resize/chrome/responsive bounds | Eight resize edges/corners, min/max and tiny work areas align drawing with hit tests; manual move/resize clears responsive policy; zero chrome needs an explicit restore path | Not run |
+| Presentation ownership | Taskbar reserves space; floating/custom panels do not; only panel bounds occlude eligible underlying windows; modal priority still wins | Not run |
+
 <a id="wiki-section-23"></a>
 ## Root lifecycle
 
@@ -603,14 +776,23 @@ The handle returned by `UI.createRoot` provides the following operations:
 | `layout()` | Read the most recent layout snapshot |
 | `dispatch(id, eventName, event)` | Dispatch a controlled event to a specified node |
 | `isDisposed()` | Check whether the root has been disposed |
-| `close()` | Release the root's nodes, subscriptions, and handlers; it does not dismiss the native Screen automatically |
+| `isUpdating()` | True throughout render, expansion, layout, staging, commit and ordinary host clearing; false while idle/disposed |
+| `close()` | Retryable release; false while updating or if host clearing fails; does not dismiss the native Screen |
+| `forceClose()` | Owner-thread-only terminal release, including when host clearing fails; no success boolean |
+
+Function identity plus the outer key/unkeyed position scopes component-local child keys. Independent component instances may reuse local keys; direct duplicate siblings still fail, and unkeyed fragments/arrays remain transparent. Expanded IDs remain unique within the root. Keep render functions stable rather than recreating a component function on each render.
+
+Re-entrant owner-thread refresh returns `"queued"` and serializes follow-up work; it does not recursively commit. Only stable candidates publish, with at most 32 passes before a render diagnostic. `true` means at least one commit even if a later retry fails; `false` means none. Off-owner admission is also `"queued"`, not completion. Keep render-phase work pure.
+
+Normal close remains retryable after failure/busy. Owner-thread resize also returns false while busy, without queueing another viewport; retry when idle. Terminal force-close marks disposal and drops render/event/dependency references immediately; during an update, native clearing waits for that transaction to finish. It cannot revive through queued work and must only be invoked on the owner thread. Native user navigation should use the host normal close, not force-close as a routine event action.
 
 A root is bound to the CLIENT generation that created it:
 
 - After a successful CLIENT reload, old roots, Screens, event closures, and VNodes become invalid.
 - A candidate generation cannot affect the currently running Screen before commit.
 - If reload fails, the current active UI remains usable.
-- Player-initiated closure, replacement by another Screen, and client exit all use the same cleanup process.
+- Owned Screen title/pause policy comes from committed root `screen` props, falling back to factory defaults. Rejected candidates cannot change it; `pausesGame` does not pause a remote server.
+- Explicit normal host close is retryable; native Screen removal/replacement/client exit force terminal cleanup. Late cleanup cannot close a newer Screen.
 - Operations through stale handles are rejected and produce the corresponding `NEKO-700x` diagnostic instead of silently operating on a new generation.
 
 <a id="wiki-section-24"></a>
@@ -625,6 +807,8 @@ Common diagnostics include:
 - `NEKO-7004`: the operation is not running on the client owner thread.
 - `NEKO-7006`: deferred work from an old generation was dropped.
 - `NEKO-7007`: a render, layout, event, or host-update phase failed.
+- `NEKO-7013`: Workspace authoring rejected invalid configuration/IDs or a controller mutation during publication; direct calls can throw before any native logging.
+- `NEKO-7014`: invalid GUI region bounds, a region-only operation on an owned Screen mount, or single-root ownership violation; construction/setRegion/binding/publication can reject directly.
 - `NEKO-7008`: native host validation rejects control appearance fields, types or colors.
 - `NEKO-7011`: native host validation rejects slider bounds, step or value.
 

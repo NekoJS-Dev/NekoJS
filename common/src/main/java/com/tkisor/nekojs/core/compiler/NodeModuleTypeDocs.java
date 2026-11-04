@@ -101,9 +101,11 @@ public final class NodeModuleTypeDocs {
             if (source == null) continue;
             String decl = extractTS(source);
             if (decl.isBlank()) continue;
-            String moduleId = "modules/jsx-runtime.ts".equals(entry)
-                    ? "nekojs/jsx-runtime"
-                    : entry.replace('/', '.').replace(".ts", "");
+            String moduleId = switch (entry) {
+                case "modules/jsx-runtime.ts" -> "nekojs/jsx-runtime";
+                case "modules/jsx-workspace.ts" -> "nekojs/jsx-workspace";
+                default -> entry.replace('/', '.').replace(".ts", "");
+            };
             String declarationId = "nekojs.node-auto." + moduleId.replace('/', '.');
             registry.registerManualDeclaration(ManualDeclarationCatalogEntry.of(
                 declarationId,

@@ -14,7 +14,7 @@ Keep identifiers unique; install a scenario once. Signed packs retain their norm
 
 ## Scenario map
 
-Paths below are relative to the bundle's `examples/` directory. Each section contains exact shipped source; [metadata](../examples/metadata.json) records the 14 scenario install sets, prerequisites and verification labels. Follow the linked section's profile and cleanup notes as part of the scenario.
+Paths below are relative to the bundle's `examples/` directory. Each section contains exact shipped source; [metadata](../examples/metadata.json) records the 15 scenario install sets, prerequisites and verification labels. Follow the linked section's profile and cleanup notes as part of the scenario.
 
 | Scenario | Files | Script Type / trigger |
 |---|---|---|
@@ -28,6 +28,7 @@ Paths below are relative to the bundle's `examples/` directory. Each section con
 | [Client TSX counter](#client-tsx-counter-supported-ui-profile-only) | `client/counter.tsx` | NeoForge 26.x only; CLIENT reload |
 | [Client controls](#client-controls-input-toggle-slider-and-inline-select) | `client/controls.tsx` | NeoForge 26.x only; CLIENT reload |
 | [Client form and dialog](#client-tabs-validated-form-modal-confirmation-and-item-preview) | `client/forms-and-dialogs.tsx` | NeoForge 26.x only; CLIENT reload |
+| [Client workspace](#client-workspace-one-screen-three-logical-windows) | `client/workspace.tsx` | NeoForge 26.x only; CLIENT reload |
 | [CommonJS](#commonjs-two-files-one-relative-import) | `modules/hello.cjs` + `modules/lib/message.cjs` | SERVER reload; preserve layout |
 | [Assertions](#explicit-test-assertions) | `test/assertions.js` | TEST; `/nekojs test` |
 | [Console warmup](#small-smoke-checks) | `greeting.js` | SERVER reload |
@@ -460,3 +461,89 @@ ServerEvents.recipes(event => {
 **Copy:** `nekojs/server_scripts/authoring-examples/event-subscription.js`. **Run:** `/nekojs reload server`. **Expect:** `NekoJS recipe authoring example loaded` when the recipe callback is dispatched. The callback observes the event without adding or removing recipes. This smoke check does not certify recipe codec behavior.
 
 **Cleanup:** remove the copied smoke-check files and reload SERVER.
+
+## Client workspace: one Screen, three logical windows
+
+Install this scenario alone at `nekojs/client_scripts/authoring-examples/workspace.tsx` on a supported NeoForge 26.x CLIENT profile. The separate `nekojs/jsx-workspace` module owns one root and binds it to the Screen host; do not create a second root or open one Screen per logical window.
+
+### [examples/client/workspace.tsx](../examples/client/workspace.tsx)
+
+```tsx
+// CLIENT only: requires the ClientUI binding published on NeoForge 26.x.
+import { UI } from "nekojs/jsx-runtime";
+import { createWorkspace } from "nekojs/jsx-workspace";
+
+const note = UI.createSignal("Draft note");
+const toolText = UI.createSignal("Tool input");
+const saved = UI.createSignal(0);
+const clicks = UI.createSignal(0);
+const host = ClientUI.screen("Authoring workspace", false);
+const workspace = createWorkspace(host, {
+    minimizedPresentation: "taskbar",
+    taskbarHeight: 28
+});
+
+workspace.add("notes", () => (
+    <scroll width="fill" height="fill">
+        <column padding={6} gap={6} width="fill">
+            <input id="notes-text" width="fill" height={20} maxLength={80}
+                value={note.get()} onChange={event => note.set(event.value || "")} />
+            <button id="notes-save" height={20} onClick={() => saved.update(value => value + 1)}>
+                Save locally
+            </button>
+            <label id="notes-count">{"Notes saved: " + saved.get()}</label>
+        </column>
+    </scroll>
+), {
+    title: "Notes", rect: { x: 12, y: 12, width: 190, height: 136 },
+    responsiveRect: {
+        x: { base: 12, profiles: { 1: 8, 2: 12 } },
+        width: { base: 190, profiles: { 1: "70%", 2: "60%" } },
+        height: "65%"
+    },
+    minWidth: 160, minHeight: 100, maxWidth: 480, maxHeight: 320,
+    resizable: true, minimizable: true, maximizable: true,
+    titlebarHeight: 24, titlebarButtonWidth: 18, titlebarTitle: true
+});
+
+workspace.add("tools", () => (
+    <scroll width="fill" height="fill">
+        <column padding={6} gap={6} width="fill">
+            <input id="tools-text" width="fill" height={20} maxLength={80}
+                value={toolText.get()} onChange={event => toolText.set(event.value || "")} />
+            <button id="tools-click" height={20} onClick={() => clicks.update(value => value + 1)}>
+                Count this window
+            </button>
+            <label id="tools-count">{"Tools clicks: " + clicks.get()}</label>
+        </column>
+    </scroll>
+), {
+    title: "Tools", rect: { x: 90, y: 42, width: 190, height: 136 },
+    minWidth: 140, minHeight: 100,
+    resizable: true, minimizable: true, maximizable: true,
+    titlebarTitle: false
+});
+
+workspace.add("preview", () => (
+    <scroll width="fill" height="fill">
+        <column padding={6} gap={6} width="fill">
+            <item id="preview-item" item="minecraft:diamond" count={1} />
+            <label id="preview-summary">{
+                "Saved=" + saved.get() + "; clicks=" + clicks.get()
+            }</label>
+            <label>Drag a titlebar; close one window without closing the desktop.</label>
+        </column>
+    </scroll>
+), {
+    title: "Preview", rect: { x: 160, y: 72, width: 190, height: 136 },
+    resizable: true, minimizable: true, maximizable: true
+});
+
+workspace.open();
+```
+
+**Run:** `/nekojs reload client`. The desktop opens after the CLIENT candidate commits. Rectangles use logical GUI coordinates and may be constrained by the actual viewport.
+
+**Expect:** Notes, Tools and Preview share one Screen above an explicit 28-high taskbar. Independent text, Save locally / Count this window counters and the Preview summary retain their business behavior. Edit Notes, minimize it, then restore using the titled Notes taskbar button: edited text, counters and keyed content should survive. All windows opt into resize/minimize/maximize. Notes combines numeric normal restore bounds, responsive profile/percentage geometry, min/max constraints and 24/18 integer chrome; Tools hides title text only. Minimize a maximized window and restore it before returning to normal. Close removes one logical window; minimize/hide do not. The diamond is read-only. Native frame capture, presentation occlusion, focus, painting and physical-client acceptance remain separate pending checks; manual dispatch and platform fixtures do not prove them.
+
+**Cleanup:** close the Screen, remove this script and reload CLIENT. The four signals and window layout are recreated, not persisted. By default an empty workspace remains a desktop until closed. See [JSX UI](jsx-ui.md) for controller/state semantics, cooperative regions, alternative floating/bounded custom initializers and the pending real-client checklist.

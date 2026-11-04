@@ -356,6 +356,23 @@ class NodeModuleTypeDocsTest {
         Files.writeString(generated, declaration, StandardCharsets.UTF_8);
     }
 
+    @Test
+    void registersWorkspaceDeclarationsUnderThePublicModuleId() {
+        List<ManualDeclarationCatalogEntry> entries = new ArrayList<>();
+        NodeModuleTypeDocs.registerBuiltin(new TypeDocsRegister() {
+            @Override
+            public void register(TypeDocCatalogEntry entry) {}
+
+            @Override
+            public void registerManualDeclaration(ManualDeclarationCatalogEntry entry) {
+                entries.add(entry);
+            }
+        });
+        assertTrue(entries.stream().anyMatch(entry ->
+                entry.id().equals("nekojs.node-auto.nekojs.jsx-workspace")
+                        && entry.declaration().contains("export const createWorkspace:")));
+    }
+
     // ============ 通用降级 ============
 
     @Test

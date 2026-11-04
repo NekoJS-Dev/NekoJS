@@ -48,7 +48,7 @@ class AuthoringScriptExamplesTest {
         }
         assertEquals(shippedSources, documentedSources, "every shipped script must have a copy/run/result contract");
         assertEquals(Set.of("greeting", "event-subscription", "player-login", "recipes", "item-tags", "block-tags",
-                "registry", "item-components", "state-and-timer", "commonjs", "assertions", "client-counter", "client-controls", "client-forms-and-dialogs"), ids);
+                "registry", "item-components", "state-and-timer", "commonjs", "assertions", "client-counter", "client-controls", "client-forms-and-dialogs", "client-workspace"), ids);
     }
 
     @Test

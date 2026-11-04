@@ -33,6 +33,19 @@ class NekoModuleResolverTest {
     }
 
     @Test
+    void workspaceBuiltinCannotBeShadowedByAUserPackage() throws Exception {
+        NekoModuleResolver resolver = resolverFor(gameDir);
+        Path shadow = gameDir.resolve("nekojs/node_modules/nekojs/jsx-workspace.js");
+        Files.createDirectories(shadow.getParent());
+        Files.writeString(shadow, "export const createWorkspace = () => null;");
+
+        assertEquals(NekoModuleKind.BUILTIN,
+                resolver.resolve("nekojs/client_scripts/main.tsx", "nekojs/jsx-workspace").kind());
+        assertEquals(NekoModuleKind.BUILTIN,
+                resolver.resolveForRequire("nekojs/client_scripts/main.tsx", "nekojs/jsx-workspace").kind());
+    }
+
+    @Test
     void rejectsBareModuleTraversalOutsideNodeModules() throws Exception {
         NekoModuleResolver resolver = resolverFor(gameDir);
         Path secret = gameDir.resolve("nekojs/server_scripts/secret.js");

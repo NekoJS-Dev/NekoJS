@@ -202,8 +202,8 @@
       "legacy": "en_us/Error-Reference.md",
       "sourceLocale": "us",
       "legacyDigest": "d655593a3910daa974f0cc8410ad608cb0fb8c8850922ee4fc61314b1ee57e3c",
-      "sourceDigest": "3e35412e669e122f83b7554014a701d0424a96d4892a496a89244e908ea799d9",
-      "translationDigest": "01b39d851993ed8d9381964e17f27a00b67c5a912bb39782dc7648905cfba99e",
+      "sourceDigest": "df8a4cf65c4a36f0aa076965ff102a81cd14263f0dfa54e99d875148cb56143f",
+      "translationDigest": "7440d9edc737f6449f759c9b30148e294ede326cc11b4d0aae4b3e41db64a7e9",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -273,8 +273,8 @@
       "us": "JSX client UI",
       "legacy": "JSX-客户端UI.md",
       "legacyDigest": "00a93c7a13042dd12d92c4e0ac97365e43ee9e3ee7f854e7de57f80ec42a41d1",
-      "sourceDigest": "c77ee87420228d39b8a8e6c39c51e6d64cb6d57c2bc2efb22b760568b115453e",
-      "translationDigest": "cb8daecda1ce9fa931ce073024ed17fbcff085e01430064af35c1d672373698c",
+      "sourceDigest": "4b494a3b4244cf65aeeb655e806f6cd39f79a713956bb302da15d86d39630c95",
+      "translationDigest": "39ebc0109831d80d7133b62a20fb60e9b0aaebcdb96ab7395e3f2871676b3e2d",
       "translationStatus": "draft",
       "humanReview": "pending"
     },

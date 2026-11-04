@@ -116,6 +116,7 @@ final class JsxHostTree {
             }
             node.configureAppearance();
             if ("dialog".equals(type)) JsxModalScope.validate(node.props);
+            JsxWorkspaceScope.validateProps(type, node.props);
             if ("slider".equals(type)) node.configureSlider();
         }
 
@@ -151,6 +152,7 @@ final class JsxHostTree {
             for (Object root : requestedRoots) ordered.add(node(root));
             if (!ordered.equals(stagedRoots)) throw new IllegalStateException("JSX host root order was not staged");
             List<Node> candidate = List.copyOf(stagedRoots);
+            JsxWorkspaceScope.validateTree(candidate);
             beforePublish.accept(candidate);
             nodes = staged;
             roots = candidate;
@@ -217,6 +219,7 @@ final class JsxHostTree {
             this.selectionEnd = this.cursor;
             configureAppearance();
             if ("dialog".equals(type)) JsxModalScope.validate(props);
+            JsxWorkspaceScope.validateProps(type, props);
             if ("slider".equals(type)) configureSlider();
         }
 

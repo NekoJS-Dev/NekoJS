@@ -239,10 +239,8 @@ public final class NekoModuleResolver {
     }
 
     private boolean isBuiltinSpecifier(String specifier) {
-        // 与 resources/nekojs/node/modules.list 注册表保持同步：bare 内置名必须在此声明，
-        // 否则只有在 node_modules 未装同名包时才会经 SPECIAL 兜底命中（优先级与 Node 相反）
-        // nekojs/jsx-runtime：automatic JSX runtime 的固定模块名（NekoJsxCompiler 注入的 import）
-        if (specifier.equals("nekojs/jsx-runtime")) {
+        // Keep reserved engine modules ahead of user packages, matching modules.list.
+        if (specifier.equals("nekojs/jsx-runtime") || specifier.equals("nekojs/jsx-workspace")) {
             return true;
         }
         return specifier.equals("fs")

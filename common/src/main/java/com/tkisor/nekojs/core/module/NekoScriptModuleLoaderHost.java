@@ -323,8 +323,11 @@ public final class NekoScriptModuleLoaderHost {
             recordDependency(parentPath, resolved);
             if (resolved.special()) {
                 if ("nekojs/jsx-runtime".equals(resolved.specifier())) {
-                    // automatic JSX runtime 的命名导入（jsx/jsxs/Fragment）需要静态导出名
+                    // Native ESM linking needs the runtime names before guest evaluation.
                     return esmRewriter.syntheticNamedModuleUri(resolved.specifier(), "jsx", "jsxs", "Fragment", "UI").toString();
+                }
+                if ("nekojs/jsx-workspace".equals(resolved.specifier())) {
+                    return esmRewriter.syntheticNamedModuleUri(resolved.specifier(), "createWorkspace").toString();
                 }
                 return esmRewriter.syntheticObjectModuleUri(resolved.specifier()).toString();
             }

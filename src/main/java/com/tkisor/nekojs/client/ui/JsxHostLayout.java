@@ -39,14 +39,16 @@ final class JsxHostLayout {
                     source.rect().y() + effectiveVerticalShift, source.rect().width(), source.rect().height());
             InspectorNode.Rect ancestralClip = portal || parentClip == null ? source.clip() : parentClip;
             InspectorNode.Rect clip = intersect(rect, ancestralClip);
+            validateBounds(rect);
+            // Project bounds and nested clips onto the same nearest-pixel boundary grid.
             node.x = (int) Math.round(rect.x());
             node.y = (int) Math.round(rect.y());
-            node.width = (int) Math.round(rect.width());
-            node.height = (int) Math.round(rect.height());
-            node.clipX = (int) Math.ceil(clip.x());
-            node.clipY = (int) Math.ceil(clip.y());
-            node.clipWidth = Math.max(0, (int) Math.floor(clip.x() + clip.width()) - node.clipX);
-            node.clipHeight = Math.max(0, (int) Math.floor(clip.y() + clip.height()) - node.clipY);
+            node.width = (int) (Math.round(rect.x() + rect.width()) - node.x);
+            node.height = (int) (Math.round(rect.y() + rect.height()) - node.y);
+            node.clipX = (int) Math.round(clip.x());
+            node.clipY = (int) Math.round(clip.y());
+            node.clipWidth = Math.max(0, (int) (Math.round(clip.x() + clip.width()) - node.clipX));
+            node.clipHeight = Math.max(0, (int) (Math.round(clip.y() + clip.height()) - node.clipY));
             node.hasClip = true;
             node.props = new LinkedHashMap<>(source.style());
             node.props.put("visible", source.visible());
@@ -75,8 +77,14 @@ final class JsxHostLayout {
                 if (horizontal) childHorizontalShift += correction;
                 else childVerticalShift += correction;
             }
+            double titlebarHeight = "window".equals(node.type)
+                    ? JsxWindowChrome.titlebarHeight(node.props, rect.height()) : 0;
+            InspectorNode.Rect childClip = "window".equals(node.type)
+                    ? intersect(clip, new InspectorNode.Rect(rect.x(), rect.y() + titlebarHeight,
+                            rect.width(), Math.max(0, rect.height() - titlebarHeight)))
+                    : clip;
             List<InspectorNode> children = project(node.children, source.children(),
-                    childHorizontalShift, childVerticalShift, clip, designScale);
+                    childHorizontalShift, childVerticalShift, childClip, designScale);
             InspectorNode.Overflow overflow = new InspectorNode.Overflow(
                     Math.max(0, ancestralClip.x() - rect.x()), Math.max(0, ancestralClip.y() - rect.y()),
                     Math.max(0, rect.x() + rect.width() - ancestralClip.x() - ancestralClip.width()),
@@ -85,6 +93,17 @@ final class JsxHostLayout {
                     rect, clip, overflow, offset, node.props, source.bindings(), source.resources(), children));
         }
         return List.copyOf(projected);
+    }
+
+    private static void validateBounds(InspectorNode.Rect rect) {
+        if (!Double.isFinite(rect.x()) || !Double.isFinite(rect.y()) || !Double.isFinite(rect.width())
+                || !Double.isFinite(rect.height()) || rect.width() < 0 || rect.height() < 0
+                || rect.x() < Integer.MIN_VALUE || rect.y() < Integer.MIN_VALUE
+                || rect.x() + rect.width() > Integer.MAX_VALUE || rect.y() + rect.height() > Integer.MAX_VALUE
+                || Math.round(rect.x() + rect.width()) - Math.round(rect.x()) > Integer.MAX_VALUE
+                || Math.round(rect.y() + rect.height()) - Math.round(rect.y()) > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("[NEKO-7014] Projected JSX bounds cannot be represented by the native mount");
+        }
     }
 
     private static InspectorNode.Rect intersect(InspectorNode.Rect rect, InspectorNode.Rect clip) {

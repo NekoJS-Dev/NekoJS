@@ -17,7 +17,7 @@ Use this installed bundle with the matching instance's declarations. The wiki is
 | Register content | [Registry builders](registry-builders.md) |
 | Work in a script pack | [Script packs](script-packs.md) |
 | Draw a HUD, world lines, or declare post effects | [Client rendering](client-rendering.md) |
-| Create a CLIENT Screen, clipboard input, themed controls, tabs, validated forms, modal dialogs or read-only item icons | [JSX UI](jsx-ui.md) |
+| Create CLIENT Screens, cooperative regions, one-root workspaces with retained window management, controlled forms, dialogs or read-only item icons | [JSX UI](jsx-ui.md) |
 | Investigate an error | [Diagnostics](diagnostics.md) |
 | Find classes and members | [Query API](query-api.md) |
 | Connect to the running game | [In-mod MCP setup](connections.md) |

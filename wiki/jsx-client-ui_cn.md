@@ -270,7 +270,7 @@ JSX 只是语法。`<panel>`、`<row>`、`<button>` 等小写标签不是浏览�
 </panel>
 ```
 
-小写标签必须来自这 14 个 primitive：`screen`、`panel`、`row`、`column`、`stack`、`scroll`、`label`、`button`、`input`、`slider`、`image`、`item`、`dialog`、`spacer`。可以用 `UI.primitives()` 查询当前 runtime 的登记清单。
+小写标签必须来自这 16 个 primitive：`screen`、`panel`、`row`、`column`、`stack`、`scroll`、`label`、`button`、`input`、`slider`、`image`、`item`、`dialog`、`spacer`、`workspace`、`window`。可以用 `UI.primitives()` 查询当前 runtime 的登记清单。
 
 <a id="wiki-section-8"></a>
 ### 2. 函数组件
@@ -366,6 +366,8 @@ JSX 小写标签只能使用 NekoJS 登记的 host primitive。任意 Java 类�
 | `dialog` | 模态视口 portal | `open`、`title`、`width`、`height`、`closeOnEscape`、`closeOnBackdrop`、`onDismiss` |
 | `image` | 图片或图标 | `resource`、`fit`、`opacity`、`icon`、`crop` |
 | `spacer` | 占位和撑开空间 | 通用布局属性 |
+| `workspace` | 一个逻辑桌面，通常由控制器管理 | 通用 logical 布局属性 |
+| `window` | workspace 的直接子节点，通常由控制器管理 | 数字正常边界、`responsiveRect`、`active`、窗框能力／尺寸与受控缩放／最小化／最大化／还原请求，见下文 Workspace |
 
 大写标签是普通 JavaScript/TypeScript 函数组件。组件应返回 VNode：
 
@@ -590,6 +592,177 @@ UI.batch(() => {
 
 `button`、`input`、`scroll` 等元素会自行维护命中、焦点、禁用、滚动和文本编辑状态。旧节点被删除或 root 被关闭后，其事件回调不会继续接收输入。
 
+**协作式区域，不是另一个 Screen**
+
+`ClientUI.region(int x, int y, int width, int height)` 返回受管 JsxHostAdapter，不创建或导航 Screen。使用 GUI 坐标、正数且可表示的宽高；创建仍要求 NeoForge 26.x 的 CLIENT 上下文／owner thread。调用方 Screen 或非 Screen GUI owner 必须主动配合。下面构造片段**不是可独立自动打开的脚本**：实际集成必须保留 adapter 并转发帧、输入、焦点和 detach。没有自动监听器、Widget 或第三方 UI 桥。
+
+```tsx
+import { UI } from "nekojs/jsx-runtime";
+
+const count = UI.createSignal(0);
+const region = ClientUI.region(24, 24, 180, 100);
+const regionRoot = UI.createRoot(() => (
+    <column width="fill" height="fill" padding={6} gap={6}>
+        <label>Region clicks: {count.get()}</label>
+        <button id="region-click" onClick={() => count.update(value => value + 1)}>Count</button>
+    </column>
+), region);
+region.bindRoot(regionRoot);
+```
+
+转发真实的 `render(GuiGraphicsExtractor, int mouseX, int mouseY)`、`mouseClicked(double x, double y, int button, int modifiers)`、`mouseDragged(double x, double y, int button)`、`mouseReleased(double x, double y, int button)`、`mouseScrolled(double x, double y, double delta)`、`keyPressed(int key, int modifiers)`、`charTyped(int codepoint)`。传调用方 GUI 坐标，不要预先减去区域原点。仅已提交 generation 可以绘制／处理输入；绘制平移、裁剪后恢复调用方 pose/scissor。每个输入方法返回消费 boolean：仅为 false 时再交调用方控件，不得重复触发同一动作。
+
+resize 时调用 `setRegion(int x, int y, int width, int height)`；用 `setFocused(boolean)`／`isFocused()` 配合外部焦点链。区域外点击清除键盘焦点，但仍须把捕获后的区域外 drag/release 转发进来。没有模态时边界 Tab 清除焦点并返回 false，让调用方接续。仅丢失键盘焦点不会取消指针捕获；模态保持自身边界。绘制／输入先后由调用方决定，API 不会自动遮挡任意原生控件。
+
+区域 `open()` 可省略，绝不导航或使调用方可见。普通 `close(): boolean` 仅 literal true 才成功，失败后可重试；最终 detach／removed 使用 `dispose(): void`。二者不得关闭调用方 Screen 或较新的替换页面。resize／重复 init 应复用 adapter，不另装一条输入链。非 Screen owner 同样要提供 owner thread、真实 GUI extractor、viewport、有序输入／焦点及 cleanup；未提供自动 HUD 订阅或通用 renderer adapter。真实借用／非 Screen 集成验收仍为**未运行**。
+
+**一个 Screen 中的三个逻辑窗口**
+
+独立模块 `nekojs/jsx-workspace` 在一个 host 内管理一个 root；不是同时激活多个 Minecraft Screen、创建额外 OS 窗口，也不是第二套 reconciler。将下面完整内嵌示例保存为 `nekojs/client_scripts/authoring-examples/workspace.tsx`，移除其它自动打开页面的示例，再在具备 ClientUI 的 NeoForge 26.x 客户端运行 `/nekojs reload client`。业务状态在窗口 render 外创建。
+
+```tsx
+// CLIENT only: requires the ClientUI binding published on NeoForge 26.x.
+import { UI } from "nekojs/jsx-runtime";
+import { createWorkspace } from "nekojs/jsx-workspace";
+
+const note = UI.createSignal("Draft note");
+const toolText = UI.createSignal("Tool input");
+const saved = UI.createSignal(0);
+const clicks = UI.createSignal(0);
+const host = ClientUI.screen("Authoring workspace", false);
+const workspace = createWorkspace(host, {
+    minimizedPresentation: "taskbar",
+    taskbarHeight: 28
+});
+
+workspace.add("notes", () => (
+    <scroll width="fill" height="fill">
+        <column padding={6} gap={6} width="fill">
+            <input id="notes-text" width="fill" height={20} maxLength={80}
+                value={note.get()} onChange={event => note.set(event.value || "")} />
+            <button id="notes-save" height={20} onClick={() => saved.update(value => value + 1)}>
+                Save locally
+            </button>
+            <label id="notes-count">{"Notes saved: " + saved.get()}</label>
+        </column>
+    </scroll>
+), {
+    title: "Notes", rect: { x: 12, y: 12, width: 190, height: 136 },
+    responsiveRect: {
+        x: { base: 12, profiles: { 1: 8, 2: 12 } },
+        width: { base: 190, profiles: { 1: "70%", 2: "60%" } },
+        height: "65%"
+    },
+    minWidth: 160, minHeight: 100, maxWidth: 480, maxHeight: 320,
+    resizable: true, minimizable: true, maximizable: true,
+    titlebarHeight: 24, titlebarButtonWidth: 18, titlebarTitle: true
+});
+
+workspace.add("tools", () => (
+    <scroll width="fill" height="fill">
+        <column padding={6} gap={6} width="fill">
+            <input id="tools-text" width="fill" height={20} maxLength={80}
+                value={toolText.get()} onChange={event => toolText.set(event.value || "")} />
+            <button id="tools-click" height={20} onClick={() => clicks.update(value => value + 1)}>
+                Count this window
+            </button>
+            <label id="tools-count">{"Tools clicks: " + clicks.get()}</label>
+        </column>
+    </scroll>
+), {
+    title: "Tools", rect: { x: 90, y: 42, width: 190, height: 136 },
+    minWidth: 140, minHeight: 100,
+    resizable: true, minimizable: true, maximizable: true,
+    titlebarTitle: false
+});
+
+workspace.add("preview", () => (
+    <scroll width="fill" height="fill">
+        <column padding={6} gap={6} width="fill">
+            <item id="preview-item" item="minecraft:diamond" count={1} />
+            <label id="preview-summary">{
+                "Saved=" + saved.get() + "; clicks=" + clicks.get()
+            }</label>
+            <label>Drag a titlebar; close one window without closing the desktop.</label>
+        </column>
+    </scroll>
+), {
+    title: "Preview", rect: { x: 160, y: 72, width: 190, height: 136 },
+    resizable: true, minimizable: true, maximizable: true
+});
+
+workspace.open();
+```
+
+Notes 与 Tools 的文本和计数彼此独立，首个按钮仅更新各自计数并反映在 Preview。编辑 Notes、最小化，再点击任务栏中标题为 Notes 的还原按钮；文本、计数与 keyed 内容应保留。尝试最大化 → 最小化 → 还原、边／角缩放以及 GUI profile／缩放变化。Notes 使用数字正常边界、响应式策略与 24／18 标题栏尺寸；Tools 仅隐藏标题文字。Preview 仍是只读钻石图标，不修改物品栏。任务栏为空也预留工作区。关闭 Screen、移除脚本并重载 CLIENT 会重置四个 signal，不持久化到磁盘或世界。这些是待观察操作，不代表已通过 native／GPU／真实客户端验收。
+
+**控制器与窗口状态：** `createWorkspace(host, options?)` 创建并绑定唯一 root，不要另建／另绑第二个 root。提供 `add(id, render, config?)`、`update(id, patch)`、`activate`、`hide`、`show`、`minimize`、`maximize`、`restore`、`resize(id, rectPatch)`、`closeWindow`、`open`、`close`、`isDisposed`、`snapshot`、`layout`。配置为普通数据；ID 是稳定的非空字符串。owner thread 变更返回 boolean，跨线程可返回 `"queued"`；入队不等于完成，刷新失败保留已提交状态，render 中禁止修改控制器。
+
+不可变 `snapshot().windows` 按后到前排列，保存 `mode: "normal" | "minimized" | "maximized"`、`restoreMode: "normal" | "maximized"`、可见性、能力与正常还原几何；`activeId` 表示活动窗口。`layout()` 才是实际发布、受约束后的几何，释放后为 null。
+
+| 操作 | 含义 |
+|---|---|
+| `minimize(id)` | 要求 `minimizable: true`；保留 keyed 内容，并记住来自正常还是最大化状态 |
+| `maximize(id)` | 要求 `maximizable: true`；填满工作区，不覆盖正常还原边界／响应式策略 |
+| `restore(id)` | 最小化时返回记忆的模式，最大化时返回正常模式 |
+| `show(id)`／`activate(id)` | 先还原最小化窗口，再提升并激活；show 还会设为可见 |
+| `hide(id)` | 保留模式与内容，同时隐藏窗口和最小化展示 |
+| `resize(id, rectPatch)` | 仅对启用 `resizable` 的正常窗口请求数字矩形变更，不接受 native edge 参数 |
+| `closeWindow(id)` | 真正移除逻辑窗口，与最小化／隐藏不同 |
+
+最小化／隐藏不暂停 signal 更新，也不写入磁盘。`closeWhenEmpty: true` 仅在真正移除最后一个窗口时请求普通 host close，失败不代表已释放。
+
+**正常与响应式几何：** `rect: { x, y, width, height }` 始终是数字形式的正常／还原请求边界，默认 `{ x: 16, y: 16, width: 240, height: 160 }`，不是当前最大化矩形。正常最小宽／高为 40／20；`minWidth`、`minHeight`、`maxWidth`、`maxHeight` 必须有限且有序，不能降低上述下限。可用工作区更小时，实际边界优先；最大化填满工作区，不使用正常 min/max 限制。
+
+`responsiveRect` 的 `x/y/width/height` 可分别使用有限数字、严格正百分比字符串，或 `{ base, profiles: { 1: ..., 6: ... } }`。宽／高数字不得为负；profile 是逻辑层级 1–6，不是 CSS 媒体查询。百分比相对于 workspace 工作区，不是物理屏幕。缺失字段回退至数字 `rect`。`update` 中提供策略会整体替换，不深合并；`responsiveRect: null` 清除策略。正常模式下手动移动／缩放会把当前显示边界实体化为数字并清除响应式策略；仅最大化不清除。
+
+**显式启用的窗框：** `resizable`、`minimizable`、`maximizable` 默认均为 false，旧窗口仍是 20 高标题栏与关闭按钮。扁平字段 `titlebarHeight`、`titlebarButtonWidth`、`titlebarTitle` 默认 20、20、true；高度必须为整数且 ≥0，按钮宽度必须为整数且 ≥1。实际窗框受窗口边界约束。高度 0 隐藏全部标题栏控件和拖动区域，必须保留程序化还原路径；`titlebarTitle: false` 只隐藏文字。没有嵌套 titlebar 对象或 CSS 语义。
+
+原始小写 `window` 的 layout `mode` 仅接受 `normal/maximized`；控制器通过保留但隐藏内容实现自己的最小化状态。`onMinimize/onMaximize/onRestore` 只是变更请求；`onResize` 携带 `{ x, y, width, height, edge }`，edge 为 `n/ne/e/se/s/sw/w/nw`。完整示例由控制器接线；手动 dispatch 仍受模态、可见性、活动窗口与能力检查限制。
+
+**最小化展示：** 创建时的 `minimizedPresentation` 默认 `"none"`，保留旧 workspace 根布局，需要自行提供还原操作。`"taskbar"` 使用全宽、等分按钮行；`taskbarHeight` 默认 28，必须为 ≥1 的整数，即使没有最小化窗口也预留高度。工作区获得非负剩余高度；安全视口比任务栏更矮时，任务栏保留请求高度并被裁剪，工作区可降至 0，并不保证最小尺寸覆盖这一限制。
+
+`"floating"` 是左下角宽 220 的面板，高度 `min(160, 24 * 可见最小化窗口数 + 4)`；内部为可滚动 column，按钮高 20、间距 4、内边距 4，不预留工作区。隐藏窗口不出现在任何最小化展示中。
+
+自定义回调接收不可变 `NekoWorkspaceMinimizedContext`：`{ windows, restore, activate }`，windows 仅含可见且最小化的快照。只可返回一个直接的 `panel` VNode（明确提供 width、height、anchor）或 null；子级可用组件，最外层不可为组件、数组或 Fragment。控制器标记面板并保留 key/children，不添加隐式铺满屏幕的包装层。可使用已有响应式样式，但大面板的边界也可能遮挡后方窗口；不要在回调执行期间产生副作用。
+
+**替换初始化语句，不要追加第二个控制器：** 保持原 host、业务 signal 与窗口定义不变，只把示例中的 `const workspace = createWorkspace(...)` 替换为以下其中一个。不要作为额外自动打开脚本一起安装。
+
+```tsx
+const workspace = createWorkspace(host, { minimizedPresentation: "floating" });
+```
+
+```tsx
+const workspace = createWorkspace(host, {
+    minimizedPresentation: context => {
+        if (context.windows.length === 0) return null;
+        return (
+            <panel width={220} height={32} anchor="bottomRight" background="#202020">
+                <row padding={4} gap={4} width="fill" height="fill">
+                    {context.windows.map(window => (
+                        <button key={window.id} id={`demo-workspace-restore:${window.id}`}
+                            width="fill" height="fill"
+                            onClick={() => context.restore(window.id)}>{window.title}</button>
+                    ))}
+                </row>
+            </panel>
+        );
+    }
+});
+```
+
+小型替换面板没有隐藏的全屏 wrapper；边界之外不属于它的输入表面。上下文不提供 native Screen 或物品栏权限。 每个可交互的原始按钮必须有显式稳定 `id`；`key` 只负责协调身份，不注册事件。展示面板在 window 作用域之外，因此这些 ID 必须在 root 内唯一。示例的 `demo-workspace-restore:` 前缀也必须避开应用自己的窗口／节点 ID。
+
+每个控制器使用全新受管 host。重复绑定同一 guest root handle 幂等；`bindRoot` 拒绝其它 handle，layout 在发布前拒绝不匹配的 root ID（`NEKO-7014`）。这些校验不代表可以在同一 host 上创建 ID 文本相同的多个 root。最多一个 workspace，必须是 root 或根 `screen` 的直接子节点；workspace 的直接子节点只能是 window，最多一个 active。几何及其祖先必须使用 logical 坐标，不能处于 design-space。`show` 提升并激活窗口；`hide` 保留身份与 signal 更新，但阻止输入。`closeWhenEmpty: true` 只请求普通 host close，失败不代表已释放。root 发布／嵌套 render 中修改控制器会被拒绝。子内容显式 ID 在组件展开后按窗口作用域处理：不同窗口可复用局部 ID，同一窗口重复仍失败；原生窗口 ID 保持原值。手动 dispatch 必须从已发布 layout／native props 读取不透明实际 ID，不要拼接其序列化格式。
+
+标题栏／缩放捕获、激活、活动窗口键盘焦点及窗口／展示面板遮挡由同一 host 管理；不要为每个窗口另装全局输入监听器。最小化／隐藏保留 keyed 内容和 signal 更新，不暂停后台工作或持久化数据。仍不提供吸附、布局持久化、任意 Screen／Widget 嵌入、服务端物品栏权限或未经测量的提速。真实 GPU、物理输入、焦点／遮挡及辅助功能验收仍为**未运行**。
+
+| 待验收项目 | 通过真实客户端输入观察 | 状态 |
+|---|---|---|
+| 最小化与还原保留状态 | Notes 文本／计数保留，隐藏内容不接收输入；来自最大化的最小化窗口先还原为最大化 | 未运行 |
+| 缩放／窗框／响应式边界 | 八个边／角、min/max 与极小工作区绘制和命中一致；手动移动／缩放清除响应式策略；零标题栏有显式还原路径 | 未运行 |
+| 展示层所有权 | 任务栏预留空间，浮动／自定义面板不预留；仅面板边界遮挡合格后方窗口；模态仍优先 | 未运行 |
+
 <a id="wiki-section-23"></a>
 ## Root 生命周期
 
@@ -603,14 +776,23 @@ UI.batch(() => {
 | `layout()` | 读取最近一次布局快照 |
 | `dispatch(id, eventName, event)` | 向指定节点派发受控事件 |
 | `isDisposed()` | 检查 root 是否已经释放 |
-| `close()` | 释放 root 的节点、订阅和事件处理器；不自动退出原生 Screen |
+| `isUpdating()` | render、展开、layout、stage、commit 及普通清空 host 全程为 true；空闲或已释放时为 false |
+| `close()` | 可重试释放；更新中或清空 host 失败返回 false，不自动退出原生 Screen |
+| `forceClose()` | 仅 owner thread 的最终释放，即使清空 host 失败也释放 guest 引用；无成功 boolean |
+
+函数身份加外层 key／无 key 位置构成组件局部子 key 的私有作用域。不同组件实例可以复用局部 key；直接同级重复 key 仍会失败，无 key fragment／数组仍透明展开。展开后的 ID 在 root 内仍唯一。保持组件函数稳定，不要每次 render 都创建新函数身份。
+
+owner-thread 重入 refresh 返回 `"queued"` 并串行安排后续工作，不递归提交。只有稳定候选可发布，最多 32 轮后记录 render 诊断。`true` 表示至少一次提交成功，即使后续重试失败；`false` 表示没有提交。跨 owner 入队同样可返回 `"queued"`，不等于完成；render 应保持纯函数。
+
+普通 close 在失败／忙碌后仍可重试。owner-thread resize 在忙碌时同样返回 false，不暗中排队另一个 viewport；空闲后重试。最终 force-close 立即标记释放并丢弃 render／事件／依赖引用；更新中则把原生清理延后到事务结束。排队工作不能复活它，调用必须在 owner thread。用户导航应走 host 普通 close，不把 force-close 当作日常事件操作。
 
 root 与创建它的 CLIENT generation 绑定：
 
 - CLIENT reload 成功后，旧 root、旧 Screen、旧事件闭包和旧 VNode 都会失效。
 - candidate generation 在提交前不能影响当前运行中的 Screen。
 - reload 失败时，当前 active UI 保持可用。
-- Screen 被玩家关闭、被其它 Screen 替换或客户端退出时，都会进入同一套清理流程。
+- 独占 Screen 的标题／暂停策略来自已提交根 `screen` props，缺省时回退工厂参数；失败候选不能改变它们，`pausesGame` 不会暂停远程服务器。
+- 显式普通 host close 可重试；原生 Screen removed／替换／客户端退出强制最终清理，晚到清理不能关闭较新的 Screen。
 - 过期 handle 的操作会被拒绝并记录对应的 `NEKO-700x` 诊断，而不是静默操作新 generation。
 
 <a id="wiki-section-24"></a>
@@ -625,6 +807,8 @@ root 与创建它的 CLIENT generation 绑定：
 - `NEKO-7004`：操作不在客户端 owner thread。
 - `NEKO-7006`：旧 generation 的延迟操作被丢弃。
 - `NEKO-7007`：render、layout、event 或 host-update 阶段失败。
+- `NEKO-7013`：Workspace 编写契约拒绝无效配置／ID 或发布中修改控制器；直接调用可在任何原生日志之前抛出。
+- `NEKO-7014`：GUI 区域边界无效、独占 Screen 上执行区域专用操作或违反单 root 所有权；构造／setRegion／绑定／发布均可直接拒绝。
 - `NEKO-7008`：原生 host 校验发现控件 appearance 的字段、类型或颜色不合法。
 - `NEKO-7011`：原生 host 校验发现 slider 的范围、步长或值不合法。
 

@@ -60,7 +60,7 @@ class NekoTypeScriptJsxRuntimeTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        TestPlatformInit.ensureInitialized(gameDir);
+        TestPlatformInit.ensureInitialized();
         paths = pathsFor(gameDir);
         Files.createDirectories(paths.serverScripts().resolve("src"));
         boot(SandboxConfig.defaultConfig());
@@ -531,6 +531,38 @@ class NekoTypeScriptJsxRuntimeTest {
     }
 
     @Test
+    void workspaceBuiltinSupportsStaticNativeEsmImports() throws Exception {
+        write("workspace-native.mjs", "import { createWorkspace } from 'nekojs/jsx-workspace';\n"
+                + "export const factoryType = typeof createWorkspace;\n");
+        Value exports = asValue(host.loadEntry("./server_scripts/src/workspace-native.mjs"));
+        assertEquals("function", exports.getMember("factoryType").asString());
+    }
+
+    @Test
+    void hiddenNonwindowCallbacksRequirePublishedVisibleTargets() throws Exception {
+        write("hidden-dispatch.cjs", """
+                const { UI } = require('nekojs/jsx-runtime');
+                const adapter = {
+                  isOwnerThread: () => true, enqueue: work => { work(); return true; },
+                  supportsPrimitive: () => true, measureText: () => ({width: 4, height: 9}),
+                  layout() {}, reportDiagnostic() {},
+                  begin: () => ({create: () => ({}), update() {}, order() {}, remove() {}, commit() {}, rollback() {}})
+                };
+                let calls = 0;
+                const root = UI.createRoot(() => UI.element('panel', {visible: false,
+                  children: UI.element('button', {id: 'hidden-action', text: 'Hidden', onClick: () => calls++})
+                }), adapter, {viewport: {width: 200, height: 120}});
+                const dispatched = root.dispatch('hidden-action', 'click', {});
+                root.close();
+                module.exports = {dispatched, calls};
+                """);
+        Value proof = asValue(host.loadEntry("./server_scripts/src/hidden-dispatch.cjs"));
+        assertEquals(false, proof.getMember("dispatched").asBoolean(),
+                "Hidden nonwindow descendants must not receive explicit dispatch");
+        assertEquals(0, proof.getMember("calls").asInt());
+    }
+
+    @Test
     void automaticJsxUiRuntimePassesTheFakeHostContract() throws Exception {
         boot(new SandboxConfig(false, false, false, false, true, true, true, true, 30, 0, 0,
                 SandboxConfig.PACK_SYNC_OFF, false, false));
@@ -542,7 +574,7 @@ class NekoTypeScriptJsxRuntimeTest {
         Value exports = asValue(host.loadEntry("./server_scripts/src/ui-core.tsx"));
         Value proof = exports.getMember("uiCoreProof");
         assertEquals(true, proof.getMember("passed").asBoolean());
-        assertEquals(14, proof.getMember("primitives").asInt());
+        assertEquals(16, proof.getMember("primitives").asInt());
         assertEquals("b,a,c", proof.getMember("keyedOrder").asString());
         assertEquals("render,component,layout,host-update,event", proof.getMember("diagnostics").asString());
         assertEquals(true, proof.getMember("visualProps").asBoolean(),

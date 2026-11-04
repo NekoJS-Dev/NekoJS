@@ -112,7 +112,7 @@ function findIn(nodes, id) {
 
 // ---- Section 5 catalog examples ----
 
-check(UI.primitives().slice().sort().join(',') === 'button,column,dialog,image,input,item,label,panel,row,screen,scroll,slider,spacer,stack',
+check(UI.primitives().slice().sort().join(',') === 'button,column,dialog,image,input,item,label,panel,row,screen,scroll,slider,spacer,stack,window,workspace',
   'primitive registry is complete (catalog-registry)');
 
 const clicked = UI.createSignal(false);

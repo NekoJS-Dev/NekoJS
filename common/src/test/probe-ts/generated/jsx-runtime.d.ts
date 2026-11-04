@@ -11,11 +11,11 @@ declare module 'nekojs/jsx-runtime' {
     export const Validators: NekoUiValidators;
     export const UI: NekoUiApi;
     type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
-    type NekoUiPrimitive = 'screen' | 'panel' | 'row' | 'column' | 'stack' | 'scroll' | 'label' | 'button' | 'input' | 'slider' | 'image' | 'spacer' | 'dialog' | 'item'
+    type NekoUiPrimitive = 'screen' | 'panel' | 'row' | 'column' | 'stack' | 'scroll' | 'label' | 'button' | 'input' | 'slider' | 'image' | 'spacer' | 'dialog' | 'item' | 'workspace' | 'window'
     type NekoUiJsxType = NekoUiPrimitive | NekoUiComponent | symbol
     type NekoUiLayoutSize = number | 'auto' | 'fill' | `${number}%`
     type NekoUiResponsive<T> = T | { readonly base?: T; readonly profiles?: Partial<Record<NekoUiProfile, T>> }
-    type NekoUiEventName = 'onClick' | 'onRelease' | 'onScroll' | 'onKey' | 'onTextInput' | 'onFocus' | 'onBlur' | 'onChange' | 'onSubmit' | 'onDismiss'
+    type NekoUiEventName = 'onClick' | 'onRelease' | 'onScroll' | 'onKey' | 'onTextInput' | 'onFocus' | 'onBlur' | 'onChange' | 'onSubmit' | 'onDismiss' | 'onMove' | 'onActivate' | 'onResize' | 'onMinimize' | 'onMaximize' | 'onRestore'
     type NekoUiDirection = 'row' | 'column'
     type NekoUiAnchor = 'topLeft' | 'top' | 'topRight' | 'left' | 'center' | 'right' | 'bottomLeft' | 'bottom' | 'bottomRight'
     interface NekoUiSafeArea {
@@ -52,11 +52,22 @@ declare module 'nekojs/jsx-runtime' {
         readonly target: string
         readonly x?: number
         readonly y?: number
+        readonly width?: number
+        readonly height?: number
+        readonly edge?: NekoUiWindowResizeEdge
         readonly button?: number
         readonly key?: string
         readonly value?: string
-        readonly reason?: 'escape' | 'backdrop'
+        readonly reason?: 'escape' | 'backdrop' | 'close'
         readonly delta?: number
+      }
+    type NekoUiWindowResizeEdge = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw'
+    interface NekoUiWindowResizeEvent extends NekoUiEvent {
+        readonly x: number
+        readonly y: number
+        readonly width: number
+        readonly height: number
+        readonly edge: NekoUiWindowResizeEdge
       }
     interface NekoVNode {
         readonly $$nekoJsx: true
@@ -140,7 +151,9 @@ declare module 'nekojs/jsx-runtime' {
         layout(): NekoUiLayoutSnapshot | null
         dispatch(id: string, eventName: string, event: Partial<NekoUiEvent>): boolean | 'queued'
         isDisposed(): boolean
+        isUpdating(): boolean
         close(): boolean | 'queued'
+        forceClose(): void
       }
     interface NekoUiSharedProps {
         id?: string
@@ -171,6 +184,8 @@ declare module 'nekojs/jsx-runtime' {
         onChange?: NekoUiEventCallback
         onSubmit?: NekoUiEventCallback
         onDismiss?: NekoUiEventCallback
+        onMove?: NekoUiEventCallback
+        onActivate?: NekoUiEventCallback
       }
     type NekoUiColor = string | number
     interface NekoUiControlColors {
@@ -263,12 +278,21 @@ declare module 'nekojs/jsx-runtime' {
         numberRange(min: number, max: number, message?: string): NekoUiValidator
       }
     type NekoUiCrop = { readonly x: number; readonly y: number; readonly width: number; readonly height: number } | readonly [number, number, number, number]
+    type NekoUiWindowResponsive<T> = T | { readonly base?: T; readonly profiles?: Readonly<Partial<Record<NekoUiProfile, T>>> }
+    interface NekoUiWindowResponsiveRect {
+        readonly x?: NekoUiWindowResponsive<number | `${number}%`>
+        readonly y?: NekoUiWindowResponsive<number | `${number}%`>
+        readonly width?: NekoUiWindowResponsive<number | `${number}%`>
+        readonly height?: NekoUiWindowResponsive<number | `${number}%`>
+      }
     type NekoUiPrimitivePropsByType = {
-        screen: NekoUiSharedProps & { title?: string; pausesGame?: boolean; closeOnEscape?: boolean }
-        panel: NekoUiSharedProps & { background?: string | number; borderColor?: string | number; borderWidth?: number; radius?: number; opacity?: number }
+        screen: NekoUiSharedProps & { title?: string; pausesGame?: boolean; closeOnEscape?: boolean; layout?: 'stack' }
+        panel: NekoUiSharedProps & { background?: string | number; borderColor?: string | number; borderWidth?: number; radius?: number; opacity?: number; workspacePresentation?: boolean }
         row: NekoUiSharedProps
         column: NekoUiSharedProps
         stack: NekoUiSharedProps
+        workspace: NekoUiSharedProps
+        window: Omit<NekoUiSharedProps, 'width' | 'height' | 'minWidth' | 'minHeight' | 'maxWidth' | 'maxHeight'> & { id: string; title: string; x: number; y: number; width: number; height: number; minWidth?: number; minHeight?: number; maxWidth?: number; maxHeight?: number; responsiveRect?: NekoUiWindowResponsiveRect; mode?: 'normal' | 'maximized'; active?: boolean; draggable?: boolean; closable?: boolean; titlebarHeight?: number; titlebarButtonWidth?: number; titlebarTitle?: boolean; resizable?: boolean; minimizable?: boolean; maximizable?: boolean; onResize?: (event: NekoUiWindowResizeEvent) => void; onMinimize?: NekoUiEventCallback; onMaximize?: NekoUiEventCallback; onRestore?: NekoUiEventCallback }
         scroll: NekoUiSharedProps & { scrollX?: NekoUiResponsive<boolean>; scrollY?: NekoUiResponsive<boolean>; scrollOffset?: NekoUiResponsive<number> }
         label: NekoUiSharedProps & { text?: string; color?: string | number; fontSize?: NekoUiResponsive<number>; font?: NekoUiResponsive<string>; wrap?: boolean; truncate?: boolean }
         button: NekoUiSharedProps & { text?: string; disabled?: boolean; tooltip?: string; appearance?: NekoUiControlAppearance }
@@ -276,7 +300,7 @@ declare module 'nekojs/jsx-runtime' {
         slider: NekoUiSharedProps & { value?: number; min?: number; max?: number; step?: number; disabled?: boolean; tooltip?: string; appearance?: NekoUiControlAppearance }
         image: NekoUiSharedProps & { resource?: string; fit?: 'contain' | 'cover' | 'stretch'; opacity?: number; icon?: string; crop?: NekoUiCrop }
         spacer: NekoUiSharedProps
-        dialog: NekoUiSharedProps & { id: string; title?: string; closeOnEscape?: boolean; closeOnBackdrop?: boolean; onDismiss?: NekoUiEventCallback }
+        dialog: Omit<NekoUiSharedProps, 'onDismiss'> & { id: string; title?: string; closeOnEscape?: boolean; closeOnBackdrop?: boolean; onDismiss?: (event: Omit<NekoUiEvent, 'reason'> & { readonly reason?: 'escape' | 'backdrop' }) => void }
         item: NekoUiSharedProps & { item: string; count?: number; itemTooltip?: boolean; tooltip?: string }
       }
     type NekoUiPrimitiveProps = NekoUiPrimitivePropsByType[NekoUiPrimitive]
@@ -294,6 +318,8 @@ declare module 'nekojs/jsx-runtime' {
           row: NekoUiPrimitivePropsByType['row']
           column: NekoUiPrimitivePropsByType['column']
           stack: NekoUiPrimitivePropsByType['stack']
+          workspace: NekoUiPrimitivePropsByType['workspace']
+          window: NekoUiPrimitivePropsByType['window']
           scroll: NekoUiPrimitivePropsByType['scroll']
           label: NekoUiPrimitivePropsByType['label']
           button: NekoUiPrimitivePropsByType['button']

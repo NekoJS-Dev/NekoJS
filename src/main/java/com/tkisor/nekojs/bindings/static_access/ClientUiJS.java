@@ -14,5 +14,14 @@ public final class ClientUiJS {
     public JsxHostAdapter screen(String title, boolean pausesGame) {
         return new JsxHostAdapter(title, pausesGame);
     }
+
+    @Doc("Creates a cooperative JSX region host in GUI coordinates. The caller forwards drawing and input and owns its surrounding Screen or HUD.")
+    @Param(name = "x", value = "GUI origin x")
+    @Param(name = "y", value = "GUI origin y")
+    @Param(name = "width", value = "positive GUI width")
+    @Param(name = "height", value = "positive GUI height")
+    public JsxHostAdapter region(int x, int y, int width, int height) {
+        return JsxHostAdapter.region(x, y, width, height);
+    }
 }
 //?}

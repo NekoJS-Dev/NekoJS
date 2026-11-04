@@ -30,6 +30,8 @@ import graal.graalvm.polyglot.io.IOAccess;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -246,6 +248,104 @@ class AuthoringExamplesEngineTest {
         assertFalse(root.invokeMember("dispatch", "forms-confirm", "click", Map.of("button", 0)).asBoolean());
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"taskbar", "floating", "custom"})
+    void bundledWorkspaceRunsThroughTheRealLoaderWithScopedWindowEvents(String presentation) throws Exception {
+        boot(ScriptType.CLIENT);
+        // This transactional host proves guest integration, not native rendering or physical input.
+        context.eval("js", CLIENT_UI_HOST);
+        Path entry = copyExample("client/workspace.tsx",
+                paths.clientScripts().resolve("examples/workspace.tsx"));
+        if (!"taskbar".equals(presentation)) {
+            String handbook;
+            try (var resource = getClass().getResourceAsStream("/nekojs/authoring/handbook/jsx-ui.md")) {
+                assertNotNull(resource);
+                handbook = new String(resource.readAllBytes(), StandardCharsets.UTF_8);
+            }
+            var blocks = java.util.regex.Pattern.compile("(?s)```tsx\\R(.*?)\\R```").matcher(handbook);
+            String initializer = null;
+            String option = "custom".equals(presentation) ? "context =>" : "\"floating\"";
+            while (blocks.find()) {
+                String block = blocks.group(1).strip();
+                if (block.startsWith("const workspace = createWorkspace(host,")
+                        && block.contains("minimizedPresentation: " + option)) initializer = block;
+            }
+            assertNotNull(initializer, "The alternative initializer must come from the exact bundled handbook");
+            String source = Files.readString(entry);
+            int start = source.indexOf("const workspace = createWorkspace(host, {");
+            int end = source.indexOf("\n});", start);
+            assertTrue(start >= 0 && end > start);
+            Files.writeString(entry, source.substring(0, start) + initializer + source.substring(end + 4));
+        }
+        loader.loadEntry(entry.toString());
+        Value host = context.getBindings("js").getMember("exampleUiHost");
+        Value root = host.getMember("root");
+        assertEquals("Authoring workspace", host.getMember("title").asString());
+        assertTrue(host.getMember("opened").asBoolean());
+        for (String id : List.of("notes", "tools", "preview")) {
+            assertTrue(host.invokeMember("has", id).asBoolean());
+        }
+        Value find = context.eval("js", """
+                (windowId, type) => {
+                    function visit(nodes, predicate) {
+                        for (const node of nodes) {
+                            if (predicate(node)) return node;
+                            const found = visit(node.children, predicate);
+                            if (found) return found;
+                        }
+                        return null;
+                    }
+                    const window = visit(exampleUiHost.snapshot(), node => node.type === 'window' && node.props.id === windowId);
+                    const node = window && visit(window.children, node => node.type === type);
+                    if (!node) throw new Error('Missing workspace example descendant: ' + windowId + '/' + type);
+                    return node.props;
+                }
+                """);
+        String notesSave = find.execute("notes", "button").getMember("id").asString();
+        String toolsClick = find.execute("tools", "button").getMember("id").asString();
+        assertFalse(root.invokeMember("dispatch", notesSave, "click", Map.of("button", 0)).asBoolean());
+        assertTrue(root.invokeMember("dispatch", "notes", "activate", Map.of()).asBoolean());
+        String notesInput = find.execute("notes", "input").getMember("id").asString();
+        assertTrue(root.invokeMember("dispatch", notesInput, "change", Map.of("value", "Edited note")).asBoolean());
+        assertEquals("Edited note", find.execute("notes", "input").getMember("value").asString());
+        assertEquals("Tool input", find.execute("tools", "input").getMember("value").asString());
+        assertTrue(root.invokeMember("dispatch", "notes", "minimize", Map.of()).asBoolean());
+        assertTrue(host.invokeMember("has", "notes").asBoolean());
+        assertFalse(root.invokeMember("dispatch", notesInput, "change", Map.of("value", "Blocked")).asBoolean());
+        Value restoreNotes = context.eval("js", """
+                (() => {
+                    function visit(nodes, insidePresentation) {
+                        for (const node of nodes) {
+                            const presentation = insidePresentation || node.props.workspacePresentation === true;
+                            if (presentation && node.type === 'button' && node.props.text === 'Notes') return node.props.id;
+                            const found = visit(node.children, presentation);
+                            if (found) return found;
+                        }
+                        return null;
+                    }
+                    return visit(exampleUiHost.snapshot(), false);
+                })()
+                """);
+        assertFalse(restoreNotes.isNull(), "The example must provide a semantic Notes restore button");
+        assertTrue(root.invokeMember("dispatch", restoreNotes.asString(), "click", Map.of("button", 0)).asBoolean());
+        assertEquals(notesInput, find.execute("notes", "input").getMember("id").asString());
+        assertEquals("Edited note", find.execute("notes", "input").getMember("value").asString());
+        assertTrue(root.invokeMember("dispatch", notesSave, "click", Map.of("button", 0)).asBoolean());
+        assertEquals("Notes saved: 1", find.execute("notes", "label").getMember("text").asString());
+        assertEquals("Saved=1; clicks=0", find.execute("preview", "label").getMember("text").asString());
+        assertTrue(root.invokeMember("dispatch", "tools", "activate", Map.of()).asBoolean());
+        assertTrue(root.invokeMember("dispatch", toolsClick, "click", Map.of("button", 0)).asBoolean());
+        assertEquals("Saved=1; clicks=1", find.execute("preview", "label").getMember("text").asString());
+        assertTrue(root.invokeMember("dispatch", "notes", "dismiss", Map.of("reason", "close")).asBoolean());
+        assertFalse(host.invokeMember("has", "notes").asBoolean());
+        assertTrue(host.invokeMember("has", "tools").asBoolean());
+        assertTrue(host.getMember("opened").asBoolean());
+        assertFalse(root.invokeMember("dispatch", notesSave, "click", Map.of("button", 0)).asBoolean());
+        assertEquals(0, host.getMember("diagnostics").getArraySize());
+        assertTrue(host.invokeMember("close").asBoolean());
+        assertEquals(0, host.invokeMember("nodeCount").asInt());
+    }
+
     private void boot(ScriptType type) throws Exception {
         // Keep process-global paths on the shared fixture; module sources remain isolated below.
         TestPlatformInit.ensureInitialized();
@@ -331,13 +431,18 @@ class AuthoringExamplesEngineTest {
                         title, pausesGame, opened: false, root: null, diagnostics: [],
                         isOwnerThread: () => true,
                         enqueue: () => false,
-                        supportsPrimitive: type => ['screen', 'panel', 'row', 'column', 'stack', 'scroll', 'label', 'button', 'input', 'slider', 'image', 'spacer', 'dialog', 'item'].includes(type),
+                        supportsPrimitive: type => ['screen', 'panel', 'row', 'column', 'stack', 'scroll', 'label', 'button', 'input', 'slider', 'image', 'spacer', 'dialog', 'item', 'workspace', 'window'].includes(type),
                         viewport: () => ({width: 320, height: 180}),
                         measureText: (text, size, maxWidth) => ({width: Math.min(maxWidth, String(text).length * 6), height: size}),
                         layout: () => {},
                         reportDiagnostic: diagnostic => host.diagnostics.push(diagnostic),
                         bindRoot: root => { host.root = root; },
                         open: () => { host.opened = true; },
+                        close: () => {
+                            if (host.root.close() !== true) return false;
+                            host.opened = false;
+                            return true;
+                        },
                         begin() {
                             const staged = new Map(Array.from(nodes, ([id, node]) => [id, {
                                 ...node, props: {...node.props}, children: node.children.slice()

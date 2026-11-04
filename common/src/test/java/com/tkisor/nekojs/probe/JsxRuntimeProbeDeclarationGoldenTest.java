@@ -70,6 +70,26 @@ class JsxRuntimeProbeDeclarationGoldenTest {
                         + "  " + ACTUAL_PATH + "\n  -> " + GOLDEN_PATH);
     }
 
+    @Test
+    void extractedWorkspaceDeclarationMatchesGolden() throws IOException {
+        String actual = NodeModuleTypeDocs.extractTS(readResource("nekojs/node/modules/jsx-workspace.ts"));
+        assertFalse(actual.isBlank());
+        assertTrue(actual.contains("declare module 'nekojs/jsx-workspace' {"), actual);
+        assertTrue(actual.contains("createWorkspace"), actual);
+        Path golden = GOLDEN_PATH.resolveSibling("jsx-workspace.d.ts");
+        Path extracted = ACTUAL_PATH.resolveSibling("jsx-workspace.d.ts");
+        Files.createDirectories(extracted.getParent());
+        Files.writeString(extracted, actual, StandardCharsets.UTF_8);
+        if (ProbeGoldenSupport.regenerateEnabled()) {
+            Files.createDirectories(golden.getParent());
+            Files.writeString(golden, actual, StandardCharsets.UTF_8);
+            Assumptions.assumeTrue(false, "goldens regenerated; review and commit");
+        }
+        assertTrue(Files.exists(golden), "Workspace golden missing: " + golden);
+        assertEquals(normalize(Files.readString(golden, StandardCharsets.UTF_8)), normalize(actual),
+                "Extracted workspace declaration drifted; regenerate and review the golden");
+    }
+
     private static String normalize(String value) {
         return value.replace("\r\n", "\n").stripTrailing();
     }

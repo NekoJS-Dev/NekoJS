@@ -176,6 +176,8 @@
 | NEKO-7008 | 原生宿主拒绝不符合受控颜色/状态字段规则的控件 appearance。 |
 | NEKO-7011 | 原生宿主拒绝无效滑块配置（非有限范围/值、非正 step 或超出范围）。 |
 | NEKO-7012 | 原生宿主拒绝无效弹窗属性（缺失或空白 id、非字符串标题、非布尔关闭开关）；公共组件或布局校验也可能通过 `NEKO-7007` 记录阶段失败。 |
+| NEKO-7013 | Workspace 编写契约拒绝无效配置／ID 或 root 发布阶段修改控制器；构造／控制器调用可直接抛出异常，UI 阶段也可能用 `NEKO-7007` 包装其原因。 |
+| NEKO-7014 | managed-mount 编写契约拒绝非正／不可表示的 GUI 区域边界、独占 Screen 的区域专用操作或其它 root handle／layout root ID。构造、绑定或发布前校验可直接拒绝；同 handle 绑定幂等。不是新增 HTTP/MCP wire error。 |
 
 <a id="wiki-section-9"></a>
 ## JSX UI 检查器

@@ -1,9 +1,9 @@
 type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
-  type NekoUiPrimitive = 'screen' | 'panel' | 'row' | 'column' | 'stack' | 'scroll' | 'label' | 'button' | 'input' | 'slider' | 'image' | 'spacer' | 'dialog' | 'item'
+  type NekoUiPrimitive = 'screen' | 'panel' | 'row' | 'column' | 'stack' | 'scroll' | 'label' | 'button' | 'input' | 'slider' | 'image' | 'spacer' | 'dialog' | 'item' | 'workspace' | 'window'
   type NekoUiJsxType = NekoUiPrimitive | NekoUiComponent | symbol
   type NekoUiLayoutSize = number | 'auto' | 'fill' | `${number}%`
   type NekoUiResponsive<T> = T | { readonly base?: T; readonly profiles?: Partial<Record<NekoUiProfile, T>> }
-  type NekoUiEventName = 'onClick' | 'onRelease' | 'onScroll' | 'onKey' | 'onTextInput' | 'onFocus' | 'onBlur' | 'onChange' | 'onSubmit' | 'onDismiss'
+  type NekoUiEventName = 'onClick' | 'onRelease' | 'onScroll' | 'onKey' | 'onTextInput' | 'onFocus' | 'onBlur' | 'onChange' | 'onSubmit' | 'onDismiss' | 'onMove' | 'onActivate' | 'onResize' | 'onMinimize' | 'onMaximize' | 'onRestore'
   type NekoUiDirection = 'row' | 'column'
   type NekoUiAnchor = 'topLeft' | 'top' | 'topRight' | 'left' | 'center' | 'right' | 'bottomLeft' | 'bottom' | 'bottomRight'
 
@@ -45,11 +45,23 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     readonly target: string
     readonly x?: number
     readonly y?: number
+    readonly width?: number
+    readonly height?: number
+    readonly edge?: NekoUiWindowResizeEdge
     readonly button?: number
     readonly key?: string
     readonly value?: string
-    readonly reason?: 'escape' | 'backdrop'
+    readonly reason?: 'escape' | 'backdrop' | 'close'
     readonly delta?: number
+  }
+
+  type NekoUiWindowResizeEdge = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw'
+  interface NekoUiWindowResizeEvent extends NekoUiEvent {
+    readonly x: number
+    readonly y: number
+    readonly width: number
+    readonly height: number
+    readonly edge: NekoUiWindowResizeEdge
   }
 
   interface NekoVNode {
@@ -145,7 +157,9 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     layout(): NekoUiLayoutSnapshot | null
     dispatch(id: string, eventName: string, event: Partial<NekoUiEvent>): boolean | 'queued'
     isDisposed(): boolean
+    isUpdating(): boolean
     close(): boolean | 'queued'
+    forceClose(): void
   }
 
   interface NekoUiSharedProps {
@@ -177,6 +191,8 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     onChange?: NekoUiEventCallback
     onSubmit?: NekoUiEventCallback
     onDismiss?: NekoUiEventCallback
+    onMove?: NekoUiEventCallback
+    onActivate?: NekoUiEventCallback
   }
   type NekoUiColor = string | number
   interface NekoUiControlColors {
@@ -269,12 +285,21 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     numberRange(min: number, max: number, message?: string): NekoUiValidator
   }
   type NekoUiCrop = { readonly x: number; readonly y: number; readonly width: number; readonly height: number } | readonly [number, number, number, number]
+  type NekoUiWindowResponsive<T> = T | { readonly base?: T; readonly profiles?: Readonly<Partial<Record<NekoUiProfile, T>>> }
+  interface NekoUiWindowResponsiveRect {
+    readonly x?: NekoUiWindowResponsive<number | `${number}%`>
+    readonly y?: NekoUiWindowResponsive<number | `${number}%`>
+    readonly width?: NekoUiWindowResponsive<number | `${number}%`>
+    readonly height?: NekoUiWindowResponsive<number | `${number}%`>
+  }
   type NekoUiPrimitivePropsByType = {
-    screen: NekoUiSharedProps & { title?: string; pausesGame?: boolean; closeOnEscape?: boolean }
-    panel: NekoUiSharedProps & { background?: string | number; borderColor?: string | number; borderWidth?: number; radius?: number; opacity?: number }
+    screen: NekoUiSharedProps & { title?: string; pausesGame?: boolean; closeOnEscape?: boolean; layout?: 'stack' }
+    panel: NekoUiSharedProps & { background?: string | number; borderColor?: string | number; borderWidth?: number; radius?: number; opacity?: number; workspacePresentation?: boolean }
     row: NekoUiSharedProps
     column: NekoUiSharedProps
     stack: NekoUiSharedProps
+    workspace: NekoUiSharedProps
+    window: Omit<NekoUiSharedProps, 'width' | 'height' | 'minWidth' | 'minHeight' | 'maxWidth' | 'maxHeight'> & { id: string; title: string; x: number; y: number; width: number; height: number; minWidth?: number; minHeight?: number; maxWidth?: number; maxHeight?: number; responsiveRect?: NekoUiWindowResponsiveRect; mode?: 'normal' | 'maximized'; active?: boolean; draggable?: boolean; closable?: boolean; titlebarHeight?: number; titlebarButtonWidth?: number; titlebarTitle?: boolean; resizable?: boolean; minimizable?: boolean; maximizable?: boolean; onResize?: (event: NekoUiWindowResizeEvent) => void; onMinimize?: NekoUiEventCallback; onMaximize?: NekoUiEventCallback; onRestore?: NekoUiEventCallback }
     scroll: NekoUiSharedProps & { scrollX?: NekoUiResponsive<boolean>; scrollY?: NekoUiResponsive<boolean>; scrollOffset?: NekoUiResponsive<number> }
     label: NekoUiSharedProps & { text?: string; color?: string | number; fontSize?: NekoUiResponsive<number>; font?: NekoUiResponsive<string>; wrap?: boolean; truncate?: boolean }
     button: NekoUiSharedProps & { text?: string; disabled?: boolean; tooltip?: string; appearance?: NekoUiControlAppearance }
@@ -282,7 +307,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     slider: NekoUiSharedProps & { value?: number; min?: number; max?: number; step?: number; disabled?: boolean; tooltip?: string; appearance?: NekoUiControlAppearance }
     image: NekoUiSharedProps & { resource?: string; fit?: 'contain' | 'cover' | 'stretch'; opacity?: number; icon?: string; crop?: NekoUiCrop }
     spacer: NekoUiSharedProps
-    dialog: NekoUiSharedProps & { id: string; title?: string; closeOnEscape?: boolean; closeOnBackdrop?: boolean; onDismiss?: NekoUiEventCallback }
+    dialog: Omit<NekoUiSharedProps, 'onDismiss'> & { id: string; title?: string; closeOnEscape?: boolean; closeOnBackdrop?: boolean; onDismiss?: (event: Omit<NekoUiEvent, 'reason'> & { readonly reason?: 'escape' | 'backdrop' }) => void }
     item: NekoUiSharedProps & { item: string; count?: number; itemTooltip?: boolean; tooltip?: string }
   }
   type NekoUiPrimitiveProps = NekoUiPrimitivePropsByType[NekoUiPrimitive]
@@ -303,6 +328,8 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       row: NekoUiPrimitivePropsByType['row']
       column: NekoUiPrimitivePropsByType['column']
       stack: NekoUiPrimitivePropsByType['stack']
+      workspace: NekoUiPrimitivePropsByType['workspace']
+      window: NekoUiPrimitivePropsByType['window']
       scroll: NekoUiPrimitivePropsByType['scroll']
       label: NekoUiPrimitivePropsByType['label']
       button: NekoUiPrimitivePropsByType['button']
@@ -335,11 +362,13 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
   }
   const FRAGMENT: NekoUiFragment = Symbol('nekojs.jsx.fragment') as unknown as NekoUiFragment
   const PRIMITIVES = Object.freeze({
-    screen: ['title', 'pausesGame', 'closeOnEscape'],
-    panel: ['background', 'borderColor', 'borderWidth', 'radius', 'opacity'],
+    screen: ['title', 'pausesGame', 'closeOnEscape', 'layout'],
+    panel: ['background', 'borderColor', 'borderWidth', 'radius', 'opacity', 'workspacePresentation'],
     row: [],
     column: [],
     stack: [],
+    workspace: [],
+    window: ['title', 'x', 'y', 'active', 'draggable', 'closable', 'titlebarHeight', 'titlebarButtonWidth', 'titlebarTitle', 'responsiveRect', 'mode', 'resizable', 'minimizable', 'maximizable'],
     scroll: ['scrollX', 'scrollY', 'scrollOffset'],
     label: ['text', 'color', 'fontSize', 'font', 'wrap', 'truncate'],
     button: ['text', 'disabled', 'tooltip', 'appearance'],
@@ -357,8 +386,11 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
   ])
   const EVENT_PROPS = Object.freeze([
     'onClick', 'onRelease', 'onScroll', 'onKey', 'onTextInput',
-    'onFocus', 'onBlur', 'onChange', 'onSubmit', 'onDismiss'
+    'onFocus', 'onBlur', 'onChange', 'onSubmit', 'onDismiss', 'onMove', 'onActivate',
+    'onResize', 'onMinimize', 'onMaximize', 'onRestore'
   ])
+  const WINDOW_EVENT_PROPS = new Set(['onResize', 'onMinimize', 'onMaximize', 'onRestore'])
+  const WINDOW_RESIZE_EDGES = new Set(['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'])
   const DIMENSIONS = new Set(['width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight'])
   const ALIGNMENTS = new Set(['start', 'center', 'end', 'stretch'])
   const JUSTIFICATIONS = new Set(['start', 'center', 'end', 'spaceBetween', 'spaceAround'])
@@ -371,6 +403,8 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
   const pendingRoots = new Set()
   let nextRootId = 1
   const signalObservers = new WeakMap()
+  const componentTypes = new WeakMap()
+  let nextComponentType = 1
 
   function fail(phase, message, cause) {
     const detail = cause == null ? '' : ': ' + (cause.message || String(cause))
@@ -552,6 +586,31 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     return result
   }
 
+  function validateWindowResponsiveRect(rect) {
+    if (!plainObject(rect)) throw fail('layout', 'window.responsiveRect must be a plain object')
+    function branch(value, name) {
+      if (typeof value === 'number' && Number.isFinite(value) && ((name === 'x' || name === 'y') || value >= 0)) return
+      if (typeof value === 'string' && /^(?:\d+(?:\.\d+)?|\.\d+)%$/.test(value)
+        && Number.isFinite(Number(value.slice(0, -1))) && Number(value.slice(0, -1)) > 0) return
+      throw fail('layout', 'window.responsiveRect.' + name + ' must be finite numeric geometry or a positive percentage')
+    }
+    for (const name of Object.keys(rect)) {
+      if (!['x', 'y', 'width', 'height'].includes(name)) throw fail('layout', 'Unsupported window.responsiveRect field: ' + name)
+      const value = rect[name]
+      if (!plainObject(value)) { branch(value, name); continue }
+      if (Object.keys(value).length === 0) throw fail('layout', 'window.responsiveRect.' + name + ' requires base or profiles')
+      for (const field of Object.keys(value)) {
+        if (field === 'base') branch(value.base, name)
+        else if (field === 'profiles' && plainObject(value.profiles)) {
+          for (const profile of Object.keys(value.profiles)) {
+            if (!/^[1-6]$/.test(profile)) throw fail('layout', 'Window geometry profiles must be integers in [1, 6]')
+            branch(value.profiles[profile], name)
+          }
+        } else throw fail('layout', 'Unsupported window geometry responsive field: ' + field)
+      }
+    }
+  }
+
   function validateProps(type, props) {
     if (!Object.prototype.hasOwnProperty.call(PRIMITIVES, type)) {
       throw fail('layout', 'Unknown JSX primitive: ' + type)
@@ -561,6 +620,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     for (const name of Object.keys(props)) {
       if (name === 'key') continue
       if (EVENT_PROPS.includes(name)) {
+        if (WINDOW_EVENT_PROPS.has(name) && type !== 'window') throw fail('layout', name + ' is only supported by window')
         if (props[name] != null && typeof props[name] !== 'function') {
           throw fail('layout', name + ' must be a function or null')
         }
@@ -576,6 +636,37 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     if (props.tooltip != null && typeof props.tooltip !== 'string') throw fail('layout', 'tooltip must be a string')
     if (props.appearance !== undefined) validateAppearance(props.appearance, true)
     if (type === 'slider') sliderValues(props)
+    if (type === 'screen' && 'layout' in props && props.layout !== 'stack') throw fail('layout', 'screen.layout must be stack')
+    if (type === 'panel' && 'workspacePresentation' in props && typeof props.workspacePresentation !== 'boolean') {
+      throw fail('layout', 'panel.workspacePresentation must be boolean')
+    }
+    if (type === 'window') {
+      if (typeof props.id !== 'string' || props.id.length === 0) throw fail('layout', 'window.id is required')
+      if (typeof props.title !== 'string') throw fail('layout', 'window.title must be a string')
+      for (const name of ['x', 'y', 'width', 'height']) {
+        if (typeof props[name] !== 'number' || !Number.isFinite(props[name])) throw fail('layout', 'window.' + name + ' must be finite')
+      }
+      if (props.width < 40 || props.height < 20) throw fail('layout', 'window width must be at least 40 and height at least 20')
+      for (const axis of ['Width', 'Height']) {
+        const minimum = axis === 'Width' ? 40 : 20
+        const min = props['min' + axis] === undefined ? minimum : props['min' + axis]
+        const max = props['max' + axis]
+        if (typeof min !== 'number' || !Number.isFinite(min) || min < minimum) throw fail('layout', 'window.min' + axis + ' must be finite and at least ' + minimum)
+        if (max !== undefined && (typeof max !== 'number' || !Number.isFinite(max) || max < min)) throw fail('layout', 'window.max' + axis + ' must be finite and at least its minimum')
+      }
+      if (props.responsiveRect !== undefined) validateWindowResponsiveRect(props.responsiveRect)
+      if (props.mode !== undefined && props.mode !== 'normal' && props.mode !== 'maximized') throw fail('layout', 'window.mode must be normal or maximized')
+      for (const name of ['titlebarHeight', 'titlebarButtonWidth']) {
+        const value = props[name]
+        if (value !== undefined && (!Number.isInteger(value) || value < (name === 'titlebarHeight' ? 0 : 1))) {
+          throw fail('layout', 'window.' + name + ' must be an integer at least ' + (name === 'titlebarHeight' ? 0 : 1))
+        }
+      }
+      for (const name of ['active', 'draggable', 'closable', 'titlebarTitle', 'resizable', 'minimizable', 'maximizable']) {
+        if (props[name] !== undefined && typeof props[name] !== 'boolean') throw fail('layout', 'window.' + name + ' must be a boolean')
+      }
+      if (props.coordinateSpace !== undefined && props.coordinateSpace !== 'logical') throw fail('layout', 'window geometry uses logical coordinates')
+    }
     if (type === 'dialog') {
       if (typeof props.id !== 'string' || props.id.length === 0) throw fail('layout', 'dialog.id is required')
       if (props.title !== undefined && typeof props.title !== 'string') throw fail('layout', 'dialog.title must be a string')
@@ -733,8 +824,24 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     const direction = props.direction || (node.type === 'row' ? 'row' : node.type === 'column' ? 'column' : 'column')
     const gap = Number(props.spacing == null ? (props.gap == null ? 0 : props.gap) : props.spacing) * scale
     const padding = Number(props.padding || 0) * scale
-    const sizes = children.map(child => intrinsicSize(child, availableWidth, availableHeight, viewport, adapter))
-    if (node.type === 'stack') {
+    const sizes = children.map(child => {
+      const childProps = resolvedProps(child.props, viewport)
+      const measured = intrinsicSize(child, availableWidth, availableHeight, viewport, adapter)
+      if (childProps.visible === false) return measured
+      const childScale = childProps.coordinateSpace === 'design' ? viewport.designScale : 1
+      const preferred = (axis, intrinsic) => {
+        const value = childProps[axis]
+        const minimum = childProps[axis === 'width' ? 'minWidth' : 'minHeight']
+        const maximum = childProps[axis === 'width' ? 'maxWidth' : 'maxHeight']
+        // Relative and fill sizes remain deferred until the parent allocates its flow.
+        return clampDimension(typeof value === 'number' ? value * childScale : intrinsic,
+          typeof minimum === 'number' ? minimum : undefined,
+          typeof maximum === 'number' ? maximum : undefined,
+          axis === 'width' ? availableWidth : availableHeight, childScale, axis)
+      }
+      return { width: preferred('width', measured.width), height: preferred('height', measured.height) }
+    })
+    if (node.type === 'stack' || node.type === 'screen' && props.layout === 'stack') {
       return { width: Math.max(...sizes.map(size => size.width), 0) + padding * 2, height: Math.max(...sizes.map(size => size.height), 0) + padding * 2 }
     }
     if (direction === 'row') {
@@ -761,8 +868,30 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     return { x: x, y: y }
   }
 
+  function windowGeometry(props, width, height, profile) {
+    if (props.mode === 'maximized') return {x: 0, y: 0, width, height}
+    const policy = props.responsiveRect || {}
+    function value(name, available) {
+      const selected = resolveResponsiveValue(policy[name], profile, props[name])
+      // Saturating percentages before multiplication avoids overflow; all geometry must fit this work area.
+      return typeof selected === 'string' ? Math.min(100, Number(selected.slice(0, -1))) / 100 * available : selected
+    }
+    const shownWidth = Math.min(width, Math.max(props.minWidth === undefined ? 40 : props.minWidth,
+      Math.min(props.maxWidth === undefined ? Infinity : props.maxWidth, value('width', width))))
+    const shownHeight = Math.min(height, Math.max(props.minHeight === undefined ? 20 : props.minHeight,
+      Math.min(props.maxHeight === undefined ? Infinity : props.maxHeight, value('height', height))))
+    return {x: Math.max(0, Math.min(value('x', width), width - shownWidth)),
+      y: Math.max(0, Math.min(value('y', height), height - shownHeight)), width: shownWidth, height: shownHeight}
+  }
+
   function layoutNode(node, x, y, availableWidth, availableHeight, parentClip, viewport, adapter, diagnostics, rootNode, allocated, eventHandlers, ancestorVisible) {
     const props = resolvedProps(node.props, viewport)
+    if (node.type === 'window') {
+      if (props.titlebarHeight === undefined) props.titlebarHeight = 20
+      if (props.titlebarButtonWidth === undefined) props.titlebarButtonWidth = 20
+      if (props.titlebarTitle === undefined) props.titlebarTitle = true
+      if (props.mode === undefined) props.mode = 'normal'
+    }
     // Dialog is an out-of-flow portal, independent of ancestor bounds and scroll offsets.
     if (node.type === 'dialog') {
       x = viewport.safeArea.left
@@ -796,15 +925,24 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     const children = []
     const padding = Number(props.padding || 0) * scale
     const innerX = x + padding
-    const innerY = y + padding
+    const titlebar = node.type === 'window' ? Math.min(props.titlebarHeight, height) : 0
+    const innerY = y + titlebar + padding
     const innerWidth = Math.max(0, width - padding * 2)
-    const innerHeight = Math.max(0, height - padding * 2)
-    const layoutClip = clip
+    const innerHeight = Math.max(0, height - titlebar - padding * 2)
+    const layoutClip = node.type === 'window' ? intersect(clip, {x, y: y + titlebar, width, height: Math.max(0, height - titlebar)}) : clip
+    const stacked = node.type === 'stack' || node.type === 'dialog' || node.type === 'screen' && props.layout === 'stack'
     if (!visible) {
       for (const child of node.children) {
         children.push(layoutNode(child, x, y, 0, 0, layoutClip, viewport, adapter, diagnostics, false, true, eventHandlers, false))
       }
-    } else if (node.children.length > 0 && node.type !== '#text' && node.type !== 'stack' && node.type !== 'dialog' && !TEXT_CHILDREN.has(node.type)) {
+    } else if (node.type === 'workspace') {
+      for (const child of node.children) {
+        const childProps = resolvedProps(child.props, viewport)
+        const geometry = windowGeometry(childProps, width, height, viewport.profile)
+        children.push(layoutNode(child, x + geometry.x, y + geometry.y, geometry.width, geometry.height,
+          layoutClip, viewport, adapter, diagnostics, false, true, eventHandlers))
+      }
+    } else if (node.children.length > 0 && node.type !== '#text' && !stacked && !TEXT_CHILDREN.has(node.type)) {
       const direction = props.direction || (node.type === 'row' ? 'row' : node.type === 'column' ? 'column' : 'column')
       const gap = Number(props.spacing == null ? (props.gap == null ? 0 : props.gap) : props.spacing) * scale
       const mainSize = direction === 'row' ? innerWidth : innerHeight
@@ -871,7 +1009,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
         children.push(layoutNode(record.child, childX - (direction === 'row' ? scrollOffset : 0), childY - (direction === 'column' ? scrollOffset : 0), childWidth, childHeight, layoutClip, viewport, adapter, diagnostics, false, true, eventHandlers))
         offset += record.main + actualGap
       }
-    } else if (visible && (node.type === 'stack' || node.type === 'dialog')) {
+    } else if (visible && stacked) {
       for (const child of node.children.filter(child => child.type !== 'dialog')) {
         const childIntrinsic = intrinsicSize(child, innerWidth, innerHeight, viewport, adapter)
         const childProps = resolvedProps(child.props, viewport)
@@ -911,7 +1049,38 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     })
   }
 
+  function validateWorkspaceHierarchy(nodes) {
+    let workspaces = 0
+    let activeWindows = 0
+    function visit(children, parent, depth, inheritedDesign) {
+      for (const node of children) {
+        const design = inheritedDesign || node.props.coordinateSpace === 'design'
+        if (node.props.workspacePresentation === true && (node.type !== 'panel' || parent === null
+          || parent.type !== 'screen' || depth !== 1 || !parent.children.some(sibling => sibling.type === 'workspace'))) {
+          throw fail('layout', 'workspacePresentation panels must be direct root screen siblings of a workspace')
+        }
+        if (node.type === 'workspace') {
+          if (++workspaces > 1 || parent !== null && (parent.type !== 'screen' || depth !== 1)) {
+            throw fail('layout', 'workspace must be the root or a direct child of the root screen, with at most one workspace')
+          }
+          if (design) throw fail('layout', 'workspace geometry uses logical coordinates, including its ancestors')
+        }
+        if (node.type === 'window') {
+          if (parent === null || parent.type !== 'workspace') throw fail('layout', 'window must be a direct workspace child')
+          if (design) throw fail('layout', 'window geometry uses logical coordinates, including its ancestors')
+          if (node.props.active === true && ++activeWindows > 1) throw fail('layout', 'workspace can have at most one active window')
+        }
+        if (parent !== null && parent.type === 'workspace' && node.type !== 'window') {
+          throw fail('layout', 'workspace children must be windows')
+        }
+        visit(node.children, node, depth + 1, design)
+      }
+    }
+    visit(nodes, null, 0, false)
+  }
+
   function layoutSnapshotFor(nodes, viewport, adapter, eventHandlers) {
+    validateWorkspaceHierarchy(nodes)
     const diagnostics = []
     const rootClip = Object.freeze({ x: viewport.safeArea.left, y: viewport.safeArea.top, width: viewport.contentWidth, height: viewport.contentHeight })
     const layoutNodes = nodes.map(node => layoutNode(node, rootClip.x, rootClip.y, rootClip.width, rootClip.height, rootClip, viewport, adapter, diagnostics, true, false, eventHandlers))
@@ -922,24 +1091,43 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     if (snapshot === null) return true
     let modal = null
     let target = null
-    function visit(nodes) {
+    let targetWindow = null
+    function visit(nodes, containingWindow) {
       for (const node of nodes) {
-        if (!node.visible) continue
-        if (node.type === 'dialog') modal = node
-        if (node.id === id) target = node
-        visit(node.children)
+        const window = node.type === 'window' ? node : containingWindow
+        if (node.visible && node.type === 'dialog') modal = node
+        if (node.id === id) { target = node; targetWindow = window }
+        visit(node.children, window)
       }
     }
-    visit(snapshot.nodes)
+    visit(snapshot.nodes, null)
+    if (target === null || !target.visible) return false
     if (target !== null && target.type === 'dialog' && eventName === 'onDismiss') {
       const reason = input == null ? undefined : input.reason
       if (reason === 'escape' && target.style.closeOnEscape === false || reason === 'backdrop' && target.style.closeOnBackdrop === false) return false
     }
-    if (modal === null) return true
-    function contains(node) {
-      return node.visible && (node.id === id || node.children.some(contains))
+    if (modal !== null) {
+      function contains(node) {
+        return node.visible && (node.id === id || node.children.some(contains))
+      }
+      // The global modal outranks workspace activation, even in an inactive window.
+      return contains(modal)
     }
-    return contains(modal)
+    if (WINDOW_EVENT_PROPS.has(eventName) && (target === null || target.type !== 'window')) return false
+    if (targetWindow === null) return true
+    if (!target.visible || !targetWindow.visible) return false
+    if (target === targetWindow && eventName === 'onActivate') return true
+    if (target === targetWindow && eventName === 'onDismiss') return target.style.closable !== false
+    if (targetWindow.style.active !== true) return false
+    if (target !== targetWindow) return true
+    if (eventName === 'onMove') return target.style.draggable !== false && target.style.mode !== 'maximized'
+    if (eventName === 'onResize') return target.style.resizable === true && target.style.mode !== 'maximized'
+      && input != null && ['x', 'y', 'width', 'height'].every(name => Number.isFinite(input[name]))
+      && input.width >= 0 && input.height >= 0 && WINDOW_RESIZE_EDGES.has(input.edge)
+    if (eventName === 'onMinimize') return target.style.minimizable === true
+    if (eventName === 'onMaximize') return target.style.maximizable === true && target.style.mode !== 'maximized'
+    if (eventName === 'onRestore') return target.style.maximizable === true && target.style.mode === 'maximized'
+    return true
   }
 
   function callGuest(callback, args) {
@@ -962,24 +1150,38 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       children = []
     }
     if (type === 'label' && hostProps.text == null && children.length === 0) hostProps.text = ''
+    if (type === 'window') {
+      hostProps.active = props.active === true
+      hostProps.draggable = props.draggable !== false
+      hostProps.closable = props.closable !== false
+      for (const capability of ['resizable', 'minimizable', 'maximizable']) hostProps[capability] = props[capability] === true
+    }
     if (type === 'slider') Object.assign(hostProps, sliderValues(props))
     if (type === 'item') { hostProps.count = props.count === undefined ? 1 : props.count; hostProps.itemTooltip = props.itemTooltip !== false }
     if (type === 'dialog') { hostProps.closeOnEscape = props.closeOnEscape !== false; hostProps.closeOnBackdrop = props.closeOnBackdrop !== false }
     return { props: Object.freeze(hostProps), children: children }
   }
 
-  function expandSiblings(values, parentPath, eventHandlers, ids, siblingKeys) {
+  function expandSiblings(values, parentPath, eventHandlers, ids, scope = [], windowId = null, cancelled = null) {
+    if (cancelled != null && cancelled()) return []
     const result = []
-    const keys = siblingKeys == null ? new Set() : siblingKeys
+    const keys = new Set()
     let index = 0
-    function visit(value, path) {
+    function visit(value) {
+      if (cancelled != null && cancelled()) return
       if (value == null || typeof value === 'boolean') return
       if (Array.isArray(value)) {
-        for (const item of value) visit(item, path + '.' + index++)
+        for (const item of value) visit(item)
         return
       }
+      // Unkeyed fragments are transparent, including duplicate-key validation.
+      if (isVNode(value) && value.type === FRAGMENT && value.key == null) {
+        for (const item of value.children) visit(item)
+        return
+      }
+      const position = index++
       if (typeof value === 'string' || typeof value === 'number') {
-        result.push(Object.freeze({ type: '#text', key: null, props: Object.freeze({ text: String(value) }), children: Object.freeze([]) }))
+        result.push(Object.freeze({ type: '#text', key: null, identity: JSON.stringify([...scope, ['position', position]]), props: Object.freeze({ text: String(value) }), children: Object.freeze([]) }))
         return
       }
       if (!isVNode(value)) throw fail('render', 'Render values must be VNodes, arrays, text, or null')
@@ -987,22 +1189,28 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
         if (keys.has(value.key)) throw fail('layout', 'Duplicate sibling key: ' + value.key)
         keys.add(value.key)
       }
-      result.push(...expandNode(value, parentPath + '.' + index++, eventHandlers, ids, keys))
+      const identity = [...scope, value.key == null ? ['position', position] : ['key', value.key]]
+      result.push(...expandNode(value, parentPath + '.' + position, eventHandlers, ids, identity, windowId, cancelled))
     }
-    for (const value of values) visit(value, parentPath)
+    for (const value of values) visit(value)
     return result
   }
 
-  function expandNode(node, path, eventHandlers, ids, siblingKeys) {
-    if (node.type === FRAGMENT) return expandSiblings(node.children, path, eventHandlers, ids, siblingKeys)
+  function expandNode(node, path, eventHandlers, ids, identity, windowId, cancelled) {
+    if (node.type === FRAGMENT) return expandSiblings(node.children, path, eventHandlers, ids, [...identity, ['fragment']], windowId, cancelled)
     if (typeof node.type === 'function') {
+      let typeId = componentTypes.get(node.type)
+      if (typeId == null) {
+        typeId = nextComponentType++
+        componentTypes.set(node.type, typeId)
+      }
       let result
       try {
         result = callGuest(node.type, [node.props])
       } catch (error) {
         throw fail('component', 'Component render failed', error)
       }
-      const expanded = expandSiblings([result], path, eventHandlers, ids)
+      const expanded = expandSiblings([result], path, eventHandlers, ids, [...identity, ['component', typeId]], windowId, cancelled)
       if (node.key != null && expanded.length === 1 && expanded[0].key == null) {
         return [Object.freeze({ ...expanded[0], key: node.key })]
       }
@@ -1014,8 +1222,11 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       && node.children.every(child => typeof child === 'string' || typeof child === 'number')
     let childNodes
     if (rawTextChildren) childNodes = node.children
-    else childNodes = expandSiblings(node.children, path, eventHandlers, ids)
-    const normalized = hostPropsFor(node.type, node.props, childNodes)
+    else childNodes = expandSiblings(node.children, path, eventHandlers, ids, [], node.type === 'window' ? node.props.id : windowId, cancelled)
+    // Local business ids are scoped after component expansion; window ids remain native ids.
+    const props = windowId !== null && node.type !== 'window' && node.props.id != null
+      ? {...node.props, id: JSON.stringify([windowId, node.props.id])} : node.props
+    const normalized = hostPropsFor(node.type, props, childNodes)
     const id = normalized.props.id
     if (id != null) {
       if (ids.has(id)) throw fail('layout', 'Duplicate UI id: ' + id)
@@ -1030,6 +1241,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     return [Object.freeze({
       type: node.type,
       key: node.key,
+      identity: JSON.stringify(identity),
       props: normalized.props,
       children: Object.freeze(children),
       path: path
@@ -1065,20 +1277,15 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
   }
 
   function reconcileChildren(transaction, previous, candidate, parent, state) {
-    const oldByKey = new Map()
-    for (const node of previous) if (node.key != null) oldByKey.set(node.key, node)
+    const oldByIdentity = new Map(previous.map(node => [node.identity, node]))
+    const identities = new Set()
     const used = new Set()
     const next = []
-    for (let i = 0; i < candidate.length; i++) {
-      const node = candidate[i]
-      let old = null
-      if (node.key != null) {
-        const keyed = oldByKey.get(node.key)
-        if (keyed != null && keyed.type === node.type) old = keyed
-      } else {
-        const positional = previous[i]
-        if (positional != null && positional.key == null && positional.type === node.type && !used.has(positional)) old = positional
-      }
+    for (const node of candidate) {
+      if (identities.has(node.identity)) throw fail('layout', 'Duplicate expanded UI identity')
+      identities.add(node.identity)
+      const matched = oldByIdentity.get(node.identity)
+      const old = matched != null && matched.type === node.type && !used.has(matched) ? matched : null
       let handle
       if (old != null) {
         used.add(old)
@@ -1088,16 +1295,16 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
         handle = transaction.create(node.type, node.key, node.props)
       }
       const children = reconcileChildren(transaction, old == null ? [] : old.children, node.children, handle, state)
-      next.push(Object.freeze({ type: node.type, key: node.key, props: node.props, children: children, handle: handle }))
+      next.push(Object.freeze({ type: node.type, key: node.key, identity: node.identity, props: node.props, children: children, handle: handle }))
       transaction.order(handle, children.map(child => child.handle))
     }
-    for (const old of previous) if (!used.has(old) && !next.some(node => node.handle === old.handle)) removeTree(transaction, old)
+    for (const old of previous) if (!used.has(old)) removeTree(transaction, old)
     transaction.order(parent, next.map(node => node.handle))
     return Object.freeze(next)
   }
 
   function scheduleRoot(root) {
-    if (root.disposed || root.pending || !root.dirty) return
+    if (root.disposed || root.pending || root.reconciling || !root.dirty) return
     root.pending = true
     const run = function () {
       root.pending = false
@@ -1132,6 +1339,13 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
 
   function createSignal(initialValue: unknown): NekoUiSignal<unknown> {
     let value = freezeValue(initialValue, new WeakSet())
+    function observingRoots() {
+      const roots = new Set(signalObservers.get(signal))
+      for (let tracker = activeTracker; tracker != null; tracker = tracker.previous) {
+        if (tracker.dependencies.has(signal)) roots.add(tracker.root)
+      }
+      return Array.from(roots).filter(root => !root.disposed)
+    }
     const signal = {
       get: function () {
         if (activeTracker != null) activeTracker.dependencies.add(signal)
@@ -1139,8 +1353,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       },
       set: function (nextValue) {
         const next = freezeValue(nextValue, new WeakSet())
-        const observers = signalObservers.get(signal)
-        const liveRoots = Array.from(observers).filter(root => !root.disposed)
+        const liveRoots = observingRoots()
         const offThread = liveRoots.find(root => !ownerThread(root.adapter))
         if (offThread != null) {
           if (!offThread.adapter.enqueue(() => signal.set(next))) throw new Error('Signal write rejected off the owner thread')
@@ -1153,8 +1366,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       },
       update: function (updater) {
         if (typeof updater !== 'function') throw new TypeError('Signal updater must be a function')
-        const observers = signalObservers.get(signal)
-        const liveRoots = Array.from(observers).filter(root => !root.disposed)
+        const liveRoots = observingRoots()
         const offThread = liveRoots.find(root => !ownerThread(root.adapter))
         if (offThread != null) {
           if (!offThread.adapter.enqueue(() => signal.update(updater))) throw new Error('Signal update rejected off the owner thread')
@@ -1224,14 +1436,16 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       disposed: false,
       dirty: false,
       pending: false,
+      reconciling: false,
+      closing: false,
+      forcedClearTree: null,
       reconcile: null
     }
 
-    root.reconcile = function (initial) {
-      if (root.disposed) throw new Error('UI root is disposed: ' + rootId)
+    function reconcilePass(initial) {
       let candidate
-      let tracker = { root: root, dependencies: new Set() }
       const previousTracker = activeTracker
+      const tracker = { root: root, dependencies: new Set(), previous: previousTracker }
       activeTracker = tracker
       try {
         let output
@@ -1240,8 +1454,10 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
         } catch (error) {
           throw fail('render', 'UI render failed', error)
         }
+        if (root.disposed) return false
         const eventHandlers = new Map()
-        candidate = expandSiblings([output], rootId, eventHandlers, new Set())
+        candidate = expandSiblings([output], rootId, eventHandlers, new Set(), [], null, () => root.disposed)
+        if (root.disposed) return false
         candidate = Object.freeze(candidate)
         for (const node of candidate) {
           const check = list => {
@@ -1261,10 +1477,20 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
         } catch (error) {
           throw fail('layout', 'UI layout failed', error)
         }
+        if (root.disposed) return false
+        if (root.dirty) return 'stale'
         const transaction = adapter.begin()
         try {
           const nextTree = reconcileChildren(transaction, root.tree, candidate, null, root)
+          if (root.disposed || root.dirty) {
+            transaction.rollback()
+            return root.disposed ? false : 'stale'
+          }
           transaction.commit(nextTree.map(node => node.handle))
+          if (root.disposed) {
+            root.forcedClearTree = nextTree
+            return true
+          }
           for (const signal of root.dependencies) if (!tracker.dependencies.has(signal)) signalObservers.get(signal).delete(root)
           for (const signal of tracker.dependencies) if (!root.dependencies.has(signal)) signalObservers.get(signal).add(root)
           root.dependencies = tracker.dependencies
@@ -1289,6 +1515,77 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       }
     }
 
+    root.reconcile = function (initial) {
+      if (root.disposed) throw new Error('UI root is disposed: ' + rootId)
+      if (root.reconciling || root.closing) {
+        root.dirty = true
+        return 'queued'
+      }
+      root.reconciling = true
+      let committed = false
+      try {
+        // Only stable candidates publish. A commit callback may request a follow-up,
+        // but its failure cannot turn an already published refresh into a failure.
+        for (let pass = 0; pass < 32; pass++) {
+          root.dirty = false
+          pendingRoots.delete(root)
+          const result = reconcilePass(initial && !committed)
+          if (result === true) committed = true
+          if (result === false || !root.dirty) return committed
+        }
+        const error = fail('render', 'UI updates did not stabilize after 32 passes')
+        report(adapter, rootId, 'render', error)
+        if (initial && !committed) throw error
+        return committed
+      } finally {
+        root.reconciling = false
+        root.dirty = false
+        pendingRoots.delete(root)
+        clearDeferredHostTree()
+      }
+    }
+
+    function clearDeferredHostTree() {
+      if (root.forcedClearTree == null) return
+      const tree = root.forcedClearTree
+      root.forcedClearTree = null
+      clearHostTree(tree)
+    }
+
+    function detachRoot() {
+      for (const signal of root.dependencies) signalObservers.get(signal).delete(root)
+      root.dependencies.clear()
+      root.eventHandlers.clear()
+      root.tree = Object.freeze([])
+      root.candidate = Object.freeze([])
+      root.layoutSnapshot = null
+      root.disposed = true
+      root.dirty = false
+      root.pending = false
+      pendingRoots.delete(root)
+      render = () => undefined
+    }
+
+    function clearHostTree(tree) {
+      let transaction = null
+      root.closing = true
+      try {
+        if (tree.length > 0) {
+          transaction = adapter.begin()
+          for (const node of tree) removeTree(transaction, node)
+          transaction.order(null, [])
+          transaction.commit([])
+        }
+        return true
+      } catch (error) {
+        try { if (transaction != null) transaction.rollback() } catch (_) {}
+        report(adapter, rootId, 'host-update', error)
+        return false
+      } finally {
+        root.closing = false
+      }
+    }
+
     const handle = Object.freeze({
       id: rootId,
       refresh: function () {
@@ -1305,20 +1602,31 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
           if (!adapter.enqueue(() => handle.resize(input))) throw new Error('UI resize rejected off the owner thread')
           return 'queued'
         }
+        if (root.reconciling || root.closing) return false
         const nextViewport = resolveViewport(input)
         if (root.candidate.length === 0) {
           root.viewport = nextViewport
           return false
         }
+        root.reconciling = true
         try {
           const nextSnapshot = layoutSnapshotFor(root.candidate, nextViewport, adapter, root.eventHandlers)
+          if (root.disposed) return false
           adapter.layout(cloneLayoutTree(root.candidate), nextViewport, { ...nextSnapshot, rootId: rootId }, true)
+          if (root.disposed) return false
           root.viewport = nextViewport
           root.layoutSnapshot = nextSnapshot
           return true
         } catch (error) {
           report(adapter, rootId, 'layout', fail('layout', 'UI resize layout failed', error))
           return false
+        } finally {
+          root.reconciling = false
+          clearDeferredHostTree()
+          if (!root.disposed && root.dirty) {
+            pendingRoots.add(root)
+            flushRoots()
+          }
         }
       },
       layout: function () { return root.layoutSnapshot },
@@ -1339,6 +1647,9 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
           target: id,
           x: input == null ? undefined : input.x,
           y: input == null ? undefined : input.y,
+          width: input == null ? undefined : input.width,
+          height: input == null ? undefined : input.height,
+          edge: input == null ? undefined : input.edge,
           button: input == null ? undefined : input.button,
           key: input == null ? undefined : input.key,
           value: input == null ? undefined : input.value,
@@ -1354,35 +1665,33 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
         }
       },
       isDisposed: function () { return root.disposed },
+      isUpdating: function () { return !root.disposed && (root.reconciling || root.closing) },
       close: function () {
         if (root.disposed) return false
         if (!ownerThread(adapter)) {
           if (!adapter.enqueue(() => handle.close())) throw new Error('UI close rejected off the owner thread')
           return 'queued'
         }
-        let transaction = null
-        try {
-          if (root.tree.length > 0) {
-            transaction = adapter.begin()
-            for (const node of root.tree) removeTree(transaction, node)
-            transaction.order(null, [])
-            transaction.commit([])
-          }
-        } catch (error) {
-          try { if (transaction != null) transaction.rollback() } catch (_) {}
-          report(adapter, rootId, 'host-update', error)
-          return false
-        }
-        for (const signal of root.dependencies) signalObservers.get(signal).delete(root)
-        root.dependencies.clear()
-        root.eventHandlers.clear()
-        root.tree = Object.freeze([])
-        root.candidate = Object.freeze([])
-        root.layoutSnapshot = null
-        root.disposed = true
-        root.dirty = false
-        root.pending = false
+        if (root.reconciling || root.closing) return false
+        if (!clearHostTree(root.tree)) return false
+        detachRoot()
         return true
+      },
+      forceClose: function () {
+        if (root.disposed) return
+        if (!ownerThread(adapter)) throw new Error('UI forced close requires the owner thread')
+        if (root.reconciling) {
+          // Disposal is immediate; host cleanup waits for the active transaction.
+          root.forcedClearTree = root.tree
+          detachRoot()
+          return
+        }
+        try {
+          handle.close()
+        } finally {
+          // Generation teardown must release guest state even if host cleanup fails.
+          detachRoot()
+        }
       }
     })
     root.reconcile(true)

@@ -351,6 +351,34 @@
       "expected": "Authoring forms and dialogs opens on Profile with Nothing confirmed and Background clicks: 0. Invalid name/quantity produces errors without a dialog. Alex and 3 open local confirmation; Confirm changes the status to Confirmed Alex x3. Preview displays a read-only diamond icon; Locked is disabled.",
       "assertion": "The actual TSX compiler and UI runtime exercise lazy tabs, synchronous immutable validation, controlled dialog and background dispatch rejection with only the platform screen host substituted. Native modal focus, item rendering/tooltips and live client acceptance require separate checks.",
       "cleanup": "Close the Screen, remove this script and reload CLIENT. All eight signals reset on fresh execution; no persistent data, inventory or server/network authority is changed."
+    },
+    {
+      "id": "client-workspace",
+      "file": "client/workspace.tsx",
+      "scriptType": "CLIENT",
+      "language": "tsx",
+      "verification": "real-engine-with-platform-fixture",
+      "requires": [
+        "NeoForge 26.x ClientUI profile only",
+        "nekojs/jsx-runtime",
+        "nekojs/jsx-workspace",
+        "UI.createSignal",
+        "createWorkspace",
+        "workspace.add",
+        "workspace.open",
+        "ClientUI.screen",
+        "item primitive"
+      ],
+      "install": [
+        {
+          "file": "client/workspace.tsx",
+          "destination": "nekojs/client_scripts/authoring-examples/workspace.tsx"
+        }
+      ],
+      "trigger": "On a supported NeoForge 26.x CLIENT profile, install this auto-opening example alone and run /nekojs reload client. Skip Fabric, 1.21.1 and dedicated servers without ClientUI.",
+      "expected": "Authoring workspace opens one desktop containing Notes, Tools and Preview with an explicit taskbar. Notes saved: 0 and Tools clicks: 0 remain independent. Edit Notes, minimize it and restore via the titled Notes taskbar button without resetting text/counters. All three windows opt into resize/minimize/maximize; Notes demonstrates responsive normal geometry and integer frame metrics, while Tools hides title text. Close one logical window without closing the others.",
+      "assertion": "The actual TSX compiler, UI runtime and workspace module use a platform screen fixture to exercise independent business values and retained keyed content through minimize/restore. Native frame hit tests, taskbar/floating/custom presentation routing, occlusion, focus, item painting and real-client acceptance require separate verification.",
+      "cleanup": "Close the Screen, remove this script and reload CLIENT. Four local signals and all logical windows reset on fresh execution. No file, inventory, server or network state is changed."
     }
   ],
   "limitations": "Sources are opt-in reference examples, never auto-installed. Isolated platform fixtures and real common-engine tests do not certify Minecraft codecs, tag rebuilding, registry realization, GUI rendering or all loader/version profiles. Validate required declarations and use a disposable instance; live game acceptance remains not run."

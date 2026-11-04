@@ -69,7 +69,12 @@ public final class JsxScreen extends Screen {
 
     @Override
     public boolean isPauseScreen() {
-        return pausesGame;
+        return adapter.pausesGame(pausesGame);
+    }
+
+    @Override
+    public Component getTitle() {
+        return Component.literal(adapter.screenTitle(super.getTitle().getString()));
     }
 
     @Override
@@ -83,14 +88,13 @@ public final class JsxScreen extends Screen {
 
     @Override
     public void onClose() {
-        adapter.close();
-        super.onClose();
+        if (adapter.close()) disposed = true;
     }
 
     @Override
     public void removed() {
         if (disposed) return;
-        adapter.close();
+        adapter.removedFromHost();
         disposed = true;
         super.removed();
     }

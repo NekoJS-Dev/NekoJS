@@ -176,6 +176,8 @@ Codes from #58 that have no call site on this branch are not used:
 | NEKO-7008 | The native host rejected a control appearance outside the controlled color/state-field grammar. |
 | NEKO-7011 | The native host rejected an invalid slider configuration (non-finite range/value, non-positive step or out-of-range value). |
 | NEKO-7012 | The native host rejected invalid dialog props (missing/blank id, non-string title or non-boolean close flags). Common component/layout validation may instead report the phase through `NEKO-7007`. |
+| NEKO-7013 | Workspace authoring rejects invalid configuration/IDs or controller mutation during root publication. Construction/controller calls can throw directly; a UI phase may also wrap the cause as `NEKO-7007`. |
+| NEKO-7014 | Managed-mount authoring rejected non-positive/unrepresentable GUI region bounds, a region-only operation on an owned Screen mount, or another root handle/layout root ID. Construction, binding or pre-publication validation can reject directly; identical-handle binding is idempotent. It is not a new HTTP/MCP wire error. |
 
 <a id="wiki-section-9"></a>
 ## JSX UI inspector

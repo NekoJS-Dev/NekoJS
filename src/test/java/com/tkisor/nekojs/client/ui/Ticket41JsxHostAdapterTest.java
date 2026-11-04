@@ -239,7 +239,7 @@ class Ticket41JsxHostAdapterTest {
         String hostTree = Files.readString(root.resolve("JsxHostTree.java"));
         assertTrue(screen.contains("adapter.paintNode"), "paint must consume committed host nodes");
         assertTrue(!screen.contains("render("), "normal paint must not execute guest render");
-        assertTrue(screen.contains("adapter.close();"), "Screen removal must use adapter cleanup");
+        assertTrue(screen.contains("adapter.removedFromHost();"), "Screen removal must force adapter cleanup without navigating the borrowed host");
         assertTrue(adapter.contains("tree.close(() ->"), "Screen cleanup must pass root release to the retained tree");
         assertTrue(hostTree.indexOf("closeRoot.run()") < hostTree.indexOf("clear();"), "failed root release must retain nodes");
         assertTrue(adapter.contains("void layout(Object tree, Object viewport, Object snapshot)"),
@@ -254,7 +254,7 @@ class Ticket41JsxHostAdapterTest {
     void screenTeardownNotifiesTheGuestBeforeEnteringClosing() throws Exception {
         String adapter = Files.readString(sourceRoot().resolve("JsxHostAdapter.java"));
         String body = adapter.substring(adapter.indexOf("private void teardown("));
-        int guestClose = body.indexOf("root.invokeMember(\"close\")");
+        int guestClose = body.indexOf("root.invokeMember(\"forceClose\")");
         int beginClose = body.indexOf("lifecycle.beginClose()");
         assertTrue(guestClose > 0 && beginClose > 0, "teardown must notify the guest and enter CLOSING");
         // The common root releases its retained nodes through the same host transaction channel
