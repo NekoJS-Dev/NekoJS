@@ -11,6 +11,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ShowErrorListPacketReadOnlyContractTest {
 
     @Test
+    void emptySnapshotKeepsExplicitOpenAndPassiveRefreshDistinct() {
+        for (boolean open : new boolean[] { true, false }) {
+            FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                new ShowErrorListPacket(java.util.List.of(), open).write(buf);
+                ShowErrorListPacket decoded = new ShowErrorListPacket(buf);
+                assertEquals(java.util.List.of(), decoded.errors());
+                assertEquals(open, decoded.openIfMissing());
+            } finally {
+                buf.release();
+            }
+        }
+    }
+
+    @Test
     void longIdentityPathAndSummaryRoundTripWithoutImplicitUtfLimit() {
         String longSuffix = "x".repeat(600);
         ErrorSummaryDTO error = new ErrorSummaryDTO(

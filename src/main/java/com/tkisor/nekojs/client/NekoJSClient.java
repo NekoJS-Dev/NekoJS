@@ -33,6 +33,9 @@ import java.nio.file.Path;
 public class NekoJSClient {
 
     public static void register(IEventBus modEventBus, NekoRuntimeRoot root) {
+        com.tkisor.nekojs.client.gui.ErrorDashboardScreens.install(
+                () -> root.openBuiltinUiSession(net.minecraft.client.Minecraft.getInstance()::schedule),
+                com.tkisor.nekojs.platform.compat.McClientCompat.get());
         NeoForge.EVENT_BUS.addListener((RegisterClientCommandsEvent event) ->
                 event.getDispatcher().register(Commands.literal("nekojs")
                         .then(Commands.literal("browse").executes(context -> BrowseCommand.open()))));

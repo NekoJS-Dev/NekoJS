@@ -85,7 +85,7 @@ public final class NekoJSCommands {
                                         return 0;
                                     }
                                     NekoRuntimeRoot.ErrorSnapshot errors = root.errors();
-                                    if (errors.count() > 0) {
+                                    if (errors.count() > 0 || source.getEntity() instanceof ServerPlayer) {
                                         ServerPlayer player = source.getPlayerOrException();
                                         PacketDistributor.sendToPlayer(player, new ShowErrorListPacket(errorSnapshot(errors)));
                                     } else {

@@ -10,5 +10,5 @@
     "skipLibCheck": false,
     "typeRoots": ["./generated"]
   },
-  "include": ["managed-api-usage.ts", "jsx-primitive-props.tsx", "jsx-advanced-controls.tsx", "jsx-workspace.tsx", "generated/**/*.d.ts"]
+  "include": ["managed-api-usage.ts", "jsx-primitive-props.tsx", "jsx-advanced-controls.tsx", "jsx-workspace.tsx", "jsx-callback-contracts.tsx", "generated/**/*.d.ts"]
 }

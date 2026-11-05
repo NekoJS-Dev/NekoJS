@@ -265,4 +265,29 @@ class NekoRuntimeRootLifecycleTest {
 
         root.closeSilently();
     }
+
+    @Test
+    void builtinUiSurvivesClientReloadSuccessAndFailureButClosesWithItsRoot() {
+        try (var engine = graal.graalvm.polyglot.Engine.create("js")) {
+            NekoRuntimeRoot root = new RootBuilder(new RecordingBridge()).build(engine);
+            var session = root.openBuiltinUiSession(Runnable::run);
+            try {
+                assertSame(engine, session.context().getEngine());
+                assertTrue(session.errorDashboardFactory(new com.tkisor.nekojs.testfixture.I18nTestFacade((key, args) -> key)).canExecute());
+                root.createScriptManager(ScriptType.CLIENT).loadScripts();
+                assertTrue(root.reload(ScriptType.CLIENT).success());
+                root.registerDomainCollector(new CandidateDomainCollector() {
+                    public String domain() { return "builtin-ui-failure-fixture"; }
+                    public ScriptType scriptType() { return ScriptType.CLIENT; }
+                    public void collect(Handle handle) { throw new IllegalStateException("fixture candidate failure"); }
+                });
+                assertThrows(NekoReloadException.class, () -> root.reload(ScriptType.CLIENT));
+                assertFalse(session.isClosed());
+                assertEquals(42, session.context().eval("js", "21*2").asInt());
+            } finally { root.closeSilently(); }
+            assertTrue(session.isClosed());
+            assertThrows(RuntimeException.class, () -> session.context().eval("js", "42"));
+            assertThrows(IllegalStateException.class, () -> root.openBuiltinUiSession(Runnable::run));
+        }
+    }
 }

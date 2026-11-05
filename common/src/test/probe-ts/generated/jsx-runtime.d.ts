@@ -12,7 +12,7 @@ declare module 'nekojs/jsx-runtime' {
     export const UI: NekoUiApi;
     type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     type NekoUiPrimitive = 'screen' | 'panel' | 'row' | 'column' | 'stack' | 'scroll' | 'label' | 'button' | 'input' | 'slider' | 'image' | 'spacer' | 'dialog' | 'item' | 'workspace' | 'window'
-    type NekoUiJsxType = NekoUiPrimitive | NekoUiComponent | symbol
+    type NekoUiJsxType = NekoUiPrimitive | NekoUiComponent<never> | symbol
     type NekoUiLayoutSize = number | 'auto' | 'fill' | `${number}%`
     type NekoUiResponsive<T> = T | { readonly base?: T; readonly profiles?: Partial<Record<NekoUiProfile, T>> }
     type NekoUiEventName = 'onClick' | 'onRelease' | 'onScroll' | 'onKey' | 'onTextInput' | 'onFocus' | 'onBlur' | 'onChange' | 'onSubmit' | 'onDismiss' | 'onMove' | 'onActivate' | 'onResize' | 'onMinimize' | 'onMaximize' | 'onRestore'
@@ -71,13 +71,15 @@ declare module 'nekojs/jsx-runtime' {
       }
     interface NekoVNode {
         readonly $$nekoJsx: true
-        readonly type: string | symbol | NekoUiComponent
+        readonly type: string | symbol | NekoUiComponent<never>
         readonly key: string | null
         readonly props: Readonly<Record<string, unknown>>
-        readonly children: readonly unknown[]
+        readonly children: readonly NekoUiRenderable[]
       }
-    type NekoUiComponent = Function
-    type NekoUiCallback = Function
+    type NekoUiComponent<Props = Record<string, unknown>> = (props: Props) => NekoUiRenderable
+    type NekoUiCallback = () => void
+    type NekoUiRender = () => NekoUiRenderable
+    type NekoUiUpdater<T> = (current: T) => T
     type NekoUiEventCallback = (event: NekoUiEvent) => void
     interface NekoUiDiagnostic {
         readonly rootId: string
@@ -136,13 +138,13 @@ declare module 'nekojs/jsx-runtime' {
     interface NekoUiSignal<T> {
         get(): T
         set(value: T): boolean | 'queued'
-        update(updater: NekoUiCallback): boolean | 'queued'
+        update(updater: NekoUiUpdater<T>): boolean | 'queued'
       }
-    interface NekoUiStore {
-        get(key: string): unknown
-        set(key: string, value: unknown): boolean | 'queued'
-        update(key: string, updater: NekoUiCallback): boolean | 'queued'
-        snapshot(): Readonly<Record<string, unknown>>
+    interface NekoUiStore<State extends Record<string, unknown> = Record<string, unknown>> {
+        get<Key extends keyof State & string>(key: Key): State[Key]
+        set<Key extends keyof State & string>(key: Key, value: State[Key]): boolean | 'queued'
+        update<Key extends keyof State & string>(key: Key, updater: NekoUiUpdater<State[Key]>): boolean | 'queued'
+        snapshot(): Readonly<State>
       }
     interface NekoUiRootHandle {
         readonly id: string
@@ -158,7 +160,7 @@ declare module 'nekojs/jsx-runtime' {
     interface NekoUiSharedProps {
         id?: string
         key?: string | number
-        children?: unknown
+        children?: NekoUiRenderable
         width?: NekoUiResponsive<NekoUiLayoutSize>
         height?: NekoUiResponsive<NekoUiLayoutSize>
         minWidth?: NekoUiResponsive<NekoUiLayoutSize>
@@ -310,6 +312,7 @@ declare module 'nekojs/jsx-runtime' {
         (props: object): NekoVNode
       }
     export namespace JSX {
+        type ElementType = NekoUiPrimitive | NekoUiComponent<never>
         interface Element extends NekoVNode {}
         interface ElementChildrenAttribute { children: {} }
         interface IntrinsicElements {
@@ -341,8 +344,8 @@ declare module 'nekojs/jsx-runtime' {
         profileFor(input: NekoUiViewportInput): NekoUiProfile
         element<T extends NekoUiJsxType>(type: T, props: NekoUiElementProps<T> | null, key?: string | number): NekoVNode
         createSignal<T>(initial: T): NekoUiSignal<T>
-        createStore(initial: Record<string, unknown>): NekoUiStore
-        createRoot(render: NekoUiCallback, adapter: NekoUiHostAdapter, options?: NekoUiRootOptions): NekoUiRootHandle
+        createStore<State extends Record<string, unknown>>(initial: State): NekoUiStore<State>
+        createRoot(render: NekoUiRender, adapter: NekoUiHostAdapter, options?: NekoUiRootOptions): NekoUiRootHandle
         batch<T>(callback: () => T): T
         readonly fragment: NekoUiFragment
       }

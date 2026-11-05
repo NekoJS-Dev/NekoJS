@@ -163,5 +163,7 @@
   "nekojs.command.info.entry_count": "%s entries",
   "nekojs.command.info.browse_failed": "Could not create the script directory: %s",
   "nekojs.command.info.mod_size": "Namespace containing %s items",
-  "nekojs.command.info.tab_size": "%s (%s displayed / %s searchable items)"
+  "nekojs.command.info.tab_size": "%s (%s displayed / %s searchable items)",
+  "nekojs.gui.dashboard.error_id": "ID: %s",
+  "nekojs.gui.dashboard.copy_retry": "Try copying again"
 }

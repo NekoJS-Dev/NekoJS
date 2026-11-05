@@ -50,6 +50,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     private boolean authoringInitialized;
     private volatile boolean authoringStopping;
     private volatile com.tkisor.nekojs.authoring.AuthoringRuntime authoringRuntime;
+    private com.tkisor.nekojs.core.ui.BuiltinUiRuntime builtinUi;
     /**
      * root 拥有的 prepared 模块缓存（票 11 W3）：模块 cache/session 生命周期归属。
      * 与 sandbox factory（module host / filesystem）共享同一实例；跨普通 reload、
@@ -140,6 +141,16 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         } catch (java.io.IOException | RuntimeException | LinkageError failure) {
             com.tkisor.nekojs.NekoJS.LOGGER.warn("[NEKO-1019] Authoring initialization failed; game startup continues", failure);
         }
+    }
+
+    /** Opens bundled diagnostic UI without joining a user CLIENT reload transaction. */
+    public synchronized com.tkisor.nekojs.core.ui.BuiltinUiRuntime.Session openBuiltinUiSession(
+            java.util.function.Consumer<Runnable> ownerQueue) {
+        if (authoringStopping) throw new IllegalStateException("[NEKO-7015] Runtime shutdown rejected built-in UI creation");
+        if (builtinUi == null) {
+            builtinUi = resources.track("builtin-ui", environmentFactory.createBuiltinUiRuntime());
+        }
+        return builtinUi.open(ownerQueue);
     }
 
     /** Binds the platform live adapter only when optional authoring initialization succeeded. */

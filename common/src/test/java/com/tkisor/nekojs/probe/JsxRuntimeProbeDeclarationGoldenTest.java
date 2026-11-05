@@ -45,6 +45,10 @@ class JsxRuntimeProbeDeclarationGoldenTest {
         assertTrue(actual.contains("declare module 'nekojs/jsx-runtime' {"), actual);
         assertTrue(actual.contains("export namespace JSX {"), actual);
         assertTrue(actual.contains("interface IntrinsicElements"), actual);
+        assertFalse(actual.contains("= Function"), "JSX callbacks must retain their callable signatures");
+        assertTrue(actual.contains("type NekoUiUpdater<T> = (current: T) => T"), actual);
+        assertTrue(actual.contains("createRoot(render: NekoUiRender"), actual);
+        assertTrue(actual.contains("NekoUiStore<State>"), actual);
 
         Files.createDirectories(ACTUAL_PATH.getParent());
         Files.writeString(ACTUAL_PATH, actual, StandardCharsets.UTF_8);

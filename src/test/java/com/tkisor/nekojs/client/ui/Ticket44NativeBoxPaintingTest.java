@@ -165,6 +165,7 @@ class Ticket44NativeBoxPaintingTest {
             adapter = allocate(JsxHostAdapter.class);
             setField(adapter, "minecraft", minecraft);
             setField(adapter, "ownerThread", Thread.currentThread());
+            setField(adapter, "textLayouts", new UiTextLayoutCache());
             setField(adapter, "tree", new JsxHostTree());
             setField(adapter, "manager", new ScriptManager(ScriptType.CLIENT, null, null, null, null,
                     null, null, null, List.of(), null));

@@ -222,6 +222,8 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register("Component", Component.class);
 
         if (registry.scriptType() == ScriptType.CLIENT) {
+            registry.register(Binding.of("I18n", new com.tkisor.nekojs.bindings.static_access.I18nJS(),
+                    com.tkisor.nekojs.api.facade.I18nFacade.class));
 //? if neoforge && >=26 {
             registry.register("ClientUI", new ClientUiJS());
 //?}

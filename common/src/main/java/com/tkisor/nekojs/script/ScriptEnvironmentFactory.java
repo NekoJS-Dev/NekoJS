@@ -62,6 +62,10 @@ public final class ScriptEnvironmentFactory {
         return globalStores;
     }
 
+    public com.tkisor.nekojs.core.ui.BuiltinUiRuntime createBuiltinUiRuntime() {
+        return sandboxFactory.createBuiltinUiRuntime();
+    }
+
     /** 创建一个 generation 的 global/shared 视图持有者（事务=候选写集；非事务=直接提交）。 */
     public GenerationGlobals newGeneration(ScriptType scriptType, boolean transactional) {
         return globalStores.newGeneration(scriptType, transactional);

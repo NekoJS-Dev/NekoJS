@@ -207,6 +207,7 @@ final class JsxHostTree {
         com.tkisor.nekojs.api.ui.TextLayout textLayout;
         com.tkisor.nekojs.wrapper.client.McFontAdapter textFont;
         double textScale = 1;
+        double coordinateScale = 1;
 
         Node(long identity, String type, String key, Map<String, Object> props) {
             this.identity = identity;
@@ -252,15 +253,18 @@ final class JsxHostTree {
             return true;
         }
 
+        int controlWidth() { return (int) Math.round(width / coordinateScale); }
+
         double sliderAt(double mouseX) {
-            double ratio = Math.max(0, Math.min(1, (mouseX - x - 4) / Math.max(1, width - 8)));
+            double ratio = Math.max(0, Math.min(1,
+                    ((mouseX - x) / coordinateScale - 4) / Math.max(1, controlWidth() - 8)));
             if (ratio <= 0) return sliderRange.min;
             if (ratio >= 1) return sliderRange.max;
             return sliderRange.min + ratio * (sliderRange.max - sliderRange.min);
         }
 
         void followInputCursor(java.util.function.ToIntFunction<String> measure) {
-            int viewport = Math.max(0, width - 9);
+            int viewport = Math.max(0, controlWidth() - 9);
             int caret = measure.applyAsInt(inputValue.substring(0, cursor));
             if (caret < inputScroll) inputScroll = caret;
             else if (caret > (long) inputScroll + viewport) inputScroll = Math.max(0, caret - viewport);
@@ -398,6 +402,7 @@ final class JsxHostTree {
             copy.textLayout = textLayout;
             copy.textFont = textFont;
             copy.textScale = textScale;
+            copy.coordinateScale = coordinateScale;
             return copy;
         }
     }

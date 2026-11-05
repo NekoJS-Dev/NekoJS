@@ -103,6 +103,7 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-4027` | storage persistence attempted during an uncommitted transfer transaction | 未提交传输事务期间不能加载或保存存储 |
 | `NEKO-4028` | Fabric registry drain did not consume a selected pending registry | Fabric 注册表抽干未消费选定的待注册条目 |
 | `NEKO-4029` | Probe type reflection is incomplete; declarations may be omitted | Probe 类型反射不完整，部分声明可能缺失 |
+| `NEKO-4030` | Localization binding rejected invalid text or format arguments | 本地化 Binding 拒绝无效文本或格式参数 |
 | `NEKO-4031` | Authored class declaration registration rejected | 手写类声明注册被拒绝 |
 | `NEKO-4032` | Conflicting authored class declarations rejected at the same priority | 同优先级的手写类声明冲突，注册被拒绝 |
 | `NEKO-4033` | Authored class declaration dependency is unavailable, excluded, or hidden | 手写类声明依赖不可用、被排除或被隐藏 |
@@ -178,6 +179,7 @@ Codes from #58 that have no call site on this branch are not used:
 | NEKO-7012 | The native host rejected invalid dialog props (missing/blank id, non-string title or non-boolean close flags). Common component/layout validation may instead report the phase through `NEKO-7007`. |
 | NEKO-7013 | Workspace authoring rejects invalid configuration/IDs or controller mutation during root publication. Construction/controller calls can throw directly; a UI phase may also wrap the cause as `NEKO-7007`. |
 | NEKO-7014 | Managed-mount authoring rejected non-positive/unrepresentable GUI region bounds, a region-only operation on an owned Screen mount, or another root handle/layout root ID. Construction, binding or pre-publication validation can reject directly; identical-handle binding is idempotent. It is not a new HTTP/MCP wire error. |
+| NEKO-7015 | A bundled diagnostic UI session is unavailable, closed, or failed to load/render/dispatch. On supported NeoForge 26.x clients, an active failed dashboard requests the native fallback once; closing/shutdown and late updates do not reopen it. This is not a new public Script API or packet status. |
 
 <a id="wiki-section-9"></a>
 ## JSX UI inspector

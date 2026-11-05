@@ -170,6 +170,8 @@ The in-game workspace editor and `/nekojs editor` have been removed. Edit script
 - `/nekojs error`: quickly report whether errors exist (yes/no and a short summary).
 - `/nekojs view_all_errors`: list full errors. NeoForge passes the error list to its error UI; Fabric outputs a text list in chat.
 
+NeoForge 26.1.2/26.2.0 use a bundled JSX dashboard with real error snapshots, search, independent detail scrolling, verified copy actions and checked asynchronous VS Code opening. Players running `/nekojs view_all_errors` always open the dashboard, showing an empty state when there are no errors; `/nekojs error` remains a chat summary, and passive snapshot updates do not open a closed dashboard. It is independent of user CLIENT script generations; a bundled UI failure falls back to the existing native dashboard. NeoForge 1.21.1 retains its native UI. Command permissions, packet fields and the chat-link opening flow remain unchanged.
+
 Script errors do not crash the game. They are caught and recorded in `logs/nekojs/<type>.log`, and the failing script is marked disabled until a successful reload clears that mark.
 
 <a id="wiki-section-16"></a>

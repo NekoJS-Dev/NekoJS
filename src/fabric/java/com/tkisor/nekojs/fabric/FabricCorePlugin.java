@@ -123,6 +123,8 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register("TriState", net.minecraft.util.TriState.class);
         // client 类绑定（与 NeoForge 侧同款 per-ScriptType 条件；专用服务器不注册）
         if (registry.scriptType() == com.tkisor.nekojs.api.ScriptType.CLIENT) {
+            registry.register(com.tkisor.nekojs.api.data.Binding.of("I18n", new com.tkisor.nekojs.bindings.static_access.I18nJS(),
+                    com.tkisor.nekojs.api.facade.I18nFacade.class));
             registry.register("Minecraft", net.minecraft.client.Minecraft.class);
             registry.register("Screen", net.minecraft.client.gui.screens.Screen.class);
             registry.register("Window", com.mojang.blaze3d.platform.Window.class);

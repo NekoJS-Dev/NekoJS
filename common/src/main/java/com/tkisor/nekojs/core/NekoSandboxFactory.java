@@ -101,6 +101,11 @@ public final class NekoSandboxFactory {
         return compilers;
     }
 
+    /** Shared engines require the exact host-access configuration for every Context. */
+    public com.tkisor.nekojs.core.ui.BuiltinUiRuntime createBuiltinUiRuntime() {
+        return new com.tkisor.nekojs.core.ui.BuiltinUiRuntime(core.engine(), hostAccess.get());
+    }
+
     /** Construction guard for the runtime root: the factory and root must share one cache. */
     public boolean usesPreparationCache(NekoModulePipelineCache cache) {
         return preparationCache == cache;

@@ -369,7 +369,7 @@ JSX 小写标签只能使用 NekoJS 登记的 host primitive。任意 Java 类�
 | `workspace` | 一个逻辑桌面，通常由控制器管理 | 通用 logical 布局属性 |
 | `window` | workspace 的直接子节点，通常由控制器管理 | 数字正常边界、`responsiveRect`、`active`、窗框能力／尺寸与受控缩放／最小化／最大化／还原请求，见下文 Workspace |
 
-大写标签是普通 JavaScript/TypeScript 函数组件。组件应返回 VNode：
+大写标签是普通 JavaScript/TypeScript 函数组件。组件可返回 VNode、文本、数字、空值、布尔或可渲染值数组；下面演示 VNode：
 
 ```tsx
 function Section({ title, children }) {
@@ -381,6 +381,8 @@ function Section({ title, children }) {
   )
 }
 ```
+
+Probe 从 runtime 的具体签名生成回调声明：root／workspace render 是 `() => NekoUiRenderable`，组件是 `NekoUiComponent<Props>`；任意对象和 Promise 不能作为渲染结果，没有 return 的 `void` 也不算显式空渲染。signal updater 为 `(current: T) => T`，store 根据初始对象推导键和值类型，例如 `UI.createStore({count: 0}).update("count", current => current + 1)`；返回字符串会被类型检查拒绝。动态键可用 `UI.createStore<Record<string, unknown>>({})`，读取后需收窄 unknown。排队动作无参数，返回值被忽略；`UI.batch` 保留回调结果类型。此改进不改变运行时调度。
 
 **受控组件与原生编辑边界**
 
@@ -411,6 +413,20 @@ UI 使用 Minecraft 逻辑像素和受控约束，不使用浏览器 CSS。常�
 - 定位：`direction`、`anchor`（如 `topLeft`、`center`、`bottomRight`）。
 - 显示：`visible`、`coordinateSpace`（`logical` 或 `design`）。
 - 稳定身份：`id` 和列表节点的 `key`。
+
+需要按比例缩放时，向 `UI.createRoot` 的 viewport 同时提供实际逻辑宽高与成对的 `designWidth`／`designHeight`，并在每个参与缩放的原语上设置 `coordinateSpace="design"`；该属性不向子节点继承。缩放比例为 `min(contentWidth / designWidth, contentHeight / designHeight)`。数字几何、label 字体和原生按钮／输入框／滑块细节同步缩放；光标、选区、横向滚动与滑块命中使用同一设计坐标。转发原生 resize 时应保留设计宽高，因为宿主只报告逻辑宽高。`logical` 控件仍使用普通 Minecraft GUI 尺寸，不需要为缩放切换成另一套导航布局。
+
+Java JSX 宿主自动复用有容量上限的文本排版结果，并只提交可见行范围的绘制。多行文字在字体基础坐标中推进后统一缩放，避免小数 GUI 缩放累计行距取整而使末行不可达。排版输入或字体资源变化会失效，宿主释放时清理缓存。普通脚本只需使用 `label` 和 `scroll`，不必手动给长文本分页或维护 JavaScript 文本缓存；复制操作仍可读取完整原文。
+
+原生 `scroll` 在内容溢出时自动显示细窄覆盖式滚动条。滑块表示可见比例与当前位置，支持拖动，点击轨道移动一屏。排列方向为 row 时使用横向滚动条，其余为纵向。滚动条覆盖末端边缘，不额外占用布局空间；必要时为内容留出内边距。嵌套滚动条各自独立，遵守裁剪和模态边界；节点不可用或内容不再溢出时取消旧捕获。脚本无需增加节点或逐帧回调。
+
+NeoForge 26.1.2／26.2.0 的内置报错面板使用随 JAR 打包的 `nekojs/builtin-ui/error-dashboard.tsx`。它通过原生 ESM 显式从 `nekojs/jsx-runtime` 导入 `UI`，使用自动 JSX 导入和固定的内存打包资源，不安装全局 UI 或 classic JSX 工厂。布局与交互由 JSX／JS 实现；Java 提供 Screen、真实错误快照、读回校验的剪贴板写入与经检查的异步源码定位。会话由运行时 root 拥有，独立于用户 CLIENT generation，随 Screen 关闭释放；内置 UI 失败时回退现有原生面板。该内部会话不是公共 Script API，也不豁免普通宿主的 generation 校验；其他节点保留当前错误 UI。
+
+CLIENT-only `I18n.translate(key, ...args)` Binding 在五个受支持节点均可使用，包括 Fabric 和 NeoForge 1.21.1。它按当前客户端语言返回普通字符串，读取资源包翻译并沿用 Minecraft 占位符（`%s`、`%1$s`），缺失键保留原键。参数支持字符串、数值、布尔值和 null，例如按钮文字可写为 `I18n.translate("gui.done")`。切换语言或资源后重建界面时应重新调用；已存储的字符串不会自动更新。SERVER 脚本应使用 `Text.translatable(...)` 保留接收玩家的语言选择。该 Binding 不增加其他节点的 JSX 支持。
+
+`I18n.has(key)` 检查当前翻译表（含语言回退）是否存在键，翻译恰好等于键也算存在。`I18n.translateWithFallback(key, fallback, ...args)` 优先翻译已有键，缺失时按 `Locale.ROOT` 格式化备用原文；备用原文不是另一个翻译键。参数类型同上，字面百分号写 `%%`，非法备用格式返回 `Format error: ` 加原模板。只读属性 `I18n.languageCode` 返回所选语言代码（如 `zh_cn`），`I18n.rightToLeft` 返回当前翻译表是否从右向左排列。属性每次读取当前状态，语言／资源重载结束后应重新读取；不会修改语言、自动订阅变化或自动镜像／重建界面。这些成员在普通 CLIENT 脚本和内置诊断会话中一致可用。
+
+I18n 直接走普通 Java Binding 互操作和 Bean 属性机制，输入检查由原生实现负责。Java 可变参数可展开末尾数组；类型脚本建议使用 `I18n.translate(key, ...values)`。单个 null 格式参数仍算一个值；null key／fallback 和对象格式值被拒绝。错误参数数量、Java 参数类型及只读属性写入使用标准互操作错误，不再单独维护 I18n 成员代理。
 
 尺寸可以是数字、`auto`、`fill` 或百分比字符串：
 
@@ -717,6 +733,10 @@ Notes 与 Tools 的文本和计数彼此独立，首个按钮仅更新各自计�
 `responsiveRect` 的 `x/y/width/height` 可分别使用有限数字、严格正百分比字符串，或 `{ base, profiles: { 1: ..., 6: ... } }`。宽／高数字不得为负；profile 是逻辑层级 1–6，不是 CSS 媒体查询。百分比相对于 workspace 工作区，不是物理屏幕。缺失字段回退至数字 `rect`。`update` 中提供策略会整体替换，不深合并；`responsiveRect: null` 清除策略。正常模式下手动移动／缩放会把当前显示边界实体化为数字并清除响应式策略；仅最大化不清除。
 
 **显式启用的窗框：** `resizable`、`minimizable`、`maximizable` 默认均为 false，旧窗口仍是 20 高标题栏与关闭按钮。扁平字段 `titlebarHeight`、`titlebarButtonWidth`、`titlebarTitle` 默认 20、20、true；高度必须为整数且 ≥0，按钮宽度必须为整数且 ≥1。实际窗框受窗口边界约束。高度 0 隐藏全部标题栏控件和拖动区域，必须保留程序化还原路径；`titlebarTitle: false` 只隐藏文字。没有嵌套 titlebar 对象或 CSS 语义。
+
+**默认窗口描边：** 每个原生窗口默认绘制一条低对比度的灰色内描边，活动窗口略亮，非活动窗口更暗。描边按 Minecraft GUI scale 换算，标称厚度保持为一个 framebuffer 像素，不随 GUI 放大而加粗。它在窗口内容之后、缩放悬停高亮之前绘制，帮助区分相邻窗口，不扩大窗口边界或缩放命中带。隐藏标题栏仍保留描边，隐藏窗口不绘制。本项默认样式不新增脚本配置。
+
+**窗框悬停反馈：** 可缩放的正常窗口在左右边缘请求横向缩放指针，上下边缘请求纵向缩放指针。四角使用原生多方向缩放指针，并高亮对应的两条边；当前受支持 Minecraft profile 没有内置对角缩放指针类型。边框高亮绘制在窗口内容之上，缩放捕获期间保持起始方向，直至释放或取消。标题栏按钮优先于重叠的缩放带：关闭按钮悬停为红色，最小化、最大化／还原按钮为较浅背景。被遮挡、隐藏或禁用的窗口不显示悬停反馈，模态会阻止底层窗框反馈。指针请求仅作用于当前帧；协作区域只在命中自身缩放边或保留缩放捕获时请求指针，不覆盖调用方其他位置的指针选择。
 
 原始小写 `window` 的 layout `mode` 仅接受 `normal/maximized`；控制器通过保留但隐藏内容实现自己的最小化状态。`onMinimize/onMaximize/onRestore` 只是变更请求；`onResize` 携带 `{ x, y, width, height, edge }`，edge 为 `n/ne/e/se/s/sw/w/nw`。完整示例由控制器接线；手动 dispatch 仍受模态、可见性、活动窗口与能力检查限制。
 

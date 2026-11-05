@@ -50,7 +50,9 @@ final class JsxWindowChrome {
         return remaining - width;
     }
 
-    static Control controlAt(JsxHostTree.Node node, double x) {
+    static Control controlAt(JsxHostTree.Node node, double x, double y) {
+        if (x < node.x || x >= (double) node.x + node.width
+                || y < node.y || y >= (double) node.y + titlebarHeight(node)) return null;
         for (Control control : controls(node)) {
             if (x >= control.x() && x < (double) control.x() + control.width()) return control;
         }
@@ -66,7 +68,9 @@ final class JsxWindowChrome {
     }
 
     static String resizeEdge(JsxHostTree.Node node, double x, double y) {
-        if (!resizable(node)) return null;
+        if (!resizable(node) || x < node.x || x >= (double) node.x + node.width
+                || y < node.y || y >= (double) node.y + node.height
+                || controlAt(node, x, y) != null) return null;
         double horizontalBand = Math.min(4, node.width / 2.0);
         double verticalBand = Math.min(4, node.height / 2.0);
         String horizontal = x < node.x + horizontalBand ? "w"

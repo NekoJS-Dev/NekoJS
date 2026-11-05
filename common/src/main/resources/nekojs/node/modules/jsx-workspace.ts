@@ -4,7 +4,7 @@ type NekoWorkspaceHost = import('nekojs/jsx-runtime').NekoUiHostAdapter & {
   close(): boolean
 }
 type NekoWorkspaceResult = boolean | 'queued'
-type NekoWorkspaceRender = () => unknown
+type NekoWorkspaceRender = import('nekojs/jsx-runtime').NekoUiRender
 type NekoWorkspaceRect = import('nekojs/jsx-runtime').NekoUiRect
 type NekoWorkspaceWindowMode = 'normal' | 'minimized' | 'maximized'
 type NekoWorkspaceResponsiveRect = import('nekojs/jsx-runtime').NekoUiWindowResponsiveRect

@@ -65,4 +65,15 @@ public final class NekoCommonBuiltinPlugin implements NekoJSPlugin, com.tkisor.n
     public void registerNodeTypeDocs(TypeDocsRegister registry) {
         NodeModuleTypeDocs.registerBuiltin(registry);
     }
+
+    @Override
+    public void registerTypeDocs(TypeDocsRegister registry) {
+        registry.register(com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry.binding(com.tkisor.nekojs.api.ScriptType.CLIENT,
+                "I18n", "{ translate(key: string, ...args: (string | number | boolean | null)[]): string; "
+                        + "has(key: string): boolean; translateWithFallback(key: string, fallback: string, ...args: (string | number | boolean | null)[]): string; "
+                        + "readonly languageCode: string; readonly rightToLeft: boolean }",
+                "Translates text, checks keys, formats missing-key fallbacks and reads current client language metadata. CLIENT only; metadata is read-only.",
+                java.util.List.of("I18n.translate('gui.done')", "I18n.has('example.title')",
+                        "I18n.translateWithFallback('example.count', 'Saved %s times', 3)", "I18n.languageCode")));
+    }
 }

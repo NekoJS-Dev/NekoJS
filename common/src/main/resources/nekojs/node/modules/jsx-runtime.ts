@@ -1,6 +1,7 @@
 type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
   type NekoUiPrimitive = 'screen' | 'panel' | 'row' | 'column' | 'stack' | 'scroll' | 'label' | 'button' | 'input' | 'slider' | 'image' | 'spacer' | 'dialog' | 'item' | 'workspace' | 'window'
-  type NekoUiJsxType = NekoUiPrimitive | NekoUiComponent | symbol
+  // VNodes store heterogeneous components; factories infer each component's actual props.
+  type NekoUiJsxType = NekoUiPrimitive | NekoUiComponent<never> | symbol
   type NekoUiLayoutSize = number | 'auto' | 'fill' | `${number}%`
   type NekoUiResponsive<T> = T | { readonly base?: T; readonly profiles?: Partial<Record<NekoUiProfile, T>> }
   type NekoUiEventName = 'onClick' | 'onRelease' | 'onScroll' | 'onKey' | 'onTextInput' | 'onFocus' | 'onBlur' | 'onChange' | 'onSubmit' | 'onDismiss' | 'onMove' | 'onActivate' | 'onResize' | 'onMinimize' | 'onMaximize' | 'onRestore'
@@ -66,14 +67,16 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
 
   interface NekoVNode {
     readonly $$nekoJsx: true
-    readonly type: string | symbol | NekoUiComponent
+    readonly type: string | symbol | NekoUiComponent<never>
     readonly key: string | null
     readonly props: Readonly<Record<string, unknown>>
-    readonly children: readonly unknown[]
+    readonly children: readonly NekoUiRenderable[]
   }
 
-  type NekoUiComponent = Function
-  type NekoUiCallback = Function
+  type NekoUiComponent<Props = Record<string, unknown>> = (props: Props) => NekoUiRenderable
+  type NekoUiCallback = () => void
+  type NekoUiRender = () => NekoUiRenderable
+  type NekoUiUpdater<T> = (current: T) => T
   type NekoUiEventCallback = (event: NekoUiEvent) => void
 
   interface NekoUiDiagnostic {
@@ -140,14 +143,14 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
   interface NekoUiSignal<T> {
     get(): T
     set(value: T): boolean | 'queued'
-    update(updater: NekoUiCallback): boolean | 'queued'
+    update(updater: NekoUiUpdater<T>): boolean | 'queued'
   }
 
-  interface NekoUiStore {
-    get(key: string): unknown
-    set(key: string, value: unknown): boolean | 'queued'
-    update(key: string, updater: NekoUiCallback): boolean | 'queued'
-    snapshot(): Readonly<Record<string, unknown>>
+  interface NekoUiStore<State extends Record<string, unknown> = Record<string, unknown>> {
+    get<Key extends keyof State & string>(key: Key): State[Key]
+    set<Key extends keyof State & string>(key: Key, value: State[Key]): boolean | 'queued'
+    update<Key extends keyof State & string>(key: Key, updater: NekoUiUpdater<State[Key]>): boolean | 'queued'
+    snapshot(): Readonly<State>
   }
 
   interface NekoUiRootHandle {
@@ -165,7 +168,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
   interface NekoUiSharedProps {
     id?: string
     key?: string | number
-    children?: unknown
+    children?: NekoUiRenderable
     width?: NekoUiResponsive<NekoUiLayoutSize>
     height?: NekoUiResponsive<NekoUiLayoutSize>
     minWidth?: NekoUiResponsive<NekoUiLayoutSize>
@@ -320,6 +323,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
   }
 
   declare namespace JSX {
+    type ElementType = NekoUiPrimitive | NekoUiComponent<never>
     interface Element extends NekoVNode {}
     interface ElementChildrenAttribute { children: {} }
     interface IntrinsicElements {
@@ -355,8 +359,8 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     profileFor(input: NekoUiViewportInput): NekoUiProfile
     element<T extends NekoUiJsxType>(type: T, props: NekoUiElementProps<T> | null, key?: string | number): NekoVNode
     createSignal<T>(initial: T): NekoUiSignal<T>
-    createStore(initial: Record<string, unknown>): NekoUiStore
-    createRoot(render: NekoUiCallback, adapter: NekoUiHostAdapter, options?: NekoUiRootOptions): NekoUiRootHandle
+    createStore<State extends Record<string, unknown>>(initial: State): NekoUiStore<State>
+    createRoot(render: NekoUiRender, adapter: NekoUiHostAdapter, options?: NekoUiRootOptions): NekoUiRootHandle
     batch<T>(callback: () => T): T
     readonly fragment: NekoUiFragment
   }
@@ -1337,7 +1341,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     flushRoots()
   }
 
-  function createSignal(initialValue: unknown): NekoUiSignal<unknown> {
+  function createSignal<T>(initialValue: T): NekoUiSignal<T> {
     let value = freezeValue(initialValue, new WeakSet())
     function observingRoots() {
       const roots = new Set(signalObservers.get(signal))
@@ -1379,7 +1383,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     return Object.freeze(signal)
   }
 
-  function createStore(initialValue: Record<string, unknown>): NekoUiStore {
+  function createStore<State extends Record<string, unknown>>(initialValue: State): NekoUiStore<State> {
     if (!plainObject(initialValue)) throw new TypeError('Store initial value must be a plain object')
     const cells = Object.create(null)
     for (const key of Object.keys(initialValue)) cells[key] = createSignal(initialValue[key])
@@ -1400,7 +1404,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     })
   }
 
-  function batch(callback: NekoUiCallback): unknown {
+  function batch<T>(callback: () => T): T {
     if (typeof callback !== 'function') throw new TypeError('batch expects a function')
     batchDepth++
     try {
@@ -1411,7 +1415,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     }
   }
 
-  function createRoot(render: NekoUiCallback, adapter: NekoUiHostAdapter, options?: NekoUiRootOptions): NekoUiRootHandle {
+  function createRoot(render: NekoUiRender, adapter: NekoUiHostAdapter, options?: NekoUiRootOptions): NekoUiRootHandle {
     if (typeof render !== 'function') throw new TypeError('UI root render must be a function')
     if (adapter == null || typeof adapter.isOwnerThread !== 'function'
       || typeof adapter.enqueue !== 'function' || typeof adapter.supportsPrimitive !== 'function'

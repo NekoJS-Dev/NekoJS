@@ -189,8 +189,8 @@
       "us": "Commands",
       "legacy": "命令.md",
       "legacyDigest": "2a161db73102c1ce5604bea6c4aa9ff14bb77c7c25df701cc0eef9bf4084a72a",
-      "sourceDigest": "076c40fa3c3eb0bd9f2070b152318a97c21977f224018c669caa26bf99b58316",
-      "translationDigest": "4f855e4437d8f7d73b33a22876c7f24a08ec54c4856bec15c45c0bbbc88e321a",
+      "sourceDigest": "dbae791c797533e583f93e2eb3de80af033e3d022742c1195e9929c531a1106a",
+      "translationDigest": "b9231f690466c96d18b284e83114048657f51bd681228ae33433c451a7398637",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -202,8 +202,8 @@
       "legacy": "en_us/Error-Reference.md",
       "sourceLocale": "us",
       "legacyDigest": "d655593a3910daa974f0cc8410ad608cb0fb8c8850922ee4fc61314b1ee57e3c",
-      "sourceDigest": "df8a4cf65c4a36f0aa076965ff102a81cd14263f0dfa54e99d875148cb56143f",
-      "translationDigest": "7440d9edc737f6449f759c9b30148e294ede326cc11b4d0aae4b3e41db64a7e9",
+      "sourceDigest": "3d9b56ca9a4f84f6532a2d90ab71f6b4d05fa3c2c03b3af8b8b34a53b91d34d3",
+      "translationDigest": "df626f1b24b65f747b9d1499a1ea2ab0b90c867b3d148baa3b9c111347ab0ad6",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -273,8 +273,8 @@
       "us": "JSX client UI",
       "legacy": "JSX-客户端UI.md",
       "legacyDigest": "00a93c7a13042dd12d92c4e0ac97365e43ee9e3ee7f854e7de57f80ec42a41d1",
-      "sourceDigest": "4b494a3b4244cf65aeeb655e806f6cd39f79a713956bb302da15d86d39630c95",
-      "translationDigest": "39ebc0109831d80d7133b62a20fb60e9b0aaebcdb96ab7395e3f2871676b3e2d",
+      "sourceDigest": "9d911e6bc0c3cebafbb221bb27b2a8a1ee930980003ab6a1c58cc5d21a2821d5",
+      "translationDigest": "e51bbf355356798c5ceb8ce31d6e91b0be1d3d0a9eeffa8048281875b23f8091",
       "translationStatus": "draft",
       "humanReview": "pending"
     },

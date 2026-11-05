@@ -319,7 +319,7 @@ class NodeModuleTypeDocsTest {
         assertTrue(all.contains("export const jsx: NekoUiJsxFactory;"), all);
         assertTrue(all.contains("export const jsxs: NekoUiJsxFactory;"), all);
         assertTrue(all.contains("export const UI: NekoUiApi;"), all);
-        assertTrue(all.contains("createRoot(render: NekoUiCallback, adapter: NekoUiHostAdapter"), all);
+        assertTrue(all.contains("createRoot(render: NekoUiRender, adapter: NekoUiHostAdapter"), all);
         assertTrue(all.contains("createSignal<T>(initial: T): NekoUiSignal<T>"), all);
         assertTrue(all.contains("interface NekoUiHostAdapter"), all);
         assertTrue(all.contains("interface NekoUiSharedProps"), all);

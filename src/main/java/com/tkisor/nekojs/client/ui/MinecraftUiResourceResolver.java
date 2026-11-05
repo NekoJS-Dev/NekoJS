@@ -46,6 +46,7 @@ public final class MinecraftUiResourceResolver implements UiResourceResolver, Au
     private final Map<String, Throwable> fontFailures = new HashMap<>();
     private Object currentRevision;
     private long nextSlot;
+    private long layoutRevision;
     private boolean closed;
 
     public MinecraftUiResourceResolver(ResourceManager resources, TextureManager textures) {
@@ -216,10 +217,16 @@ public final class MinecraftUiResourceResolver implements UiResourceResolver, Au
 
     public void invalidate() {
         requireOpen();
+        layoutRevision++;
         retiredTextures.addAll(textures.values());
         textures.clear();
         fonts.clear();
         fontFailures.clear();
+    }
+
+    long textLayoutRevision() {
+        refresh();
+        return layoutRevision;
     }
 
     /** Releases retired slots after the caller successfully publishes the prepared host plan. */

@@ -1,6 +1,7 @@
 //? if neoforge && >=26 {
 package com.tkisor.nekojs.client.ui;
 
+import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.ScriptErrorReporter;
 import com.tkisor.nekojs.api.ui.InspectorScreenshot;
@@ -51,11 +52,15 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     private double windowDragOffsetX;
     private double windowDragOffsetY;
     private JsxWindowChrome.ResizeCapture windowResize;
+    private JsxScrollBar.Capture scrollDrag;
     private final JsxHostTree tree = new JsxHostTree();
     private final ScriptManager manager;
     private final GenerationGlobals globals;
     private final UiRootLifecycle lifecycle;
+    private final com.tkisor.nekojs.core.ui.BuiltinUiRuntime.Session builtinSession;
+    private java.util.function.Consumer<RuntimeException> builtinFailure;
     private final McFontAdapter fontAdapter;
+    private final UiTextLayoutCache textLayouts = new UiTextLayoutCache();
     private final MinecraftUiResourceResolver resources;
     private final List<InspectorSnapshot.PhaseError> retainedErrors = new ArrayList<>();
     private String rootId;
@@ -96,6 +101,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         JsxHostTree.Node captured = tree.captured(0);
         if (captured == null) {
             windowResize = null;
+            scrollDrag = null;
         } else if ("window".equals(captured.type)) {
             boolean resizing = windowResize != null && windowResize.identity() == captured.identity;
             if (JsxWindowChrome.maximized(captured) || (resizing ? !JsxWindowChrome.resizable(captured)
@@ -103,6 +109,14 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                 // Publication must end invalid chrome gestures even if no input arrives before another commit.
                 tree.cancelCapture();
                 windowResize = null;
+            }
+        }
+        if (scrollDrag != null) {
+            JsxScrollBar.Geometry bar = captured == null ? null : JsxScrollBar.geometry(captured);
+            if (captured == null || captured.identity != scrollDrag.identity() || bar == null
+                    || bar.horizontal() != scrollDrag.horizontal()) {
+                if (captured != null && captured.identity == scrollDrag.identity()) tree.cancelCapture();
+                scrollDrag = null;
             }
         }
         JsxHostTree.Node modal = JsxModalScope.active(tree.roots());
@@ -142,15 +156,24 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     }
 
     public JsxHostAdapter(String title, boolean pausesGame) {
-        this(title, pausesGame, false, 0, 0, 0, 0);
+        this(title, pausesGame, false, 0, 0, 0, 0, null);
     }
 
     public static JsxHostAdapter region(int x, int y, int width, int height) {
         validateRegion(x, y, width, height);
-        return new JsxHostAdapter("", false, true, x, y, width, height);
+        return new JsxHostAdapter("", false, true, x, y, width, height, null);
     }
 
-    private JsxHostAdapter(String title, boolean pausesGame, boolean regionMount, int x, int y, int width, int height) {
+    static JsxHostAdapter builtin(com.tkisor.nekojs.core.ui.BuiltinUiRuntime.Session session,
+            int width, int height, java.util.function.Consumer<RuntimeException> failure) {
+        session.requireOwner();
+        JsxHostAdapter adapter = new JsxHostAdapter("", false, true, 0, 0, Math.max(1, width), Math.max(1, height), session);
+        adapter.builtinFailure = failure;
+        return adapter;
+    }
+
+    private JsxHostAdapter(String title, boolean pausesGame, boolean regionMount, int x, int y, int width, int height,
+            com.tkisor.nekojs.core.ui.BuiltinUiRuntime.Session builtinSession) {
         minecraft = Minecraft.getInstance();
         ownerThread = Thread.currentThread();
         this.regionMount = regionMount;
@@ -161,6 +184,15 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         screen = regionMount ? null : new JsxScreen(title, pausesGame, this);
         this.fontAdapter = new McFontAdapter(minecraft.font);
         this.resources = new MinecraftUiResourceResolver(minecraft.getResourceManager(), minecraft.getTextureManager());
+        this.builtinSession = builtinSession;
+        if (builtinSession != null) {
+            if (builtinSession.isClosed()) throw new IllegalStateException("[NEKO-7015] Built-in UI session is closed");
+            this.manager = null;
+            this.globals = builtinSession.globals();
+            this.lifecycle = new UiRootLifecycle(false, 0, globals);
+            globals.registerUiRoot(this);
+            return;
+        }
         Context context = Context.getCurrent();
         ScriptManager owner = null;
         if (context != null) {
@@ -213,16 +245,13 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
      * Wrap-enabled and truncation-off match the runtime's intrinsic-size contract.
      */
     public Map<String, Object> measureText(String text, double fontSize, int maxWidth) {
-        requireUsable("measure text");
-        TextLayout layout = TextLayouter.layoutScaled(
-                fontAdapter, text, fontSize, maxWidth, true, TextLayouter.Truncation.OFF);
-        return Map.of("width", layout.width(), "height", layout.height());
+        return measureText(text, fontSize, maxWidth, null);
     }
 
     public Map<String, Object> measureText(String text, double fontSize, int maxWidth, String font) {
         requireUsable("measure text");
-        TextLayout layout = TextLayouter.layoutScaled(selectedFont(font), text, fontSize, maxWidth,
-                true, TextLayouter.Truncation.OFF);
+        TextLayout layout = textLayouts.layout(selectedFont(font), font, text, fontSize, maxWidth,
+                true, TextLayouter.Truncation.OFF, resources.textLayoutRevision());
         return Map.of("width", layout.width(), "height", layout.height());
     }
 
@@ -243,6 +272,10 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         return Thread.currentThread() == ownerThread;
     }
 
+    private long activeGeneration() { return builtinSession == null ? manager.generationId() : 0; }
+
+    boolean isDisposed() { return lifecycle.isClosed(); }
+
     public boolean enqueue(Object action) {
         if (action == null) return false;
         // Explicit cross-thread queueing point (the common runtime calls this only from
@@ -250,7 +283,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         // discarded this root's generation; re-check the epoch at run time so a stale
         // generation never executes guest code.
         minecraft.execute(() -> {
-            if (!lifecycle.isUsable(manager.generationId())) {
+            if (builtinSession != null && builtinSession.isClosed() || !lifecycle.isUsable(activeGeneration())) {
                 reportStaleDrop("queued UI action");
                 return;
             }
@@ -347,6 +380,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     private void prepareVisuals(List<JsxHostTree.Node> nodes, double designScale, int paintWidth, int paintHeight) {
         for (JsxHostTree.Node node : nodes) {
+            node.coordinateScale = "design".equals(node.props.get("coordinateSpace")) ? designScale : 1;
             if (!"#text".equals(node.type)) {
                 node.visual = resolveVisual(node.props, node.type,
                         node.key == null ? text(node.props.get("id")) : node.key,
@@ -386,10 +420,11 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                 if ("design".equals(node.props.get("coordinateSpace"))) {
                     fontSize = (fontSize <= 0 ? fontAdapter.lineHeight() : fontSize) * designScale;
                 }
-                node.textFont = selectedFont(node.props.get("font") instanceof String font ? font : null);
+                String font = node.props.get("font") instanceof String name ? name : null;
+                node.textFont = selectedFont(font);
                 boolean truncate = node.visual != null && Boolean.TRUE.equals(node.visual.truncate());
-                node.textLayout = TextLayouter.layoutScaled(node.textFont, text(node.props.get("text")), fontSize,
-                        Math.max(1, node.width), !truncate, truncationFor(node.visual));
+                node.textLayout = textLayouts.layout(node.textFont, font, text(node.props.get("text")), fontSize,
+                        Math.max(1, node.width), !truncate, truncationFor(node.visual), resources.textLayoutRevision());
                 node.textScale = fontSize <= 0 ? 1 : fontSize / fontAdapter.lineHeight();
             }
             prepareVisuals(node.children, designScale, paintWidth, paintHeight);
@@ -426,6 +461,11 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     public void reportDiagnostic(Object diagnostic) {
         diagnosticCount++;
         Value envelope = Value.asValue(diagnostic);
+        if (builtinFailure != null) {
+            builtinFailure.accept(new IllegalStateException("[NEKO-7015] Built-in UI reported a render or host diagnostic: "
+                    + text(memberOrNull(envelope, "message"))));
+            return;
+        }
         String rootId = text(memberOrNull(envelope, "rootId"));
         String phase = text(memberOrNull(envelope, "phase"));
         String message = "";
@@ -452,6 +492,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     }
 
     private void reportStaleDrop(String what) {
+        if (builtinSession != null) return;
         ScriptErrorReporter.recordCallbackError(ScriptType.CLIENT, "ui-stale",
                 new IllegalStateException("[NEKO-7006] " + what + " was dropped: its UI root belongs "
                         + "to generation " + lifecycle.generation() + ", which is no longer active"));
@@ -469,10 +510,13 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                     + "owner thread; cross-thread state updates must go through the explicit "
                     + "enqueue channel (UI root generation " + lifecycle.generation() + ")");
         }
-        if (!lifecycle.isUsable(manager.generationId())) {
+        if (builtinSession != null && builtinSession.isClosed() && !tearingDown) {
+            throw new IllegalStateException("[NEKO-7015] Built-in UI session is closed");
+        }
+        if (!lifecycle.isUsable(activeGeneration())) {
             throw new IllegalStateException("[NEKO-7001] Cannot " + operation + ": this UI root belongs "
                     + "to generation " + lifecycle.generation() + ", which is superseded or closed "
-                    + "(active generation " + manager.generationId() + ", lifecycle state "
+                    + "(active generation " + activeGeneration() + ", lifecycle state "
                     + lifecycle.state() + ")");
         }
     }
@@ -494,8 +538,9 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     private boolean productionRouting() {
         if (!isOwnerThread()) throw new IllegalStateException("[NEKO-7004] JSX mount forwarding requires the client owner thread");
+        if (builtinSession != null && builtinSession.isClosed()) return false;
         if (lifecycle.isClosed() || lifecycle.state() == UiRootLifecycle.State.CLOSING) return false;
-        long active = manager.generationId();
+        long active = activeGeneration();
         lifecycle.observeCommit(active);
         return lifecycle.isProduction(active);
     }
@@ -611,7 +656,8 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         viewportHeight = Math.max(0, height);
         if (root != null) {
             try {
-                root.invokeMember("resize", viewport());
+                if (builtinSession == null) root.invokeMember("resize", viewport());
+                else root.invokeMember("resize", graal.graalvm.polyglot.proxy.ProxyObject.fromMap(viewport()));
             } catch (RuntimeException failure) {
                 reportHostFailure("resize", failure);
             }
@@ -620,6 +666,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     private void reportHostFailure(String phase, RuntimeException failure) {
         diagnosticCount++;
+        if (builtinFailure != null) { builtinFailure.accept(failure); return; }
         ScriptErrorReporter.recordCallbackError(ScriptType.CLIENT, "ui-" + phase,
                 new IllegalStateException("[NEKO-7007] JSX UI host operation '" + phase
                         + "' failed (generation " + lifecycle.generation() + ")", failure));
@@ -688,6 +735,20 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     void paintNodes(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         inputRoots();
+        JsxHostTree.Node hoveredWindow = JsxWorkspaceScope.chromeAt(tree.roots(), mouseX, mouseY);
+        String resizeEdge = null;
+        if (windowResize != null) resizeEdge = windowResize.edge();
+        else if (tree.captured(0) == null && hoveredWindow != null) {
+            resizeEdge = JsxWindowChrome.resizeEdge(hoveredWindow, mouseX, mouseY);
+        }
+        if (resizeEdge != null) {
+            // Minecraft owns these cursor handles and resets the request each frame, including after close.
+            graphics.requestCursor(switch (resizeEdge) {
+                case "e", "w" -> CursorTypes.RESIZE_EW;
+                case "n", "s" -> CursorTypes.RESIZE_NS;
+                default -> CursorTypes.RESIZE_ALL;
+            });
+        }
         List<JsxHostTree.Node> dialogs = JsxModalScope.dialogs(tree.roots());
         int backgroundMouse = Integer.MIN_VALUE;
         for (JsxHostTree.Node node : tree.roots()) {
@@ -734,12 +795,19 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
             return;
         }
         if ("window".equals(type)) {
+            JsxHostTree.Node hoveredWindow = JsxWorkspaceScope.chromeAt(tree.roots(), mouseX, mouseY);
+            if (hoveredWindow == null || hoveredWindow.identity != node.identity) {
+                mouseX = Integer.MIN_VALUE;
+                mouseY = Integer.MIN_VALUE;
+            }
             graphics.fill(x, y, x + width, y + height, 0xFF20252B);
             int titlebarHeight = JsxWindowChrome.titlebarHeight(node);
             if (titlebarHeight > 0) {
                 graphics.fill(x, y, x + width, y + titlebarHeight,
                         bool(node.props.get("active")) ? 0xFF3A536F : 0xFF30363D);
                 List<JsxWindowChrome.Control> controls = JsxWindowChrome.controls(node);
+                JsxWindowChrome.Control hoveredControl = tree.captured(0) == null
+                        ? JsxWindowChrome.controlAt(node, mouseX, mouseY) : null;
                 int titleRight = controls.isEmpty() ? x + width : controls.getLast().x();
                 int textY = y + Math.max(0, (titlebarHeight - minecraft.font.lineHeight) / 2 + 1);
                 graphics.enableScissor(x, y, titleRight, y + titlebarHeight);
@@ -753,18 +821,16 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                 for (JsxWindowChrome.Control control : controls) {
                     graphics.enableScissor(control.x(), y, control.x() + control.width(), y + titlebarHeight);
                     try {
+                        if (control.equals(hoveredControl)) {
+                            graphics.fill(control.x(), y, control.x() + control.width(), y + titlebarHeight,
+                                    "dismiss".equals(control.event()) ? 0xFFE81123 : 0xFF5A6D82);
+                        }
                         int textX = control.x() + Math.max(0, (control.width() - minecraft.font.width(control.glyph())) / 2);
                         graphics.text(minecraft.font, control.glyph(), textX, textY, 0xFFFFFFFF, false);
                     } finally {
                         graphics.disableScissor();
                     }
                 }
-            }
-            JsxHostTree.Node top = JsxWorkspaceScope.windowAt(tree.roots(), mouseX, mouseY);
-            if (top == null || top.identity != node.identity
-                    || JsxWorkspaceScope.presentationAt(tree.roots(), mouseX, mouseY) != null) {
-                mouseX = Integer.MIN_VALUE;
-                mouseY = Integer.MIN_VALUE;
             }
         } else if ("panel".equals(type) || "screen".equals(type) || "scroll".equals(type)) {
             VisualSpec spec = resolveVisual(node);
@@ -785,7 +851,81 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                 node.itemVisual.paint(graphics, minecraft.font,
                         x + (width - 16) / 2, y + (height - 16) / 2);
             }
-        } else if ("button".equals(type)) {
+        } else if ("button".equals(type) || "input".equals(type) || "slider".equals(type)) {
+            paintControl(graphics, node, mouseX, mouseY);
+        } else if ("label".equals(type)) {
+            VisualSpec spec = resolveVisual(node);
+            paintTextLines(graphics, node, x, y, applyOpacity(spec, argb(spec.color(), 0xFFFFFFFF)));
+        }
+        if ("scroll".equals(type)) {
+            JsxScrollBar.Geometry bar = JsxScrollBar.geometry(node);
+            boolean overBar = bar != null && contains(node, mouseX, mouseY) && bar.contains(mouseX, mouseY);
+            graphics.enableScissor(x, y, x + width, y + height);
+            try {
+                for (JsxHostTree.Node child : node.children) {
+                    paintNode(graphics, child, overBar ? Integer.MIN_VALUE : mouseX, overBar ? Integer.MIN_VALUE : mouseY);
+                }
+                if (bar != null) {
+                    graphics.fill(bar.x(), bar.y(), bar.x() + bar.width(), bar.y() + bar.height(), 0xFF252D38);
+                    boolean dragging = scrollDrag != null && scrollDrag.identity() == node.identity && scrollDrag.thumb();
+                    graphics.fill(bar.thumbX(), bar.thumbY(), bar.thumbX() + bar.thumbWidth(), bar.thumbY() + bar.thumbHeight(),
+                            dragging ? 0xFFB4C7DD : overBar ? 0xFF9BAEC4 : 0xFF7D8A9A);
+                }
+            } finally {
+                graphics.disableScissor();
+            }
+            return;
+        }
+        for (JsxHostTree.Node child : node.children) paintNode(graphics, child, mouseX, mouseY);
+        if ("window".equals(type)) {
+            paintWindowOutline(graphics, node);
+            String edge = null;
+            if (windowResize != null && windowResize.identity() == node.identity) edge = windowResize.edge();
+            else if (tree.captured(0) == null) edge = JsxWindowChrome.resizeEdge(node, mouseX, mouseY);
+            if (edge != null) {
+                if (edge.contains("n")) graphics.fill(x, y, x + width, y + Math.min(2, height), 0xFF80BFFF);
+                if (edge.contains("s")) graphics.fill(x, y + Math.max(0, height - 2), x + width, y + height, 0xFF80BFFF);
+                if (edge.contains("w")) graphics.fill(x, y, x + Math.min(2, width), y + height, 0xFF80BFFF);
+                if (edge.contains("e")) graphics.fill(x + Math.max(0, width - 2), y, x + width, y + height, 0xFF80BFFF);
+            }
+        }
+        if (contains(node, mouseX, mouseY) && node.props.get("tooltip") != null) {
+            graphics.setTooltipForNextFrame(Minecraft.getInstance().font,
+                    net.minecraft.network.chat.Component.literal(text(node.props.get("tooltip"))),
+                    mouseX + tooltipOffsetX, mouseY + tooltipOffsetY);
+        } else if ("item".equals(type) && node.itemVisual != null
+                && !Boolean.FALSE.equals(node.props.get("itemTooltip")) && contains(node, mouseX, mouseY)) {
+            node.itemVisual.tooltip(graphics, minecraft.font, mouseX + tooltipOffsetX, mouseY + tooltipOffsetY);
+        }
+    }
+
+    private void paintControl(net.minecraft.client.gui.GuiGraphicsExtractor graphics, JsxHostTree.Node node,
+                              int mouseX, int mouseY) {
+        int x = node.x;
+        int y = node.y;
+        int width = node.width;
+        int height = node.height;
+        boolean scaled = node.coordinateScale != 1;
+        if (scaled) {
+            // Use design units for every control detail; hit testing keeps the committed logical rectangle.
+            graphics.pose().pushMatrix();
+            graphics.pose().translate((float) x, (float) y);
+            graphics.pose().scale((float) node.coordinateScale, (float) node.coordinateScale);
+            x = 0;
+            y = 0;
+            width = node.controlWidth();
+            height = (int) Math.round(height / node.coordinateScale);
+        }
+        try {
+            paintControlContents(graphics, node, mouseX, mouseY, x, y, width, height);
+        } finally {
+            if (scaled) graphics.pose().popMatrix();
+        }
+    }
+
+    private void paintControlContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, JsxHostTree.Node node,
+                                      int mouseX, int mouseY, int x, int y, int width, int height) {
+        if ("button".equals(node.type)) {
             boolean disabled = bool(node.props.get("disabled"));
             boolean hovered = contains(node, mouseX, mouseY);
             Map<String, UiColor> colors = node.appearance.resolve(hovered, node.focused, node.pressed, disabled);
@@ -796,9 +936,9 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
             graphics.centeredText(minecraft.font, text(node.props.get("text")), x + width / 2,
                     y + Math.max(0, (height - minecraft.font.lineHeight) / 2),
                     controlColor(colors, "color", disabled ? 0xFF888888 : 0xFFFFFFFF));
-        } else if ("input".equals(type)) {
-            paintInput(graphics, node, mouseX, mouseY);
-        } else if ("slider".equals(type)) {
+        } else if ("input".equals(node.type)) {
+            paintInput(graphics, node, mouseX, mouseY, x, y, width, height);
+        } else if ("slider".equals(node.type)) {
             Map<String, UiColor> colors = node.appearance.resolve(contains(node, mouseX, mouseY),
                     node.focused, node.pressed, bool(node.props.get("disabled")));
             graphics.fill(x, y, x + width, y + height, controlColor(colors, "background", 0xFF20252B));
@@ -811,27 +951,21 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
             int thumbX = x + 4 + (int) Math.round(ratio * Math.max(0, width - 8));
             graphics.fill(thumbX - 2, y + 3, thumbX + 2, Math.max(y + 3, y + height - 3),
                     controlColor(colors, "thumbColor", bool(node.props.get("disabled")) ? 0xFF888888 : 0xFFFFFFFF));
-        } else if ("label".equals(type)) {
-            VisualSpec spec = resolveVisual(node);
-            paintTextLines(graphics, node, x, y, applyOpacity(spec, argb(spec.color(), 0xFFFFFFFF)));
         }
-        if ("scroll".equals(type)) {
-            graphics.enableScissor(x, y, x + width, y + height);
-            try {
-                for (JsxHostTree.Node child : node.children) paintNode(graphics, child, mouseX, mouseY);
-            } finally {
-                graphics.disableScissor();
-            }
-            return;
-        }
-        for (JsxHostTree.Node child : node.children) paintNode(graphics, child, mouseX, mouseY);
-        if (contains(node, mouseX, mouseY) && node.props.get("tooltip") != null) {
-            graphics.setTooltipForNextFrame(Minecraft.getInstance().font,
-                    net.minecraft.network.chat.Component.literal(text(node.props.get("tooltip"))),
-                    mouseX + tooltipOffsetX, mouseY + tooltipOffsetY);
-        } else if ("item".equals(type) && node.itemVisual != null
-                && !Boolean.FALSE.equals(node.props.get("itemTooltip")) && contains(node, mouseX, mouseY)) {
-            node.itemVisual.tooltip(graphics, minecraft.font, mouseX + tooltipOffsetX, mouseY + tooltipOffsetY);
+    }
+
+    private void paintWindowOutline(net.minecraft.client.gui.GuiGraphicsExtractor graphics, JsxHostTree.Node node) {
+        if (node.width <= 0 || node.height <= 0) return;
+        int scale = minecraft.getWindow() == null ? 1 : Math.max(1, minecraft.getWindow().getGuiScale());
+        // Cancel GUI scaling locally so the passive outline stays one framebuffer pixel wide.
+        graphics.pose().pushMatrix();
+        try {
+            graphics.pose().translate((float) node.x, (float) node.y);
+            graphics.pose().scale(1.0f / scale);
+            graphics.outline(0, 0, node.width * scale, node.height * scale,
+                    bool(node.props.get("active")) ? 0xFF697582 : 0xFF454D57);
+        } finally {
+            graphics.pose().popMatrix();
         }
     }
 
@@ -841,19 +975,17 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     }
 
     private void paintInput(net.minecraft.client.gui.GuiGraphicsExtractor graphics, JsxHostTree.Node node,
-            int mouseX, int mouseY) {
+            int mouseX, int mouseY, int x, int y, int width, int height) {
         Map<String, UiColor> colors = node.appearance.resolve(contains(node, mouseX, mouseY),
                 node.focused, node.pressed, bool(node.props.get("disabled")));
-        int x = node.x;
-        int y = node.y;
-        graphics.fill(x, y, x + node.width, y + node.height, controlColor(colors, "background", 0xFF20252B));
-        graphics.outline(x, y, node.width, node.height,
+        graphics.fill(x, y, x + width, y + height, controlColor(colors, "background", 0xFF20252B));
+        graphics.outline(x, y, width, height,
                 controlColor(colors, "borderColor", node.focused ? 0xFFFFFFFF : 0xFF707780));
         node.followInputCursor(fontAdapter::stringWidth);
         int left = x + 4;
-        int right = Math.max(left, x + node.width - 4);
+        int right = Math.max(left, x + width - 4);
         int top = y + 4;
-        int bottom = Math.max(top, y + node.height - 4);
+        int bottom = Math.max(top, y + height - 4);
         graphics.enableScissor(left, top, right, bottom);
         try {
             String input = node.inputValue;
@@ -901,13 +1033,25 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     private void paintTextLines(net.minecraft.client.gui.GuiGraphicsExtractor graphics, JsxHostTree.Node node,
             int x, int y, int argbColor) {
-        if (node.textLayout == null) return;
+        if (node.textLayout == null || node.textLayout.lineHeight() <= 0 || node.textScale <= 0) return;
+        int firstLine = 0;
+        int endLine = node.textLayout.lines().size();
+        double lineHeight = node.textFont.lineHeight() * node.textScale;
+        if (node.hasClip) {
+            firstLine = Math.max(0, (int) Math.floor(((double) node.clipY - y - lineHeight) / lineHeight));
+            endLine = (int) Math.min(endLine, Math.ceil(((double) node.clipY + node.clipHeight - y) / lineHeight) + 1);
+        }
         graphics.pose().pushMatrix();
         try {
             graphics.pose().translate((float) x, (float) y);
             graphics.pose().scale((float) node.textScale, (float) node.textScale);
-            for (int lineIndex = 0; lineIndex < node.textLayout.lines().size(); lineIndex++) {
-                int baseline = (int) Math.round(lineIndex * node.textLayout.lineHeight() / node.textScale);
+            // Bound submissions to the visible line window; the native scissor alone still pays for every glyph.
+            for (int lineIndex = firstLine; lineIndex < endLine; lineIndex++) {
+                // Advance in base-font units and apply the pose scale once; rounded logical gaps accumulate drift.
+                int baseline = lineIndex * node.textFont.lineHeight();
+                double top = y + baseline * node.textScale;
+                if (node.hasClip && (top >= (double) node.clipY + node.clipHeight
+                        || top + lineHeight <= node.clipY)) continue;
                 graphics.text(Minecraft.getInstance().font, node.textFont.text(node.textLayout.lines().get(lineIndex)),
                         0, baseline, argbColor, false);
             }
@@ -964,8 +1108,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                         || JsxWorkspaceScope.presentationAt(tree.roots(), mouseX, mouseY) != null) return true;
             }
             scope = List.of(pointerWindow);
-            JsxWindowChrome.Control control = mouseY < pointerWindow.y + JsxWindowChrome.titlebarHeight(pointerWindow)
-                    ? JsxWindowChrome.controlAt(pointerWindow, mouseX) : null;
+            JsxWindowChrome.Control control = JsxWindowChrome.controlAt(pointerWindow, mouseX, mouseY);
             String resizeEdge = JsxWindowChrome.resizeEdge(pointerWindow, mouseX, mouseY);
             if (resizeEdge != null && control == null && button == 0 && "click".equals(eventName)) {
                 JsxHostTree.Node workspace = JsxWorkspaceScope.workspace(tree.roots());
@@ -999,6 +1142,22 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
             return true;
         }
         if (node == null || bool(node.props.get("disabled"))) return modal != null || pointerWindow != null || presentation != null;
+        JsxScrollBar.Geometry bar = JsxScrollBar.geometry(node);
+        if (bar != null && bar.contains(mouseX, mouseY) && button == 0 && "click".equals(eventName)) {
+            tree.capture(node, button);
+            windowResize = null;
+            double position = bar.position(mouseX, mouseY);
+            if (bar.onThumb(position)) {
+                scrollDrag = new JsxScrollBar.Capture(node.identity, bar.horizontal(), true,
+                        (position - bar.thumbStart()) / bar.thumbLength());
+            } else {
+                scrollDrag = new JsxScrollBar.Capture(node.identity, bar.horizontal(), false, 0);
+                double current = number(node.props.get("scrollOffset"), 0);
+                double page = (bar.horizontal() ? node.width : node.height) / node.coordinateScale;
+                setScrollOffset(node, current + (position < bar.thumbStart() ? -page : page), mouseX, mouseY);
+            }
+            return true;
+        }
         if ("click".equals(eventName)) {
             if (("input".equals(node.type) || "slider".equals(node.type)) && button != 0) return modal != null || presentation != null;
             windowResize = null;
@@ -1022,7 +1181,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     private int inputPosition(JsxHostTree.Node node, double mouseX) {
         node.followInputCursor(fontAdapter::stringWidth);
-        double relativeX = mouseX - node.x - 4 + node.inputScroll;
+        double relativeX = (mouseX - node.x) / node.coordinateScale - 4 + node.inputScroll;
         int position = 0;
         int previousWidth = 0;
         while (position < node.inputValue.length()) {
@@ -1040,6 +1199,14 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         inputRoots();
         JsxHostTree.Node node = tree.captured(button);
         if (node == null || button != 0) return modalActive();
+        if (scrollDrag != null && scrollDrag.identity() == node.identity) {
+            JsxScrollBar.Geometry bar = JsxScrollBar.geometry(node);
+            if (scrollDrag.thumb() && bar != null) {
+                setScrollOffset(node, bar.offsetAt(bar.position(mouseX, mouseY), scrollDrag.grabFraction(), node.scrollRange),
+                        mouseX, mouseY);
+            }
+            return true;
+        }
         if ("window".equals(node.type)) {
             JsxHostTree.Node workspace = JsxWorkspaceScope.workspace(tree.roots());
             if (workspace == null || JsxWindowChrome.maximized(node)) {
@@ -1079,6 +1246,16 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         requireUsable("route a mouse release");
         inputRoots();
         JsxHostTree.Node node = tree.releaseCapture(button);
+        if (node != null && scrollDrag != null && scrollDrag.identity() == node.identity && button == 0) {
+            JsxScrollBar.Geometry bar = JsxScrollBar.geometry(node);
+            JsxScrollBar.Capture drag = scrollDrag;
+            scrollDrag = null;
+            if (bar != null && drag.thumb()) {
+                setScrollOffset(node, bar.offsetAt(bar.position(mouseX, mouseY), drag.grabFraction(), node.scrollRange),
+                        mouseX, mouseY);
+            }
+            return true;
+        }
         if (node != null && windowResize != null && windowResize.identity() == node.identity) windowResize = null;
         if (node == null || node.removed) return modalActive();
         if (button == 0 && "input".equals(node.type) && node.focused) {
@@ -1116,6 +1293,15 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         relayout();
         boolean callbackHandled = dispatch(node, "scroll", Map.of("x", mouseX, "y", mouseY, "delta", delta));
         return callbackHandled || node.scrollRange > 0 || modalActive() || presentation != null;
+    }
+
+    private void setScrollOffset(JsxHostTree.Node node, double offset, double mouseX, double mouseY) {
+        double previous = number(node.props.get("scrollOffset"), 0);
+        double next = clamp(offset, 0, node.scrollRange);
+        if (next == previous) return;
+        node.props.put("scrollOffset", next);
+        relayout();
+        dispatch(tree.retained(node), "scroll", Map.of("x", mouseX, "y", mouseY, "delta", (previous - next) / 12));
     }
 
     boolean key(int key, int modifiers) {
@@ -1270,7 +1456,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
             requireUsable("open the region mount");
             return;
         }
-        long active = manager.generationId();
+        long active = activeGeneration();
         lifecycle.observeCommit(active);
         if (lifecycle.isProduction(active)) {
             showScreen();
@@ -1290,7 +1476,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     }
 
     private void runDeferredOpen() {
-        long active = manager.generationId();
+        long active = activeGeneration();
         // A discarded candidate has already closed this root; observing would throw, and the
         // drop below is the observable outcome the ticket requires.
         if (lifecycle.state() == UiRootLifecycle.State.CANDIDATE) lifecycle.observeCommit(active);
@@ -1391,6 +1577,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                 }
             } finally {
                 try {
+                    textLayouts.clear();
                     resources.close();
                 } finally {
                     lifecycle.finishClose();
@@ -1408,7 +1595,9 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         JsxHostTree.Node modal = JsxModalScope.active(tree.roots());
         if (modal != null && !JsxModalScope.contains(modal, node)) return false;
         try {
-            Value result = root.invokeMember("dispatch", text(node.props.get("id")), eventName, input);
+            Object eventInput = builtinSession == null ? input
+                    : graal.graalvm.polyglot.proxy.ProxyObject.fromMap(new LinkedHashMap<>(input));
+            Value result = root.invokeMember("dispatch", text(node.props.get("id")), eventName, eventInput);
             return result.isBoolean() && result.asBoolean() || result.isString() && "queued".equals(result.asString());
         } catch (RuntimeException failure) {
             reportHostFailure("event", failure);
@@ -1445,6 +1634,21 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         }
     }
 
+    boolean inputFocused() {
+        JsxHostTree.Node node = focused(inputRoots());
+        return node != null && "input".equals(node.type);
+    }
+
+    boolean focusControl(String id) {
+        requireUsable("focus an internal UI control");
+        List<JsxHostTree.Node> candidates = new ArrayList<>();
+        collectFocusable(inputRoots(), candidates);
+        for (JsxHostTree.Node node : candidates) {
+            if (id.equals(node.props.get("id"))) { focus(node); return true; }
+        }
+        return false;
+    }
+
     private static JsxHostTree.Node focused(List<JsxHostTree.Node> values) {
         for (JsxHostTree.Node node : values) {
             if (!visible(node)) continue;
@@ -1474,6 +1678,8 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         for (int i = values.size() - 1; i >= 0; i--) {
             JsxHostTree.Node node = values.get(i);
             if (!visible(node) || !contains(node, x, y)) continue;
+            JsxScrollBar.Geometry bar = JsxScrollBar.geometry(node);
+            if (bar != null && bar.contains(x, y)) return node;
             JsxHostTree.Node child = hit(node.children, x, y);
             return child == null ? node : child;
         }
@@ -1484,6 +1690,8 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         for (int i = values.size() - 1; i >= 0; i--) {
             JsxHostTree.Node node = values.get(i);
             if (!visible(node) || !contains(node, x, y)) continue;
+            JsxScrollBar.Geometry bar = JsxScrollBar.geometry(node);
+            if (bar != null && bar.contains(x, y)) return node;
             JsxHostTree.Node child = scrollHit(node.children, x, y);
             if (child != null) return child;
             if ("scroll".equals(node.type)) return node;

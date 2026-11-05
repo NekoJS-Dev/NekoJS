@@ -140,6 +140,13 @@ final class JsxWorkspaceScope {
         return result;
     }
 
+    /** Hover feedback belongs only to the enabled, uncovered window, even before activation. */
+    static JsxHostTree.Node chromeAt(List<JsxHostTree.Node> roots, double x, double y) {
+        if (JsxModalScope.active(roots) != null || presentationAt(roots, x, y) != null) return null;
+        JsxHostTree.Node window = windowAt(roots, x, y);
+        return window != null && containsEnabled(roots, window.identity) ? window : null;
+    }
+
     /** Resolves retained identities even when reconciliation has replaced the node objects. */
     static JsxHostTree.Node windowFor(List<JsxHostTree.Node> roots, JsxHostTree.Node target) {
         return target == null ? null : windowFor(roots, target.identity, null);

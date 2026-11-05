@@ -392,6 +392,7 @@ class Ticket41MouseSelectionTest {
             adapter = allocate(JsxHostAdapter.class);
             setField(adapter, "minecraft", minecraft);
             setField(adapter, "ownerThread", Thread.currentThread());
+            setField(adapter, "textLayouts", new UiTextLayoutCache());
             setField(adapter, "tree", tree);
             setField(adapter, "fontAdapter", new McFontAdapter(font));
             ScriptManager manager = new ScriptManager(ScriptType.CLIENT, null, null, null, null,

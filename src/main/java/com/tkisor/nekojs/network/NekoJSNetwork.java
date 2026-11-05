@@ -4,9 +4,8 @@
 package com.tkisor.nekojs.network;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.client.gui.NekoErrorDashboardScreen;
+import com.tkisor.nekojs.client.gui.ErrorDashboardScreens;
 import com.tkisor.nekojs.network.ErrorSummaryDTO;
-import com.tkisor.nekojs.platform.compat.McClientCompat;
 import com.tkisor.nekojs.platform.compat.McPlatformCompat;
 import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -76,11 +75,7 @@ public class NekoJSNetwork {
 
     private static class ClientHandler {
         private static void showOrUpdateDashboard(List<ErrorSummaryDTO> errors, boolean openIfMissing) {
-            if (McClientCompat.get().currentScreen() instanceof NekoErrorDashboardScreen screen) {
-                screen.updateErrors(errors);
-            } else if (openIfMissing) {
-                McClientCompat.get().showScreen(NekoErrorDashboardScreen.create(errors));
-            }
+            ErrorDashboardScreens.showOrUpdate(errors, openIfMissing);
         }
     }
 

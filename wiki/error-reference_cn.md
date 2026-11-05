@@ -103,6 +103,7 @@
 | `NEKO-4027` | storage persistence attempted during an uncommitted transfer transaction | 未提交传输事务期间不能加载或保存存储 |
 | `NEKO-4028` | Fabric registry drain did not consume a selected pending registry | Fabric 注册表抽干未消费选定的待注册条目 |
 | `NEKO-4029` | Probe type reflection is incomplete; declarations may be omitted | Probe 类型反射不完整，部分声明可能缺失 |
+| `NEKO-4030` | Localization binding rejected invalid text or format arguments | 本地化 Binding 拒绝无效文本或格式参数 |
 | `NEKO-4031` | Authored class declaration registration rejected | 手写类声明注册被拒绝 |
 | `NEKO-4032` | Conflicting authored class declarations rejected at the same priority | 同优先级的手写类声明冲突，注册被拒绝 |
 | `NEKO-4033` | Authored class declaration dependency is unavailable, excluded, or hidden | 手写类声明依赖不可用、被排除或被隐藏 |
@@ -178,6 +179,7 @@
 | NEKO-7012 | 原生宿主拒绝无效弹窗属性（缺失或空白 id、非字符串标题、非布尔关闭开关）；公共组件或布局校验也可能通过 `NEKO-7007` 记录阶段失败。 |
 | NEKO-7013 | Workspace 编写契约拒绝无效配置／ID 或 root 发布阶段修改控制器；构造／控制器调用可直接抛出异常，UI 阶段也可能用 `NEKO-7007` 包装其原因。 |
 | NEKO-7014 | managed-mount 编写契约拒绝非正／不可表示的 GUI 区域边界、独占 Screen 的区域专用操作或其它 root handle／layout root ID。构造、绑定或发布前校验可直接拒绝；同 handle 绑定幂等。不是新增 HTTP/MCP wire error。 |
+| NEKO-7015 | 内置诊断 UI 会话不可用、已关闭，或加载／绘制／事件分发失败。支持的 NeoForge 26.x 客户端中，当前失败的仪表盘只请求一次原生回退；关闭／停机及晚到更新不会使其重新弹出。不是新增公共 Script API 或网络包状态。 |
 
 <a id="wiki-section-9"></a>
 ## JSX UI 检查器

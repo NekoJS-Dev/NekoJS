@@ -52,10 +52,11 @@ public final class BindingDeclarationGenerator {
         // Emit type aliases for bindings that use a TypeDoc typeOverride (e.g. ItemJS -> NekoItemHelper).
         // Without this, `let ItemJS: NekoItemHelper` references an undefined name and the binding loses
         // all member completion. The alias forwards to the real $Class so the override resolves to members.
+        // Inline type expressions already describe their shape and cannot be used as alias names.
         Set<String> emittedAlias = new LinkedHashSet<>();
         for (BindingCatalogEntry binding : bindings) {
             String override = binding.typeOverride();
-            if (override != null && !override.isEmpty()
+            if (override != null && override.matches("[\\p{javaLetter}_$][\\p{javaLetterOrDigit}_$]*")
                     && binding.javaType() != null && emittedAlias.add(override)) {
                 sb.append("type ").append(override).append(" = $")
                         .append(getTsClassName(binding.javaType())).append(";\n");

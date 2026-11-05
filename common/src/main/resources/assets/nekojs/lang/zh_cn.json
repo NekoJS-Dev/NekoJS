@@ -163,5 +163,7 @@
   "nekojs.command.info.entry_count": "共 %s 个条目",
   "nekojs.command.info.browse_failed": "无法创建脚本目录：%s",
   "nekojs.command.info.mod_size": "含 %s 个物品的命名空间",
-  "nekojs.command.info.tab_size": "%s（展示 %s / 搜索 %s 个物品）"
+  "nekojs.command.info.tab_size": "%s（展示 %s / 搜索 %s 个物品）",
+  "nekojs.gui.dashboard.error_id": "ID：%s",
+  "nekojs.gui.dashboard.copy_retry": "重新复制"
 }

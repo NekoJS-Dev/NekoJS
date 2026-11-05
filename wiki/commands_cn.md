@@ -170,6 +170,8 @@ NekoJS 的服务端根命令 `/nekojs` 需要游戏管理员权限（op 2 及以
 - `/nekojs error`：快速报告当前是否有错误（yes/no + 简短摘要）。
 - `/nekojs view_all_errors`：列出完整错误。NeoForge 会把错误列表交给错误 UI，Fabric 在聊天中输出文本列表。
 
+NeoForge 26.1.2／26.2.0 使用内置 JSX 仪表盘，接入真实错误快照、搜索、详情独立滚动、经确认的复制与经检查的异步 VS Code 定位。玩家执行 `/nekojs view_all_errors` 总会打开面板，零错误时显示空状态；`/nekojs error` 仍只在聊天中报告概览，被动快照更新不会打开已关闭的面板。它独立于用户 CLIENT 脚本 generation；内置 UI 失败时回退现有原生面板。NeoForge 1.21.1 保留原生 UI。命令权限、网络包字段和聊天链接打开流程均不变。
+
 脚本出错不会崩溃游戏——错误会被捕获、记录到 `logs/nekojs/<type>.log`，出错脚本被标记 disabled 直到 reload 成功清除标记。
 
 <a id="wiki-section-16"></a>
