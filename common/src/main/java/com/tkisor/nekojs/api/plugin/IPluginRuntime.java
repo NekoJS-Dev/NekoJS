@@ -28,7 +28,15 @@ public interface IPluginRuntime {
 
     Map<String, Binding> bindings(ScriptType type);
 
+    /** Module-only registrations; these do not appear in the legacy globals map. */
+    default List<com.tkisor.nekojs.api.data.ModuleBinding> moduleBindings(ScriptType type) {
+        return List.of();
+    }
+
     Map<String, EventGroup> eventGroups();
+
+    default List<com.tkisor.nekojs.api.event.ModuleEventGroup> moduleEventGroups() { return List.of(); }
+    default List<EventGroup> lifecycleEventGroups() { return List.copyOf(eventGroups().values()); }
 
     List<JSTypeAdapter<?>> adapters();
 

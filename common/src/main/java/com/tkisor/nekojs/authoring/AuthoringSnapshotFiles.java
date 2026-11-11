@@ -51,7 +51,7 @@ public final class AuthoringSnapshotFiles {
     static String readBounded(Path path, int limit) throws IOException {
         byte[] bytes;
         try (var input = Files.newInputStream(path)) { bytes = input.readNBytes(limit + 1); }
-        if (bytes.length > limit) throw new IOException("[NEKO-1019] Authoring JSON file exceeds the size limit.");
+        if (bytes.length > limit) throw new IOException("[NEKO-1019] Authoring file exceeds the size limit.");
         return java.nio.charset.StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes)).toString();
     }
 

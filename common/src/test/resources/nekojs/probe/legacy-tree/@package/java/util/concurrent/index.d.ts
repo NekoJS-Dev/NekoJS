@@ -1,5 +1,5 @@
 import { $AutoCloseable, $AutoCloseable_, $Enum, $Runnable, $Runnable_, $Thread, $Throwable } from "java:java/lang";
-import { $Collection, $List } from "java:java/util";
+import { $Collection, $Collection_, $List, $List_ } from "java:java/util";
 
 declare module "java:java/util/concurrent" {
     export class $TimeUnit {
@@ -19,14 +19,19 @@ declare module "java:java/util/concurrent" {
     export interface $TimeUnit extends $Enum<$TimeUnit> {}
 
     export interface $ExecutorService extends $Executor, $AutoCloseable {
+        isShutdown(): boolean;
+        get terminated(): boolean;
+        isTerminated(): boolean;
         awaitTermination(arg0: number, arg1: $TimeUnit_): boolean;
         close(): void;
-        invokeAll<T>(arg0: ($Collection<$Callable<T>> | ($Callable_<T, T>)[]), arg1: number, arg2: $TimeUnit_): $List<$Future<T>>;
-        invokeAll<T>(arg0: ($Collection<$Callable<T>> | ($Callable_<T, T>)[])): $List<$Future<T>>;
-        invokeAny<T>(arg0: ($Collection<$Callable<T>> | ($Callable_<T, T>)[]), arg1: number, arg2: $TimeUnit_): T;
-        invokeAny<T>(arg0: ($Collection<$Callable<T>> | ($Callable_<T, T>)[])): T;
-        isShutdown(): boolean;
-        isTerminated(): boolean;
+        invokeAll<T>(
+            arg0: ($Collection<$Callable<T>> | $Callable_<T, T>[]),
+            arg1: number,
+            arg2: $TimeUnit_
+        ): $List<$Future<T>>;
+        invokeAll<T>(arg0: ($Collection<$Callable<T>> | $Callable_<T, T>[])): $List<$Future<T>>;
+        invokeAny<T>(arg0: ($Collection<$Callable<T>> | $Callable_<T, T>[]), arg1: number, arg2: $TimeUnit_): T;
+        invokeAny<T>(arg0: ($Collection<$Callable<T>> | $Callable_<T, T>[])): T;
         shutdownNow(): $List<$Runnable>;
         shutdown(): void;
         submit<T>(arg0: $Runnable_, arg1: T): $Future<T>;
@@ -35,12 +40,14 @@ declare module "java:java/util/concurrent" {
     }
 
     export interface $Future<V> {
+        get cancelled(): boolean;
+        isCancelled(): boolean;
+        get done(): boolean;
+        isDone(): boolean;
         cancel(arg0: boolean): boolean;
         exceptionNow(): $Throwable;
         get(arg0: number, arg1: $TimeUnit_): V;
         get(): V;
-        isCancelled(): boolean;
-        isDone(): boolean;
         resultNow(): V;
         state(): $Future$State;
     }

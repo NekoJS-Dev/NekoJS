@@ -85,6 +85,44 @@ class GlobalBindingMemberValidatorTest {
     }
 
     @Test
+    void negatedArrayLiteralMethodIsNotAnUnknownGlobal() {
+        validate(file("array-literal-member"),
+                "const mode = 'idle'; if (!['replace', 'poison'].includes(mode)) {}\n");
+
+        assertTrue(reported.isEmpty(), "Array method access must not become a free identifier: " + reported);
+    }
+
+    @Test
+    void literalMembersDoNotLeakThroughConditionOrInitializerRecovery() {
+        for (String expression : List.of(
+                "['replace', 'poison'].includes(mode)",
+                "!['replace', 'poison'].includes(mode)",
+                "[].includes(mode)",
+                "[['replace'], /* ] inside a comment */ ['poison']][0].includes(mode)",
+                "[, ...['replace'],].includes(mode)",
+                "['replace'].map(value => value).includes(mode)",
+                "['replace']['includes'](mode)")) {
+            validate(file("array-literal-variants"), "const mode = 'idle'; const result = " + expression + ";");
+            assertTrue(reported.isEmpty(), expression + ": " + reported);
+        }
+    }
+
+    @Test
+    void literalReceiversKeepNestedDiagnosticsAndDoNotWhitelistMemberNames() {
+        validate(file("array-literal-errors"),
+                "[Utils.serverTel('bad'), missing.call(), () => Item.empty().getIdd()]"
+                        + ".includes(unknown()); includes();");
+
+        for (String diagnostic : List.of("no member 'serverTel'", "Unknown identifier 'missing'",
+                "no member 'getIdd'", "Unknown identifier 'unknown'", "Unknown identifier 'includes'")) {
+            assertTrue(reported.stream().anyMatch(message -> message.contains(diagnostic)),
+                    "Nested and standalone diagnostics must remain active: " + diagnostic + ": " + reported);
+        }
+        assertEquals(1, reported.stream().filter(message -> message.contains("Unknown identifier 'includes'")).count(),
+                "Only the standalone call is an unknown global");
+    }
+
+    @Test
     void flagsTypoedBindingMemberAnywhereInTheFile() {
         validate(file("typo"),
                 "Utils.serverTel('hi')\r\nServerEvents.recipes(event => {\r\n  Utils.serverTel2('x')\r\n})\r\n");

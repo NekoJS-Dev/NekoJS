@@ -9,7 +9,10 @@ declare global {
     namespace SampleEvents {
         function cancellable(handler: ((event: $LegacyProbeFixture$SampleCancellableEvent) => void)): void;
         function dispatch(handler: ((event: $LegacyProbeFixture$SampleDispatchEvent) => void)): void;
-        function dispatch(extra: $LegacyProbeFixture$SampleDispatchKey, handler: ((event: $LegacyProbeFixture$SampleDispatchEvent) => void)): void;
+        function dispatch(
+            extra: $LegacyProbeFixture$SampleDispatchKey,
+            handler: ((event: $LegacyProbeFixture$SampleDispatchEvent) => void)
+        ): void;
     }
 
 }

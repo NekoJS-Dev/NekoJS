@@ -53,32 +53,39 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
     private boolean bucket = true;
     private boolean block = true;
 
-    private final RegistryObjectBuilder<Fluid> flowing;
-    private final RegistryObjectBuilder<LiquidBlock> liquidBlock;
-    private final RegistryObjectBuilder<BucketItem> bucketItem;
+    private record AdditionalBuilders(RegistryObjectBuilder<Fluid> flowing,
+            RegistryObjectBuilder<LiquidBlock> liquidBlock, RegistryObjectBuilder<BucketItem> bucketItem) {}
 
+    private AdditionalBuilders additionalBuilders;
     private FluidType cachedType;
 
     public FluidBuilder(Identifier id) {
         super(id);
-        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+    }
+
+    /** Defers overridable ID reads until use and publishes the sibling builders together. */
+    private AdditionalBuilders additionalBuilders() {
+        if (additionalBuilders != null) return additionalBuilders;
+        RegistryObjectBuilder<Fluid> flowing = new RegistryObjectBuilder<>(getFlowingId()) {
             @Override
             public Fluid build() {
                 return new BaseFlowingFluid.Flowing(FluidBuilder.this.properties());
             }
         };
-        this.liquidBlock = new RegistryObjectBuilder<>(id) {
+        RegistryObjectBuilder<LiquidBlock> liquidBlock = new RegistryObjectBuilder<>(id) {
             @Override
             public LiquidBlock build() {
                 return FluidBuilder.this.createLiquidBlock();
             }
         };
-        this.bucketItem = new RegistryObjectBuilder<>(getBucketId()) {
+        RegistryObjectBuilder<BucketItem> bucketItem = new RegistryObjectBuilder<>(getBucketId()) {
             @Override
             public BucketItem build() {
                 return FluidBuilder.this.createBucketItem();
             }
         };
+        additionalBuilders = new AdditionalBuilders(flowing, liquidBlock, bucketItem);
+        return additionalBuilders;
     }
 
     /** {@link TaggableBuilder}：流体 tag（如 {@code minecraft:water}）归属 FLUID 注册表。 */
@@ -242,12 +249,13 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
     /** 四子连带注册：flowing（FLUID 同 pass 追加）/ block（BLOCK）/ bucket（ITEM）/ type（FLUID_TYPES）。 */
     @Override
     public void handleAdditionalObjects(RegistryObjectBuilder.AdditionalObjectRegistry registry) {
-        registry.additional(Registries.FLUID, flowing.id, flowing);
+        AdditionalBuilders builders = additionalBuilders();
+        registry.additional(Registries.FLUID, builders.flowing.id, builders.flowing);
         if (block) {
-            registry.additional(Registries.BLOCK, liquidBlock.id, liquidBlock);
+            registry.additional(Registries.BLOCK, builders.liquidBlock.id, builders.liquidBlock);
         }
         if (bucket) {
-            registry.additional(Registries.ITEM, bucketItem.id, bucketItem);
+            registry.additional(Registries.ITEM, builders.bucketItem.id, builders.bucketItem);
         }
         registry.additional(NeoForgeRegistries.FLUID_TYPES.key(), id, this::createType);
     }
@@ -271,13 +279,14 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
     }
 
     private BaseFlowingFluid.Properties properties() {
+        AdditionalBuilders builders = additionalBuilders();
         BaseFlowingFluid.Properties props = new BaseFlowingFluid.Properties(
-                this::createType, this::get, flowing::get);
+                this::createType, this::get, builders.flowing::get);
         if (bucket) {
-            props.bucket(bucketItem::get);
+            props.bucket(builders.bucketItem::get);
         }
         if (block) {
-            props.block(liquidBlock::get);
+            props.block(builders.liquidBlock::get);
         }
         props.slopeFindDistance(slopeFindDistance)
                 .levelDecreasePerBlock(levelDecreasePerBlock)

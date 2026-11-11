@@ -107,7 +107,7 @@ class Ticket24FabricGameplayEventCatalogTest {
                 throw new IllegalStateException("cannot initialize fabric adapter " + adapter, e);
             }
         }
-        EventGroupRegistry registry = new EventGroupRegistry.Impl();
+        EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         new FabricCorePlugin().registerEvents(registry);
         new FabricCorePlugin().registerClientEvents(registry);
         return registry.view();

@@ -5,6 +5,8 @@ import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.StableServerTickEvent;
 import com.tkisor.nekojs.core.villager.VillagerTradeDeclarationEventJS;
 import com.tkisor.nekojs.core.villager.VillagerTradeReloadEventJS;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
@@ -24,7 +26,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.minecraft.resources.Identifier;
 
 public interface ServerEvents {
-    EventGroup GROUP = EventGroup.of("ServerEvents");
+    EventGroup GROUP = EventGroup.of("ServerEvents").expose(api -> api.versioned());
 
     DispatchKey<TagEventJS, Identifier> TAG_REGISTRY_KEY = new DispatchKey<>() {
         @Override
@@ -53,9 +55,15 @@ public interface ServerEvents {
 
     // 两时代的声明逐字相同（ServerTickEvent / RecipeEventJS 两端同包同名），无需守卫。
     EventBusJS<ServerTickEvent.Pre, Void> TICK_PRE =
-            GROUP.server("tickPre", ServerTickEvent.Pre.class);
+            GROUP.server("tickPre", ServerTickEvent.Pre.class, api ->
+                    api.stable(StableServerTickEvent.class,
+                            event -> new StableServerTickEvent(event.getServer().getTickCount()))
+                            .scriptTypes(ScriptType.SERVER));
     EventBusJS<ServerTickEvent.Post, Void> TICK_POST =
-            GROUP.server("tickPost", ServerTickEvent.Post.class);
+            GROUP.server("tickPost", ServerTickEvent.Post.class, api ->
+                    api.stable(StableServerTickEvent.class,
+                            event -> new StableServerTickEvent(event.getServer().getTickCount()))
+                            .scriptTypes(ScriptType.SERVER));
 
     EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
     EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class);

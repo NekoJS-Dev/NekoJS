@@ -144,6 +144,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
                 // 由本次脚本执行期间 RecipeJsonBuilder 的动作调用重建——删掉的脚本动作随之消失
                 NekoRuntimeAccess.get().beforeRecipeLoading(eventJS);
                 if (!ServerEvents.RECIPES.postChecked(eventJS)) successful[0] = false;
+                eventJS.prepareRecipesForDecode();
             } catch (PolyglotException e) {
                 successful[0] = false;
                 // 错误上报经 ScriptErrorReporter 门面（root-owned ErrorTracker 的静态报告面，

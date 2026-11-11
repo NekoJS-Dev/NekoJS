@@ -90,6 +90,43 @@ class NekoModuleIdentityLifecycleTest {
     }
 
     @Test
+    void apiModulesShareCjsAndEsmNamespacesWithoutCreatingGlobals() throws Exception {
+        try (var in = getClass().getResourceAsStream("/nekojs/node/internal/define.js")) {
+            assertNotNull(in);
+            context.eval("js", new String(in.readAllBytes(), StandardCharsets.UTF_8));
+        }
+        var bindings = java.util.List.of(
+                new com.tkisor.nekojs.api.data.ModuleBinding("nekojs", com.tkisor.nekojs.api.data.BindingExposure.Category.STABLE,
+                        com.tkisor.nekojs.api.ScriptType.SERVER, com.tkisor.nekojs.api.data.Binding.of("answer", 42)),
+                new com.tkisor.nekojs.api.data.ModuleBinding("addon", com.tkisor.nekojs.api.data.BindingExposure.Category.VERSION,
+                        com.tkisor.nekojs.api.ScriptType.SERVER, com.tkisor.nekojs.api.data.Binding.of("answer", 7)));
+        var runtime = (com.tkisor.nekojs.api.plugin.IPluginRuntime) java.lang.reflect.Proxy.newProxyInstance(
+                getClass().getClassLoader(), new Class<?>[]{com.tkisor.nekojs.api.plugin.IPluginRuntime.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "moduleBindings" -> bindings;
+                    case "moduleEventGroups" -> java.util.List.of();
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+        com.tkisor.nekojs.core.api.ApiModuleInstaller.install(context, runtime, com.tkisor.nekojs.api.ScriptType.SERVER);
+        Path dir = paths.serverScripts().resolve("src");
+        Files.writeString(dir.resolve("api.cjs"), "module.exports = require('nekojs/api/stable');");
+        Files.writeString(dir.resolve("api.mjs"), "import * as api from 'nekojs/api/stable';\n"
+                + "import { answer as addon } from 'nekojs/api/version/addon';\n"
+                + "export const result = api.answer + addon;\n"
+                + "export const same = api.default === globalThis.__nekoNodeResolve('nekojs/api/stable');");
+        Value cjs = asValue(host.loadEntry("./server_scripts/src/api.cjs"));
+        Value esm = asValue(host.loadEntry("./server_scripts/src/api.mjs"));
+        assertEquals(42, cjs.getMember("answer").asInt());
+        assertEquals(49, esm.getMember("result").asInt());
+        assertTrue(esm.getMember("same").asBoolean());
+        assertEquals("undefined", context.eval("js", "typeof answer").asString());
+        assertTrue(context.eval("js", "Object.isFrozen(__nekoNodeResolve('nekojs/api/stable'))").asBoolean());
+        assertThrows(PolyglotException.class, () -> context.eval("js", "__nekoNodeDefine('nekojs/api/stable', {})"));
+        Files.writeString(dir.resolve("missing-api.mjs"), "import { absent } from 'nekojs/api/stable'; export { absent };");
+        assertThrows(IOException.class, () -> host.loadEntry("./server_scripts/src/missing-api.mjs"));
+    }
+
+    @Test
     void repeatedRequireReturnsIdenticalExports() throws Exception {
         Path dir = paths.serverScripts().resolve("src");
         Files.writeString(dir.resolve("id-dep.cjs"), "module.exports = { tag: 'dep' };\n");

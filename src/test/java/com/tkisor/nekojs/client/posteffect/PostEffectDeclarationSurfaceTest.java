@@ -30,7 +30,7 @@ class PostEffectDeclarationSurfaceTest {
 
     @Test
     void declarationBusLivesInClientEventsAndIsTheOnlyPostEffectEvent() {
-        var registry = new com.tkisor.nekojs.api.event.EventGroupRegistry.Impl();
+        var registry = new com.tkisor.nekojs.api.event.EventGroupRegistry.Impl().scopedTo("nekojs");
         new NekoJSCorePlugin().registerClientEvents(registry);
 
         var clientEvents = registry.view().get("ClientEvents");

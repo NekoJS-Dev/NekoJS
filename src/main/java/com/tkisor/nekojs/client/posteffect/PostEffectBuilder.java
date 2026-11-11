@@ -25,10 +25,10 @@ public final class PostEffectBuilder implements ProxyObject {
     public String getFragmentShaderId() { return (String) read("fragmentShaderId"); }
     public void setFragmentShaderId(String value) { set("fragmentShaderId", value); }
 
-    public Map<String, String> getFragmentShaders() { return (Map<String, String>) read("fragmentShaders"); }
+    public Map<String, String> getFragmentShaders() { return readShaderMap("fragmentShaders"); }
     public void setFragmentShaders(Map<String, String> value) { set("fragmentShaders", value); }
 
-    public Map<String, String> getVertexShaders() { return (Map<String, String>) read("vertexShaders"); }
+    public Map<String, String> getVertexShaders() { return readShaderMap("vertexShaders"); }
     public void setVertexShaders(Map<String, String> value) { set("vertexShaders", value); }
 
     public String getUniformsJson() { return (String) read("uniformsJson"); }
@@ -49,6 +49,15 @@ public final class PostEffectBuilder implements ProxyObject {
             case "blurRounds" -> 1;
             default -> "";
         };
+    }
+
+    private Map<String, String> readShaderMap(String name) {
+        // The schema validates entries on write; recover the typed view with checked casts.
+        Map<String, String> shaders = new LinkedHashMap<>();
+        for (var entry : ((Map<?, ?>) read(name)).entrySet()) {
+            shaders.put((String) entry.getKey(), (String) entry.getValue());
+        }
+        return java.util.Collections.unmodifiableMap(shaders);
     }
 
     private void set(String name, Object value) {

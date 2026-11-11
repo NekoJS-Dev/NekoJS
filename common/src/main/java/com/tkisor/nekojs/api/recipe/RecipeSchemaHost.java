@@ -20,6 +20,16 @@ public interface RecipeSchemaHost {
     /** Create a builder for a schema-driven recipe (recipe type + id prefix). */
     RecipeBuilder builder(String type, String prefix);
 
+    /** Borrows native recipe execution support when the platform implements it. */
+    default RecipeBuilderSession session(RecipeBuilder builder) {
+        throw new UnsupportedOperationException("[NEKO-5350] Native recipe builder sessions are unsupported by this host");
+    }
+
+    /** Borrows the platform registry view used by native field and recipe codecs. */
+    default Object registryAccess() {
+        throw new UnsupportedOperationException("[NEKO-5353] Recipe host has no borrowed registry access");
+    }
+
     /** Register a raw/custom recipe from a prebuilt JSON object; returns the object exposed to JS. */
     Object custom(JsonObject json);
 
@@ -30,11 +40,14 @@ public interface RecipeSchemaHost {
     JsonElement toJson(Value value);
 
     /**
-     * Encode a JS value to JSON for a schema field: scalar via {@link #encodeField}, or an
-     * array (wrapping a single value when the JS value isn't array-shaped). Shared by the
+     * Encode the whole field using its explicit codec, or fall back to native scalar/array
+     * conversion (wrapping a single value when the JS value isn't array-shaped). Shared by the
      * namespace proxies and the schema-driven builder so the conversion logic lives in one place.
      */
     default JsonElement convertField(RecipeFieldDefinition field, Value value) {
+        if (field.valueCodec() != null) {
+            return field.valueCodec().encoder().encode(value, this);
+        }
         if (!field.array()) {
             return encodeField(field.kind(), value);
         }
@@ -55,6 +68,14 @@ public interface RecipeSchemaHost {
      * Platforms without a JSON pipeline (1.12.2) override this to apply typed values directly.
      */
     default void applyField(RecipeBuilder builder, RecipeFieldDefinition field, Value value) {
-        builder.setPath(field.path(), new RecipeJsonValue(convertField(field, value)));
+        applyEncodedField(builder, field, convertField(field, value));
+    }
+
+    /**
+     * Apply prevalidated JSON without repeating conversion. Advanced schema profiles use this
+     * hook after detached preparation; hosts overriding applyField alone retain the legacy path.
+     */
+    default void applyEncodedField(RecipeBuilder builder, RecipeFieldDefinition field, JsonElement value) {
+        builder.setPath(field.path(), new RecipeJsonValue(value.deepCopy()));
     }
 }

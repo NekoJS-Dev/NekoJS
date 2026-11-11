@@ -37,15 +37,42 @@ public final class BindingsPoint {
         }
     }
 
+    /** Keeps the historical map product while retaining module exports in the same frozen collection. */
+    static final class Snapshot extends java.util.AbstractMap<ScriptType, Map<String, Binding>> {
+        private final Map<ScriptType, Map<String, Binding>> globals;
+        private final java.util.List<com.tkisor.nekojs.api.data.ModuleBinding> modules;
+
+        Snapshot(Map<ScriptType, Map<String, Binding>> globals,
+                 java.util.List<com.tkisor.nekojs.api.data.ModuleBinding> modules) {
+            this.globals = Map.copyOf(globals);
+            this.modules = java.util.List.copyOf(modules);
+        }
+
+        java.util.List<com.tkisor.nekojs.api.data.ModuleBinding> modules() {
+            return modules;
+        }
+
+        @Override
+        public java.util.Set<Entry<ScriptType, Map<String, Binding>>> entrySet() {
+            return globals.entrySet();
+        }
+    }
+
     /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册时构造）。 */
     public static NekoPluginExtensionPoint<NekoJSPlugin, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>> point(
             boolean client) {
+        return point(client, plugin -> null);
+    }
+
+    static NekoPluginExtensionPoint<NekoJSPlugin, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>> point(
+            boolean client, java.util.function.Function<NekoJSPlugin, String> owners) {
         var predicate = NekoPluginBootstrap.bindingPredicate(client);
         return NekoPluginExtensionPoint.<NekoJSPlugin, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>>builder(ID, NekoJSPlugin.class)
                 .merge(MergePolicy.append())
                 .initializer(context -> ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new))
                 .collector((plugin, registries) -> predicate.streamMatched()
                         .map(registries::at)
+                        .map(registry -> ((BindingRegistry.BindingRegistryImpl) registry).scopedTo(owners.apply(plugin)))
                         .forEach(plugin::registerBinding))
                 .finish(NekoPluginBootstrap::freezeBindings)
                 .build();

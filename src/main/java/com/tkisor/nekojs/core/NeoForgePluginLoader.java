@@ -13,11 +13,26 @@ import com.tkisor.nekojs.utils.ReflectionUtils;
 public final class NeoForgePluginLoader {
     private NeoForgePluginLoader() {}
 
+    private static void registerOwnedClass(Class<?> plugin) {
+        var owners = net.neoforged.fml.ModList.get().getAllScanData().stream()
+                .filter(data -> data.getClasses().stream().anyMatch(entry ->
+                        entry.clazz().getClassName().equals(plugin.getName())))
+                .flatMap(data -> data.getIModInfoData().stream())
+                .flatMap(info -> info.getMods().stream())
+                .map(info -> info.getModId()).distinct().toList();
+        if (owners.size() == 1) {
+            NekoJSBasePluginManager.registerClass(owners.getFirst(), plugin);
+        } else {
+            // Multi-mod jars require an explicit owner for module publications.
+            NekoJSBasePluginManager.registerClass(plugin);
+        }
+    }
+
     public static void loadAnnotatedPlugins() {
         ReflectionUtils.findAnnotationClasses(
                 RegisterNekoJSPlugin.class,
                 null,
-                NekoJSBasePluginManager::registerClass,
+                NeoForgePluginLoader::registerOwnedClass,
                 () -> NekoJS.LOGGER.debug("Plugin scan finished")
         );
     }

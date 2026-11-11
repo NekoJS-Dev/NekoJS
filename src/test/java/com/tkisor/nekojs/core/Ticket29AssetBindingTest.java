@@ -50,7 +50,7 @@ class Ticket29AssetBindingTest {
 
     /** 走生产注册路径装配 registry（与 bootstrap 期 BindingsPoint 收集同一入口）。 */
     private static BindingRegistry productionBindings(ScriptType scriptType) {
-        BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(scriptType);
+        BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(scriptType).scopedTo("nekojs");
         new NekoJSCorePlugin().registerBinding(registry);
         return registry;
     }

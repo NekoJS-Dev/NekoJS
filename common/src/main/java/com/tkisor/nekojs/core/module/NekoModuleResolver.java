@@ -240,7 +240,7 @@ public final class NekoModuleResolver {
 
     private boolean isBuiltinSpecifier(String specifier) {
         // Keep reserved engine modules ahead of user packages, matching modules.list.
-        if (specifier.equals("nekojs/jsx-runtime") || specifier.equals("nekojs/jsx-workspace")) {
+        if (specifier.startsWith("nekojs/api/") || specifier.equals("nekojs/jsx-runtime") || specifier.equals("nekojs/jsx-workspace")) {
             return true;
         }
         return specifier.equals("fs")

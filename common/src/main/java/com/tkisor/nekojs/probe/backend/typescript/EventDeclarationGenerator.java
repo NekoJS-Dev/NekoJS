@@ -8,6 +8,7 @@ import com.tkisor.nekojs.probe.EventPayloadDeclarations;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
+import com.tkisor.nekojs.probe.types.TypeScriptDeclarationFormatter;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.reflect.JavaGenericTypes;
 
@@ -152,16 +153,33 @@ public final class EventDeclarationGenerator {
         return cls.getSimpleName();
     }
 
+    /** Renders module namespaces without declaring legacy global event groups. */
+    public String generateModuleNamespaces(List<EventCatalogEntry> events) {
+        TypeAliasRegistry inline = aliasRegistry.withReferences((fqn, symbol) ->
+                "import(\"java:" + fqn.substring(0, fqn.lastIndexOf('.')).replace('.', '/')
+                        + "\")." + symbol);
+        StringBuilder output = new StringBuilder();
+        Map<String, List<EventCatalogEntry>> groups = events.stream().collect(Collectors.groupingBy(
+                EventCatalogEntry::group, TreeMap::new, Collectors.toList()));
+        groups.forEach((name, entries) -> {
+            output.append("    export namespace ").append(name).append(" {\n");
+            entries.stream().sorted(Comparator.comparing(EventCatalogEntry::name))
+                    .forEach(event -> output.append(generateEventMethod(event, null, inline)));
+            output.append("    }\n");
+        });
+        return output.toString();
+    }
+
     private String generateEventMethod(EventCatalogEntry event, EventPayload payload, TypeAliasRegistry moduleAliases) {
         StringBuilder sb = new StringBuilder();
 
         // ScriptEvents 声明的自定义事件：载荷任意、且脚本可自己触发
         if (event.scriptDefined()) {
             sb.append("        namespace ").append(event.name()).append(" {\n");
-            sb.append("            function post(payload?: any): void;\n");
+            TypeScriptDeclarationFormatter.appendCallable(sb, 12, "function post", List.of("payload?: any"), ": void;");
             sb.append("        }\n");
-            sb.append("        function ").append(event.name());
-            sb.append("(handler: ((payload: any) => void)): void;\n");
+            TypeScriptDeclarationFormatter.appendCallable(sb, 8, "function " + event.name(),
+                    List.of("handler: ((payload: any) => void)"), ": void;");
             return sb.toString();
         }
 
@@ -178,10 +196,8 @@ public final class EventDeclarationGenerator {
                             .renderShape(parameter.shape(), moduleAliases, false).type());
                 }
                 parameters.add("callback: (" + String.join(", ", callbackParameters) + ") => void");
-                sb.append("        function ").append(event.name()).append("(")
-                        .append(String.join(", ", parameters)).append("): ")
-                        .append(AdapterAliasGenerator.renderShape(signature.returns(), moduleAliases, false).type())
-                        .append(";\n");
+                TypeScriptDeclarationFormatter.appendCallable(sb, 8, "function " + event.name(), parameters,
+                        ": " + AdapterAliasGenerator.renderShape(signature.returns(), moduleAliases, false).type() + ";");
             }
             return sb.toString();
         }
@@ -206,17 +222,16 @@ public final class EventDeclarationGenerator {
         }
 
         // 无 dispatch key 的版本
-        sb.append("        function ").append(event.name());
-        sb.append("(handler: ((event: ").append(eventType).append(") => void)): void;\n");
+        TypeScriptDeclarationFormatter.appendCallable(sb, 8, "function " + event.name(),
+                List.of("handler: ((event: " + eventType + ") => void)"), ": void;");
 
         // 有 dispatch key 的版本
         if (event.dispatchable() && event.dispatchKeyType() != null) {
             String keyType = TypeScriptClassRenderer.renderTypeRef(
                     JavaTypeScriptProjection.project(event.dispatchKeyType(), TypeReflector.toRef(event.dispatchKeyType())),
                     moduleAliases, true);
-            sb.append("        function ").append(event.name());
-            sb.append("(extra: ").append(keyType);
-            sb.append(", handler: ((event: ").append(eventType).append(") => void)): void;\n");
+            TypeScriptDeclarationFormatter.appendCallable(sb, 8, "function " + event.name(),
+                    List.of("extra: " + keyType, "handler: ((event: " + eventType + ") => void)"), ": void;");
         }
 
         return sb.toString();

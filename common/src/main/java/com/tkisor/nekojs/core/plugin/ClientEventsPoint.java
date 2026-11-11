@@ -35,20 +35,33 @@ public final class ClientEventsPoint {
     }
 
     /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
-    public static final NekoPluginExtensionPoint<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>> POINT =
-            NekoPluginExtensionPoint.<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>>builder(ID, NekoJSPlugin.class)
+    public static final NekoPluginExtensionPoint<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>> POINT = point(plugin -> null);
+
+    static NekoPluginExtensionPoint<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>> point(
+            java.util.function.Function<NekoJSPlugin, String> owners) {
+        return NekoPluginExtensionPoint.<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.failFast())
                     .clientOnly()
                     .dependsOn(EventsPoint.POINT)
                     .initializer(context -> {
-                        EventGroupRegistry merged = new EventGroupRegistry.Impl();
+                        EventGroupRegistry.Impl merged = new EventGroupRegistry.Impl();
                         Map<String, EventGroup> earlier = context.result(EventsPoint.POINT);
                         if (earlier != null) {
-                            earlier.values().forEach(merged::register);
+                            if (earlier instanceof EventsPoint.Snapshot snapshot) {
+                                merged.inherit(new EventGroupRegistry() {
+                                    public void register(EventGroup group) { throw new UnsupportedOperationException(); }
+                                    public Map<String, EventGroup> view() { return earlier; }
+                                    public java.util.List<com.tkisor.nekojs.api.event.ModuleEventGroup> moduleGroups() { return snapshot.modules(); }
+                                    public java.util.List<EventGroup> sources() { return snapshot.sources(); }
+                                });
+                            } else {
+                                earlier.values().forEach(merged::register);
+                            }
                         }
                         return merged;
                     })
-                    .collector(NekoJSPlugin::registerClientEvents)
+                    .collector((plugin, registry) -> plugin.registerClientEvents(((EventGroupRegistry.Impl) registry).scopedTo(owners.apply(plugin))))
                     .finish(EventsPoint::freezeEventGroups)
                     .build();
+    }
 }

@@ -49,6 +49,10 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
 
     @Override
     public void registerBinding(com.tkisor.nekojs.api.data.BindingRegistry registry) {
+        registry.register(com.tkisor.nekojs.api.data.Binding.of("Native",
+                new com.tkisor.nekojs.bindings.static_access.NativeBridgeJS()), expose -> expose.stable());
+        registry.register(com.tkisor.nekojs.api.data.Binding.of("Item",
+                new com.tkisor.nekojs.bindings.static_access.ItemJS()), expose -> expose.versioned());
         // 服务端→客户端键值推送（只读侧 clientData 由 common 内置插件注册）
         registry.register("Capabilities", new com.tkisor.nekojs.bindings.static_access.CapabilitiesJS());
         registry.register("ClientData", com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncJS.class);
@@ -123,8 +127,10 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register("TriState", net.minecraft.util.TriState.class);
         // client 类绑定（与 NeoForge 侧同款 per-ScriptType 条件；专用服务器不注册）
         if (registry.scriptType() == com.tkisor.nekojs.api.ScriptType.CLIENT) {
-            registry.register(com.tkisor.nekojs.api.data.Binding.of("I18n", new com.tkisor.nekojs.bindings.static_access.I18nJS(),
-                    com.tkisor.nekojs.api.facade.I18nFacade.class));
+            var i18n = com.tkisor.nekojs.api.data.Binding.of("I18n", new com.tkisor.nekojs.bindings.static_access.I18nJS(),
+                    com.tkisor.nekojs.api.facade.I18nFacade.class);
+            registry.register(i18n);
+            registry.register(i18n, expose -> expose.stable());
             registry.register("Minecraft", net.minecraft.client.Minecraft.class);
             registry.register("Screen", net.minecraft.client.gui.screens.Screen.class);
             registry.register("Window", com.mojang.blaze3d.platform.Window.class);
@@ -178,15 +184,21 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         // 实体事件 mixin 面子集（drops/finalizeSpawn/tickPre/tickPost/leaveLevel；
         // 与 FabricEntityEventBindings.ENTITY_EVENTS 同名合并）
         registry.register(com.tkisor.nekojs.bindings.event.EntityEvents.GROUP);
+        for (var group : registry.view().values()) {
+            // Both ServerEvents contributors already declare their own version publication.
+            if (!group.name().equals("ServerEvents")) registry.register(group, expose -> expose.versioned());
+        }
     }
 
     @Override
     public void registerClientEvents(EventGroupRegistry registry) {
         // 客户端 tick 事件（CLIENT 脚本由 NekoJSFabricClient 在 CLIENT_STARTED 加载）
         registry.register(com.tkisor.nekojs.fabric.event.FabricClientEventBindings.CLIENT_EVENTS);
+        registry.register(com.tkisor.nekojs.fabric.event.FabricClientEventBindings.CLIENT_EVENTS, expose -> expose.versioned());
         // 脚本按键绑定（register/pressed/released/tick；孪生 KeyBindEvents，
         // 轮询挂载在 NekoJSFabricClient）
         registry.register(com.tkisor.nekojs.bindings.event.client.KeyBindEvents.GROUP);
+        registry.register(com.tkisor.nekojs.bindings.event.client.KeyBindEvents.GROUP, expose -> expose.versioned());
     }
 
     @Override

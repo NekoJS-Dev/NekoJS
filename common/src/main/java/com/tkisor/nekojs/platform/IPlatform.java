@@ -60,6 +60,9 @@ public interface IPlatform {
         loadedPackRoots().forEach(visitor);
     }
 
+    /** Plan resources from mods already admitted by the native loader; never scans a scripts directory. */
+    default void visitLoadedMixinPlans(java.util.function.BiConsumer<String, java.net.URI> visitor) {}
+
     IModInfo getInfo(String modID);
 
     default boolean isLoaded(String modId) {

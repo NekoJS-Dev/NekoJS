@@ -30,10 +30,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *   <li><b>AC9 (per-node source trace)</b> — the fabric twins/adapters that carry the fabric
  *       subset of each family exist and post the neutral payloads, including the entity
  *       behavior mixins (death drops / finalize spawn / tick / damage); the 1.21.1
- *       {@code NeoForgeBlockEvents} twin keeps the same bind surface.</li>
+ *       {@code BlockEvents} twin keeps the same bind surface.</li>
  *   <li><b>AC10 (no second registration path)</b> — {@code EventGroup.of("<Family>")} for each
- *       of the eight families is declared only in the legal sites (shared tree declaration +
- *       fabric twin + fabric binding group merged by name); no fourth surface exists.</li>
+ *       of the eight families is declared only in its legal platform/node source sites;
+ *       mutually exclusive source twins do not create an additional runtime surface.</li>
  * </ol>
  * File reads see the raw shared tree (stonecutter guards included), so the same assertions
  * hold on every node; guards only affect evaluation, not the wiring recorded here.
@@ -101,9 +101,9 @@ class Ticket24GameplayEventPhaseTraceTest {
         assertEquals(1, count(code(MAIN + "/bindings/event/EntityEvents.java"), ".bindCancellable("),
                 "DAMAGE_PRE is the one entity bus cancelled through an adapter cancel action"
                         + " (D4: Pre has no ICancellableEvent face; cancel maps to setNewDamage(0))");
-        assertEquals(12, count(code(MAIN + "/bindings/event/NeoForgeBlockEvents.java"), ".bind("),
+        assertEquals(12, count(code(MAIN + "/bindings/event/BlockEvents.java"), ".bind("),
                 "BlockEvents adapter: 12 plain binds + BROKEN via bindTransformed (13 wired buses)");
-        assertEquals(1, count(code(MAIN + "/bindings/event/NeoForgeBlockEvents.java"), ".bindTransformed("),
+        assertEquals(1, count(code(MAIN + "/bindings/event/BlockEvents.java"), ".bindTransformed("),
                 "BROKEN is the one transformed (neutral wrapper payload) block bus");
     }
 
@@ -115,8 +115,9 @@ class Ticket24GameplayEventPhaseTraceTest {
         String player = code(MAIN + "/bindings/event/PlayerEvents.java");
         assertFalse(player.contains(".bind(INVENTORY_CHANGED"),
                 "PlayerEvents.inventoryChanged is posted by InventoryChangeListener, not bridge-bound");
-        String blockAdapter = code(MAIN + "/bindings/event/NeoForgeBlockEvents.java");
-        assertFalse(blockAdapter.contains(".bind(BlockEvents.MODIFICATION"),
+        String blockAdapter = code(MAIN + "/bindings/event/BlockEvents.java");
+        assertFalse(blockAdapter.contains(".bind(MODIFICATION")
+                        || blockAdapter.contains(".bind(BlockEvents.MODIFICATION"),
                 "BlockEvents.modification is posted-object mode: the adapter must not bridge it");
     }
 
@@ -169,9 +170,9 @@ class Ticket24GameplayEventPhaseTraceTest {
                 "PlayerEvents: tickPre/tickPost/entityInteract filter client instances");
         assertEquals(4, count(code(MAIN + "/bindings/event/EntityEvents.java"), "isClientSide()"),
                 "EntityEvents: tick/tickPre/joinLevel/leaveLevel filter client instances");
-        assertEquals(2, count(code(MAIN + "/bindings/event/NeoForgeBlockEvents.java"), "isClientSide()"),
+        assertEquals(2, count(code(MAIN + "/bindings/event/BlockEvents.java"), "isClientSide()"),
                 "BlockEvents adapter: rightClicked/leftClicked filter client instances");
-        assertEquals(2, count(code("versions/1.21.1/src/main/java/com/tkisor/nekojs/bindings/event/NeoForgeBlockEvents.java"),
+        assertEquals(2, count(code("versions/1.21.1/src/main/java/com/tkisor/nekojs/bindings/event/BlockEvents.java"),
                         "isClientSide()"),
                 "1.21.1 BlockEvents twin keeps the same client-instance filters");
     }
@@ -224,9 +225,15 @@ class Ticket24GameplayEventPhaseTraceTest {
 
     @Test
     void familyGroupsAreDeclaredOnlyInTheirLegalSites() {
-        // shared-tree declaration (every loader compiles it) + fabric twin + fabric binding
-        // group merged by name are the legal sites; anything else would be a second surface
-        assertDeclarationCount("BlockEvents", 1);
+        // Count physical source owners, including mutually exclusive platform/node twins.
+        // Exact block source paths below prevent a duplicate owner from replacing a legal site.
+        assertDeclarationCount("BlockEvents", 3);
+        for (String site : List.of(MAIN + "/bindings/event/BlockEvents.java",
+                FABRIC + "/bindings/event/BlockEvents.java",
+                "versions/1.21.1/src/main/java/com/tkisor/nekojs/bindings/event/BlockEvents.java")) {
+            assertEquals(1, count(code(site), "EventGroup.of(\"BlockEvents\")"),
+                    "Each mutually exclusive platform source owns exactly one BlockEvents group: " + site);
+        }
         assertDeclarationCount("CapabilityEvents", 2);
         assertDeclarationCount("GoalEvents", 1);
         assertDeclarationCount("LevelEvents", 2);

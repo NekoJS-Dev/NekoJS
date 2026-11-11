@@ -113,6 +113,9 @@ public final class CoreManagedApiBootstrap {
                 args.size() == 1
                         ? id.of((String) args.get(0))
                         : id.of((String) args.get(0), (String) args.get(1)));
+        register(contributions, symbols, "member:ID.resource", (receiver, args) ->
+                args.size() == 1 ? id.resource((String) args.get(0))
+                        : id.resource((String) args.get(0), (String) args.get(1)));
         register(contributions, symbols, "member:ID.namespace", (receiver, args) ->
                 id.namespace((NekoId) args.get(0)));
         register(contributions, symbols, "member:ID.path", (receiver, args) ->

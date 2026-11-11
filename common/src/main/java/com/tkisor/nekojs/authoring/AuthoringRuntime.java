@@ -53,7 +53,6 @@ public final class AuthoringRuntime implements AutoCloseable {
                 }
             }
             runtime.writeEnvironment();
-            runtime.writeLocator();
             runtime.probeBinding = com.tkisor.nekojs.probe.ProbeCoordinator.bindAuthoringPaths(runtime.outputPaths);
             if (runtime.config.http() || runtime.config.mcp()) {
                 Path tokenFile = paths.verifyInsideNekoRootForCreate(paths.config().resolve("ai.token"));
@@ -126,11 +125,6 @@ public final class AuthoringRuntime implements AutoCloseable {
                 "bundleId", bundle.id(), "apiEnabled", config.api(), "apiSnapshotDirectory", outputPaths.gameDirectory().relativize(snapshotDirectory).toString().replace('\\', '/'),
                 "refresh", "after-successful-typescript-probe", "languages", List.of("typescript"), "memberViews", List.of("declared")).toString());
     }
-    private void writeLocator() throws IOException {
-        Path locator = paths.verifyInsideNekoRootForCreate(paths.config().resolve("ai-location.json"));
-        AuthoringSnapshotFiles.atomicWrite(locator, AuthoringJson.obj("schemaVersion", 1, "directory", config.directory()).toString());
-    }
-
     private void writeConnection(boolean listening) throws IOException {
         String address = listening ? "http://127.0.0.1:" + listener.port() : null;
         AuthoringSnapshotFiles.atomicWrite(outputPaths.connection(), AuthoringJson.obj(

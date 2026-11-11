@@ -78,7 +78,7 @@ class EventSurfaceOwnershipTest {
         } catch (IllegalStateException alreadyInitialized) {
             // same-JVM reuse of an already initialized platform is fine
         }
-        EventGroupRegistry registry = new EventGroupRegistry.Impl();
+        EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         new NekoJSCorePlugin().registerEvents(registry);
         new NekoJSCorePlugin().registerClientEvents(registry);
         return registry.view();

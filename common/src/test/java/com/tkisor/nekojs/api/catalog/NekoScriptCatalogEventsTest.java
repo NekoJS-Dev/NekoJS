@@ -92,7 +92,23 @@ class NekoScriptCatalogEventsTest {
         assertEquals(ScriptType.SERVER, late.scriptType());
     }
 
-    private static final class StubRuntime implements IPluginRuntime {
+    @Test
+    void modulePublicationScopeMatchesTheRuntimeWithoutChangingLegacyVisibility() {
+        var registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
+        var group = EventGroup.of("StableTicks");
+        group.server("tickPre", String.class);
+        registry.register(group);
+        registry.register(group, e -> e.stable().events("tickPre").scriptTypes(ScriptType.SERVER));
+        var runtime = new StubRuntime(registry.view()) {
+            @Override public List<com.tkisor.nekojs.api.event.ModuleEventGroup> moduleEventGroups() { return registry.moduleGroups(); }
+        };
+        var snapshot = NekoScriptCatalog.snapshot(runtime);
+        assertEquals(List.of(ScriptType.SERVER), snapshot.moduleEvents().stream().map(ModuleEventCatalogEntry::scriptType).toList());
+        assertEquals(String.class, snapshot.moduleEvents().getFirst().event().eventType());
+        assertTrue(snapshot.events().getFirst().scriptType().test(ScriptType.STARTUP));
+    }
+
+    private static class StubRuntime implements IPluginRuntime {
         private final Map<String, EventGroup> eventGroups;
 
         StubRuntime(Map<String, EventGroup> eventGroups) {

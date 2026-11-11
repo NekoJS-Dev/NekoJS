@@ -4,7 +4,7 @@ import { $ChronoLocalDate, $ChronoLocalDateTime, $ChronoPeriod, $ChronoZonedDate
 import { $DateTimeFormatter, $TextStyle, $TextStyle_ } from "java:java/time/format";
 import { $Temporal, $TemporalAccessor, $TemporalAdjuster, $TemporalAdjuster_, $TemporalAmount, $TemporalField, $TemporalQuery, $TemporalQuery_, $TemporalUnit, $ValueRange } from "java:java/time/temporal";
 import { $ZoneRules } from "java:java/time/zone";
-import { $Comparator, $Comparator_, $List, $Locale, $Map, $Set } from "java:java/util";
+import { $Comparator, $Comparator_, $List, $List_, $Locale, $Map, $Map_, $Set, $Set_ } from "java:java/util";
 import { $Stream } from "java:java/util/stream";
 
 export * as temporal from "java:java/time/temporal";
@@ -179,7 +179,16 @@ declare module "java:java/time" {
         static now(arg0: $ZoneId): $OffsetDateTime;
         static now(): $OffsetDateTime;
         static ofInstant(arg0: $Instant, arg1: $ZoneId): $OffsetDateTime;
-        static of(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: number, arg7: $ZoneOffset): $OffsetDateTime;
+        static of(
+            arg0: number,
+            arg1: number,
+            arg2: number,
+            arg3: number,
+            arg4: number,
+            arg5: number,
+            arg6: number,
+            arg7: $ZoneOffset
+        ): $OffsetDateTime;
         static of(arg0: $LocalDateTime, arg1: $ZoneOffset): $OffsetDateTime;
         static of(arg0: $LocalDate, arg1: $LocalTime, arg2: $ZoneOffset): $OffsetDateTime;
         static parse(arg0: $CharSequence, arg1: $DateTimeFormatter): $OffsetDateTime;
@@ -254,7 +263,7 @@ declare module "java:java/time" {
         static from(arg0: $TemporalAccessor): $ZoneId;
         static getAvailableZoneIds(): $Set<string>;
         static ofOffset(arg0: string, arg1: $ZoneOffset): $ZoneId;
-        static of(arg0: string, arg1: ($Map<string, string> | (([string] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<string, PropertyKey>, string>>))): $ZoneId;
+        static of(arg0: string, arg1: $Map_<string, string>): $ZoneId;
         static of(arg0: string): $ZoneId;
         static systemDefault(): $ZoneId;
         equals(arg0: unknown): boolean;
@@ -280,7 +289,7 @@ declare module "java:java/time" {
         static ofHoursMinutes(arg0: number, arg1: number): $ZoneOffset;
         static ofHours(arg0: number): $ZoneOffset;
         static ofTotalSeconds(arg0: number): $ZoneOffset;
-        static of(arg0: string, arg1: ($Map<string, string> | (([string] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<string, PropertyKey>, string>>))): $ZoneId;
+        static of(arg0: string, arg1: $Map_<string, string>): $ZoneId;
         static of(arg0: string): $ZoneId;
         static of(arg0: string): $ZoneOffset;
         adjustInto(arg0: $Temporal): $Temporal;
@@ -331,7 +340,16 @@ declare module "java:java/time" {
         static ofInstant(arg0: $LocalDateTime, arg1: $ZoneOffset, arg2: $ZoneId): $ZonedDateTime;
         static ofLocal(arg0: $LocalDateTime, arg1: $ZoneId, arg2: $ZoneOffset): $ZonedDateTime;
         static ofStrict(arg0: $LocalDateTime, arg1: $ZoneOffset, arg2: $ZoneId): $ZonedDateTime;
-        static of(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: number, arg7: $ZoneId): $ZonedDateTime;
+        static of(
+            arg0: number,
+            arg1: number,
+            arg2: number,
+            arg3: number,
+            arg4: number,
+            arg5: number,
+            arg6: number,
+            arg7: $ZoneId
+        ): $ZonedDateTime;
         static of(arg0: $LocalDateTime, arg1: $ZoneId): $ZonedDateTime;
         static of(arg0: $LocalDate, arg1: $LocalTime, arg2: $ZoneId): $ZonedDateTime;
         static parse(arg0: $CharSequence, arg1: $DateTimeFormatter): $ZonedDateTime;
@@ -537,10 +555,26 @@ declare module "java:java/time" {
         static now(): $LocalDateTime;
         static ofEpochSecond(arg0: number, arg1: number, arg2: $ZoneOffset): $LocalDateTime;
         static ofInstant(arg0: $Instant, arg1: $ZoneId): $LocalDateTime;
-        static of(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: number): $LocalDateTime;
+        static of(
+            arg0: number,
+            arg1: number,
+            arg2: number,
+            arg3: number,
+            arg4: number,
+            arg5: number,
+            arg6: number
+        ): $LocalDateTime;
         static of(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number): $LocalDateTime;
         static of(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number): $LocalDateTime;
-        static of(arg0: number, arg1: $Month_, arg2: number, arg3: number, arg4: number, arg5: number, arg6: number): $LocalDateTime;
+        static of(
+            arg0: number,
+            arg1: $Month_,
+            arg2: number,
+            arg3: number,
+            arg4: number,
+            arg5: number,
+            arg6: number
+        ): $LocalDateTime;
         static of(arg0: number, arg1: $Month_, arg2: number, arg3: number, arg4: number, arg5: number): $LocalDateTime;
         static of(arg0: number, arg1: $Month_, arg2: number, arg3: number, arg4: number): $LocalDateTime;
         static of(arg0: $LocalDate, arg1: $LocalTime): $LocalDateTime;

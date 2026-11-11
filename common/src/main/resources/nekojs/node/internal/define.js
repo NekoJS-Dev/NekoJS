@@ -47,6 +47,7 @@
 
   function define(names, value) {
     for (const name of Array.isArray(names) ? names : [names]) {
+      if (name.startsWith('nekojs/api/')) throw new Error('[NEKO-4057] API module routes are reserved: ' + name)
       modules[name] = value
     }
     return value
@@ -222,6 +223,12 @@
 
   globalThis.__nekoNodeBuiltins = modules
   globalThis.__nekoNodeDefine = define
+  globalThis.__nekoNodeDefineApi = (id, value) => {
+    if (!id.startsWith('nekojs/api/') || Object.prototype.hasOwnProperty.call(modules, id)) {
+      throw new Error('[NEKO-4057] API module route cannot be replaced: ' + id)
+    }
+    Object.defineProperty(modules, id, { value, enumerable: true, writable: false, configurable: false })
+  }
   globalThis.__nekoNodeNoModule = NO_MODULE
   globalThis.__nekoNodeResolve = resolveSpecialModule
   globalThis.__nekoNodeInternal = {

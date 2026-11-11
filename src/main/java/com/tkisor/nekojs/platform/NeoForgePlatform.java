@@ -26,6 +26,29 @@ public class NeoForgePlatform implements IPlatform {
                     .ifPresent(uri -> com.tkisor.nekojs.core.pack.LoadedModPackSource.visitManifestUri(mod.getModId(), uri, visitor));
         }
     }
+    @Override
+    public void visitLoadedMixinPlans(java.util.function.BiConsumer<String, java.net.URI> visitor) {
+        for (var mod : ModList.get().getMods()) {
+            mod.getOwningFile().getFile().getContents().findFile("META-INF/nekojs/mixin-plan.json")
+                    .ifPresent(uri -> visitor.accept(mod.getModId(), uri));
+        }
+        String selected;
+        try {
+            selected = com.tkisor.nekojs.core.mixin.MixinLibrarySelection.selected(getGameDir());
+        } catch (java.io.IOException invalidSelection) {
+            throw new IllegalStateException("[NEKO-4090] Managed mixin selection could not be read", invalidSelection);
+        }
+        for (var library : FMLLoader.getCurrent().getLoadingModList().getGameLibraries()) {
+            var contents = library.getContents();
+            var manifest = contents.getManifest();
+            if (manifest == null) continue;
+            String managed = manifest.getMainAttributes().getValue("NekoJS-Mixin-Managed");
+            if (managed != null && !managed.equals(selected)) continue;
+            String owner = manifest.getMainAttributes().getValue("NekoJS-Mixin-Owner");
+            if (owner != null) contents.findFile("META-INF/nekojs/mixin-plan.json")
+                    .ifPresent(uri -> visitor.accept(owner, uri));
+        }
+    }
     private static final NbtBinaryCodec NBT_BINARY_CODEC = NeoForgeNbtBinaryCodec.INSTANCE;
 
     @Override

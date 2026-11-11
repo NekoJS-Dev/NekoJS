@@ -559,7 +559,7 @@ class TypeScriptInheritedInterfaceTest {
         new FunctionalInterfaceAliasGenerator(aliases).prepare(Set.of(Function.class.getName(), Box.class.getName(),
                 Map.class.getName()), Set.of());
         String output = new TypeScriptClassRenderer(aliases).render(new TypeReflector().reflect(MapContainer.class));
-        assertTrue(output.contains("pass(input: $TypeScriptInheritedInterfaceTest$Box<$Map<K, V>>)"), output);
+        assertTrue(output.replaceAll("\\s+", "").contains("pass(input:$TypeScriptInheritedInterfaceTest$Box<$Map<K,V>>)"), output);
         assertTrue(output.contains("$Function_<string, $TypeScriptInheritedInterfaceTest$Box<$Map<K, V>>, string, "
                 + "$TypeScriptInheritedInterfaceTest$Box<$Map<K, V>>>"), output);
         try (Context context = context()) {

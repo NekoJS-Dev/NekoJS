@@ -168,6 +168,7 @@ public class ServerEventListener {
         if (villagerTradeDomain != null) {
             villagerTradeDomain.clearServer();
         }
+        if (runtimeRoot != null) runtimeRoot.mixins().clearCallbacks();
         if (removed.isEmpty()) return;
         runtimeRoot.clearWorldPackListeners(ScriptType.SERVER, removed);
         if (com.tkisor.nekojs.platform.Platform.isClient()) {

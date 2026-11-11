@@ -1,3 +1,4 @@
+import './api-modules';
 // Bindings for server scripts
 import { $LegacyProbeFixture$SampleContext, $LegacyProbeFixture$SampleHelper } from "java:com/tkisor/nekojs/probe";
 

@@ -3,22 +3,25 @@ import { $Comparable, $Comparable_, $Enum } from "java:java/lang";
 import { $Clock, $Instant, $LocalDate, $LocalDateTime, $LocalTime, $Period, $ZoneId, $ZoneOffset, $ZonedDateTime } from "java:java/time";
 import { $DateTimeFormatter, $ResolverStyle, $ResolverStyle_, $TextStyle, $TextStyle_ } from "java:java/time/format";
 import { $ChronoField, $ChronoField_, $Temporal, $TemporalAccessor, $TemporalAdjuster, $TemporalAdjuster_, $TemporalAmount, $TemporalField, $TemporalQuery, $TemporalQuery_, $TemporalUnit, $ValueRange } from "java:java/time/temporal";
-import { $Comparator, $Comparator_, $List, $Locale, $Map, $Set } from "java:java/util";
+import { $Comparator, $Comparator_, $List, $List_, $Locale, $Map, $Map_, $Set, $Set_ } from "java:java/util";
 
 declare module "java:java/time/chrono" {
     export interface $ChronoLocalDate extends $Temporal, $TemporalAdjuster, $Comparable<$ChronoLocalDate> {
+        get chronology(): $Chronology;
+        getChronology(): $Chronology;
+        get era(): $Era;
+        getEra(): $Era;
+        get leapYear(): boolean;
+        isLeapYear(): boolean;
         adjustInto(arg0: $Temporal): $Temporal;
         atTime(arg0: $LocalTime): $ChronoLocalDateTime<any>;
         compareTo(arg0: $ChronoLocalDate): number;
         equals(arg0: unknown): boolean;
         format(arg0: $DateTimeFormatter): string;
-        getChronology(): $Chronology;
-        getEra(): $Era;
         hashCode(): number;
         isAfter(arg0: $ChronoLocalDate): boolean;
         isBefore(arg0: $ChronoLocalDate): boolean;
         isEqual(arg0: $ChronoLocalDate): boolean;
-        isLeapYear(): boolean;
         isSupported(arg0: $TemporalField): boolean;
         isSupported(arg0: $TemporalUnit): boolean;
         lengthOfMonth(): number;
@@ -57,8 +60,25 @@ declare module "java:java/time/chrono" {
         date(arg0: number, arg1: number, arg2: number): $LocalDate;
         date(arg0: $Era_<number>, arg1: number, arg2: number, arg3: number): $LocalDate;
         date(arg0: $TemporalAccessor): $LocalDate;
-        epochSecond(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: $ZoneOffset): number;
-        epochSecond(arg0: $Era_<number>, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: number, arg7: $ZoneOffset): number;
+        epochSecond(
+            arg0: number,
+            arg1: number,
+            arg2: number,
+            arg3: number,
+            arg4: number,
+            arg5: number,
+            arg6: $ZoneOffset
+        ): number;
+        epochSecond(
+            arg0: $Era_<number>,
+            arg1: number,
+            arg2: number,
+            arg3: number,
+            arg4: number,
+            arg5: number,
+            arg6: number,
+            arg7: $ZoneOffset
+        ): number;
         equals(arg0: unknown): boolean;
         eraOf(arg0: number): $IsoEra;
         eras(): $List<$Era>;
@@ -69,7 +89,7 @@ declare module "java:java/time/chrono" {
         period(arg0: number, arg1: number, arg2: number): $Period;
         prolepticYear(arg0: $Era_<number>, arg1: number): number;
         range(arg0: $ChronoField_): $ValueRange;
-        resolveDate(arg0: ($Map<$TemporalField, number> | (([$TemporalField] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<$TemporalField, PropertyKey>, number>>)), arg1: $ResolverStyle_): $LocalDate;
+        resolveDate(arg0: $Map_<$TemporalField, number>, arg1: $ResolverStyle_): $LocalDate;
         toString(): string;
         zonedDateTime(arg0: $Instant, arg1: $ZoneId): $ZonedDateTime;
         zonedDateTime(arg0: $TemporalAccessor): $ZonedDateTime;
@@ -87,12 +107,13 @@ declare module "java:java/time/chrono" {
     export interface $IsoEra extends $Enum<$IsoEra>, $Era {}
 
     export interface $ChronoLocalDateTime<D extends $ChronoLocalDate> extends $Temporal, $TemporalAdjuster, $Comparable<$ChronoLocalDateTime<any>> {
+        get chronology(): $Chronology;
+        getChronology(): $Chronology;
         adjustInto(arg0: $Temporal): $Temporal;
         atZone(arg0: $ZoneId): $ChronoZonedDateTime<D>;
         compareTo(arg0: $ChronoLocalDateTime<any>): number;
         equals(arg0: unknown): boolean;
         format(arg0: $DateTimeFormatter): string;
-        getChronology(): $Chronology;
         hashCode(): number;
         isAfter(arg0: $ChronoLocalDateTime<any>): boolean;
         isBefore(arg0: $ChronoLocalDateTime<any>): boolean;
@@ -118,6 +139,12 @@ declare module "java:java/time/chrono" {
     };
 
     export interface $Chronology extends $Comparable<$Chronology> {
+        get calendarType(): string;
+        getCalendarType(): string;
+        get id(): string;
+        getId(): string;
+        get isoBased(): boolean;
+        isIsoBased(): boolean;
         compareTo(arg0: $Chronology): number;
         dateEpochDay(arg0: number): $ChronoLocalDate;
         dateNow(arg0: $Clock): $ChronoLocalDate;
@@ -128,22 +155,36 @@ declare module "java:java/time/chrono" {
         date(arg0: number, arg1: number, arg2: number): $ChronoLocalDate;
         date(arg0: $Era_<number>, arg1: number, arg2: number, arg3: number): $ChronoLocalDate;
         date(arg0: $TemporalAccessor): $ChronoLocalDate;
-        epochSecond(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: $ZoneOffset): number;
-        epochSecond(arg0: $Era_<number>, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: number, arg7: $ZoneOffset): number;
+        epochSecond(
+            arg0: number,
+            arg1: number,
+            arg2: number,
+            arg3: number,
+            arg4: number,
+            arg5: number,
+            arg6: $ZoneOffset
+        ): number;
+        epochSecond(
+            arg0: $Era_<number>,
+            arg1: number,
+            arg2: number,
+            arg3: number,
+            arg4: number,
+            arg5: number,
+            arg6: number,
+            arg7: $ZoneOffset
+        ): number;
         equals(arg0: unknown): boolean;
         eraOf(arg0: number): $Era;
         eras(): $List<$Era>;
-        getCalendarType(): string;
         getDisplayName(arg0: $TextStyle_, arg1: $Locale): string;
-        getId(): string;
         hashCode(): number;
-        isIsoBased(): boolean;
         isLeapYear(arg0: number): boolean;
         localDateTime(arg0: $TemporalAccessor): $ChronoLocalDateTime<$ChronoLocalDate>;
         period(arg0: number, arg1: number, arg2: number): $ChronoPeriod;
         prolepticYear(arg0: $Era_<number>, arg1: number): number;
         range(arg0: $ChronoField_): $ValueRange;
-        resolveDate(arg0: ($Map<$TemporalField, number> | (([$TemporalField] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<$TemporalField, PropertyKey>, number>>)), arg1: $ResolverStyle_): $ChronoLocalDate;
+        resolveDate(arg0: $Map_<$TemporalField, number>, arg1: $ResolverStyle_): $ChronoLocalDate;
         toString(): string;
         zonedDateTime(arg0: $Instant, arg1: $ZoneId): $ChronoZonedDateTime<$ChronoLocalDate>;
         zonedDateTime(arg0: $TemporalAccessor): $ChronoZonedDateTime<$ChronoLocalDate>;
@@ -156,14 +197,18 @@ declare module "java:java/time/chrono" {
     };
 
     export interface $ChronoPeriod extends $TemporalAmount {
+        get chronology(): $Chronology;
+        getChronology(): $Chronology;
+        get units(): $List<$TemporalUnit>;
+        getUnits(): $List<$TemporalUnit>;
+        get negative(): boolean;
+        isNegative(): boolean;
+        get zero(): boolean;
+        isZero(): boolean;
         addTo(arg0: $Temporal): $Temporal;
         equals(arg0: unknown): boolean;
-        getChronology(): $Chronology;
-        getUnits(): $List<$TemporalUnit>;
         get(arg0: $TemporalUnit): number;
         hashCode(): number;
-        isNegative(): boolean;
-        isZero(): boolean;
         minus(arg0: $TemporalAmount): $ChronoPeriod;
         multipliedBy(arg0: number): $ChronoPeriod;
         negated(): $ChronoPeriod;
@@ -177,13 +222,16 @@ declare module "java:java/time/chrono" {
     };
 
     export interface $ChronoZonedDateTime<D extends $ChronoLocalDate> extends $Temporal, $Comparable<$ChronoZonedDateTime<any>> {
+        get chronology(): $Chronology;
+        getChronology(): $Chronology;
+        get offset(): $ZoneOffset;
+        getOffset(): $ZoneOffset;
+        get zone(): $ZoneId;
+        getZone(): $ZoneId;
         compareTo(arg0: $ChronoZonedDateTime<any>): number;
         equals(arg0: unknown): boolean;
         format(arg0: $DateTimeFormatter): string;
-        getChronology(): $Chronology;
         getLong(arg0: $TemporalField): number;
-        getOffset(): $ZoneOffset;
-        getZone(): $ZoneId;
         get(arg0: $TemporalField): number;
         hashCode(): number;
         isAfter(arg0: $ChronoZonedDateTime<any>): boolean;
@@ -216,10 +264,11 @@ declare module "java:java/time/chrono" {
     };
 
     export interface $Era extends $TemporalAccessor, $TemporalAdjuster {
+        get value(): number;
+        getValue(): number;
         adjustInto(arg0: $Temporal): $Temporal;
         getDisplayName(arg0: $TextStyle_, arg1: $Locale): string;
         getLong(arg0: $TemporalField): number;
-        getValue(): number;
         get(arg0: $TemporalField): number;
         isSupported(arg0: $TemporalField): boolean;
         query<R>(arg0: $TemporalQuery_<R, $TemporalAccessor, R>): R;
@@ -243,8 +292,25 @@ declare module "java:java/time/chrono" {
         date(arg0: number, arg1: number, arg2: number): $ChronoLocalDate;
         date(arg0: $Era_<number>, arg1: number, arg2: number, arg3: number): $ChronoLocalDate;
         date(arg0: $TemporalAccessor): $ChronoLocalDate;
-        epochSecond(arg0: number, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: $ZoneOffset): number;
-        epochSecond(arg0: $Era_<number>, arg1: number, arg2: number, arg3: number, arg4: number, arg5: number, arg6: number, arg7: $ZoneOffset): number;
+        epochSecond(
+            arg0: number,
+            arg1: number,
+            arg2: number,
+            arg3: number,
+            arg4: number,
+            arg5: number,
+            arg6: $ZoneOffset
+        ): number;
+        epochSecond(
+            arg0: $Era_<number>,
+            arg1: number,
+            arg2: number,
+            arg3: number,
+            arg4: number,
+            arg5: number,
+            arg6: number,
+            arg7: $ZoneOffset
+        ): number;
         equals(arg0: unknown): boolean;
         eraOf(arg0: number): $Era;
         eras(): $List<$Era>;
@@ -255,7 +321,7 @@ declare module "java:java/time/chrono" {
         period(arg0: number, arg1: number, arg2: number): $ChronoPeriod;
         prolepticYear(arg0: $Era_<number>, arg1: number): number;
         range(arg0: $ChronoField_): $ValueRange;
-        resolveDate(arg0: ($Map<$TemporalField, number> | (([$TemporalField] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<$TemporalField, PropertyKey>, number>>)), arg1: $ResolverStyle_): $ChronoLocalDate;
+        resolveDate(arg0: $Map_<$TemporalField, number>, arg1: $ResolverStyle_): $ChronoLocalDate;
         toString(): string;
         zonedDateTime(arg0: $Instant, arg1: $ZoneId): $ChronoZonedDateTime<$ChronoLocalDate>;
         zonedDateTime(arg0: $TemporalAccessor): $ChronoZonedDateTime<$ChronoLocalDate>;

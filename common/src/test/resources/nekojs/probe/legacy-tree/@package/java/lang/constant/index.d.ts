@@ -1,18 +1,21 @@
 import { $Class, $Enum } from "java:java/lang";
 import { $MethodHandle, $MethodHandles$Lookup, $MethodType, $TypeDescriptor$OfField, $TypeDescriptor$OfMethod } from "java:java/lang/invoke";
-import { $List, $Optional, $OptionalView } from "java:java/util";
+import { $List, $List_, $Optional, $OptionalView } from "java:java/util";
 
 declare module "java:java/lang/constant" {
     export interface $ClassDesc extends $ConstantDesc, $TypeDescriptor$OfField<$ClassDesc> {
+        get array(): boolean;
+        isArray(): boolean;
+        get classOrInterface(): boolean;
+        isClassOrInterface(): boolean;
+        get primitive(): boolean;
+        isPrimitive(): boolean;
         arrayType(arg0: number): $ClassDesc;
         arrayType(): $ClassDesc;
         componentType(): $ClassDesc;
         descriptorString(): string;
         displayName(): string;
         equals(arg0: unknown): boolean;
-        isArray(): boolean;
-        isClassOrInterface(): boolean;
-        isPrimitive(): boolean;
         nested(arg0: string, arg1?: string[]): $ClassDesc;
         nested(arg0: string): $ClassDesc;
         packageName(): string;
@@ -34,6 +37,7 @@ declare module "java:java/lang/constant" {
     }
 
     export interface $DirectMethodHandleDesc extends $MethodHandleDesc {
+        get ownerInterface(): boolean;
         isOwnerInterface(): boolean;
         kind(): $DirectMethodHandleDesc$Kind;
         lookupDescriptor(): string;
@@ -63,9 +67,22 @@ declare module "java:java/lang/constant" {
     export interface $DirectMethodHandleDesc$Kind extends $Enum<$DirectMethodHandleDesc$Kind> {}
 
     export class $DynamicConstantDesc<T> implements $ConstantDesc {
-        static ofCanonical<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3: (number | string | $ConstantDesc_<$MethodHandles$Lookup, unknown>)[]): (number | string | $ConstantDesc);
-        static ofNamed<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3?: (number | string | $ConstantDesc_<$MethodHandles$Lookup, unknown>)[]): $DynamicConstantDesc<T>;
-        static of<T>(arg0: $DirectMethodHandleDesc, arg1?: (number | string | $ConstantDesc_<$MethodHandles$Lookup, unknown>)[]): $DynamicConstantDesc<T>;
+        static ofCanonical<T>(
+            arg0: $DirectMethodHandleDesc,
+            arg1: string,
+            arg2: $ClassDesc,
+            arg3: (number | string | $ConstantDesc_<$MethodHandles$Lookup, unknown>)[]
+        ): (number | string | $ConstantDesc);
+        static ofNamed<T>(
+            arg0: $DirectMethodHandleDesc,
+            arg1: string,
+            arg2: $ClassDesc,
+            arg3?: (number | string | $ConstantDesc_<$MethodHandles$Lookup, unknown>)[]
+        ): $DynamicConstantDesc<T>;
+        static of<T>(
+            arg0: $DirectMethodHandleDesc,
+            arg1?: (number | string | $ConstantDesc_<$MethodHandles$Lookup, unknown>)[]
+        ): $DynamicConstantDesc<T>;
         static of<T>(arg0: $DirectMethodHandleDesc): $DynamicConstantDesc<T>;
         bootstrapArgsList(): $List<(number | string | $ConstantDesc)>;
         bootstrapArgs(): (number | string | $ConstantDesc)[];
@@ -86,8 +103,18 @@ declare module "java:java/lang/constant" {
     }
     export const $MethodHandleDesc: {
         ofConstructor(arg0: $ClassDesc, arg1?: $ClassDesc[]): $DirectMethodHandleDesc;
-        ofField(arg0: $DirectMethodHandleDesc$Kind_, arg1: $ClassDesc, arg2: string, arg3: $ClassDesc): $DirectMethodHandleDesc;
-        ofMethod(arg0: $DirectMethodHandleDesc$Kind_, arg1: $ClassDesc, arg2: string, arg3: $MethodTypeDesc): $DirectMethodHandleDesc;
+        ofField(
+            arg0: $DirectMethodHandleDesc$Kind_,
+            arg1: $ClassDesc,
+            arg2: string,
+            arg3: $ClassDesc
+        ): $DirectMethodHandleDesc;
+        ofMethod(
+            arg0: $DirectMethodHandleDesc$Kind_,
+            arg1: $ClassDesc,
+            arg2: string,
+            arg3: $MethodTypeDesc
+        ): $DirectMethodHandleDesc;
         of(arg0: $DirectMethodHandleDesc$Kind_, arg1: $ClassDesc, arg2: string, arg3: string): $DirectMethodHandleDesc;
     };
 
@@ -109,7 +136,7 @@ declare module "java:java/lang/constant" {
     export const $MethodTypeDesc: {
         ofDescriptor(arg0: string): $MethodTypeDesc;
         of(arg0: $ClassDesc, arg1?: $ClassDesc[]): $MethodTypeDesc;
-        of(arg0: $ClassDesc, arg1: ($List<$ClassDesc> | ($ClassDesc)[])): $MethodTypeDesc;
+        of(arg0: $ClassDesc, arg1: $List_<$ClassDesc>): $MethodTypeDesc;
         of(arg0: $ClassDesc): $MethodTypeDesc;
     };
 

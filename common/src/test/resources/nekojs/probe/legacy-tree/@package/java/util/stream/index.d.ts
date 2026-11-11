@@ -1,11 +1,11 @@
 import { $AutoCloseable, $AutoCloseable_, $Enum, $Runnable, $Runnable_ } from "java:java/lang";
-import { $Collection, $Comparator, $Comparator_, $DoubleSummaryStatistics, $IntSummaryStatistics, $Iterator, $List, $ListView, $LongSummaryStatistics, $Optional, $OptionalDouble, $OptionalInt, $OptionalLong, $OptionalView, $PrimitiveIterator$OfDouble, $PrimitiveIterator$OfInt, $PrimitiveIterator$OfLong, $Set, $Spliterator, $Spliterator$OfDouble, $Spliterator$OfInt, $Spliterator$OfLong } from "java:java/util";
+import { $Collection, $Comparator, $Comparator_, $DoubleSummaryStatistics, $IntSummaryStatistics, $Iterator, $List, $ListView, $List_, $LongSummaryStatistics, $Optional, $OptionalDouble, $OptionalInt, $OptionalLong, $OptionalView, $PrimitiveIterator$OfDouble, $PrimitiveIterator$OfInt, $PrimitiveIterator$OfLong, $Set, $Set_, $Spliterator, $Spliterator$OfDouble, $Spliterator$OfInt, $Spliterator$OfLong } from "java:java/util";
 import { $BiConsumer, $BiConsumer_, $BiFunction, $BiFunction_, $BinaryOperator, $BinaryOperator_, $Consumer, $Consumer_, $DoubleBinaryOperator, $DoubleBinaryOperator_, $DoubleConsumer, $DoubleConsumer_, $DoubleFunction, $DoubleFunction_, $DoublePredicate, $DoublePredicate_, $DoubleSupplier, $DoubleSupplier_, $DoubleToIntFunction, $DoubleToIntFunction_, $DoubleToLongFunction, $DoubleToLongFunction_, $DoubleUnaryOperator, $DoubleUnaryOperator_, $Function, $Function_, $IntBinaryOperator, $IntBinaryOperator_, $IntConsumer, $IntConsumer_, $IntFunction, $IntFunction_, $IntPredicate, $IntPredicate_, $IntSupplier, $IntSupplier_, $IntToDoubleFunction, $IntToDoubleFunction_, $IntToLongFunction, $IntToLongFunction_, $IntUnaryOperator, $IntUnaryOperator_, $LongBinaryOperator, $LongBinaryOperator_, $LongConsumer, $LongConsumer_, $LongFunction, $LongFunction_, $LongPredicate, $LongPredicate_, $LongSupplier, $LongSupplier_, $LongToDoubleFunction, $LongToDoubleFunction_, $LongToIntFunction, $LongToIntFunction_, $LongUnaryOperator, $LongUnaryOperator_, $ObjDoubleConsumer, $ObjDoubleConsumer_, $ObjIntConsumer, $ObjIntConsumer_, $ObjLongConsumer, $ObjLongConsumer_, $Predicate, $Predicate_, $Supplier, $Supplier_, $ToDoubleFunction, $ToDoubleFunction_, $ToIntFunction, $ToIntFunction_, $ToLongFunction, $ToLongFunction_, $UnaryOperator, $UnaryOperator_ } from "java:java/util/function";
 
 declare module "java:java/util/stream" {
     export interface $BaseStream<T, S extends $BaseStream<T, S>> extends $AutoCloseable {
-        close(): void;
         isParallel(): boolean;
+        close(): void;
         iterator(): $Iterator<T>;
         onClose(arg0: $Runnable_): S;
         parallel(): S;
@@ -22,8 +22,19 @@ declare module "java:java/util/stream" {
         supplier(): $Supplier<A>;
     }
     export const $Collector: {
-        of<T, A, R>(arg0: $Supplier_<A, A>, arg1: $BiConsumer_<A, T, A, T>, arg2: $BinaryOperator_<A, A, A, A>, arg3: $Function_<A, R, A, R>, arg4?: $Collector$Characteristics_[]): $Collector<T, A, R>;
-        of<T, R>(arg0: $Supplier_<R, R>, arg1: $BiConsumer_<R, T, R, T>, arg2: $BinaryOperator_<R, R, R, R>, arg3?: $Collector$Characteristics_[]): $Collector<T, R, R>;
+        of<T, A, R>(
+            arg0: $Supplier_<A, A>,
+            arg1: $BiConsumer_<A, T, A, T>,
+            arg2: $BinaryOperator_<A, A, A, A>,
+            arg3: $Function_<A, R, A, R>,
+            arg4?: $Collector$Characteristics_[]
+        ): $Collector<T, A, R>;
+        of<T, R>(
+            arg0: $Supplier_<R, R>,
+            arg1: $BiConsumer_<R, T, R, T>,
+            arg2: $BinaryOperator_<R, R, R, R>,
+            arg3?: $Collector$Characteristics_[]
+        ): $Collector<T, R, R>;
     };
 
     export class $Collector$Characteristics {
@@ -81,7 +92,11 @@ declare module "java:java/util/stream" {
         concat(arg0: $DoubleStream, arg1: $DoubleStream): $DoubleStream;
         empty(): $DoubleStream;
         generate(arg0: $DoubleSupplier_<number>): $DoubleStream;
-        iterate(arg0: number, arg1: $DoublePredicate_<number, boolean>, arg2: $DoubleUnaryOperator_<number, number>): $DoubleStream;
+        iterate(
+            arg0: number,
+            arg1: $DoublePredicate_<number, boolean>,
+            arg2: $DoubleUnaryOperator_<number, number>
+        ): $DoubleStream;
         iterate(arg0: number, arg1: $DoubleUnaryOperator_<number, number>): $DoubleStream;
         of(arg0?: number[]): $DoubleStream;
         of(arg0: number): $DoubleStream;
@@ -142,7 +157,11 @@ declare module "java:java/util/stream" {
         concat(arg0: $IntStream, arg1: $IntStream): $IntStream;
         empty(): $IntStream;
         generate(arg0: $IntSupplier_<number>): $IntStream;
-        iterate(arg0: number, arg1: $IntPredicate_<number, boolean>, arg2: $IntUnaryOperator_<number, number>): $IntStream;
+        iterate(
+            arg0: number,
+            arg1: $IntPredicate_<number, boolean>,
+            arg2: $IntUnaryOperator_<number, number>
+        ): $IntStream;
         iterate(arg0: number, arg1: $IntUnaryOperator_<number, number>): $IntStream;
         of(arg0?: number[]): $IntStream;
         of(arg0: number): $IntStream;
@@ -204,7 +223,11 @@ declare module "java:java/util/stream" {
         concat(arg0: $LongStream, arg1: $LongStream): $LongStream;
         empty(): $LongStream;
         generate(arg0: $LongSupplier_<number>): $LongStream;
-        iterate(arg0: number, arg1: $LongPredicate_<number, boolean>, arg2: $LongUnaryOperator_<number, number>): $LongStream;
+        iterate(
+            arg0: number,
+            arg1: $LongPredicate_<number, boolean>,
+            arg2: $LongUnaryOperator_<number, number>
+        ): $LongStream;
         iterate(arg0: number, arg1: $LongUnaryOperator_<number, number>): $LongStream;
         of(arg0?: number[]): $LongStream;
         of(arg0: number): $LongStream;
@@ -290,69 +313,193 @@ declare module "java:java/util/stream" {
     type $NekoCaptureOptionalInput<$Value> = globalThis.NoInfer<$Optional<any>> & { readonly "get": () => $Value };
     type $NekoCaptureStreamInput<$Value> = globalThis.NoInfer<$Stream<any>> & { readonly "iterator": () => $Iterator<$Value> };
     export interface $StreamView<B> extends $Stream<B> {
-        allMatch(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): boolean;
-        allMatch(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): boolean;
-        anyMatch(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): boolean;
-        anyMatch(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): boolean;
-        collect<R>(arg0: $Supplier_<R, R>, arg1: $BiConsumer<R, B> & { readonly "accept": (arg0: R, arg1: B) => void } & { readonly [Symbol.hasInstance]?: never }, arg2: $BiConsumer_<R, R, R, R>): R;
-        collect<R>(arg0: $Supplier_<R, R>, arg1: ((arg0: R, arg1: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: R, arg1: B) => void } & { readonly [Symbol.hasInstance]?: never }>, arg2: $BiConsumer_<R, R, R, R>): R;
-        collect<R, A>(arg0: $Collector<B, A, R> & { readonly "accumulator": () => { readonly "accept": (arg0: A, arg1: B) => void } }): R;
+        allMatch(
+            arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }
+        ): boolean;
+        allMatch(
+            arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>
+        ): boolean;
+        anyMatch(
+            arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }
+        ): boolean;
+        anyMatch(
+            arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>
+        ): boolean;
+        collect<R>(
+            arg0: $Supplier_<R, R>,
+            arg1: $BiConsumer<R, B> & { readonly "accept": (arg0: R, arg1: B) => void } & { readonly [Symbol.hasInstance]?: never },
+            arg2: $BiConsumer_<R, R, R, R>
+        ): R;
+        collect<R>(
+            arg0: $Supplier_<R, R>,
+            arg1: ((arg0: R, arg1: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: R, arg1: B) => void } & { readonly [Symbol.hasInstance]?: never }>,
+            arg2: $BiConsumer_<R, R, R, R>
+        ): R;
+        collect<R, A>(
+            arg0: $Collector<B, A, R> & { readonly "accumulator": () => { readonly "accept": (arg0: A, arg1: B) => void } }
+        ): R;
         distinct(): $StreamView<B>;
-        dropWhile(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): $StreamView<B>;
-        dropWhile(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): $StreamView<B>;
-        filter(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): $StreamView<B>;
-        filter(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): $StreamView<B>;
+        dropWhile(
+            arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }
+        ): $StreamView<B>;
+        dropWhile(
+            arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>
+        ): $StreamView<B>;
+        filter(
+            arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }
+        ): $StreamView<B>;
+        filter(
+            arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>
+        ): $StreamView<B>;
         findAny(): $OptionalView<B>;
         findFirst(): $OptionalView<B>;
-        flatMapToDouble(arg0: $Function<B, $DoubleStream> & { readonly "apply": (arg0: B) => $DoubleStream } & { readonly [Symbol.hasInstance]?: never }): $DoubleStream;
-        flatMapToDouble(arg0: ((arg0: B) => $DoubleStream) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => $DoubleStream } & { readonly [Symbol.hasInstance]?: never }>): $DoubleStream;
-        flatMapToInt(arg0: $Function<B, $IntStream> & { readonly "apply": (arg0: B) => $IntStream } & { readonly [Symbol.hasInstance]?: never }): $IntStream;
-        flatMapToInt(arg0: ((arg0: B) => $IntStream) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => $IntStream } & { readonly [Symbol.hasInstance]?: never }>): $IntStream;
-        flatMapToLong(arg0: $Function<B, $LongStream> & { readonly "apply": (arg0: B) => $LongStream } & { readonly [Symbol.hasInstance]?: never }): $LongStream;
-        flatMapToLong(arg0: ((arg0: B) => $LongStream) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => $LongStream } & { readonly [Symbol.hasInstance]?: never }>): $LongStream;
-        flatMap<R>(arg0: $Function<B, $NekoCaptureStreamInput<R>> & { readonly "apply": (arg0: B) => $NekoCaptureStreamInput<R> } & { readonly [Symbol.hasInstance]?: never }): $StreamView<R>;
-        flatMap<R>(arg0: ((arg0: B) => $NekoCaptureStreamInput<R>) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => $NekoCaptureStreamInput<R> } & { readonly [Symbol.hasInstance]?: never }>): $StreamView<R>;
-        forEachOrdered(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }): void;
-        forEachOrdered(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>): void;
-        forEach(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }): void;
-        forEach(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>): void;
+        flatMapToDouble(
+            arg0: $Function<B, $DoubleStream> & { readonly "apply": (arg0: B) => $DoubleStream } & { readonly [Symbol.hasInstance]?: never }
+        ): $DoubleStream;
+        flatMapToDouble(
+            arg0: ((arg0: B) => $DoubleStream) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => $DoubleStream } & { readonly [Symbol.hasInstance]?: never }>
+        ): $DoubleStream;
+        flatMapToInt(
+            arg0: $Function<B, $IntStream> & { readonly "apply": (arg0: B) => $IntStream } & { readonly [Symbol.hasInstance]?: never }
+        ): $IntStream;
+        flatMapToInt(
+            arg0: ((arg0: B) => $IntStream) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => $IntStream } & { readonly [Symbol.hasInstance]?: never }>
+        ): $IntStream;
+        flatMapToLong(
+            arg0: $Function<B, $LongStream> & { readonly "apply": (arg0: B) => $LongStream } & { readonly [Symbol.hasInstance]?: never }
+        ): $LongStream;
+        flatMapToLong(
+            arg0: ((arg0: B) => $LongStream) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => $LongStream } & { readonly [Symbol.hasInstance]?: never }>
+        ): $LongStream;
+        flatMap<R>(
+            arg0: $Function<B, $NekoCaptureStreamInput<R>> & { readonly "apply": (arg0: B) => $NekoCaptureStreamInput<R> } & { readonly [Symbol.hasInstance]?: never }
+        ): $StreamView<R>;
+        flatMap<R>(
+            arg0: ((arg0: B) => $NekoCaptureStreamInput<R>) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => $NekoCaptureStreamInput<R> } & { readonly [Symbol.hasInstance]?: never }>
+        ): $StreamView<R>;
+        forEachOrdered(
+            arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }
+        ): void;
+        forEachOrdered(
+            arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>
+        ): void;
+        forEach(
+            arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }
+        ): void;
+        forEach(
+            arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>
+        ): void;
         limit(arg0: number): $StreamView<B>;
-        mapMultiToDouble(arg0: $BiConsumer<B, $DoubleConsumer> & { readonly "accept": (arg0: B, arg1: $DoubleConsumer) => void } & { readonly [Symbol.hasInstance]?: never }): $DoubleStream;
-        mapMultiToDouble(arg0: ((arg0: B, arg1: $DoubleConsumer) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B, arg1: $DoubleConsumer) => void } & { readonly [Symbol.hasInstance]?: never }>): $DoubleStream;
-        mapMultiToInt(arg0: $BiConsumer<B, $IntConsumer> & { readonly "accept": (arg0: B, arg1: $IntConsumer) => void } & { readonly [Symbol.hasInstance]?: never }): $IntStream;
-        mapMultiToInt(arg0: ((arg0: B, arg1: $IntConsumer) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B, arg1: $IntConsumer) => void } & { readonly [Symbol.hasInstance]?: never }>): $IntStream;
-        mapMultiToLong(arg0: $BiConsumer<B, $LongConsumer> & { readonly "accept": (arg0: B, arg1: $LongConsumer) => void } & { readonly [Symbol.hasInstance]?: never }): $LongStream;
-        mapMultiToLong(arg0: ((arg0: B, arg1: $LongConsumer) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B, arg1: $LongConsumer) => void } & { readonly [Symbol.hasInstance]?: never }>): $LongStream;
-        mapMulti<R>(arg0: $BiConsumer<B, $Consumer<R>> & { readonly "accept": (arg0: B, arg1: $Consumer<R>) => void } & { readonly [Symbol.hasInstance]?: never }): $StreamView<R>;
-        mapMulti<R>(arg0: ((arg0: B, arg1: $Consumer<R>) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B, arg1: $Consumer<R>) => void } & { readonly [Symbol.hasInstance]?: never }>): $StreamView<R>;
-        mapToDouble(arg0: $ToDoubleFunction<B> & { readonly "applyAsDouble": (arg0: B) => number } & { readonly [Symbol.hasInstance]?: never }): $DoubleStream;
-        mapToDouble(arg0: ((arg0: B) => number) | globalThis.NoInfer<{ readonly "applyAsDouble": (arg0: B) => number } & { readonly [Symbol.hasInstance]?: never }>): $DoubleStream;
-        mapToInt(arg0: $ToIntFunction<B> & { readonly "applyAsInt": (arg0: B) => number } & { readonly [Symbol.hasInstance]?: never }): $IntStream;
-        mapToInt(arg0: ((arg0: B) => number) | globalThis.NoInfer<{ readonly "applyAsInt": (arg0: B) => number } & { readonly [Symbol.hasInstance]?: never }>): $IntStream;
-        mapToLong(arg0: $ToLongFunction<B> & { readonly "applyAsLong": (arg0: B) => number } & { readonly [Symbol.hasInstance]?: never }): $LongStream;
-        mapToLong(arg0: ((arg0: B) => number) | globalThis.NoInfer<{ readonly "applyAsLong": (arg0: B) => number } & { readonly [Symbol.hasInstance]?: never }>): $LongStream;
-        map<R>(arg0: $Function<B, R> & { readonly "apply": (arg0: B) => R } & { readonly [Symbol.hasInstance]?: never }): $StreamView<R>;
-        map<R>(arg0: ((arg0: B) => R) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => R } & { readonly [Symbol.hasInstance]?: never }>): $StreamView<R>;
-        max(arg0: $Comparator<B> & { readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }): $OptionalView<B>;
-        max(arg0: ((arg0: B, arg1: B) => number) | globalThis.NoInfer<{ readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }>): $OptionalView<B>;
-        min(arg0: $Comparator<B> & { readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }): $OptionalView<B>;
-        min(arg0: ((arg0: B, arg1: B) => number) | globalThis.NoInfer<{ readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }>): $OptionalView<B>;
-        noneMatch(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): boolean;
-        noneMatch(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): boolean;
-        peek(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }): $StreamView<B>;
-        peek(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>): $StreamView<B>;
-        reduce(arg0: B, arg1: $BinaryOperator<B> & { readonly "apply": (arg0: B, arg1: B) => B } & { readonly [Symbol.hasInstance]?: never }): B;
-        reduce(arg0: B, arg1: ((arg0: B, arg1: B) => B) | globalThis.NoInfer<{ readonly "apply": (arg0: B, arg1: B) => B } & { readonly [Symbol.hasInstance]?: never }>): B;
-        reduce<U>(arg0: U, arg1: $BiFunction<U, B, U> & { readonly "apply": (arg0: U, arg1: B) => U } & { readonly [Symbol.hasInstance]?: never }, arg2: $BinaryOperator_<U, U, U, U>): U;
-        reduce<U>(arg0: U, arg1: ((arg0: U, arg1: B) => U) | globalThis.NoInfer<{ readonly "apply": (arg0: U, arg1: B) => U } & { readonly [Symbol.hasInstance]?: never }>, arg2: $BinaryOperator_<U, U, U, U>): U;
-        reduce(arg0: $BinaryOperator<B> & { readonly "apply": (arg0: B, arg1: B) => B } & { readonly [Symbol.hasInstance]?: never }): $OptionalView<B>;
-        reduce(arg0: ((arg0: B, arg1: B) => B) | globalThis.NoInfer<{ readonly "apply": (arg0: B, arg1: B) => B } & { readonly [Symbol.hasInstance]?: never }>): $OptionalView<B>;
+        mapMultiToDouble(
+            arg0: $BiConsumer<B, $DoubleConsumer> & { readonly "accept": (arg0: B, arg1: $DoubleConsumer) => void } & { readonly [Symbol.hasInstance]?: never }
+        ): $DoubleStream;
+        mapMultiToDouble(
+            arg0: ((arg0: B, arg1: $DoubleConsumer) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B, arg1: $DoubleConsumer) => void } & { readonly [Symbol.hasInstance]?: never }>
+        ): $DoubleStream;
+        mapMultiToInt(
+            arg0: $BiConsumer<B, $IntConsumer> & { readonly "accept": (arg0: B, arg1: $IntConsumer) => void } & { readonly [Symbol.hasInstance]?: never }
+        ): $IntStream;
+        mapMultiToInt(
+            arg0: ((arg0: B, arg1: $IntConsumer) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B, arg1: $IntConsumer) => void } & { readonly [Symbol.hasInstance]?: never }>
+        ): $IntStream;
+        mapMultiToLong(
+            arg0: $BiConsumer<B, $LongConsumer> & { readonly "accept": (arg0: B, arg1: $LongConsumer) => void } & { readonly [Symbol.hasInstance]?: never }
+        ): $LongStream;
+        mapMultiToLong(
+            arg0: ((arg0: B, arg1: $LongConsumer) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B, arg1: $LongConsumer) => void } & { readonly [Symbol.hasInstance]?: never }>
+        ): $LongStream;
+        mapMulti<R>(
+            arg0: $BiConsumer<B, $Consumer<R>> & { readonly "accept": (arg0: B, arg1: $Consumer<R>) => void } & { readonly [Symbol.hasInstance]?: never }
+        ): $StreamView<R>;
+        mapMulti<R>(
+            arg0: ((arg0: B, arg1: $Consumer<R>) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B, arg1: $Consumer<R>) => void } & { readonly [Symbol.hasInstance]?: never }>
+        ): $StreamView<R>;
+        mapToDouble(
+            arg0: $ToDoubleFunction<B> & { readonly "applyAsDouble": (arg0: B) => number } & { readonly [Symbol.hasInstance]?: never }
+        ): $DoubleStream;
+        mapToDouble(
+            arg0: ((arg0: B) => number) | globalThis.NoInfer<{ readonly "applyAsDouble": (arg0: B) => number } & { readonly [Symbol.hasInstance]?: never }>
+        ): $DoubleStream;
+        mapToInt(
+            arg0: $ToIntFunction<B> & { readonly "applyAsInt": (arg0: B) => number } & { readonly [Symbol.hasInstance]?: never }
+        ): $IntStream;
+        mapToInt(
+            arg0: ((arg0: B) => number) | globalThis.NoInfer<{ readonly "applyAsInt": (arg0: B) => number } & { readonly [Symbol.hasInstance]?: never }>
+        ): $IntStream;
+        mapToLong(
+            arg0: $ToLongFunction<B> & { readonly "applyAsLong": (arg0: B) => number } & { readonly [Symbol.hasInstance]?: never }
+        ): $LongStream;
+        mapToLong(
+            arg0: ((arg0: B) => number) | globalThis.NoInfer<{ readonly "applyAsLong": (arg0: B) => number } & { readonly [Symbol.hasInstance]?: never }>
+        ): $LongStream;
+        map<R>(
+            arg0: $Function<B, R> & { readonly "apply": (arg0: B) => R } & { readonly [Symbol.hasInstance]?: never }
+        ): $StreamView<R>;
+        map<R>(
+            arg0: ((arg0: B) => R) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => R } & { readonly [Symbol.hasInstance]?: never }>
+        ): $StreamView<R>;
+        max(
+            arg0: $Comparator<B> & { readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }
+        ): $OptionalView<B>;
+        max(
+            arg0: ((arg0: B, arg1: B) => number) | globalThis.NoInfer<{ readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }>
+        ): $OptionalView<B>;
+        min(
+            arg0: $Comparator<B> & { readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }
+        ): $OptionalView<B>;
+        min(
+            arg0: ((arg0: B, arg1: B) => number) | globalThis.NoInfer<{ readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }>
+        ): $OptionalView<B>;
+        noneMatch(
+            arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }
+        ): boolean;
+        noneMatch(
+            arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>
+        ): boolean;
+        peek(
+            arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }
+        ): $StreamView<B>;
+        peek(
+            arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>
+        ): $StreamView<B>;
+        reduce(
+            arg0: B,
+            arg1: $BinaryOperator<B> & { readonly "apply": (arg0: B, arg1: B) => B } & { readonly [Symbol.hasInstance]?: never }
+        ): B;
+        reduce(
+            arg0: B,
+            arg1: ((arg0: B, arg1: B) => B) | globalThis.NoInfer<{ readonly "apply": (arg0: B, arg1: B) => B } & { readonly [Symbol.hasInstance]?: never }>
+        ): B;
+        reduce<U>(
+            arg0: U,
+            arg1: $BiFunction<U, B, U> & { readonly "apply": (arg0: U, arg1: B) => U } & { readonly [Symbol.hasInstance]?: never },
+            arg2: $BinaryOperator_<U, U, U, U>
+        ): U;
+        reduce<U>(
+            arg0: U,
+            arg1: ((arg0: U, arg1: B) => U) | globalThis.NoInfer<{ readonly "apply": (arg0: U, arg1: B) => U } & { readonly [Symbol.hasInstance]?: never }>,
+            arg2: $BinaryOperator_<U, U, U, U>
+        ): U;
+        reduce(
+            arg0: $BinaryOperator<B> & { readonly "apply": (arg0: B, arg1: B) => B } & { readonly [Symbol.hasInstance]?: never }
+        ): $OptionalView<B>;
+        reduce(
+            arg0: ((arg0: B, arg1: B) => B) | globalThis.NoInfer<{ readonly "apply": (arg0: B, arg1: B) => B } & { readonly [Symbol.hasInstance]?: never }>
+        ): $OptionalView<B>;
         skip(arg0: number): $StreamView<B>;
         sorted(): $StreamView<B>;
-        sorted(arg0: $Comparator<B> & { readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }): $StreamView<B>;
-        sorted(arg0: ((arg0: B, arg1: B) => number) | globalThis.NoInfer<{ readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }>): $StreamView<B>;
-        takeWhile(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): $StreamView<B>;
-        takeWhile(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): $StreamView<B>;
+        sorted(
+            arg0: $Comparator<B> & { readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }
+        ): $StreamView<B>;
+        sorted(
+            arg0: ((arg0: B, arg1: B) => number) | globalThis.NoInfer<{ readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }>
+        ): $StreamView<B>;
+        takeWhile(
+            arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }
+        ): $StreamView<B>;
+        takeWhile(
+            arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>
+        ): $StreamView<B>;
         toList(): $ListView<B>;
         onClose(arg0: $Runnable_): $StreamView<B>;
         parallel(): $StreamView<B>;

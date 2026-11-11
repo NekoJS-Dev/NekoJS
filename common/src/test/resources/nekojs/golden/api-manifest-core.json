@@ -79,6 +79,13 @@
       ]
     },
     {
+      "id": "member:ID.resource",
+      "signatures": [
+        "(PRIMITIVE:string)",
+        "(PRIMITIVE:string,PRIMITIVE:string)"
+      ]
+    },
+    {
       "id": "member:JsonIO.parse",
       "signatures": [
         "(PRIMITIVE:string)"

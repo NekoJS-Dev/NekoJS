@@ -44,6 +44,9 @@ public final class NekoCommonBuiltinPlugin implements NekoJSPlugin, com.tkisor.n
         registry.register("once", OnceJS.ONCE);
         registry.register("clearOnce", OnceJS.CLEAR_ONCE);
         registry.register("clientData", new ClientDataJS());
+        registry.register(com.tkisor.nekojs.api.data.Binding.of("ID",
+                new com.tkisor.nekojs.core.api.facade.DefaultIdFacade(),
+                com.tkisor.nekojs.api.facade.IdFacade.class), expose -> expose.stable());
     }
 
     @Override

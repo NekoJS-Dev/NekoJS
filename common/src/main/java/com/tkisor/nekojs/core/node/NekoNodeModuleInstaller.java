@@ -105,6 +105,9 @@ public final class NekoNodeModuleInstaller {
         if (modules.isEmpty()) return;
         for (Map.Entry<String, String> entry : modules.entrySet()) {
             String id = entry.getKey();
+            if (id.startsWith("nekojs/api/")) {
+                throw new IllegalArgumentException("[NEKO-4057] Plugin Node module uses a reserved API route: " + id);
+            }
             String source = entry.getValue();
             try {
                 StringBuilder js = new StringBuilder();

@@ -15,23 +15,25 @@ public record EnvironmentScope(
     public EnvironmentScope {
         requiredMods = Set.copyOf(requiredMods == null ? Set.of() : requiredMods);
         allowedLoaderIds = Set.copyOf(allowedLoaderIds == null ? Set.of() : allowedLoaderIds);
+        if (minecraftVersionRange != null) {
+            com.tkisor.nekojs.core.pack.PackVersion.validateRange(minecraftVersionRange);
+        }
     }
 
     public boolean matches(EnvironmentKey key) {
         Objects.requireNonNull(key, "key");
         if (scriptType != null && scriptType != key.scriptType()) return false;
         if (dist != null && dist != key.dist()) return false;
-        if (!allowedLoaderIds.isEmpty() && key.loaderId() != null
-                && !allowedLoaderIds.contains(key.loaderId())) return false;
-        if (loaderVersionRange != null && key.loaderVersion() != null
-                && !loaderVersionRange.matches(key.loaderVersion())) return false;
+        if (!allowedLoaderIds.isEmpty() && (key.loaderId() == null || !allowedLoaderIds.contains(key.loaderId()))) return false;
+        if (loaderVersionRange != null && (key.loaderVersion() == null
+                || !loaderVersionRange.matches(key.loaderVersion()))) return false;
         if (requiredMods != null && !requiredMods.isEmpty()) {
             Map<String, String> installed = key.installedMods();
             for (String mod : requiredMods) {
                 if (!installed.containsKey(mod)) return false;
             }
         }
-        // minecraftVersionRange matching is simplified for phase 0-1
-        return true;
+        return minecraftVersionRange == null || (key.minecraftVersion() != null
+                && com.tkisor.nekojs.core.pack.PackVersion.satisfies(key.minecraftVersion(), minecraftVersionRange));
     }
 }

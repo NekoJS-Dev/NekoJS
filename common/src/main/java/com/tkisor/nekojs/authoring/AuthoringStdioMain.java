@@ -18,8 +18,8 @@ public final class AuthoringStdioMain {
         if (args.length == 1 && args[0].equals("--help")) {
             errors.println("Usage: java -jar nekojs-<version>-authoring-stdio.jar --game-dir <game-directory> [--ai-dir <game-relative-directory>]");
             errors.println("Read-only MCP over UTF-8 newline-delimited stdio. Requires Java 21+ and an exported environment.json.");
-            errors.println("Discovery: --ai-dir override, then nekojs/config/ai-location.json, then " + AuthoringPaths.DEFAULT_DIRECTORY + ", then legacy nekojs/ai.");
-            errors.println("Reads exported data only; never creates configuration or relays live control requests.");
+            errors.println("Discovery: --ai-dir override, then output.directory in nekojs/config/ai.toml, then " + AuthoringPaths.DEFAULT_DIRECTORY + ", then legacy nekojs/ai.");
+            errors.println("Reads exports and output configuration only; never creates configuration or relays live control requests.");
             return 0;
         }
         String gameDirectory = null;

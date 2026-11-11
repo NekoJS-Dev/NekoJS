@@ -8,20 +8,18 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
 
 /**
- * Static, thread-safe progress tracker for script (re)load operations, consumed by the
- * client reload progress HUD (platform side, e.g. {@code NekoReloadProgressHud}).
+ * Stores thread-safe progress snapshots for script load and reload operations.
  *
- * <p>Mirrors Katton's {@code ReloadProgressState}/{@code ReloadProgressTracker}: the HUD
- * reads an immutable {@link Snapshot} from an {@link AtomicReference}, so producer threads
- * (server reload, client reload) never block the render thread. Sessions are keyed by
+ * <p>Consumers read an immutable {@link Snapshot} from an {@link AtomicReference} without
+ * blocking producer threads. Sessions are keyed by
  * script type name ({@code startup}/{@code server}/{@code client}/{@code test}).
  *
- * <p>Display rules:
+ * <p>Snapshot visibility metadata:
  * <ul>
  *   <li>while a session is {@link Snapshot#active() active} the snapshot is always visible;</li>
  *   <li>{@link #begin}/{@link #step}/{@link #update} refresh {@code visibleUntilMillis} to
- *       now + 5s so the HUD lingers briefly if the producer stalls;</li>
- *   <li>{@link #finish} shows 100% ({@code active = false}) for ~1.5s, then the HUD hides it.</li>
+ *       now + 5s;</li>
+ *   <li>{@link #finish} retains 100% ({@code active = false}) for ~1.5s.</li>
  * </ul>
  *
  * <p>The tracker tolerates misuse: {@link #step}/{@link #update}/{@link #finish} for a type

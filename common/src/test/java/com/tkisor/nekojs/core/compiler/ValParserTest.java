@@ -167,6 +167,24 @@ class ValParserTest {
     }
 
     @Test
+    void arrayLiteralKeepsItsReceiverElementsAndMemberOffsets() {
+        String source = "[Utils.getServer(), /* ] */ ['x', 'y'],].includes(mode)";
+        ValNode.CallExpr call = assertInstanceOf(ValNode.CallExpr.class, first(parse(source)));
+        ValNode.MemberAccess member = assertInstanceOf(ValNode.MemberAccess.class, call.callee());
+        assertEquals("includes", member.member());
+        assertEquals(source.indexOf("includes"), member.start());
+        ValNode.Block elements = assertInstanceOf(ValNode.Block.class, member.object());
+        assertTrue(elements.scope().isEmpty(), "Literal contents do not introduce a declaration scope");
+        assertEquals(0, elements.start());
+        assertEquals(source.indexOf(".includes"), elements.end());
+        assertEquals(2, elements.stmts().size());
+        assertNotNull(findMember(elements, "getServer"));
+        ValNode.Block nested = assertInstanceOf(ValNode.Block.class, elements.stmts().get(1));
+        assertEquals(2, nested.stmts().size());
+        assertEquals("mode", assertInstanceOf(ValNode.Identifier.class, call.args().getFirst()).name());
+    }
+
+    @Test
     void quotedBracketNormalizedToNamedMemberAccess() {
         ValNode.Block block = parse("e['getServer']()");
         ValNode.CallExpr call = assertInstanceOf(ValNode.CallExpr.class, first(block));
@@ -307,6 +325,8 @@ class ValParserTest {
             parse("e.getServer( ; }");
             parse("const x = 'unclosed");
             parse("?.[");
+            parse("[");
+            parse("[[, ;");
         });
     }
 

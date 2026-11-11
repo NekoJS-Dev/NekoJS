@@ -3,7 +3,7 @@ import { $Format, $ParsePosition } from "java:java/text";
 import { $Period, $ZoneId } from "java:java/time";
 import { $Chronology } from "java:java/time/chrono";
 import { $TemporalAccessor, $TemporalField, $TemporalQuery, $TemporalQuery_ } from "java:java/time/temporal";
-import { $Locale, $Set } from "java:java/util";
+import { $Locale, $Set, $Set_ } from "java:java/util";
 
 declare module "java:java/time/format" {
     export class $DateTimeFormatter {

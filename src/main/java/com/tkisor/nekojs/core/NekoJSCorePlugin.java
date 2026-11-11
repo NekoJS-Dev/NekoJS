@@ -100,34 +100,46 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
     @Override
     public void registerEvents(EventGroupRegistry registry) {
         registry.register(PlayerEvents.GROUP);
+        registry.register(PlayerEvents.GROUP, expose -> expose.versioned());
         registry.register(ServerEvents.GROUP);
-        // ⚠️ 顺序要紧：BlockEvents.GROUP 住在跨加载器共享层，访问它**不会**再顺带初始化
-        // NeoForge 适配层（以前同一个类，靠类初始化副作用顺带完成）。而 registry.register
-        // 之后组会被 freeze，晚到的总线会被拒绝——症状是脚本侧
-        // "Binding 'BlockEvents' has no member 'randomTick'"。所以必须先 bootstrap 再 register。
-        NeoForgeBlockEvents.bootstrap();
         registry.register(BlockEvents.GROUP);
+        registry.register(BlockEvents.GROUP, expose -> expose.versioned());
         registry.register(ItemEvents.GROUP);
+        registry.register(ItemEvents.GROUP, expose -> expose.versioned());
         registry.register(EntityEvents.GROUP);
+        registry.register(EntityEvents.GROUP, expose -> expose.versioned());
         registry.register(GoalEvents.GROUP);
+        registry.register(GoalEvents.GROUP, expose -> expose.versioned());
         registry.register(CommandEvents.GROUP);
+        registry.register(CommandEvents.GROUP, expose -> expose.versioned());
         registry.register(CapabilityEvents.GROUP);
+        registry.register(CapabilityEvents.GROUP, expose -> expose.versioned());
         registry.register(LevelEvents.GROUP);
+        registry.register(LevelEvents.GROUP, expose -> expose.versioned());
         registry.register(ScriptEvents.GROUP);
+        registry.register(ScriptEvents.GROUP, expose -> expose.versioned());
         registry.register(NetworkEvents.GROUP);
+        registry.register(NetworkEvents.GROUP, expose -> expose.versioned());
         registry.register(ProbeEvents.GROUP);
+        registry.register(ProbeEvents.GROUP, expose -> expose.versioned());
     }
 
     @Override
     public void registerClientEvents(EventGroupRegistry registry) {
         registry.register(ClientEvents.GROUP);
+        registry.register(ClientEvents.GROUP, expose -> expose.versioned());
 //? if >=26 {
         registry.register(KeyBindEvents.GROUP);
+        registry.register(KeyBindEvents.GROUP, expose -> expose.versioned());
 //?}
     }
 
     @Override
     public void registerBinding(BindingRegistry registry) {
+        registry.register(com.tkisor.nekojs.api.data.Binding.of("Native",
+                new com.tkisor.nekojs.bindings.static_access.NativeBridgeJS()), expose -> expose.stable());
+        registry.register(com.tkisor.nekojs.api.data.Binding.of("Item",
+                new com.tkisor.nekojs.bindings.static_access.ItemJS()), expose -> expose.versioned());
         // 同名原版类组合绑定（与下方 Item/Block 代理委托同模式）：工厂方法走 helper，
         // 其余成员委托同名 vanilla/NeoForge 类的静态成员（如 Ingredient.empty、
         // Capabilities.ItemHandler.BLOCK）。Binding.of 的 valueType 声明 helper 类型供
@@ -222,8 +234,10 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register("Component", Component.class);
 
         if (registry.scriptType() == ScriptType.CLIENT) {
-            registry.register(Binding.of("I18n", new com.tkisor.nekojs.bindings.static_access.I18nJS(),
-                    com.tkisor.nekojs.api.facade.I18nFacade.class));
+            var i18n = Binding.of("I18n", new com.tkisor.nekojs.bindings.static_access.I18nJS(),
+                    com.tkisor.nekojs.api.facade.I18nFacade.class);
+            registry.register(i18n);
+            registry.register(i18n, expose -> expose.stable());
 //? if neoforge && >=26 {
             registry.register("ClientUI", new ClientUiJS());
 //?}

@@ -17,7 +17,7 @@ import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 
 /** 配方脚本事件（SERVER 侧）：总线名与 NeoForge 侧 {@code ServerEvents} 一致，脚本写法跨加载器相同。 */
 public interface ServerEvents {
-    EventGroup GROUP = EventGroup.of("ServerEvents");
+    EventGroup GROUP = EventGroup.of("ServerEvents").expose(api -> api.versioned());
 
     EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
     EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class);

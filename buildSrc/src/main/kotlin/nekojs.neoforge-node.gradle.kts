@@ -401,7 +401,7 @@ tasks.register("dumpCompileClasspath") {
 tasks.test {
     // 工单 33 gate 走独立 platformGateTest JVM（它建立进程级事件 schema，不能与普通用例同 JVM）
     useJUnitPlatform {
-        excludeTags("platform-gate")
+        excludeTags("platform-gate", "native-recipe-probe")
     }
     systemProperty("user.language", "en")
     systemProperty("user.country", "US")
@@ -443,6 +443,21 @@ val platformGateTest = tasks.register<Test>("platformGateTest") {
 
 // 工单 33：非 processor 覆盖 gate 是节点 check 的一部分（Fabric processor 延期不得变成覆盖空白）。
 tasks.named("check") { dependsOn(platformGateTest) }
+
+// Genuine registry bootstrap changes process-wide vanilla state, so keep it out of ordinary unit workers.
+val nativeRecipeProbeTest = tasks.register<Test>("nativeRecipeProbeTest") {
+    group = "verification"
+    description = "Verifies native handler declarations, vanilla shaped metadata and real recipe JSON in an isolated JVM."
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform { includeTags("native-recipe-probe") }
+    systemProperty("user.language", "en")
+    systemProperty("user.country", "US")
+    systemProperty("user.timezone", "UTC")
+    systemProperty("file.encoding", "UTF-8")
+}
+
+tasks.named("check") { dependsOn(nativeRecipeProbeTest) }
 
 tasks.register<Test>("nbtSmokeTest") {
     group = "verification"

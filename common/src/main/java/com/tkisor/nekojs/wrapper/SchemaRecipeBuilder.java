@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.wrapper;
 
+import com.google.gson.JsonElement;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 import com.tkisor.nekojs.api.annotation.Doc;
@@ -60,6 +61,9 @@ final class SchemaRecipeBuilder implements ProxyObject {
     private final RecipeTypeDefinition def;
     private final RecipeSchemaHost host;
     private final Map<String, List<Method>> delegateMethods;
+    private final Object executionTarget;
+    private final Map<String, List<Method>> executionMethods;
+    private final Map<String, String> fieldFunctions;
     private final Map<String, ProxyExecutable> memberCache;
     private final Set<String> allKeys;
 
@@ -70,33 +74,92 @@ final class SchemaRecipeBuilder implements ProxyObject {
      */
     SchemaRecipeBuilder(RecipeBuilder delegate, RecipeTypeDefinition def, RecipeSchemaHost host,
                         Map<String, Value> initialValues) {
+        this(delegate, def, host, initialValues, null);
+    }
+
+    private SchemaRecipeBuilder(RecipeBuilder delegate, RecipeTypeDefinition def, RecipeSchemaHost host,
+                                Map<String, Value> initialValues, Map<String, JsonElement> preparedValues) {
         this.delegate = delegate;
         this.def = def;
         this.host = host;
-        this.delegateMethods = RecipeReflectionUtil.reflectMethods(delegate);
+        this.delegateMethods = visibleMethods(delegate);
 
-        Set<String> keys = new LinkedHashSet<>(delegateMethods.keySet());
-        keys.addAll(def.fields().keySet());
-        this.allKeys = keys;
-        this.memberCache = new LinkedHashMap<>();
-
-        for (RecipeFieldDefinition field : def.fields().values()) {
-            Value value = initialValues != null ? initialValues.get(field.name()) : null;
-            if (value != null) {
-                host.applyField(delegate, field, value);
-            } else if (field.defaultValue() != null) {
-                delegate.setPath(field.path(), new RecipeJsonValue(field.defaultValue().deepCopy()));
-            } else if (field.required()) {
-                throw new IllegalArgumentException("Missing required field '" + field.name() + "' for " + def.key());
+        if (preparedValues != null) {
+            preparedValues.forEach((name, value) -> host.applyEncodedField(delegate, def.fields().get(name), value));
+        } else {
+            for (RecipeFieldDefinition field : def.fields().values()) {
+                Value value = initialValues != null ? initialValues.get(field.name()) : null;
+                if (value != null) {
+                    host.applyField(delegate, field, value);
+                } else if (field.defaultValue() != null && field.writeDefault()) {
+                    delegate.setPath(field.path(), new RecipeJsonValue(field.defaultValue().deepCopy()));
+                } else if (field.required()) {
+                    throw new IllegalArgumentException("Missing required field '" + field.name() + "' for " + def.key());
+                }
             }
         }
 
-        for (String field : def.fields().keySet()) {
+        this.fieldFunctions = new LinkedHashMap<>();
+        if (def.fieldFunctions() == null) {
+            def.fields().keySet().forEach(name -> fieldFunctions.put(name, name));
+            fieldFunctions.putAll(def.fieldAliases());
+        } else {
+            fieldFunctions.putAll(def.fieldFunctions());
+        }
+        this.executionTarget = def.executionFactory() == null ? null
+                : def.executionFactory().create(delegate, host, host.session(delegate));
+        this.executionMethods = executionTarget == null ? Map.of() : visibleMethods(executionTarget);
+        Set<String> keys = new LinkedHashSet<>(delegateMethods.keySet());
+        keys.addAll(executionMethods.keySet());
+        keys.addAll(fieldFunctions.keySet());
+        keys.addAll(def.functions().keySet());
+        this.allKeys = keys;
+        this.memberCache = new LinkedHashMap<>();
+
+        for (String field : fieldFunctions.keySet()) {
             if (delegateMethods.containsKey(field)) {
                 NekoJS.LOGGER.debug("Schema field '{}' of {} is shadowed by a delegate method on {}; use setPath('{}', v) to write the field",
                         field, def.key(), delegate.getClass().getName(), field);
             }
         }
+    }
+
+    private static Map<String, List<Method>> visibleMethods(Object target) {
+        Map<String, List<Method>> methods = RecipeReflectionUtil.reflectMethods(target);
+        methods.values().forEach(overloads -> overloads.removeIf(RecipeReflectionUtil::isHiddenMethod));
+        methods.entrySet().removeIf(entry -> entry.getValue().isEmpty());
+        return methods;
+    }
+
+    /** Validate and encode an advanced constructor before the platform publishes its builder. */
+    static SchemaRecipeBuilder createPrepared(RecipeTypeDefinition def, RecipeSchemaHost host,
+                                              Map<String, Value> values, Map<String, JsonElement> constants) {
+        Map<String, JsonElement> prepared = new LinkedHashMap<>();
+        for (RecipeFieldDefinition field : def.fields().values()) {
+            if (values.containsKey(field.name())) {
+                JsonElement encoded = host.convertField(field, values.get(field.name()));
+                if (encoded == null) {
+                    throw new IllegalArgumentException("[NEKO-5215] Recipe encoder returned null for "
+                            + def.key() + "." + field.name());
+                }
+                prepared.put(field.name(), encoded.deepCopy());
+            } else if (field.defaultValue() != null) {
+                if (field.writeDefault()) prepared.put(field.name(), field.defaultValue().deepCopy());
+            } else if (field.required() && !constants.containsKey(field.name())) {
+                throw new IllegalArgumentException("[NEKO-5213] Missing required field '" + field.name()
+                        + "' for " + def.key());
+            }
+            if (constants.containsKey(field.name())) {
+                prepared.put(field.name(), constants.get(field.name()).deepCopy());
+            }
+        }
+        if (def.executionFactory() != null) {
+            Map<String, JsonElement> validationFields = new LinkedHashMap<>();
+            prepared.forEach((name, value) -> validationFields.put(name, value.deepCopy()));
+            def.executionFactory().validatePreparedFields(java.util.Collections.unmodifiableMap(validationFields));
+        }
+        RecipeBuilder builder = host.builder(def.type(), def.prefix());
+        return new SchemaRecipeBuilder(builder, def, host, Map.of(), prepared);
     }
 
     // ==================== ProxyObject ====================
@@ -143,7 +206,20 @@ final class SchemaRecipeBuilder implements ProxyObject {
         if (methods != null && !methods.isEmpty()) {
             return delegateExecutable(methods);
         }
-        RecipeFieldDefinition field = def.fields().get(key);
+        List<Method> targetMethods = executionMethods.get(key);
+        if (targetMethods != null) return methodExecutable(targetMethods, executionTarget);
+        Map<String, JsonElement> constants = def.functions().get(key);
+        if (constants != null) {
+            return args -> {
+                if (args.length != 0) {
+                    throw new IllegalArgumentException("[NEKO-5216] Recipe function " + key
+                            + " expects no arguments for " + def.key());
+                }
+                constants.forEach((name, value) -> host.applyEncodedField(delegate, def.fields().get(name), value));
+                return this;
+            };
+        }
+        RecipeFieldDefinition field = def.fields().get(fieldFunctions.get(key));
         if (field != null) {
             return fieldExecutable(field);
         }
@@ -153,20 +229,20 @@ final class SchemaRecipeBuilder implements ProxyObject {
     /** Invokes the first arity/convertibility-matching delegate overload, rebinding a
      *  self-returning delegate result to this wrapper so chains stay on the JS-visible type. */
     private ProxyExecutable delegateExecutable(List<Method> methods) {
+        return methodExecutable(methods, delegate);
+    }
+
+    private ProxyExecutable methodExecutable(List<Method> methods, Object target) {
         return args -> {
             for (Method m : methods) {
                 int total = m.getParameterCount();
                 int required = RecipeReflectionUtil.requiredParamCount(m);
                 if (args.length >= required && args.length <= total) {
-                    try {
-                        Object[] converted = RecipeReflectionUtil.convertArgs(m, args, total);
-                        Object result = m.invoke(delegate, converted);
-                        // keep the fluent chain on the wrapper: a delegate method that returns
-                        // itself (setPath/id/group/validate...) is reborn as this wrapper.
-                        return result == delegate ? this : result;
-                    } catch (Exception ignored) {
-                        // arity matched but arg conversion failed → try next overload
-                    }
+                    Object[] converted = RecipeReflectionUtil.convertArgs(m, args, total);
+                    if (converted == null) continue;
+                    Object result = RecipeReflectionUtil.invoke(m, target, converted);
+                    // A self-returning delegate keeps the fluent chain on the script-visible wrapper.
+                    return result == delegate || result == executionTarget && result != null ? this : result;
                 }
             }
             throw new IllegalArgumentException("No overload of '" + methods.get(0).getName()
@@ -182,7 +258,16 @@ final class SchemaRecipeBuilder implements ProxyObject {
                 throw new IllegalArgumentException("Schema field '" + field.name()
                         + "' setter expects exactly 1 argument, got " + args.length);
             }
-            host.applyField(delegate, field, args[0]);
+            if (def.requiresPreparedFields()) {
+                JsonElement encoded = host.convertField(field, args[0]);
+                if (encoded == null) {
+                    throw new IllegalArgumentException("[NEKO-5215] Recipe encoder returned null for "
+                            + def.key() + "." + field.name());
+                }
+                host.applyEncodedField(delegate, field, encoded);
+            } else {
+                host.applyField(delegate, field, args[0]);
+            }
             return this;
         };
     }

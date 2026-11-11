@@ -74,6 +74,38 @@ public final class BindingDeclarationGenerator {
         return sb.toString();
     }
 
+    /** Emits ambient ESM exports and matching literal CommonJS overloads from runtime registrations. */
+    public String generateModules(Map<String, List<BindingCatalogEntry>> modules) {
+        return generateModules(modules, Map.of());
+    }
+
+    public String generateModules(Map<String, List<BindingCatalogEntry>> modules, Map<String, String> events) {
+        StringBuilder output = new StringBuilder("// API modules for the selected script environment.\n");
+        for (var module : new TreeMap<>(modules).entrySet()) {
+            output.append("declare module \"").append(module.getKey()).append("\" {\n");
+            module.getValue().stream().sorted(Comparator.comparing(BindingCatalogEntry::name)).forEach(binding -> {
+                output.append("    export const ").append(binding.name()).append(": ");
+                Class<?> type = binding.javaType();
+                if (type == null) output.append("unknown");
+                else if (type == String.class) output.append("string");
+                else if (type == Boolean.class || type == boolean.class) output.append("boolean");
+                else if (type.isPrimitive() || Number.class.isAssignableFrom(type)) output.append("number");
+                else {
+                    if (binding.staticClass()) output.append("typeof ");
+                    output.append("import(\"java:").append(type.getPackageName().replace('.', '/'))
+                            .append("\").$").append(getTsClassName(type));
+                }
+                output.append(";\n");
+            });
+            output.append(events.getOrDefault(module.getKey(), ""));
+            output.append("}\n");
+            output.append("declare function require(id: \"").append(module.getKey())
+                    .append("\"): typeof import(\"").append(module.getKey()).append("\");\n");
+        }
+        output.append("declare function require(id: string): unknown;\n");
+        return output.toString();
+    }
+
     /**
      * 获取类的 TypeScript 标识符名（内部类使用 Parent$Child 格式）。
      */

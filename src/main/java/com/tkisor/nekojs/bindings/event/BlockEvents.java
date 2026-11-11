@@ -1,55 +1,99 @@
+//? if neoforge {
 package com.tkisor.nekojs.bindings.event;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.DispatchKey;
+import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.event.level.BlockEntityTickEvent;
+import com.tkisor.nekojs.event.level.RandomTickEvent;
 import com.tkisor.nekojs.wrapper.event.block.BlockBrokenEventJS;
+import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+
 import java.util.function.Function;
 
-/**
- * 脚本命名空间 {@code BlockEvents} 的**规范声明**——住在 `src-common/`，被根分支的三个
- * NeoForge 节点与 fabric 分支同时挂载，因此这些总线在所有加载器上是同一个对象。
- *
- * <p>本层规矩（`src-common/` 全体适用）：
- * <ul>
- *   <li>只允许原版 MC 类型与 NekoJS 自己的类型，**不得** import
- *       {@code net.neoforged} / {@code net.minecraftforge} / {@code net.fabricmc}；</li>
- *   <li>**不得写 `//?` 守卫**——stonecutter 只预处理分支的 `src` 树，这个源根不经预处理，
- *       写了守卫会原样进编译。需要版本分叉的事件请留在加载器侧。</li>
- * </ul>
- *
- * <p>加载器侧只负责**把原生事件转换成这里的载荷**：
- * NeoForge 见 {@link NeoForgeBlockEvents}，Fabric 见 {@code FabricBlockEventBindings}。
- * 加载器专属的事件依然声明在加载器侧，并注册进本类的 {@link #GROUP}——脚本命名空间
- * 因此仍是完整的一个。哪些事件能进本层，取决于**投递方式**而不只是字段类型：
- * NekoJS 自己的 {@code RandomTickEvent}/{@code BlockEntityTickEvent} 继承
- * {@code net.neoforged.bus.api.Event}（经 NF 总线投递），所以它们按定义就不中立，
- * 留在 {@link NeoForgeBlockEvents}；要让它们中立得先改投递路径（mixin 直接 post 到
- * {@code EventBusJS}，不再过 NF 总线）——那是独立的一步。
- */
+/** Declares the complete NeoForge block event group and its native bridge. */
 public final class BlockEvents {
-
     private BlockEvents() {}
 
-    /** 脚本命名空间。{@code EventGroup.of} 每次都新建实例，所以只能在这里创建一次。 */
     public static final EventGroup GROUP = EventGroup.of("BlockEvents");
 
-    /** 方块被破坏（脚本 {@code BlockEvents.broken}），载荷为加载器中立的 {@link BlockBrokenEventJS}。 */
     public static final EventBusJS<BlockBrokenEventJS, Block> BROKEN =
             GROUP.add("broken", ScriptType.SERVER, EventBusJS.of(
                     BlockBrokenEventJS.class, true, dispatchByBlock(BlockBrokenEventJS::getBlock)));
 
-    // modification（posted-object 模式，不挂任何总线事件：平台侧在服务器启动与
-    // /nekojs reload server 时手动 post）。载荷 BlockModificationEventJS 是 26.x
-    // 面（1.21.1 无此总线，其区块属性修改走别的路径），故整块版本守卫。
-    //? if >=26 {
-    public static final EventBusJS<com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS, Void> MODIFICATION =
-            GROUP.server("modification", com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS.class);
-    //?}
+    /** Posted by the modification domain owner, not the native event bridge. */
+    public static final EventBusJS<BlockModificationEventJS, Void> MODIFICATION =
+            GROUP.server("modification", BlockModificationEventJS.class);
+
+    public static final EventBusJS<BlockEvent.EntityPlaceEvent, Block> ENTITY_PLACED =
+            GROUP.server("entityPlaced", BlockEvent.EntityPlaceEvent.class, dispatchByBlock());
+    public static final EventBusJS<BlockEvent.EntityMultiPlaceEvent, Block> ENTITY_MULTI_PLACED =
+            GROUP.server("entityMultiPlaced", BlockEvent.EntityMultiPlaceEvent.class, dispatchByBlock());
+    public static final EventBusJS<BlockEvent.NeighborNotifyEvent, Block> NEIGHBOR_NOTIFY =
+            GROUP.server("neighborNotify", BlockEvent.NeighborNotifyEvent.class, dispatchByBlock());
+    public static final EventBusJS<BlockEvent.FluidPlaceBlockEvent, Block> FLUID_PLACED =
+            GROUP.server("fluidPlaced", BlockEvent.FluidPlaceBlockEvent.class, dispatchByBlock());
+    public static final EventBusJS<BlockEvent.FarmlandTrampleEvent, Block> FARMLAND_TRAMPLE =
+            GROUP.server("farmlandTrample", BlockEvent.FarmlandTrampleEvent.class, dispatchByBlock());
+    public static final EventBusJS<BlockEvent.PortalSpawnEvent, Block> PORTAL_SPAWN =
+            GROUP.server("portalSpawn", BlockEvent.PortalSpawnEvent.class, dispatchByBlock());
+    public static final EventBusJS<BlockEvent.BlockToolModificationEvent, Block> TOOL_MODIFICATION =
+            GROUP.server("toolModification", BlockEvent.BlockToolModificationEvent.class, dispatchByBlock());
+
+    public static final EventBusJS<PlayerInteractEvent.RightClickBlock, Block> RIGHT_CLICKED =
+            GROUP.server("rightClicked", PlayerInteractEvent.RightClickBlock.class,
+                    dispatchByBlock(e -> e.getLevel().getBlockState(e.getPos()).getBlock()));
+    public static final EventBusJS<BlockEvent.EntityPlaceEvent, Block> PLACED =
+            GROUP.server("placed", BlockEvent.EntityPlaceEvent.class, dispatchByBlock());
+    public static final EventBusJS<PlayerInteractEvent.LeftClickBlock, Block> LEFT_CLICKED =
+            GROUP.server("leftClicked", PlayerInteractEvent.LeftClickBlock.class,
+                    dispatchByBlock(e -> e.getLevel().getBlockState(e.getPos()).getBlock()));
+
+    /** Receives the mixin-posted native random tick event. */
+    public static final EventBusJS<RandomTickEvent, Block> RANDOM_TICK =
+            GROUP.server("randomTick", RandomTickEvent.class,
+                    dispatchByBlock(RandomTickEvent::getBlock));
+
+    /** Receives the mixin-posted native block entity tick event. */
+    public static final EventBusJS<BlockEntityTickEvent, BlockEntityType<?>> BLOCK_ENTITY_TICK =
+            GROUP.server("blockEntityTick", BlockEntityTickEvent.class,
+                    DispatchKey.of(BlockEntityType.class, BlockEntityTickEvent::getType));
 
     static <T> DispatchKey<T, Block> dispatchByBlock(Function<T, Block> toKey) {
         return DispatchKey.of(Block.class, toKey);
     }
+
+    private static <T extends BlockEvent> DispatchKey<T, Block> dispatchByBlock() {
+        return dispatchByBlock(event -> event.getState().getBlock());
+    }
+
+    public static final EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
+        .bindTransformed(
+                BROKEN,
+                (BreakBlockEvent event) -> new BlockBrokenEventJS(
+                        event.getLevel(), event.getPos(), event.getState(), event.getPlayer()),
+                BreakBlockEvent.class)
+        .bind(ENTITY_PLACED)
+        .bind(ENTITY_MULTI_PLACED)
+        .bind(NEIGHBOR_NOTIFY)
+        .bind(FLUID_PLACED)
+        .bind(FARMLAND_TRAMPLE)
+        .bind(PORTAL_SPAWN)
+        .bind(TOOL_MODIFICATION)
+        // Interaction callbacks also fire on the client; these buses accept server instances only.
+        .bind(RIGHT_CLICKED, e -> !e.getLevel().isClientSide())
+        .bind(PLACED)
+        .bind(LEFT_CLICKED, e -> !e.getLevel().isClientSide())
+        .bind(RANDOM_TICK)
+        .bind(BLOCK_ENTITY_TICK);
+
 }
+//?}

@@ -25,6 +25,15 @@ public final class LegacySurfaceAdapter {
         List<ApiSymbol> result = new ArrayList<>();
         result.addAll(fromBindings(snapshot.bindings()));
         result.addAll(fromEvents(snapshot.events()));
+        for (var publication : snapshot.moduleBindings()) {
+            result.add(new ApiSymbol(new ApiSymbolId("module", publication.moduleId() + ":" + publication.binding().name()),
+                    List.of(ApiSignature.function(List.of(), ApiTypeRef.voidType()))));
+        }
+        for (var publication : snapshot.moduleEvents()) {
+            result.add(new ApiSymbol(new ApiSymbolId("moduleEvent", publication.moduleId() + ":"
+                    + publication.event().group() + "." + publication.event().name()),
+                    List.of(ApiSignature.function(List.of(), ApiTypeRef.voidType()))));
+        }
         result.addAll(fromAdapters(snapshot.adapters()));
         result.addAll(fromHostExtensions(snapshot.hostExtensions()));
         return List.copyOf(result);

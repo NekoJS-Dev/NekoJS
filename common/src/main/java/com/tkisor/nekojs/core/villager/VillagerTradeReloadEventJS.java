@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.core.villager;
 
+import com.tkisor.nekojs.api.annotation.ScriptTypeView;
+import com.tkisor.nekojs.api.villager.VillagerTradeReloadEvent;
+
 import java.util.List;
 import java.util.Set;
 
@@ -12,7 +15,8 @@ import java.util.Set;
  * is done with it declares that explicitly here; the declaration takes effect in the same
  * commit, so removal is a transaction, not a side effect in the middle of collection.
  */
-public final class VillagerTradeReloadEventJS {
+@ScriptTypeView(VillagerTradeReloadEvent.class)
+public final class VillagerTradeReloadEventJS implements VillagerTradeReloadEvent {
 
     private final VillagerTradeCandidatePlan plan;
     private final VillagerTradeSetSnapshot incoming;

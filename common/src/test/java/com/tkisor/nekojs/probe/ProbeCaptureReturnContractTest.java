@@ -137,7 +137,7 @@ class ProbeCaptureReturnContractTest {
         assertTrue(inherited.substring(0, inherited.indexOf("\n    }")).contains(
                 " & $OptionalView<$ProbeCaptureReturnContractTest$Base>;"),
                 "The receiving subclass supplies the generic interface context: " + declaration);
-        assertEquals(4, java.util.regex.Pattern.compile("values\\([^\\n]+\\): "
+        assertEquals(4, java.util.regex.Pattern.compile("values\\(\\s*[^()\\r\\n]+\\s*\\): "
                 + "\\$Optional<\\$ProbeCaptureReturnContractTest\\$Child> & "
                 + "\\$OptionalView<\\$ProbeCaptureReturnContractTest\\$Base>;").matcher(declaration).results().count(),
                 "A specialized generic parameter still overrides the erased parent signature: " + declaration);

@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.core.villager;
 
+import com.tkisor.nekojs.api.annotation.ScriptTypeView;
+import com.tkisor.nekojs.api.villager.VillagerTradeQuery;
+
 import java.util.List;
 
 /**
@@ -11,7 +14,8 @@ import java.util.List;
  * from a generation that is no longer the active one reports {@link Status#STALE} and gives
  * deterministic empty/zero answers for every member instead of stale data.
  */
-public final class VillagerTradeQuerySurface {
+@ScriptTypeView(VillagerTradeQuery.class)
+public final class VillagerTradeQuerySurface implements VillagerTradeQuery {
 
     public enum Status {
         /** The reading generation is the active SERVER generation: values are the last commit's. */

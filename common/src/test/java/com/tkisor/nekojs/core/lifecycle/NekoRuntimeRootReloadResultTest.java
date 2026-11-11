@@ -43,6 +43,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -57,7 +58,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class NekoRuntimeRootReloadResultTest {
 
-    private static final class StubPluginRuntime implements IPluginRuntime {
+    private static class StubPluginRuntime implements IPluginRuntime {
         @Override public Map<String, Binding> bindings(ScriptType type) { return Map.of(); }
         @Override public Map<String, EventGroup> eventGroups() { return Map.of(); }
         @Override public List<JSTypeAdapter<?>> adapters() { return List.of(); }
@@ -101,6 +102,10 @@ class NekoRuntimeRootReloadResultTest {
     }
 
     private static NekoRuntimeRoot newRoot(ScriptEventBridge bridge, SandboxConfig config) {
+        return newRoot(bridge, config, new StubPluginRuntime());
+    }
+
+    private static NekoRuntimeRoot newRoot(ScriptEventBridge bridge, SandboxConfig config, IPluginRuntime runtime) {
         NekoJSPaths paths = NekoJSPaths.get();
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         NekoCoreContext core = new NekoCoreContext(
@@ -111,9 +116,50 @@ class NekoRuntimeRootReloadResultTest {
                 new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
                 NekoTrustContext.local());
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(
-                core, paths, compilers, new StubPluginRuntime(), cache);
-        return new NekoRuntimeRoot(core, new StubPluginRuntime(), bridge,
+                core, paths, compilers, runtime, cache);
+        return new NekoRuntimeRoot(core, runtime, bridge,
                 newPropertyRegistry(), sandboxFactory, cache);
+    }
+
+    @Test
+    void mixinHooksUseCandidateRollbackDuplicatePreflightAndRootLeases() throws Exception {
+        Path dir = ScriptTypeEnv.scriptsDir(ScriptType.SERVER);
+        Files.createDirectories(dir);
+        try (var files = Files.list(dir)) { for (Path file : files.toList()) Files.deleteIfExists(file); }
+        String hash = "a".repeat(64);
+        var profile = new com.tkisor.nekojs.core.mixin.MixinPlan.Profile("26.1.2", "neoforge", "26.1.2.71", "runtime", "client");
+        var hook = new com.tkisor.nekojs.core.mixin.MixinPlan.Hook("demo:health", "demo.Target", "health", "()F", "RETURN", true, "SERVER", "SERVER_MAIN", 1, false);
+        var plan = new com.tkisor.nekojs.core.mixin.MixinPlan(1, profile, hash, java.util.List.of(hook));
+        var root = newRoot(ScriptEventBridge.EMPTY);
+        var mainThread = Thread.currentThread();
+        root.mixins().install(java.util.List.of(plan), profile, thread -> Thread.currentThread() == mainThread);
+        try {
+            writeScript(ScriptType.SERVER, "mixin-hook.js", "MixinEvents.inject('demo:health', e => { e.returnValue = 40; });");
+            root.createScriptManager(ScriptType.SERVER).discoverScripts(); root.scriptManagerOf(ScriptType.SERVER).loadScripts();
+            assertTrue(root.errorTracker().getAllErrors().isEmpty(), () -> root.errorTracker().getAllErrors().stream().map(error -> error.getFullDetailText()).toList().toString());
+            assertTrue(com.tkisor.nekojs.core.mixin.MixinNativeBridge.enabled(hash, hook.id()), () -> "candidate=" + com.tkisor.nekojs.script.ScriptManager.isAnyCandidatePreparing());
+            assertEquals(40F, com.tkisor.nekojs.core.mixin.MixinNativeBridge.invoke(hash, hook.id(), null, new Object[0], 20F).value(), () -> root.errorTracker().getAllErrors().stream().map(error -> error.getFullDetailText()).toList().toString());
+            writeScript(ScriptType.SERVER, "mixin-hook.js", "MixinEvents.inject('demo:health', e => { e.returnValue = 41; });");
+            assertTrue(root.reload(ScriptType.SERVER).success());
+            assertEquals(41F, com.tkisor.nekojs.core.mixin.MixinNativeBridge.invoke(hash, hook.id(), null, new Object[0], 20F).value());
+            writeScript(ScriptType.SERVER, "mixin-hook.js", "MixinEvents.inject('demo:health', e => { e.returnValue = 99; }); throw new Error('rollback fixture');");
+            assertThrows(NekoReloadException.class, () -> root.reload(ScriptType.SERVER));
+            assertEquals(41F, com.tkisor.nekojs.core.mixin.MixinNativeBridge.invoke(hash, hook.id(), null, new Object[0], 20F).value());
+            writeScript(ScriptType.SERVER, "mixin-hook.js", "MixinEvents.inject('demo:health', e => {}); MixinEvents.inject('demo:health', e => {});");
+            assertThrows(NekoReloadException.class, () -> root.reload(ScriptType.SERVER));
+            assertEquals(41F, com.tkisor.nekojs.core.mixin.MixinNativeBridge.invoke(hash, hook.id(), null, new Object[0], 20F).value());
+            writeScript(ScriptType.SERVER, "mixin-hook.js", "MixinEvents.inject('demo:health', e => { e.returnValue = 99; return Promise.resolve(); });");
+            assertTrue(root.reload(ScriptType.SERVER).success());
+            assertFalse(com.tkisor.nekojs.core.mixin.MixinNativeBridge.invoke(hash, hook.id(), null, new Object[0], 20F).changed());
+            var wrongThread = java.util.concurrent.CompletableFuture.supplyAsync(() -> com.tkisor.nekojs.core.mixin.MixinNativeBridge.enabled(hash, hook.id()));
+            assertFalse(wrongThread.get());
+            root.mixins().clearCallbacks();
+            assertFalse(com.tkisor.nekojs.core.mixin.MixinNativeBridge.enabled(hash, hook.id()));
+            writeScript(ScriptType.SERVER, "mixin-hook.js", "MixinEvents.inject('demo:health', e => { e.returnValue = 42; });");
+            assertTrue(root.reload(ScriptType.SERVER).success());
+            assertEquals(42F, com.tkisor.nekojs.core.mixin.MixinNativeBridge.invoke(hash, hook.id(), null, new Object[0], 20F).value());
+        } finally { root.closeSilently(); }
+        assertFalse(com.tkisor.nekojs.core.mixin.MixinNativeBridge.enabled(hash, hook.id()));
     }
 
     private static void writeScript(ScriptType type, String fileName, String source) throws Exception {
@@ -121,6 +167,67 @@ class NekoRuntimeRootReloadResultTest {
         Files.createDirectories(dir);
         Files.writeString(dir.resolve(fileName), source);
         dir.resolve(fileName).toFile().deleteOnExit();
+    }
+
+    public record SourceTick(int tick) {}
+
+    @Test
+    void stableTickSnapshotsUseSourceValuesAcrossSuccessfulAndFailedReloadWithoutDuplicateListeners() throws Exception {
+        var registry = new com.tkisor.nekojs.api.event.EventGroupRegistry.Impl().scopedTo("nekojs");
+        var group = EventGroup.of("ServerEvents");
+        var pre = group.server("tickPre", SourceTick.class);
+        var post = group.server("tickPost", SourceTick.class);
+        registry.register(group);
+        registry.register(group, e -> e.stable().scriptTypes(ScriptType.SERVER).events("tickPre", "tickPost")
+                .view("tickPre", com.tkisor.nekojs.api.event.StableServerTickEvent.class,
+                        (SourceTick event) -> new com.tkisor.nekojs.api.event.StableServerTickEvent(event.tick()))
+                .view("tickPost", com.tkisor.nekojs.api.event.StableServerTickEvent.class,
+                        (SourceTick event) -> new com.tkisor.nekojs.api.event.StableServerTickEvent(event.tick())));
+        var seen = new java.util.ArrayList<String>();
+        var recorder = (graal.graalvm.polyglot.proxy.ProxyExecutable) arguments -> {
+            seen.add(arguments[0].asString() + ":" + arguments[1].asLong());
+            return null;
+        };
+        var runtime = new StubPluginRuntime() {
+            @Override public Map<String, Binding> bindings(ScriptType type) { return Map.of("recordTick", Binding.of("recordTick", recorder)); }
+            @Override public Map<String, EventGroup> eventGroups() { return registry.view(); }
+            @Override public List<com.tkisor.nekojs.api.event.ModuleEventGroup> moduleEventGroups() { return registry.moduleGroups(); }
+            @Override public List<EventGroup> lifecycleEventGroups() { return registry.sources(); }
+        };
+        var bridge = new com.tkisor.nekojs.core.DefaultScriptEventBridge(null);
+        bridge.setPluginRuntime(runtime);
+        Path dir = ScriptTypeEnv.scriptsDir(ScriptType.SERVER);
+        Files.createDirectories(dir);
+        try (var stream = Files.list(dir)) {
+            for (Path path : stream.toList()) Files.deleteIfExists(path);
+        }
+        String source = "const { ServerEvents: ticks } = require('nekojs/api/stable');\n"
+                + "ticks.tickPre(e => recordTick('v1-pre', e.tick));\n"
+                + "ticks.tickPost(e => recordTick('v1-post', e.tick));\n";
+        writeScript(ScriptType.SERVER, "stable-ticks.js", source);
+        var root = newRoot(bridge, SandboxConfig.defaultConfig(), runtime);
+        try {
+            root.createScriptManager(ScriptType.SERVER).discoverScripts();
+            root.scriptManagerOf(ScriptType.SERVER).loadScripts();
+            pre.post(new SourceTick(37));
+            post.post(new SourceTick(37));
+            assertEquals(List.of("v1-pre:37", "v1-post:37"), seen);
+            writeScript(ScriptType.SERVER, "stable-ticks.js", source.replace("v1-", "v2-"));
+            assertTrue(root.reload(ScriptType.SERVER).success());
+            pre.post(new SourceTick(91));
+            post.post(new SourceTick(91));
+            assertEquals(List.of("v1-pre:37", "v1-post:37", "v2-pre:91", "v2-post:91"), seen);
+            writeScript(ScriptType.SERVER, "stable-ticks.js", source.replace("v1-", "candidate-") + "throw new Error('fixture rollback');");
+            org.junit.jupiter.api.Assertions.assertThrows(NekoReloadException.class, () -> root.reload(ScriptType.SERVER));
+            pre.post(new SourceTick(105));
+            post.post(new SourceTick(105));
+            assertEquals(List.of("v1-pre:37", "v1-post:37", "v2-pre:91", "v2-post:91", "v2-pre:105", "v2-post:105"), seen);
+        } finally {
+            root.closeSilently();
+            Files.deleteIfExists(dir.resolve("stable-ticks.js"));
+        }
+        assertFalse(pre.hasListeners());
+        assertFalse(post.hasListeners());
     }
 
     /** AC6：STARTUP reload 保持 reset+load 非事务语义，结果显式标记 STARTUP 阶段。 */

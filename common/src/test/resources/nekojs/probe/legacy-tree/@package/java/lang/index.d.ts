@@ -9,7 +9,7 @@ import { $CharBuffer } from "java:java/nio";
 import { $Charset } from "java:java/nio/charset";
 import { $ProtectionDomain } from "java:java/security";
 import { $Duration } from "java:java/time";
-import { $Comparator, $Comparator_, $Enumeration, $Iterator, $List, $Locale, $Map, $Optional, $OptionalView, $Set, $Spliterator } from "java:java/util";
+import { $Comparator, $Comparator_, $Enumeration, $Iterator, $List, $List_, $Locale, $Map, $Map_, $Optional, $OptionalView, $Set, $Set_, $Spliterator } from "java:java/util";
 import { $ThreadFactory, $ThreadFactory_ } from "java:java/util/concurrent";
 import { $Consumer, $Consumer_, $Function, $Function_ } from "java:java/util/function";
 import { $IntStream, $Stream } from "java:java/util/stream";
@@ -92,10 +92,11 @@ declare module "java:java/lang" {
     }
 
     export interface $CharSequence {
+        get empty(): boolean;
+        isEmpty(): boolean;
         charAt(arg0: number): string;
         chars(): $IntStream;
         codePoints(): $IntStream;
-        isEmpty(): boolean;
         length(): number;
         subSequence(arg0: number, arg1: number): $CharSequence;
         toString(): string;
@@ -506,7 +507,10 @@ declare module "java:java/lang" {
 
     export class $Enum$EnumDesc<E extends $Enum<E>> extends $DynamicConstantDesc<E> {
         static of<E extends $Enum<E>>(arg0: $ClassDesc, arg1: string): $Enum$EnumDesc<E>;
-        static of<T>(arg0: $DirectMethodHandleDesc, arg1?: (number | string | $ConstantDesc_<$MethodHandles$Lookup, unknown>)[]): $DynamicConstantDesc<T>;
+        static of<T>(
+            arg0: $DirectMethodHandleDesc,
+            arg1?: (number | string | $ConstantDesc_<$MethodHandles$Lookup, unknown>)[]
+        ): $DynamicConstantDesc<T>;
         static of<T>(arg0: $DirectMethodHandleDesc): $DynamicConstantDesc<T>;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): E;
         toString(): string;
@@ -683,9 +687,21 @@ declare module "java:java/lang" {
 
     export class $ModuleLayer {
         static boot(): $ModuleLayer;
-        static defineModulesWithManyLoaders(arg0: $Configuration, arg1: ($List<$ModuleLayer> | ($ModuleLayer)[]), arg2: $ClassLoader): $ModuleLayer$Controller;
-        static defineModulesWithOneLoader(arg0: $Configuration, arg1: ($List<$ModuleLayer> | ($ModuleLayer)[]), arg2: $ClassLoader): $ModuleLayer$Controller;
-        static defineModules(arg0: $Configuration, arg1: ($List<$ModuleLayer> | ($ModuleLayer)[]), arg2: $Function_<string, $ClassLoader, string, $ClassLoader>): $ModuleLayer$Controller;
+        static defineModulesWithManyLoaders(
+            arg0: $Configuration,
+            arg1: $List_<$ModuleLayer>,
+            arg2: $ClassLoader
+        ): $ModuleLayer$Controller;
+        static defineModulesWithOneLoader(
+            arg0: $Configuration,
+            arg1: $List_<$ModuleLayer>,
+            arg2: $ClassLoader
+        ): $ModuleLayer$Controller;
+        static defineModules(
+            arg0: $Configuration,
+            arg1: $List_<$ModuleLayer>,
+            arg2: $Function_<string, $ClassLoader, string, $ClassLoader>
+        ): $ModuleLayer$Controller;
         static empty(): $ModuleLayer;
         configuration(): $Configuration;
         defineModulesWithManyLoaders(arg0: $Configuration, arg1: $ClassLoader): $ModuleLayer;
@@ -805,7 +821,7 @@ declare module "java:java/lang" {
         static format(arg0: string, arg1?: unknown[]): string;
         static format(arg0: $Locale, arg1: string, arg2?: unknown[]): string;
         static join(arg0: $CharSequence, arg1?: $CharSequence[]): string;
-        static join(arg0: $CharSequence, arg1: ($Iterable<$CharSequence> | ($CharSequence)[])): string;
+        static join(arg0: $CharSequence, arg1: $Iterable_<$CharSequence>): string;
         static valueOf(arg0: boolean): string;
         static valueOf(arg0: string[], arg1: number, arg2: number): string;
         static valueOf(arg0: string[]): string;
@@ -1116,14 +1132,18 @@ declare module "java:java/lang" {
         name(arg0: string): $Thread$Builder$OfPlatform;
         priority(arg0: number): $Thread$Builder$OfPlatform;
         stackSize(arg0: number): $Thread$Builder$OfPlatform;
-        uncaughtExceptionHandler(arg0: $Thread$UncaughtExceptionHandler_<$Thread, $Throwable>): $Thread$Builder$OfPlatform;
+        uncaughtExceptionHandler(
+            arg0: $Thread$UncaughtExceptionHandler_<$Thread, $Throwable>
+        ): $Thread$Builder$OfPlatform;
     }
 
     export interface $Thread$Builder$OfVirtual extends $Thread$Builder {
         inheritInheritableThreadLocals(arg0: boolean): $Thread$Builder$OfVirtual;
         name(arg0: string, arg1: number): $Thread$Builder$OfVirtual;
         name(arg0: string): $Thread$Builder$OfVirtual;
-        uncaughtExceptionHandler(arg0: $Thread$UncaughtExceptionHandler_<$Thread, $Throwable>): $Thread$Builder$OfVirtual;
+        uncaughtExceptionHandler(
+            arg0: $Thread$UncaughtExceptionHandler_<$Thread, $Throwable>
+        ): $Thread$Builder$OfVirtual;
     }
 
     export class $Thread$State {
@@ -1192,7 +1212,7 @@ declare module "java:java/lang" {
 
     export type $AutoCloseable_ = (() => void) | ($AutoCloseable & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "close": () => void } & { readonly [Symbol.hasInstance]?: never }>);
     export type $Comparable_<Host0 = any, CallbackArg0 = Host0, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Comparable<Host0> & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "compareTo": (arg0: CallbackArg0) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
-    export type $Iterable_<T> = ($Iterable<T> | (T)[]);
+    export type $Iterable_<T> = ($Iterable<T> | T[]);
     export type $Readable_<CallbackArg0 = $CharBuffer, CallbackResult = number> = ((arg0: CallbackArg0) => CallbackResult) | ($Readable & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "read": (arg0: CallbackArg0) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
     export type $Runnable_ = (() => void) | ($Runnable & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "run": () => void } & { readonly [Symbol.hasInstance]?: never }>);
     export type $Thread$State_ = $Thread$State | "BLOCKED" | "NEW" | "RUNNABLE" | "TERMINATED" | "TIMED_WAITING" | "WAITING";

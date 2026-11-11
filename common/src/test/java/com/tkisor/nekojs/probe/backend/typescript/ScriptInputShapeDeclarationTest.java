@@ -80,7 +80,11 @@ class ScriptInputShapeDeclarationTest {
         Path output = Path.of("build/probe-ts-script-input-shapes/callable");
         Map<String, String> files = new TypeScriptProbeBackend().render(context(output, List.of(callable, ordinary), List.of()));
         String events = files.get("@side-only/server/events/index.d.ts");
-        assertTrue(events.contains("function paint(name: string, options: { format: (\"fast\" | \"precise\"), labels?: Record<string, string>, target?: $EventTypes$Key_, count?: number }, callback: (key: $EventTypes$Key, payload: $EventTypes$Payload) => void): void;"), events);
+        assertTrue(events.contains("function paint(\n"
+                + "            name: string,\n"
+                + "            options: { format: (\"fast\" | \"precise\"), labels?: Record<string, string>, target?: $EventTypes$Key_, count?: number },\n"
+                + "            callback: (key: $EventTypes$Key, payload: $EventTypes$Payload) => void\n"
+                + "        ): void;"), events);
         assertTrue(events.contains("function paint(callback: () => void): $EventTypes$Key;"), events);
         assertTrue(events.contains("function ordinary(handler: ((event: $EventTypes$Payload) => void)): void;"), events);
         assertFalse(events.contains("paint(handler:"), events);
@@ -121,9 +125,10 @@ class ScriptInputShapeDeclarationTest {
         assertNull(getter.returnType.inputShape);
         String rendered = new TypeScriptClassRenderer(new TypeAliasRegistry()).render(declaration);
         assertEquals(1, rendered.lines().filter(line -> line.contains("configure(")).count(), rendered);
-        String configureLine = rendered.lines().filter(line -> line.contains("configure(")).findFirst().orElseThrow();
-        assertTrue(configureLine.contains("{ format: (\"fast\" | \"precise\")"), rendered);
-        assertFalse(configureLine.contains("Map"), configureLine);
+        int configureStart = rendered.indexOf("configure(");
+        String configureSignature = rendered.substring(configureStart, rendered.indexOf(';', configureStart) + 1);
+        assertTrue(configureSignature.contains("{ format: (\"fast\" | \"precise\")"), rendered);
+        assertFalse(configureSignature.contains("Map"), configureSignature);
         var inherited = new TypeReflector().reflect(InheritedPostBuilder.class);
         assertEquals(PostBuilder.class, inherited.superType.sourceType);
         assertTrue(inherited.methods.stream().noneMatch(method -> method.name.equals("configure")),

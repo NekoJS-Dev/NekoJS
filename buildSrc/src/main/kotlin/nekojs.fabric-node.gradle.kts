@@ -86,10 +86,9 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
-// 共享版本树（src/main/java）由 stonecutter 自动挂载；加载器差异用 `//? if neoforge`
-// 整文件守卫和节点目录表达，跨加载器中立的部分（BlockEvents 等）直接住共享树。
-// 少数 NeoForge 专属实现没有共享语义，按类名下放并从 Fabric source set 排除，避免
-// 它们因缺少外层守卫而进入 Fabric fat jar。
+// Stonecutter mounts the shared version tree. Whole-file loader guards and node overrides
+// separate platform implementations; raw Fabric counterparts live in src/fabric.
+// Remaining NeoForge-prefixed implementations are also excluded from the Fabric source set.
 //
 // `src/fabric` 是两个 Fabric 节点唯一共享的 raw loader root（交接单 W8 锚点，票 31 迁入）：
 // java/resources 由本 convention 显式注入，templates/access widener 同根取材。该目录在

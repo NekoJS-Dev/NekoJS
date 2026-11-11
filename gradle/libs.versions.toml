@@ -15,6 +15,7 @@ jetbrainsAnnotations = "24.1.0"
 jspecify = "1.0.0"
 nightConfig = "3.8.3"
 gson = "2.11.0"
+asm = "9.8"
 slf4jModern = "2.0.13"
 log4j = "2.20.0"
 icu4j = "77.1"
@@ -38,6 +39,7 @@ jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 night-config-core = { module = "com.electronwill.night-config:core", version.ref = "nightConfig" }
 night-config-toml = { module = "com.electronwill.night-config:toml", version.ref = "nightConfig" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4jModern" }
 log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }

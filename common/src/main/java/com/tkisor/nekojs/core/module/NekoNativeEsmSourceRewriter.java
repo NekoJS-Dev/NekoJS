@@ -31,6 +31,17 @@ public final class NekoNativeEsmSourceRewriter {
     /** 传递依赖准备缓存（W3 显式注入，语义同 {@link NekoEsmLinker}）。 */
     private final NekoModulePipelineCache preparationCache;
     private final SourceMapRegistry sourceMaps;
+    private final java.util.Map<String, Set<String>> apiExports = new java.util.LinkedHashMap<>();
+
+    public void registerApiModule(String id, String... names) {
+        apiExports.put(id, Set.of(names));
+    }
+
+    public java.net.URI apiModuleUri(String id) {
+        Set<String> names = apiExports.get(id);
+        if (names == null) throw new IllegalArgumentException("[NEKO-4057] API module is unavailable: " + id);
+        return syntheticNamedModuleUri(id, names.stream().sorted().toArray(String[]::new));
+    }
 
     public NekoNativeEsmSourceRewriter(NekoModuleResolver resolver, NekoModulePipelineCache preparationCache,
                                        NekoEsmVirtualModuleRegistry virtualModules,
@@ -192,6 +203,13 @@ public final class NekoNativeEsmSourceRewriter {
 
         private java.net.URI syntheticObjectModule(NekoEsmStatement statement, String specifier) {
             Set<String> namedExports = statement == null ? Set.of() : requestedExportNames(statement);
+            if (specifier.startsWith("nekojs/api/")) {
+                Set<String> available = apiExports.get(specifier);
+                if (available == null || !available.containsAll(namedExports)) {
+                    throw new IllegalArgumentException("[NEKO-4057] API module or requested export is unavailable: " + specifier + " " + namedExports);
+                }
+                return apiModuleUri(specifier);
+            }
             StringBuilder source = new StringBuilder();
             source.append("const __neko_module = globalThis.__nekoNodeResolve(").append(jsString(specifier)).append(");\n")
                     .append("if (__neko_module === globalThis.__nekoNodeNoModule) throw new Error('Cannot resolve module: ").append(escapeForSingleQuoted(specifier)).append("');\n")

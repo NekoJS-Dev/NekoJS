@@ -2,7 +2,8 @@ package com.tkisor.nekojs.probe.ir;
 
 import com.tkisor.nekojs.api.JavaMemberIndex;
 import com.tkisor.nekojs.api.annotation.ScriptInput;
-import com.tkisor.nekojs.api.surface.ApiSymbolId;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptOutput;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
 import com.tkisor.nekojs.core.reflect.JavaGenericTypes;
@@ -42,6 +43,17 @@ public final class TypeReflector {
 
         decl.typeParams.addAll(typeParametersOf(cls));
 
+        // A missing public signature poisons the JVM's entire method enumeration. Retain only
+        // independently reflected members; heritage could otherwise restore unknown hidden overrides.
+        MethodScan scan = scanDeclarationMethods(cls);
+        if (scan.omission() != null) {
+            decl.memberOmissions.add(scan.omission());
+            reflectIndependentMembers(cls, decl);
+            decl.constructors.sort(Comparator.comparing(TypeReflector::constructorKey));
+            decl.fields.sort(Comparator.comparing(field -> field.name));
+            return decl;
+        }
+
         // Enums also retain Enum<Self>; each backend chooses how to expose the instance heritage.
         if (kind != TypeDecl.Kind.INTERFACE) {
             Class<?> sc = cls.getSuperclass();
@@ -59,9 +71,9 @@ public final class TypeReflector {
         }
 
         switch (kind) {
-            case CLASS -> reflectClassMembers(cls, decl);
-            case INTERFACE -> reflectInterfaceMembers(cls, decl);
-            case ENUM -> reflectEnumMembers(cls, decl);
+            case CLASS -> reflectClassMembers(cls, decl, scan.methods());
+            case INTERFACE -> reflectInterfaceMembers(cls, decl, scan.methods());
+            case ENUM -> reflectEnumMembers(cls, decl, scan.methods());
         }
 
         // 确定性排序：JVM 规范不保证 getDeclaredMethods/getDeclaredFields 的返回顺序，
@@ -116,12 +128,15 @@ public final class TypeReflector {
         return slot.sourceType.getTypeName();
     }
 
-    private void reflectClassMembers(Class<?> cls, TypeDecl decl) {
+    private void reflectClassMembers(Class<?> cls, TypeDecl decl, List<Method> methods) {
+        reflectIndependentMembers(cls, decl);
+        reflectMethodsLikeClassDecl(cls, decl, methods);
+    }
+
+    private void reflectIndependentMembers(Class<?> cls, TypeDecl decl) {
         // 构造器
-        for (var ctor : cls.getDeclaredConstructors()) {
-            if (Modifier.isPublic(ctor.getModifiers())) {
-                decl.constructors.add(reflectConstructor(ctor));
-            }
+        for (var ctor : declarationConstructors(cls)) {
+            decl.constructors.add(reflectConstructor(ctor));
         }
         // 字段
         for (var field : cls.getDeclaredFields()) {
@@ -134,19 +149,11 @@ public final class TypeReflector {
             f.docs.addAll(AnnotatedDocs.fieldDocs(field));
             decl.fields.add(f);
         }
-        // 方法 + getter/setter 推断（与 ClassDeclGenerator 对齐）
-        reflectMethodsLikeClassDecl(cls, decl);
+
     }
 
-    private void reflectInterfaceMembers(Class<?> cls, TypeDecl decl) {
-        for (var method : declarationMethods(cls)) {
-            if (!Modifier.isPublic(method.getModifiers())) continue;
-            // bridge/synthetic 是 JVM 协变覆盖的实现细节（如 LevelExtension.neko$data()
-            // 覆盖 LevelSpec 的 Object 哨兵时 javac 生成 Object bridge），对 JS/Python 侧
-            // 无意义且会产生「同参不同返回」的非法重载，过滤掉
-            if (method.isSynthetic() || method.isBridge()) continue;
-            decl.methods.add(reflectClassMethod(cls, method));
-        }
+    private void reflectInterfaceMembers(Class<?> cls, TypeDecl decl, List<Method> methods) {
+        reflectMethodsLikeClassDecl(cls, decl, methods);
         for (var field : cls.getDeclaredFields()) {
             if (Modifier.isStatic(field.getModifiers()) && Modifier.isPublic(field.getModifiers())
                     && Modifier.isFinal(field.getModifiers())) {
@@ -160,7 +167,7 @@ public final class TypeReflector {
         }
     }
 
-    private void reflectEnumMembers(Class<?> cls, TypeDecl decl) {
+    private void reflectEnumMembers(Class<?> cls, TypeDecl decl, List<Method> methods) {
         for (var field : cls.getDeclaredFields()) {
             if (field.isEnumConstant()) {
                 FieldDecl f = new FieldDecl(field.getName(), TypeSlot.of(cls, toRef(cls)));
@@ -180,7 +187,7 @@ public final class TypeReflector {
             }
         }
         // 枚举的公开方法：renderEnum 不发射（固定骨架），仅用于 import 收集镜像旧行为
-        reflectMethodsLikeClassDecl(cls, decl);
+        reflectMethodsLikeClassDecl(cls, decl, methods);
     }
 
     /**
@@ -188,8 +195,7 @@ public final class TypeReflector {
      * Declared accessors keep precedence; candidates are sorted before Bean pairing, and bridges are omitted.
      * Inherited overloads remain separate from a class's same-name methods instead of being hidden by them.
      */
-    private void reflectMethodsLikeClassDecl(Class<?> cls, TypeDecl decl) {
-        List<Method> declared = declarationMethods(cls);
+    private void reflectMethodsLikeClassDecl(Class<?> cls, TypeDecl decl, List<Method> declared) {
         Set<String> processedProperties = new HashSet<>();
         for (var method : declared) {
             if (!Modifier.isPublic(method.getModifiers())) continue;
@@ -236,9 +242,33 @@ public final class TypeReflector {
                 && Arrays.equals(candidate.getParameterTypes(), method.getParameterTypes()));
     }
 
-    /** Returns declaration candidates shared by reflection and bounded dependency collection. */
+    /** Public constructors shared by declaration reflection and signature dependency traversal. */
+    public static List<java.lang.reflect.Constructor<?>> declarationConstructors(Class<?> cls) {
+        return Arrays.stream(cls.getConstructors())
+                .filter(constructor -> !constructor.isSynthetic()
+                        && !constructor.isAnnotationPresent(ScriptInternalConstructor.class))
+                .toList();
+    }
+
+    /** Native method enumeration and its explicit, owner-wide missing-signature boundary. */
+    public record MethodScan(List<Method> methods, String omission) {}
+
+    public static MethodScan scanDeclarationMethods(Class<?> cls) {
+        try {
+            return new MethodScan(declarationMethods(cls), null);
+        } catch (NoClassDefFoundError unavailable) {
+            // Enum renderers publish a fixed method skeleton, so partial enum recovery would overpromise.
+            if (cls.isEnum()) throw unavailable;
+            return new MethodScan(List.of(), "Public method set and method-bearing heritage unavailable: " + unavailable);
+        }
+    }
+
+    /** Returns public candidates without linking private implementation signatures. */
     public static List<Method> declarationMethods(Class<?> cls) {
-        List<Method> methods = new ArrayList<>(Arrays.asList(cls.getDeclaredMethods()));
+        // Public-only VM enumeration filters private signatures before resolving their optional types.
+        Method[] visible = cls.getMethods();
+        List<Method> methods = new ArrayList<>(Arrays.stream(visible)
+                .filter(method -> method.getDeclaringClass() == cls).toList());
         methods.sort(TypeReflector::compareCandidates);
         if (cls.isInterface()) {
             // A child interface's own overload hides the parent's overload set in TypeScript.
@@ -265,7 +295,6 @@ public final class TypeReflector {
         } else if (!cls.isEnum()) {
             // TypeScript implements clauses do not inherit Java's default interface methods or overloads.
             // Keep declared accessor precedence; getMethods selects actual overrides and excludes private members.
-            Method[] visible = cls.getMethods();
             Set<String> names = new HashSet<>();
             // Object methods are required only when an implemented interface explicitly redeclares them.
             Set<String> interfaceNames = new HashSet<>();
@@ -375,13 +404,13 @@ public final class TypeReflector {
             return declaration;
         }
         Type result = interfaceReturnContract(cls, method, declaration.returnType.sourceType);
-        declaration.returnType = TypeSlot.of(result, toRef(result));
+        declaration.returnType = returnSlot(result, declaration.returnType);
         return declaration;
     }
 
     private static void applySignature(MethodDecl declaration, FunctionalInterfaceResolver.Signature signature) {
         reflectTypeParameters(declaration, signature.typeParameters());
-        declaration.returnType = TypeSlot.of(signature.returnType(), toRef(signature.returnType()));
+        declaration.returnType = returnSlot(signature.returnType(), declaration.returnType);
         for (int index = 0; index < declaration.params.size(); index++) {
             Type type = signature.parameterTypes().get(index);
             if (declaration.params.get(index).varargs) {
@@ -392,6 +421,24 @@ public final class TypeReflector {
             slot.inputShape = declaration.params.get(index).type.inputShape;
             declaration.params.get(index).type = slot;
         }
+    }
+
+    private static TypeSlot outputSlot(Type type) {
+        return TypeSlot.of(type, outputRef(type));
+    }
+
+    /** Projects direct returned objects only; container arguments and mutable arrays retain native acceptance. */
+    public static ApiTypeRef outputRef(Type type) {
+        if (type instanceof Class<?> cls && !cls.isArray()) {
+            return toRef(com.tkisor.nekojs.api.ScriptTypeViews.outputClass(cls));
+        }
+        return toRef(type);
+    }
+
+    private static TypeSlot returnSlot(Type type, TypeSlot previous) {
+        TypeSlot slot = outputSlot(type);
+        slot.outputTypeScript = previous.outputTypeScript;
+        return slot;
     }
 
     /** Restores an erased implementation only when every matching interface agrees on the full generic contract. */
@@ -463,7 +510,9 @@ public final class TypeReflector {
 
     private static void collectInterfaceMethods(Class<?> cls, Set<Class<?>> visited, List<Method> methods) {
         if (cls == null || !visited.add(cls)) return;
-        if (cls.isInterface()) methods.addAll(List.of(cls.getDeclaredMethods()));
+        if (cls.isInterface()) {
+            Arrays.stream(cls.getMethods()).filter(method -> method.getDeclaringClass() == cls).forEach(methods::add);
+        }
         for (Class<?> parent : cls.getInterfaces()) collectInterfaceMethods(parent, visited, methods);
         collectInterfaceMethods(cls.getSuperclass(), visited, methods);
     }
@@ -559,7 +608,14 @@ public final class TypeReflector {
             m.renameTo = jsName;
         }
         m.isStatic = Modifier.isStatic(method.getModifiers());
-        m.returnType = TypeSlot.of(method.getGenericReturnType(), toRef(method.getGenericReturnType()));
+        m.returnType = outputSlot(method.getGenericReturnType());
+        ScriptOutput output = method.getAnnotation(ScriptOutput.class);
+        if (output != null) {
+            if (output.value().isBlank()) {
+                throw new IllegalArgumentException("[NEKO-4064] Script output declaration is blank: " + method);
+            }
+            m.returnType.outputTypeScript = output.value();
+        }
         reflectTypeParameters(m, List.of(method.getTypeParameters()));
         reflectParamsInto(m, method);
         m.docs.addAll(AnnotatedDocs.executableDocs(method));
@@ -691,52 +747,8 @@ public final class TypeReflector {
 
     // ---- Java Type → ApiTypeRef（唯一类型映射：无损承载，语言糖由各渲染器决定）----
 
-    /**
-     * Java 反射类型 → {@link ApiTypeRef}（probe 的唯一类型映射，TS/Python 渲染均以此为准）。
-     *
-     * <p>保真约定（与旧 {@code TypeConverter} 的 TS 语义逐项对齐，保证双轨合并后产物零回归）：
-     * <ul>
-     *   <li>参数化类型 → SYMBOL(raw) **携带完整实参**（{@code Map<K,V>} 保留两个实参；
-     *       语法糖——TS 的 {@code $Map<$K, $V>}、Python 的 {@code list[X]}——由各语言渲染器决定）</li>
-     *   <li>有界通配符 → 上界；无界通配符 → {@code any}（对齐 TypeConverter 的 "any"，非 object）</li>
-     *   <li>raw 非 Class 的参数化类型 / 未知形态 → {@code any}</li>
-     * </ul>
-     */
+    /** Converts reflection types through the same neutral model used by native handler metadata. */
     public static ApiTypeRef toRef(Type type) {
-        if (type == null || type == void.class || type == Void.class) return ApiTypeRef.voidType();
-        if (type instanceof Class<?> cls) return classToRef(cls);
-        if (type instanceof ParameterizedType pt) {
-            Type raw = pt.getRawType();
-            if (raw instanceof Class<?> rawCls) {
-                List<Type> args = JavaGenericTypes.arguments(pt);
-                List<ApiTypeRef> argRefs = new ArrayList<>(args.size());
-                for (Type arg : args) {
-                    argRefs.add(toRef(arg));
-                }
-                return ApiTypeRef.symbol(new ApiSymbolId("java", rawCls.getName()), argRefs);
-            }
-            return ApiTypeRef.primitive("any");
-        }
-        if (type instanceof GenericArrayType gat) return ApiTypeRef.array(toRef(gat.getGenericComponentType()));
-        if (type instanceof TypeVariable<?> tv) return ApiTypeRef.typeVariable(JavaGenericTypes.parameterName(tv));
-        if (type instanceof WildcardType wt) {
-            Type[] upper = wt.getUpperBounds();
-            if (upper.length > 0 && upper[0] != Object.class) return toRef(upper[0]);
-            return ApiTypeRef.primitive("any");
-        }
-        return ApiTypeRef.primitive("any");
-    }
-
-    private static ApiTypeRef classToRef(Class<?> cls) {
-        if (cls == void.class || cls == Void.class) return ApiTypeRef.voidType();
-        if (cls == String.class || cls == char.class) return ApiTypeRef.primitive("string");
-        if (cls == boolean.class || cls == Boolean.class) return ApiTypeRef.primitive("boolean");
-        if (cls == float.class || cls == Float.class || cls == double.class || cls == Double.class) {
-            return ApiTypeRef.primitive("float");
-        }
-        if (cls.isPrimitive() || Number.class.isAssignableFrom(cls)) return ApiTypeRef.primitive("int");
-        if (cls == Object.class) return ApiTypeRef.primitive("object");
-        if (cls.isArray()) return ApiTypeRef.array(classToRef(cls.getComponentType()));
-        return ApiTypeRef.symbol(new ApiSymbolId("java", cls.getName()));
+        return JavaGenericTypes.toTypeRef(type);
     }
 }

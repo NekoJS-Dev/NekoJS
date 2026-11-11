@@ -1,7 +1,7 @@
 //? if neoforge {
 package com.tkisor.nekojs.mixin;
 
-import com.tkisor.nekojs.bindings.event.NeoForgeBlockEvents;
+import com.tkisor.nekojs.bindings.event.BlockEvents;
 import com.tkisor.nekojs.event.level.BlockEntityTickEvent;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.common.NeoForge;
@@ -26,7 +26,7 @@ public abstract class LevelChunkBoundTickingBlockEntityMixin {
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void nekojs$fireBlockEntityTick(CallbackInfo ci) {
-        if (!NeoForgeBlockEvents.BLOCK_ENTITY_TICK.canDispatch()) {
+        if (!BlockEvents.BLOCK_ENTITY_TICK.canDispatch()) {
             return;
         }
         if (this.blockEntity == null || this.blockEntity.isRemoved() || !this.blockEntity.hasLevel()) {

@@ -115,6 +115,10 @@ public final class NekoScriptModuleLoaderHost {
         preparationCache.unregisterPreparationObserver(preparationObserver);
     }
 
+    public void registerApiModule(String id, String... names) {
+        esmRewriter.registerApiModule(id, names);
+    }
+
     // ======== Graal interop shell：@CalledByDynamicCode 方法供 internal/script-loader.js 通过 GraalVM interop 调用 ========
     // 这些是 interop shell 入口，内部委托给协作者（EsmModuleLifecycle / CjsModuleLoader）。
 
@@ -322,6 +326,7 @@ public final class NekoScriptModuleLoaderHost {
             NekoResolvedModule resolved = resolveChild(parentPath, specifier);
             recordDependency(parentPath, resolved);
             if (resolved.special()) {
+                if (resolved.specifier().startsWith("nekojs/api/")) return esmRewriter.apiModuleUri(resolved.specifier()).toString();
                 if ("nekojs/jsx-runtime".equals(resolved.specifier())) {
                     // Native ESM linking needs the runtime names before guest evaluation.
                     return esmRewriter.syntheticNamedModuleUri(resolved.specifier(), "jsx", "jsxs", "Fragment", "UI").toString();
@@ -507,7 +512,12 @@ public final class NekoScriptModuleLoaderHost {
         };
         boundaryFailure.remove();
         try {
-            executor.execute(module.value(), require, resolve, resolved.id(), resolved.dirname(), prepared.code());
+            // Preserve the physical origin in callback SourceSections; guest sourceURL labels are not authority.
+            Source authored = Source.newBuilder("js",
+                    "(function anonymous(exports,require,module,__filename,__dirname\n) {\n" + prepared.code() + "\n})", resolved.id())
+                    .uri(resolved.path().toAbsolutePath().normalize().toUri()).build();
+            Value compiled = context.eval(authored);
+            executor.execute(module.value(), require, resolve, resolved.id(), resolved.dirname(), prepared.code(), compiled);
         } catch (RuntimeException failure) {
             NekoModuleError nested = boundaryFailure.get();
             boundaryFailure.remove();

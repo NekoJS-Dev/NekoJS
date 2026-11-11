@@ -4,7 +4,7 @@ import { $AccessFlag, $AccessFlag_ } from "java:java/lang/reflect";
 import { $URI } from "java:java/net";
 import { $ByteBuffer } from "java:java/nio";
 import { $Path } from "java:java/nio/file";
-import { $Collection, $List, $Optional, $Set } from "java:java/util";
+import { $Collection, $Collection_, $List, $List_, $Optional, $Set, $Set_ } from "java:java/util";
 import { $Supplier, $Supplier_ } from "java:java/util/function";
 import { $Stream } from "java:java/util/stream";
 
@@ -43,13 +43,23 @@ declare module "java:java/lang/module" {
 
     export class $Configuration {
         static empty(): $Configuration;
-        static resolveAndBind(arg0: $ModuleFinder, arg1: ($List<$Configuration> | ($Configuration)[]), arg2: $ModuleFinder, arg3: ($Collection<string> | (string)[])): $Configuration;
-        static resolve(arg0: $ModuleFinder, arg1: ($List<$Configuration> | ($Configuration)[]), arg2: $ModuleFinder, arg3: ($Collection<string> | (string)[])): $Configuration;
+        static resolveAndBind(
+            arg0: $ModuleFinder,
+            arg1: $List_<$Configuration>,
+            arg2: $ModuleFinder,
+            arg3: $Collection_<string>
+        ): $Configuration;
+        static resolve(
+            arg0: $ModuleFinder,
+            arg1: $List_<$Configuration>,
+            arg2: $ModuleFinder,
+            arg3: $Collection_<string>
+        ): $Configuration;
         findModule(arg0: string): $Optional<$ResolvedModule>;
         modules(): $Set<$ResolvedModule>;
         parents(): $List<$Configuration>;
-        resolveAndBind(arg0: $ModuleFinder, arg1: $ModuleFinder, arg2: ($Collection<string> | (string)[])): $Configuration;
-        resolve(arg0: $ModuleFinder, arg1: $ModuleFinder, arg2: ($Collection<string> | (string)[])): $Configuration;
+        resolveAndBind(arg0: $ModuleFinder, arg1: $ModuleFinder, arg2: $Collection_<string>): $Configuration;
+        resolve(arg0: $ModuleFinder, arg1: $ModuleFinder, arg2: $Collection_<string>): $Configuration;
         toString(): string;
     }
 
@@ -78,20 +88,32 @@ declare module "java:java/lang/module" {
         exports(arg0: string, arg1: $Set<string>): $ModuleDescriptor$Builder;
         exports(arg0: string): $ModuleDescriptor$Builder;
         exports(arg0: $ModuleDescriptor$Exports): $ModuleDescriptor$Builder;
-        exports(arg0: $Set<$ModuleDescriptor$Exports$Modifier>, arg1: string, arg2: $Set<string>): $ModuleDescriptor$Builder;
+        exports(
+            arg0: $Set<$ModuleDescriptor$Exports$Modifier>,
+            arg1: string,
+            arg2: $Set<string>
+        ): $ModuleDescriptor$Builder;
         exports(arg0: $Set<$ModuleDescriptor$Exports$Modifier>, arg1: string): $ModuleDescriptor$Builder;
         mainClass(arg0: string): $ModuleDescriptor$Builder;
         opens(arg0: string, arg1: $Set<string>): $ModuleDescriptor$Builder;
         opens(arg0: string): $ModuleDescriptor$Builder;
         opens(arg0: $ModuleDescriptor$Opens): $ModuleDescriptor$Builder;
-        opens(arg0: $Set<$ModuleDescriptor$Opens$Modifier>, arg1: string, arg2: $Set<string>): $ModuleDescriptor$Builder;
+        opens(
+            arg0: $Set<$ModuleDescriptor$Opens$Modifier>,
+            arg1: string,
+            arg2: $Set<string>
+        ): $ModuleDescriptor$Builder;
         opens(arg0: $Set<$ModuleDescriptor$Opens$Modifier>, arg1: string): $ModuleDescriptor$Builder;
         packages(arg0: $Set<string>): $ModuleDescriptor$Builder;
-        provides(arg0: string, arg1: ($List<string> | (string)[])): $ModuleDescriptor$Builder;
+        provides(arg0: string, arg1: $List_<string>): $ModuleDescriptor$Builder;
         provides(arg0: $ModuleDescriptor$Provides): $ModuleDescriptor$Builder;
         requires(arg0: string): $ModuleDescriptor$Builder;
         requires(arg0: $ModuleDescriptor$Requires): $ModuleDescriptor$Builder;
-        requires(arg0: $Set<$ModuleDescriptor$Requires$Modifier>, arg1: string, arg2: $ModuleDescriptor$Version): $ModuleDescriptor$Builder;
+        requires(
+            arg0: $Set<$ModuleDescriptor$Requires$Modifier>,
+            arg1: string,
+            arg2: $ModuleDescriptor$Version
+        ): $ModuleDescriptor$Builder;
         requires(arg0: $Set<$ModuleDescriptor$Requires$Modifier>, arg1: string): $ModuleDescriptor$Builder;
         uses(arg0: string): $ModuleDescriptor$Builder;
         version(arg0: string): $ModuleDescriptor$Builder;

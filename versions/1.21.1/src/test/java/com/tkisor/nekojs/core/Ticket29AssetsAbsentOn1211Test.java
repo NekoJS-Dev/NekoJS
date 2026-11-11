@@ -38,7 +38,7 @@ class Ticket29AssetsAbsentOn1211Test {
 
     /** Production registration path (same entry the bootstrap BindingsPoint collection uses). */
     private static BindingRegistry.BindingRegistryImpl productionBindings(ScriptType scriptType) {
-        BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(scriptType);
+        BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(scriptType).scopedTo("nekojs");
         new NekoJSCorePlugin().registerBinding(registry);
         return registry;
     }

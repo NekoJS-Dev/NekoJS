@@ -14,3 +14,5 @@ For complete scenarios using these directories, CommonJS modules, state, timers 
 `global` shares memory within one Script Type across ordinary reloads. `shared` shares memory across Script Types in the same runtime. Neither provides network synchronization or save persistence.
 
 A failed transactional candidate preserves the active script generation. Arbitrary game, Java, network, or file effects are outside the managed rollback guarantee. Startup scripts cannot be rerun with `/nekojs reload startup`.
+
+Script reload commands report results through chat and logs. NekoJS does not draw an on-screen script reload progress bar.

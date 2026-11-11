@@ -120,7 +120,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         tsClassRenderer.setBeanAliasExclusions(snapshot.beanAliasExclusions());
         tsClassRenderer.setBeanMethodProjections(snapshot.beanMethodProjections());
         Set<String> interfaceClassBindings = new LinkedHashSet<>();
-        for (BindingCatalogEntry binding : snapshot.bindings()) {
+        for (BindingCatalogEntry binding : allBindings(snapshot)) {
             if (!binding.emit()) continue;
             if (binding.staticClass() && binding.javaType() != null && binding.javaType().isInterface()
                     && (binding.typeOverride() == null || binding.typeOverride().isEmpty())) {
@@ -134,6 +134,13 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         tsClassRenderer.setInterfaceClassBindings(interfaceClassBindings);
         List<String> platformPkgs = ProbeConfigLoader.platformDefaultPackages();
         Map<String, String> files = new LinkedHashMap<>();
+        if (!snapshot.moduleBindings().isEmpty() || !snapshot.moduleEvents().isEmpty()) {
+            String profile = snapshot.managedApis().values().stream().map(api -> api.environmentKey())
+                    .map(key -> key.loaderId() + "@" + key.loaderVersionRaw() + "/" + key.minecraftVersion() + "/" + key.dist())
+                    .distinct().sorted().collect(java.util.stream.Collectors.joining(","));
+            files.put("@special/api-modules.json", com.tkisor.nekojs.api.catalog.ApiModuleBaseline
+                    .capture(profile.isEmpty() ? "unresolved" : profile, snapshot).toJson());
+        }
         try {
             // 1. 种子类来自共享收集（ProbeCoordinator 的 BFS 结果）
             Set<String> classesToGenerate = new LinkedHashSet<>();
@@ -159,11 +166,15 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                     reflectionLoader(ctx));
             ManualDeclarationReferences manualReferences = ManualDeclarationReferences.prepare(
                     ctx, classesToGenerate, declarations);
-            for (String dependency : bindingGenerator.referencedClasses(snapshot.bindings().stream()
+            for (String dependency : bindingGenerator.referencedClasses(allBindings(snapshot).stream()
                     .filter(BindingCatalogEntry::emit).toList())) {
                 declarations.includeReference(classesToGenerate, dependency);
             }
-            for (String dependency : eventGenerator.referencedClasses(snapshot.events(), snapshot.registryBuilderSurfaces())) {
+            for (String dependency : eventGenerator.referencedClasses(java.util.stream.Stream.concat(snapshot.events().stream(),
+                    snapshot.moduleEvents().stream().map(com.tkisor.nekojs.api.catalog.ModuleEventCatalogEntry::event)).toList(), snapshot.registryBuilderSurfaces())) {
+                declarations.includeReference(classesToGenerate, dependency);
+            }
+            for (String dependency : recipeEventGenerator.referencedClasses(snapshot.recipeNamespaces())) {
                 declarations.includeReference(classesToGenerate, dependency);
             }
             boolean closureChanged;
@@ -189,11 +200,18 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             manualReferences.validateGeneratedTypes(indexFileGenerator);
 
             Map<String, String> unavailable = new TreeMap<>(declarations.unavailable());
+            Map<String, List<String>> incompleteMembers = new TreeMap<>(declarations.incompleteMembers());
+            for (var entry : incompleteMembers.entrySet()) {
+                renderWarnings.add("[NEKO-4066] Probe declaration retained: class="
+                        + entry.getKey() + "; entire public method set unavailable; omissions="
+                        + String.join("; ", entry.getValue()));
+            }
             Map<String, Object> dependencyReport = new LinkedHashMap<>();
-            dependencyReport.put("complete", unavailable.isEmpty());
+            dependencyReport.put("complete", unavailable.isEmpty() && incompleteMembers.isEmpty());
             dependencyReport.put("primaryClassCount", ctx.collectedClasses().size());
             dependencyReport.put("referencedClassCount", classesToGenerate.size());
             dependencyReport.put("unavailable", unavailable);
+            dependencyReport.put("incompleteMembers", incompleteMembers);
             files.put("@special/dependencies.json", new com.google.gson.GsonBuilder().setPrettyPrinting().create()
                     .toJson(dependencyReport) + "\n");
             if (!unavailable.isEmpty()) {
@@ -233,6 +251,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
             // 6. 渲染绑定声明
             renderBindingDeclarations(snapshot, files);
+            files.put("@mixin/index.d.ts", MixinDeclarationDeclarations.render(ctx.collectedClasses(), renderWarnings));
 
             // 6. 渲染 @side-only/{side}/index.d.ts（重新导出 events 和 bindings）
             renderSideRootIndexes(files);
@@ -385,6 +404,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         contributeScriptDirJsconfig(contributor, paths.clientScripts(), ScriptType.CLIENT, tsOut);
         contributeScriptDirJsconfig(contributor, paths.testScripts(), ScriptType.TEST, tsOut);
         contributeProbeDirJsconfig(contributor, paths.probeDir(), tsOut);
+        contributeMixinDirJsconfig(contributor, paths.root().resolve("mixins"), tsOut);
 
         // probe.snippets → nekojs/.vscode/nekojs.code-snippets（TS-only，merge）
         List<com.tkisor.nekojs.probe.events.Snippet> snippets = ctx.overrides().snippets();
@@ -422,6 +442,17 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         c.mergeJsConfigTypeAcquisition(scriptDir.resolve("jsconfig.json"), false);
     }
 
+    private static void contributeMixinDirJsconfig(EditorConfigContributor c, Path mixinDir, Path tsOut) {
+        String rel = FileEditorConfigContributor.relativePosix(mixinDir, tsOut);
+        Path config = mixinDir.resolve("jsconfig.json");
+        // The declaration sandbox has no Java access, ordinary globals, or runtime event subscriptions.
+        c.mergeJsConfigPaths(config, Map.of("nekojs/mixin", List.of(rel + "/@mixin/index.d.ts")));
+        c.mergeJsConfigIncludes(config, List.of("./**/*.js", "./**/*.mjs", "./**/*.cjs", "./**/*.ts",
+                rel + "/@mixin/**/*.d.ts"));
+        c.mergeJsConfigTypeRoots(config, List.of(rel + "/@mixin"));
+        c.mergeJsConfigTypeAcquisition(config, false);
+    }
+
     private static void contributeProbeDirJsconfig(EditorConfigContributor c, Path probeDir, Path tsOut) {
         // 未设置 baseUrl 时 paths 映射值必须是相对路径（./ 前缀）——TS 4.1+ 相对 tsconfig 位置解析
         String rel = "./" + FileEditorConfigContributor.relativePosix(probeDir, tsOut); // "./typescript"
@@ -439,14 +470,14 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     }
 
     /**
-     * 删除本 backend 管理的编辑器配置：4 个脚本目录 + probe 根目录的 jsconfig、probe 拥有的
-     * VS Code snippets 文件。{@code .vscode/settings.json} 是与用户共享的文件，不删——
-     * 其中本 backend 的贡献键（如 JS 语言服务开关）由下次 contribute 幂等校正。
+     * Deletes managed jsconfig files for runtime scripts, MixinJS declarations, and Probe,
+     * plus the managed VS Code snippets file. Shared {@code .vscode/settings.json} remains;
+     * the next contribution reconciles the backend-owned settings.
      */
     @Override
     public void resetEditorConfig(NekoJSPaths paths) {
         for (Path scriptDir : List.of(paths.startupScripts(), paths.serverScripts(),
-                paths.clientScripts(), paths.testScripts())) {
+                paths.clientScripts(), paths.testScripts(), paths.root().resolve("mixins"))) {
             deleteManagedEditorFile(scriptDir.resolve("jsconfig.json"));
         }
         deleteManagedEditorFile(paths.probeDir().resolve("jsconfig.json"));
@@ -526,22 +557,51 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
     private void renderRecipeEventDeclarations(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {
         List<RecipeNamespaceCatalogEntry> namespaces = snapshot.recipeNamespaces();
-        if (namespaces.isEmpty()) return;
+        if (!RecipeEventDeclarationGenerator.hasDeclarations(namespaces, ScriptType.SERVER)) return;
 
         // 只为 server 脚本生成 recipe 声明
         files.put("@side-only/server/events/recipes/index.d.ts",
                 recipeEventGenerator.generate(namespaces, ScriptType.SERVER));
     }
 
+    private static List<BindingCatalogEntry> allBindings(NekoScriptCatalogSnapshot snapshot) {
+        return java.util.stream.Stream.concat(snapshot.bindings().stream(),
+                snapshot.moduleBindings().stream().map(com.tkisor.nekojs.api.catalog.ModuleBindingCatalogEntry::binding)).toList();
+    }
+
     private void renderBindingDeclarations(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {
+        var mixinPlans = com.tkisor.nekojs.core.mixin.MixinCarriers.discover();
         for (ScriptType type : ScriptType.all()) {
             List<BindingCatalogEntry> bindings = snapshot.bindings().stream()
                     .filter(b -> b.scriptType() == type && b.emit())
                     .toList();
-            if (bindings.isEmpty()) continue;
+            Map<String, List<BindingCatalogEntry>> modules = new TreeMap<>();
+            modules.put("nekojs/api/stable", new ArrayList<>());
+            modules.put("nekojs/api/version", new ArrayList<>());
+            snapshot.moduleBindings().stream().filter(entry -> entry.binding().scriptType() == type)
+                    .forEach(entry -> modules.computeIfAbsent(entry.moduleId(), key -> new ArrayList<>()).add(entry.binding()));
+            Map<String, List<EventCatalogEntry>> moduleEvents = new TreeMap<>();
+            snapshot.moduleEvents().stream().filter(entry -> entry.scriptType() == type).forEach(entry -> {
+                modules.computeIfAbsent(entry.moduleId(), key -> new ArrayList<>());
+                moduleEvents.computeIfAbsent(entry.moduleId(), key -> new ArrayList<>()).add(entry.event());
+            });
+            Map<String, String> eventNamespaces = new TreeMap<>();
+            moduleEvents.forEach((id, entries) -> eventNamespaces.put(id, eventGenerator.generateModuleNamespaces(entries)));
+            files.put("@side-only/" + type.name + "/bindings/api-modules.d.ts",
+                    bindingGenerator.generateModules(modules, eventNamespaces));
+            String mixinDeclarations = MixinHookDeclarations.render(mixinPlans, type);
+            String mixinImport = "";
+            if (!mixinDeclarations.isEmpty()) {
+                files.put("@side-only/" + type.name + "/bindings/mixin-hooks.d.ts", mixinDeclarations);
+                mixinImport = "import './mixin-hooks';\n";
+            }
+            if (bindings.isEmpty()) {
+                files.put("@side-only/" + type.name + "/bindings/index.d.ts", mixinImport + "import './api-modules';\nexport {};\n");
+                continue;
+            }
 
             // 参考 ProbeJS: @side-only/server/bindings/index.d.ts（无 GlobalBindings 子目录）
-            files.put("@side-only/" + type.name + "/bindings/index.d.ts", bindingGenerator.generate(bindings, type));
+            files.put("@side-only/" + type.name + "/bindings/index.d.ts", mixinImport + "import './api-modules';\n" + bindingGenerator.generate(bindings, type));
         }
     }
 

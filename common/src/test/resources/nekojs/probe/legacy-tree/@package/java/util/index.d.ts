@@ -1,5 +1,5 @@
 import { $InputStream, $OutputStream, $PrintStream, $PrintWriter, $Reader, $Serializable, $Writer } from "java:java/io";
-import { $Cloneable, $Comparable, $Comparable_, $Enum, $Iterable, $Runnable, $Runnable_, $Throwable } from "java:java/lang";
+import { $Cloneable, $Comparable, $Comparable_, $Enum, $Iterable, $Iterable_, $Runnable, $Runnable_, $Throwable } from "java:java/lang";
 import { $Charset } from "java:java/nio/charset";
 import { $Instant } from "java:java/time";
 import { $BiConsumer, $BiConsumer_, $BiFunction, $BiFunction_, $Consumer, $Consumer_, $DoubleConsumer, $DoubleConsumer_, $DoubleSupplier, $DoubleSupplier_, $Function, $Function_, $IntConsumer, $IntConsumer_, $IntFunction, $IntFunction_, $IntSupplier, $IntSupplier_, $LongConsumer, $LongConsumer_, $LongSupplier, $LongSupplier_, $Predicate, $Predicate_, $Supplier, $Supplier_, $ToDoubleFunction, $ToDoubleFunction_, $ToIntFunction, $ToIntFunction_, $ToLongFunction, $ToLongFunction_, $UnaryOperator, $UnaryOperator_ } from "java:java/util/function";
@@ -11,20 +11,21 @@ export * as concurrent from "java:java/util/concurrent";
 
 declare module "java:java/util" {
     export interface $Collection<E> extends $Iterable<E> {
-        addAll(arg0: ($Collection<E> | (E)[])): boolean;
+        get empty(): boolean;
+        isEmpty(): boolean;
+        addAll(arg0: $Collection_<E>): boolean;
         add(arg0: E): boolean;
         clear(): void;
-        containsAll(arg0: ($Collection<any> | (any)[])): boolean;
+        containsAll(arg0: $Collection_<any>): boolean;
         contains(arg0: unknown): boolean;
         equals(arg0: unknown): boolean;
         hashCode(): number;
-        isEmpty(): boolean;
         iterator(): $Iterator<E>;
         parallelStream(): $Stream<E>;
-        removeAll(arg0: ($Collection<any> | (any)[])): boolean;
+        removeAll(arg0: $Collection_<any>): boolean;
         removeIf(arg0: $Predicate_<E, E, boolean>): boolean;
         remove(arg0: unknown): boolean;
-        retainAll(arg0: ($Collection<any> | (any)[])): boolean;
+        retainAll(arg0: $Collection_<any>): boolean;
         size(): number;
         spliterator(): $Spliterator<E>;
         stream(): $Stream<E>;
@@ -108,33 +109,36 @@ declare module "java:java/util" {
     }
 
     export interface $List<E> extends $SequencedCollection<E> {
-        addAll(arg0: number, arg1: ($Collection<E> | (E)[])): boolean;
-        addAll(arg0: ($Collection<E> | (E)[])): boolean;
+        get first(): E;
+        getFirst(): E;
+        get last(): E;
+        getLast(): E;
+        get empty(): boolean;
+        isEmpty(): boolean;
+        addAll(arg0: number, arg1: $Collection_<E>): boolean;
+        addAll(arg0: $Collection_<E>): boolean;
         addFirst(arg0: E): void;
         addLast(arg0: E): void;
         add(arg0: E): boolean;
         add(arg0: number, arg1: E): void;
         clear(): void;
-        containsAll(arg0: ($Collection<any> | (any)[])): boolean;
+        containsAll(arg0: $Collection_<any>): boolean;
         contains(arg0: unknown): boolean;
         equals(arg0: unknown): boolean;
-        getFirst(): E;
-        getLast(): E;
         get(arg0: number): E;
         hashCode(): number;
         indexOf(arg0: unknown): number;
-        isEmpty(): boolean;
         iterator(): $Iterator<E>;
         lastIndexOf(arg0: unknown): number;
         listIterator(arg0: number): $ListIterator<E>;
         listIterator(): $ListIterator<E>;
-        removeAll(arg0: ($Collection<any> | (any)[])): boolean;
+        removeAll(arg0: $Collection_<any>): boolean;
         removeFirst(): E;
         removeLast(): E;
         remove(arg0: number): E;
         remove(arg0: unknown): boolean;
         replaceAll(arg0: $UnaryOperator_<E, E, E>): void;
-        retainAll(arg0: ($Collection<any> | (any)[])): boolean;
+        retainAll(arg0: $Collection_<any>): boolean;
         reversed(): $List<E>;
         set(arg0: number, arg1: E): E;
         size(): number;
@@ -146,7 +150,7 @@ declare module "java:java/util" {
         toArray(): unknown[];
     }
     export const $List: {
-        copyOf<E>(arg0: ($Collection<E> | (E)[])): $List<E>;
+        copyOf<E>(arg0: $Collection_<E>): $List<E>;
         of<E>(arg0?: E[]): $List<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E, arg9: E): $List<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E): $List<E>;
@@ -231,10 +235,18 @@ declare module "java:java/util" {
         getVariant(): string;
         static availableLocales(): $Stream<$Locale>;
         static caseFoldLanguageTag(arg0: string): string;
-        static filterTags(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Collection<string> | (string)[]), arg2: $Locale$FilteringMode_): $List<string>;
-        static filterTags(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Collection<string> | (string)[])): $List<string>;
-        static filter(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Collection<$Locale> | ($Locale)[]), arg2: $Locale$FilteringMode_): $List<$Locale>;
-        static filter(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Collection<$Locale> | ($Locale)[])): $List<$Locale>;
+        static filterTags(
+            arg0: $List_<$Locale$LanguageRange>,
+            arg1: $Collection_<string>,
+            arg2: $Locale$FilteringMode_
+        ): $List<string>;
+        static filterTags(arg0: $List_<$Locale$LanguageRange>, arg1: $Collection_<string>): $List<string>;
+        static filter(
+            arg0: $List_<$Locale$LanguageRange>,
+            arg1: $Collection_<$Locale>,
+            arg2: $Locale$FilteringMode_
+        ): $List<$Locale>;
+        static filter(arg0: $List_<$Locale$LanguageRange>, arg1: $Collection_<$Locale>): $List<$Locale>;
         static forLanguageTag(arg0: string): $Locale;
         static getAvailableLocales(): $Locale[];
         static getDefault(arg0: $Locale$Category_): $Locale;
@@ -242,8 +254,8 @@ declare module "java:java/util" {
         static getISOCountries(arg0: $Locale$IsoCountryCode_): $Set<string>;
         static getISOCountries(): string[];
         static getISOLanguages(): string[];
-        static lookupTag(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Collection<string> | (string)[])): string;
-        static lookup(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Collection<$Locale> | ($Locale)[])): $Locale;
+        static lookupTag(arg0: $List_<$Locale$LanguageRange>, arg1: $Collection_<string>): string;
+        static lookup(arg0: $List_<$Locale$LanguageRange>, arg1: $Collection_<$Locale>): $Locale;
         static of(arg0: string, arg1: string, arg2: string): $Locale;
         static of(arg0: string, arg1: string): $Locale;
         static of(arg0: string): $Locale;
@@ -311,8 +323,14 @@ declare module "java:java/util" {
         getRange(): string;
         get weight(): number;
         getWeight(): number;
-        static mapEquivalents(arg0: ($List<$Locale$LanguageRange> | ($Locale$LanguageRange)[]), arg1: ($Map<string, $List<string>> | (([string] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<string, PropertyKey>, ($List<string> | (string)[])>>))): $List<$Locale$LanguageRange>;
-        static parse(arg0: string, arg1: ($Map<string, $List<string>> | (([string] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<string, PropertyKey>, ($List<string> | (string)[])>>))): $List<$Locale$LanguageRange>;
+        static mapEquivalents(
+            arg0: $List_<$Locale$LanguageRange>,
+            arg1: ($Map<string, $List<string>> | Partial<Record<string, $List_<string>>>)
+        ): $List<$Locale$LanguageRange>;
+        static parse(
+            arg0: string,
+            arg1: ($Map<string, $List<string>> | Partial<Record<string, $List_<string>>>)
+        ): $List<$Locale$LanguageRange>;
         static parse(arg0: string): $List<$Locale$LanguageRange>;
         equals(arg0: unknown): boolean;
         hashCode(): number;
@@ -341,6 +359,8 @@ declare module "java:java/util" {
     }
 
     export interface $Map<K, V> {
+        get empty(): boolean;
+        isEmpty(): boolean;
         clear(): void;
         computeIfAbsent(arg0: K, arg1: $Function_<K, V, K, V>): V;
         computeIfPresent(arg0: K, arg1: $BiFunction_<K, V, V, K, V, V>): V;
@@ -353,10 +373,9 @@ declare module "java:java/util" {
         getOrDefault(arg0: unknown, arg1: V): V;
         get(arg0: unknown): V;
         hashCode(): number;
-        isEmpty(): boolean;
         keySet(): $Set<K>;
         merge(arg0: K, arg1: V, arg2: $BiFunction_<V, V, V, V, V, V>): V;
-        putAll(arg0: ($Map<K, V> | (([K] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<K, PropertyKey>, V>>))): void;
+        putAll(arg0: $Map_<K, V>): void;
         putIfAbsent(arg0: K, arg1: V): V;
         put(arg0: K, arg1: V): V;
         remove(arg0: unknown, arg1: unknown): boolean;
@@ -368,14 +387,99 @@ declare module "java:java/util" {
         values(): $Collection<V>;
     }
     export const $Map: {
-        copyOf<K, V>(arg0: ($Map<K, V> | (([K] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<K, PropertyKey>, V>>))): $Map<K, V>;
+        copyOf<K, V>(arg0: $Map_<K, V>): $Map<K, V>;
         entry<K, V>(arg0: K, arg1: V): $Map$Entry<K, V>;
         ofEntries<K, V>(arg0?: $Map$Entry<K, V>[]): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V, arg16: K, arg17: V, arg18: K, arg19: V): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V, arg16: K, arg17: V): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V): $Map<K, V>;
+        of<K, V>(
+            arg0: K,
+            arg1: V,
+            arg2: K,
+            arg3: V,
+            arg4: K,
+            arg5: V,
+            arg6: K,
+            arg7: V,
+            arg8: K,
+            arg9: V,
+            arg10: K,
+            arg11: V,
+            arg12: K,
+            arg13: V,
+            arg14: K,
+            arg15: V,
+            arg16: K,
+            arg17: V,
+            arg18: K,
+            arg19: V
+        ): $Map<K, V>;
+        of<K, V>(
+            arg0: K,
+            arg1: V,
+            arg2: K,
+            arg3: V,
+            arg4: K,
+            arg5: V,
+            arg6: K,
+            arg7: V,
+            arg8: K,
+            arg9: V,
+            arg10: K,
+            arg11: V,
+            arg12: K,
+            arg13: V,
+            arg14: K,
+            arg15: V,
+            arg16: K,
+            arg17: V
+        ): $Map<K, V>;
+        of<K, V>(
+            arg0: K,
+            arg1: V,
+            arg2: K,
+            arg3: V,
+            arg4: K,
+            arg5: V,
+            arg6: K,
+            arg7: V,
+            arg8: K,
+            arg9: V,
+            arg10: K,
+            arg11: V,
+            arg12: K,
+            arg13: V,
+            arg14: K,
+            arg15: V
+        ): $Map<K, V>;
+        of<K, V>(
+            arg0: K,
+            arg1: V,
+            arg2: K,
+            arg3: V,
+            arg4: K,
+            arg5: V,
+            arg6: K,
+            arg7: V,
+            arg8: K,
+            arg9: V,
+            arg10: K,
+            arg11: V,
+            arg12: K,
+            arg13: V
+        ): $Map<K, V>;
+        of<K, V>(
+            arg0: K,
+            arg1: V,
+            arg2: K,
+            arg3: V,
+            arg4: K,
+            arg5: V,
+            arg6: K,
+            arg7: V,
+            arg8: K,
+            arg9: V,
+            arg10: K,
+            arg11: V
+        ): $Map<K, V>;
         of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V): $Map<K, V>;
         of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V): $Map<K, V>;
         of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V): $Map<K, V>;
@@ -385,9 +489,12 @@ declare module "java:java/util" {
     };
 
     export interface $Map$Entry<K, V> {
-        equals(arg0: unknown): boolean;
+        get key(): K;
         getKey(): K;
+        get value(): V;
         getValue(): V;
+        set value(value: V);
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         setValue(arg0: V): V;
     }
@@ -514,10 +621,12 @@ declare module "java:java/util" {
     }
 
     export interface $SequencedCollection<E> extends $Collection<E> {
+        get first(): E;
+        getFirst(): E;
+        get last(): E;
+        getLast(): E;
         addFirst(arg0: E): void;
         addLast(arg0: E): void;
-        getFirst(): E;
-        getLast(): E;
         removeFirst(): E;
         removeLast(): E;
         reversed(): $SequencedCollection<E>;
@@ -537,21 +646,22 @@ declare module "java:java/util" {
     }
 
     export interface $SequencedSet<E> extends $SequencedCollection<E>, $Set<E> {
-        addAll(arg0: ($Collection<E> | (E)[])): boolean;
+        get empty(): boolean;
+        isEmpty(): boolean;
+        addAll(arg0: $Collection_<E>): boolean;
         add(arg0: E): boolean;
         clear(): void;
-        containsAll(arg0: ($Collection<any> | (any)[])): boolean;
+        containsAll(arg0: $Collection_<any>): boolean;
         contains(arg0: unknown): boolean;
         equals(arg0: unknown): boolean;
         forEach(arg0: $Consumer_<E, E>): void;
         hashCode(): number;
-        isEmpty(): boolean;
         iterator(): $Iterator<E>;
         parallelStream(): $Stream<E>;
-        removeAll(arg0: ($Collection<any> | (any)[])): boolean;
+        removeAll(arg0: $Collection_<any>): boolean;
         removeIf(arg0: $Predicate_<E, E, boolean>): boolean;
         remove(arg0: unknown): boolean;
-        retainAll(arg0: ($Collection<any> | (any)[])): boolean;
+        retainAll(arg0: $Collection_<any>): boolean;
         reversed(): $SequencedSet<E>;
         size(): number;
         spliterator(): $Spliterator<E>;
@@ -562,18 +672,19 @@ declare module "java:java/util" {
     }
 
     export interface $Set<E> extends $Collection<E> {
-        addAll(arg0: ($Collection<E> | (E)[])): boolean;
+        get empty(): boolean;
+        isEmpty(): boolean;
+        addAll(arg0: $Collection_<E>): boolean;
         add(arg0: E): boolean;
         clear(): void;
-        containsAll(arg0: ($Collection<any> | (any)[])): boolean;
+        containsAll(arg0: $Collection_<any>): boolean;
         contains(arg0: unknown): boolean;
         equals(arg0: unknown): boolean;
         hashCode(): number;
-        isEmpty(): boolean;
         iterator(): $Iterator<E>;
-        removeAll(arg0: ($Collection<any> | (any)[])): boolean;
+        removeAll(arg0: $Collection_<any>): boolean;
         remove(arg0: unknown): boolean;
-        retainAll(arg0: ($Collection<any> | (any)[])): boolean;
+        retainAll(arg0: $Collection_<any>): boolean;
         size(): number;
         spliterator(): $Spliterator<E>;
         toArray<T>(arg0: T[]): T[];
@@ -581,7 +692,7 @@ declare module "java:java/util" {
         toArray(): unknown[];
     }
     export const $Set: {
-        copyOf<E>(arg0: ($Collection<E> | (E)[])): $Set<E>;
+        copyOf<E>(arg0: $Collection_<E>): $Set<E>;
         of<E>(arg0?: E[]): $Set<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E, arg9: E): $Set<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E): $Set<E>;
@@ -612,11 +723,13 @@ declare module "java:java/util" {
     }
 
     export interface $Spliterator<T> {
+        get comparator(): $Comparator<any>;
+        getComparator(): $Comparator<any>;
+        get exactSizeIfKnown(): number;
+        getExactSizeIfKnown(): number;
         characteristics(): number;
         estimateSize(): number;
         forEachRemaining(arg0: $Consumer_<T, T>): void;
-        getComparator(): $Comparator<any>;
-        getExactSizeIfKnown(): number;
         hasCharacteristics(arg0: number): boolean;
         tryAdvance(arg0: $Consumer_<T, T>): boolean;
         trySplit(): $Spliterator<T>;
@@ -750,7 +863,7 @@ declare module "java:java/util" {
         load(arg0: $Reader): void;
         merge(arg0: unknown, arg1: unknown, arg2: $BiFunction_<unknown, unknown, any, unknown, unknown, any>): unknown;
         propertyNames(): $Enumeration<any>;
-        putAll(arg0: ($Map<any, any> | (([any] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<any, PropertyKey>, any>>))): void;
+        putAll(arg0: $Map_<any, any>): void;
         putIfAbsent(arg0: unknown, arg1: unknown): unknown;
         put(arg0: unknown, arg1: unknown): unknown;
         remove(arg0: unknown, arg1: unknown): boolean;
@@ -775,7 +888,7 @@ declare module "java:java/util" {
         constructor();
         constructor(arg0: number);
         constructor(arg0: number, arg1: number);
-        constructor(arg0: ($Map<K, V> | (([K] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<K, PropertyKey>, V>>)));
+        constructor(arg0: $Map_<K, V>);
         get empty(): boolean;
         isEmpty(): boolean;
         clear(): void;
@@ -796,7 +909,7 @@ declare module "java:java/util" {
         keySet(): $Set<K>;
         keys(): $Enumeration<K>;
         merge(arg0: K, arg1: V, arg2: $BiFunction_<V, V, V, V, V, V>): V;
-        putAll(arg0: ($Map<K, V> | (([K] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<K, PropertyKey>, V>>))): void;
+        putAll(arg0: $Map_<K, V>): void;
         putIfAbsent(arg0: K, arg1: V): V;
         put(arg0: K, arg1: V): V;
         remove(arg0: unknown, arg1: unknown): boolean;
@@ -821,10 +934,10 @@ declare module "java:java/util" {
         size(): number;
     }
 
-    export type $Collection_<E> = ($Collection<E> | (E)[]);
+    export type $Collection_<E> = ($Collection<E> | E[]);
     export type $Comparator_<Host0 = any, CallbackArg0 = Host0, CallbackArg1 = Host0, CallbackResult = number> = ((arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult) | ($Comparator<Host0> & { readonly [Symbol.hasInstance]?: never }) | (globalThis.NoInfer<{ readonly "compare": (arg0: CallbackArg0, arg1: CallbackArg1) => CallbackResult } & { readonly [Symbol.hasInstance]?: never }>);
     export type $Iterator_<E> = E[];
-    export type $List_<E> = ($List<E> | (E)[]);
+    export type $List_<E> = ($List<E> | E[]);
     export type $Locale$Category_ = $Locale$Category | "DISPLAY" | "FORMAT";
     export type $Locale$FilteringMode_ = $Locale$FilteringMode | "AUTOSELECT_FILTERING" | "EXTENDED_FILTERING" | "IGNORE_EXTENDED_RANGES" | "MAP_EXTENDED_RANGES" | "REJECT_EXTENDED_RANGES";
     export type $Locale$IsoCountryCode_ = $Locale$IsoCountryCode | "PART1_ALPHA2" | "PART1_ALPHA3" | "PART3";
@@ -840,58 +953,116 @@ declare module "java:java/util" {
     type $NekoCaptureOptionalInput<$Value> = globalThis.NoInfer<$Optional<any>> & { readonly "get": () => $Value };
     type $NekoCaptureStreamInput<$Value> = globalThis.NoInfer<$Stream<any>> & { readonly "iterator": () => $Iterator<$Value> };
     export interface $CollectionView<B> extends $Collection<B> {
-        addAll(arg0: ($NekoCaptureCollectionInput<B> | (B)[])): boolean;
+        addAll(arg0: ($NekoCaptureCollectionInput<B> | B[])): boolean;
         parallelStream(): $StreamView<B>;
-        removeIf(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): boolean;
-        removeIf(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): boolean;
+        removeIf(
+            arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }
+        ): boolean;
+        removeIf(
+            arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>
+        ): boolean;
         stream(): $StreamView<B>;
-        forEach(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }): void;
-        forEach(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>): void;
+        forEach(
+            arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }
+        ): void;
+        forEach(
+            arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>
+        ): void;
     }
     export interface $ListView<B> extends $List<B> {
-        addAll(arg0: number, arg1: ($NekoCaptureCollectionInput<B> | (B)[])): boolean;
-        addAll(arg0: ($NekoCaptureCollectionInput<B> | (B)[])): boolean;
+        addAll(arg0: number, arg1: ($NekoCaptureCollectionInput<B> | B[])): boolean;
+        addAll(arg0: ($NekoCaptureCollectionInput<B> | B[])): boolean;
         listIterator(): $ListIteratorView<B>;
         listIterator(arg0: number): $ListIteratorView<B>;
-        replaceAll(arg0: $UnaryOperator<B> & { readonly "apply": (arg0: B) => B } & { readonly [Symbol.hasInstance]?: never }): void;
-        replaceAll(arg0: ((arg0: B) => B) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => B } & { readonly [Symbol.hasInstance]?: never }>): void;
+        replaceAll(
+            arg0: $UnaryOperator<B> & { readonly "apply": (arg0: B) => B } & { readonly [Symbol.hasInstance]?: never }
+        ): void;
+        replaceAll(
+            arg0: ((arg0: B) => B) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => B } & { readonly [Symbol.hasInstance]?: never }>
+        ): void;
         reversed(): $ListView<B>;
-        sort(arg0: $Comparator<B> & { readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }): void;
-        sort(arg0: ((arg0: B, arg1: B) => number) | globalThis.NoInfer<{ readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }>): void;
+        sort(
+            arg0: $Comparator<B> & { readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }
+        ): void;
+        sort(
+            arg0: ((arg0: B, arg1: B) => number) | globalThis.NoInfer<{ readonly "compare": (arg0: B, arg1: B) => number } & { readonly [Symbol.hasInstance]?: never }>
+        ): void;
         subList(arg0: number, arg1: number): $ListView<B>;
         parallelStream(): $StreamView<B>;
-        removeIf(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): boolean;
-        removeIf(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): boolean;
+        removeIf(
+            arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }
+        ): boolean;
+        removeIf(
+            arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>
+        ): boolean;
         stream(): $StreamView<B>;
-        forEach(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }): void;
-        forEach(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>): void;
+        forEach(
+            arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }
+        ): void;
+        forEach(
+            arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>
+        ): void;
     }
     export interface $ListIteratorView<B> extends $ListIterator<B> {
-        forEachRemaining(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }): void;
-        forEachRemaining(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>): void;
+        forEachRemaining(
+            arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }
+        ): void;
+        forEachRemaining(
+            arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>
+        ): void;
     }
     export interface $OptionalView<B> extends $Optional<B> {
-        filter(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): $OptionalView<B>;
-        filter(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): $OptionalView<B>;
-        flatMap<U>(arg0: $Function<B, $NekoCaptureOptionalInput<U>> & { readonly "apply": (arg0: B) => $NekoCaptureOptionalInput<U> } & { readonly [Symbol.hasInstance]?: never }): $OptionalView<U>;
-        flatMap<U>(arg0: ((arg0: B) => $NekoCaptureOptionalInput<U>) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => $NekoCaptureOptionalInput<U> } & { readonly [Symbol.hasInstance]?: never }>): $OptionalView<U>;
-        ifPresentOrElse(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }, arg1: $Runnable_): void;
-        ifPresentOrElse(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>, arg1: $Runnable_): void;
-        ifPresent(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }): void;
-        ifPresent(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>): void;
-        map<U>(arg0: $Function<B, U> & { readonly "apply": (arg0: B) => U } & { readonly [Symbol.hasInstance]?: never }): $OptionalView<U>;
-        map<U>(arg0: ((arg0: B) => U) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => U } & { readonly [Symbol.hasInstance]?: never }>): $OptionalView<U>;
+        filter(
+            arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }
+        ): $OptionalView<B>;
+        filter(
+            arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>
+        ): $OptionalView<B>;
+        flatMap<U>(
+            arg0: $Function<B, $NekoCaptureOptionalInput<U>> & { readonly "apply": (arg0: B) => $NekoCaptureOptionalInput<U> } & { readonly [Symbol.hasInstance]?: never }
+        ): $OptionalView<U>;
+        flatMap<U>(
+            arg0: ((arg0: B) => $NekoCaptureOptionalInput<U>) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => $NekoCaptureOptionalInput<U> } & { readonly [Symbol.hasInstance]?: never }>
+        ): $OptionalView<U>;
+        ifPresentOrElse(
+            arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never },
+            arg1: $Runnable_
+        ): void;
+        ifPresentOrElse(
+            arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>,
+            arg1: $Runnable_
+        ): void;
+        ifPresent(
+            arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }
+        ): void;
+        ifPresent(
+            arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>
+        ): void;
+        map<U>(
+            arg0: $Function<B, U> & { readonly "apply": (arg0: B) => U } & { readonly [Symbol.hasInstance]?: never }
+        ): $OptionalView<U>;
+        map<U>(
+            arg0: ((arg0: B) => U) | globalThis.NoInfer<{ readonly "apply": (arg0: B) => U } & { readonly [Symbol.hasInstance]?: never }>
+        ): $OptionalView<U>;
         or(arg0: $Supplier_<$NekoCaptureOptionalInput<B>, $NekoCaptureOptionalInput<B>>): $OptionalView<B>;
         stream(): $StreamView<B>;
     }
     export interface $SequencedCollectionView<B> extends $SequencedCollection<B> {
         reversed(): $SequencedCollectionView<B>;
-        addAll(arg0: ($NekoCaptureCollectionInput<B> | (B)[])): boolean;
+        addAll(arg0: ($NekoCaptureCollectionInput<B> | B[])): boolean;
         parallelStream(): $StreamView<B>;
-        removeIf(arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }): boolean;
-        removeIf(arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>): boolean;
+        removeIf(
+            arg0: $Predicate<B> & { readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }
+        ): boolean;
+        removeIf(
+            arg0: ((arg0: B) => boolean) | globalThis.NoInfer<{ readonly "test": (arg0: B) => boolean } & { readonly [Symbol.hasInstance]?: never }>
+        ): boolean;
         stream(): $StreamView<B>;
-        forEach(arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }): void;
-        forEach(arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>): void;
+        forEach(
+            arg0: $Consumer<B> & { readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }
+        ): void;
+        forEach(
+            arg0: ((arg0: B) => void) | globalThis.NoInfer<{ readonly "accept": (arg0: B) => void } & { readonly [Symbol.hasInstance]?: never }>
+        ): void;
     }
 }

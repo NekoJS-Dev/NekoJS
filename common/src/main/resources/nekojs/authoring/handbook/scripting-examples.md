@@ -1,6 +1,6 @@
 # Scripting examples
 
-Use these complete files as small, independent scenarios, not as an automatically installed demo pack. They ship with this NekoJS release; confirm the installed Minecraft version, loader and Script Type in `environment.json` under the selected AI root (discover it through `nekojs/config/ai-location.json`; default `.github/neko_ai`), then check unfamiliar calls against that instance's declarations or [query API](query-api.md). Vanilla identifiers and the `nekojs_example` namespace keep dependencies explicit; they do not guarantee behavior on every platform.
+Use these complete files as small, independent scenarios, not as an automatically installed demo pack. They ship with this NekoJS release; confirm the installed Minecraft version, loader and Script Type in `environment.json` under the selected AI root (read `[output].directory` in `nekojs/config/ai.toml`; default `.github/neko_ai` if the file or setting is absent), then check unfamiliar calls against that instance's declarations or [query API](query-api.md). Vanilla identifiers and the `nekojs_example` namespace keep dependencies explicit; they do not guarantee behavior on every platform.
 
 ## Safe setup and completion
 

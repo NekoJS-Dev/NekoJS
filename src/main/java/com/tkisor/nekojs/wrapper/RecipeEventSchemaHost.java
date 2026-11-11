@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.tkisor.nekojs.api.recipe.RecipeBuilder;
+import com.tkisor.nekojs.api.recipe.RecipeBuilderSession;
 import com.tkisor.nekojs.api.recipe.RecipeJsonBuilder;
 import com.tkisor.nekojs.api.recipe.RecipeJsonValueConverter;
 import com.tkisor.nekojs.api.recipe.RecipeSchemaHost;
@@ -35,6 +36,19 @@ final class RecipeEventSchemaHost implements RecipeSchemaHost {
     @Override
     public RecipeBuilder builder(String type, String prefix) {
         return new RecipeJsonBuilder(event, type, prefix);
+    }
+
+    @Override
+    public RecipeBuilderSession session(RecipeBuilder builder) {
+        if (!(builder instanceof RecipeJsonBuilder nativeBuilder)) {
+            throw new IllegalArgumentException("[NEKO-5352] Native recipe host requires a native JSON builder");
+        }
+        return nativeBuilder.session();
+    }
+
+    @Override
+    public Object registryAccess() {
+        return event.registryAccess();
     }
 
     /** 添加自定义（非 schema 化）配方 JSON。 */

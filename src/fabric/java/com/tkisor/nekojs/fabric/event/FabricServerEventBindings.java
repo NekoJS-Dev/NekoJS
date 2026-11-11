@@ -3,6 +3,7 @@ package com.tkisor.nekojs.fabric.event;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.event.StableServerTickEvent;
 import com.tkisor.nekojs.wrapper.event.player.PlayerCloneEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerLifecycleEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerRespawnEventJS;
@@ -44,7 +45,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public final class FabricServerEventBindings {
 
     /** 与 NeoForge 侧 bindings/event/ServerEvents 同名（fabric 子集）。 */
-    public static final EventGroup SERVER_EVENTS = EventGroup.of("ServerEvents");
+    public static final EventGroup SERVER_EVENTS = EventGroup.of("ServerEvents").expose(api -> api.versioned());
 
     public static final EventBusJS<ServerLifecycleEventJS, Void> ABOUT_TO_START =
             SERVER_EVENTS.server("aboutToStart", ServerLifecycleEventJS.class);
@@ -57,9 +58,15 @@ public final class FabricServerEventBindings {
     public static final EventBusJS<ServerLifecycleEventJS, Void> STOPPED =
             SERVER_EVENTS.server("stopped", ServerLifecycleEventJS.class);
     public static final EventBusJS<ServerTickEventJS, Void> TICK_PRE =
-            SERVER_EVENTS.server("tickPre", ServerTickEventJS.class);
+            SERVER_EVENTS.server("tickPre", ServerTickEventJS.class, api ->
+                    api.stable(StableServerTickEvent.class,
+                            event -> new StableServerTickEvent(event.getServer().getTickCount()))
+                            .scriptTypes(ScriptType.SERVER));
     public static final EventBusJS<ServerTickEventJS, Void> TICK_POST =
-            SERVER_EVENTS.server("tickPost", ServerTickEventJS.class);
+            SERVER_EVENTS.server("tickPost", ServerTickEventJS.class, api ->
+                    api.stable(StableServerTickEvent.class,
+                            event -> new StableServerTickEvent(event.getServer().getTickCount()))
+                            .scriptTypes(ScriptType.SERVER));
 
     // ---- 资源/生命周期面（第 15 批；NeoForge 侧直传原生事件，fabric 侧纯回调 + 中立载荷）----
 
@@ -195,6 +202,7 @@ public final class FabricServerEventBindings {
                 }
             }
             STOPPED.post(new ServerLifecycleEventJS(server));
+            if (root != null) root.mixins().clearCallbacks();
             var removed = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().deactivateWorldPacks();
             if (root != null) {
                 root.clearWorldPackListeners(com.tkisor.nekojs.api.ScriptType.SERVER, removed);

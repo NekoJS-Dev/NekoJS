@@ -131,6 +131,7 @@ public final class ScriptEnvironmentFactory {
             var bindings = context.getBindings("js");
             eventBridge.bindEvents(bindings, scriptType);
 
+            com.tkisor.nekojs.core.api.ApiModuleInstaller.install(context, pluginRuntime, scriptType);
             var environmentBindings = pluginRuntime.bindings(scriptType);
             Map<String, ScriptBindingSchema.BindingMembers> bindingSchema = new HashMap<>();
             if (bindings.hasMember("Pack")) {

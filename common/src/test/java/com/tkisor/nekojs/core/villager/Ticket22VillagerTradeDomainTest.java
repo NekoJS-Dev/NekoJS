@@ -2,10 +2,14 @@ package com.tkisor.nekojs.core.villager;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.ScriptTypeViews;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
+import com.tkisor.nekojs.api.villager.VillagerTradeDeclarationEvent;
+import com.tkisor.nekojs.api.villager.VillagerTradeQuery;
+import com.tkisor.nekojs.api.villager.VillagerTradeReloadEvent;
 import com.tkisor.nekojs.core.DefaultScriptEventBridge;
 import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
@@ -45,6 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -452,8 +457,8 @@ class Ticket22VillagerTradeDomainTest {
             Context firstActiveToken = harness.getActiveToken();
             // The committed generation reads active through a real callback on the active bus.
             harness.root.reload(ScriptType.SERVER);
-            VillagerTradeQuerySurface latest = readFromActiveGeneration(harness);
-            assertEquals(VillagerTradeQuerySurface.Status.ACTIVE, latest.getStatus());
+            VillagerTradeQuery latest = readFromActiveGeneration(harness);
+            assertSame(VillagerTradeQuerySurface.Status.ACTIVE, latest.getStatus());
             assertEquals("synthetic-trades", latest.getAdapterId());
             assertEquals(1, latest.countOf("synthetic:set"));
             assertEquals(1, latest.getTotal());
@@ -461,8 +466,8 @@ class Ticket22VillagerTradeDomainTest {
 
             Context oldToken = firstActiveToken;
             assertNotNull(oldToken, "the first probe captured a real generation token");
-            VillagerTradeQuerySurface stale = harness.state.query(oldToken);
-            assertEquals(VillagerTradeQuerySurface.Status.STALE, stale.getStatus(),
+            VillagerTradeQuery stale = harness.state.query(oldToken);
+            assertSame(VillagerTradeQuerySurface.Status.STALE, stale.getStatus(),
                     "a superseded generation token must not read the new generation's data");
             assertEquals(VillagerTradeQuerySurface.Status.STALE, harness.state.query(null).getStatus(),
                     "no context at all is an explicit stale answer, not an exception");
@@ -543,6 +548,86 @@ class Ticket22VillagerTradeDomainTest {
             assertEquals(0, query.getTotal());
             assertEquals(1, query.getUnrestoredListingKeys().size());
         }
+    }
+
+    @Test
+    void publicContractsPreserveNativeConstructorsPayloadTypesAndEnumDescriptor() throws Exception {
+        assertTrue(VillagerTradeDeclarationEvent.class.isAssignableFrom(VillagerTradeDeclarationEventJS.class));
+        assertTrue(VillagerTradeReloadEvent.class.isAssignableFrom(VillagerTradeReloadEventJS.class));
+        assertTrue(VillagerTradeQuery.class.isAssignableFrom(VillagerTradeQuerySurface.class));
+        assertSame(VillagerTradeDeclarationEvent.class,
+                ScriptTypeViews.outputClass(VillagerTradeDeclarationEventJS.class));
+        assertSame(VillagerTradeReloadEvent.class, ScriptTypeViews.outputClass(VillagerTradeReloadEventJS.class));
+        assertSame(VillagerTradeQuery.class, ScriptTypeViews.outputClass(VillagerTradeQuerySurface.class));
+        assertEquals(VillagerTradeDeclarationEventJS.class,
+                VillagerTradeDeclarationEventJS.class.getConstructor(VillagerTradeCandidatePlan.class).getDeclaringClass());
+        assertEquals(VillagerTradeReloadEventJS.class,
+                VillagerTradeReloadEventJS.class.getConstructor(VillagerTradeCandidatePlan.class,
+                        VillagerTradeSetSnapshot.class).getDeclaringClass());
+        assertSame(VillagerTradeDeclarationEventJS.class, DECLARATION.eventType());
+        assertSame(VillagerTradeReloadEventJS.class, RELOAD.eventType());
+        assertEquals(Enum.class, VillagerTradeQuery.class.getMethod("getStatus").getReturnType());
+        Method nativeStatus = java.util.Arrays.stream(VillagerTradeQuerySurface.class.getDeclaredMethods())
+                .filter(method -> method.getName().equals("getStatus") && !method.isBridge())
+                .findFirst().orElseThrow();
+        assertEquals(VillagerTradeQuerySurface.Status.class, nativeStatus.getReturnType());
+        assertEquals("com.tkisor.nekojs.core.villager.VillagerTradeQuerySurface$Status",
+                nativeStatus.getReturnType().getName());
+    }
+
+    @Test
+    void publicQueryViewKeepsOriginalEnumIdentityAndImmutableSnapshotValues() {
+        List<String> unrestored = new ArrayList<>(List.of("synthetic:set|unrestored"));
+        List<String> retired = new ArrayList<>(List.of("synthetic:old|retired"));
+        VillagerTradeQuerySurface nativeQuery = VillagerTradeQuerySurface.active(7L, "synthetic-trades",
+                VillagerTradeSetSnapshot.of(3L, Map.of("synthetic:set", 2)), unrestored, retired);
+        VillagerTradeQuery query = nativeQuery;
+        assertSame(nativeQuery, query);
+        assertSame(VillagerTradeQuerySurface.Status.ACTIVE, query.getStatus());
+        assertEquals("ACTIVE", query.getStatus().name());
+        assertEquals(0, query.getStatus().ordinal());
+        assertSame(VillagerTradeQuerySurface.Status.class, query.getStatus().getDeclaringClass());
+        assertEquals(7L, query.getGeneration());
+        assertEquals(2, query.getTotal());
+        assertEquals(2, query.countOf("synthetic:set"));
+        assertEquals(0, query.countOf("synthetic:missing"));
+        assertEquals("synthetic-trades", query.getAdapterId());
+        assertEquals("active-generation", query.getStatusReason());
+        assertEquals(nativeQuery.describe(), query.describe());
+        unrestored.clear();
+        retired.clear();
+        assertEquals(List.of("synthetic:set|unrestored"), query.getUnrestoredListingKeys());
+        assertEquals(List.of("synthetic:old|retired"), query.getRetiredListingKeys());
+        assertThrows(UnsupportedOperationException.class, () -> query.getTradeSetIds().add("synthetic:other"));
+        assertThrows(UnsupportedOperationException.class, () -> query.getUnrestoredListingKeys().clear());
+        assertThrows(UnsupportedOperationException.class, () -> query.getRetiredListingKeys().clear());
+        VillagerTradeQuery stale = new VillagerTradeDomainState("synthetic-trades", true).query(null);
+        assertSame(VillagerTradeQuerySurface.Status.STALE, stale.getStatus());
+        assertEquals("STALE", stale.getStatus().name());
+        assertEquals(0, stale.getTotal());
+        assertEquals(0, stale.countOf("synthetic:set"));
+        assertTrue(stale.getTradeSetIds().isEmpty());
+    }
+
+    @Test
+    void publicEventViewsRecordIntoTheOriginalCandidateWithoutApplyingIt() {
+        SyntheticTradeApplier applier = new SyntheticTradeApplier();
+        VillagerTradeCandidatePlan plan = new VillagerTradeCandidatePlan(applier,
+                new VillagerTradeDomainState(applier.adapterId(), true));
+        VillagerTradeDeclarationEvent declaration = new VillagerTradeDeclarationEventJS(plan);
+        assertEquals(0, declaration.getAddedCount());
+        assertThrows(IllegalArgumentException.class, () -> declaration.add(" ", Map.of()));
+        VillagerTradeReloadEvent reload = new VillagerTradeReloadEventJS(plan,
+                VillagerTradeSetSnapshot.of(3L, Map.of("synthetic:set", 2)));
+        assertEquals(List.of("synthetic:set"), reload.getTradeSets());
+        assertEquals(2, reload.getTotal());
+        assertEquals(2, reload.countOf("synthetic:set"));
+        assertEquals(0, reload.countOf("synthetic:missing"));
+        reload.declareObsolete("synthetic:set");
+        assertEquals(Set.of("synthetic:set"), plan.obsoleteTradeSets());
+        assertThrows(IllegalArgumentException.class, () -> reload.declareObsolete(" "));
+        assertEquals(0, applier.preflightCount);
+        assertEquals(0, applier.applyCount);
     }
 
     @Test

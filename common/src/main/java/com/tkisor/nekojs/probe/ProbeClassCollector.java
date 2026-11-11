@@ -58,15 +58,25 @@ final class ProbeClassCollector {
         Queue<Object[]> queue = new LinkedList<>();
 
         // 种子类：事件类型和绑定类型（depth 0）
-        for (EventCatalogEntry event : snapshot.events()) {
+        for (EventCatalogEntry event : java.util.stream.Stream.concat(snapshot.events().stream(),
+                snapshot.moduleEvents().stream().map(com.tkisor.nekojs.api.catalog.ModuleEventCatalogEntry::event)).toList()) {
             if (event.eventType() != null) queue.add(new Object[]{event.eventType(), 0});
             if (event.dispatchKeyType() != null) queue.add(new Object[]{event.dispatchKeyType(), 0});
         }
-        for (BindingCatalogEntry binding : snapshot.bindings()) {
+        for (BindingCatalogEntry binding : java.util.stream.Stream.concat(snapshot.bindings().stream(),
+                snapshot.moduleBindings().stream().map(com.tkisor.nekojs.api.catalog.ModuleBindingCatalogEntry::binding)).toList()) {
             if (binding.javaType() != null) queue.add(new Object[]{binding.javaType(), 0});
             // 代理绑定（如 Item）的 extraDocTypes（委托目标 MC 类）也作为种子
             for (Class<?> extra : binding.extraDocTypes()) {
                 queue.add(new Object[]{extra, 0});
+            }
+        }
+
+        // Whole-field recipe inputs can introduce host types absent from event and binding signatures.
+        for (var namespace : snapshot.recipeNamespaces()) {
+            for (var schema : namespace.schemaTypes()) {
+                if (schema.unsupportedReason() != null) continue;
+                for (var field : schema.fields()) collectShapeToQueue(field.inputShape(), queue);
             }
         }
 
@@ -77,6 +87,12 @@ final class ProbeClassCollector {
             queue.add(new Object[]{declaration.targetType(), 0});
             declaration.imports().stream().sorted(Comparator.comparing(Class::getName))
                     .forEach(imported -> queue.add(new Object[]{imported, 0}));
+        }
+
+        for (String name : com.tkisor.nekojs.probe.backend.typescript.MixinHookDeclarations.referencedClasses(
+                com.tkisor.nekojs.core.mixin.MixinCarriers.discover())) {
+            try { queue.add(new Object[]{Class.forName(name, false, ProbeClassCollector.class.getClassLoader()), 0}); }
+            catch (ClassNotFoundException | LinkageError failure) { warnings.add("Installed mixin hook type unavailable: " + name); }
         }
 
         int maxDepth = cfg.scan().maxDepth() <= 0 ? 5 : cfg.scan().maxDepth();
@@ -103,17 +119,15 @@ final class ProbeClassCollector {
                     for (Type bound : variable.getBounds()) collectTypeToQueue(bound, queue, nextDepth);
                 }
 
-                for (Constructor<?> ctor : cls.getDeclaredConstructors()) {
-                    if (Modifier.isPublic(ctor.getModifiers())) {
-                        for (Type p : ctor.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
-                        for (TypeVariable<?> variable : ctor.getTypeParameters()) {
-                            for (Type bound : variable.getBounds()) collectTypeToQueue(bound, queue, nextDepth);
-                        }
+                for (Constructor<?> ctor : TypeReflector.declarationConstructors(cls)) {
+                    for (Type p : ctor.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
+                    for (TypeVariable<?> variable : ctor.getTypeParameters()) {
+                        for (Type bound : variable.getBounds()) collectTypeToQueue(bound, queue, nextDepth);
                     }
                 }
-                for (Method method : TypeReflector.declarationMethods(cls)) {
+                for (Method method : TypeReflector.scanDeclarationMethods(cls).methods()) {
                     if (Modifier.isPublic(method.getModifiers())) {
-                        collectTypeToQueue(method.getGenericReturnType(), queue, nextDepth);
+                        collectTypeToQueue(method.getGenericReturnType(), queue, nextDepth, true);
                         for (Type p : method.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
                         for (TypeVariable<?> variable : method.getTypeParameters()) {
                             for (Type bound : variable.getBounds()) collectTypeToQueue(bound, queue, nextDepth);
@@ -156,33 +170,53 @@ final class ProbeClassCollector {
         return false;
     }
 
+    private static void collectShapeToQueue(com.tkisor.nekojs.api.AdapterInputShape shape, Queue<Object[]> queue) {
+        if (shape instanceof com.tkisor.nekojs.api.AdapterInputShape.HostValue host) {
+            queue.add(new Object[]{host.cls(), 0});
+        } else if (shape instanceof com.tkisor.nekojs.api.AdapterInputShape.ArrayOfValue array) {
+            collectShapeToQueue(array.element(), queue);
+        } else if (shape instanceof com.tkisor.nekojs.api.AdapterInputShape.UnionValue union) {
+            union.members().forEach(member -> collectShapeToQueue(member, queue));
+        } else if (shape instanceof com.tkisor.nekojs.api.AdapterInputShape.ObjectValue object) {
+            object.slots().forEach(slot -> collectShapeToQueue(slot.shape(), queue));
+        } else if (shape instanceof com.tkisor.nekojs.api.AdapterInputShape.TemplateValue template) {
+            collectShapeToQueue(template.hole(), queue);
+        }
+    }
+
     private static void collectTypeToQueue(Type type, Queue<Object[]> queue, int depth) {
+        collectTypeToQueue(type, queue, depth, false);
+    }
+
+    private static void collectTypeToQueue(Type type, Queue<Object[]> queue, int depth, boolean output) {
         if (type instanceof Class<?> cls) {
             if (cls.isArray()) {
                 // Array dimensions do not add signature edges; scan the actual component at this depth.
-                collectTypeToQueue(cls.getComponentType(), queue, depth);
+                collectTypeToQueue(cls.getComponentType(), queue, depth, false);
             } else {
-                queue.add(new Object[]{cls, depth});
+                queue.add(new Object[]{output ? com.tkisor.nekojs.api.ScriptTypeViews.outputClass(cls) : cls, depth});
             }
         } else if (type instanceof ParameterizedType pt) {
-            if (pt.getRawType() instanceof Class<?> rawCls) queue.add(new Object[]{rawCls, depth});
+            if (pt.getRawType() instanceof Class<?> rawCls) {
+                queue.add(new Object[]{rawCls, depth});
+            }
             boolean functional = FunctionalInterfaceResolver.resolve(pt) != null;
             for (Type arg : JavaGenericTypes.arguments(pt)) {
                 if (functional && arg instanceof WildcardType wildcard) {
                     // Callback signatures project wildcard bounds into concrete host parameter types.
                     // Follow only these bounds, through the existing depth and package filters.
-                    for (Type bound : wildcard.getLowerBounds()) collectTypeToQueue(bound, queue, depth);
-                    for (Type bound : wildcard.getUpperBounds()) collectTypeToQueue(bound, queue, depth);
+                    for (Type bound : wildcard.getLowerBounds()) collectTypeToQueue(bound, queue, depth, false);
+                    for (Type bound : wildcard.getUpperBounds()) collectTypeToQueue(bound, queue, depth, false);
                 } else {
-                    collectTypeToQueue(arg, queue, depth);
+                    collectTypeToQueue(arg, queue, depth, false);
                 }
             }
         } else if (type instanceof GenericArrayType gat) {
-            collectTypeToQueue(gat.getGenericComponentType(), queue, depth);
+            collectTypeToQueue(gat.getGenericComponentType(), queue, depth, false);
         } else if (type instanceof WildcardType wildcard) {
             // Ordinary wildcard slots render their upper bound, even inside non-functional containers.
             // The bound is part of this signature edge; its members still use the next BFS depth.
-            for (Type bound : wildcard.getUpperBounds()) collectTypeToQueue(bound, queue, depth);
+            for (Type bound : wildcard.getUpperBounds()) collectTypeToQueue(bound, queue, depth, false);
         }
         // Declaration parameter bounds are queued explicitly at their owner's next depth.
         // Other nested type variables do not expand the scan.

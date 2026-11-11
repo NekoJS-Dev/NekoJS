@@ -222,16 +222,22 @@ public final class AdapterAliasGenerator {
                     context.imports().add(hostCls.getName());
                 }
                 String hostAlias = nested && context.inputHosts() ? aliasRegistry.getAlias(hostCls.getName()) : null;
-                yield hostAlias != null ? hostAlias : aliasRegistry.reference(hostCls.getName(), "$" + tsClassName(hostCls));
+                if (hostAlias != null) yield hostAlias;
+                String host = aliasRegistry.reference(hostCls.getName(), "$" + tsClassName(hostCls));
+                int arity = TypeReflector.typeParametersOf(hostCls).size();
+                yield arity == 0 ? host : host + "<" + String.join(", ", java.util.Collections.nCopies(arity, "any")) + ">";
             }
-            case AdapterInputShape.ArrayOfValue v ->
-                    render(v.element(), context, true) + "[]";
+            case AdapterInputShape.ArrayOfValue v -> {
+                String element = render(v.element(), context, true);
+                yield com.tkisor.nekojs.probe.types.TypeScriptTypeExpressions.arrayOf(element);
+            }
             case AdapterInputShape.ObjectValue v ->
                     renderObject(v.slots(), context);
             case AdapterInputShape.UnionValue v -> {
                 List<String> members = new ArrayList<>();
                 for (AdapterInputShape member : v.members()) {
-                    members.add(render(member, context, true));
+                    String rendered = render(member, context, true);
+                    members.add(member instanceof AdapterInputShape.RawValue ? "(" + rendered + ")" : rendered);
                 }
                 // 恒加括号：槽位/数组元素位置都合法，且不依赖调用点自己判断优先级
                 yield "(" + String.join(" | ", members) + ")";

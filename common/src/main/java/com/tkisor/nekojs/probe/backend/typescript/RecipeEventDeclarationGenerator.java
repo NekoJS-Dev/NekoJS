@@ -1,12 +1,22 @@
 package com.tkisor.nekojs.probe.backend.typescript;
 
+import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.catalog.RecipeHandlerMethodEntry;
 import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RecipeSchemaTypeEntry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeFieldKind;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
+import com.tkisor.nekojs.probe.types.TypeScriptDeclarationFormatter;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import com.tkisor.nekojs.api.surface.ApiSymbolId;
+import com.tkisor.nekojs.wrapper.RecipeReflectionUtil;
+import com.tkisor.nekojs.probe.ir.TypeReflector;
+import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+import java.lang.reflect.ParameterizedType;
 
 import java.util.*;
 
@@ -24,9 +34,62 @@ import java.util.*;
  */
 public final class RecipeEventDeclarationGenerator {
     private final TypeAliasRegistry aliasRegistry;
+    private final InputAliases inputAliases;
 
     public RecipeEventDeclarationGenerator(TypeAliasRegistry aliasRegistry) {
+        this(aliasRegistry, new InputAliases(Map.of()));
+    }
+
+    private RecipeEventDeclarationGenerator(TypeAliasRegistry aliasRegistry, InputAliases inputAliases) {
         this.aliasRegistry = aliasRegistry;
+        this.inputAliases = inputAliases;
+    }
+
+    private record SchemaKey(String namespace, String name) {}
+    private record InputAliases(Map<SchemaKey, String> options) {}
+
+    /** Reserves only named-options declarations; component types use the canonical input alias registry. */
+    private static InputAliases allocateInputAliases(List<RecipeNamespaceCatalogEntry> namespaces, Set<String> occupied) {
+        Map<SchemaKey, String> options = new LinkedHashMap<>();
+        for (var namespace : namespaces.stream().sorted(Comparator.comparing(RecipeNamespaceCatalogEntry::namespace)).toList()) {
+            for (var schema : namespace.schemaTypes().stream().sorted(Comparator.comparing(RecipeSchemaTypeEntry::type)).toList()) {
+                if (!hasBuilder(schema) || schema.fields().stream().noneMatch(field ->
+                        field.inputType() != null || field.inputShape() instanceof AdapterInputShape.UnionValue
+                        || field.inputShape() instanceof AdapterInputShape.ObjectValue
+                        || field.inputShape() instanceof AdapterInputShape.ArrayOfValue)) continue;
+                options.put(new SchemaKey(namespace.namespace(), schema.type()), allocateName(typeName(namespace.namespace())
+                        + "$" + typeName(schema.type()) + "Options", occupied));
+            }
+        }
+        return new InputAliases(Collections.unmodifiableMap(options));
+    }
+
+    private static String allocateName(String base, Set<String> occupied) {
+        String name = base;
+        for (int suffix = 2; !occupied.add(name); suffix++) name = base + suffix;
+        return name;
+    }
+
+    private static String typeName(String source) {
+        String name = capitalize(source);
+        StringBuilder result = new StringBuilder();
+        if (name.isEmpty() || !Character.isJavaIdentifierStart(name.charAt(0))) result.append('_');
+        for (int index = 0; index < name.length(); index++) {
+            char character = name.charAt(index);
+            result.append(Character.isJavaIdentifierPart(character) ? character : '_');
+        }
+        return result.toString();
+    }
+
+    private void generateInputAliases(StringBuilder output, List<RecipeNamespaceCatalogEntry> namespaces) {
+        for (var namespace : namespaces) {
+            for (var schema : namespace.schemaTypes()) {
+                String name = inputAliases.options().get(new SchemaKey(namespace.namespace(), schema.type()));
+                if (name != null) output.append("    export type ").append(name).append(" = ")
+                        .append(namedOptionsType(schema, namespace.namespace())).append(";\n");
+            }
+        }
+        if (!inputAliases.options().isEmpty()) output.append('\n');
     }
 
     /**
@@ -36,34 +99,65 @@ public final class RecipeEventDeclarationGenerator {
     private String resolveAlias(String pkg, String simple) {
         String fqn = pkg + "." + simple;
         if (aliasRegistry.hasAlias(fqn)) return aliasRegistry.getAlias(fqn);
-        return "$" + simple + "_";
+        return aliasRegistry.reference(fqn, "$" + simple + "_");
     }
 
-    /**
-     * 为指定 ScriptType 生成 recipe 事件声明。
-     */
-    public String generate(List<RecipeNamespaceCatalogEntry> namespaces, ScriptType scriptType) {
-        // 第一遍：收集所有需要的 import（基于 field kind 和 handler param type）
-        Map<String, Set<String>> importsByPkg = new TreeMap<>();
-        addImport(importsByPkg, "com.tkisor.nekojs.api.recipe", "RecipeJsonBuilder");
-        collectImports(namespaces, importsByPkg);
+    public static boolean hasDeclarations(List<RecipeNamespaceCatalogEntry> namespaces, ScriptType scriptType) {
+        return scriptType == ScriptType.SERVER && !namespaces.isEmpty();
+    }
 
+    /** Java references from nominal inputs, structural fallbacks and builder execution types. */
+    public Set<String> referencedClasses(List<RecipeNamespaceCatalogEntry> namespaces) {
+        if (!hasDeclarations(namespaces, ScriptType.SERVER)) return Set.of();
+        Set<TypeScriptImportNames.Symbol> imports = new LinkedHashSet<>();
+        collectImports(namespaces, imports);
+        Set<String> result = new LinkedHashSet<>();
+        for (var symbol : imports) result.add(symbol.fqn());
+        return Collections.unmodifiableSet(result);
+    }
+
+    public String generate(List<RecipeNamespaceCatalogEntry> namespaces, ScriptType scriptType) {
+        if (!hasDeclarations(namespaces, scriptType)) return "";
+        Set<TypeScriptImportNames.Symbol> imports = new LinkedHashSet<>();
+        collectImports(namespaces, imports);
+        Set<String> declarations = new HashSet<>(Set.of("DocumentedRecipes", "RegistryTypes"));
+        for (var namespace : namespaces) {
+            for (var schema : namespace.schemaTypes()) {
+                if (hasBuilder(schema)) declarations.add(capitalize(namespace.namespace()) + "$" + capitalize(schema.type()));
+            }
+        }
+        InputAliases inputs = allocateInputAliases(namespaces, declarations);
+        TypeScriptImportNames names = new TypeScriptImportNames(imports, declarations, Set.of());
+        TypeAliasRegistry moduleAliases = names.hasAliases() ? aliasRegistry.withReferences(names::reference) : aliasRegistry;
+        RecipeEventDeclarationGenerator renderer = new RecipeEventDeclarationGenerator(moduleAliases, inputs);
+        Map<String, Set<String>> importsByPkg = new TreeMap<>();
+        for (var symbol : imports) {
+            String pkg = symbol.fqn().substring(0, symbol.fqn().lastIndexOf('.'));
+            String local = names.reference(symbol.fqn(), symbol.exportedName());
+            String binding = symbol.exportedName().equals(local) ? local : symbol.exportedName() + " as " + local;
+            importsByPkg.computeIfAbsent(pkg, ignored -> new TreeSet<>()).add(binding);
+        }
         StringBuilder sb = new StringBuilder();
-        // 生成 import 语句（包内符号名字典序排序：确定性输出，不依赖集合迭代顺序）
+        if (namespaces.stream().flatMap(namespace -> namespace.schemaTypes().stream())
+                .filter(schema -> schema.unsupportedReason() == null)
+                .flatMap(schema -> schema.fields().stream()).filter(field -> field.inputShape() != null)
+                .anyMatch(field -> AdapterAliasGenerator.renderShape(field.inputShape(), moduleAliases, true).usesRegistry())) {
+            sb.append("import type { RegistryTypes } from \"@special/types\";\n\n");
+        }
         for (var entry : importsByPkg.entrySet()) {
             String importPath = "java:" + entry.getKey().replace('.', '/');
-            List<String> names = new ArrayList<>(entry.getValue());
-            java.util.Collections.sort(names);
-            sb.append("import { ").append(String.join(", ", names));
+            sb.append("import { ").append(String.join(", ", entry.getValue()));
             sb.append(" } from \"").append(importPath).append("\";\n");
         }
         sb.append("\n");
 
+        renderer.generateInputAliases(sb, namespaces);
+
         // 1. 为每个 schema 类型生成单独的 builder 类（链式 setter）
         for (RecipeNamespaceCatalogEntry ns : namespaces) {
             for (RecipeSchemaTypeEntry schemaType : ns.schemaTypes()) {
-                if (schemaType.fields().isEmpty()) continue;
-                generateSchemaClass(sb, schemaType, ns.namespace());
+                if (!hasBuilder(schemaType)) continue;
+                renderer.generateSchemaClass(sb, schemaType, ns.namespace());
             }
         }
 
@@ -75,7 +169,7 @@ public final class RecipeEventDeclarationGenerator {
 
         for (RecipeNamespaceCatalogEntry ns : namespaces) {
             if (ns.handlerMethods().isEmpty() && ns.schemaTypes().isEmpty()) continue;
-            generateNamespaceMember(sb, ns);
+            renderer.generateNamespaceMember(sb, ns);
         }
 
         sb.append("}\n");
@@ -92,12 +186,20 @@ public final class RecipeEventDeclarationGenerator {
      * }
      */
     private void generateNamespaceMember(StringBuilder sb, RecipeNamespaceCatalogEntry ns) {
-        sb.append("        ").append(ns.namespace()).append(": {\n");
+        sb.append("        ").append(safeMethodName(ns.namespace())).append(": {\n");
 
         Set<String> emittedMethods = new HashSet<>();
+        Set<String> rejectedMethods = new HashSet<>();
+        for (var schema : ns.schemaTypes()) {
+            if (schema.unsupportedReason() == null) continue;
+            sb.append("            ").append(safeMethodName(schema.type())).append(": never;\n");
+            emittedMethods.add(schema.type());
+            rejectedMethods.add(schema.type());
+        }
 
         // Handler 方法（如 shaped, smelting 等有 Java 实现的方法）
         for (RecipeHandlerMethodEntry method : ns.handlerMethods()) {
+            if (rejectedMethods.contains(method.methodName())) continue;
             generateHandlerMethod(sb, method, ns.namespace());
             emittedMethods.add(method.methodName());
         }
@@ -116,56 +218,58 @@ public final class RecipeEventDeclarationGenerator {
      * 生成 handler 方法（有 Java 实现）。
      */
     private void generateHandlerMethod(StringBuilder sb, RecipeHandlerMethodEntry method, String namespace) {
-        sb.append("            ").append(safeMethodName(method.methodName())).append("(");
-
+        List<String> parameters = new ArrayList<>();
         List<RecipeHandlerMethodEntry.HandlerParam> params = method.params();
         for (int i = 0; i < params.size(); i++) {
             RecipeHandlerMethodEntry.HandlerParam param = params.get(i);
-            if (i > 0) sb.append(", ");
-            sb.append(safeParamName(param.name(), i));
-            if (i >= method.minArgs() || param.optional()) sb.append("?");
-            sb.append(": ").append(mapParamToTs(param));
+            boolean omittedTail = i >= method.minArgs();
+            String type = renderHandlerParameter(param, aliasRegistry);
+            parameters.add(safeParamName(param.name(), i) + (omittedTail ? "?" : "") + ": "
+                    + (param.optional() && !omittedTail ? "(" + type + ") | null | undefined" : type));
         }
-
-        // 返回类型：对应的 builder 类，或 $RecipeJsonBuilder
-        sb.append("): ").append(builderClassName(namespace, method.methodName())).append(";\n");
+        // Native results follow the Java method contract, not a similarly named schema class.
+        TypeScriptDeclarationFormatter.appendCallable(sb, 12, safeMethodName(method.methodName()), parameters,
+                ": " + renderHandlerReturn(method, aliasRegistry) + ";");
     }
 
     /**
      * 生成 schema 类型方法（自动发现的 recipe 类型）。
      */
     private void generateSchemaMethod(StringBuilder sb, RecipeSchemaTypeEntry schemaType, String namespace) {
-        String returnType = !schemaType.fields().isEmpty()
-                ? capitalize(namespace) + "$" + capitalize(schemaType.type())
-                : "$RecipeJsonBuilder";
-
-        // 命名对象重载
+        String returnType = hasBuilder(schemaType)
+                ? capitalize(namespace) + "$" + capitalize(schemaType.type()) : baseBuilderType();
+        for (var overload : RecipeConstructorOverloads.plan(schemaType.constructors(), schemaType.hasConstructorOverrides())) {
+            List<String> parameters = new ArrayList<>();
+            for (int i = 0; i < overload.fields().size(); i++) {
+                String field = overload.fields().get(i);
+                String label = safeParamName(positionalLabel(schemaType, field), i);
+                parameters.add(label + (i >= overload.requiredCount() ? "?" : "") + ": "
+                        + getFieldTsType(schemaType, field, namespace));
+            }
+            appendSchemaOverload(sb, schemaType.type(), parameters, returnType);
+        }
         if (!schemaType.fields().isEmpty()) {
-            sb.append("            ").append(safeMethodName(schemaType.type())).append("(options: { ");
-            boolean first = true;
-            for (RecipeSchemaTypeEntry.SchemaField field : schemaType.fields()) {
-                if (!first) sb.append(", ");
-                first = false;
-                sb.append(field.name());
-                if (!field.required()) sb.append("?");
-                sb.append(": ");
-                sb.append(mapFieldKindToTs(field.kind()));
-                if (field.array()) sb.append("[]");
-            }
-            sb.append(" }): ").append(returnType).append(";\n");
+            String options = inputAliases.options().get(new SchemaKey(namespace, schemaType.type()));
+            appendSchemaOverload(sb, schemaType.type(), List.of("options: "
+                    + (options == null ? namedOptionsType(schemaType, namespace) : options)), returnType);
         }
+    }
 
-        // 构造器位置参数重载
-        for (List<String> ctor : schemaType.constructors()) {
-            sb.append("            ").append(safeMethodName(schemaType.type())).append("(");
-            for (int i = 0; i < ctor.size(); i++) {
-                if (i > 0) sb.append(", ");
-                String fieldName = ctor.get(i);
-                sb.append(safeParamName(fieldName, i)).append(": ");
-                sb.append(getFieldTsType(schemaType, fieldName));
-            }
-            sb.append("): ").append(returnType).append(";\n");
+    /** Keeps long declarations readable without hiding their nominal parameter types behind field aliases. */
+    private void appendSchemaOverload(StringBuilder output, String method, List<String> parameters, String result) {
+        TypeScriptDeclarationFormatter.appendCallable(output, 12, safeMethodName(method), parameters, ": " + result + ";");
+    }
+
+    private static String positionalLabel(RecipeSchemaTypeEntry schema, String field) {
+        StringBuilder camel = new StringBuilder();
+        boolean upper = false;
+        for (char character : field.toCharArray()) {
+            if (character == '_') { upper = true; continue; }
+            camel.append(upper ? Character.toUpperCase(character) : character);
+            upper = false;
         }
+        String candidate = camel.toString();
+        return field.equals(schema.fieldAliases().get(candidate)) ? candidate : field;
     }
 
     /**
@@ -174,33 +278,129 @@ public final class RecipeEventDeclarationGenerator {
     private void generateSchemaClass(StringBuilder sb, RecipeSchemaTypeEntry schemaType, String namespace) {
         String className = capitalize(namespace) + "$" + capitalize(schemaType.type());
 
-        sb.append("    export class ").append(className).append(" extends $RecipeJsonBuilder {\n");
-
-        for (RecipeSchemaTypeEntry.SchemaField field : schemaType.fields()) {
-            sb.append("        ").append(safeMethodName(field.name())).append("(");
-            sb.append(safeParamName(field.name(), 0)).append(": ");
-            sb.append(mapFieldKindToTs(field.kind()));
-            if (field.array()) sb.append("[]");
-            sb.append("): this;\n");
+        sb.append("    export class ").append(className).append(" extends ").append(baseBuilderType()).append(" {\n");
+        Map<String, String> setters = new LinkedHashMap<>();
+        if (schemaType.fieldFunctions() == null) {
+            schemaType.fields().forEach(field -> setters.put(field.name(), field.name()));
+            setters.putAll(schemaType.fieldAliases());
+        } else {
+            setters.putAll(schemaType.fieldFunctions());
         }
-
+        Set<String> targetNames = new HashSet<>();
+        for (Method method : executionMethods(schemaType)) {
+            targetNames.add(method.getName());
+            appendExecutionMethod(sb, schemaType, method, aliasRegistry);
+        }
+        for (var setter : setters.entrySet()) {
+            if (targetNames.contains(setter.getKey())) continue;
+            for (var field : schemaType.fields()) {
+                if (field.name().equals(setter.getValue())) appendSetter(sb, setter.getKey(), field, namespace);
+            }
+        }
+        for (String function : schemaType.functions()) {
+            if (targetNames.contains(function)) continue;
+            sb.append("        ").append(safeMethodName(function)).append("(): this;\n");
+        }
         sb.append("    }\n");
     }
 
-    /**
-     * 推断 builder 类名 — 用于 handler 方法的返回类型。
-     * 如果对应名称的 schema 类型存在，返回 builder 类；否则返回 $RecipeJsonBuilder。
-     */
-    private String builderClassName(String namespace, String methodName) {
-        return "$RecipeJsonBuilder";
+    private static boolean hasBuilder(RecipeSchemaTypeEntry schema) {
+        return schema.unsupportedReason() == null && (!schema.fields().isEmpty() || !schema.functions().isEmpty()
+                || schema.executionType() != Object.class);
     }
 
-    private String getFieldTsType(RecipeSchemaTypeEntry schemaType, String fieldName) {
+    private static List<Method> executionMethods(RecipeSchemaTypeEntry schema) {
+        return Arrays.stream(schema.executionType().getMethods())
+                .filter(method -> method.getDeclaringClass() != Object.class && !method.isBridge() && !method.isSynthetic())
+                .filter(method -> !RecipeReflectionUtil.isHiddenMethod(method))
+                .sorted(Comparator.comparing(Method::toGenericString)).toList();
+    }
+
+    /** Uses the same Java type projections as ordinary host declarations, preserving fluent self returns. */
+    private static void appendExecutionMethod(StringBuilder sb, RecipeSchemaTypeEntry schema, Method method,
+                                              TypeAliasRegistry aliases) {
+        StringBuilder head = new StringBuilder(safeMethodName(method.getName()));
+        if (method.getTypeParameters().length > 0) {
+            head.append("<");
+            for (int i = 0; i < method.getTypeParameters().length; i++) {
+                if (i > 0) head.append(", ");
+                var variable = method.getTypeParameters()[i];
+                head.append(variable.getName());
+                var bounds = Arrays.stream(variable.getBounds()).filter(bound -> bound != Object.class)
+                        .map(bound -> renderExecutionType(bound, aliases, false)).toList();
+                if (!bounds.isEmpty()) head.append(" extends ").append(String.join(" & ", bounds));
+            }
+            head.append(">");
+        }
+        List<String> renderedParameters = new ArrayList<>();
+        var parameters = method.getParameters();
+        for (int i = 0; i < parameters.length; i++) {
+            boolean varargs = method.isVarArgs() && i == parameters.length - 1;
+            String name = (varargs ? "..." : "") + safeParamName(parameters[i].getName(), i);
+            Type type = method.getGenericParameterTypes()[i];
+            boolean optional = parameters[i].getType() == Optional.class;
+            if (optional && type instanceof ParameterizedType parameterized) type = parameterized.getActualTypeArguments()[0];
+            renderedParameters.add(name + (optional ? "?" : "") + ": " + renderExecutionType(type, aliases, true));
+        }
+        boolean self = method.getReturnType() != Object.class && method.getReturnType().isAssignableFrom(schema.executionType());
+        TypeScriptDeclarationFormatter.appendCallable(sb, 8, head.toString(), renderedParameters,
+                ": " + (self ? "this" : renderExecutionType(method.getGenericReturnType(), aliases, false)) + ";");
+    }
+
+    private static String renderExecutionType(Type type, TypeAliasRegistry aliases, boolean input) {
+        return TypeScriptClassRenderer.renderTypeRef(input ? TypeReflector.toRef(type) : TypeReflector.outputRef(type), aliases, input);
+    }
+
+    private String baseBuilderType() {
+        return aliasRegistry.reference("com.tkisor.nekojs.api.recipe.RecipeJsonBuilder", "$RecipeJsonBuilder");
+    }
+
+    private void appendSetter(StringBuilder sb, String name, RecipeSchemaTypeEntry.SchemaField field, String namespace) {
+        TypeScriptDeclarationFormatter.appendCallable(sb, 8, safeMethodName(name),
+                List.of(safeParamName(field.name(), 0) + ": " + fieldTsType(field, namespace)), ": this;");
+    }
+
+    private String fieldTsType(RecipeSchemaTypeEntry.SchemaField field, String namespace) {
+        if (field.inputType() != null) return TypeScriptClassRenderer.renderDeclaredInputType(field.inputType(), aliasRegistry);
+        if (field.inputShape() != null) return renderStructuralInput(field.inputShape(), aliasRegistry);
+        return mapFieldKindToTs(field.kind()) + (field.array() ? "[]" : "");
+    }
+
+    private static String renderStructuralInput(AdapterInputShape shape, TypeAliasRegistry aliases) {
+        return AdapterAliasGenerator.renderShape(shape, aliases.withRawValueReferences(), false).type();
+    }
+
+    private String namedOptionsType(RecipeSchemaTypeEntry schema, String namespace) {
+        List<String> ordinary = new ArrayList<>();
+        List<String> alternatives = new ArrayList<>();
+        for (var field : schema.fields()) {
+            List<String> names = new ArrayList<>(List.of(field.name()));
+            schema.fieldAliases().forEach((alias, canonical) -> { if (canonical.equals(field.name())) names.add(alias); });
+            String type = fieldTsType(field, namespace);
+            if (names.size() == 1) {
+                ordinary.add(safeMethodName(field.name()) + (field.required() ? "" : "?") + ": " + type);
+                continue;
+            }
+            // The runtime rejects duplicate canonical/alias keys, even when their values are equal.
+            List<String> choices = new ArrayList<>();
+            for (String selected : names) {
+                List<String> slots = new ArrayList<>();
+                for (String name : names) {
+                    slots.add(safeMethodName(name) + (name.equals(selected) && field.required() ? "" : "?")
+                            + ": " + (name.equals(selected) ? type : "never"));
+                }
+                choices.add("{ " + String.join(", ", slots) + " }");
+            }
+            alternatives.add("(" + String.join(" | ", choices) + ")");
+        }
+        if (!ordinary.isEmpty() || alternatives.isEmpty()) alternatives.addFirst("{ " + String.join(", ", ordinary) + " }");
+        return String.join(" & ", alternatives);
+    }
+
+    private String getFieldTsType(RecipeSchemaTypeEntry schemaType, String fieldName, String namespace) {
         for (RecipeSchemaTypeEntry.SchemaField field : schemaType.fields()) {
             if (field.name().equals(fieldName)) {
-                String type = mapFieldKindToTs(field.kind());
-                if (field.array()) return type + "[]";
-                return type;
+                return fieldTsType(field, namespace);
             }
         }
         return "any";
@@ -221,33 +421,49 @@ public final class RecipeEventDeclarationGenerator {
     /**
      * 收集所有命名空间用到的输入别名类型，生成 import 映射。
      */
-    private void collectImports(List<RecipeNamespaceCatalogEntry> namespaces, Map<String, Set<String>> importsByPkg) {
-        Set<String> neededKinds = new HashSet<>();
-
-        for (RecipeNamespaceCatalogEntry ns : namespaces) {
-            // schema field kinds
-            for (RecipeSchemaTypeEntry schemaType : ns.schemaTypes()) {
-                for (RecipeSchemaTypeEntry.SchemaField field : schemaType.fields()) {
-                    neededKinds.add(field.kind());
+    private void collectImports(List<RecipeNamespaceCatalogEntry> namespaces, Set<TypeScriptImportNames.Symbol> imports) {
+        boolean usesBuilder = namespaces.stream().anyMatch(namespace -> {
+            Set<String> rejected = namespace.schemaTypes().stream().filter(schema -> schema.unsupportedReason() != null)
+                    .map(RecipeSchemaTypeEntry::type).collect(java.util.stream.Collectors.toSet());
+            return namespace.schemaTypes().stream().anyMatch(schema -> schema.unsupportedReason() == null)
+                    || namespace.handlerMethods().stream().anyMatch(method -> !rejected.contains(method.methodName())
+                            && method.returnType() == null);
+        });
+        if (usesBuilder) imports.add(new TypeScriptImportNames.Symbol(
+                "com.tkisor.nekojs.api.recipe.RecipeJsonBuilder", "$RecipeJsonBuilder"));
+        for (var namespace : namespaces) {
+            Set<String> rejected = new HashSet<>();
+            for (var schema : namespace.schemaTypes()) {
+                if (schema.unsupportedReason() != null) {
+                    rejected.add(schema.type());
+                    continue;
+                }
+                TypeAliasRegistry collectingAliases = aliasRegistry.withReferences((fqn, symbol) -> {
+                    imports.add(new TypeScriptImportNames.Symbol(fqn, symbol));
+                    return symbol;
+                });
+                for (Method method : executionMethods(schema)) {
+                    appendExecutionMethod(new StringBuilder(), schema, method, collectingAliases);
+                }
+                for (var field : schema.fields()) {
+                    if (field.inputType() != null) {
+                        TypeScriptClassRenderer.renderDeclaredInputType(field.inputType(), collectingAliases);
+                    } else if (field.inputShape() != null) {
+                        renderStructuralInput(field.inputShape(), collectingAliases);
+                    } else {
+                        String[] target = kindToImport(field.kind());
+                        if (target != null) imports.add(new TypeScriptImportNames.Symbol(target[0] + "." + target[1], "$" + target[1] + "_"));
+                    }
                 }
             }
-        }
-
-        // schema field kinds → imports (version-specific mapping; only hit on platforms with schema paths)
-        for (String kind : neededKinds) {
-            String[] pkgType = kindToImport(kind);
-            if (pkgType != null) addImport(importsByPkg, pkgType[0], pkgType[1] + "_");
-        }
-        // handler param types → imports extracted from each param's generic signature,
-        // so List<Ingredient> / Map<String,Ingredient> pull in $Ingredient_ (and the package
-        // follows the real Java type, not a hard-coded MC-version path).
-        for (RecipeNamespaceCatalogEntry ns : namespaces) {
-            for (RecipeHandlerMethodEntry method : ns.handlerMethods()) {
-                for (RecipeHandlerMethodEntry.HandlerParam param : method.params()) {
-                    String sig = param.genericType();
-                    if (sig == null) continue;
-                    extractFqns(sig, (pkg, simple) -> addImport(importsByPkg, pkg, simple + "_"));
-                }
+            for (var method : namespace.handlerMethods()) {
+                if (rejected.contains(method.methodName())) continue;
+                TypeAliasRegistry collecting = aliasRegistry.withReferences((fqn, symbol) -> {
+                    imports.add(new TypeScriptImportNames.Symbol(fqn, symbol));
+                    return symbol;
+                });
+                for (var parameter : method.params()) renderHandlerParameter(parameter, collecting);
+                renderHandlerReturn(method, collecting);
             }
         }
     }
@@ -303,124 +519,67 @@ public final class RecipeEventDeclarationGenerator {
         return k == null ? null : kindToPkgType(k);
     }
 
-    private static void addImport(Map<String, Set<String>> importsByPkg, String pkg, String className) {
-        importsByPkg.computeIfAbsent(pkg, k -> new TreeSet<>()).add("$" + className);
-    }
-
-    /**
-     * Map a handler parameter to its TS type by parsing the generic signature, so
-     * {@code List<Ingredient>} → {@code $Ingredient_[]}, {@code Map<String,Ingredient>} →
-     * {@code { [key: string]: $Ingredient_ }}. Imports are pre-collected by {@link #collectImports}.
-     * Falls back to {@link #mapTypeToTs} when no generic signature is present (primitives).
-     */
-    private String mapParamToTs(RecipeHandlerMethodEntry.HandlerParam param) {
-        String sig = param.genericType();
-        if (sig == null) return mapTypeToTs(param.type());
-        return renderTypeSig(sig);
-    }
-
-    /** Render a generic signature to TS: collections → {@code E[]}, maps → index signature. */
-    private String renderTypeSig(String sig) {
-        int lt = sig.indexOf('<');
-        if (lt < 0) return resolveFqn(sig);
-        String raw = sig.substring(0, lt);
-        String inner = sig.substring(lt + 1, sig.lastIndexOf('>'));
-        List<String> args = splitTopLevel(inner);
-        String rawSimple = raw.substring(raw.lastIndexOf('.') + 1);
-        if (isCollectionRaw(rawSimple) && !args.isEmpty()) {
-            return renderTypeSig(args.get(0)) + "[]";
+    private String renderHandlerParameter(RecipeHandlerMethodEntry.HandlerParam parameter, TypeAliasRegistry aliases) {
+        ApiTypeRef type = parameter.typeRef();
+        if (type == null && parameter.genericType() != null) type = parseLegacyType(parameter.genericType());
+        if (type == null && parameter.qualifiedType() != null) type = parseLegacyType(parameter.qualifiedType());
+        if (type == null) {
+            String[] target = typeToImport(parameter.type());
+            type = target == null ? parseLegacyType(parameter.type())
+                    : ApiTypeRef.symbol(new ApiSymbolId("java", target[0] + "." + target[1]));
         }
-        if (rawSimple.equals("Map") && args.size() >= 2) {
-            return "{ [key: " + renderTypeSig(args.get(0)) + "]: " + renderTypeSig(args.get(1)) + " }";
-        }
-        // other parameterized types — fall back to the raw alias
-        return resolveFqn(raw);
+        return TypeScriptClassRenderer.renderTypeRef(type, aliases, true);
     }
 
-    /** Resolve a single FQN (or primitive name) to a TS type. */
-    private String resolveFqn(String fqn) {
-        int dot = fqn.lastIndexOf('.');
-        if (dot < 0) return primitiveName(fqn); // primitive like int / boolean
-        switch (fqn) {
-            case "java.lang.String", "java.lang.Character" -> { return "string"; }
-            case "java.lang.Object" -> { return "any"; }
-            case "java.lang.Boolean" -> { return "boolean"; }
-        }
-        if (isNumberWrapper(fqn)) return "number";
-        return resolveAlias(fqn.substring(0, dot), fqn.substring(dot + 1));
+    private static String renderHandlerReturn(RecipeHandlerMethodEntry method, TypeAliasRegistry aliases) {
+        return method.returnType() == null
+                ? aliases.reference("com.tkisor.nekojs.api.recipe.RecipeJsonBuilder", "$RecipeJsonBuilder")
+                : TypeScriptClassRenderer.renderTypeRef(method.returnType(), aliases, false);
     }
 
-    private static String primitiveName(String name) {
-        return switch (name) {
-            case "int", "long", "short", "byte", "float", "double" -> "number";
-            case "boolean" -> "boolean";
-            case "char" -> "string";
-            case "void" -> "never";
-            default -> "any";
+    /** Older contributors may still supply Java signature strings; only parsing is local, never type rendering. */
+    private static ApiTypeRef parseLegacyType(String signature) {
+        String type = signature.trim();
+        if (type.endsWith("[]")) return ApiTypeRef.array(parseLegacyType(type.substring(0, type.length() - 2)));
+        if (type.startsWith("[")) {
+            String component = type.substring(1);
+            if (component.startsWith("L") && component.endsWith(";")) component = component.substring(1, component.length() - 1);
+            else component = switch (component) {
+                case "Z" -> "boolean"; case "B", "S", "I", "J" -> "int";
+                case "F", "D" -> "float"; case "C" -> "string"; default -> component;
+            };
+            return ApiTypeRef.array(parseLegacyType(component));
+        }
+        int generic = type.indexOf('<');
+        if (generic >= 0) return ApiTypeRef.symbol(new ApiSymbolId("java", type.substring(0, generic)),
+                splitTopLevel(type.substring(generic + 1, type.lastIndexOf('>'))).stream()
+                        .map(RecipeEventDeclarationGenerator::parseLegacyType).toList());
+        return switch (type) {
+            case "void", "java.lang.Void" -> ApiTypeRef.voidType();
+            case "string", "char", "java.lang.String", "java.lang.Character" -> ApiTypeRef.primitive("string");
+            case "boolean", "java.lang.Boolean" -> ApiTypeRef.primitive("boolean");
+            case "byte", "short", "int", "long", "float", "double", "number", "java.lang.Byte", "java.lang.Short",
+                    "java.lang.Integer", "java.lang.Long", "java.lang.Float", "java.lang.Double" -> ApiTypeRef.primitive("number");
+            case "RecipeJsonValue", "json", "object", "java.lang.Object" -> ApiTypeRef.primitive("object");
+            case "any" -> ApiTypeRef.primitive("any");
+            default -> ApiTypeRef.symbol(new ApiSymbolId("java", type));
         };
     }
 
-    private static boolean isNumberWrapper(String fqn) {
-        return fqn.startsWith("java.lang.") && switch (fqn.substring("java.lang.".length())) {
-            case "Integer", "Long", "Short", "Byte", "Float", "Double" -> true;
-            default -> false;
-        };
-    }
-
-    private static boolean isCollectionRaw(String simple) {
-        return switch (simple) {
-            case "List", "Collection", "Iterable", "Set", "Queue", "Deque", "NavigableSet",
-                 "ArrayList", "LinkedList", "HashSet", "LinkedHashSet", "TreeSet",
-                 "Vector", "Stack" -> true;
-            default -> false;
-        };
-    }
-
-    /** Split a comma-separated list at top level (ignoring commas nested in {@code <>}). */
-    private static List<String> splitTopLevel(String s) {
-        List<String> result = new ArrayList<>();
+    private static List<String> splitTopLevel(String signature) {
+        List<String> arguments = new ArrayList<>();
         int depth = 0, start = 0;
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (c == '<') depth++;
-            else if (c == '>') depth--;
-            else if (c == ',' && depth == 0) {
-                result.add(s.substring(start, i).trim());
-                start = i + 1;
+        for (int index = 0; index < signature.length(); index++) {
+            char current = signature.charAt(index);
+            if (current == '<') depth++;
+            else if (current == '>') depth--;
+            else if (current == ',' && depth == 0) {
+                arguments.add(signature.substring(start, index).trim());
+                start = index + 1;
             }
         }
-        result.add(s.substring(start).trim());
-        return result;
-    }
-
-    /** Walk a generic signature and feed every referenced non-basic class to the consumer. */
-    private static void extractFqns(String sig, java.util.function.BiConsumer<String, String> consumer) {
-        int lt = sig.indexOf('<');
-        String head = lt < 0 ? sig : sig.substring(0, lt);
-        int dot = head.lastIndexOf('.');
-        boolean basic = dot < 0                          // primitive
-                || head.equals("java.lang.String") || head.equals("java.lang.Object")
-                || head.equals("java.lang.Boolean") || isNumberWrapper(head);
-        if (!basic && dot > 0) {
-            consumer.accept(head.substring(0, dot), head.substring(dot + 1));
-        }
-        if (lt >= 0) {
-            String inner = sig.substring(lt + 1, sig.lastIndexOf('>'));
-            for (String arg : splitTopLevel(inner)) extractFqns(arg, consumer);
-        }
-    }
-
-    private String mapTypeToTs(String typeName) {
-        String[] pkgType = typeToImport(typeName);
-        if (pkgType != null) return resolveAlias(pkgType[0], pkgType[1]);
-        return switch (typeName) {
-            case "string" -> "string";
-            case "number" -> "number";
-            case "boolean" -> "boolean";
-            case "RecipeJsonValue", "json" -> "object";
-            case "any" -> "any";
-            default -> "$" + typeName + "_";
-        };
+        arguments.add(signature.substring(start).trim());
+        return arguments;
     }
 
     /**

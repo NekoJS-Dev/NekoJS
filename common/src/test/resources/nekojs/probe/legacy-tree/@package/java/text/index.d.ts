@@ -1,6 +1,6 @@
 import { $Serializable } from "java:java/io";
 import { $Cloneable, $StringBuffer } from "java:java/lang";
-import { $Map, $Set } from "java:java/util";
+import { $Map, $Map_, $Set, $Set_ } from "java:java/util";
 
 declare module "java:java/text" {
     export class $Format implements $Serializable, $Cloneable {
@@ -28,15 +28,19 @@ declare module "java:java/text" {
     }
 
     export interface $AttributedCharacterIterator extends $CharacterIterator {
+        get allAttributeKeys(): $Set<$AttributedCharacterIterator$Attribute>;
         getAllAttributeKeys(): $Set<$AttributedCharacterIterator$Attribute>;
+        get attributes(): $Map<$AttributedCharacterIterator$Attribute, unknown>;
         getAttributes(): $Map<$AttributedCharacterIterator$Attribute, unknown>;
+        get runLimit(): number;
+        getRunLimit(): number;
+        get runStart(): number;
+        getRunStart(): number;
         getAttribute(arg0: $AttributedCharacterIterator$Attribute): unknown;
         getRunLimit(arg0: $AttributedCharacterIterator$Attribute): number;
         getRunLimit(arg0: $Set<$AttributedCharacterIterator$Attribute>): number;
-        getRunLimit(): number;
         getRunStart(arg0: $AttributedCharacterIterator$Attribute): number;
         getRunStart(arg0: $Set<$AttributedCharacterIterator$Attribute>): number;
-        getRunStart(): number;
     }
 
     export class $FieldPosition {
@@ -70,12 +74,16 @@ declare module "java:java/text" {
     }
 
     export interface $CharacterIterator extends $Cloneable {
+        get beginIndex(): number;
+        getBeginIndex(): number;
+        get endIndex(): number;
+        getEndIndex(): number;
+        get index(): number;
+        getIndex(): number;
+        set index(value: number);
         clone(): unknown;
         current(): string;
         first(): string;
-        getBeginIndex(): number;
-        getEndIndex(): number;
-        getIndex(): number;
         last(): string;
         next(): string;
         previous(): string;

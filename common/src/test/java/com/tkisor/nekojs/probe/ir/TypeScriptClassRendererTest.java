@@ -348,7 +348,7 @@ class TypeScriptClassRendererTest {
         String out = render(d);
         // 嵌套类名前缀不硬编码：分别校验两个通配符数组实参就位（含分隔逗号与闭合），无参数名泄漏
         assertTrue(out.contains("<any>[], "), "first wildcard array arg missing:\n" + out);
-        assertTrue(out.contains("MemoryModuleType<any>[]>): void"), "second wildcard array arg missing:\n" + out);
+        assertTrue(out.replaceAll("\\s+", "").contains("MemoryModuleType<any>[]>):void"), "second wildcard array arg missing:\n" + out);
     }
 
     @Test
@@ -361,7 +361,7 @@ class TypeScriptClassRendererTest {
         // 嵌套类名前缀不硬编码：校验第一个实参数组闭合后的分隔、varargs 元素保留泛型实参
         assertTrue(out.contains("<any>[], "), "generic pair args incomplete:\n" + out);
         assertFalse(out.contains(", rest:"), "varargs param name must not leak into generic args:\n" + out);
-        assertTrue(out.contains("MemoryModuleType<any>[]): void"),
+        assertTrue(out.replaceAll("\\s+", "").contains("MemoryModuleType<any>[]):void"),
                 "varargs param must keep generic args and render as optional array:\n" + out);
     }
 

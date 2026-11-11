@@ -9,6 +9,7 @@ import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import graal.graalvm.polyglot.proxy.ProxyObject;
 import com.tkisor.nekojs.api.annotation.ScriptInput;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
 import java.util.function.Consumer;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
@@ -43,6 +44,7 @@ public final class PostEffectEventJS implements ProxyObject {
     private final PostEffectCandidatePlan plan;
 
     /** @param plan collection target created by {@link PostEffectDomainOwner}. */
+    @ScriptInternalConstructor
     public PostEffectEventJS(PostEffectCandidatePlan plan) {
         this.plan = plan;
     }

@@ -57,6 +57,10 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     private final SourceMapRegistry sourceMaps;
     private final NekoEsmVirtualModuleRegistry virtualModules;
     private final NekoTrustContext trustContext;
+    private volatile boolean onlyLocalSources = true;
+
+    /** Elevated native hooks cannot be authorized by a generation that prepared remote dependencies. */
+    public boolean onlyLocalSources() { return onlyLocalSources; }
     private final BindingSchemaStore bindingSchema;
     private final CopyOnWriteArrayList<BiConsumer<Path, String>> preparationObservers = new CopyOnWriteArrayList<>();
     private final NekoModulePipelineCache owner;
@@ -707,6 +711,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
             throw NekoModuleError.denied(NekoModuleError.displayPath(path), identity.languageId(), identity.requestedMode(),
                     approval, "module dependency has no valid trust context");
         }
+        if (approval.kind() != NekoTrustApprovedSource.Kind.LOCAL_TRUSTED) onlyLocalSources = false;
         return approval;
     }
 

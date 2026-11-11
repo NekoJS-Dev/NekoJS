@@ -110,7 +110,8 @@ class ManualDeclarationReferencesTest {
         String module = files.get("@package/com/tkisor/nekojs/probe/backend/typescript/index.d.ts");
         assertNotNull(module, "The referenced array element needs its actual Java package module");
         assertTrue(module.contains("class $ManualDeclarationReferencesTest$Box<T>"), module);
-        assertTrue(files.get("@manual/references.d.ts").contains(".$ManualDeclarationReferencesTest$Box<any>[];"));
+        String references = files.get("@manual/references.d.ts");
+        assertTrue(references.contains("type ManualBoxes = (import(\"java:com/tkisor/nekojs/probe/backend/typescript\").$ManualDeclarationReferencesTest$Box<any>)[];"), references);
         Path output = Path.of("build/probe-ts-manual-array-references");
         for (var file : files.entrySet()) {
             Path target = output.resolve(file.getKey());

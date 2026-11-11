@@ -29,6 +29,25 @@ public class DefaultScriptEventBridge implements ScriptEventBridge {
         return rt;
     }
 
+    private java.util.List<com.tkisor.nekojs.api.event.EventGroup> lifecycleEventGroups() {
+        var runtime = pluginRuntime();
+        var groups = runtime.lifecycleEventGroups();
+        // Older runtime adapters may not dispatch newly added default methods.
+        return groups.isEmpty() ? java.util.List.copyOf(runtime.eventGroups().values()) : groups;
+    }
+
+    private java.util.List<com.tkisor.nekojs.api.event.EventBusJS<?, ?>> lifecycleBuses(ScriptType type) {
+        var seen = java.util.Collections.newSetFromMap(
+                new java.util.IdentityHashMap<com.tkisor.nekojs.api.event.EventBusJS<?, ?>, Boolean>());
+        var result = new java.util.ArrayList<com.tkisor.nekojs.api.event.EventBusJS<?, ?>>();
+        for (var group : lifecycleEventGroups()) {
+            for (var holder : group.viewBuses().values()) {
+                if (holder.canApplyOn(type) && seen.add(holder.getBus(type))) result.add(holder.getBus(type));
+            }
+        }
+        return result;
+    }
+
     @Override
     public void bindEvents(Value bindings, ScriptType type) {
         var values = pluginRuntime().eventGroups().values();
@@ -49,8 +68,8 @@ public class DefaultScriptEventBridge implements ScriptEventBridge {
 
     @Override
     public void clearListeners(ScriptType type) {
-        for (var group : pluginRuntime().eventGroups().values()) {
-            group.clearListeners(type);
+        for (var bus : lifecycleBuses(type)) {
+            bus.clearTokens(type);
         }
         ScriptEventRegistry.clearListeners(type);
         if (type == ScriptType.STARTUP) {
@@ -83,8 +102,8 @@ public class DefaultScriptEventBridge implements ScriptEventBridge {
         java.util.List<com.tkisor.nekojs.api.event.EventBusJS.PendingCommit> commits =
                 new java.util.ArrayList<>();
         try {
-            for (var group : pluginRuntime().eventGroups().values()) {
-                commits.addAll(group.preparePendingListeners(type, pending, replaced));
+            for (var bus : lifecycleBuses(type)) {
+                commits.add(bus.preparePendingListeners(type, pending, replaced));
             }
             commits.addAll(ScriptEventRegistry.preparePendingListeners(type, pending, replaced));
             return new ListenerBatch() {
@@ -132,8 +151,8 @@ public class DefaultScriptEventBridge implements ScriptEventBridge {
 
     @Override
     public void clearListeners(ScriptType type, String scriptId) {
-        for (var group : pluginRuntime().eventGroups().values()) {
-            group.clearListeners(type, scriptId);
+        for (var bus : lifecycleBuses(type)) {
+            bus.clearTokens(type, scriptId);
         }
         ScriptEventRegistry.clearListeners(type, scriptId);
         if (type == ScriptType.STARTUP) {
@@ -149,8 +168,8 @@ public class DefaultScriptEventBridge implements ScriptEventBridge {
 
     @Override
     public void clearListenersByPrefix(ScriptType type, String scriptIdPrefix) {
-        for (var group : pluginRuntime().eventGroups().values()) {
-            group.clearListenersByPrefix(type, scriptIdPrefix);
+        for (var bus : lifecycleBuses(type)) {
+            bus.clearTokensByPrefix(type, scriptIdPrefix);
         }
         ScriptEventRegistry.clearListenersByPrefix(type, scriptIdPrefix);
         // 与 clearListeners(type, scriptId) 的 STARTUP 全扫同理：动态事件定义按 targetType

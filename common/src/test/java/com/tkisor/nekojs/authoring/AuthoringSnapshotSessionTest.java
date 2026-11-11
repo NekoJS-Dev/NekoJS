@@ -100,20 +100,20 @@ class AuthoringSnapshotSessionTest {
         Files.writeString(game.resolve(outputDirectory + "/environment.json"), " ".repeat(64 * 1024 + 1));
         assertThrows(java.io.IOException.class, () -> new AuthoringSnapshotSession(game, AuthoringBundle.load()));
     }
-    private void locator(String text) throws Exception {
-        Path file = game.resolve("nekojs/config/ai-location.json");
+    private void configuration(String text) throws Exception {
+        Path file = game.resolve("nekojs/config/ai.toml");
         Files.createDirectories(file.getParent());
         Files.writeString(file, text);
     }
 
-    @Test void locatorSelectsCustomRootAndExplicitOverrideWinsWithoutReadingInvalidLocator() throws Exception {
+    @Test void configurationSelectsCustomRootAndExplicitOverrideWinsWithoutReadingInvalidConfiguration() throws Exception {
         descriptor(false);
         outputDirectory = "custom/AI tools";
         descriptor(true); publish("custom");
-        locator(AuthoringJson.obj("schemaVersion", 1, "directory", outputDirectory).toString());
+        configuration("[output]\ndirectory = '" + outputDirectory + "'\n[http]\nenabled = 'unused invalid runtime setting'\n");
         try (var session = new AuthoringSnapshotSession(game, AuthoringBundle.load())) {
             assertEquals("custom", session.execute("context", new JsonObject()).get("snapshotId").getAsString());
-            locator("invalid locator");
+            configuration("invalid TOML");
             assertEquals("custom", session.execute("context", new JsonObject()).get("snapshotId").getAsString());
         }
         try (var session = new AuthoringSnapshotSession(game, AuthoringBundle.load(), outputDirectory)) {
@@ -122,14 +122,29 @@ class AuthoringSnapshotSessionTest {
         assertFalse(Files.exists(game.resolve("nekojs/config/ai.token")));
     }
 
-    @Test void malformedOrMissingLocatorSelectionNeverFallsBackToValidDefault() throws Exception {
+    @Test void malformedOrMissingConfiguredSelectionNeverFallsBackToValidDefault() throws Exception {
         descriptor(false);
-        for (String invalid : List.of("{}", "[]", "{broken", AuthoringJson.obj("schemaVersion", "1", "directory", outputDirectory).toString(),
-                AuthoringJson.obj("schemaVersion", 2, "directory", outputDirectory).toString(), AuthoringJson.obj("schemaVersion", 1, "directory", "../escape").toString(),
-                AuthoringJson.obj("schemaVersion", 1, "directory", "missing/export").toString(), " ".repeat(4097))) {
-            locator(invalid);
+        for (String invalid : List.of("[broken", "output = 'not a table'", "[output]\ndirectory = true", "[output]\ndirectory = 17", "[output]\ndirectory = ['wrong']",
+                "[output]\ndirectory = ''", "[output]\ndirectory = '../escape'",
+                "[output]\ndirectory = 'missing/export'", " ".repeat(64 * 1024 + 1))) {
+            configuration(invalid);
             assertThrows(java.io.IOException.class, () -> new AuthoringSnapshotSession(game, AuthoringBundle.load()), invalid);
         }
+    }
+
+    @Test void obsoleteLocatorIsIgnoredAndMissingOutputSettingUsesTheDefault() throws Exception {
+        descriptor(false);
+        configuration("[documentation]\nenabled = false\n");
+        Path obsolete = game.resolve("nekojs/config/ai-location.json");
+        Files.writeString(obsolete, "invalid obsolete locator");
+        try (var session = new AuthoringSnapshotSession(game, AuthoringBundle.load())) {
+            assertEquals("disabled", session.execute("context", new JsonObject()).get("indexState").getAsString());
+        }
+        Files.delete(game.resolve("nekojs/config/ai.toml"));
+        try (var session = new AuthoringSnapshotSession(game, AuthoringBundle.load())) {
+            assertEquals("disabled", session.execute("context", new JsonObject()).get("indexState").getAsString());
+        }
+        assertEquals("invalid obsolete locator", Files.readString(obsolete));
     }
 
     @Test void explicitDirectoriesRejectTraversalAndMissingExportsWithoutDiscoveryFallback() throws Exception {
@@ -147,7 +162,7 @@ class AuthoringSnapshotSessionTest {
         assertThrows(java.io.IOException.class, () -> new AuthoringSnapshotSession(game, AuthoringBundle.load()));
     }
 
-    @Test void legacyFallbackRetainsContainedCustomSnapshotsOnlyWithoutDefaultOrLocator() throws Exception {
+    @Test void legacyFallbackRetainsContainedCustomSnapshotsOnlyWithoutDefaultOrConfiguration() throws Exception {
         outputDirectory = "nekojs/ai";
         JsonObject value = descriptor(true);
         value.addProperty("apiSnapshotDirectory", "custom-probe/authoring"); writeDescriptor(value);
@@ -167,7 +182,7 @@ class AuthoringSnapshotSessionTest {
         assertThrows(AuthoringException.class, () -> new AuthoringSnapshotSession(game, AuthoringBundle.load()));
     }
 
-    @Test void symlinkedOverridesLocatorsAndDescriptorChildrenCannotEscapeTheGameOrRoot() throws Exception {
+    @Test void symlinkedOverridesConfigurationAndDescriptorChildrenCannotEscapeTheGameOrRoot() throws Exception {
         Path outside = Files.createTempDirectory("authoring-outside-");
         try {
             Path alias = game.resolve("alias");
@@ -176,12 +191,12 @@ class AuthoringSnapshotSessionTest {
                 org.junit.jupiter.api.Assumptions.abort("Symlink creation is unavailable: " + failure.getMessage());
             }
             assertThrows(java.io.IOException.class, () -> new AuthoringSnapshotSession(game, AuthoringBundle.load(), "alias/missing"));
-            locator(AuthoringJson.obj("schemaVersion", 1, "directory", "alias/missing").toString());
+            configuration("[output]\ndirectory = 'alias/missing'\n");
             assertThrows(java.io.IOException.class, () -> new AuthoringSnapshotSession(game, AuthoringBundle.load()));
-            Files.delete(game.resolve("nekojs/config/ai-location.json"));
-            Files.createSymbolicLink(game.resolve("nekojs/config/ai-location.json"), outside.resolve("missing.json"));
+            Files.delete(game.resolve("nekojs/config/ai.toml"));
+            Files.createSymbolicLink(game.resolve("nekojs/config/ai.toml"), outside.resolve("missing.toml"));
             assertThrows(java.io.IOException.class, () -> new AuthoringSnapshotSession(game, AuthoringBundle.load()));
-            Files.delete(game.resolve("nekojs/config/ai-location.json"));
+            Files.delete(game.resolve("nekojs/config/ai.toml"));
             Path descriptor = game.resolve(outputDirectory + "/environment.json");
             Files.createDirectories(descriptor.getParent());
             Files.createSymbolicLink(descriptor, outside.resolve("missing.json"));

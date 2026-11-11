@@ -194,6 +194,7 @@ public final class ScriptManager implements AutoCloseable {
 
     private volatile RuntimeEnvironment runtime = RuntimeEnvironment.EMPTY;
     private List<ScriptContainer> scripts;
+    private volatile java.util.Map<String, Path> mixinCandidateSources = java.util.Map.of();
     private final java.util.Map<String, com.tkisor.nekojs.core.pack.PackScriptView> executionEntries =
             new java.util.LinkedHashMap<>();
 
@@ -470,6 +471,30 @@ public final class ScriptManager implements AutoCloseable {
     }
 
     // ---- 票 10：候选域计划联合边界 seam ----
+
+    /** Returns only an engine-resolved candidate entry, never a caller-supplied path. */
+    public static Path mixinCandidateSource(Context context) {
+        ScriptManager manager = CONTEXT_TO_MANAGER.get(context);
+        if (manager == null || manager.candidateContext == null || !manager.candidateContext.equals(context)
+                || manager.candidateEnvironment == null) throw new IllegalStateException("[NEKO-4091] Mixin registration requires an executing candidate Context");
+        if (!manager.candidateEnvironment.moduleSession().onlyLocalSources()) throw new IllegalStateException("[NEKO-4091] Mixin registration rejects candidate sessions with remote sources");
+        String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
+        Path source = manager.mixinCandidateSources.get(scriptId);
+        if (source == null) throw new IllegalStateException("[NEKO-4091] Candidate entry source is unavailable: script=" + scriptId);
+        return source;
+    }
+
+    /** Preflight repeats provenance checks after the candidate has loaded all dependencies. */
+    public static boolean mixinCandidateOnlyLocal(Context context) {
+        ScriptManager manager = CONTEXT_TO_MANAGER.get(context);
+        return manager != null && manager.candidateContext != null && manager.candidateContext.equals(context)
+                && manager.candidateEnvironment != null && manager.candidateEnvironment.moduleSession().onlyLocalSources();
+    }
+
+    /** Native interception conservatively bypasses all script callbacks during any candidate transaction. */
+    public static boolean isAnyCandidatePreparing() {
+        return CONTEXT_TO_MANAGER.values().stream().anyMatch(manager -> manager.candidateContext != null);
+    }
 
     /**
      * 候选执行期间的联合计划注册 seam（票 10 AC5）：来源 Context 属于构建中的候选
@@ -801,6 +826,10 @@ public final class ScriptManager implements AutoCloseable {
      * 不受影响。
      */
     public synchronized void loadScripts() {
+        if (scriptType != ScriptType.STARTUP && scriptEventBridge.requiresTransactionalLoad(scriptType)) {
+            reloadScripts();
+            return;
+        }
         // 票 07：同一 ScriptType 的 evaluate/reload/close 单一序列由实例锁承担；
         // 门只判决重入（STARTUP 的 RELOAD 内嵌套 LOAD 放行）、回调内请求与
         // close 优先/已关闭。拒绝时抛结构化失败，不递归、不同步等待自身队列。
@@ -822,8 +851,8 @@ public final class ScriptManager implements AutoCloseable {
     }
 
     private void doLoadScripts() {
-        // Reload progress HUD：首次加载独占会话；被 reloadScripts 嵌套调用时（STARTUP 分支）
-        // 已有活动会话，begin 返回 false，finish 交由外层 reload 负责。
+        // Initial loading owns its progress session; a nested STARTUP load leaves completion
+        // to the surrounding reload when begin reports an existing session.
         final boolean progressOwned = ReloadProgressTracker.begin(scriptType.name, 1);
         try {
             pluginRuntime.fireBeforeScriptsLoaded(scriptType);
@@ -1331,6 +1360,8 @@ public final class ScriptManager implements AutoCloseable {
 
         /** 候选脚本逐个执行；首个触发候选 kill 的脚本被记录用于失败结果的 source location。 */
         private void loadCandidateScripts (List<ScriptContainer> scriptsToLoad, Context context, NekoNodeRuntime nodeRuntime) {
+            mixinCandidateSources = scriptsToLoad.stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
+                    script -> String.valueOf(script.id), script -> script.path));
             if (!prepareScriptsForLoad(scriptsToLoad, context)) {
                 return;
             }
@@ -1749,8 +1780,10 @@ public final class ScriptManager implements AutoCloseable {
 
         private void closeBindings() {
             if (packInstance != null) return;
-            releaseAll(pluginRuntime.bindings(scriptType).values().stream()
-                    .<Runnable>map(binding -> () -> binding.close(scriptType)).toArray(Runnable[]::new));
+            java.util.Set<com.tkisor.nekojs.api.data.Binding> bindings = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+            bindings.addAll(pluginRuntime.bindings(scriptType).values());
+            pluginRuntime.moduleBindings(scriptType).forEach(export -> bindings.add(export.binding()));
+            releaseAll(bindings.stream().<Runnable>map(binding -> () -> binding.close(scriptType)).toArray(Runnable[]::new));
         }
 
         private void releaseAll(Runnable... releases) {

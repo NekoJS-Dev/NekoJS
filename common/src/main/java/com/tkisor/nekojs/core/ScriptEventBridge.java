@@ -19,6 +19,9 @@ public interface ScriptEventBridge {
 
     void clearListeners(ScriptType type);
 
+    /** Native callback routes require candidate admission even for initial script loading. */
+    default boolean requiresTransactionalLoad(ScriptType type) { return false; }
+
     /** Scoped activation requires a bridge that can retain sibling owners. */
     default ListenerBatch preparePackListeners(ScriptType type,
             java.util.List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> pending,

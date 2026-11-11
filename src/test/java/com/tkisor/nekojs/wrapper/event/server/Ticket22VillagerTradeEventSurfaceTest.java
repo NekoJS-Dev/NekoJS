@@ -6,6 +6,8 @@ import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
+import com.tkisor.nekojs.api.villager.VillagerTradeDeclarationEvent;
+import com.tkisor.nekojs.api.villager.VillagerTradeReloadEvent;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.villager.VillagerTradeCandidatePlan;
 import com.tkisor.nekojs.core.villager.VillagerTradeDeclaration;
@@ -65,7 +67,8 @@ class Ticket22VillagerTradeEventSurfaceTest {
 
         EventCatalogEntry declaration = entryOf(entries, "tradeDeclaration").orElseThrow(
                 () -> new AssertionError("ServerEvents.tradeDeclaration missing from the catalog"));
-        assertEquals(VillagerTradeDeclarationEventJS.class, declaration.eventType());
+        assertEquals(VillagerTradeDeclarationEvent.class, declaration.eventType());
+        assertEquals(VillagerTradeDeclarationEventJS.class, ServerEvents.TRADE_DECLARATION.eventType());
         assertEquals(ScriptType.SERVER, declaration.scriptType());
         assertFalse(declaration.cancellable(), "a posted-object declaration bus is not cancellable");
         assertFalse(declaration.dispatchable(), "the declaration bus is not key-dispatched");
@@ -73,7 +76,8 @@ class Ticket22VillagerTradeEventSurfaceTest {
 
         EventCatalogEntry reload = entryOf(entries, "tradeReload").orElseThrow(
                 () -> new AssertionError("ServerEvents.tradeReload missing from the catalog"));
-        assertEquals(VillagerTradeReloadEventJS.class, reload.eventType());
+        assertEquals(VillagerTradeReloadEvent.class, reload.eventType());
+        assertEquals(VillagerTradeReloadEventJS.class, ServerEvents.TRADE_RELOAD.eventType());
         assertEquals(ScriptType.SERVER, reload.scriptType());
         assertFalse(reload.cancellable());
         assertFalse(reload.dispatchable());

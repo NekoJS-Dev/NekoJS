@@ -48,7 +48,7 @@ class PostEffectDeclarationParityTest {
         if (coreType == null) {
             coreType = Class.forName("com.tkisor.nekojs.fabric.FabricCorePlugin");
         }
-        EventGroupRegistry.Impl groups = new EventGroupRegistry.Impl();
+        EventGroupRegistry.Impl groups = new EventGroupRegistry.Impl().scopedTo("nekojs");
         coreType.getMethod("registerClientEvents", EventGroupRegistry.class)
                 .invoke(coreType.getDeclaredConstructor().newInstance(), groups);
         var clientEvents = groups.view().get("ClientEvents");
@@ -67,7 +67,7 @@ class PostEffectDeclarationParityTest {
             }
             return;
         }
-        BindingRegistry.BindingRegistryImpl bindings = new BindingRegistry.BindingRegistryImpl(ScriptType.CLIENT);
+        BindingRegistry.BindingRegistryImpl bindings = new BindingRegistry.BindingRegistryImpl(ScriptType.CLIENT).scopedTo("nekojs");
         pluginType.getMethod("registerBinding", BindingRegistry.class)
                 .invoke(pluginType.getDeclaredConstructor().newInstance(), bindings);
         Binding binding = bindings.viewRegistered().get("PostEffects");

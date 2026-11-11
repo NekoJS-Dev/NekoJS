@@ -1,7 +1,7 @@
 import { $Serializable } from "java:java/io";
 import { $Comparable, $Comparable_, $Enum } from "java:java/lang";
 import { $DayOfWeek, $DayOfWeek_, $Duration, $Instant, $LocalDateTime, $LocalTime, $Month, $Month_, $ZoneOffset } from "java:java/time";
-import { $List } from "java:java/util";
+import { $List, $List_ } from "java:java/util";
 
 declare module "java:java/time/zone" {
     export class $ZoneRules implements $Serializable {
@@ -11,7 +11,13 @@ declare module "java:java/time/zone" {
         getTransitions(): $List<$ZoneOffsetTransition>;
         get fixedOffset(): boolean;
         isFixedOffset(): boolean;
-        static of(arg0: $ZoneOffset, arg1: $ZoneOffset, arg2: ($List<$ZoneOffsetTransition> | ($ZoneOffsetTransition)[]), arg3: ($List<$ZoneOffsetTransition> | ($ZoneOffsetTransition)[]), arg4: ($List<$ZoneOffsetTransitionRule> | ($ZoneOffsetTransitionRule)[])): $ZoneRules;
+        static of(
+            arg0: $ZoneOffset,
+            arg1: $ZoneOffset,
+            arg2: $List_<$ZoneOffsetTransition>,
+            arg3: $List_<$ZoneOffsetTransition>,
+            arg4: $List_<$ZoneOffsetTransitionRule>
+        ): $ZoneRules;
         static of(arg0: $ZoneOffset): $ZoneRules;
         equals(arg0: unknown): boolean;
         getDaylightSavings(arg0: $Instant): $Duration;
@@ -73,7 +79,17 @@ declare module "java:java/time/zone" {
         getTimeDefinition(): $ZoneOffsetTransitionRule$TimeDefinition;
         get midnightEndOfDay(): boolean;
         isMidnightEndOfDay(): boolean;
-        static of(arg0: $Month_, arg1: number, arg2: $DayOfWeek_, arg3: $LocalTime, arg4: boolean, arg5: $ZoneOffsetTransitionRule$TimeDefinition_, arg6: $ZoneOffset, arg7: $ZoneOffset, arg8: $ZoneOffset): $ZoneOffsetTransitionRule;
+        static of(
+            arg0: $Month_,
+            arg1: number,
+            arg2: $DayOfWeek_,
+            arg3: $LocalTime,
+            arg4: boolean,
+            arg5: $ZoneOffsetTransitionRule$TimeDefinition_,
+            arg6: $ZoneOffset,
+            arg7: $ZoneOffset,
+            arg8: $ZoneOffset
+        ): $ZoneOffsetTransitionRule;
         createTransition(arg0: number): $ZoneOffsetTransition;
         equals(arg0: unknown): boolean;
         hashCode(): number;

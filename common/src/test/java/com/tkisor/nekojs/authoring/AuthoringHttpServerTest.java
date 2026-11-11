@@ -222,6 +222,7 @@ class AuthoringHttpServerTest {
         var queued = new java.util.concurrent.atomic.AtomicReference<com.tkisor.nekojs.api.ScriptType>();
         var reloaded = new java.util.concurrent.atomic.AtomicReference<com.tkisor.nekojs.api.ScriptType>();
         try (var runtime = AuthoringRuntime.open(paths, ProbeConfig.defaultConfig())) {
+            assertFalse(Files.exists(paths.config().resolve("ai-location.json")));
             assertTrue(runtime.execute("capabilities", new JsonObject()).getAsJsonObject("liveControls").getAsJsonArray("reloadTypes").isEmpty());
             runtime.installHost(new com.tkisor.nekojs.api.authoring.AuthoringControlHost() {
                 @Override public long epoch() { return serverEpoch.get(); }

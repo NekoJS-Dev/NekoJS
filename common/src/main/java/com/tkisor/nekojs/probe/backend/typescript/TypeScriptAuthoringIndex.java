@@ -78,6 +78,32 @@ final class TypeScriptAuthoringIndex {
                 }
             }
         }
+        for (var publication : context.snapshot().moduleBindings()) {
+            var binding = publication.binding();
+            String path = "@side-only/" + binding.scriptType().name + "/bindings/api-modules.d.ts";
+            JsonObject source = sources.get(path);
+            if (source == null) continue;
+            String id = "module:" + AuthoringJson.hash(publication.moduleId() + ":" + binding.scriptType() + ":" + binding.name());
+            List<String> types = List.of(binding.scriptType().name());
+            symbols.add(AuthoringJson.obj("symbolId", id, "name", binding.name(), "kind", "moduleExport",
+                    "moduleId", publication.moduleId(), "category", publication.category().name(), "owner", publication.owner(),
+                    "scriptTypes", types, "source", source, "staticClass", binding.staticClass(), "coverage", "incomplete",
+                    "incompleteReasons", List.of("Inherited public members are available in the emitted declaration text.")));
+            if (binding.javaType() != null && emitted.containsKey(binding.javaType().getName())) {
+                copyBindingMembers(members, emitted.get(binding.javaType().getName()), id, binding.staticClass(), types,
+                        classSources.get(binding.javaType().getName()));
+            }
+        }
+        for (var publication : context.snapshot().moduleEvents()) {
+            var event = publication.event();
+            String path = "@side-only/" + publication.scriptType().name + "/bindings/api-modules.d.ts";
+            events.add(AuthoringJson.obj("symbolId", "moduleEvent:" + AuthoringJson.hash(publication.moduleId() + ":"
+                            + publication.scriptType() + ":" + event.group() + "." + event.name()),
+                    "name", event.name(), "kind", "event", "group", event.group(), "cancellable", event.cancellable(),
+                    "moduleId", publication.moduleId(), "category", publication.category().name(), "owner", publication.owner(),
+                    "scriptTypes", List.of(publication.scriptType().name()), "source", sources.get(path), "coverage", "incomplete",
+                    "incompleteReasons", List.of("Read the emitted module declaration for its callback signature.")));
+        }
         for (var event : context.snapshot().events()) {
             List<String> types = context.snapshot().scriptTypes().stream().filter(event.scriptType()::test).map(Enum::name).sorted().toList();
             events.add(AuthoringJson.obj("symbolId", "event:" + AuthoringJson.hash(event.group() + ":" + event.name() + ":" + String.join(",", types)),

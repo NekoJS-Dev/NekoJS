@@ -27,10 +27,10 @@ import net.minecraft.server.level.ServerLevel;
 /**
  * 方块事件面的 fabric 桥 v2：portalSpawn / neighborNotify / farmlandTrample /
  * placed / entityPlaced / fluidPlaced / randomTick / blockEntityTick
- * （NeoForge 侧由 {@code NeoForgeBlockEvents} 直传原生事件，fabric 无对应
- * fabric-api 回调，按任务批次以 mixin 接入）。
+ * Native NeoForge counterparts are declared in that platform's BlockEvents implementation.
+ * Fabric uses mixins where no Fabric API callback exists.
  *
- * <p>总线声明在**本类**、注册进共享树 {@link BlockEvents} 的 {@code GROUP}
+ * <p>Buses declared here extend the Fabric {@link BlockEvents} {@code GROUP}
  * （与 broken 及 v1 的 rightClicked/leftClicked 同名合并），按 Block 分发
  * （与 NeoForge 侧 {@code dispatchByBlock} 的 {@code state.getBlock()} 键一致）：
  * <ul>

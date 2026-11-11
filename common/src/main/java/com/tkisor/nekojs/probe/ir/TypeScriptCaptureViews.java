@@ -162,7 +162,11 @@ final class TypeScriptCaptureViews {
         if (raw != null && aliases.getRegisteredAlias(raw.getName()) != null) return List.of(baseline);
         String carrier = carrier(slot.sourceType, aliases, packageName);
         if (carrier != null) {
-            String nativeType = TypeScriptClassRenderer.renderTypeRef(TypeReflector.toRef(slot.sourceType), aliases, false);
+            ApiTypeRef source = TypeReflector.toRef(slot.sourceType);
+            String projected = aliases.renderCollectionInputWithHost(fqn(source), carrier, source.arguments().stream()
+                    .map(argument -> TypeScriptClassRenderer.renderTypeRef(argument, aliases, true)).toArray(String[]::new));
+            if (projected != null) return List.of(projected);
+            String nativeType = TypeScriptClassRenderer.renderTypeRef(source, aliases, false);
             return List.of(baseline.replace(nativeType, carrier));
         }
         ApiTypeRef declared = slot.ref;

@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.authoring;
 
+import com.electronwill.nightconfig.core.UnmodifiableConfig;
+import com.electronwill.nightconfig.toml.TomlParser;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -17,6 +20,25 @@ public final class AuthoringPaths {
     private AuthoringPaths(Path gameDirectory, Path root) {
         this.gameDirectory = gameDirectory;
         this.root = root;
+    }
+
+    /** Reads only the output selection; parsing never creates configuration or enables runtime services. */
+    static String readConfiguredDirectory(Path file) throws IOException {
+        try {
+            return configuredDirectory(new TomlParser().parse(AuthoringSnapshotFiles.readBounded(file, 64 * 1024)));
+        } catch (RuntimeException failure) {
+            throw new IOException("[NEKO-1019] Invalid authoring output configuration in ai.toml.", failure);
+        }
+    }
+
+    static String configuredDirectory(UnmodifiableConfig config) throws IOException {
+        if (config.contains("output") && !(config.getRaw("output") instanceof UnmodifiableConfig)) {
+            throw new IOException("[NEKO-1019] Authoring output must be a TOML table.");
+        }
+        Object value = config.getOrElse("output.directory", DEFAULT_DIRECTORY);
+        if (!(value instanceof String directory)) throw invalidDirectory();
+        validateRelativeDirectory(directory);
+        return directory;
     }
 
     /** Resolves an explicit portable slash-separated directory; no default or global path state is consulted. */

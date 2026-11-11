@@ -1,7 +1,7 @@
 import { $Serializable } from "java:java/io";
 import { $Class } from "java:java/lang";
 import { $AccessControlContext, $Principal, $Principal_, $PrivilegedAction, $PrivilegedAction_, $PrivilegedExceptionAction, $PrivilegedExceptionAction_ } from "java:java/security";
-import { $Set } from "java:java/util";
+import { $Set, $Set_ } from "java:java/util";
 import { $Callable, $Callable_ } from "java:java/util/concurrent";
 
 declare module "java:javax/security/auth" {
@@ -19,7 +19,11 @@ declare module "java:javax/security/auth" {
         static callAs<T>(arg0: $Subject, arg1: $Callable_<T, T>): T;
         static current(): $Subject;
         static doAsPrivileged<T>(arg0: $Subject, arg1: $PrivilegedAction_<T, T>, arg2: $AccessControlContext): T;
-        static doAsPrivileged<T>(arg0: $Subject, arg1: $PrivilegedExceptionAction_<T, T>, arg2: $AccessControlContext): T;
+        static doAsPrivileged<T>(
+            arg0: $Subject,
+            arg1: $PrivilegedExceptionAction_<T, T>,
+            arg2: $AccessControlContext
+        ): T;
         static doAs<T>(arg0: $Subject, arg1: $PrivilegedAction_<T, T>): T;
         static doAs<T>(arg0: $Subject, arg1: $PrivilegedExceptionAction_<T, T>): T;
         static getSubject(arg0: $AccessControlContext): $Subject;

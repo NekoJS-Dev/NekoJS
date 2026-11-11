@@ -2,7 +2,7 @@ import { $InputStream, $Reader, $Serializable } from "java:java/io";
 import { $ClassLoader } from "java:java/lang";
 import { $URL } from "java:java/net";
 import { $CertPath, $Certificate } from "java:java/security/cert";
-import { $Collection, $Date, $Enumeration, $List, $Map, $Map$Entry, $Properties, $Set } from "java:java/util";
+import { $Collection, $Collection_, $Date, $Enumeration, $List, $List_, $Map, $Map$Entry, $Map_, $Properties, $Set, $Set_ } from "java:java/util";
 import { $BiConsumer, $BiConsumer_, $BiFunction, $BiFunction_, $Function, $Function_ } from "java:java/util/function";
 import { $Stream } from "java:java/util/stream";
 import { $Subject } from "java:javax/security/auth";
@@ -52,8 +52,9 @@ declare module "java:java/security" {
     }
 
     export interface $Principal {
-        equals(arg0: unknown): boolean;
+        get name(): string;
         getName(): string;
+        equals(arg0: unknown): boolean;
         hashCode(): number;
         implies(arg0: $Subject): boolean;
         toString(): string;
@@ -134,7 +135,7 @@ declare module "java:java/security" {
         load(arg0: $InputStream): void;
         load(arg0: $Reader): void;
         merge(arg0: unknown, arg1: unknown, arg2: $BiFunction_<unknown, unknown, any, unknown, unknown, any>): unknown;
-        putAll(arg0: ($Map<any, any> | (([any] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<any, PropertyKey>, any>>))): void;
+        putAll(arg0: $Map_<any, any>): void;
         putIfAbsent(arg0: unknown, arg1: unknown): unknown;
         put(arg0: unknown, arg1: unknown): unknown;
         remove(arg0: unknown, arg1: unknown): boolean;
@@ -153,7 +154,14 @@ declare module "java:java/security" {
     };
 
     export class $Provider$Service {
-        constructor(arg0: $Provider, arg1: string, arg2: string, arg3: string, arg4: ($List<string> | (string)[]), arg5: ($Map<string, string> | (([string] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<string, PropertyKey>, string>>)));
+        constructor(
+            arg0: $Provider,
+            arg1: string,
+            arg2: string,
+            arg3: string,
+            arg4: $List_<string>,
+            arg5: $Map_<string, string>
+        );
         get algorithm(): string;
         getAlgorithm(): string;
         get className(): string;
@@ -169,8 +177,11 @@ declare module "java:java/security" {
     }
 
     export interface $Key extends $Serializable {
+        get algorithm(): string;
         getAlgorithm(): string;
+        get encoded(): number[];
         getEncoded(): number[];
+        get format(): string;
         getFormat(): string;
     }
     export const $Key: {
@@ -178,7 +189,10 @@ declare module "java:java/security" {
     };
 
     export class $AccessControlContext {
-        constructor(arg0: $AccessControlContext, arg1: $DomainCombiner_<$ProtectionDomain[], $ProtectionDomain[], $ProtectionDomain[]>);
+        constructor(
+            arg0: $AccessControlContext,
+            arg1: $DomainCombiner_<$ProtectionDomain[], $ProtectionDomain[], $ProtectionDomain[]>
+        );
         constructor(arg0: $ProtectionDomain[]);
         get domainCombiner(): $DomainCombiner;
         getDomainCombiner(): $DomainCombiner;

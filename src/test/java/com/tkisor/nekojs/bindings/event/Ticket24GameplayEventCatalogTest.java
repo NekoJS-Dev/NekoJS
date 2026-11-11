@@ -100,7 +100,7 @@ class Ticket24GameplayEventCatalogTest {
     private static Map<String, EventGroup> registeredGroups() {
         // production init order: the cancellability predicate precedes any family class-init
         EventBusJS.setExternalCancellabilityPredicate(ICancellableEvent.class::isAssignableFrom);
-        EventGroupRegistry registry = new EventGroupRegistry.Impl();
+        EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         new NekoJSCorePlugin().registerEvents(registry);
         new NekoJSCorePlugin().registerClientEvents(registry);
         return registry.view();

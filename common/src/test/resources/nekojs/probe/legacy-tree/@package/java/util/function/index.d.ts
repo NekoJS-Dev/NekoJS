@@ -44,6 +44,7 @@ declare module "java:java/util/function" {
     }
 
     export interface $DoubleSupplier {
+        get asDouble(): number;
         getAsDouble(): number;
     }
 
@@ -94,6 +95,7 @@ declare module "java:java/util/function" {
     }
 
     export interface $IntSupplier {
+        get asInt(): number;
         getAsInt(): number;
     }
 
@@ -135,6 +137,7 @@ declare module "java:java/util/function" {
     }
 
     export interface $LongSupplier {
+        get asLong(): number;
         getAsLong(): number;
     }
 

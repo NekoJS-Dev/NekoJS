@@ -96,6 +96,11 @@ public class RecipeJsonBuilder implements RecipeBuilder {
         return this;
     }
 
+    @com.tkisor.nekojs.api.annotation.HideFromJS
+    public RecipeBuilderSession session() {
+        return event.builderSession(() -> currentId, json);
+    }
+
     public JsonObject json() {
         return json;
     }

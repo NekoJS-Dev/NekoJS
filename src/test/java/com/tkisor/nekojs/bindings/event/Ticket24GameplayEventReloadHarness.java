@@ -54,7 +54,6 @@ final class Ticket24GameplayEventReloadHarness implements AutoCloseable {
         // production init order: predicate first, family class-init afterwards
         EventBusJS.setExternalCancellabilityPredicate(
                 net.neoforged.bus.api.ICancellableEvent.class::isAssignableFrom);
-        NeoForgeBlockEvents.bootstrap();
         groups.put("BlockEvents", BlockEvents.GROUP);
         groups.put("ItemEvents", ItemEvents.GROUP);
         groups.put("LevelEvents", LevelEvents.GROUP);

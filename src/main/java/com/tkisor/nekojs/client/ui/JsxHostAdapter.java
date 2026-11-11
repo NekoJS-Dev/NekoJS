@@ -3,6 +3,7 @@ package com.tkisor.nekojs.client.ui;
 
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.annotation.ScriptOutput;
 import com.tkisor.nekojs.api.event.ScriptErrorReporter;
 import com.tkisor.nekojs.api.ui.InspectorScreenshot;
 import com.tkisor.nekojs.api.ui.InspectorSnapshot;
@@ -244,10 +245,12 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
      * {@link TextLayouter} over this client's font, so the runtime never guesses widths.
      * Wrap-enabled and truncation-off match the runtime's intrinsic-size contract.
      */
+    @ScriptOutput("import('java:java/util').$Map<string, unknown> & { readonly width: number; readonly height: number }")
     public Map<String, Object> measureText(String text, double fontSize, int maxWidth) {
         return measureText(text, fontSize, maxWidth, null);
     }
 
+    @ScriptOutput("import('java:java/util').$Map<string, unknown> & { readonly width: number; readonly height: number }")
     public Map<String, Object> measureText(String text, double fontSize, int maxWidth, String font) {
         requireUsable("measure text");
         TextLayout layout = textLayouts.layout(selectedFont(font), font, text, fontSize, maxWidth,
@@ -297,6 +300,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     }
 
     /** Returns the current logical viewport used when the common root is created. */
+    @ScriptOutput("import('java:java/util').$Map<string, unknown> & import('nekojs/jsx-runtime').NekoUiViewportInput")
     public Map<String, Object> viewport() {
         int width = viewportWidth > 0 ? viewportWidth : minecraft.getWindow().getGuiScaledWidth();
         int height = viewportHeight > 0 ? viewportHeight : minecraft.getWindow().getGuiScaledHeight();

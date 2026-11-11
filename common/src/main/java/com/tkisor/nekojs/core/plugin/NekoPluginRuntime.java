@@ -179,8 +179,24 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         return bindings.getOrDefault(type, Map.of());
     }
 
+    @Override
+    public List<com.tkisor.nekojs.api.data.ModuleBinding> moduleBindings(ScriptType type) {
+        if (!(bindings instanceof BindingsPoint.Snapshot snapshot)) return List.of();
+        return snapshot.modules().stream().filter(entry -> entry.scriptType() == type).toList();
+    }
+
     public List<JSTypeAdapter<?>> adapters() {
         return adapters;
+    }
+
+    @Override
+    public List<com.tkisor.nekojs.api.event.ModuleEventGroup> moduleEventGroups() {
+        return eventGroups instanceof EventsPoint.Snapshot snapshot ? snapshot.modules() : List.of();
+    }
+
+    @Override
+    public List<EventGroup> lifecycleEventGroups() {
+        return eventGroups instanceof EventsPoint.Snapshot snapshot ? snapshot.sources() : List.copyOf(eventGroups.values());
     }
 
     public Map<String, EventGroup> eventGroups() {

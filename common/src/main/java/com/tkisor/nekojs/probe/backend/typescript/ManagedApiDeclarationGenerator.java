@@ -8,6 +8,8 @@ import com.tkisor.nekojs.api.surface.ApiSurfaceSnapshot;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import com.tkisor.nekojs.probe.types.TypeScriptDeclarationFormatter;
+import com.tkisor.nekojs.probe.types.TypeScriptTypeExpressions;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -98,16 +100,20 @@ public final class ManagedApiDeclarationGenerator {
             }
 
             if (sigs.size() == 1) {
-                ApiSignature sig = sigs.getFirst();
-                sb.append("    const ").append(name).append(": ").append(renderSignature(sig)).append(";\n");
+                appendGlobalSignature(sb, 4, "const " + name + ": ", sigs.getFirst(), ";");
             } else {
-                // Multiple overloads: render as intersection of parenthesized function types
-                sb.append("    const ").append(name).append(": ");
-                for (int i = 0; i < sigs.size(); i++) {
-                    if (i > 0) sb.append(" & ");
-                    sb.append("(").append(renderSignature(sigs.get(i))).append(")");
+                // Keep short intersections intact; format long overloads using their structured parameter lists.
+                String declaration = "const " + name + ": " + String.join(" & ", sigs.stream()
+                        .map(signature -> "(" + renderSignature(signature) + ")").toList()) + ";";
+                if (4 + declaration.length() <= TypeScriptDeclarationFormatter.DEFAULT_MAX_WIDTH) {
+                    sb.append("    ").append(declaration).append('\n');
+                } else {
+                    sb.append("    const ").append(name).append(":\n");
+                    for (int index = 0; index < sigs.size(); index++) {
+                        appendGlobalSignature(sb, 8, "(", sigs.get(index),
+                                index + 1 < sigs.size() ? ") &" : ");");
+                    }
                 }
-                sb.append(";\n");
             }
         }
 
@@ -115,13 +121,20 @@ public final class ManagedApiDeclarationGenerator {
         return sb.toString();
     }
 
+    private static void appendGlobalSignature(StringBuilder sb, int indent, String prefix, ApiSignature signature,
+                                              String tail) {
+        String head = prefix + (signature.isConstructor() ? "{ new " : "");
+        String suffix = (signature.isConstructor() ? ": " : " => ") + renderTypeRef(signature.returnType())
+                + (signature.isConstructor() ? " }" : "") + tail;
+        TypeScriptDeclarationFormatter.appendCallable(sb, indent, head, renderedParameters(signature.parameters()), suffix);
+    }
+
     private static void renderMember(StringBuilder sb, ApiSymbol symbol) {
         String qualifiedName = symbol.id().qualifiedName();
         String memberName = qualifiedName.substring(qualifiedName.lastIndexOf('.') + 1);
         for (ApiSignature signature : symbol.signatures()) {
-            sb.append("        ").append(memberName).append('(');
-            renderParameters(sb, signature.parameters());
-            sb.append("): ").append(renderTypeRef(signature.returnType())).append(";\n");
+            TypeScriptDeclarationFormatter.appendCallable(sb, 8, memberName, renderedParameters(signature.parameters()),
+                    ": " + renderTypeRef(signature.returnType()) + ";");
         }
     }
 
@@ -152,24 +165,20 @@ public final class ManagedApiDeclarationGenerator {
     }
 
     private static void renderParameters(StringBuilder sb, List<ApiParameter> params) {
-        for (int i = 0; i < params.size(); i++) {
-            if (i > 0) sb.append(", ");
-            ApiParameter p = params.get(i);
-            if (p.varargs()) {
-                sb.append("...");
-                sb.append(p.name());
-                sb.append(": ");
-                if (p.type().kind() == ApiTypeRef.Kind.UNION) sb.append('(');
-                sb.append(renderTypeRef(p.type()));
-                if (p.type().kind() == ApiTypeRef.Kind.UNION) sb.append(')');
-                sb.append("[]");
+        sb.append(String.join(", ", renderedParameters(params)));
+    }
+
+    private static List<String> renderedParameters(List<ApiParameter> params) {
+        List<String> rendered = new ArrayList<>();
+        for (ApiParameter parameter : params) {
+            String type = renderTypeRef(parameter.type());
+            if (parameter.varargs()) {
+                rendered.add("..." + parameter.name() + ": " + TypeScriptTypeExpressions.arrayOf(type));
             } else {
-                sb.append(p.name());
-                if (p.optional()) sb.append("?");
-                sb.append(": ");
-                sb.append(renderTypeRef(p.type()));
+                rendered.add(parameter.name() + (parameter.optional() ? "?" : "") + ": " + type);
             }
         }
+        return rendered;
     }
 
     public static String renderTypeRef(ApiTypeRef type) {
@@ -181,11 +190,7 @@ public final class ManagedApiDeclarationGenerator {
                 int colonIdx = symName.indexOf(':');
                 yield "$" + (colonIdx >= 0 ? symName.substring(colonIdx + 1) : symName);
             }
-            case ARRAY -> {
-                ApiTypeRef element = type.arguments().getFirst();
-                String rendered = renderTypeRef(element);
-                yield element.kind() == ApiTypeRef.Kind.UNION ? "(" + rendered + ")[]" : rendered + "[]";
-            }
+            case ARRAY -> TypeScriptTypeExpressions.arrayOf(renderTypeRef(type.arguments().getFirst()));
             case UNION -> {
                 List<String> members = new ArrayList<>();
                 for (ApiTypeRef arg : type.arguments()) {

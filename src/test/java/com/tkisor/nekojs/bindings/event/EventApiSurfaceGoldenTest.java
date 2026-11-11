@@ -13,20 +13,9 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 /**
- * **脚本 API 表面 golden**：钉住 {@code BlockEvents} 命名空间对脚本可见的成员集合。
- *
- * <p>为什么需要它：SPI 抽取（共享声明 + 加载器适配）会改变字节码，所以"字节码逐字不变"
- * 对被重构的文件不再是正确的不变量。真正该守的不变量是**脚本看到的东西没变**——
- * 这正是本测试。它比字节码比对更贴近用户，且能抓到字节码抓不到的一类 bug：
- *
- * <p>典型场景：把 {@code GROUP} 搬到共享层后，{@code registry.register(GROUP)} 不再靠类
- * 初始化副作用登记 NeoForge 适配层的总线，而 {@code register} 之后组会 {@code freeze()}，
- * 于是 {@code randomTick} 静默消失（脚本报 {@code Binding 'BlockEvents' has no member
- * 'randomTick'}）。字节码比对全绿，只有真机才发现。本测试把这个场景变成 {@code check} 里
- * 的秒级断言：它按**生产顺序**（先 bootstrap 适配层、再冻结组）构造，然后比对成员集合。
- *
- * <p>golden 放在各节点的 {@code src/test/resources}（26.x 多一个 26-only 的
- * {@code modification}），改动 API 时更新对应 golden 并在 diff 里说明。
+ * Pins the script-visible block event members independently of platform source placement.
+ * Reading BlockEvents.GROUP initializes the complete native group and its bridge before freezing.
+ * Node-local goldens retain the 26.x-only modification event and the legacy absence of that event.
  */
 class EventApiSurfaceGoldenTest {
 
@@ -34,14 +23,13 @@ class EventApiSurfaceGoldenTest {
 
     @Test
     void blockEventsSurfaceMatchesGolden() throws IOException {
-        // 生产顺序：适配层先登记总线，随后组被冻结（顺序反了会静默丢事件——见类注释）。
+        // Install the platform predicate before the complete event family initializes.
         // ticket 24: cancellability predicate must also precede the first family class-init
         // (mirrors NekoJSMod's constructor calling NeoForgeRuntimeBootstrap.setup() first);
         // without it this test would freeze every cancellable family bus as non-cancellable
         // for the whole shared test JVM.
         com.tkisor.nekojs.api.event.EventBusJS.setExternalCancellabilityPredicate(
                 net.neoforged.bus.api.ICancellableEvent.class::isAssignableFrom);
-        NeoForgeBlockEvents.bootstrap();
         EventGroup group = BlockEvents.GROUP;
         group.freeze();
 

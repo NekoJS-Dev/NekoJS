@@ -1,6 +1,6 @@
 import { $CharSequence, $Comparable, $Comparable_ } from "java:java/lang";
 import { $ByteBuffer, $CharBuffer } from "java:java/nio";
-import { $Locale, $Set, $SortedMap } from "java:java/util";
+import { $Locale, $Set, $Set_, $SortedMap } from "java:java/util";
 
 declare module "java:java/nio/charset" {
     export class $Charset implements $Comparable<$Charset> {

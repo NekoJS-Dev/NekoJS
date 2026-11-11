@@ -295,6 +295,8 @@ public final class IndexFileGenerator {
     private Set<String> exportedSymbols(String fqn) {
         Set<String> names = new LinkedHashSet<>();
         names.add("$" + fqn.substring(fqn.lastIndexOf('.') + 1));
+        String collectionInput = TypeAliasRegistry.collectionInputAlias(fqn);
+        if (collectionInput != null) names.add(collectionInput);
         AdapterAliasGenerator.AdapterAlias adapter = adapterAliasGenerator.getAlias(fqn);
         if (adapter != null) names.add(adapter.aliasName());
         TypeAliasRegistry.FunctionalInterfaceAlias functional = functionalInterfaceAliasGenerator.getAlias(fqn);
@@ -377,9 +379,7 @@ public final class IndexFileGenerator {
 
         // 需要别名的类型：(完整名, 类型参数数量, 别名模板)
         // 别名模板中 {0} = 第一个类型参数, {1} = 第二个类型参数
-        String alias = switch (fullName) {
-            case "java.util.List", "java.util.Collection", "java.util.Set", "java.lang.Iterable",
-                 "java.util.Map" -> "COLLECTION_INPUT";
+        String alias = TypeAliasRegistry.collectionInputAlias(fullName) != null ? "COLLECTION_INPUT" : switch (fullName) {
             // Native List/Collection/Map conversions do not extend to concrete classes or subinterfaces.
             case "java.util.ArrayList", "java.util.LinkedList", "java.util.SequencedCollection",
                  "java.util.HashSet", "java.util.TreeSet", "java.util.LinkedHashSet", "java.util.SequencedSet",
@@ -434,7 +434,9 @@ public final class IndexFileGenerator {
             result = result.replace("{" + i + "}", typeParams[i].getName());
         }
 
-        return "    export type $" + simpleName + "_<" + paramJoiner + "> = " + result + ";\n";
+        String inputName = TypeAliasRegistry.collectionInputAlias(fullName);
+        return "    export type " + (inputName == null ? "$" + simpleName + "_" : inputName)
+                + "<" + paramJoiner + "> = " + result + ";\n";
     }
 
     // ------------------------------------------------------------------

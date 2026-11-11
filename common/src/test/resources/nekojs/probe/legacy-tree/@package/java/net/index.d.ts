@@ -1,7 +1,7 @@
 import { $InputStream, $OutputStream, $Serializable } from "java:java/io";
 import { $Class, $Comparable, $Comparable_, $Enum } from "java:java/lang";
 import { $Permission } from "java:java/security";
-import { $List, $Map } from "java:java/util";
+import { $List, $List_, $Map, $Map_ } from "java:java/util";
 
 declare module "java:java/net" {
     export class $Proxy {

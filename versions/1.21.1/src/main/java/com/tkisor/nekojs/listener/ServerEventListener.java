@@ -62,14 +62,10 @@ public class ServerEventListener {
         var server = event.getServer();
         activateWorldPacks(server);
         mountScriptPackData(server);
-        // 物品属性修改（票 39 收口）：初始 generation 的收集点——active 总线监听器产出声明，
-        // domain owner preflight 通过后恢复基线并应用完整计划（不通过 → 整批 blocked 保持既有值；
-        // 1.21.1 无 block 半边）。SERVER 事务 reload 的重放在 DOMAIN_PLAN 阶段联合应用。
-        // 方块属性修改：26.x 侧同位置由同一 owner 覆盖 BlockEvents.modification；1.21.1 无
-        // BlockBehaviour.Properties 修改面与该总线，本节点不触发（NeoForgeBlockEvents 同款
-        // 口径），故无对应声明面——重新提取孪生文件时须保持这种缺席（提取产物若含 26.x
-        // 专属符号会破坏本节点编译，见 baseline twin-reextract-audit）。
-        // Dynamic registration is unavailable on this node; source re-extraction must preserve that absence.
+        // Active item listeners collect the initial generation plan; the domain owner preflights
+        // the full batch before restoring baselines and applying changes. Transactional SERVER
+        // reload replays this plan in DOMAIN_PLAN. The block property/modification surface is
+        // absent on 1.21.1, as is dynamic registration; node re-extraction must preserve both gaps.
         com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner modificationDomain = modificationDomain();
         if (modificationDomain != null) {
             modificationDomain.applyInitialPlan(server);
@@ -153,6 +149,7 @@ public class ServerEventListener {
         if (villagerTradeDomain != null) {
             villagerTradeDomain.clearServer();
         }
+        if (runtimeRoot != null) runtimeRoot.mixins().clearCallbacks();
         if (removed.isEmpty()) return;
         runtimeRoot.clearWorldPackListeners(ScriptType.SERVER, removed);
         if (com.tkisor.nekojs.platform.Platform.isClient()) {

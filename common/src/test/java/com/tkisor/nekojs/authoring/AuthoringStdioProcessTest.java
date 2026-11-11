@@ -40,7 +40,7 @@ class AuthoringStdioProcessTest {
     private static JsonObject structured(JsonObject reply) { return reply.getAsJsonObject("result").getAsJsonObject("structuredContent"); }
 
     @ParameterizedTest
-    @ValueSource(strings = {"default", "locator", "override"})
+    @ValueSource(strings = {"default", "configuration", "override"})
     void realJarRunsWithoutGameClasspathAndStdoutContainsOnlyMcpResponses(String discovery) throws Exception {
         Path game = directory.resolve("game with spaces");
         String aiDirectory = discovery.equals("default") ? AuthoringPaths.DEFAULT_DIRECTORY : "custom/AI tools";
@@ -53,12 +53,12 @@ class AuthoringStdioProcessTest {
         JsonObject snapshot = AuthoringQueryTest.fixture("s1", List.of(AuthoringQueryTest.member("overload", "convert", "string", "number")));
         snapshot.addProperty("environmentId", environmentId);
         AuthoringSnapshotFiles.publish(game.resolve(aiDirectory + "/snapshots"), snapshot);
-        if (discovery.equals("locator")) {
-            Path locator = game.resolve("nekojs/config/ai-location.json");
-            Files.createDirectories(locator.getParent());
-            Files.writeString(locator, AuthoringJson.obj("schemaVersion", 1, "directory", aiDirectory).toString());
-            Files.writeString(locator.resolveSibling("ai.toml"), "not valid runtime configuration");
-            Files.writeString(locator.resolveSibling("ai.token"), "offline-must-not-relay-this-token");
+        if (!discovery.equals("default")) {
+            Path config = game.resolve("nekojs/config/ai.toml");
+            Files.createDirectories(config.getParent());
+            Files.writeString(config, discovery.equals("override") ? "invalid TOML"
+                    : "[output]\ndirectory = '" + aiDirectory + "'\n[mcp]\nenabled = true\n");
+            Files.writeString(config.resolveSibling("ai.token"), "offline-must-not-relay-this-token");
         }
         Map<String, String> before = files(game);
         JsonObject query = AuthoringQueryTest.request("members", null);
@@ -78,18 +78,27 @@ class AuthoringStdioProcessTest {
         assertEquals("stdio", structured(replies.get(1)).get("transport").getAsString());
         assertEquals("overload", structured(replies.get(2)).getAsJsonArray("items").get(0).getAsJsonObject().get("symbolId").getAsString());
         assertEquals(before, files(game), "Offline discovery must not modify any exported or configuration file.");
-        if (!discovery.equals("locator")) assertFalse(Files.exists(game.resolve("nekojs/config")));
+        if (discovery.equals("default")) assertFalse(Files.exists(game.resolve("nekojs/config")));
+        assertFalse(Files.exists(game.resolve("nekojs/config/ai-location.json")));
         assertFalse(Files.exists(game.resolve(aiDirectory + "/connection.json")));
         try (JarFile jar = new JarFile(System.getProperty("nekojs.authoring.stdio.jar"))) {
             assertEquals("com.tkisor.nekojs.authoring.AuthoringStdioMain", jar.getManifest().getMainAttributes().getValue("Main-Class"));
+            assertEquals("true", jar.getManifest().getMainAttributes().getValue("Multi-Release"));
             assertNotNull(jar.getEntry("com/google/gson/Gson.class"));
+            assertNotNull(jar.getEntry("com/electronwill/nightconfig/toml/TomlParser.class"));
+            assertNotNull(jar.getEntry("META-INF/licenses/night-config/LICENSE.txt"));
+            assertNotNull(jar.getEntry("META-INF/licenses/night-config/NOTICE.txt"));
             assertNotNull(jar.getEntry("com/tkisor/nekojs/authoring/AuthoringLocator.class"));
             assertNotNull(jar.getEntry("com/tkisor/nekojs/authoring/AuthoringPaths.class"));
             assertNotNull(jar.getEntry("nekojs/authoring/manifest.json"));
             assertNull(jar.getEntry("com/tkisor/nekojs/NekoJS.class"));
             assertNull(jar.getEntry("com/tkisor/nekojs/authoring/AuthoringRuntime.class"));
             assertNull(jar.getEntry("com/tkisor/nekojs/authoring/AuthoringHttpServer.class"));
-            assertTrue(jar.stream().filter(entry -> entry.getName().endsWith(".class")).allMatch(entry -> entry.getName().startsWith("com/google/gson/") || entry.getName().startsWith("com/google/errorprone/annotations/") || entry.getName().startsWith("com/tkisor/nekojs/authoring/")));
+            assertNull(jar.getEntry("com/tkisor/nekojs/authoring/AuthoringConfig.class"));
+            assertTrue(jar.stream().filter(entry -> entry.getName().endsWith(".class"))
+                    .map(entry -> entry.getName().replaceFirst("^META-INF/versions/[0-9]+/", ""))
+                    .allMatch(name -> name.startsWith("com/google/gson/") || name.startsWith("com/google/errorprone/annotations/")
+                            || name.startsWith("com/electronwill/nightconfig/") || name.startsWith("com/tkisor/nekojs/authoring/")));
         }
     }
 
@@ -104,7 +113,8 @@ class AuthoringStdioProcessTest {
     @Test void helpAndInvalidStartupNeverWriteToProtocolStdout() throws Exception {
         Result help = launch("", "--help");
         assertEquals(0, help.exit()); assertEquals("", help.output()); assertTrue(help.errors().contains("--game-dir"));
-        assertTrue(help.errors().contains("--ai-dir")); assertTrue(help.errors().contains("ai-location.json"));
+        assertTrue(help.errors().contains("--ai-dir")); assertTrue(help.errors().contains("ai.toml"));
+        assertFalse(help.errors().contains("ai-location.json"));
         assertTrue(help.errors().contains(AuthoringPaths.DEFAULT_DIRECTORY));
         Result missing = launch("");
         assertEquals(2, missing.exit()); assertEquals("", missing.output()); assertTrue(missing.errors().contains("NEKO-4055"));
@@ -122,11 +132,11 @@ class AuthoringStdioProcessTest {
         assertFalse(Files.exists(directory.resolve("nekojs")));
     }
 
-    @Test void escapingOverrideAndLocatorAreRejectedWithoutWrites() throws Exception {
+    @Test void escapingOverrideAndConfigurationAreRejectedWithoutWrites() throws Exception {
         Path game = Files.createDirectory(directory.resolve("game"));
-        Path locator = game.resolve("nekojs/config/ai-location.json");
-        Files.createDirectories(locator.getParent());
-        Files.writeString(locator, AuthoringJson.obj("schemaVersion", 1, "directory", "../escape").toString());
+        Path config = game.resolve("nekojs/config/ai.toml");
+        Files.createDirectories(config.getParent());
+        Files.writeString(config, "[output]\ndirectory = '../escape'\n");
         Map<String, String> before = files(game);
         for (String[] args : List.of(new String[]{"--game-dir", game.toString()},
                 new String[]{"--game-dir", game.toString(), "--ai-dir", "../escape"})) {

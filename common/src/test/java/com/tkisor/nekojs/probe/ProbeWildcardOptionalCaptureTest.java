@@ -170,7 +170,8 @@ class ProbeWildcardOptionalCaptureTest {
         assertTrue(streamView.contains("collect<R>"), "the three-argument collect overload stays available");
         assertTrue(streamView.contains("reduce<U>"), "the three-argument reduce overload keeps its method parameter");
         assertTrue(streamView.contains("sorted(): $StreamView<B>;"), "natural sorting stays callable");
-        assertTrue(streamView.contains("sorted(arg0:"), "comparator sorting stays callable");
+        assertTrue(java.util.regex.Pattern.compile("sorted\\(\\s*arg0:").matcher(streamView).find(),
+                "comparator sorting stays callable");
     }
 
     private static String blockOf(String declarations, String header) {

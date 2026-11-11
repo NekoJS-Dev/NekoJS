@@ -5,6 +5,7 @@ package com.tkisor.nekojs.wrapper.event.server;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
 import com.tkisor.nekojs.bindings.event.BlockEvents;
 import com.tkisor.nekojs.core.modification.ModificationCandidatePlan;
 import com.tkisor.nekojs.core.modification.ModificationDeclaration;
@@ -46,6 +47,7 @@ public class BlockModificationEventJS {
     private int declaredCount;
 
     /** @param plan 收集目标计划（由 {@code ModificationDomainOwner} 创建）。 */
+    @ScriptInternalConstructor
     public BlockModificationEventJS(ModificationCandidatePlan plan) {
         this.plan = plan;
     }

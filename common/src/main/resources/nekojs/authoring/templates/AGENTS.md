@@ -1,6 +1,6 @@
 # NekoJS scripting workspace
 
-- Before writing or repairing a script, read nekojs/config/ai-location.json from the game directory. Resolve its directory as data (default .github/neko_ai), then read environment.json and current.json under that AI root. Resolve the active bundle from current.json and confirm Minecraft, loader, Script Type and language.
+- Before writing or repairing a script, read output.directory from nekojs/config/ai.toml as data (default .github/neko_ai if the file or setting is absent). Resolve that directory against the game directory, then read environment.json and current.json under that AI root. Resolve the active bundle from current.json and confirm Minecraft, loader, Script Type and language.
 - Read the active bundle's skills/nekojs-scripting/SKILL.md for script changes, KubeJS migrations and JSX UI work. If the client cannot install Skills, read that Markdown file directly.
 - For MCP access while the game runs, read handbook/connections.md: explicitly enable in-mod MCP, then give the client its URL and bearer credential; no helper JAR/game-directory arguments are needed. For offline snapshots or a separate process, use the Java 21+ helper described in handbook/stdio.md.
 - For unfamiliar calls, read handbook/query-api.md in the active bundle and use the current instance's API snapshot or final declarations. Treat incomplete coverage as uncertainty.

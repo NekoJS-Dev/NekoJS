@@ -606,6 +606,12 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         return new PendingCommit(this, type, old, activated);
     }
 
+    /** Counts active listeners retained by an owner-selective replacement. */
+    protected final long retainedListenerCount(ScriptType type, java.util.function.Predicate<Context> replaced) {
+        var tokens = tokensByType.get(type);
+        return tokens == null ? 0 : tokens.stream().filter(token -> !replaced.test(token.context())).count();
+    }
+
     /** Complete a previously prepared listener replacement. */
     public void commitPendingListeners(ScriptType type, List<PendingListener> pending) {
         PendingCommit commit = preparePendingListeners(type, pending);

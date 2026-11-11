@@ -43,7 +43,7 @@ public final class RecipeSchemaAutoDiscovery {
             for (DiscoveredRecipeKey key : sortedKeys) {
                 RecipeFieldDefinition field = new RecipeFieldDefinition(
                         key.name(), key.name(), key.kind(), key.isList(), key.optional(), null,
-                        RecipeFieldRoles.roleOfName(key.name())
+                        RecipeFieldRoles.roleOfName(key.name()), key.valueCodec(), true
                 );
                 fields.put(key.name(), field);
                 orderedKeys.add(key.name());
@@ -108,8 +108,12 @@ public final class RecipeSchemaAutoDiscovery {
             String name,
             RecipeFieldKind kind,
             boolean optional,
-            boolean isList
+            boolean isList,
+            RecipeFieldValueCodec valueCodec
     ) {
+        public DiscoveredRecipeKey(String name, RecipeFieldKind kind, boolean optional, boolean isList) {
+            this(name, kind, optional, isList, null);
+        }
         public static DiscoveredRecipeKey required(String name, RecipeFieldKind kind) {
             return new DiscoveredRecipeKey(name, kind, false, false);
         }
@@ -119,7 +123,7 @@ public final class RecipeSchemaAutoDiscovery {
         }
 
         public static DiscoveredRecipeKey list(DiscoveredRecipeKey inner) {
-            return new DiscoveredRecipeKey(inner.name(), inner.kind(), inner.optional(), true);
+            return new DiscoveredRecipeKey(inner.name(), inner.kind(), inner.optional(), true, inner.valueCodec());
         }
     }
 }

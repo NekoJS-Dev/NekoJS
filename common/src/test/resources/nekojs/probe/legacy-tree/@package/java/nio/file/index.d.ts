@@ -1,9 +1,9 @@
 import { $Closeable, $Closeable_, $File } from "java:java/io";
-import { $Class, $Comparable, $Comparable_, $Enum, $Iterable } from "java:java/lang";
+import { $Class, $Comparable, $Comparable_, $Enum, $Iterable, $Iterable_ } from "java:java/lang";
 import { $URI } from "java:java/net";
 import { $FileAttributeView, $FileAttributeView_, $FileStoreAttributeView, $FileStoreAttributeView_, $UserPrincipalLookupService } from "java:java/nio/file/attribute";
 import { $FileSystemProvider } from "java:java/nio/file/spi";
-import { $Iterator, $List, $Set } from "java:java/util";
+import { $Iterator, $List, $List_, $Set, $Set_ } from "java:java/util";
 import { $TimeUnit, $TimeUnit_ } from "java:java/util/concurrent";
 
 export * as attribute from "java:java/nio/file/attribute";
@@ -11,18 +11,24 @@ export * as spi from "java:java/nio/file/spi";
 
 declare module "java:java/nio/file" {
     export interface $Path extends $Comparable<$Path>, $Iterable<$Path>, $Watchable {
+        get fileName(): $Path;
+        getFileName(): $Path;
+        get fileSystem(): $FileSystem;
+        getFileSystem(): $FileSystem;
+        get nameCount(): number;
+        getNameCount(): number;
+        get parent(): $Path;
+        getParent(): $Path;
+        get root(): $Path;
+        getRoot(): $Path;
+        get absolute(): boolean;
+        isAbsolute(): boolean;
         compareTo(arg0: $Path): number;
         endsWith(arg0: string): boolean;
         endsWith(arg0: $Path): boolean;
         equals(arg0: unknown): boolean;
-        getFileName(): $Path;
-        getFileSystem(): $FileSystem;
-        getNameCount(): number;
         getName(arg0: number): $Path;
-        getParent(): $Path;
-        getRoot(): $Path;
         hashCode(): number;
-        isAbsolute(): boolean;
         iterator(): $Iterator<$Path>;
         normalize(): $Path;
         register(arg0: $WatchService, arg1: $WatchEvent$Kind<any>[], arg2?: $WatchEvent$Modifier_<string>[]): $WatchKey;
@@ -87,8 +93,9 @@ declare module "java:java/nio/file" {
     }
 
     export interface $WatchKey {
-        cancel(): void;
+        get valid(): boolean;
         isValid(): boolean;
+        cancel(): void;
         pollEvents(): $List<$WatchEvent<any>>;
         reset(): boolean;
         watchable(): $Watchable;

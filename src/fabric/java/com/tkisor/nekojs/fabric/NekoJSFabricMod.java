@@ -154,6 +154,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
                     ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);
                     this.scriptEventsRegistrar.bindRuntime(pluginRuntime);
                 }).root();
+        com.tkisor.nekojs.mixinjs.MixinPlatform.install(runtimeRoot);
         // 票 39：Item/Block modification domain owner 注册进 root（与 NekoJSMod 同构）。
         runtimeRoot.installAuthoringControlHost(new com.tkisor.nekojs.authoring.MinecraftAuthoringControlHost(
                 runtimeRoot, com.tkisor.nekojs.fabric.event.FabricServerEventBindings::currentServer,

@@ -4,6 +4,12 @@
 package com.tkisor.nekojs.api.recipe.definition;
 
 import com.mojang.serialization.Codec;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.tkisor.nekojs.api.AdapterInputShape;
+import com.tkisor.nekojs.api.surface.ApiSymbolId;
+import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import graal.graalvm.polyglot.Value;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -33,8 +39,7 @@ public final class MinecraftRecipeSchemaScanner {
             String typeKey = id.toString();
 
             try {
-                MapCodec<?> codec = serializer.codec();
-                List<RecipeSchemaAutoDiscovery.DiscoveredRecipeKey> keys = extractKeys(id, codec);
+                List<RecipeSchemaAutoDiscovery.DiscoveredRecipeKey> keys = extractKeys(id, serializer);
                 if (!keys.isEmpty()) {
                     types.put(typeKey, keys);
                 }
@@ -47,6 +52,66 @@ public final class MinecraftRecipeSchemaScanner {
         }
 
         return RecipeSchemaAutoDiscovery.DiscoveredRecipeTypes.of(types);
+    }
+
+    /** Known vanilla contracts use registered serializer identity, not a mod's similarly named path. */
+    static List<RecipeSchemaAutoDiscovery.DiscoveredRecipeKey> extractKeys(Identifier id, RecipeSerializer<?> serializer) {
+        Identifier registeredId = BuiltInRegistries.RECIPE_SERIALIZER.getKey(serializer);
+        if (registeredId != null && registeredId.getNamespace().equals("minecraft")) {
+            if (registeredId.getPath().equals("crafting_shaped")) {
+                return List.of(resultKey(),
+                        new RecipeSchemaAutoDiscovery.DiscoveredRecipeKey("pattern", RecipeFieldKind.STRING,
+                                false, true, listCodec(RecipeFieldKind.STRING, ApiTypeRef.primitive("string"), AdapterInputShape.string())),
+                        new RecipeSchemaAutoDiscovery.DiscoveredRecipeKey("key", RecipeFieldKind.JSON,
+                                false, false, ingredientMapCodec()));
+            }
+            if (registeredId.getPath().equals("crafting_shapeless")) {
+                return List.of(resultKey(),
+                        new RecipeSchemaAutoDiscovery.DiscoveredRecipeKey("ingredients", RecipeFieldKind.INGREDIENT,
+                                false, true, listCodec(RecipeFieldKind.INGREDIENT, nominal(Ingredient.class), AdapterInputShape.host(Ingredient.class))));
+            }
+        }
+        return extractKeys(id, serializer.codec());
+    }
+
+    private static RecipeSchemaAutoDiscovery.DiscoveredRecipeKey resultKey() {
+        var codec = new RecipeFieldValueCodec(AdapterInputShape.host(ItemStack.class), nominal(ItemStack.class),
+                (value, host) -> host.encodeField(RecipeFieldKind.ITEM_STACK, value));
+        return new RecipeSchemaAutoDiscovery.DiscoveredRecipeKey("result", RecipeFieldKind.ITEM_STACK, false, false, codec);
+    }
+
+    private static RecipeFieldValueCodec listCodec(RecipeFieldKind kind, ApiTypeRef elementType, AdapterInputShape elementShape) {
+        return new RecipeFieldValueCodec(AdapterInputShape.arrayOf(elementShape), nominal(List.class, elementType), (value, host) -> {
+            var array = new JsonArray();
+            for (long index = 0, size = value.getArraySize(); index < size; index++) {
+                array.add(host.encodeField(kind, value.getArrayElement(index)));
+            }
+            return array;
+        });
+    }
+
+    private static RecipeFieldValueCodec ingredientMapCodec() {
+        // Nominal metadata preserves dynamic key/value types beyond the structural model's fixed slots.
+        return new RecipeFieldValueCodec(AdapterInputShape.object(),
+                nominal(Map.class, ApiTypeRef.primitive("string"), nominal(Ingredient.class)), (value, host) -> {
+            var object = new JsonObject();
+            if (value.hasHashEntries()) {
+                Value entries = value.getHashEntriesIterator();
+                while (entries.hasIteratorNextElement()) {
+                    Value entry = entries.getIteratorNextElement();
+                    object.add(entry.getArrayElement(0).asString(), host.encodeField(RecipeFieldKind.INGREDIENT, entry.getArrayElement(1)));
+                }
+            } else {
+                for (String key : value.getMemberKeys()) {
+                    object.add(key, host.encodeField(RecipeFieldKind.INGREDIENT, value.getMember(key)));
+                }
+            }
+            return object;
+        });
+    }
+
+    private static ApiTypeRef nominal(Class<?> type, ApiTypeRef... arguments) {
+        return ApiTypeRef.symbol(new ApiSymbolId("java", type.getName()), List.of(arguments));
     }
 
     private static List<RecipeSchemaAutoDiscovery.DiscoveredRecipeKey> extractKeys(Identifier id, MapCodec<?> codec) {
@@ -99,10 +164,7 @@ public final class MinecraftRecipeSchemaScanner {
         String path = id.getPath();
 
         // Common recipe type patterns
-        if (path.contains("shaped") || path.contains("shapeless")) {
-            keys.add(RecipeSchemaAutoDiscovery.DiscoveredRecipeKey.required("result", RecipeFieldKind.ITEM_STACK));
-            keys.add(RecipeSchemaAutoDiscovery.DiscoveredRecipeKey.required("ingredients", RecipeFieldKind.JSON));
-        } else if (path.contains("smelt") || path.contains("blast") || path.contains("smok") || path.contains("campfire")) {
+        if (path.contains("smelt") || path.contains("blast") || path.contains("smok") || path.contains("campfire")) {
             keys.add(RecipeSchemaAutoDiscovery.DiscoveredRecipeKey.required("ingredient", RecipeFieldKind.INGREDIENT));
             keys.add(RecipeSchemaAutoDiscovery.DiscoveredRecipeKey.required("result", RecipeFieldKind.ITEM_STACK));
             keys.add(RecipeSchemaAutoDiscovery.DiscoveredRecipeKey.optional("experience", RecipeFieldKind.NUMBER));

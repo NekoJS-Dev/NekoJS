@@ -185,6 +185,19 @@ class EventCallbackSourceValidatorTest {
     }
 
     @Test
+    void arrayReceiversPreserveEventPayloadValidationInsideAndOutsideElements() {
+        registerBindingGroup("TestEvents");
+        for (String source : List.of(
+                "TestEvents.started(e => [e.getServer(), e.getServeer()].includes(null));",
+                "[TestEvents.started(e => { e.getServeer(); })].length;")) {
+            reported.clear();
+            validate(serverScript("array-payload"), source);
+            assertEquals(1, reported.size(), "The payload typo must remain visible: " + reported);
+            assertTrue(reported.getFirst().contains("getServeer"), reported.getFirst());
+        }
+    }
+
+    @Test
     void contractFieldsPassEvenWhenReflectionClassLacksThem() {
         ManagedCallbackSchemaRegistry.installContractEvents(List.of(
                 contractEvent("ContractEvents", "chat", "message", "username")));

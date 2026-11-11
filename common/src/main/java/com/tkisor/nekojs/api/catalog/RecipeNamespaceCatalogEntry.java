@@ -1,12 +1,12 @@
 package com.tkisor.nekojs.api.catalog;
 
+import com.tkisor.nekojs.core.reflect.JavaGenericTypes;
+import com.tkisor.nekojs.wrapper.RecipeReflectionUtil;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -66,20 +66,10 @@ public record RecipeNamespaceCatalogEntry(
     public static List<RecipeHandlerMethodEntry> collectHandlerMethods(Class<?> handlerClass) {
         if (handlerClass == null) return List.of();
         List<RecipeHandlerMethodEntry> entries = new ArrayList<>();
-        var grouped = reflectMethods(handlerClass);
-        for (var entry : grouped.entrySet()) {
-            List<RecipeHandlerMethodEntry.HandlerParam> bestParams = null;
-            int bestTotal = 0;
-            for (var m : entry.getValue()) {
-                var params = extractParams(m);
-                // Prefer the overload with the most params (full signature)
-                if (params.size() >= bestTotal) {
-                    bestParams = params;
-                    bestTotal = params.size();
-                    int required = requiredParamCount(m);
-                    entries.removeIf(e -> e.methodName().equals(entry.getKey()));
-                    entries.add(new RecipeHandlerMethodEntry(entry.getKey(), params, required));
-                }
+        for (var methods : RecipeReflectionUtil.reflectMethods(handlerClass).values()) {
+            for (Method method : methods) {
+                entries.add(new RecipeHandlerMethodEntry(method.getName(), extractParams(method),
+                        RecipeReflectionUtil.requiredParamCount(method), JavaGenericTypes.toErasedTypeRef(method.getGenericReturnType())));
             }
         }
         return List.copyOf(entries);
@@ -100,7 +90,7 @@ public record RecipeNamespaceCatalogEntry(
             }
             params.add(new RecipeHandlerMethodEntry.HandlerParam(
                     paramName(method, i, display), typeName(display), qualifiedName(display),
-                    genericSignature(generic), optional));
+                    genericSignature(generic), optional, JavaGenericTypes.toErasedTypeRef(generic)));
         }
         return params;
     }
@@ -169,21 +159,5 @@ public record RecipeNamespaceCatalogEntry(
         return name;
     }
 
-    private static Map<String, List<Method>> reflectMethods(Class<?> clazz) {
-        Map<String, List<Method>> methods = new LinkedHashMap<>();
-        for (Method m : clazz.getMethods()) {
-            if (m.getDeclaringClass() == Object.class) continue;
-            methods.computeIfAbsent(m.getName(), k -> new ArrayList<>()).add(m);
-        }
-        return methods;
-    }
 
-    private static int requiredParamCount(Method m) {
-        int count = 0;
-        for (var p : m.getParameterTypes()) {
-            if (p == Optional.class) break;
-            count++;
-        }
-        return count;
-    }
 }

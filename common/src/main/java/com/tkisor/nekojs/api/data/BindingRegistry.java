@@ -14,6 +14,15 @@ public interface BindingRegistry {
 
     boolean register(Binding binding);
 
+    /** Registers a module-only export; legacy registrations remain globals. */
+    default boolean register(Binding binding, java.util.function.Consumer<BindingExposure> configure) {
+        throw new UnsupportedOperationException("[NEKO-4057] This binding registry does not support API modules");
+    }
+
+    default java.util.List<ModuleBinding> moduleBindings() {
+        return java.util.List.of();
+    }
+
     default boolean register(String name, Object value) {
         return register(Binding.of(name, value));
     }
@@ -32,10 +41,49 @@ public interface BindingRegistry {
                 org.slf4j.LoggerFactory.getLogger("nekojs.bootstrap");
 
         private final ScriptType scriptType;
-        private final Map<String, Binding> bindings = new LinkedHashMap<>();
+        private final Map<String, Binding> bindings;
+        private final Map<String, ModuleBinding> modules;
+        private final String owner;
 
         public BindingRegistryImpl(ScriptType scriptType) {
+            this(scriptType, null, new LinkedHashMap<>(), new LinkedHashMap<>());
+        }
+
+        private BindingRegistryImpl(ScriptType scriptType, String owner, Map<String, Binding> bindings,
+                                    Map<String, ModuleBinding> modules) {
             this.scriptType = scriptType;
+            this.owner = owner;
+            this.bindings = bindings;
+            this.modules = modules;
+        }
+
+        public BindingRegistryImpl scopedTo(String owner) {
+            return new BindingRegistryImpl(scriptType, owner, bindings, modules);
+        }
+
+        @Override
+        public boolean register(Binding binding, java.util.function.Consumer<BindingExposure> configure) {
+            java.util.Objects.requireNonNull(configure, "configure");
+            BindingExposure exposure = new BindingExposure();
+            configure.accept(exposure);
+            var category = exposure.freeze();
+            if (owner == null) {
+                throw new IllegalArgumentException("[NEKO-4057] API module registration requires a resolved mod owner");
+            }
+            if (category == BindingExposure.Category.STABLE) {
+                com.tkisor.nekojs.core.api.ModulePublicTypes.validateStable(binding.valueType(), binding.value() instanceof Class<?>);
+            }
+            ModuleBinding entry = new ModuleBinding(owner, category, scriptType, binding);
+            String key = entry.moduleId() + ":" + binding.name();
+            if (modules.putIfAbsent(key, entry) != null) {
+                throw new IllegalArgumentException("[NEKO-4057] Duplicate API module export: " + key);
+            }
+            return true;
+        }
+
+        @Override
+        public java.util.List<ModuleBinding> moduleBindings() {
+            return java.util.List.copyOf(modules.values());
         }
 
         @Override

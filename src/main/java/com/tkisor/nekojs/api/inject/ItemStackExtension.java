@@ -24,6 +24,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemLore;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -159,7 +160,7 @@ public interface ItemStackExtension extends ItemStackSpec {
 
     default boolean neko$hasEnchantment(Holder<Enchantment> enchantment, int level) {
         // 26.x 移除 ItemStack#getEnchantmentLevel —— 经 ItemEnchantments 组件查等级
-        return self().getEnchantments().getLevel(enchantment) >= level;
+        return self().getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY).getLevel(enchantment) >= level;
     }
 
     default Ingredient neko$asIngredient() {

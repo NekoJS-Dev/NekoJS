@@ -42,7 +42,7 @@ class Ticket26ClientInputHudSurfaceTest {
     private static final Pattern LOWER_CAMEL = Pattern.compile("[a-z][A-Za-z0-9]*");
 
     private static Map<String, EventGroup> productionGroups() {
-        EventGroupRegistry registry = new EventGroupRegistry.Impl();
+        EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         new NekoJSCorePlugin().registerEvents(registry);
         new NekoJSCorePlugin().registerClientEvents(registry);
         return registry.view();

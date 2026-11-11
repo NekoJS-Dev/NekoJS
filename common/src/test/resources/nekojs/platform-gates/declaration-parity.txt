@@ -9,7 +9,7 @@
 #   而不是靠一条永远为真的 missing-type 断言装作已覆盖。
 # 本文件只是经审阅的快照，不是第二规范源：契约变化须先改行为/渲染器，再更新并在工单 33 REPORT 留记录。
 globals=ID,JsonIO,NBT,Performance,Platform,Registry,Text
-members=141
+members=142
 owners=ID,JsonIO,JsonValue,ModInfo,NBT,NbtEntry,NbtValue,NekoId,PerfTimer,Performance,Platform,Registry,RegistryView,ScriptEventRegistrationEvent,Text,TextValue
-signatures=150
+signatures=152
 types=<empty: no kind=type producer in the contract>

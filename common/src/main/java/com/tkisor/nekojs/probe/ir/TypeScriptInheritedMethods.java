@@ -116,6 +116,7 @@ final class TypeScriptInheritedMethods {
         Type source = slot.sourceType == null ? null : FunctionalInterfaceResolver.substitute(slot.sourceType, sourceBindings);
         TypeSlot copy = TypeSlot.of(source, ref);
         copy.inputShape = slot.inputShape;
+        copy.outputTypeScript = slot.outputTypeScript;
         // Edited hierarchy arguments may intentionally disagree with the Java superclass's signature.
         copy.overridden = slot.overridden || source == null || !TypeReflector.toRef(source).equals(ref);
         return copy;

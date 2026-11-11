@@ -35,6 +35,14 @@ public final class FabricPlatform implements IPlatform {
         return Map.copyOf(roots);
     }
 
+    @Override
+    public void visitLoadedMixinPlans(java.util.function.BiConsumer<String, java.net.URI> visitor) {
+        for (var mod : FabricLoader.getInstance().getAllMods()) {
+            mod.findPath("META-INF/nekojs/mixin-plan.json")
+                    .ifPresent(path -> visitor.accept(mod.getMetadata().getId(), path.toUri()));
+        }
+    }
+
     private Map<String, IModInfo> modCache;
 
     @Override

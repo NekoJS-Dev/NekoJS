@@ -131,7 +131,8 @@ public final class NekoPluginBootstrap {
         ExtensionRegistry registry = new ExtensionRegistry();
         // ADR-0003：内置点定义插件显式先行（与第三方同一条 provider 路径；内置先行相位
         // 是引擎对依赖图根部的保证，不依赖插件 priority）
-        new NekoBuiltinPointsPlugin(scriptProperties, context.client())
+        new NekoBuiltinPointsPlugin(scriptProperties, context.client(), plugin ->
+                plugin instanceof NekoCommonBuiltinPlugin ? "nekojs" : ownerLabels.apply(plugin))
                 .registerPluginExtensionPoints(registry.scopedTo("nekojs:builtin-points"));
         for (NekoJSPlugin plugin : plugins) {
             if (plugin instanceof NekoPluginExtensionProvider provider) {
@@ -207,11 +208,10 @@ public final class NekoPluginBootstrap {
     }
 
     static Map<ScriptType, Map<String, Binding>> freezeBindings(ScriptTypedValue<BindingRegistry> registries) {
-        return registries.stream()
-                .collect(Collectors.toMap(
-                        BindingRegistry::scriptType,
-                        reg -> Map.copyOf(reg.viewRegistered())
-                ));
+        Map<ScriptType, Map<String, Binding>> globals = registries.stream()
+                .collect(Collectors.toMap(BindingRegistry::scriptType, reg -> Map.copyOf(reg.viewRegistered())));
+        var modules = registries.stream().flatMap(reg -> reg.moduleBindings().stream()).toList();
+        return new BindingsPoint.Snapshot(globals, modules);
     }
 
     @SuppressWarnings("unchecked")

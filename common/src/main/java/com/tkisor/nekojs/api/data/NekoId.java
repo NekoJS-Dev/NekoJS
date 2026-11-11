@@ -39,6 +39,26 @@ public record NekoId(String namespace, String path) {
         return new NekoId(namespace, path);
     }
 
+    /** Parses a resource ID without normalizing it; unqualified values use {@code nekojs}. */
+    public static NekoId resource(String value) {
+        if (value == null) {
+            throw new IllegalArgumentException("[NEKO-4056] Resource ID cannot be null");
+        }
+        int separator = value.indexOf(':');
+        return separator < 0
+                ? resource(DEFAULT_NAMESPACE, value)
+                : resource(value.substring(0, separator), value.substring(separator + 1));
+    }
+
+    /** Constructs a resource ID using the fixed NekoJS resource grammar. */
+    public static NekoId resource(String namespace, String path) {
+        if (namespace == null || !namespace.matches("[a-z0-9_.-]+")
+                || path == null || !path.matches("[a-z0-9/._-]+")) {
+            throw new IllegalArgumentException("[NEKO-4056] Resource ID requires namespace [a-z0-9_.-]+ and path [a-z0-9/._-]+");
+        }
+        return new NekoId(namespace, path);
+    }
+
     /** 返回命名空间。 */
     public String getNamespace() {
         return namespace;

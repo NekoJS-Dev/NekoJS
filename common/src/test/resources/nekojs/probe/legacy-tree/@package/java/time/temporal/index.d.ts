@@ -2,7 +2,7 @@ import { $Serializable } from "java:java/io";
 import { $Enum } from "java:java/lang";
 import { $Duration } from "java:java/time";
 import { $ResolverStyle, $ResolverStyle_ } from "java:java/time/format";
-import { $List, $Locale, $Map } from "java:java/util";
+import { $List, $List_, $Locale, $Map, $Map_ } from "java:java/util";
 
 declare module "java:java/time/temporal" {
     export interface $Temporal extends $TemporalAccessor {
@@ -18,20 +18,25 @@ declare module "java:java/time/temporal" {
     }
 
     export interface $TemporalAmount {
-        addTo(arg0: $Temporal): $Temporal;
+        get units(): $List<$TemporalUnit>;
         getUnits(): $List<$TemporalUnit>;
+        addTo(arg0: $Temporal): $Temporal;
         get(arg0: $TemporalUnit): number;
         subtractFrom(arg0: $Temporal): $Temporal;
     }
 
     export interface $TemporalUnit {
+        get duration(): $Duration;
+        getDuration(): $Duration;
+        get dateBased(): boolean;
+        isDateBased(): boolean;
+        get durationEstimated(): boolean;
+        isDurationEstimated(): boolean;
+        get timeBased(): boolean;
+        isTimeBased(): boolean;
         addTo<R extends $Temporal>(arg0: R, arg1: number): R;
         between(arg0: $Temporal, arg1: $Temporal): number;
-        getDuration(): $Duration;
-        isDateBased(): boolean;
-        isDurationEstimated(): boolean;
         isSupportedBy(arg0: $Temporal): boolean;
-        isTimeBased(): boolean;
         toString(): string;
     }
 
@@ -48,17 +53,21 @@ declare module "java:java/time/temporal" {
     }
 
     export interface $TemporalField {
-        adjustInto<R extends $Temporal>(arg0: R, arg1: number): R;
+        get baseUnit(): $TemporalUnit;
         getBaseUnit(): $TemporalUnit;
+        get rangeUnit(): $TemporalUnit;
+        getRangeUnit(): $TemporalUnit;
+        get dateBased(): boolean;
+        isDateBased(): boolean;
+        get timeBased(): boolean;
+        isTimeBased(): boolean;
+        adjustInto<R extends $Temporal>(arg0: R, arg1: number): R;
         getDisplayName(arg0: $Locale): string;
         getFrom(arg0: $TemporalAccessor): number;
-        getRangeUnit(): $TemporalUnit;
-        isDateBased(): boolean;
         isSupportedBy(arg0: $TemporalAccessor): boolean;
-        isTimeBased(): boolean;
         rangeRefinedBy(arg0: $TemporalAccessor): $ValueRange;
         range(): $ValueRange;
-        resolve(arg0: ($Map<$TemporalField, number> | (([$TemporalField] extends [PropertyKey] ? unknown : never) & Partial<Record<Extract<$TemporalField, PropertyKey>, number>>)), arg1: $TemporalAccessor, arg2: $ResolverStyle_): $TemporalAccessor;
+        resolve(arg0: $Map_<$TemporalField, number>, arg1: $TemporalAccessor, arg2: $ResolverStyle_): $TemporalAccessor;
         toString(): string;
     }
 

@@ -1,7 +1,7 @@
 import { $AutoCloseable, $AutoCloseable_, $Class, $Thread } from "java:java/lang";
 import { $MethodHandle, $VarHandle } from "java:java/lang/invoke";
 import { $Buffer, $ByteBuffer, $ByteOrder } from "java:java/nio";
-import { $List, $Optional, $Spliterator } from "java:java/util";
+import { $List, $List_, $Optional, $Spliterator } from "java:java/util";
 import { $Consumer, $Consumer_ } from "java:java/util/function";
 import { $Stream } from "java:java/util/stream";
 
@@ -29,6 +29,14 @@ declare module "java:java/lang/foreign" {
     };
 
     export interface $MemorySegment {
+        get loaded(): boolean;
+        isLoaded(): boolean;
+        get mapped(): boolean;
+        isMapped(): boolean;
+        get native(): boolean;
+        isNative(): boolean;
+        get readOnly(): boolean;
+        isReadOnly(): boolean;
         address(): number;
         asByteBuffer(): $ByteBuffer;
         asOverlappingSlice(arg0: $MemorySegment): $Optional<$MemorySegment>;
@@ -65,10 +73,6 @@ declare module "java:java/lang/foreign" {
         hashCode(): number;
         heapBase(): $Optional<unknown>;
         isAccessibleBy(arg0: $Thread): boolean;
-        isLoaded(): boolean;
-        isMapped(): boolean;
-        isNative(): boolean;
-        isReadOnly(): boolean;
         load(): void;
         mismatch(arg0: $MemorySegment): number;
         reinterpret(arg0: $Arena, arg1: $Consumer_<$MemorySegment, $MemorySegment>): $MemorySegment;
@@ -108,9 +112,24 @@ declare module "java:java/lang/foreign" {
     export const $MemorySegment: {
         copy(arg0: unknown, arg1: number, arg2: $MemorySegment, arg3: $ValueLayout, arg4: number, arg5: number): void;
         copy(arg0: $MemorySegment, arg1: $ValueLayout, arg2: number, arg3: unknown, arg4: number, arg5: number): void;
-        copy(arg0: $MemorySegment, arg1: $ValueLayout, arg2: number, arg3: $MemorySegment, arg4: $ValueLayout, arg5: number, arg6: number): void;
+        copy(
+            arg0: $MemorySegment,
+            arg1: $ValueLayout,
+            arg2: number,
+            arg3: $MemorySegment,
+            arg4: $ValueLayout,
+            arg5: number,
+            arg6: number
+        ): void;
         copy(arg0: $MemorySegment, arg1: number, arg2: $MemorySegment, arg3: number, arg4: number): void;
-        mismatch(arg0: $MemorySegment, arg1: number, arg2: number, arg3: $MemorySegment, arg4: number, arg5: number): number;
+        mismatch(
+            arg0: $MemorySegment,
+            arg1: number,
+            arg2: number,
+            arg3: $MemorySegment,
+            arg4: number,
+            arg5: number
+        ): number;
         ofAddress(arg0: number): $MemorySegment;
         ofArray(arg0: number[]): $MemorySegment;
         ofArray(arg0: string[]): $MemorySegment;
@@ -158,9 +177,10 @@ declare module "java:java/lang/foreign" {
     };
 
     export interface $MemorySegment$Scope {
+        get alive(): boolean;
+        isAlive(): boolean;
         equals(arg0: unknown): boolean;
         hashCode(): number;
-        isAlive(): boolean;
     }
 
     export interface $SegmentAllocator {

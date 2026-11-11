@@ -26,6 +26,8 @@ public final class TypeDecl {
     public final List<MethodDecl> methods = new ArrayList<>();     // 含 getter/setter（按标志区分）
     public final List<FieldDecl> fields = new ArrayList<>();
     public final List<String> docs = new ArrayList<>();
+    /** Native member groups unavailable to reflection; retained declarations remain explicitly incomplete. */
+    public final List<String> memberOmissions = new ArrayList<>();
     public boolean hidden;
     /**
      * 重命名后的类名；null = 用 sourceClass 原名。由 {@code probe.modify_type} 的 {@code renameClass}

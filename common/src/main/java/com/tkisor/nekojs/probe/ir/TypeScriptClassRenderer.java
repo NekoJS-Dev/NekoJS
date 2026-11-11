@@ -8,6 +8,8 @@ import com.tkisor.nekojs.probe.backend.typescript.FunctionalInterfaceAliasGenera
 import com.tkisor.nekojs.probe.backend.typescript.JavaTypeScriptProjection;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
+import com.tkisor.nekojs.probe.types.TypeScriptTypeExpressions;
+import com.tkisor.nekojs.probe.types.TypeScriptDeclarationFormatter;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -89,7 +91,7 @@ public final class TypeScriptClassRenderer {
     }
 
     private boolean emitsInstanceMethod(TypeDecl declaration, MethodDecl method) {
-        return !projectsBeanMethod(declaration, method) && (declaration.kind != TypeDecl.Kind.CLASS || !method.isGetter
+        return !projectsBeanMethod(declaration, method) && (declaration.kind == TypeDecl.Kind.ENUM || !method.isGetter
                 || !isValidTsIdentifier(method.property) || beanPropertyConflicts(declaration).contains(method.property)
                 || excludesBeanAlias(declaration, method)
                 || !getterOverrides.getOrDefault(declaration.fqn, Map.of()).containsKey(method.property));
@@ -132,7 +134,7 @@ public final class TypeScriptClassRenderer {
     }
 
     private static boolean unchangedResult(MethodDecl method) {
-        return method.returnType != null && !method.returnType.overridden
+        return method.returnType != null && !method.returnType.overridden && method.returnType.outputTypeScript == null
                 && method.returnType.sourceType != null && method.sourceMethod != null
                 && method.returnType.sourceType.equals(method.sourceMethod.getGenericReturnType())
                 && method.returnType.ref.equals(TypeReflector.toRef(method.sourceMethod.getGenericReturnType()));
@@ -512,7 +514,8 @@ public final class TypeScriptClassRenderer {
             }
         }
         sb.append(" {\n");
-        appendProjectedMethods(sb, d, methodSelectors.methods(d).stream().filter(method -> !method.hidden && !method.isStatic).toList());
+        appendInstanceFieldsAndBeans(sb, d);
+        appendInstanceMethods(sb, d);
         sb.append("    }\n");
 
         if (!hasClassValue(d)) return sb.toString();
@@ -600,9 +603,8 @@ public final class TypeScriptClassRenderer {
     private String formatConstructor(MethodDecl c) {
         StringBuilder sb = new StringBuilder();
         appendDoc(sb, "        ", c.docs);
-        sb.append("        constructor(");
-        appendParameters(sb, c.params, true);
-        sb.append(");\n");
+        TypeScriptDeclarationFormatter.appendCallable(sb, 8, "constructor",
+                parameterDeclarations(c.params, true, null), ";");
         if (authoringEmission != null) authoringEmission.method(c, "constructor", false,
                 renderedParameters(c.params, true, null), null, sb.toString());
         appendOverloads(sb, c, true, false);
@@ -632,18 +634,16 @@ public final class TypeScriptClassRenderer {
                                 List<String> parameters, String result) {
         StringBuilder sb = new StringBuilder();
         appendDoc(sb, "        ", m.docs);
-        sb.append("        ");
-        if (isStatic) sb.append("static ");
-        if (emittedName != null) sb.append(tsMemberName(emittedName));
+        StringBuilder head = new StringBuilder(isStatic ? "static " : "");
+        if (emittedName != null) head.append(tsMemberName(emittedName));
         if (!m.typeParams.isEmpty()) {
-            sb.append("<").append(m.typeParams.stream().map(name ->
+            head.append("<").append(m.typeParams.stream().map(name ->
                     renderTypeParameter(name, m.typeParameterBounds.getOrDefault(name, List.of()), aliases))
                     .collect(Collectors.joining(", "))).append(">");
         }
-        sb.append("(");
-        appendParameters(sb, m.params, false, parameters);
         String returnType = result == null ? renderSlot(m.returnType, false) : result;
-        sb.append("): ").append(returnType).append(";\n");
+        TypeScriptDeclarationFormatter.appendCallable(sb, 8, head.toString(),
+                parameterDeclarations(m.params, false, parameters), ": " + returnType + ";");
         if (authoringEmission != null) authoringEmission.method(m, emittedName, isStatic || authoringStaticValue,
                 renderedParameters(m.params, false, parameters), returnType, sb.toString());
         appendOverloads(sb, m, false, isStatic, emittedName);
@@ -662,41 +662,23 @@ public final class TypeScriptClassRenderer {
     private void appendOverloads(StringBuilder sb, MethodDecl m, boolean constructor, boolean isStatic, String name) {
         for (MethodDecl.Overload o : m.overloads) {
             appendDoc(sb, "        ", o.docs);
-            sb.append("        ");
-            if (constructor) {
-                sb.append("constructor(");
-            } else {
-                if (isStatic) sb.append("static ");
-                if (name != null) sb.append(tsMemberName(name));
-                sb.append("(");
-            }
-            sb.append(String.join(", ", o.params)).append(")");
-            if (!constructor) {
-                sb.append(": ");
-                sb.append(o.returns.isEmpty() ? renderSlot(m.returnType, false) : o.returns);
-            }
-            sb.append(";\n");
+            String head = constructor ? "constructor" : (isStatic ? "static " : "")
+                    + (name == null ? "" : tsMemberName(name));
+            String suffix = constructor ? ";" : ": "
+                    + (o.returns.isEmpty() ? renderSlot(m.returnType, false) : o.returns) + ";";
+            TypeScriptDeclarationFormatter.appendCallable(sb, 8, head, o.params, suffix);
         }
     }
 
-    private void appendParameters(StringBuilder sb, List<MethodDecl.MethodParam> params) {
-        appendParameters(sb, params, false);
-    }
-
-    private void appendParameters(StringBuilder sb, List<MethodDecl.MethodParam> params, boolean constructor) {
-        appendParameters(sb, params, constructor, null);
-    }
-
-    private void appendParameters(StringBuilder sb, List<MethodDecl.MethodParam> params, boolean constructor,
-                                  List<String> renderedTypes) {
-        for (int i = 0; i < params.size(); i++) {
-            MethodDecl.MethodParam p = params.get(i);
-            if (i > 0) sb.append(", ");
-            sb.append(tsParamName(p.name));
-            if (p.varargs || p.optional) sb.append("?");
-            sb.append(": ");
-            sb.append(renderParameterType(p, i, constructor, renderedTypes));
+    private List<String> parameterDeclarations(List<MethodDecl.MethodParam> parameters, boolean constructor,
+                                               List<String> renderedTypes) {
+        List<String> declarations = new java.util.ArrayList<>();
+        for (int index = 0; index < parameters.size(); index++) {
+            MethodDecl.MethodParam parameter = parameters.get(index);
+            declarations.add(tsParamName(parameter.name) + (parameter.varargs || parameter.optional ? "?" : "")
+                    + ": " + renderParameterType(parameter, index, constructor, renderedTypes));
         }
+        return declarations;
     }
 
     private List<String> renderedParameters(List<MethodDecl.MethodParam> parameters, boolean constructor,
@@ -800,6 +782,7 @@ public final class TypeScriptClassRenderer {
     /** Renders edits from IR; ordinary input slots retain reflection generics for callback substitution. */
     private String renderSlot(TypeSlot slot, boolean input) {
         if (slot == null) return "any";
+        if (!input && !slot.overridden && slot.outputTypeScript != null) return slot.outputTypeScript;
         if (input && !slot.overridden && slot.inputShape != null) {
             return com.tkisor.nekojs.probe.backend.typescript.AdapterAliasGenerator
                     .renderShape(slot.inputShape, aliases, true).type();
@@ -938,9 +921,21 @@ public final class TypeScriptClassRenderer {
         return renderTypeRef(ref, aliases, input, new LinkedHashSet<>());
     }
 
+    private enum InputProjection { NATIVE_PARAMETER, DECLARED_INPUT }
+
+    /** Converter-owned declarations recursively project inputs; erased Java adapters retain host arguments. */
+    public static String renderDeclaredInputType(ApiTypeRef ref, TypeAliasRegistry aliases) {
+        return renderTypeRef(ref, aliases, true, new LinkedHashSet<>(), InputProjection.DECLARED_INPUT);
+    }
+
     /** Internal recursive renderer carrying functional-alias recursion state. */
     public static String renderTypeRef(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input,
                                       Set<String> expandingFunctionalAliases) {
+        return renderTypeRef(ref, aliases, input, expandingFunctionalAliases, InputProjection.NATIVE_PARAMETER);
+    }
+
+    private static String renderTypeRef(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input,
+                                       Set<String> expandingFunctionalAliases, InputProjection projection) {
         if (ref == null) return "any";
         return switch (ref.kind()) {
             case VOID -> "void";
@@ -948,26 +943,28 @@ public final class TypeScriptClassRenderer {
             case TYPE_VARIABLE -> aliases == null ? ref.name() : aliases.typeVariable(ref.name());
             case ARRAY -> {
                 ApiTypeRef element = ref.arguments().getFirst();
-                String rendered = renderTypeRef(element, aliases, input, expandingFunctionalAliases);
-                yield (element.kind() == ApiTypeRef.Kind.UNION ? "(" + rendered + ")" : rendered) + "[]";
+                String rendered = renderTypeRef(element, aliases, input, expandingFunctionalAliases, projection);
+                yield TypeScriptTypeExpressions.arrayOf(rendered);
             }
             case UNION -> ref.arguments().stream()
-                    .map(a -> renderTypeRef(a, aliases, input, expandingFunctionalAliases))
+                    .map(a -> renderTypeRef(a, aliases, input, expandingFunctionalAliases, projection))
                     .collect(Collectors.joining(" | "));
-            case SYMBOL -> renderSymbol(ref, aliases, input, expandingFunctionalAliases);
+            case SYMBOL -> renderSymbol(ref, aliases, input, expandingFunctionalAliases, projection);
             case CALLBACK -> "(...args: any[]) => any";
         };
     }
 
-    /** Applies conversion at the outer symbol while ordinary host type arguments retain their identity. */
     private static String renderSymbol(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input,
-                                       Set<String> expandingFunctionalAliases) {
+                                       Set<String> expandingFunctionalAliases, InputProjection projection) {
         String fqn = fqnOfSymbol(ref.name());
+        boolean projectArguments = input && projection == InputProjection.DECLARED_INPUT
+                && !ref.arguments().isEmpty() && !preservesDeclaredPayload(fqn, aliases);
         if (input && aliases != null) {
             String registeredAlias = aliases.getRegisteredAlias(fqn);
             if (registeredAlias != null) {
                 return aliases.renderRegisteredAlias(fqn, ref.arguments().stream()
-                        .map(argument -> renderTypeRef(argument, aliases, false, expandingFunctionalAliases)).toList());
+                        .map(argument -> renderTypeRef(argument, aliases, projectArguments,
+                                expandingFunctionalAliases, projection)).toList());
             }
         }
         List<ApiTypeRef> scalarValues = ref.arguments().isEmpty() && (aliases == null || aliases.projectsScalarValues())
@@ -977,35 +974,51 @@ public final class TypeScriptClassRenderer {
                     ? aliases.getFunctionalInterfaceAlias(fqn) : null;
             String host = functionalAlias == null ? renderHostSymbol(ref, aliases, expandingFunctionalAliases)
                     : FunctionalInterfaceAliasGenerator.renderInputType(ref, functionalAlias, aliases, expandingFunctionalAliases);
-            // Keep identity until this boundary: an explicit input adapter above replaces the whole value domain.
-            // Parentheses also keep array and varargs element unions intact at their callers.
             return "(" + scalarValues.stream().map(value -> renderTypeRef(value, aliases, false, expandingFunctionalAliases))
                     .collect(Collectors.joining(" | ")) + " | " + host + ")";
         }
         if (input && aliases != null) {
-            TypeAliasRegistry.FunctionalInterfaceAlias functionalAlias =
-                    aliases.getFunctionalInterfaceAlias(fqn);
+            TypeAliasRegistry.FunctionalInterfaceAlias functionalAlias = aliases.getFunctionalInterfaceAlias(fqn);
             if (functionalAlias != null) {
-                return FunctionalInterfaceAliasGenerator.renderInputType(ref, functionalAlias, aliases,
-                        expandingFunctionalAliases);
+                return FunctionalInterfaceAliasGenerator.renderInputType(ref, functionalAlias, aliases, expandingFunctionalAliases);
             }
             if (!ref.arguments().isEmpty()) {
                 String[] hostArgs = ref.arguments().stream()
-                        .map(a -> renderTypeRef(a, aliases, false, expandingFunctionalAliases))
-                        .toArray(String[]::new);
-                String[] renderedArgs = ref.arguments().stream()
-                        .map(a -> renderTypeRef(a, aliases, true, expandingFunctionalAliases))
-                        .toArray(String[]::new);
-                String alias = aliases.getCollectionAlias(fqn, hostArgs, renderedArgs);
+                        .map(a -> renderTypeRef(a, aliases, false, expandingFunctionalAliases)).toArray(String[]::new);
+                String[] inputArgs = ref.arguments().stream()
+                        .map(a -> renderTypeRef(a, aliases, projection == InputProjection.NATIVE_PARAMETER || projectArguments,
+                                expandingFunctionalAliases, projection)).toArray(String[]::new);
+                String declaredAlias = TypeAliasRegistry.collectionInputAlias(fqn);
+                if (projection == InputProjection.DECLARED_INPUT && declaredAlias != null) {
+                    return aliases.reference(fqn, declaredAlias) + "<" + String.join(", ", inputArgs) + ">";
+                }
+                String alias = aliases.renderCollectionInput(fqn, hostArgs, inputArgs);
                 if (alias != null) return alias;
             } else if (aliases.hasAlias(fqn)) {
                 return aliases.getAlias(fqn);
             }
         }
-        // Graal exposes boxed characters as string values, including returns and generic contents.
-        // This is an intrinsic value projection; ordinary host identities and input adapters stay separate.
         if (fqn.equals("java.lang.Character")) return "string";
+        if (projectArguments) {
+            ApiTypeRef raw = new ApiTypeRef(ApiTypeRef.Kind.SYMBOL, ref.name(), List.of(), null);
+            return renderHostSymbol(raw, aliases, expandingFunctionalAliases) + "<" + ref.arguments().stream()
+                    .map(argument -> renderTypeRef(argument, aliases, true, expandingFunctionalAliases, projection))
+                    .collect(Collectors.joining(", ")) + ">";
+        }
         return renderHostSymbol(ref, aliases, expandingFunctionalAliases);
+    }
+
+    private static boolean preservesDeclaredPayload(String fqn, TypeAliasRegistry aliases) {
+        if (Set.of("net.minecraft.core.Holder", "net.minecraft.core.HolderSet", "net.minecraft.tags.TagKey",
+                "net.minecraft.resources.ResourceKey").contains(fqn)
+                || (aliases != null && aliases.getFunctionalInterfaceAlias(fqn) != null)) return true;
+        try {
+            Class<?> raw = Class.forName(fqn, false, Thread.currentThread().getContextClassLoader());
+            return com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver.resolve(raw) != null;
+        } catch (ClassNotFoundException | LinkageError unavailable) {
+            // Missing metadata must not broaden a callback payload into an input value domain.
+            return true;
+        }
     }
 
     private static String renderHostSymbol(ApiTypeRef ref, TypeAliasRegistry aliases, Set<String> expandingFunctionalAliases) {

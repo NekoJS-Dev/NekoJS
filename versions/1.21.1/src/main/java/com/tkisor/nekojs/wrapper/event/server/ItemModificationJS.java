@@ -28,34 +28,39 @@ import java.util.Map;
  */
 public class ItemModificationJS implements graal.graalvm.polyglot.proxy.ProxyObject {
 
-    /** 脚本面成员目录/值装配引擎（putMember 与显式 setter 同一 Method seam，AC8）。 */
-    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+    private ModificationViewSurface surface;
+
+    /** Creates the script surface on first use, after normal subclass construction. */
+    private ModificationViewSurface surface() {
+        if (surface == null) surface = ModificationViewSurface.of(this);
+        return surface;
+    }
 
     // ---- ProxyObject：property 写与显式 setter 分发到同一 Java setter ----
 
     @Override
     public Object getMember(String name) {
-        return surface.getMember(name);
+        return surface().getMember(name);
     }
 
     @Override
     public boolean hasMember(String name) {
-        return surface.hasMember(name);
+        return surface().hasMember(name);
     }
 
     @Override
     public Object getMemberKeys() {
-        return surface.getMemberKeys();
+        return surface().getMemberKeys();
     }
 
     @Override
     public void putMember(String name, graal.graalvm.polyglot.Value value) {
-        surface.putMember(name, value);
+        surface().putMember(name, value);
     }
 
     @Override
     public boolean removeMember(String name) {
-        return surface.removeMember(name);
+        return surface().removeMember(name);
     }
 
     private Integer maxStackSize;

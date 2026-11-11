@@ -52,8 +52,7 @@ public record AuthoringConfig(boolean documentation, boolean agents, boolean api
             if (!"127.0.0.1".equals(config.getOrElse("mcp.host", "127.0.0.1"))) throw new IllegalArgumentException();
             Object portValue = config.getOrElse("mcp.port", 8767);
             if (!(portValue instanceof Number number) || number.doubleValue() != number.intValue() || number.intValue() < 1 || number.intValue() > 65535) throw new IllegalArgumentException();
-            Object directory = config.getOrElse("output.directory", AuthoringPaths.DEFAULT_DIRECTORY);
-            if (!(directory instanceof String output) || output.isBlank()) throw new IllegalArgumentException("Expected an authoring output directory.");
+            String output = AuthoringPaths.configuredDirectory(config);
             return new AuthoringConfig(docs, agents.equals("create-if-missing"), bool(config.getOrElse("api.enabled", true)),
                     bool(config.getOrElse("http.enabled", false)), bool(config.getOrElse("mcp.enabled", false)), number.intValue(),
                     new AuthoringControl.Policy(bool(config.getOrElse("control.commands", false)),

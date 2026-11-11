@@ -14,8 +14,8 @@ import net.minecraft.world.level.Explosion;
  *
  * <p>总线声明在**本类**、注册进节点孪生 {@link LevelEvents} 的 {@code GROUP}
  * （同名组、加载时合并）——与 v1 的 loaded/unloaded/tickPre/tickPost 同命名空间，
- * 脚本看到的是一个完整的 {@code LevelEvents}。按 {@code NeoForgeBlockEvents}/
- * 共享树 {@code LevelEvents} 的命名与别名关系对齐：
+ * 脚本看到的是一个完整的 {@code LevelEvents}。
+ * Names and aliases match the NeoForge LevelEvents implementation:
  * <ul>
  *   <li>{@code saved} —— NeoForge {@code LevelEvent.Save}（不可取消）；</li>
  *   <li>{@code explosionStart} / {@code beforeExplosion}(Deprecated) ——

@@ -8,6 +8,7 @@ import net.minecraft.world.item.Items;
 /** Distinguishes registry metadata from usable item fixtures with bound vanilla components. */
 public final class VanillaRegistryProbe {
     private static volatile Boolean metadataAvailable;
+    private static volatile Throwable metadataFailure;
     private static volatile Boolean available;
 
     private VanillaRegistryProbe() {}
@@ -25,6 +26,7 @@ public final class VanillaRegistryProbe {
                                 VanillaRegistryProbe.class.getClassLoader());
                         result = true;
                     } catch (Throwable failure) {
+                        metadataFailure = failure;
                         result = false;
                     }
                     metadataAvailable = result;
@@ -32,6 +34,10 @@ public final class VanillaRegistryProbe {
             }
         }
         return result;
+    }
+
+    public static Throwable metadataFailure() {
+        return metadataFailure;
     }
 
     public static boolean available() {

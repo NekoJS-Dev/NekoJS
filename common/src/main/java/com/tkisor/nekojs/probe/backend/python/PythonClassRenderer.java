@@ -144,22 +144,7 @@ public final class PythonClassRenderer {
             appendMethodBody(sb, c.docs);
             hasMember = true;
         }
-        // getter → @property（+ setter）
-        for (MethodDecl m : d.methods) {
-            if (m.hidden || !m.isGetter || !isPythonIdentifier(m.property)
-                    || propertyConflicts.properties().contains(pyIdent(m.property))) continue;
-            String ret = renderSlot(m.returnType);
-            sb.append("    @property\n");
-            sb.append("    def ").append(pyIdent(m.property)).append("(self) -> ").append(ret);
-            appendMethodBody(sb, m.docs);
-            if (m.setterParamType != null) {
-                sb.append("    @").append(pyIdent(m.property)).append(".setter\n");
-                sb.append("    def ").append(pyIdent(m.property)).append("(self, value: ")
-                  .append(renderSlot(m.setterParamType)).append(") -> None");
-                appendMethodBody(sb, m.docs);
-            }
-            hasMember = true;
-        }
+        hasMember |= appendBeanProperties(sb, d, propertyConflicts);
         // 方法：静态 + 实例（排除 getter/setter/构造器）。Java 重载（同名不同参数）渲染为
         // 同名 def 时必须全部标注 @overload，否则 Pylance 报「方法声明被同名声明遮盖」
         // （与 PythonEventRenderer 对 dispatch 事件的处理一致）。
@@ -185,6 +170,27 @@ public final class PythonClassRenderer {
         }
         if (!hasMember) sb.append("    ...\n");
         return sb.toString();
+    }
+
+    /** Appends nonconflicting Bean properties without removing real interface accessor calls. */
+    private boolean appendBeanProperties(StringBuilder sb, TypeDecl d, BeanPropertyConflicts propertyConflicts) {
+        boolean hasMember = false;
+        for (MethodDecl m : d.methods) {
+            if (m.hidden || !m.isGetter || !isPythonIdentifier(m.property)
+                    || propertyConflicts.properties().contains(pyIdent(m.property))) continue;
+            String ret = renderSlot(m.returnType);
+            sb.append("    @property\n");
+            sb.append("    def ").append(pyIdent(m.property)).append("(self) -> ").append(ret);
+            appendMethodBody(sb, m.docs);
+            if (m.setterParamType != null) {
+                sb.append("    @").append(pyIdent(m.property)).append(".setter\n");
+                sb.append("    def ").append(pyIdent(m.property)).append("(self, value: ")
+                  .append(renderSlot(m.setterParamType)).append(") -> None");
+                appendMethodBody(sb, m.docs);
+            }
+            hasMember = true;
+        }
+        return hasMember;
     }
 
     private void appendBeanField(StringBuilder sb, TypeDecl declaration, FieldDecl field, MethodDecl getter) {
@@ -398,15 +404,15 @@ public final class PythonClassRenderer {
         StringBuilder sb = new StringBuilder();
         sb.append("class ").append(name).append(bases(d, false)).append(":\n");
         appendDoc(sb, d.docs);
-        boolean hasMember = false;
+        boolean hasMember = appendBeanProperties(sb, d, beanPropertyConflicts(d, declarations));
         // 接口方法同样可能有 Java 重载 → 同名 def 需 @overload
         Map<String, Integer> nameCount = new HashMap<>();
         for (MethodDecl m : d.methods) {
-            if (m.hidden || !isPythonIdentifier(m.effectiveName())) continue;
+            if (!isRenderedInterfaceMethod(m)) continue;
             nameCount.merge(pyIdent(m.effectiveName()), 1, Integer::sum);
         }
         for (MethodDecl m : d.methods) {
-            if (m.hidden || !isPythonIdentifier(m.effectiveName())) continue;
+            if (!isRenderedInterfaceMethod(m)) continue;
             if (nameCount.getOrDefault(pyIdent(m.effectiveName()), 0) > 1) sb.append("    @overload\n");
             sb.append("    def ").append(pyIdent(m.effectiveName()))
               .append("(").append(params(m, true)).append(") -> ")
@@ -464,7 +470,8 @@ public final class PythonClassRenderer {
         BeanPropertyConflicts propertyConflicts = beanPropertyConflicts(d, declarations);
         Map<String, Integer> nameCount = new HashMap<>();
         for (MethodDecl m : d.methods) {
-            if (!isOrdinaryPythonMethod(m, propertyConflicts)) continue;
+            if (d.kind == TypeDecl.Kind.INTERFACE
+                    ? !isRenderedInterfaceMethod(m) : !isOrdinaryPythonMethod(m, propertyConflicts)) continue;
             nameCount.merge(pyIdent(m.effectiveName()), 1, Integer::sum);
         }
         return nameCount.values().stream().anyMatch(count -> count > 1);
@@ -664,6 +671,10 @@ public final class PythonClassRenderer {
         }
         names.addAll(accessorCalls);
         return new BeanPropertyConflicts(Set.copyOf(names), Set.copyOf(accessorCalls), fields);
+    }
+
+    private static boolean isRenderedInterfaceMethod(MethodDecl method) {
+        return !method.hidden && isPythonIdentifier(method.effectiveName());
     }
 
     private static boolean isOrdinaryPythonMethod(MethodDecl method, BeanPropertyConflicts propertyConflicts) {

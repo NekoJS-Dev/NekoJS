@@ -24,6 +24,7 @@ public class EventGroup {
 
     private final String name;
     private final Map<String, RegisteredBus> buses;
+    private final java.util.List<EventExposure.Declaration> publications = new java.util.ArrayList<>();
     private volatile boolean frozen;
 
     private EventGroup(String name) {
@@ -31,6 +32,23 @@ public class EventGroup {
         // LinkedHashMap：保持注册顺序，viewBuses()/probe 目录迭代确定（HashMap 的
         // String key 迭代序依赖 hashCode 内部布局，跨 JDK/运行脆弱）
         this.buses = new LinkedHashMap<>();
+    }
+
+    /** Declares a group-wide module publication; registration supplies the actual plugin owner. */
+    public EventGroup expose(java.util.function.Consumer<EventExposure> configure) {
+        checkMutable();
+        EventExposure exposure = new EventExposure();
+        Objects.requireNonNull(configure, "configure").accept(exposure);
+        publications.add(exposure.declaration());
+        return this;
+    }
+
+    java.util.List<ModuleEventGroup> modulePublications(String owner) {
+        return publications.stream().map(publication -> publication.bind(owner, this)).toList();
+    }
+
+    private void checkMutable() {
+        if (frozen) throw new IllegalStateException("EventGroup '" + name + "' is frozen after bootstrap");
     }
 
     /** 组名（如 {@code "ServerEvents"}）。 */
@@ -83,6 +101,48 @@ public class EventGroup {
         return add(name, ScriptType.STARTUP, EventBusJS.of(type, EventBusJS.eventCancellability(type), dispatchKey));
     }
 
+    /** Defines a source event and its module publications in the same declaration. */
+    public <E> EventBusJS<E, Void> server(String name, Class<E> type,
+                                        java.util.function.Consumer<EventPublication<E>> configure) {
+        return add(name, ScriptType.SERVER, EventBusJS.of(type), configure);
+    }
+
+    public <E> EventBusJS<E, Void> client(String name, Class<E> type,
+                                        java.util.function.Consumer<EventPublication<E>> configure) {
+        return add(name, ScriptType.CLIENT, EventBusJS.of(type), configure);
+    }
+
+    public <E> EventBusJS<E, Void> startup(String name, Class<E> type,
+                                         java.util.function.Consumer<EventPublication<E>> configure) {
+        return add(name, ScriptType.STARTUP, EventBusJS.of(type), configure);
+    }
+
+    public <E, K> EventBusJS<E, K> server(String name, Class<E> type, DispatchKey<E, K> dispatchKey,
+                                         java.util.function.Consumer<EventPublication<E>> configure) {
+        return add(name, ScriptType.SERVER, EventBusJS.of(type, EventBusJS.eventCancellability(type), dispatchKey), configure);
+    }
+
+    public <E, K> EventBusJS<E, K> client(String name, Class<E> type, DispatchKey<E, K> dispatchKey,
+                                         java.util.function.Consumer<EventPublication<E>> configure) {
+        return add(name, ScriptType.CLIENT, EventBusJS.of(type, EventBusJS.eventCancellability(type), dispatchKey), configure);
+    }
+
+    public <E, K> EventBusJS<E, K> startup(String name, Class<E> type, DispatchKey<E, K> dispatchKey,
+                                          java.util.function.Consumer<EventPublication<E>> configure) {
+        return add(name, ScriptType.STARTUP, EventBusJS.of(type, EventBusJS.eventCancellability(type), dispatchKey), configure);
+    }
+
+    public <E, K> EventBusJS<E, K> add(String name, ScriptType scriptType, EventBusJS<E, K> bus,
+                                      java.util.function.Consumer<EventPublication<E>> configure) {
+        checkMutable();
+        EventPublication<E> publication = new EventPublication<>(name);
+        Objects.requireNonNull(configure, "configure").accept(publication);
+        var declarations = publication.declarations();
+        add(name, scriptType, bus);
+        publications.addAll(declarations);
+        return bus;
+    }
+
     /**
      * 注册总线：绑定 {@code scriptType} 与组/事件名元数据后收入本组，返回该总线。
      * 组已冻结抛 {@link IllegalStateException}；总线名重复抛 {@link IllegalArgumentException}；
@@ -119,7 +179,15 @@ public class EventGroup {
                     this.name, other.name);
             return;
         }
+        checkMutable();
+        for (String busName : other.buses.keySet()) {
+            if (buses.containsKey(busName)) {
+                throw new IllegalArgumentException("A bus with name '" + busName + "' has already been registered");
+            }
+        }
+        var declarations = other.publications.stream().map(publication -> publication.resolveEvents(other)).toList();
         other.buses.forEach((busName, registered) -> this.add(busName, registered.scriptType, registered.bus));
+        publications.addAll(declarations);
     }
 
     /**

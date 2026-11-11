@@ -20,7 +20,7 @@ class CoreBindingsGlobalsTest {
 
     @Test
     void wrapperParityGlobalsAreRegistered() {
-        BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(ScriptType.SERVER);
+        BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(ScriptType.SERVER).scopedTo("nekojs");
 
         new NekoJSCorePlugin().registerBinding(registry);
 
@@ -31,7 +31,7 @@ class CoreBindingsGlobalsTest {
 
     @Test
     void parityGlobalsDoNotShadowExistingNames() {
-        BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(ScriptType.SERVER);
+        BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(ScriptType.SERVER).scopedTo("nekojs");
 
         new NekoJSCorePlugin().registerBinding(registry);
 

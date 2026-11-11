@@ -96,7 +96,7 @@ class QueryToolCapabilityMatrixTest {
                             + "client class init is not probeable in a bare JVM and no client runtime "
                             + "smoke was run -> not runtime-verified (REPORT §7 N6)";
                 } else {
-                    BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(type);
+                    BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(type).scopedTo("nekojs");
                     newInstance(corePlugin).registerBinding(registry);
                     var binding = registry.viewRegistered().get("DataMap");
                     status = binding == null ? CapabilityStatus.UNAVAILABLE : CapabilityStatus.SUPPORTED;
@@ -190,7 +190,7 @@ class QueryToolCapabilityMatrixTest {
         String valueType = facadeClass.getName();
 
         for (ScriptType type : ScriptType.values()) {
-            BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(type);
+            BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(type).scopedTo("nekojs");
             newInstance(pluginClass).registerBinding(registry);
             var binding = registry.viewRegistered().get("EntitySelectors");
             CapabilityStatus status =

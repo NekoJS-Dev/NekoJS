@@ -28,6 +28,12 @@ For a complete component-bearing item scenario with its run command and expected
 
 Adapters allow specific Java inputs to accept extra script shapes. Check the parameter's emitted input alias and adapter documentation. A string-accepting ItemStack adapter does not make every String parameter an item input, and not every string is a valid item value.
 
+## Reading generated input types
+
+Probe shares collection input rendering across ordinary Java methods, callbacks, events, managed modules and recipes. When host and guest element types are identical, an existing collection input alias such as `$List_<string>` replaces its expanded host-or-array union. When an adapter accepts extra guest forms, the distinction remains explicit: a Java `List<Ingredient>` does not become a Java `List<IngredientInput>` merely because a script array can contain ingredient strings. Concrete collections and Set do not gain unsupported array conversions.
+
+Known primitive property-key types use a shorter map record expression; generic or mixed key domains retain their conditional guard. `Partial<Record<...>>` remains partial. Long callable declarations use multiple lines, and compound array elements retain precedence-preserving parentheses. These are shared declaration simplifications, not new runtime conversions, renamed methods or removed overloads. Existing live declarations require a new Probe export after updating the installed build.
+
 Use readable Bean properties for exposed getters and writable properties for exposed setters. A getter alone does not permit assignment. Parameterized operations remain methods. When a field conflicts with a method, use only the exact selector spelling found in the emitted declaration; some projected methods are deliberately absent.
 
 Entity/player PData on Fabric retains the full `NeoForgeData` persistence container; the platform bridge selects `NekoJSPersistentData` once, matching NeoForge. Other container fields are preserved. Historical Fabric saves may contain a second same-named payload compound. Those bytes remain nested: no automatic flattening or guessed migration occurs because a legitimate user compound is indistinguishable. Back up and inspect affected saves before an intentional migration or a temporary nested read path. Headless bridge/save/sync tests do not replace real-world restart or multiplayer acceptance. ItemStack PData is different: it owns the whole vanilla `CUSTOM_DATA` component, not an entity payload child.

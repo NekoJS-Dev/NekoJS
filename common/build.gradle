@@ -62,11 +62,14 @@ dependencies {
     testImplementation platform(libs.junit.bom)
     testImplementation libs.junit.jupiter
     testImplementation libs.gson
+    testImplementation libs.asm
     testRuntimeOnly libs.junit.platform.launcher
     // 25.1.3.6; exported so every platform receives the same remapper SPI.
     api(libs.graal)
 
     compileOnly libs.jspecify
+    // Used by declaration preparation and offline artifact generation, never callback dispatch.
+    compileOnly libs.asm
     compileOnly libs.gson
     compileOnly libs.slf4j.api
     compileOnly libs.log4j.api
@@ -312,15 +315,19 @@ def generateAuthoringManifest = tasks.register('generateAuthoringManifest') {
 sourceSets.main.resources.srcDir(authoringGenerated)
 tasks.named('processResources') { dependsOn generateAuthoringManifest }
 
-// A companion executable contains only the read-only query stack, its documents and Gson.
+// The companion contains the read-only query stack, documents, Gson and the shared TOML parser.
 configurations { authoringStdioRuntime }
-dependencies { authoringStdioRuntime libs.gson }
+dependencies {
+    authoringStdioRuntime libs.gson
+    authoringStdioRuntime libs.night.config.core
+    authoringStdioRuntime libs.night.config.toml
+}
 def authoringStdioJar = tasks.register('authoringStdioJar', Jar) {
     group = 'build'
     description = 'Builds the standalone read-only MCP stdio companion (Java 21+).'
     archiveClassifier = 'authoring-stdio'
     dependsOn classes
-    manifest { attributes 'Main-Class': 'com.tkisor.nekojs.authoring.AuthoringStdioMain' }
+    manifest { attributes 'Main-Class': 'com.tkisor.nekojs.authoring.AuthoringStdioMain', 'Multi-Release': 'true' }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from(sourceSets.main.output) {
         include 'com/tkisor/nekojs/authoring/**'
@@ -337,6 +344,7 @@ def authoringStdioJar = tasks.register('authoringStdioJar', Jar) {
         exclude 'module-info.class', 'META-INF/versions/**/module-info.class'
         exclude 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'META-INF/MANIFEST.MF'
     }
+    from('src/authoring-stdio/resources')
 }
 tasks.named('assemble') { dependsOn authoringStdioJar }
 // Process tests launch exactly this artifact, never the mod/test runtime classpath.

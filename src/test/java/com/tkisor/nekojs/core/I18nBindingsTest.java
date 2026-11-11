@@ -42,7 +42,7 @@ class I18nBindingsTest {
     @Test
     void nativeLocalizationIsRegisteredOnlyForClientScripts() {
         for (ScriptType type : ScriptType.values()) {
-            var registry = new BindingRegistry.BindingRegistryImpl(type);
+            var registry = new BindingRegistry.BindingRegistryImpl(type).scopedTo("nekojs");
 //? if neoforge {
             new NekoJSCorePlugin().registerBinding(registry);
 //?} else {

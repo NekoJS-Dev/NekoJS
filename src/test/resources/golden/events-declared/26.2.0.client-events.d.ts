@@ -32,7 +32,9 @@ declare global {
         function registerMenuScreens(handler: ((event: $RegisterMenuScreensEvent) => void)): void;
         function registerRenderers(handler: ((event: $EntityRenderersEvent$RegisterRenderers) => void)): void;
         function registerEntityRenderers(handler: ((event: $EntityRenderersEvent$RegisterRenderers) => void)): void;
-        function registerBlockEntityRenderers(handler: ((event: $EntityRenderersEvent$RegisterRenderers) => void)): void;
+        function registerBlockEntityRenderers(
+            handler: ((event: $EntityRenderersEvent$RegisterRenderers) => void)
+        ): void;
         function registerParticleProviders(handler: ((event: $RegisterParticleProvidersEvent) => void)): void;
         function generateAssets(handler: ((event: $DataGeneratorJS) => void)): void;
         function generateAssets(extra: string, handler: ((event: $DataGeneratorJS) => void)): void;
@@ -41,10 +43,21 @@ declare global {
         function postEffects(handler: ((event: $PostEffectEventJS) => void)): void;
         function hud(handler: ((event: $PainterJS) => void)): void;
         function screenRender(handler: ((event: $ScreenRenderEventJS) => void)): void;
-        function hudRender(id: string, callback: (ctx: $HudRenderContextJS, graphics: $GuiGraphicsExtractor) => void): boolean;
-        function hudRender(id: string, options: ({ layer?: ("background" | "normal" | "foreground"), priority?: number } | ("background" | "normal" | "foreground") | number), callback: (ctx: $HudRenderContextJS, graphics: $GuiGraphicsExtractor) => void): boolean;
+        function hudRender(
+            id: string,
+            callback: (ctx: $HudRenderContextJS, graphics: $GuiGraphicsExtractor) => void
+        ): boolean;
+        function hudRender(
+            id: string,
+            options: ({ layer?: ("background" | "normal" | "foreground"), priority?: number } | ("background" | "normal" | "foreground") | number),
+            callback: (ctx: $HudRenderContextJS, graphics: $GuiGraphicsExtractor) => void
+        ): boolean;
         function worldRender(id: string, callback: (ctx: $WorldRenderContextJS) => void): boolean;
-        function worldRender(id: string, options: ({ layer?: ("early" | "normal" | "late"), priority?: number } | ("early" | "normal" | "late") | number), callback: (ctx: $WorldRenderContextJS) => void): boolean;
+        function worldRender(
+            id: string,
+            options: ({ layer?: ("early" | "normal" | "late"), priority?: number } | ("early" | "normal" | "late") | number),
+            callback: (ctx: $WorldRenderContextJS) => void
+        ): boolean;
     }
 
     namespace ItemEvents {

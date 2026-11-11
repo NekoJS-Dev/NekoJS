@@ -96,6 +96,11 @@ public final class NekoJSBasePluginManager {
         }
     }
 
+    /** Registers a discovered class using the loader-provided mod identity. */
+    public static synchronized void registerClass(String ownerId, Class<?> clazz) {
+        registerClass(new PluginIdentity(ownerId, clazz.getName(), codeSourceUri(clazz)), clazz);
+    }
+
     private static PluginIdentity createLegacyIdentity(Class<?> clazz) {
         URI codeSource = codeSourceUri(clazz);
         return new PluginIdentity("legacy:" + clazz.getName(), clazz.getName(), codeSource);

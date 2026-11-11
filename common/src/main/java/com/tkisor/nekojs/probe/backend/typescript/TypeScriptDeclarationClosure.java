@@ -9,6 +9,7 @@ import com.tkisor.nekojs.probe.ir.TypeReflector;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -20,6 +21,7 @@ final class TypeScriptDeclarationClosure {
     private final Map<String, TypeDecl> declarations = new LinkedHashMap<>();
     private final Map<String, ClassDeclarationCatalogEntry> replacements = new LinkedHashMap<>();
     private final Map<String, String> unavailable = new LinkedHashMap<>();
+    private final Map<String, List<String>> incompleteMembers = new LinkedHashMap<>();
     private final Set<String> hidden = new LinkedHashSet<>();
     private final ClassLoader loader;
 
@@ -89,6 +91,9 @@ final class TypeScriptDeclarationClosure {
                 Set<String> imports = declaration.mutated
                         ? ProbeModifyTypeEventJS.collectEditedSymbolFqns(declaration, packageOf(name)) : Set.of();
                 generator.predeclareClass(name, declaration, imports);
+                if (!declaration.memberOmissions.isEmpty()) {
+                    incompleteMembers.put(name, List.copyOf(declaration.memberOmissions));
+                }
             }
             // Reference caches are sets; sort before insertion to keep package member order stable across JVMs.
             for (String dependency : new TreeSet<>(generator.referencedClasses(name))) {
@@ -101,6 +106,8 @@ final class TypeScriptDeclarationClosure {
     void clearCaches() { declarations.clear(); }
 
     Map<String, String> unavailable() { return Map.copyOf(unavailable); }
+
+    Map<String, List<String>> incompleteMembers() { return Map.copyOf(incompleteMembers); }
 
     boolean includeReference(Set<String> classes, String dependency) {
         if (hidden.contains(dependency) || context.config().isExcluded(dependency)) {

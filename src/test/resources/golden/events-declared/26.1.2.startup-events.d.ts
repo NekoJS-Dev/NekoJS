@@ -1,7 +1,7 @@
+import { $VillagerTradeDeclarationEvent, $VillagerTradeReloadEvent } from "java:com/tkisor/nekojs/api/villager";
 import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
 import { $PostEffectEventJS } from "java:com/tkisor/nekojs/client/posteffect";
 import { $HudRenderContextJS, $WorldRenderContextJS } from "java:com/tkisor/nekojs/client/render";
-import { $VillagerTradeDeclarationEventJS, $VillagerTradeReloadEventJS } from "java:com/tkisor/nekojs/core/villager";
 import { $BlockEntityTickEvent, $RandomTickEvent } from "java:com/tkisor/nekojs/event/level";
 import { $DataGeneratorJS, $LangGeneratorJS } from "java:com/tkisor/nekojs/wrapper";
 import { $PainterJS, $ScreenRenderEventJS } from "java:com/tkisor/nekojs/wrapper/client";
@@ -51,7 +51,10 @@ declare global {
         function portalSpawn(handler: ((event: $BlockEvent$PortalSpawnEvent) => void)): void;
         function portalSpawn(extra: $Block, handler: ((event: $BlockEvent$PortalSpawnEvent) => void)): void;
         function toolModification(handler: ((event: $BlockEvent$BlockToolModificationEvent) => void)): void;
-        function toolModification(extra: $Block, handler: ((event: $BlockEvent$BlockToolModificationEvent) => void)): void;
+        function toolModification(
+            extra: $Block,
+            handler: ((event: $BlockEvent$BlockToolModificationEvent) => void)
+        ): void;
         function rightClicked(handler: ((event: $PlayerInteractEvent$RightClickBlock) => void)): void;
         function rightClicked(extra: $Block, handler: ((event: $PlayerInteractEvent$RightClickBlock) => void)): void;
         function placed(handler: ((event: $BlockEvent$EntityPlaceEvent) => void)): void;
@@ -83,7 +86,9 @@ declare global {
         function registerMenuScreens(handler: ((event: $RegisterMenuScreensEvent) => void)): void;
         function registerRenderers(handler: ((event: $EntityRenderersEvent$RegisterRenderers) => void)): void;
         function registerEntityRenderers(handler: ((event: $EntityRenderersEvent$RegisterRenderers) => void)): void;
-        function registerBlockEntityRenderers(handler: ((event: $EntityRenderersEvent$RegisterRenderers) => void)): void;
+        function registerBlockEntityRenderers(
+            handler: ((event: $EntityRenderersEvent$RegisterRenderers) => void)
+        ): void;
         function registerParticleProviders(handler: ((event: $RegisterParticleProvidersEvent) => void)): void;
         function generateAssets(handler: ((event: $DataGeneratorJS) => void)): void;
         function generateAssets(extra: string, handler: ((event: $DataGeneratorJS) => void)): void;
@@ -92,10 +97,21 @@ declare global {
         function postEffects(handler: ((event: $PostEffectEventJS) => void)): void;
         function hud(handler: ((event: $PainterJS) => void)): void;
         function screenRender(handler: ((event: $ScreenRenderEventJS) => void)): void;
-        function hudRender(id: string, callback: (ctx: $HudRenderContextJS, graphics: $GuiGraphicsExtractor) => void): boolean;
-        function hudRender(id: string, options: ({ layer?: ("background" | "normal" | "foreground"), priority?: number } | ("background" | "normal" | "foreground") | number), callback: (ctx: $HudRenderContextJS, graphics: $GuiGraphicsExtractor) => void): boolean;
+        function hudRender(
+            id: string,
+            callback: (ctx: $HudRenderContextJS, graphics: $GuiGraphicsExtractor) => void
+        ): boolean;
+        function hudRender(
+            id: string,
+            options: ({ layer?: ("background" | "normal" | "foreground"), priority?: number } | ("background" | "normal" | "foreground") | number),
+            callback: (ctx: $HudRenderContextJS, graphics: $GuiGraphicsExtractor) => void
+        ): boolean;
         function worldRender(id: string, callback: (ctx: $WorldRenderContextJS) => void): boolean;
-        function worldRender(id: string, options: ({ layer?: ("early" | "normal" | "late"), priority?: number } | ("early" | "normal" | "late") | number), callback: (ctx: $WorldRenderContextJS) => void): boolean;
+        function worldRender(
+            id: string,
+            options: ({ layer?: ("early" | "normal" | "late"), priority?: number } | ("early" | "normal" | "late") | number),
+            callback: (ctx: $WorldRenderContextJS) => void
+        ): boolean;
     }
 
     namespace CommandEvents {
@@ -232,8 +248,8 @@ declare global {
         function lootTables(handler: ((event: $LootTableEventJS) => void)): void;
         function tags(handler: ((event: $TagEventJS) => void)): void;
         function tags(extra: $Identifier, handler: ((event: $TagEventJS) => void)): void;
-        function tradeDeclaration(handler: ((event: $VillagerTradeDeclarationEventJS) => void)): void;
-        function tradeReload(handler: ((event: $VillagerTradeReloadEventJS) => void)): void;
+        function tradeDeclaration(handler: ((event: $VillagerTradeDeclarationEvent) => void)): void;
+        function tradeReload(handler: ((event: $VillagerTradeReloadEvent) => void)): void;
     }
 
 }

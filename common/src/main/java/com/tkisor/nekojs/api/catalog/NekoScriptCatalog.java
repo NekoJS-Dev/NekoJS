@@ -56,7 +56,9 @@ public final class NekoScriptCatalog {
                 Map.of(),
                 List.of(),
                 runtime.beanAliasExclusions(),
-                runtime.beanMethodProjections()
+                runtime.beanMethodProjections(),
+                moduleBindings(runtime, ScriptType.all()),
+                moduleEvents(runtime, ScriptType.all())
         );
 
         Map<ScriptType, ApiEnvironmentSnapshot> managedApis = buildManagedApis(runtime, ScriptType.all());
@@ -80,7 +82,9 @@ public final class NekoScriptCatalog {
                 managedApis,
                 legacySurface,
                 runtime.beanAliasExclusions(),
-                runtime.beanMethodProjections()
+                runtime.beanMethodProjections(),
+                moduleBindings(runtime, ScriptType.all()),
+                moduleEvents(runtime, ScriptType.all())
         );
     }
 
@@ -110,7 +114,9 @@ public final class NekoScriptCatalog {
                 Map.of(),
                 List.of(),
                 runtime.beanAliasExclusions(),
-                runtime.beanMethodProjections()
+                runtime.beanMethodProjections(),
+                moduleBindings(runtime, List.of(scriptType)),
+                moduleEvents(runtime, List.of(scriptType))
         );
 
         Map<ScriptType, ApiEnvironmentSnapshot> managedApis = buildManagedApis(runtime, List.of(scriptType));
@@ -134,8 +140,33 @@ public final class NekoScriptCatalog {
                 managedApis,
                 legacySurface,
                 runtime.beanAliasExclusions(),
-                runtime.beanMethodProjections()
+                runtime.beanMethodProjections(),
+                moduleBindings(runtime, List.of(scriptType)),
+                moduleEvents(runtime, List.of(scriptType))
         );
+    }
+
+    private static List<ModuleEventCatalogEntry> moduleEvents(IPluginRuntime runtime, List<ScriptType> types) {
+        List<ModuleEventCatalogEntry> result = new ArrayList<>();
+        for (var publication : runtime.moduleEventGroups()) {
+            for (ScriptType type : types) {
+                for (String name : publication.events().stream().sorted().toList()) {
+                    var holder = publication.group().getBusHolder(name);
+                    if (!publication.supports(name, type)) continue;
+                    var bus = holder.getBus(type);
+                    var projection = publication.views().get(name);
+                    Class<?> payload = projection == null ? bus.bus().eventType() : projection.type();
+                    Class<?> key = bus.bus() instanceof DispatchEventBus<?, ?> dispatch
+                            ? dispatch.dispatchKey().keyType() : null;
+                    var event = EventCatalogEntry.of(publication.group().name(), name, type, payload,
+                            key, bus.canCancel(), bus.canDispatch());
+                    if (projection == null) event = event.withCallSignatures(bus.callSignatures());
+                    result.add(new ModuleEventCatalogEntry(publication.moduleId(), publication.owner(),
+                            publication.category(), type, event));
+                }
+            }
+        }
+        return List.copyOf(result);
     }
 
     /** Merged recipe namespace entries: handler methods + schema types. */
@@ -199,6 +230,18 @@ public final class NekoScriptCatalog {
                 }
             }
             entries.add(entry);
+        }
+        return List.copyOf(entries);
+    }
+
+    public static List<ModuleBindingCatalogEntry> moduleBindings(IPluginRuntime runtime, List<ScriptType> types) {
+        List<ModuleBindingCatalogEntry> entries = new ArrayList<>();
+        for (ScriptType type : types) {
+            for (var module : runtime.moduleBindings(type)) {
+                var binding = module.binding();
+                entries.add(new ModuleBindingCatalogEntry(module.moduleId(), module.owner(), module.category(),
+                        BindingCatalogEntry.of(binding.name(), type, binding.valueType(), binding.value() instanceof Class<?>)));
+            }
         }
         return List.copyOf(entries);
     }

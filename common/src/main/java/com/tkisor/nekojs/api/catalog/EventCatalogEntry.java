@@ -16,6 +16,7 @@ public record EventCatalogEntry(
         List<EventCallSignature> callSignatures
 ) {
     public EventCatalogEntry {
+        eventType = com.tkisor.nekojs.api.ScriptTypeViews.outputClass(eventType);
         callSignatures = List.copyOf(callSignatures);
     }
 

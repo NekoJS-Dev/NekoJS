@@ -62,6 +62,8 @@ final class RecipeNamespaceProxy implements ProxyObject {
     @Param(name = "type", value = "recipe type path within the namespace, e.g. 'shaped' in 'minecraft:shaped'")
     @Return("an executable for the resolved layer; never null (fallback accepts any name)")
     public Object getMember(String type) {
+        RecipeTypeDefinition known = definitions.get(namespace, type);
+        if (known != null && known.unsupportedReason() != null) return schemaExecutable(known);
         List<Method> methods = handlerMethods.get(type);
         if (methods != null && !methods.isEmpty()) {
             return handlerExecutable(type, methods);
@@ -109,15 +111,12 @@ final class RecipeNamespaceProxy implements ProxyObject {
                 int total = m.getParameterCount();
                 int required = RecipeReflectionUtil.requiredParamCount(m);
                 if (args.length >= required && args.length <= total) {
-                    try {
-                        Object[] converted = RecipeReflectionUtil.convertArgs(m, args, total);
-                        return m.invoke(handler, converted);
-                    } catch (Exception e) {
-                        break; // conversion failed → try next layer
-                    }
+                    Object[] converted = RecipeReflectionUtil.convertArgs(m, args, total);
+                    if (converted == null) continue;
+                    return RecipeReflectionUtil.invoke(m, handler, converted);
                 }
             }
-            // handler failed → try schema
+            // No handler overload accepts these arguments; try schema, then raw JSON.
             RecipeTypeDefinition def = definitions.get(namespace, type);
             if (def != null) return schemaExecutable(def).execute(args);
             return fallbackExecutable(type).execute(args);
@@ -130,31 +129,52 @@ final class RecipeNamespaceProxy implements ProxyObject {
      *  {@link SchemaRecipeBuilder} for the given schema definition. */
     private ProxyExecutable schemaExecutable(RecipeTypeDefinition def) {
         return args -> {
-            Map<String, Value> values = resolveArgs(def, args);
+            if (def.unsupportedReason() != null) {
+                throw new UnsupportedOperationException("[NEKO-5211] Recipe profile " + def.key()
+                        + " is unsupported: " + def.unsupportedReason());
+            }
+            ResolvedArgs resolved = resolveArgs(def, args);
+            if (def.requiresPreparedFields()) {
+                return SchemaRecipeBuilder.createPrepared(def, host, resolved.values(), resolved.constants());
+            }
             RecipeBuilder builder = host.builder(def.type(), def.prefix());
-            return new SchemaRecipeBuilder(builder, def, host, values);
+            return new SchemaRecipeBuilder(builder, def, host, resolved.values());
         };
     }
 
     /** Maps call arguments to schema field names: a single object with matching fields
      *  is treated as named-object construction, otherwise a positional constructor of
      *  the same arity is used; throws when neither fits. */
-    private Map<String, Value> resolveArgs(RecipeTypeDefinition def, Value[] args) {
-        if (args.length == 1 && args[0].hasMembers() && hasNamedField(def, args[0])) {
+    private record ResolvedArgs(Map<String, Value> values, Map<String, JsonElement> constants) {}
+
+    private ResolvedArgs resolveArgs(RecipeTypeDefinition def, Value[] args) {
+        int supplied = args.length;
+        // Graal reports both null and undefined as null-like; only undefined denotes omission.
+        while (supplied > 0 && args[supplied - 1].isNull()
+                && "undefined".equals(args[supplied - 1].toString())) supplied--;
+        if (supplied == 1 && args[0].hasMembers() && hasNamedField(def, args[0])) {
             Map<String, Value> values = new LinkedHashMap<>();
-            for (String field : def.fields().keySet()) {
-                if (args[0].hasMember(field)) values.put(field, args[0].getMember(field));
+            Set<String> names = new LinkedHashSet<>(def.fields().keySet());
+            names.addAll(def.fieldAliases().keySet());
+            for (String name : names) {
+                if (!args[0].hasMember(name)) continue;
+                String field = def.fieldAliases().getOrDefault(name, name);
+                if (values.containsKey(field)) {
+                    throw new IllegalArgumentException("[NEKO-5212] Multiple named arguments target field '"
+                            + field + "' for " + def.key());
+                }
+                values.put(field, args[0].getMember(name));
             }
-            return values;
+            return new ResolvedArgs(values, Map.of());
         }
         for (List<String> ctor : def.constructors()) {
-            if (ctor.size() == args.length) {
+            if (ctor.size() == supplied) {
                 Map<String, Value> values = new LinkedHashMap<>();
                 for (int i = 0; i < ctor.size(); i++) values.put(ctor.get(i), args[i]);
-                return values;
+                return new ResolvedArgs(values, def.constructorOverrides().getOrDefault(ctor, Map.of()));
             }
         }
-        StringBuilder msg = new StringBuilder("No constructor for " + def.key() + " accepts " + args.length + " args.\n");
+        StringBuilder msg = new StringBuilder("[NEKO-5214] No constructor for " + def.key() + " accepts " + args.length + " args.\n");
         msg.append("Available: ");
         for (List<String> c : def.constructors()) msg.append("(").append(String.join(", ", c)).append(") ");
         msg.append("or named object: { ").append(String.join(", ", def.fields().keySet())).append(" }");
@@ -165,6 +185,9 @@ final class RecipeNamespaceProxy implements ProxyObject {
     private static boolean hasNamedField(RecipeTypeDefinition def, Value value) {
         for (String field : def.fields().keySet()) {
             if (value.hasMember(field)) return true;
+        }
+        for (String alias : def.fieldAliases().keySet()) {
+            if (value.hasMember(alias)) return true;
         }
         return false;
     }

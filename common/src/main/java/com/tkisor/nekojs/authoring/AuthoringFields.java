@@ -38,13 +38,13 @@ final class AuthoringFields {
             FIELDS.put(resource, new LinkedHashMap<>());
             add(resource, Kind.STRING, "symbolId", "name", "kind", "coverage", "source.path", "source.sha256");
         }
-        add("symbols", Kind.STRING, "qualifiedName", "package", "typeId", "declarationId");
+        add("symbols", Kind.STRING, "qualifiedName", "package", "typeId", "declarationId", "moduleId", "category", "owner");
         add("symbols", Kind.BOOLEAN, "staticClass");
         add("members", Kind.STRING, "ownerSymbolId", "declaringType.id", "returnType.id", "returnType.display", "type.id", "type.display", "signature");
         add("members", Kind.BOOLEAN, "isStatic", "readable", "writable");
         add("members", Kind.NUMBER, "callArity.min", "parameterCount");
         add("members", Kind.BOUND, "callArity.max");
-        add("events", Kind.STRING, "group", "payloadType.id");
+        add("events", Kind.STRING, "group", "payloadType.id", "moduleId", "category", "owner");
         add("events", Kind.BOOLEAN, "cancellable");
         add("inputAdapters", Kind.STRING, "targetType", "syntax", "precedence");
         add("declarations", Kind.STRING, "path", "sha256");

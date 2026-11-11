@@ -181,6 +181,32 @@ class PostEffectBuilderTest {
         }
     }
 
+    //? if >=26.1 {
+    @Test
+    void typedShaderMapsStayImmutableDetachedAndConsistentWithProxyWrites() {
+        var empty = new PostEffectBuilder();
+        assertEquals(Map.of(), empty.getFragmentShaders());
+        assertEquals(Map.of(), empty.getVertexShaders());
+        assertTrue(empty.finish().isEmpty(), "Default reads must not add declaration fields");
+
+        var builder = new PostEffectBuilder();
+        var input = new java.util.LinkedHashMap<String, String>();
+        input.put("pass", "original");
+        builder.setFragmentShaders(input);
+        input.put("pass", "mutated");
+        var snapshot = builder.getFragmentShaders();
+        assertEquals(Map.of("pass", "original"), snapshot);
+        assertThrows(UnsupportedOperationException.class, () -> snapshot.put("other", "value"));
+        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
+            builder.putMember("vertexShaders", context.eval("js", "({pass: 'vertex'})"));
+        }
+        assertEquals(Map.of("pass", "vertex"), builder.getVertexShaders());
+        builder.setFragmentShaders(Map.of("next", "updated"));
+        assertEquals(Map.of("pass", "original"), snapshot);
+        assertEquals(builder.getVertexShaders(), builder.finish().get("vertexShaders"));
+    }
+    //?}
+
     @Test
     void javaBuilderIsDetachedAndCannotChangeCollectedDeclarations() {
         var plan = plan();

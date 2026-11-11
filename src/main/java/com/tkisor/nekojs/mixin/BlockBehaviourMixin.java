@@ -1,7 +1,7 @@
 //? if neoforge {
 package com.tkisor.nekojs.mixin;
 
-import com.tkisor.nekojs.bindings.event.NeoForgeBlockEvents;
+import com.tkisor.nekojs.bindings.event.BlockEvents;
 import com.tkisor.nekojs.event.level.RandomTickEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -35,7 +35,7 @@ public abstract class BlockBehaviourMixin {
 
     @Inject(method = "randomTick", at = @At("HEAD"))
     private void nekojs$fireRandomTick(ServerLevel level, BlockPos pos, RandomSource random, CallbackInfo ci) {
-        if (!NeoForgeBlockEvents.RANDOM_TICK.hasListeners()) {
+        if (!BlockEvents.RANDOM_TICK.hasListeners()) {
             return;
         }
         BlockState state = (BlockState) (Object) this;

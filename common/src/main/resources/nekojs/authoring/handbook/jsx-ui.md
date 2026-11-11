@@ -10,6 +10,10 @@ Import `UI`, the controlled components `Toggle`, `Slider`, `Select`, `Tabs`, `Di
 
 Probe extracts callback signatures from the canonical runtime types. A root or workspace render is `() => NekoUiRenderable`; a function component is `NekoUiComponent<Props>`, receiving its declared props and returning VNodes, text, numbers, booleans, null/undefined, or arrays of renderable values. Arbitrary objects and promises are not render results. Event handlers receive their event type; queued actions have no arguments and their return value is ignored.
 
+Pass `ClientUI.screen(...)` or `ClientUI.region(...)` directly to `UI.createRoot`; no casts or local declaration augmentation are required. Probe retains numeric `width`/`height` fields on native measurement and viewport results alongside their Java Map methods. Host implementations must accept `layout(tree, viewport, snapshot, publish?)`; the runtime supplies the viewport and snapshot on every layout call.
+
+Java plugin authors can use `@ScriptOutput("TypeScript expression")` when reflection cannot describe the actual returned shape. This changes only TypeScript declarations, including Bean getters and inherited members; explicit Probe type edits take precedence. Use resolvable inline imports for external types and an intersection with the Java type when its methods remain available. The annotation does not discover dependencies or convert runtime values, and ordinary Maps keep their reflected types.
+
 Signal updates are `(current: T) => T`. Stores infer keys and value types from their initial state, so each updater must return the type for its selected key:
 
 ```ts

@@ -48,7 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
             Set.of("hud", "hudRender", "screenRender", "worldRender");
 
     private static Map<String, EventGroup> productionGroups() {
-        EventGroupRegistry registry = new EventGroupRegistry.Impl();
+        EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         new NekoJSCorePlugin().registerEvents(registry);
         new NekoJSCorePlugin().registerClientEvents(registry);
         return registry.view();

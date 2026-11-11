@@ -1,6 +1,6 @@
 import { $Class, $Enum } from "java:java/lang";
 import { $Annotation, $Annotation_ } from "java:java/lang/annotation";
-import { $Set } from "java:java/util";
+import { $Set, $Set_ } from "java:java/util";
 
 declare module "java:java/lang/reflect" {
     export class $AccessFlag {
@@ -73,21 +73,27 @@ declare module "java:java/lang/reflect" {
     }
 
     export interface $AnnotatedElement {
-        getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
+        get annotations(): $Annotation[];
         getAnnotations(): $Annotation[];
+        get declaredAnnotations(): $Annotation[];
+        getDeclaredAnnotations(): $Annotation[];
+        getAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
         getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
         getDeclaredAnnotationsByType<T extends $Annotation>(arg0: $Class<T>): T[];
-        getDeclaredAnnotations(): $Annotation[];
         getDeclaredAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
         isAnnotationPresent(arg0: $Class<$Annotation>): boolean;
     }
 
     export interface $AnnotatedType extends $AnnotatedElement {
+        get annotatedOwnerType(): $AnnotatedType;
         getAnnotatedOwnerType(): $AnnotatedType;
+        get annotations(): $Annotation[];
         getAnnotations(): $Annotation[];
-        getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
+        get declaredAnnotations(): $Annotation[];
         getDeclaredAnnotations(): $Annotation[];
+        get type(): $Type;
         getType(): $Type;
+        getAnnotation<T extends $Annotation>(arg0: $Class<T>): T;
     }
 
     export class $ClassFileFormatVersion {
@@ -257,15 +263,20 @@ declare module "java:java/lang/reflect" {
     }
 
     export interface $GenericDeclaration extends $AnnotatedElement {
+        get typeParameters(): $TypeVariable<any>[];
         getTypeParameters(): $TypeVariable<any>[];
     }
 
     export interface $Member {
-        accessFlags(): $Set<$AccessFlag>;
+        get declaringClass(): $Class<any>;
         getDeclaringClass(): $Class<any>;
+        get modifiers(): number;
         getModifiers(): number;
+        get name(): string;
         getName(): string;
+        get synthetic(): boolean;
         isSynthetic(): boolean;
+        accessFlags(): $Set<$AccessFlag>;
     }
     export const $Member: {
         readonly DECLARED: number;
@@ -384,13 +395,18 @@ declare module "java:java/lang/reflect" {
     }
 
     export interface $Type {
+        get typeName(): string;
         getTypeName(): string;
     }
 
     export interface $TypeVariable<D extends $GenericDeclaration> extends $Type, $AnnotatedElement {
+        get annotatedBounds(): $AnnotatedType[];
         getAnnotatedBounds(): $AnnotatedType[];
+        get bounds(): $Type[];
         getBounds(): $Type[];
+        get genericDeclaration(): D;
         getGenericDeclaration(): D;
+        get name(): string;
         getName(): string;
     }
 

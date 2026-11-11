@@ -1,6 +1,6 @@
 import { $Serializable } from "java:java/io";
 import { $Provider, $PublicKey } from "java:java/security";
-import { $Iterator, $List } from "java:java/util";
+import { $Iterator, $List, $List_ } from "java:java/util";
 
 declare module "java:java/security/cert" {
     export class $Certificate implements $Serializable {

@@ -64,6 +64,14 @@ import java.util.TreeSet;
  * <p>{@link #requiresIr} 恒为 true：Python 无「旧路径」，必须由 {@code ProbeCoordinator} 构建共享 IR。
  */
 public final class PythonProbeBackend implements ProbeBackend {
+    private final Set<String> renderWarnings = new LinkedHashSet<>();
+
+    @Override
+    public GenerateResult generate(ProbeContext ctx) {
+        GenerateResult result = ProbeBackend.super.generate(ctx);
+        return result.success() && !renderWarnings.isEmpty()
+                ? GenerateResult.withWarnings(result, List.copyOf(renderWarnings)) : result;
+    }
 
     @Override
     public String languageId() {
@@ -96,9 +104,22 @@ public final class PythonProbeBackend implements ProbeBackend {
      */
     @Override
     public Map<String, String> render(ProbeContext ctx) {
+        renderWarnings.clear();
         List<TypeDecl> ir = ctx.ir();
         if (ir == null || ir.isEmpty()) {
             throw new IllegalArgumentException("python probe requires shared IR; no classes collected");
+        }
+        Map<String, List<String>> incompleteMembers = new TreeMap<>();
+        for (TypeDecl declaration : ir) {
+            if (!declaration.hidden && !pkgOf(declaration.fqn).isEmpty()
+                    && !declaration.memberOmissions.isEmpty()) {
+                incompleteMembers.put(declaration.fqn, List.copyOf(declaration.memberOmissions));
+            }
+        }
+        for (var entry : incompleteMembers.entrySet()) {
+            renderWarnings.add("[NEKO-4066] Probe declaration retained: class="
+                    + entry.getKey() + "; entire public method set unavailable; omissions="
+                    + String.join("; ", entry.getValue()));
         }
         return renderFiles(ir, ctx.snapshot(), ctx.overrides().globals());
     }

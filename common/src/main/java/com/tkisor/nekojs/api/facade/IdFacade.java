@@ -24,6 +24,16 @@ public interface IdFacade {
      */
     NekoId of(String namespace, String path);
 
+    /** Parses a strict resource ID; unqualified values use {@code nekojs}. */
+    default NekoId resource(String value) {
+        return NekoId.resource(value);
+    }
+
+    /** Constructs a strict resource ID without trimming or changing case. */
+    default NekoId resource(String namespace, String path) {
+        return NekoId.resource(namespace, path);
+    }
+
     /** 返回 {@link NekoId} 的命名空间。 */
     String namespace(NekoId id);
 

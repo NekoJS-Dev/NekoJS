@@ -7,6 +7,8 @@ import com.google.gson.*;
 import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.recipe.RecipeCreationContext;
+import com.tkisor.nekojs.api.recipe.RecipeBuilderSession;
+import com.tkisor.nekojs.api.annotation.HideFromJS;
 import com.tkisor.nekojs.api.recipe.RecipeEntryJS;
 import com.tkisor.nekojs.api.recipe.RecipeFilter;
 import com.tkisor.nekojs.api.recipe.RecipeJsonBuilder;
@@ -32,6 +34,7 @@ import org.jetbrains.annotations.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 
@@ -62,6 +65,8 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     private final HolderLookup.Provider registries;
     private final RecipeTypeDefinitionRegistry recipeTypeDefinitions;
     private int recipeCounter = 0;
+    private final Deque<Runnable> beforeEncode = new ArrayDeque<>();
+    private boolean preparingRecipes;
 
     private final Set<ResourceLocation> takenIds = new HashSet<>();
     // Lazily created by getRecipes(): constructing the proxy in a constructor or field
@@ -85,6 +90,50 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     public Map<ResourceLocation, JsonElement> getFinalJsons() { return this.jsons; }
+
+    /** Returns the exact registry view borrowed from the current datapack reload. */
+    @HideFromJS
+    public HolderLookup.Provider registryAccess() {
+        return registries;
+    }
+
+    /** Completes pending native builders before the owner's final recipe decode pass. */
+    @HideFromJS
+    public void prepareRecipesForDecode() {
+        if (preparingRecipes) return;
+        preparingRecipes = true;
+        try {
+            while (!beforeEncode.isEmpty()) beforeEncode.removeFirst().run();
+        } finally {
+            preparingRecipes = false;
+        }
+    }
+
+    /** Borrows this event's recipe view and preparation lifecycle without taking ownership. */
+    @HideFromJS
+    public RecipeBuilderSession builderSession(Supplier<ResourceLocation> currentId, JsonObject json) {
+        return new RecipeBuilderSession() {
+            @Override
+            public String currentId() {
+                return currentId.get().toString();
+            }
+
+            @Override
+            public JsonObject snapshot() {
+                return json.deepCopy();
+            }
+
+            @Override
+            public void beforeEncode(Runnable action) {
+                Objects.requireNonNull(action, "action");
+                beforeEncode.addLast(() -> {
+                    // Removed or replaced builders must not publish deferred side effects.
+                    if (jsons.get(currentId.get()) == json) action.run();
+                });
+            }
+
+        };
+    }
 
     public RecipeTypeDefinitionRegistry getRecipeTypeDefinitions() { return this.recipeTypeDefinitions; }
 

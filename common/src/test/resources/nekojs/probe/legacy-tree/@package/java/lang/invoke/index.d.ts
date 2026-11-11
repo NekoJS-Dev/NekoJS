@@ -2,7 +2,7 @@ import { $Serializable } from "java:java/io";
 import { $Class, $ClassLoader, $Enum } from "java:java/lang";
 import { $ClassDesc, $Constable, $Constable_, $ConstantDesc, $ConstantDesc_, $DynamicConstantDesc, $MethodHandleDesc, $MethodTypeDesc } from "java:java/lang/constant";
 import { $Constructor, $Field, $Member, $Method } from "java:java/lang/reflect";
-import { $List, $Optional, $OptionalView } from "java:java/util";
+import { $List, $List_, $Optional, $OptionalView } from "java:java/util";
 
 declare module "java:java/lang/invoke" {
     export class $MethodHandle implements $Constable {
@@ -19,7 +19,7 @@ declare module "java:java/lang/invoke" {
         describeConstable(): $Optional<$MethodHandleDesc> & $OptionalView<(number | string | $ConstantDesc)>;
         invokeExact(arg0?: unknown[]): unknown;
         invokeWithArguments(arg0?: unknown[]): unknown;
-        invokeWithArguments(arg0: ($List<any> | (any)[])): unknown;
+        invokeWithArguments(arg0: $List_<any>): unknown;
         invoke(arg0?: unknown[]): unknown;
         toString(): string;
         type(): $MethodType;
@@ -27,11 +27,17 @@ declare module "java:java/lang/invoke" {
     }
 
     export interface $MethodHandleInfo {
+        get declaringClass(): $Class<any>;
         getDeclaringClass(): $Class<any>;
+        get methodType(): $MethodType;
         getMethodType(): $MethodType;
+        get modifiers(): number;
         getModifiers(): number;
+        get name(): string;
         getName(): string;
+        get referenceKind(): number;
         getReferenceKind(): number;
+        get varArgs(): boolean;
         isVarArgs(): boolean;
         reflectAs<T extends $Member>(arg0: $Class<T>, arg1: $MethodHandles$Lookup): T;
     }
@@ -60,8 +66,17 @@ declare module "java:java/lang/invoke" {
         accessClass<T>(arg0: $Class<T>): $Class<T>;
         bind(arg0: unknown, arg1: string, arg2: $MethodType): $MethodHandle;
         defineClass(arg0: number[]): $Class<any>;
-        defineHiddenClassWithClassData(arg0: number[], arg1: unknown, arg2: boolean, arg3?: $MethodHandles$Lookup$ClassOption_[]): $MethodHandles$Lookup;
-        defineHiddenClass(arg0: number[], arg1: boolean, arg2?: $MethodHandles$Lookup$ClassOption_[]): $MethodHandles$Lookup;
+        defineHiddenClassWithClassData(
+            arg0: number[],
+            arg1: unknown,
+            arg2: boolean,
+            arg3?: $MethodHandles$Lookup$ClassOption_[]
+        ): $MethodHandles$Lookup;
+        defineHiddenClass(
+            arg0: number[],
+            arg1: boolean,
+            arg2?: $MethodHandles$Lookup$ClassOption_[]
+        ): $MethodHandles$Lookup;
         dropLookupMode(arg0: number): $MethodHandles$Lookup;
         ensureInitialized<T>(arg0: $Class<T>): $Class<T>;
         findClass(arg0: string): $Class<any>;
@@ -110,10 +125,10 @@ declare module "java:java/lang/invoke" {
         static methodType(arg0: $Class<any>, arg1: $Class<any>, arg2?: $Class<any>[]): $MethodType;
         static methodType(arg0: $Class<any>, arg1: $Class<any>): $MethodType;
         static methodType(arg0: $Class<any>, arg1: $MethodType): $MethodType;
-        static methodType(arg0: $Class<any>, arg1: ($List<$Class<any>> | ($Class<any>)[])): $MethodType;
+        static methodType(arg0: $Class<any>, arg1: $List_<$Class<any>>): $MethodType;
         static methodType(arg0: $Class<any>): $MethodType;
         appendParameterTypes(arg0?: $Class<any>[]): $MethodType;
-        appendParameterTypes(arg0: ($List<$Class<any>> | ($Class<any>)[])): $MethodType;
+        appendParameterTypes(arg0: $List_<$Class<any>>): $MethodType;
         changeParameterType(arg0: number, arg1: $Class<any>): $MethodType;
         changeReturnType(arg0: $Class<any>): $MethodType;
         describeConstable(): $Optional<$MethodTypeDesc> & $OptionalView<(number | string | $ConstantDesc)>;
@@ -126,7 +141,7 @@ declare module "java:java/lang/invoke" {
         hasWrappers(): boolean;
         hashCode(): number;
         insertParameterTypes(arg0: number, arg1?: $Class<any>[]): $MethodType;
-        insertParameterTypes(arg0: number, arg1: ($List<$Class<any>> | ($Class<any>)[])): $MethodType;
+        insertParameterTypes(arg0: number, arg1: $List_<$Class<any>>): $MethodType;
         lastParameterType(): $Class<any>;
         parameterArray(): $Class<any>[];
         parameterCount(): number;
@@ -144,10 +159,12 @@ declare module "java:java/lang/invoke" {
     }
 
     export interface $TypeDescriptor$OfField<F extends $TypeDescriptor$OfField<F>> extends $TypeDescriptor {
+        get array(): boolean;
+        isArray(): boolean;
+        get primitive(): boolean;
+        isPrimitive(): boolean;
         arrayType(): F;
         componentType(): F;
-        isArray(): boolean;
-        isPrimitive(): boolean;
     }
 
     export interface $TypeDescriptor$OfMethod<F extends $TypeDescriptor$OfField<F>, M extends $TypeDescriptor$OfMethod<F, M>> extends $TypeDescriptor {

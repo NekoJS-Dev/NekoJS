@@ -1,4 +1,4 @@
-import { $VillagerTradeDeclarationEventJS, $VillagerTradeReloadEventJS } from "java:com/tkisor/nekojs/core/villager";
+import { $VillagerTradeDeclarationEvent, $VillagerTradeReloadEvent } from "java:com/tkisor/nekojs/api/villager";
 import { $BlockBrokenEventJS } from "java:com/tkisor/nekojs/wrapper/event/block";
 import { $EntityJoinLevelEventJS, $EntityLeaveLevelEventJS, $EntityTickEventJS, $LivingDamageEventJS, $LivingDeathEventJS, $LivingDropsEventJS, $MobFinalizeSpawnEventJS } from "java:com/tkisor/nekojs/wrapper/event/entity";
 import { $ItemDroppedEventJS, $ItemEntityPickupEventJS, $ItemRightClickEventJS, $ItemUseFinishedEventJS, $PlayerEntityInteractEventJS as $NekoImport$PlayerEntityInteractEventJS } from "java:com/tkisor/nekojs/wrapper/event/item";
@@ -60,7 +60,10 @@ declare global {
         function foodEaten(handler: ((event: $ItemUseFinishedEventJS) => void)): void;
         function foodEaten(extra: $Item, handler: ((event: $ItemUseFinishedEventJS) => void)): void;
         function entityInteracted(handler: ((event: $NekoImport$PlayerEntityInteractEventJS) => void)): void;
-        function entityInteracted(extra: $Item, handler: ((event: $NekoImport$PlayerEntityInteractEventJS) => void)): void;
+        function entityInteracted(
+            extra: $Item,
+            handler: ((event: $NekoImport$PlayerEntityInteractEventJS) => void)
+        ): void;
         function modification(handler: ((event: $ItemModificationEventJS) => void)): void;
     }
 
@@ -109,8 +112,8 @@ declare global {
         function lootTableLoad(handler: ((event: $LootTableLoadEventJS) => void)): void;
         function recipes(handler: ((event: $RecipeEventJS) => void)): void;
         function afterRecipes(handler: ((event: $RecipeEventJS) => void)): void;
-        function tradeDeclaration(handler: ((event: $VillagerTradeDeclarationEventJS) => void)): void;
-        function tradeReload(handler: ((event: $VillagerTradeReloadEventJS) => void)): void;
+        function tradeDeclaration(handler: ((event: $VillagerTradeDeclarationEvent) => void)): void;
+        function tradeReload(handler: ((event: $VillagerTradeReloadEvent) => void)): void;
     }
 
 }

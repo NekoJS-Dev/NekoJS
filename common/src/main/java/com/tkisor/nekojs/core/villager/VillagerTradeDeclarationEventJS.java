@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.core.villager;
 
+import com.tkisor.nekojs.api.annotation.ScriptTypeView;
+import com.tkisor.nekojs.api.villager.VillagerTradeDeclarationEvent;
+
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 
@@ -20,7 +23,8 @@ import java.util.regex.Pattern;
  * points (initial generation on server start and the candidate DOMAIN_PLAN phase of a SERVER
  * reload); it never mutates a live registry itself.
  */
-public final class VillagerTradeDeclarationEventJS {
+@ScriptTypeView(VillagerTradeDeclarationEvent.class)
+public final class VillagerTradeDeclarationEventJS implements VillagerTradeDeclarationEvent {
 
     private static final Pattern ITEM_SPEC = Pattern.compile("(?i)^(\\d+)\\s*x\\s+(\\S+)$");
 

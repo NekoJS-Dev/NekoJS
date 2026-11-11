@@ -21,7 +21,19 @@ public final class NekoIdCompat {
 
     @HideFromJS
     public static Object toPlatformId(NekoId id) {
-        return get().toPlatformId(id);
+        if (id == null) throw new IllegalArgumentException("[NEKO-4056] Resource ID cannot be null");
+        return get().toPlatformId(NekoId.resource(id.namespace(), id.path()));
+    }
+
+    @HideFromJS
+    public static NekoId fromPlatformId(Object id) {
+        NekoId value = get().fromPlatformId(id);
+        return NekoId.resource(value.namespace(), value.path());
+    }
+
+    @HideFromJS
+    public static Class<?> platformIdType() {
+        return get().platformIdType();
     }
 
     private static Adapter get() {
@@ -33,5 +45,11 @@ public final class NekoIdCompat {
 
     public interface Adapter {
         Object toPlatformId(NekoId id);
+
+        default NekoId fromPlatformId(Object id) {
+            throw new IllegalArgumentException("[NEKO-4056] Native ID conversion is not supported by this adapter");
+        }
+
+        default Class<?> platformIdType() { return Object.class; }
     }
 }

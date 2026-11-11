@@ -360,10 +360,12 @@ public final class FunctionalInterfaceAliasGenerator {
                     TypeReflector.toRef(declared), registry, true, expanding);
         }
         if (declared instanceof GenericArrayType array) {
-            return renderJavaTypeInput(array.getGenericComponentType(), registry, expanding) + "[]";
+            return com.tkisor.nekojs.probe.types.TypeScriptTypeExpressions.arrayOf(
+                    renderJavaTypeInput(array.getGenericComponentType(), registry, expanding));
         }
         if (declared instanceof Class<?> cls && cls.isArray()) {
-            return renderJavaTypeInput(cls.getComponentType(), registry, expanding) + "[]";
+            return com.tkisor.nekojs.probe.types.TypeScriptTypeExpressions.arrayOf(
+                    renderJavaTypeInput(cls.getComponentType(), registry, expanding));
         }
 
         Class<?> raw = FunctionalInterfaceResolver.rawClass(declared);
@@ -394,7 +396,7 @@ public final class FunctionalInterfaceAliasGenerator {
                 String[] renderedArguments = Arrays.stream(arguments)
                         .map(argument -> renderJavaTypeInput(argument, registry, expanding))
                         .toArray(String[]::new);
-                String collectionAlias = registry.getCollectionAlias(raw.getName(), hostArguments, renderedArguments);
+                String collectionAlias = registry.renderCollectionInput(raw.getName(), hostArguments, renderedArguments);
                 if (collectionAlias != null) return collectionAlias;
                 // An ordinary host container cannot convert its invariant type arguments independently.
                 // Conversion belongs to the outer parameter or callback return, not the container's contents.

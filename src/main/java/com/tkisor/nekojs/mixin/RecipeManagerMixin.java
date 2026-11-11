@@ -162,6 +162,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
                 com.tkisor.nekojs.api.recipe.IngredientActionRegistry.clear();
                 NekoRuntimeAccess.get().beforeRecipeLoading(eventJS);
                 if (!ServerEvents.RECIPES.postChecked(eventJS)) successful[0] = false;
+                eventJS.prepareRecipesForDecode();
             } catch (PolyglotException e) {
                 successful[0] = false;
                 // 错误上报经 ScriptErrorReporter 门面（root-owned ErrorTracker 的静态报告面，

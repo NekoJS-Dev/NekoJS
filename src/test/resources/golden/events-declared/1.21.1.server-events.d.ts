@@ -1,4 +1,4 @@
-import { $VillagerTradeDeclarationEventJS, $VillagerTradeReloadEventJS } from "java:com/tkisor/nekojs/core/villager";
+import { $VillagerTradeDeclarationEvent, $VillagerTradeReloadEvent } from "java:com/tkisor/nekojs/api/villager";
 import { $BlockEntityTickEvent, $RandomTickEvent } from "java:com/tkisor/nekojs/event/level";
 import { $DataGeneratorJS } from "java:com/tkisor/nekojs/wrapper";
 import { $BlockBrokenEventJS } from "java:com/tkisor/nekojs/wrapper/event/block";
@@ -41,7 +41,10 @@ declare global {
         function portalSpawn(handler: ((event: $BlockEvent$PortalSpawnEvent) => void)): void;
         function portalSpawn(extra: $Block, handler: ((event: $BlockEvent$PortalSpawnEvent) => void)): void;
         function toolModification(handler: ((event: $BlockEvent$BlockToolModificationEvent) => void)): void;
-        function toolModification(extra: $Block, handler: ((event: $BlockEvent$BlockToolModificationEvent) => void)): void;
+        function toolModification(
+            extra: $Block,
+            handler: ((event: $BlockEvent$BlockToolModificationEvent) => void)
+        ): void;
         function rightClicked(handler: ((event: $PlayerInteractEvent$RightClickBlock) => void)): void;
         function rightClicked(extra: $Block, handler: ((event: $PlayerInteractEvent$RightClickBlock) => void)): void;
         function placed(handler: ((event: $BlockEvent$EntityPlaceEvent) => void)): void;
@@ -162,8 +165,8 @@ declare global {
         function lootTables(handler: ((event: $LootTableEventJS) => void)): void;
         function tags(handler: ((event: $TagEventJS) => void)): void;
         function tags(extra: $ResourceLocation, handler: ((event: $TagEventJS) => void)): void;
-        function tradeDeclaration(handler: ((event: $VillagerTradeDeclarationEventJS) => void)): void;
-        function tradeReload(handler: ((event: $VillagerTradeReloadEventJS) => void)): void;
+        function tradeDeclaration(handler: ((event: $VillagerTradeDeclarationEvent) => void)): void;
+        function tradeReload(handler: ((event: $VillagerTradeReloadEvent) => void)): void;
     }
 
 }

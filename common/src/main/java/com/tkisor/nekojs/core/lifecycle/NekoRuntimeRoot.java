@@ -117,17 +117,22 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         }
         this.core = core;
         this.pluginRuntime = pluginRuntime;
-        this.eventBridge = eventBridge;
+        this.mixins = new com.tkisor.nekojs.core.mixin.MixinRuntime(trustContext, getClass().getClassLoader());
+        this.eventBridge = mixins.wrap(eventBridge);
         this.scriptProperties = scriptProperties;
-        this.environmentFactory = new ScriptEnvironmentFactory(eventBridge, pluginRuntime, sandboxFactory, globalState);
+        this.environmentFactory = new ScriptEnvironmentFactory(this.eventBridge, pluginRuntime, sandboxFactory, globalState);
         this.scriptManagers = new EnumMap<>(ScriptType.class);
         this.resources = new ResourceTracker();
         this.preparationCache = preparationCache;
         this.trustContext = trustContext;
         this.packs = new com.tkisor.nekojs.core.pack.PackActivationCoordinator(this::createPackManager,
                 this::scriptManagerOf, type -> com.tkisor.nekojs.core.ScriptLocator.discover(type, scriptProperties),
-                eventBridge, pluginRuntime, domainCollectors);
+                this.eventBridge, pluginRuntime, domainCollectors);
     }
+
+    private final com.tkisor.nekojs.core.mixin.MixinRuntime mixins;
+
+    public com.tkisor.nekojs.core.mixin.MixinRuntime mixins() { return mixins; }
 
     /** Starts optional authoring access once; ordinary script reloads retain the same root-owned service. */
     public synchronized void initializeAuthoring() {
@@ -262,6 +267,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     public ScriptManager createScriptManager(ScriptType type) {
         ScriptManager[] owner = new ScriptManager[1];
         ScriptEventBridge partition = new ScriptEventBridge() {
+            public boolean requiresTransactionalLoad(ScriptType scriptType) { return eventBridge.requiresTransactionalLoad(scriptType); }
             public void bindEvents(graal.graalvm.polyglot.Value bindings, ScriptType scriptType) { eventBridge.bindEvents(bindings, scriptType); }
             public void clearListeners(ScriptType scriptType) {
                 if (!packTypes.contains(scriptType)) { eventBridge.clearListeners(scriptType); return; }
@@ -498,7 +504,10 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         closeInProgress = true;
         try {
             Throwable first = null;
-            try { packs.close(); } catch (Throwable failure) { first = failure; }
+            try { mixins.close(); } catch (Throwable failure) { first = failure; }
+            try { packs.close(); } catch (Throwable failure) {
+                if (first == null) first = failure; else first.addSuppressed(failure);
+            }
             for (ScriptType type : scriptManagers.keySet()) {
                 ScriptManager manager = scriptManagers.get(type);
                 try {

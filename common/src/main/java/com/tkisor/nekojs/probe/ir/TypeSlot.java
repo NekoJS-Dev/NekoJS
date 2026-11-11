@@ -21,8 +21,10 @@ import java.lang.reflect.Type;
 public final class TypeSlot {
     public final Type sourceType;   // 原始 Java 类型；合成时为 null
     public ApiTypeRef ref;          // 语言中性类型（始终非 null）
-    /** Explicit input metadata; output slots retain the reflected Java type. */
+    /** Explicit input metadata for the TypeScript backend. */
     public AdapterInputShape inputShape;
+    /** Explicit TypeScript output expression; other backends retain the Java type. */
+    public String outputTypeScript;
     public boolean overridden;      // modify_type 改写过 ref
 
     public TypeSlot(Type sourceType, ApiTypeRef ref) {

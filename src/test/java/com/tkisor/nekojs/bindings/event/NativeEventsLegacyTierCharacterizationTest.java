@@ -53,7 +53,7 @@ class NativeEventsLegacyTierCharacterizationTest {
     @Test
     void nativeEventsIsAStartupOnlyRawBinding() {
         BindingRegistry.BindingRegistryImpl startup =
-                new BindingRegistry.BindingRegistryImpl(ScriptType.STARTUP);
+                new BindingRegistry.BindingRegistryImpl(ScriptType.STARTUP).scopedTo("nekojs");
         new NekoJSCorePlugin().registerBinding(startup);
         assertTrue(startup.viewRegistered().containsKey("NativeEvents"),
                 "NativeEvents must be registered in the STARTUP binding set (raw adapter face)");
@@ -62,7 +62,7 @@ class NativeEventsLegacyTierCharacterizationTest {
                 "the binding value is the raw NativeEventsJS bridge");
 
         BindingRegistry.BindingRegistryImpl server =
-                new BindingRegistry.BindingRegistryImpl(ScriptType.SERVER);
+                new BindingRegistry.BindingRegistryImpl(ScriptType.SERVER).scopedTo("nekojs");
         new NekoJSCorePlugin().registerBinding(server);
         assertFalse(server.viewRegistered().containsKey("NativeEvents"),
                 "NativeEvents must NOT be registered outside STARTUP (STARTUP reload owns its lifecycle)");

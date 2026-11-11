@@ -5,7 +5,7 @@ import { $ByteBuffer, $MappedByteBuffer } from "java:java/nio";
 import { $AbstractInterruptibleChannel } from "java:java/nio/channels/spi";
 import { $OpenOption, $Path } from "java:java/nio/file";
 import { $FileAttribute } from "java:java/nio/file/attribute";
-import { $Set } from "java:java/util";
+import { $Set, $Set_ } from "java:java/util";
 import { $ExecutorService, $Future } from "java:java/util/concurrent";
 
 export * as spi from "java:java/nio/channels/spi";
@@ -15,7 +15,12 @@ declare module "java:java/nio/channels" {
         get open(): boolean;
         isOpen(): boolean;
         static open(arg0: $Path, arg1?: $OpenOption[]): $AsynchronousFileChannel;
-        static open(arg0: $Path, arg1: $Set<$OpenOption>, arg2: $ExecutorService, arg3?: $FileAttribute<any>[]): $AsynchronousFileChannel;
+        static open(
+            arg0: $Path,
+            arg1: $Set<$OpenOption>,
+            arg2: $ExecutorService,
+            arg3?: $FileAttribute<any>[]
+        ): $AsynchronousFileChannel;
         close(): void;
         force(arg0: boolean): void;
         lock<A>(arg0: A, arg1: $CompletionHandler<$FileLock, any>): void;
@@ -95,8 +100,9 @@ declare module "java:java/nio/channels" {
     }
 
     export interface $Channel extends $Closeable {
-        close(): void;
+        get open(): boolean;
         isOpen(): boolean;
+        close(): void;
     }
 
     export class $FileChannel$MapMode {
@@ -127,8 +133,9 @@ declare module "java:java/nio/channels" {
     }
 
     export interface $ByteChannel extends $ReadableByteChannel, $WritableByteChannel {
-        close(): void;
+        get open(): boolean;
         isOpen(): boolean;
+        close(): void;
     }
 
     export interface $InterruptibleChannel extends $Channel {

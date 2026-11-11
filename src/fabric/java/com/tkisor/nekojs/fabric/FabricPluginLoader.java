@@ -41,10 +41,11 @@ public final class FabricPluginLoader {
 
     public static void loadPlugins() {
         for (Class<?> plugin : BUILTIN_PLUGINS) {
-            NekoJSBasePluginManager.registerClass(plugin);
+            NekoJSBasePluginManager.registerClass("nekojs", plugin);
         }
         for (var container : FabricLoader.getInstance().getEntrypointContainers("nekojs", NekoJSPlugin.class)) {
-            NekoJSBasePluginManager.registerClass(container.getEntrypoint().getClass());
+            NekoJSBasePluginManager.registerClass(container.getProvider().getMetadata().getId(),
+                    container.getEntrypoint().getClass());
         }
     }
 }

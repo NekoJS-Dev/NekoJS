@@ -1,0 +1,5 @@
+NightConfig core and TOML 3.8.3
+License: GNU Lesser General Public License, version 3.
+Unmodified upstream source: https://github.com/TheElectronWill/night-config/tree/v3.8.3
+Upstream license: https://github.com/TheElectronWill/night-config/blob/v3.8.3/LICENSE
+The standalone NekoJS authoring helper uses this parser to read output.directory from ai.toml.

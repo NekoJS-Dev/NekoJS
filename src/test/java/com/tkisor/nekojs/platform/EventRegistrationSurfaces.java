@@ -97,7 +97,8 @@ final class EventRegistrationSurfaces {
             return Registration.failure(describe(error));
         }
         if (method == null) return new Registration(out, null);
-        EventGroupRegistry registry = new EventGroupRegistry.Impl();
+        // Built-in contributors use the same verified owner scope as plugin bootstrap.
+        EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         try {
             method.invoke(instance, registry);
         } catch (InvocationTargetException | IllegalAccessException | RuntimeException error) {

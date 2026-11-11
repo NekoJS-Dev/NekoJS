@@ -47,8 +47,30 @@ public final class NekoSharedHostAccess {
     }
 
     private static <T> void registerTypeAdapter(HostAccess.Builder builder, JSTypeAdapter<T> adapter) {
-        builder.targetTypeMapping(Value.class, adapter.getTargetClass(), adapter, adapter,
-                toHostAccessPrecedence(adapter.getPrecedence()));
+        Class<T> target = adapter.getTargetClass();
+        // Graal normalizes adapter ClassCastException into the same signal as a target mismatch.
+        // Preserve execution failures before that boundary so overload dispatch cannot suppress them.
+        builder.targetTypeMapping(Value.class, target, value -> {
+            try {
+                return adapter.test(value);
+            } catch (ClassCastException failure) {
+                throw new AdapterExecutionException(target, "acceptance", failure);
+            }
+        }, value -> {
+            try {
+                return adapter.apply(value);
+            } catch (ClassCastException failure) {
+                throw new AdapterExecutionException(target, "conversion", failure);
+            }
+        }, toHostAccessPrecedence(adapter.getPrecedence()));
+    }
+
+    private static final class AdapterExecutionException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        private AdapterExecutionException(Class<?> target, String phase, ClassCastException cause) {
+            super("[NEKO-5202] Type adapter failed during " + phase + ": target=" + target.getName(), cause);
+        }
     }
 
     private static HostAccess.TargetMappingPrecedence toHostAccessPrecedence(ConversionPrecedence p) {

@@ -283,6 +283,7 @@ public final class ValParser {
         if (c == '\'' || c == '"') return parseStringLiteral();
         if (c == '`') { int start = pos; skipTpl(); return new ValNode.Identifier("", start, pos); }
         if (Character.isDigit(c) || (c == '.' && Character.isDigit(peek(1)))) return parseNumberLiteral();
+        if (c == '[') return parseArrayLiteral();
         if (c == '{') return parseBlock();
         if (c == '(') {
             int start = pos;
@@ -299,6 +300,25 @@ public final class ValParser {
             return expr;
         }
         pos++; return null;
+    }
+
+    private ValNode.Block parseArrayLiteral() {
+        int start = pos++;
+        List<ValNode> elements = new ArrayList<>();
+        while (pos < n) {
+            skipWsCmt();
+            if (pos >= n) break;
+            if (peek() == ']') { pos++; break; }
+            int before = pos;
+            ValNode element = parseExpr();
+            if (element != null) elements.add(element);
+            skipWsCmt();
+            if (peek() == ',') pos++;
+            if (pos == before) pos++;
+        }
+        // Like compound initializers, literal contents use a scope-free fragment container.
+        // Keeping the receiver intact lets suffix parsing attach members without inventing globals.
+        return new ValNode.Block(elements, null, Map.of(), start, pos);
     }
 
     private ValNode parseSuffix(ValNode obj) {

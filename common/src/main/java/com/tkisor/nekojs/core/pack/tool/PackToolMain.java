@@ -15,6 +15,9 @@ public final class PackToolMain {
     public static void main(String[] arguments) throws Exception {
         if (arguments.length == 0) throw new IllegalArgumentException("[NEKO-1018] Expected create, validate, archive, install, jar or schema");
         switch (arguments[0]) {
+            case "mixins" -> {
+                com.tkisor.nekojs.core.mixin.tool.MixinToolMain.main(Arrays.copyOfRange(arguments, 1, arguments.length));
+            }
             case "create" -> {
                 count(arguments, 4);
                 var types = Arrays.stream(arguments[3].split(",")).map(name -> ScriptType.valueOf(name.toUpperCase(java.util.Locale.ROOT))).toList();

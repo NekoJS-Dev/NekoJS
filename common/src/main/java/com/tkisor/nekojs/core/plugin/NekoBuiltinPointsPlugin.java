@@ -20,23 +20,30 @@ public final class NekoBuiltinPointsPlugin implements NekoJSPlugin, NekoPluginEx
 
     private final ScriptPropertyRegistry scriptProperties;
     private final boolean client;
+    private final java.util.function.Function<NekoJSPlugin, String> owners;
 
     public NekoBuiltinPointsPlugin(ScriptPropertyRegistry scriptProperties, boolean client) {
+        this(scriptProperties, client, plugin -> null);
+    }
+
+    NekoBuiltinPointsPlugin(ScriptPropertyRegistry scriptProperties, boolean client,
+                           java.util.function.Function<NekoJSPlugin, String> owners) {
         this.scriptProperties = scriptProperties;
         this.client = client;
+        this.owners = owners;
     }
 
     @Override
     public void registerPluginExtensionPoints(NekoPluginExtensionRegistry registry) {
         registry.register(ScriptCompilersPoint.POINT);
         registry.register(ScriptPropertiesPoint.point(scriptProperties));
-        registry.register(BindingsPoint.point(client));
+        registry.register(BindingsPoint.point(client, owners));
         registry.register(AdaptersPoint.POINT);
         registry.register(TypeDocsPoint.POINT);
         registry.register(NodeTypeDocsPoint.POINT);
         registry.register(NodeModulesPoint.POINT);
-        registry.register(EventsPoint.POINT);
-        registry.register(ClientEventsPoint.POINT);
+        registry.register(EventsPoint.point(owners));
+        registry.register(ClientEventsPoint.point(owners));
         registry.register(RecipeNamespacesPoint.POINT);
         registry.register(RecipeSchemasPoint.POINT);
         registry.register(RecipeLifecyclePoint.POINT);

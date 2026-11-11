@@ -20,7 +20,7 @@
     return brace < 0 ? 0 : text.slice(0, brace).split('\n').length
   }
 
-  function executeModule(module, requireFn, resolveFn, filename, dirname, code) {
+  function executeModule(module, requireFn, resolveFn, filename, dirname, code, compiled) {
     const localRequire = function require(id) {
       return requireFn(String(id))
     }
@@ -28,7 +28,7 @@
       return resolveFn(String(id))
     }
     const source = `${code}\n//# sourceURL=${filename}`
-    const fn = new Function('exports', 'require', 'module', '__filename', '__dirname', source)
+    const fn = compiled || new Function('exports', 'require', 'module', '__filename', '__dirname', source)
     fn(module.exports, localRequire, module, filename, dirname)
   }
 
