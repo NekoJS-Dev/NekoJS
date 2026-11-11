@@ -1,0 +1,57 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "${mod_license}"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${mod_version}"
+displayName = "${mod_name}"
+authors = "${mod_authors}"
+description = '''${mod_description}'''
+
+[[mods]]
+modId = "kubejs"
+version = "2101.7.2-build.309"
+displayName = "NekuJS KubeJS API Provider"
+description = '''Bounded native compatibility provider backed by NekoJS. This is not the upstream KubeJS runtime.'''
+
+[[mods]]
+modId = "rhino"
+version = "2101.2.7-build.81"
+displayName = "NekuJS Native Rhino API Provider"
+description = '''Native type and conversion facade. JavaScript executes in NekoJS Graal, not Rhino.'''
+
+[[dependencies.kubejs]]
+modId = "nekujs"
+type = "required"
+versionRange = "[0.1.0,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.rhino]]
+modId = "nekujs"
+type = "required"
+versionRange = "[0.1.0,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies."${mod_id}"]]
+modId = "neoforge"
+type = "required"
+versionRange = "${neo_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies."${mod_id}"]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies."${mod_id}"]]
+modId = "nekojs"
+type = "required"
+versionRange = "${nekojs_version_range}"
+ordering = "AFTER"
+side = "BOTH"

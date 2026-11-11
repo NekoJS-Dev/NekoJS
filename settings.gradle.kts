@@ -42,3 +42,4 @@ stonecutter {
 }
 
 include("common-api-processor", "common")
+include(":addons:nekujs")

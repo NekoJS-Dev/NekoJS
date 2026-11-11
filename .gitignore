@@ -37,3 +37,7 @@ NekoJS-mult/
 /docs/architecture-refactor/evidence/**/*.7z
 /docs/architecture-refactor/evidence/**/*.tar
 /docs/architecture-refactor/evidence/**/*.hprof
+
+# Local NekuJS compatibility fixtures; third-party JARs are not redistributed.
+/1211nekujs/*.jar
+/addons/nekujs/1211nekujs/*.jar
