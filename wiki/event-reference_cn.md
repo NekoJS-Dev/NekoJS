@@ -5,16 +5,13 @@
 <a id="wiki-section-1"></a>
 # 事件参考
 
-NekoJS 把游戏事件按 **事件组（EventGroup）** 组织。每个事件组是一个顶层绑定，里面的事件作为方法调用。
+NekoJS 把游戏事件按 **事件组（EventGroup）** 组织。传统事件组是顶层绑定；显式发布的 API 模块也可通过 import 暴露同一源事件。调用事件成员即可订阅，模块发布不会创建第二条总线。
 
-> **平台说明**：本页优先记录 NeoForge 的完整事件面。Fabric 26.x 已支持脚本加载、配方、网络、常用玩家/实体/方块/物品事件和按键绑定，但仍是子集；每个 NeoForge 专属或尚未移植的事件都会标注。完整差异见 [平台与兼容性](platform-compatibility_cn)。
+> **平台说明**：本页主要记录 NeoForge 事件名，不是已验收的跨平台完整目录。Fabric 26.x 已支持脚本加载、配方、网络、常用玩家/实体/方块/物品事件和按键绑定，但仍是子集；每个 NeoForge 专属或尚未移植的事件都会标注。完整差异见 [平台与兼容性](platform-compatibility_cn)。
 
-> **统一取消方式**：可取消事件一律用**监听器返回 `true`** 取消——NekoJS 会把它翻译为平台原生取消（NeoForge `setCanceled` 等）。这是唯一的跨平台取消写法；原生方法（如 `event.setCanceled(true)` / `event.isCanceled()`）在各自平台上也可直接调用。
-> - `event.level` — 1.12.2 的 BlockEvent 注入了 `level` 属性（映射 `getWorld()`），与 NeoForge 的 `getLevel()` 统一
+> **取消规则**：只有声明为可取消的事件总线，才可通过监听器返回 `true` 取消；平台桥接在支持时应用原生取消。普通总线不会因为回调返回 true 而变成可取消。`setCanceled` 等原生方法属于特定平台，不是通用脚本契约。
 >
-> 脚本收到的是原生事件对象（全部原生 getter 可用），1.12.2 的 BlockEvent 另有上述注入的 `level` 属性。
->
-> 历史版本曾在 NeoForge 上提供 mixin 注入的 `event.cancel()` / `event.isCancelled()`，**已移除**——请改用 `return true`（1.12.2 上它们从未可用，且 Cleanroom 的 `Event` 基类无法 mixin，两者行为天然不对称）。
+> 原生事件载荷保留其已暴露的 Java 成员；Fabric 的自定义载荷和显式投影的 API 模块视图可能具有不同接口。请以当前实例的 Probe 输出为准，不要假设所有事件都具有全部原生 getter。历史注入的 `cancel()` / `isCancelled()` 不是当前取消 API；旧 Cleanroom 示例也不属于现有五个构建节点。
 
 ```javascript
 ServerEvents.recipes(event => { /* ... */ })
@@ -206,17 +203,7 @@ ServerEvents.tags('minecraft:item', event => {
 ServerEvents.tags('minecraft:block', event => { /* 方块 tag */ })
 ```
 
-**Cleanroom 1.12.2（OreDictionary 适配）**：分发键固定 `'ore_dict'`（1.12.2 是 pre-1.13 时代，没有按注册表分类的现代 tag 系统）。脚本侧形态保持一致，但底层映射到 OreDictionary，**仅对物品/方块有意义**。事件在 `serverAboutToStart`（SERVER 脚本加载后）触发一次，让 ore dict 修改在配方注册前生效。
-
-```javascript
-// 1.12.2：dispatch 键固定 'ore_dict'
-ServerEvents.tags('ore_dict', event => {
-  event.add('ingots/iron', 'mymod:custom_iron_ingot')  // 加进 ore 名
-  event.getEntries('ingots/iron')  // 读当前 ore 名的物品列表
-})
-```
-
-> **跨平台语义边界**：NeoForge 的 `tags('minecraft:item', ...)` 与 cleanroom 的 `tags('ore_dict', ...)` 分发键不同，不是逐字移植。1.12.2 的 OreDictionary 是"等价物品组"语义，移除是运行时操作；脚本要做严格跨平台 tag 操作时，1.12.2 是近似支持。
+Fabric 当前没有发布这个标签编辑事件。Cleanroom 1.12.2 / `ore_dict` 示例属于旧实现，不适用于当前仓库。
 
 ---
 

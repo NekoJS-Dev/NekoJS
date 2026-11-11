@@ -5,16 +5,13 @@
 <a id="wiki-section-1"></a>
 # Event reference
 
-NekoJS organizes game events into **Event Groups (EventGroup)**. Each group is a top-level Binding, and its events are invoked as methods.
+NekoJS organizes game events into **Event Groups (EventGroup)**. Legacy groups are top-level Bindings; explicitly published API modules can expose the same source events through imports. Call an event member to subscribe. Module publication does not create a second event bus.
 
-> **Platforms**: this page primarily documents NeoForge's complete event surface. Fabric 26.x supports script loading, recipes, networking, common player/entity/block/item events, and key bindings, but remains a subset. NeoForge-only events and events not yet ported are marked. See [Platforms and compatibility](platform-compatibility_us) for the full differences.
+> **Platforms**: this page primarily documents NeoForge event names, not a verified cross-platform inventory. Fabric 26.x supports script loading, recipes, networking, common player/entity/block/item events, and key bindings, but remains a subset. NeoForge-only events and events not yet ported are marked. See [Platforms and compatibility](platform-compatibility_us) for the full differences.
 
-> **Unified cancellation**: cancel a cancellable event by **returning `true` from its listener**. NekoJS translates this into native platform cancellation, such as NeoForge's `setCanceled`. This is the only cross-platform cancellation form; native methods such as `event.setCanceled(true)` / `event.isCanceled()` can also be called directly on their respective platforms.
-> - `event.level`: the 1.12.2 BlockEvent has an injected `level` property mapped to `getWorld()`, matching NeoForge's `getLevel()`.
+> **Cancellation**: return `true` from a listener only for an event bus declared cancellable. The platform bridge applies native cancellation where supported; ordinary buses do not become cancellable because a callback returns true. Native methods such as `setCanceled` are platform-specific, not a portable script contract.
 >
-> Scripts receive native event objects with all native getters available. The 1.12.2 BlockEvent additionally has the injected `level` property described above.
->
-> Earlier versions provided mixin-injected `event.cancel()` / `event.isCancelled()` on NeoForge. These have been **removed**; use `return true` instead. They were never available on 1.12.2, and Cleanroom's `Event` base class cannot be mixed into, so the two platforms were inherently asymmetric.
+> Native event payloads retain their exposed Java members; custom Fabric payloads and explicitly projected API-module views can have a different surface. Use the current instance's Probe output rather than assuming every event exposes every native getter. Historical injected `cancel()` / `isCancelled()` helpers are not the current cancellation API. Legacy Cleanroom examples are not supported by the five current build nodes.
 
 ```javascript
 ServerEvents.recipes(event => { /* ... */ })
@@ -207,17 +204,7 @@ ServerEvents.tags('minecraft:item', event => {
 ServerEvents.tags('minecraft:block', event => { /* Block tags */ })
 ```
 
-**Cleanroom 1.12.2 (OreDictionary adapter)**: the dispatch key is fixed to `'ore_dict'` (1.12.2 predates 1.13 and has no modern registry-specific tag system). Scripts use the same form, but it maps to OreDictionary underneath and is **meaningful only for items/blocks**. The event fires once at `serverAboutToStart`, after SERVER scripts load, so ore dictionary changes take effect before recipe registration.
-
-```javascript
-// 1.12.2: the dispatch key is fixed to 'ore_dict'
-ServerEvents.tags('ore_dict', event => {
-  event.add('ingots/iron', 'mymod:custom_iron_ingot')  // Add to an ore name
-  event.getEntries('ingots/iron')  // Read the ore name's item list
-})
-```
-
-> **Cross-platform semantics**: NeoForge's `tags('minecraft:item', ...)` and Cleanroom's `tags('ore_dict', ...)` use different dispatch keys, so scripts cannot be ported word for word. OreDictionary in 1.12.2 describes groups of equivalent items, and removal is a runtime operation. Strict cross-platform tag manipulation is therefore only approximated on 1.12.2.
+Fabric does not currently publish this tag-editing event. Cleanroom 1.12.2 / `ore_dict` examples belonged to an older implementation and do not apply to this checkout.
 
 ---
 

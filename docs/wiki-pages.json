@@ -51,8 +51,8 @@
       "us": "Platforms and compatibility",
       "legacy": "平台与兼容性.md",
       "legacyDigest": "b697e861f3ba37e7fc14b880530feb5e0a731bfc5c29a7932ec26faafc79a702",
-      "sourceDigest": "71799ec36567725544d7c461ca374b9ec28638d753bba1c0f4d6bcf1864938a8",
-      "translationDigest": "24b609b4d09b833e2c511012b4de716545cd5fe10425139c8b53e9a89f94f219",
+      "sourceDigest": "49819ff91e99f78a383ffef356c7d4d1341d28e181362654ff0e69b3ef826730",
+      "translationDigest": "a660193beb8d65ff0ec93156e7af80a1f31073c41a86344acbd0527f764263a3",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -63,8 +63,8 @@
       "us": "Quick start",
       "legacy": "快速开始.md",
       "legacyDigest": "6d7f5c999e495c3bf63ad6aab85a2a83cf6959be653897e5db8127e5698738e5",
-      "sourceDigest": "8af84720c2adcb2edfff16bbc127bf751e13eac8e3ca75de1025ea87106a5857",
-      "translationDigest": "05c8d7026165f8be377babb371d5fe99d994b96b8241296b71c5486f6dfb86ef",
+      "sourceDigest": "80b0fe8e37c35d607e72b28abf61870a4537781f0438d5adc5c9514271fa5729",
+      "translationDigest": "ae49038ce2f0e0d5026270959dad55cf642381ca28fed86d6a6807ea64fac0bf",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -75,8 +75,8 @@
       "us": "FAQ",
       "legacy": "常见问题.md",
       "legacyDigest": "4227fde9d00259fa332da0d80d6c931a5c4066468b57a4cc4221c17ed5d3893a",
-      "sourceDigest": "88663d90d9de52bdc34a36861fc1b0e7e73e38247f895ee1ebd2a987009d1ecf",
-      "translationDigest": "daedbdfe3b2fa9e249f0340ad23f17a189cf6df3e5358f703e1180860c88a19f",
+      "sourceDigest": "90f9433f886b44d53950e8635dd40564c9ce633d2c50d360d18fa3ba4d1f5c08",
+      "translationDigest": "bcf23c69f34061e04a1a9afc614eefd4c155c12636b10a0c5e3e7b6dfdeaf26d",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -87,8 +87,8 @@
       "us": "Script basics",
       "legacy": "脚本基础.md",
       "legacyDigest": "0ce1e75bc6f3baaeec81c50f6396e58ac64e129ef160a242ab62426fd186a6b2",
-      "sourceDigest": "be444fb2bf4457231317fa3a9e75e60354f2b5684ad938cff2ef6c0ec40389dd",
-      "translationDigest": "8ac620f4a1db72e00d977cc127d64a6c8ddd504660c32f12d9e14dec1c8d0aa8",
+      "sourceDigest": "9f6cc859e91b57592bdfaca1bb829b239f94ad3544cf5a22b6e97d2916337014",
+      "translationDigest": "bf9ef28dc74274d2cce192447dc03e74261f8bb3af35a10a8e1f976b6aba3d89",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -109,8 +109,8 @@
       "us": "Script properties",
       "legacy": "脚本属性.md",
       "legacyDigest": "0fbe95c6e94cfcbbdfcbe7717d04d578f9419d6989920521882801db103930c6",
-      "sourceDigest": "5d158e2da7bb633601c0d9ae335842445c030e2d71e819d8675ef210ef0a2ef6",
-      "translationDigest": "5bdaf226a330f7c3b14a32f02c7b268d5ee91bc8bda166d02e2e376aa019636a",
+      "sourceDigest": "f6ca2ffe3515bee7468859676159386ccf1dab502cbc6c659945b143555c0c46",
+      "translationDigest": "d4317b6ee7e2b3da74b6531db816b26bd8bfd77e4b33ae6a23cf9d3b9e00d23d",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -121,8 +121,8 @@
       "us": "Global bindings",
       "legacy": "全局绑定.md",
       "legacyDigest": "610f273af3dd06e75482b76e2461f623711f6cc21ca87a8e3ddb495b967dd794",
-      "sourceDigest": "311fbfbf43c7b05af7b2eaa27a684fc28c0b722e2a3b6658ccb3eee352a1ded2",
-      "translationDigest": "8cb3cccb5af8fb029c1576a066f1425371ed44685ca5824dba17887015b46d91",
+      "sourceDigest": "f89d38dc00e22f83eebe3c6b31222a8c6ea0d1590190357996776f1fc57d3fd3",
+      "translationDigest": "d3d90723c03d0be99f406e2a0342784412f001c03a08dfa62411e424ba01a544",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -167,8 +167,8 @@
       "us": "Event reference",
       "legacy": "事件参考.md",
       "legacyDigest": "c4981ab0f0a357d3a49de5ff8472bd180447e5148f6078ca3f792cf32974c3d1",
-      "sourceDigest": "3c98d37f950986acf65fdb067e047e0fe7d74921495743f058a2c07b94e1e7e2",
-      "translationDigest": "b4fbc2ba0d24d3616a2bb14302fa9f870e9394d185b5dba46411e5925a4f6288",
+      "sourceDigest": "aff43fea7704dbc8551dd7412a05bdabb637801f5e0a878a8ec85bfa5c7eeb0a",
+      "translationDigest": "5a5ede188939d3da638b05222924d98dd0b79f483e682fdcc8d7192d11e54975",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -179,8 +179,8 @@
       "us": "AI-assisted authoring",
       "translationStatus": "draft",
       "humanReview": "pending",
-      "sourceDigest": "5fe1a89e74ae3da5a4388bb9892c36b169f4f143f15a6f7bfb9809f6112668f7",
-      "translationDigest": "5388fec49dfe294542cfdd2b1be795f69266740ee452c450393ac7df273dcf0b"
+      "sourceDigest": "5bd6d2ec4846025e9ff2811ac04158027de1f822f3e4660bfdcb8e7f1cddcd64",
+      "translationDigest": "a386958c2710740b5476da164526717515be04ad3e10cf55d079d0b4d2817860"
     },
     {
       "id": "commands",
@@ -202,8 +202,8 @@
       "legacy": "en_us/Error-Reference.md",
       "sourceLocale": "us",
       "legacyDigest": "d655593a3910daa974f0cc8410ad608cb0fb8c8850922ee4fc61314b1ee57e3c",
-      "sourceDigest": "3d9b56ca9a4f84f6532a2d90ab71f6b4d05fa3c2c03b3af8b8b34a53b91d34d3",
-      "translationDigest": "df626f1b24b65f747b9d1499a1ea2ab0b90c867b3d148baa3b9c111347ab0ad6",
+      "sourceDigest": "bbfe3f762e8287c791cd2f1140a9e532c4fb00ed06b16d19c872c52a2b4e4d5c",
+      "translationDigest": "ddabca0016d25b46d77dc0e93971820d308be1e2246fd19d494866c7c278157d",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -225,8 +225,8 @@
       "us": "Recipe system",
       "legacy": "配方系统.md",
       "legacyDigest": "0b2b7b0b0a0ba172772be0500acb67de680f2b31aec02b079cbc417da267cd70",
-      "sourceDigest": "a48187dabc0286a8129a3fdcc00cccbb96030acc2547d3607fc2e22948736674",
-      "translationDigest": "9fc703afc84255dbe3f341e3f21320a76f30083683c49f3733b95035c28d4c28",
+      "sourceDigest": "d4e42b3a5b853f73c76640635e9995ade90731951cdc6461e651f91ee4fd230d",
+      "translationDigest": "4924f7919f62c5acc1eb264f6423a639605c50a23d2c094b6adb123d20cc40f2",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -249,8 +249,8 @@
       "us": "Module system",
       "legacy": "模块系统.md",
       "legacyDigest": "73cefc50be0c9117fa9d11cbf225810eac2ea3bae2fe9bcdc8762b257647ced0",
-      "sourceDigest": "a619c6b6801d2624b9ce87a3f672cb30ecea7ed3ced0e63ce8a14b74db8df9b7",
-      "translationDigest": "b6c0d61683261d68789c121471f4778b519baaa2587b2025a9a186b1ff85d95e",
+      "sourceDigest": "db9088af332d086365c96a49d28e824ce94052edd132cb327985dea9fa16d5c2",
+      "translationDigest": "547c37fbeaa4f2194eb82fa52b66752c48830d950ffeef4eb8951cd780454f4e",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -261,8 +261,8 @@
       "us": "TypeScript and JSX",
       "legacy": "TypeScript-与-JSX.md",
       "legacyDigest": "aa041878196d981ec2fe66dc6fceb92074042db75395b5435ea60718c9588903",
-      "sourceDigest": "79f5fc71f0f5ec5970365a042c8190cc9cf9cf103800eab6635c5c831a68972b",
-      "translationDigest": "30080e36e93054a4ae74cf48f6074a5bf9077d777046e46ee8b8b4ef9fe51e66",
+      "sourceDigest": "9e144d544814c14b9e68ac6e552fe5c8e98c17118054c3fac7a7a985ce7bb9a3",
+      "translationDigest": "709a69f9bb5b25d95b22c25d7fa366ab77a5056c8774f5ee5c70d57b7610c026",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -273,8 +273,8 @@
       "us": "JSX client UI",
       "legacy": "JSX-客户端UI.md",
       "legacyDigest": "00a93c7a13042dd12d92c4e0ac97365e43ee9e3ee7f854e7de57f80ec42a41d1",
-      "sourceDigest": "9d911e6bc0c3cebafbb221bb27b2a8a1ee930980003ab6a1c58cc5d21a2821d5",
-      "translationDigest": "e51bbf355356798c5ceb8ce31d6e91b0be1d3d0a9eeffa8048281875b23f8091",
+      "sourceDigest": "9091f82f7428e6598088100e1be5034f5db48fea42f578ebcb50aef41714967e",
+      "translationDigest": "5bc4a83f657f493ea240d54057517ec3686ff2ff1c0177c0f80e42f041518e0b",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -289,14 +289,24 @@
       "translationDigest": "7a9ba31e8be72c9cc7351733b4c0792356fac06d3ae8f7620c44d1b39a4ae0c9"
     },
     {
+      "id": "mixinjs",
+      "section": "modpacks",
+      "cn": "MixinJS（实验性）",
+      "us": "MixinJS (experimental)",
+      "translationStatus": "draft",
+      "humanReview": "pending",
+      "sourceDigest": "47633435e79ce316ac236a7d7e2fd72ce75571eb907ab0aea8557f4a48e85dae",
+      "translationDigest": "a95250d03b58b9dca71c86426557d07f1c1e1498cb43838f96c1ff3a1458eb21"
+    },
+    {
       "id": "nodejs-compatibility",
       "section": "modpacks",
       "cn": "Node.js 兼容",
       "us": "Node.js compatibility",
       "legacy": "Node-js-兼容.md",
       "legacyDigest": "3600cb30306ef3eba41286f0565a7f2cb43deafcbb122d082137967fa02f6574",
-      "sourceDigest": "c71fc29cf7452151b055a3d4af08f845bbdb6f0e203b611ddcc740cac9e5db62",
-      "translationDigest": "ce22a6627ac92b7a94f23900bf45412d86777614817b973a4064f7371e80e998",
+      "sourceDigest": "cb88333597a99b4b7656c3afd9074a59398cde1bfbb605c67f0a518d6286f02b",
+      "translationDigest": "8d7793f512773e134d9d7f8002613b4549ee6e305d374e6d4efe9a7f62777b05",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -307,8 +317,8 @@
       "us": "Plugin development",
       "legacy": "插件开发.md",
       "legacyDigest": "3b1e293cebb15b3e967150bc4897f4c866cf663a09cdcaef77b8bd20e0795fd7",
-      "sourceDigest": "86b06b12f994f351a0795869bad64461f7042200bce73c3157332fd8ff12e7af",
-      "translationDigest": "756a16e1614307fa53a056d0e0f8c320336e97cd19f9157e6cbb3127501065de",
+      "sourceDigest": "70ba9577e0903707b97a6f903deba23dac1e94d0bc4a7f31fbf0d02dc632b7f6",
+      "translationDigest": "a92dd569c7bcd8da1dd0a8a1d230e667f4137334342cee4a468efeebe0ac86fe",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -319,8 +329,8 @@
       "us": "Type adapters",
       "legacy": "类型适配器.md",
       "legacyDigest": "03e9c1c029bde32fb81cb2115134491763a1d65d6ec5bb5b88512bbd7851e008",
-      "sourceDigest": "52757140b4cf8dd86a687a9f76b0385019081313aac6be379a499acad77673cb",
-      "translationDigest": "aa5e3e161e6c28763da3972e77f5732ef006835aeed5896517ab9ceb807b275c",
+      "sourceDigest": "ebebee1f1729f6bd4bac65f67dae4d0460a16437ab4c3ffa3c4c6fd09284db1f",
+      "translationDigest": "220e5353f38b907a9f507d3e27017f5be50382047f9cd6b6f127fa35f6a2cf7a",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -331,8 +341,8 @@
       "us": "Event extensions",
       "legacy": "事件扩展.md",
       "legacyDigest": "033267bec13dfcc33faa9370b097ad6cb5128edd84fa6d37ca5dffdab69fab9d",
-      "sourceDigest": "6a9ba14f5adf8e73fc769f6e7ac4524ad582d56e5970786d6c33f232cfe9d9f4",
-      "translationDigest": "a6e80ca9146975b6666ce6c25a07dafe4eebe12e7c15e99b3879ec71cfdc0236",
+      "sourceDigest": "955994f97ed48f20a9818622a77470890d0d0d60c1d8fe6d73adb47514ef83e3",
+      "translationDigest": "ea344006c5d8ddd062ed1c9bb06546419c5bcaf4f867489fea4a005a370c5244",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -343,8 +353,8 @@
       "us": "Annotations",
       "legacy": "注解体系.md",
       "legacyDigest": "87447931e59ad693ffe3dff834d957569e67992dc48748d9d397ddfce181fc4e",
-      "sourceDigest": "d24a6574435768164603f67c22e5f0a181b15cb1b61f7e35d19e20551cf72130",
-      "translationDigest": "96adb751e6a869575f7792bc1c7b966d6cc50a8bb7df207b92557401814e51c5",
+      "sourceDigest": "454a08c7e5e7890b7a1ad4364f6c4487c7d71e37e75d56e17e56e1c191c13d23",
+      "translationDigest": "7708a6a9d2a096546a4e8e6eea4906be1dec978d1b198b87bc6536c3113d5dd3",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -355,8 +365,8 @@
       "us": "Project architecture",
       "legacy": "项目架构.md",
       "legacyDigest": "d80a5b1aa46ea88a728ed973d2e313333c61b639cbb830a5aae90492d365fb6d",
-      "sourceDigest": "5cdf15f7bcc194446c71c25c1c3726cde4178134281ea5322b0f4f364db2db98",
-      "translationDigest": "bef25098a90e30e19afdae3aaed37c00d8e2e1fb28f9a4d783c4023141d2b770",
+      "sourceDigest": "c01822b95e33d8dd01391a3abaf654cafba54dda7b76ba487cd9b0d0e2f27f2f",
+      "translationDigest": "6a9a4d244e8c1d3b41c88e1c8adff21e50937d4997c93f6189ee8a74fb215eaf",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -367,8 +377,8 @@
       "us": "Probe type generation",
       "legacy": "Probe-类型生成.md",
       "legacyDigest": "e04220b9b877582ad6ba0a05d95573c1ed3945c00cbccf36bc79e899bd1a3cab",
-      "sourceDigest": "14fb287982bb09afaac575ba7f2e80aa86da6ad01658e12caf90810e6c82d0f7",
-      "translationDigest": "8581023c3b4e2504014f275a7cb3352cbdcf3955dd73b53a5ecd37d8734e6175",
+      "sourceDigest": "c0f7fa6db3418049206dd1c6133add8063a7d17616b45830357c54e3ba116931",
+      "translationDigest": "5d20053373f2bfbee3ba6e6ba656da9e9b16645eb6f46e9a08d196b958526045",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -379,8 +389,8 @@
       "us": "Build system",
       "legacy": "构建系统.md",
       "legacyDigest": "53a393be55a9dc6d69f026c619dab10b0d0aa9913fee45e35d160c9b571d91c1",
-      "sourceDigest": "523ab48f6da94426814c28cd8ec14af61ad610f5903f050d53e8853d9aa20aa9",
-      "translationDigest": "b02bbd7123ef4354ded982649acf39baf4b070132ac218d939212a14fecad818",
+      "sourceDigest": "63e6ec89348fc94a11e44592026d11ce262f299cd21d537b10d56e308f82e529",
+      "translationDigest": "2f7a80522e1a2e5d0286d70411dfdf5b514a47490ed95153b4e48a2b614249c5",
       "translationStatus": "draft",
       "humanReview": "pending"
     }

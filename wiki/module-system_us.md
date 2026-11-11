@@ -70,7 +70,7 @@ This table is not naming advice; it describes the engine's dispatch rules (`Neko
 | `.cjs` | Forces CJS |
 | `.js` | `AUTO`: compiled module syntax selects ESM; a non-module program selects CommonJS |
 | `.ts` | Erasable TypeScript (after erasure, follows the rules above: `AUTO`) |
-| `.jsx`/`.tsx` | JSX lowering (classic runtime), with the same module mode as `AUTO` |
+| `.jsx`/`.tsx` | JSX lowering (classic by default; optional automatic runtime), with module mode `AUTO` |
 
 `enableEsmAuthoring=false` selects the CommonJS preparation path even for `.mjs`; it is not an automatic import/export-to-CommonJS compatibility transform. With ESM enabled, writing `export` in `.cjs` does not make it ESM because you want it to be. The directory names (`server_scripts` / `client_scripts` / `startup_scripts` / `test_scripts`) and the `nekojs/` root are also hardcoded (`NekoJSPaths`); no configuration option changes them.
 
@@ -101,12 +101,43 @@ console.info(greet('NekoJS')) // Hello, NekoJS!
 - These are shims, **not a full Node.js runtime**. See [Node.js compatibility](nodejs-compatibility_us) for the available core modules. Pure JS alone does not guarantee compatibility: package.json `main`/`exports` resolution is not implemented, so the example supplies a self-contained module at an explicit entry path. Synchronous `require()` rejects not-yet-evaluated ESM with top-level await or async static descendants; use `import()` instead.
 - File access is limited to the game directory, with symlink escape checks.
 
+<a id="wiki-api-modules"></a>
 <a id="wiki-section-7"></a>
+## Built-in NekoJS API modules
+
+These routes are built into NekoJS; they are not npm packages to install:
+
+| Route | Contract |
+|---|---|
+| `nekojs/api/stable` | Explicitly published stable views, including `ID` and the `Native` interoperability bridge |
+| `nekojs/api/version` | Current-node helpers and published event groups, including `Item` |
+
+`stable` does not mean every export exists on every loader, Minecraft version or Script Type. For example, stable `ServerEvents` exposes SERVER-only `tickPre`/`tickPost`, while `I18n` is CLIENT-only. Inspect the current instance's Probe declarations rather than assuming the native and stable event payloads are interchangeable.
+
+
+```ts
+import { ID } from 'nekojs/api/stable'
+import { Item } from 'nekojs/api/version'
+
+const resource = ID.resource('minecraft:stone')
+const stack = Item.of('minecraft:stone')
+```
+
+CommonJS uses the same Context-local namespace:
+
+```js
+const { ID } = require('nekojs/api/stable')
+const resource = ID.resource('minecraft:stone')
+```
+
+Plugin publications use `nekojs/api/stable/<modid>` or `nekojs/api/version/<modid>`. Importing an unavailable member fails rather than creating a placeholder. Module-only publication does not create a global; existing legacy globals remain supported. These routes are separate from `java:` imports and existing domain modules such as `nekojs/commands`. See [Global bindings](global-bindings_us) and the installed [AI authoring handbook](ai-support_us) for the available surface.
+
+<a id="wiki-section-8"></a>
 ## Importing Java classes (`java:` modules)
 
 Java packages/classes can be imported as special modules. **Only the `java:` prefix and slash-separated paths are accepted**.
 
-<a id="wiki-section-8"></a>
+<a id="wiki-section-9"></a>
 ### Package modules (lazy namespace proxy)
 
 ```ts
@@ -118,7 +149,7 @@ const { Integer, $Integer, Math: JavaMath } = require('java:java/lang')
 - Names with a `$` prefix, such as `$Integer`, map directly to `Java.type('java.lang.Integer')`.
 - `Integer`, `$Integer`, and `Math` / `JavaMath` all work.
 
-<a id="wiki-section-9"></a>
+<a id="wiki-section-10"></a>
 ### Class modules (return a Java class proxy directly)
 
 ```ts
@@ -130,7 +161,7 @@ const IntegerClass = require('java:java/lang/Integer')
 - Also exposes `default` and `$Class`.
 - This is the most direct form when you only need one specific Java class.
 
-<a id="wiki-section-10"></a>
+<a id="wiki-section-11"></a>
 ### Rules
 
 | Rule | Description |
@@ -140,7 +171,7 @@ const IntegerClass = require('java:java/lang/Integer')
 | `.` / `..` are not supported | — |
 | Dynamic `import('java:...')` | Returns a synthetic ESM module with `default` / `namespace` |
 
-<a id="wiki-section-11"></a>
+<a id="wiki-section-12"></a>
 ### Practical example: calling arbitrary Java APIs
 
 ```javascript
@@ -160,7 +191,7 @@ console.info(JavaMath.PI)               // 3.141592653589793
 
 > **Prefer NekoJS bindings** in recipe/event scripts (`Item.of(...)` rather than `Java.type(...)`): they are simpler and provide type hints. `java:` imports are mainly for cases that bindings do not cover.
 
-<a id="wiki-section-12"></a>
+<a id="wiki-section-13"></a>
 ## Security sandbox
 
 NekoJS limits what scripts can access:
@@ -171,9 +202,9 @@ NekoJS limits what scripts can access:
 - **Runaway protection**: `scriptRunawayTimeoutSeconds` and `scriptStatementLimit` are optional execution budgets, both disabled by default at 0. A watchdog termination can isolate the active generation; recovery requires an explicit full reload, not a single-file rerun or an automatic rebuild. Host calls and arbitrary external side effects are not rolled back.
 - **HostAccess limits**: the name-based denylist only blocks **class lookup** such as `Java.type`; object graphs returned by Java methods are controlled by Graal `HostAccess` (currently `HostAccess.ALL`), so instances of denylisted classes can still reach scripts through method return values.
 
-> Scripts should still be treated as **partially trusted code**: do not run untrusted third-party scripts, especially when using network synchronization on multiplayer servers.
+> Treat scripts and their dependencies as **trusted code**. Class-lookup filters, filesystem checks and watchdog budgets do not make arbitrary Java host calls safe; do not run untrusted third-party scripts, especially with multiplayer script distribution.
 
-<a id="wiki-section-13"></a>
+<a id="wiki-section-14"></a>
 ## Top-level await and dynamic import
 
 ```javascript
@@ -189,7 +220,7 @@ if (someCondition) {
 }
 ```
 
-<a id="wiki-section-14"></a>
+<a id="wiki-section-15"></a>
 ## Practical example: splitting a project across files
 
 ```
@@ -225,7 +256,7 @@ ServerEvents.recipes(event => {
 })
 ```
 
-<a id="wiki-section-15"></a>
+<a id="wiki-section-16"></a>
 ## Next steps
 
 - [TypeScript and JSX](typescript-and-jsx_us) - Writing scripts in TS.

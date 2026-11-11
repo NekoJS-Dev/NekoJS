@@ -45,7 +45,7 @@ nekojs/
                               （旧 config/nekojs-engine.toml 仅作只读回退）
 ```
 
-独立的 AI 文档根默认为 `.github/neko_ai`，由 `nekojs/config/ai.toml` 的 `[output].directory` 控制，可通过 `nekojs/config/ai-location.json` 定位。私有 token 保留在 `nekojs/config/`，不是 `.neko_probe`。见 [AI 创作支持](ai-support_cn)，不要提交 token。
+独立的 AI 文档根默认为 `.github/neko_ai`，由 `nekojs/config/ai.toml` 的 `[output].directory` 控制，工具直接读取这个配置定位。私有 token 保留在 `nekojs/config/`，不是 `.neko_probe`。见 [AI 创作支持](ai-support_cn)，不要提交 token。
 
 四个脚本目录都支持 `.js`、`.mjs`、`.cjs`、`.ts`、`.jsx`、`.tsx` 和 `.py`。`.py` 是 NekoJS 的 Python 子集转译脚本，不需要外部 Python 运行时。详见 [脚本基础](script-basics_cn)。
 
@@ -63,6 +63,8 @@ nekojs/packs/my_pack/
 └── client_scripts/
     └── hud.js
 ```
+
+这个最小清单没有 `formatVersion`，因此使用下面的**旧式目录包**规则。声明 `formatVersion: 1` 的包改用严格清单、显式入口、依赖排序和包专属 Context，见[版本化脚本包](script-packs_cn)；旧清单的宽松解析规则不适用于该格式。
 
 - **加载顺序**：全局包（按 id 字母序）→ 世界包 → 平铺目录。
 - **启用/禁用**：`/nekojs packs` 展示配置启用意图，不代表运行状态。

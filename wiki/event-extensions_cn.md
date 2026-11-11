@@ -110,6 +110,21 @@ public void registerEvents(EventGroupRegistry registry) {
 }
 ```
 
+**将同一个源事件发布到 API 模块**
+
+模块发布需要显式声明，并复用原有事件定义；它不会创建第二套原生桥接、总线或监听器归属：
+
+```java
+EventGroup GROUP = EventGroup.of("MyEvents");
+EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET = GROUP.server(
+        "playerGreet", PlayerGreetEvent.class,
+        publication -> publication.versioned().scriptTypes(ScriptType.SERVER));
+```
+
+仍通过 `registerEvents` 注册 `GROUP`。若归属 id 为 `myaddon`，SERVER 脚本可从 `nekojs/api/version/myaddon` 导入 `MyEvents`。显式发布范围不会扩大源总线能力，也不会删除原有全局形式；同时通过两种入口订阅会注册两次监听器，而不是产生两个独立原生事件源。
+
+`publication.stable()` 仅能发布通过稳定模块公共类型校验的载荷；需要显式投影时可用 `stable(View.class, converter)`，目前可取消事件的载荷投影会被拒绝，因为这个发布 API 尚无取消控制映射；这类事件只能在通过普通类型校验后按原载荷发布。也可用组级 `GROUP.expose(...)`；stable 组发布必须显式提供 `events(...)` 白名单。未知事件名、重复发布目标、不合法视图或不可用的源范围会以 `NEKO-4057` 失败，不会虚构跨平台事件。绑定模块的注册方式见[插件开发](plugin-development_cn)。
+
 <a id="wiki-section-7"></a>
 ### 步骤 4：派发事件
 

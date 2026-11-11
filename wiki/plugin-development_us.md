@@ -93,7 +93,7 @@ The consequence of registering too late depends on the registry:
 - **`IllegalStateException`**: extension points that use `Sealable` (TypeDocs / Lifecycle / NodeModules / RecipeNamespaces / RecipeLifecycle / RecipeSchemas), plus `ScriptPropertyRegistry`, `ProbeBackendRegistry`, and `ScriptCompilerRegistry`. These fail immediately.
 - **Silently ignored**: `BindingRegistry`, `JSTypeAdapterRegistry`, and `EventGroupRegistry` currently do not check whether registration has closed. Late registrations enter their collections but are never read. These failures are harder to diagnose: no error is reported, but your binding is missing.
 
-All methods have empty default implementations. Override them as needed:
+Override only the hooks you need. Most convenience callbacks are empty by default; lifecycle registration hooks already delegate to those callbacks, and `generatedLangs()` defaults to `en_us`. Replacing a registration hook without calling its default implementation replaces that default wiring.
 
 <a id="wiki-section-6"></a>
 ### Lifecycle
@@ -119,6 +119,19 @@ All methods have empty default implementations. Override them as needed:
 | `registerTypeDocs(TypeDocsRegister)` | Register type documentation programmatically; `@Doc` / `@Param` / `@Return` annotations are also supported |
 | `registerNodeTypeDocs(...)` | Register Node module type declarations |
 | `registerNodeModules(...)` | Register Node-compatible modules |
+
+**Optional owner-scoped API modules**
+
+The ordinary `registerBinding` hook also supports module-only exports:
+
+```java
+registry.register(com.tkisor.nekojs.api.data.Binding.of("MyHelper", new MyHelperJS()),
+        exposure -> exposure.versioned());
+```
+
+For an addon resolved to owner id `myaddon`, scripts import this as `import { MyHelper } from "nekojs/api/version/myaddon"`. This overload does **not** additionally create a global; the original `register(name, value)` form remains global. Select exactly one `versioned()` or `stable()` target. The owner is supplied by plugin discovery, not by a script-provided module path. Missing owners and duplicate module exports fail with `NEKO-4057`.
+
+`stable()` uses `nekojs/api/stable/myaddon` and validates public types for native leaks; it does not automatically make a Minecraft-facing helper portable. Existing stable/version module exports, globals and custom Node modules are distinct registration channels. Register only during bootstrap; ordinary script reload does not discover a new plugin or recollect its contributions.
 
 <a id="wiki-section-8"></a>
 ### Events
@@ -324,7 +337,7 @@ dependencies {
 <a id="wiki-section-21"></a>
 ## Complete example
 
-See the built-in `src/main/java/com/tkisor/nekojs/core/NekoJSCorePlugin.java`: it registers all built-in bindings/adapters/events and is the best reference implementation.
+Read the relevant built-in implementation rather than assuming one class owns every contribution: `src/main/java/com/tkisor/nekojs/core/NekoJSCorePlugin.java` contains native contributions, `common/.../core/plugin/NekoCommonBuiltinPlugin.java` contains shared bindings/compiler/type-doc contributions, and `NekoBuiltinPointsPlugin` registers the existing extension Points. Fabric also has its own platform plugin; node-local overrides take precedence over the shared source tree.
 
 <a id="wiki-section-22"></a>
 ## Next steps

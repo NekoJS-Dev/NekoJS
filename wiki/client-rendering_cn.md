@@ -132,4 +132,4 @@ CLIENT 提供 `Minecraft`、`Screen`、`Window`、`KeyMapping`、`InputConstants
 
 ---
 
-[上一篇: JSX 客户端 UI](jsx-client-ui_cn) · [目录](Home) · [下一篇: Node.js 兼容](nodejs-compatibility_cn)
+[上一篇: JSX 客户端 UI](jsx-client-ui_cn) · [目录](Home) · [下一篇: MixinJS（实验性）](mixinjs_cn)

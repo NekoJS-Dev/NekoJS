@@ -27,6 +27,8 @@ NekoJS includes a set of Node.js core module shims, so you can `require`/`import
 
 Both forms work, with or without the `node:` prefix (bare names work too).
 
+`process.versions.node` is shim-provided metadata, not evidence that Node.js itself is running or that a package targeting that Node version is compatible.
+
 <a id="wiki-section-3"></a>
 ## Common API reference
 
@@ -44,9 +46,9 @@ console.info(fs.readFileSync('nekojs/data/x.txt', 'utf8'))   // 'hello'
 fs.existsSync('nekojs/data/x.txt')                            // true
 fs.readdirSync('nekojs/data')                                 // ['x.txt']
 fs.statSync('nekojs/data/x.txt').isFile()                     // true
-fs.rmSync('nekojs/data/x.txt')
-fs.renameSync('a.txt', 'b.txt')
-fs.copyFileSync('a.txt', 'b.txt')
+fs.copyFileSync('nekojs/data/x.txt', 'nekojs/data/x-copy.txt')
+fs.renameSync('nekojs/data/x-copy.txt', 'nekojs/data/x-moved.txt')
+fs.rmSync('nekojs/data/x-moved.txt')
 
 // promises
 await fsp.appendFile('nekojs/data/x.txt', ':more')
@@ -54,6 +56,8 @@ const files = await fsp.readdir('nekojs/data')
 ```
 
 Callback forms (`fs.readFile(path, cb)`) are also supported.
+
+Relative `fs` paths initially resolve from the **game directory**, not from the importing script. `process.chdir()` changes that Context's filesystem working directory within the same sandbox; relative `import`/`require` still resolve from their importing module. The example keeps every write target under `nekojs/`, as required by the default write policy.
 
 <a id="wiki-section-5"></a>
 ### `node:path`
@@ -192,4 +196,4 @@ Run with `/nekojs test`.
 
 ---
 
-[Previous: Client rendering and post effects](client-rendering_us) · [Contents](Home) · [Next: Plugin development](plugin-development_us)
+[Previous: MixinJS (experimental)](mixinjs_us) · [Contents](Home) · [Next: Plugin development](plugin-development_us)

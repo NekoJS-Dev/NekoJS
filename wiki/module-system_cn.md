@@ -70,7 +70,7 @@ ServerEvents.tickPre(event => {
 | `.cjs` | 强制 CJS |
 | `.js` | `AUTO`：编译结果具有模块语法时选 ESM，非模块程序选 CommonJS |
 | `.ts` | 可擦除 TypeScript（擦除后按上面规则，`AUTO`） |
-| `.jsx`/`.tsx` | JSX lowering（classic runtime），模块模式同 `AUTO` |
+| `.jsx`/`.tsx` | JSX lowering（默认 classic，可选 automatic runtime），模块模式为 `AUTO` |
 
 `enableEsmAuthoring=false` 会让 `.mjs` 也走 CommonJS 准备路径，并不提供将 import/export 自动改写为 CommonJS 的兼容转换。开启 ESM 时，`.cjs` 里写 `export` 不会因为你希望它是 ESM 就变成 ESM。而目录名（`server_scripts` / `client_scripts` / `startup_scripts` / `test_scripts`）与 `nekojs/` 根同样是硬编码的（`NekoJSPaths`），没有配置项可以改。
 
@@ -101,12 +101,42 @@ console.info(greet('NekoJS')) // Hello, NekoJS!
 - 这是 shim，**不等于完整 Node.js 运行时**。能用的核心模块见 [Node.js 兼容](nodejs-compatibility_cn)。纯 JS 不保证兼容：未实现 package.json `main` 或 `exports` 解析，因此示例提供了完整模块及其明确入口。同步 `require()` 会拒绝尚未完成求值且含顶层 await 或异步静态依赖的 ESM，应改用 `import()`。
 - 文件访问限制在游戏目录内，有符号链接逃逸检查。
 
+<a id="wiki-api-modules"></a>
 <a id="wiki-section-7"></a>
+## 内置 NekoJS API 模块
+
+这些路由由 NekoJS 内置提供，不是需要通过 npm 安装的包：
+
+| 路由 | 契约 |
+|---|---|
+| `nekojs/api/stable` | 显式发布的稳定视图，包括 `ID` 与 `Native` 原生互操作桥 |
+| `nekojs/api/version` | 当前节点的帮助对象与已发布事件组，包括 `Item` |
+
+`stable` 不表示每个导出都能在所有加载器、Minecraft 版本或 Script Type 中使用。例如稳定 `ServerEvents` 仅提供 SERVER 的 `tickPre`/`tickPost`，`I18n` 仅供 CLIENT 使用。请查当前实例的 Probe 声明，不要认为原生事件载荷与稳定视图可以互换。
+
+```ts
+import { ID } from 'nekojs/api/stable'
+import { Item } from 'nekojs/api/version'
+
+const resource = ID.resource('minecraft:stone')
+const stack = Item.of('minecraft:stone')
+```
+
+CommonJS 使用同一个 Context 专属命名空间：
+
+```js
+const { ID } = require('nekojs/api/stable')
+const resource = ID.resource('minecraft:stone')
+```
+
+插件发布使用 `nekojs/api/stable/<modid>` 或 `nekojs/api/version/<modid>`。导入当前环境不可用的成员会失败，而不是返回占位对象。仅模块发布不会创建全局变量；已有旧式全局绑定仍受支持。这些路由独立于 `java:` 导入和 `nekojs/commands` 等现有领域模块。可用接口请结合[全局绑定](global-bindings_cn)与实例内的 [AI 创作手册](ai-support_cn)查询。
+
+<a id="wiki-section-8"></a>
 ## 导入 Java 类（`java:` 模块）
 
 Java 包/类可以作为特殊模块导入。**只接受 `java:` 前缀和斜杠分隔路径**。
 
-<a id="wiki-section-8"></a>
+<a id="wiki-section-9"></a>
 ### 包级模块（懒加载 namespace proxy）
 
 ```ts
@@ -118,7 +148,7 @@ const { Integer, $Integer, Math: JavaMath } = require('java:java/lang')
 - `$Integer` 这种 `$` 前缀名字会直接映射到 `Java.type('java.lang.Integer')`。
 - `Integer`、`$Integer`、`Math` / `JavaMath` 这几种写法都能用。
 
-<a id="wiki-section-9"></a>
+<a id="wiki-section-10"></a>
 ### 类级模块（直接返回 Java 类 proxy）
 
 ```ts
@@ -130,7 +160,7 @@ const IntegerClass = require('java:java/lang/Integer')
 - 额外暴露 `default` 和 `$Class`。
 - 如果只想拿一个明确的 Java 类，这种写法最直接。
 
-<a id="wiki-section-10"></a>
+<a id="wiki-section-11"></a>
 ### 规则
 
 | 规则 | 说明 |
@@ -140,7 +170,7 @@ const IntegerClass = require('java:java/lang/Integer')
 | 不支持 `.` / `..` | — |
 | 动态 `import('java:...')` | 返回带 `default` / `namespace` 的合成 ESM 模块 |
 
-<a id="wiki-section-11"></a>
+<a id="wiki-section-12"></a>
 ### 实战：调用任意 Java API
 
 ```javascript
@@ -160,7 +190,7 @@ console.info(JavaMath.PI)               // 3.141592653589793
 
 > 配方/事件脚本里**首选 NekoJS 绑定**（`Item.of(...)` 而不是 `Java.type(...)`），更简洁、有类型提示。`java:` 导入主要用于绑定未覆盖的场景。
 
-<a id="wiki-section-12"></a>
+<a id="wiki-section-13"></a>
 ## 安全沙盒
 
 NekoJS 限制脚本访问范围：
@@ -171,9 +201,9 @@ NekoJS 限制脚本访问范围：
 - **失控保护**：`scriptRunawayTimeoutSeconds` 与 `scriptStatementLimit` 是可选执行预算，默认均为 0（禁用）。watchdog 终止可能隔离活动代；恢复需要显式完整重载，不能靠单文件重跑，也不会自动重建。宿主调用与任意外部副作用不会回滚。
 - **HostAccess 边界**：按名黑名单只拦截 `Java.type` 一类的**类查找**；Java 方法返回值的对象图由 Graal `HostAccess` 控制（当前 `HostAccess.ALL`），黑名单类的实例仍可能经方法返回值进入脚本。
 
-> 脚本仍应视为**半可信代码**——不应运行不受信任的第三方脚本，多人服务器里用网络同步功能时尤其如此。
+> 应将脚本及其依赖视为**受信任代码**。类查找过滤、文件系统检查和 watchdog 预算不能使任意 Java 宿主调用变得安全；不要运行不受信任的第三方脚本，多人脚本分发时尤其如此。
 
-<a id="wiki-section-13"></a>
+<a id="wiki-section-14"></a>
 ## 顶层 await 与动态 import
 
 ```javascript
@@ -189,7 +219,7 @@ if (someCondition) {
 }
 ```
 
-<a id="wiki-section-14"></a>
+<a id="wiki-section-15"></a>
 ## 实战：拆分多文件项目
 
 ```
@@ -225,7 +255,7 @@ ServerEvents.recipes(event => {
 })
 ```
 
-<a id="wiki-section-15"></a>
+<a id="wiki-section-16"></a>
 ## 下一步
 
 - [TypeScript 与 JSX](typescript-and-jsx_cn) —— 用 TS 写脚本。

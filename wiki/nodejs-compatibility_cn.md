@@ -27,6 +27,8 @@ NekoJS 内置一组 Node.js 核心模块 shim，让你能 `require`/`import` 常
 
 带 `node:` 前缀和不带前缀都能用（裸名也行）。
 
+`process.versions.node` 是 shim 提供的元数据，不表示当前运行的是 Node.js，也不能据此认定面向该 Node 版本的 npm 包兼容。
+
 <a id="wiki-section-3"></a>
 ## 常用 API 速查
 
@@ -44,9 +46,9 @@ console.info(fs.readFileSync('nekojs/data/x.txt', 'utf8'))   // 'hello'
 fs.existsSync('nekojs/data/x.txt')                            // true
 fs.readdirSync('nekojs/data')                                 // ['x.txt']
 fs.statSync('nekojs/data/x.txt').isFile()                     // true
-fs.rmSync('nekojs/data/x.txt')
-fs.renameSync('a.txt', 'b.txt')
-fs.copyFileSync('a.txt', 'b.txt')
+fs.copyFileSync('nekojs/data/x.txt', 'nekojs/data/x-copy.txt')
+fs.renameSync('nekojs/data/x-copy.txt', 'nekojs/data/x-moved.txt')
+fs.rmSync('nekojs/data/x-moved.txt')
 
 // promises
 await fsp.appendFile('nekojs/data/x.txt', ':more')
@@ -54,6 +56,8 @@ const files = await fsp.readdir('nekojs/data')
 ```
 
 回调形式（`fs.readFile(path, cb)`）也支持。
+
+`fs` 的相对路径最初以**游戏目录**为基准，不是以导入它的脚本目录为基准。`process.chdir()` 可在同一沙盒边界内改变该 Context 的文件系统工作目录；相对 `import`/`require` 仍从导入模块的位置解析。示例的所有写入目标均位于 `nekojs/` 下，符合默认写入策略。
 
 <a id="wiki-section-5"></a>
 ### `node:path`
@@ -192,4 +196,4 @@ test('fs 同步与 promises 都能用', async () => {
 
 ---
 
-[上一篇: 客户端绘制与后处理](client-rendering_cn) · [目录](Home) · [下一篇: 插件开发](plugin-development_cn)
+[上一篇: MixinJS（实验性）](mixinjs_cn) · [目录](Home) · [下一篇: 插件开发](plugin-development_cn)

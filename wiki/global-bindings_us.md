@@ -9,6 +9,8 @@ Global bindings are objects/functions that NekoJS injects into the script's top-
 
 > This page is a reference manual. Each binding's method signatures are listed, with arguments in parentheses and the return type after the arrow.
 
+Existing globals remain supported. First-party and plugin APIs can also be published through [`nekojs/api/stable` and `nekojs/api/version`](module-system_us#wiki-api-modules); module-only exports do not automatically appear as globals. Check the current Script Type and node's generated declarations before importing a member.
+
 ---
 
 <a id="wiki-section-2"></a>
@@ -732,7 +734,7 @@ The following bindings provide direct access to vanilla Minecraft classes, as co
 | `SoundEvents` | `net.minecraft.sounds.SoundEvents` | Vanilla sound events |
 | `ParticleTypes` | `net.minecraft.core.particles.ParticleTypes` | Vanilla particle types |
 | `EntityType` | `net.minecraft.world.entity.EntityType` | Entity type constants |
-| `MobEffects` | `net.minecraft.core.registries.MobEffects` (or its counterpart) | Potion effect constants |
+| `MobEffects` | `net.minecraft.world.effect.MobEffects` (or the node-mapped counterpart) | Potion effect constants |
 | `MobEffectInstance` | Mob effect instance class | Potion effect instance |
 | `DamageTypes` | Damage type constants | — |
 | `Identifier` | `net.minecraft.resources.Identifier` (26.x) / `ResourceLocation` (1.21.1) | Resource identifier |

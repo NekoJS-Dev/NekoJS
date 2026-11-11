@@ -24,6 +24,8 @@ stonecutter {
 - **`versions/<node>/`**：节点参数（`gradle.properties` 的 `deps.*`）+ 节点专属源码（差异大到守卫不划算的孪生文件，如 26.x 拆出去前的 GUI / `PostEffectManager`）。
 - **构建逻辑不在节点脚本里**：入口脚本只做声明，全部构建逻辑住 buildSrc。
 
+节点 ID 不一定等于 Minecraft 依赖版本：`26.2.0-fabric` 当前指定 `deps.minecraft=26.2` 和 Fabric API `0.159.0+26.2`；Gradle 任务路径仍使用节点 ID。
+
 <a id="wiki-section-3"></a>
 ## 入口脚本与 convention plugin
 
@@ -73,7 +75,7 @@ stonecutter {
 
 **replacements 是配置，不是纪律**：`!mc_ids` 吃纯改名（`ResourceLocation`↔`Identifier` 等，全局默认启用）；`mc_legacy_api` 默认关，仅文件级 `//~ mc_legacy_api` 局部启用（门槛：该文件 token 单侧不出现）。
 
-**sandboxCheck**：guardLint + 全部节点 `check` 的聚合门禁，提交前本地跑一遍。
+**sandboxCheck**：聚合 guardLint、Java 子项目（包括各节点）的 `check` 和外部 addon 夹具隔离检查，提交前本地跑一遍。它不会启动 CI 的 Fabric 游戏服务器 smoke。
 
 <a id="wiki-section-6"></a>
 ## 日常命令
@@ -90,6 +92,8 @@ stonecutter {
 
 active 节点 = IDE 里直接编译/运行的节点（`stonecutter.gradle.kts` 的 `stonecutter active "…"` 行）。
 
+验证层级需要分开：节点构建编译、打包 Minecraft/加载器实现并运行已配置的检查；JVM 测试不等于运行游戏。两个加载器 convention 都把独立的 `platformGateTest` 覆盖检查挂入 `check`。NeoForge 还挂入 `nativeRecipeProbeTest`（独立 JVM 内的真实注册表/配方检查）；`nbtSmokeTest` 也是 JVM `Test` 任务，不是游戏服务器 smoke。CI 的 Fabric `runServer` smoke 仅检查 startup/server-started 夹具，不代表完整 API、客户端画面、重启或多人验收。
+
 <a id="wiki-section-7"></a>
 ## 加新 MC 版本（三步）
 
@@ -100,9 +104,9 @@ active 节点 = IDE 里直接编译/运行的节点（`stonecutter.gradle.kts` �
 <a id="wiki-section-8"></a>
 ## CI
 
-`.github/workflows/ci-build.yml`（手写节点矩阵）：`:common:check` → `guardLint` → NeoForge `nbtSmokeTest` → `npm run test:probe-types` → 各节点 `build`（含 Fabric 26.1.2/26.2.0）→ 每个 Fabric matrix leg 先校验下载的 Fabric jar，再运行 development server smoke。发版由提交标题 `update <版本>` 触发，GitHub Release 和 CurseForge 任务都依赖两个 Fabric smoke leg；Fabric 文件仍明确排除，直到单独开启发布。runtime smoke 使用版本库中的 fixture，看到 startup/server-started markers 后主动停止。JDK 供给：CI 由 `actions/setup-java` 提供，仓库不再钉 `org.gradle.java.home`；本机用户在用户级 `~/.gradle/gradle.properties` 设置或导出 `JAVA_HOME`。
+`.github/workflows/ci-build.yml`（手写节点矩阵）：`:common:check` / `:common-api-processor:test` → `guardLint` → NeoForge `nbtSmokeTest` → `npm run test:probe-types` → 各节点 `build`（含 Fabric 26.1.2/26.2.0）→ 每个 Fabric matrix leg 先校验下载的 Fabric jar，再运行 development server smoke。发版由提交标题 `update <版本>` 触发，GitHub Release 和 CurseForge 任务都依赖两个 Fabric smoke leg；Fabric 文件仍明确排除，直到单独开启发布。runtime smoke 使用版本库中的 fixture，看到 startup/server-started markers 后主动停止。JDK 供给：CI 由 `actions/setup-java` 提供，仓库不再钉 `org.gradle.java.home`；本机用户在用户级 `~/.gradle/gradle.properties` 设置或导出 `JAVA_HOME`。
 
-CI 还运行 `python tools/test_active_node_sources.py` 与 `python tools/verify-active-node-sources.py`。回归覆盖恢复、失败/陈旧摘要检测及保留已有 probe 路径；验证器通过 `tools/verify-node-source-selection.init.gradle` 检查真实 compile/resource 任务输入。版本节点必须选择自己的覆盖文件，不能静默编译共享孪生。
+节点构建后，CI 还运行 `npm run test:probe-native-jsx`、`python3 -m unittest discover -s tools -p test_active_node_sources.py`、`python3 tools/verify-active-node-sources.py --target build/active-source-matrix`，以及 `tools/nekojs-ci-gates.py` 中的源码根/覆盖检查。回归覆盖恢复、失败/陈旧摘要检测及保留已有 probe 路径；验证器通过 `tools/verify-node-source-selection.init.gradle` 检查真实 compile/resource 任务输入。版本节点必须选择自己的覆盖文件，不能静默编译共享孪生。
 
 <a id="wiki-section-9"></a>
 ## 已知边界

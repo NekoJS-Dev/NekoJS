@@ -34,7 +34,7 @@ NekoJS 把脚本按 **脚本类型（ScriptType）** 分到不同目录，每种
 <a id="wiki-section-4"></a>
 ## 支持的文件扩展名
 
-`.js`、`.mjs`、`.cjs`、`.ts`（可擦除 TypeScript）、`.jsx`/`.tsx`（classic runtime JSX lowering）和 `.py`（内置 Python 子集转译）。
+`.js`、`.mjs`、`.cjs`、`.ts`（可擦除 TypeScript）、`.jsx`/`.tsx`（JSX lowering：默认 classic，可选开启 automatic runtime）和 `.py`（内置 Python 子集转译）。
 
 详见 [TypeScript 与 JSX](typescript-and-jsx_cn)。
 
@@ -62,6 +62,8 @@ NekoJS 把脚本按 **脚本类型（ScriptType）** 分到不同目录，每种
 
 - `/nekojs reload`（默认 reload `server`）
 - `/nekojs reload server` / `client` / `test`
+
+重载结果通过聊天和日志反馈，NekoJS 不再在屏幕上显示脚本重载进度条。
 
 | 操作 | 边界 |
 |---|---|

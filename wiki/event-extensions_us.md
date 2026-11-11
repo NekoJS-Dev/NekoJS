@@ -110,6 +110,21 @@ public void registerEvents(EventGroupRegistry registry) {
 }
 ```
 
+**Publish the same source event through an API module**
+
+Module publication is opt-in and uses the existing event declaration; it does not create another native bridge, bus or listener owner:
+
+```java
+EventGroup GROUP = EventGroup.of("MyEvents");
+EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET = GROUP.server(
+        "playerGreet", PlayerGreetEvent.class,
+        publication -> publication.versioned().scriptTypes(ScriptType.SERVER));
+```
+
+Register `GROUP` through `registerEvents` as before. For owner id `myaddon`, SERVER scripts can import `MyEvents` from `nekojs/api/version/myaddon`. This explicit publication scope does not widen the source bus and does not remove its existing global form. Calling both forms subscribes twice; they are not independent native event sources.
+
+`publication.stable()` publishes a payload only if its public types satisfy stable-module validation; use `stable(View.class, converter)` for an explicit projected payload. Projected cancellable events are currently rejected: this publication API has no control mapping for their cancellation semantics. Publish such an event without a payload projection, subject to its normal type checks. The group-wide `GROUP.expose(...)` form is also available; stable group publication requires an explicit `events(...)` allowlist. Unknown event names, duplicated publication targets, invalid views or an unavailable source scope fail with `NEKO-4057`, rather than fabricating a portable event. See [Plugin development](plugin-development_us) for binding module registration.
+
 <a id="wiki-section-7"></a>
 ### Step 4: dispatch the event
 

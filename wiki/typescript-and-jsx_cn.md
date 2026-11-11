@@ -10,7 +10,7 @@ NekoJS **本体内置** TypeScript 和 JSX 支持，无需额外编译步骤。
 <a id="wiki-section-2"></a>
 ## TypeScript（`.ts`）
 
-内置 TypeScript 前端。它擦除/降级 TS 语法，留下纯 JS 执行，不是完整的 TS 编译器——但支持的语法覆盖绝大多数实战场景。
+内置 TypeScript 前端会擦除或降级下表列出的受支持 TS 语法，再执行普通 JS；它不会运行 `tsc` 或检查类型注解。请用编辑器或独立的 TypeScript 检查配合当前 Probe 声明验证类型；脚本成功加载不等于通过静态类型检查。
 
 <a id="wiki-section-3"></a>
 ### 支持的语法

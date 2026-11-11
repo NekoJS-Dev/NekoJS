@@ -116,11 +116,14 @@ A:
 - **Cleanroom 1.12.2**：不在当前版本图内；当前仓库无法确认 HEI/JEI 刷新行为。
 
 <a id="wiki-section-19"></a>
-### Q: `event.recipes.create.mixing(...)` 报错
+### Q: 命名空间配方调用失败，或 Probe 声明为 `never`
 
-A: 这个类型没有 handler 也没有 schema。要么：
-1. 用原始 JSON：`event.custom({ type: 'create:mixing', ... })`。
-2. 给它写一个数据驱动 schema JSON（见 [配方系统 - 数据驱动 Schema](recipe-system_cn#wiki-section-13)），之后就能用位置参数了。
+A: 先看实际加载的模组、当前配方模型和日志，不能仅凭 `create:mixing` 这样的名字就认定它没有 schema。区分以下情况：
+
+- **未发现专用构造器**：检查模组是否加载、原生 serializer 是否可探测，以及对应插件或 schema 是否注册。可以按该模组真实的完整配方格式使用 `event.custom(...)`，但仍需验证 serializer 与实际配方结果；这不是自动补齐任意配方语义。
+- **已识别但明确不支持**：Probe 会生成 `recipeName: never`，运行时对应路径会拒绝调用。查看来源资源、JSON 路径和 `NEKO-52xx` 原因，不要把声明改成 `any` 或手工添加重载来掩盖问题。
+
+旧构建中的 `NEKO-5242 Unsupported inherited schema: minecraft:shaped` / `minecraft:special` 指向父 schema 接入缺口，不表示整个模组都不受支持。当前 NekuJS 已补齐这两个原生父模型的受支持行为，并纠正把 `hidden` 元数据当作调用禁令的问题；升级、重启并重新生成 Probe 后再看结果。其他未知父模型和不支持的工厂语义仍可能产生 `never`，不能通过修改生成文件解决。详见 [配方系统](recipe-system_cn)、[Probe 类型生成](probe-type-generation_cn) 和 [错误码](error-reference_cn)。
 
 <a id="wiki-section-20"></a>
 ### Q: 配方 id 是什么？怎么指定？

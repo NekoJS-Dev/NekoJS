@@ -32,6 +32,7 @@
 - [模块系统](module-system_cn)
 - [TypeScript 与 JSX](typescript-and-jsx_cn)
 - [JSX 客户端 UI](jsx-client-ui_cn)
+- [MixinJS（实验性）](mixinjs_cn)
 - [Node.js 兼容](nodejs-compatibility_cn)
 
 ## 插件开发者
@@ -79,6 +80,7 @@
 - [Module system](module-system_us)
 - [TypeScript and JSX](typescript-and-jsx_us)
 - [JSX client UI](jsx-client-ui_us)
+- [MixinJS (experimental)](mixinjs_us)
 - [Node.js compatibility](nodejs-compatibility_us)
 
 ## Plugin developers

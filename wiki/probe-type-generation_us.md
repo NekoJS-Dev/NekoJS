@@ -343,13 +343,24 @@ The table below describes directory and naming conventions used by the built-in 
 | `$Foo_` | Adapter input alias, where `Foo` is the target type name |
 | `java:` / `@side-only` / `@special` | Module specifier prefixes |
 
+<a id="wiki-section-17"></a>
+### Reading native inputs and recipe signatures
+
+`$Foo_` denotes an input contract only when a registered adapter or built-in collection actually defines it; it is not an alias automatically invented for every host class. Collection declarations keep **host values and guest inputs separate**: a native `$List<$Payload>` is not the same as a list whose elements have already been converted to `$Payload_`. Where the real adapter supplies `$Payload_`, a contract may therefore retain `($List<$Payload> | $Payload_[])`. The shorter `$List_<T>` / `$Collection_<T>` / `$Iterable_<T>` aliases are reused only when the host and guest type arguments agree. `Set` remains host-only; map object alternatives keep `Partial<Record<...>>` and property-key restrictions instead of turning arbitrary host keys into strings. See [canonical aliases and collection rules](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java#L79-L142), [alias reuse](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java#L233-L254), and [type-adapter boundaries](type-adapters_us).
+
+Native recipe handlers expose their visible Java overloads and actual generic return types; they are not all presented as a schema-specific builder. Unbound Java variables are projected to upper bounds. Converter-owned schema fields can recursively declare their accepted input types, while ordinary native generic adapters retain the host-side arguments they really accept. A schema with fields retains its **full named-options object overload**, with constructor-derived positional overloads, required/defaulted fields and exclusive canonical-or-alias keys. Named `...Options` declarations share the complete object contract; they do not remove less common fields. See [handler catalog](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/catalog/RecipeNamespaceCatalogEntry.java#L66-L94), [schema overloads](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/RecipeEventDeclarationGenerator.java#L238-L255), and [recipe contracts](recipe-system_us#wiki-section-8).
+
+Callable declarations use a shared **soft 120-character width** including indentation. Long parameter lists wrap one already-rendered parameter per line, indented four additional spaces. This covers ordinary constructors/methods/annotation overloads and structured event, managed-API and recipe callables; it does not change optionality, overload count, return types or the full options contract. A single complex parameter/return fragment, zero-parameter callable or pre-rendered declaration may still exceed 120 characters: this is not a parser or hard truncation limit. See [the formatter](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeScriptDeclarationFormatter.java#L5-L27).
+
+A recipe member declared as `name: never` reflects a known catalog rejection, not a complicated TypeScript type being hidden for readability. Check the profile's current schema-compilation diagnostics; `NEKO-5242`, for example, concerns parent-schema resolution in the compatibility graph. The currently supported parents/components/factories determine the result, not a blanket mod-wide compatibility switch. This differs from an options key declared `alias?: never` to prevent duplicate canonical-and-alias inputs. See [recipe rejection and fallback diagnostics](recipe-system_us#wiki-section-19) and [the generator guard](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/RecipeEventDeclarationGenerator.java#L188-L208).
+
 The constraints are conditional, not universal:
 
 - **A backend for a new language**, such as Lua, a JSON inventory, or a documentation site, has no relationship to this table and can organize output freely.
 - **A replacement TypeScript backend reusing existing editor configuration** can keep these names and require no other changes.
 - **A replacement TypeScript backend with a custom layout** is allowed, but requires two editor integration changes or `@side-only/...` in scripts cannot resolve. First is the backend's `contributeEditorConfig`, which merges aliases into `jsconfig.json` after probe. Second is the plugin hook `NekoJSPlugin.modifyWorkspaceConfig`: `WorkspaceGenerator` independently hardcodes the same aliases when creating the first workspace configuration, while `jsconfig.json` does not yet exist. Without changing it, configuration is wrong between initial startup and the first probe run. Existing scripts also hardcode these module specifiers, so changing layout is a breaking change for script authors.
 
-<a id="wiki-section-17"></a>
+<a id="wiki-section-18"></a>
 ## Key classes
 
 | Class | Location | Responsibility |
@@ -370,7 +381,7 @@ The constraints are conditional, not universal:
 | `AdapterAliasGenerator` | `common/.../probe/` | Render `$Foo_` aliases from `AdapterInputShape` |
 | `TypeAliasRegistry` | `common/.../probe/types/` | TS input aliases, broadening adapter/enum/collection inputs. The sole Java `Type` → `ApiTypeRef` mapping is `TypeReflector.toRef`, shared by TS/Python. |
 
-<a id="wiki-section-18"></a>
+<a id="wiki-section-19"></a>
 ## Data source: catalog snapshot
 
 `NekoScriptCatalog.snapshot(runtime)` creates an immutable `NekoScriptCatalogSnapshot`. Backends consume only the snapshot, as pure functions of `(snapshot, collectedClasses, ir)`. This is the main decoupling point.
@@ -387,15 +398,15 @@ The snapshot contains:
 - `typeDocs`: contents of `TypeDocsRegister` (descriptions/examples/parameter docs)
 - `manualDeclarations`: handwritten `.d.ts`
 
-<a id="wiki-section-19"></a>
+<a id="wiki-section-20"></a>
 ## Supply data to probe (plugin authors)
 
-<a id="wiki-section-20"></a>
+<a id="wiki-section-21"></a>
 ### Bindings carry their types
 
 `registry.register("Foo", new FooJS())` makes probe reflect public methods of `FooJS`. For JSDoc, annotate the class/methods/parameters with `@Doc` / `@Param` / `@Return` (`TypeReflector` consumes them), or use programmatic `registerTypeDocs` (`TypeDocsRegister.register(...)` / `registerManualDeclaration(...)`; see [Plugin development](plugin-development_us)).
 
-<a id="wiki-section-21"></a>
+<a id="wiki-section-22"></a>
 ### Registry literals
 
 `NekoCatalogPlatformProvider.registryTypes()` supplies registry id lists. Probe generates `@special/types/index.d.ts`, including string literal unions of all item ids, so values such as `'minecraft:stone'` have completion.
@@ -412,22 +423,22 @@ There is also a registry-independent union:
 
 - `RegistryTypes.Namespace` combines two sources: `NekoCatalogPlatformProvider.modIds()` (the loader mod list on all three platforms, including mods that registered nothing in this registry) and the `:` prefixes of all registry entry ids (including script-created namespaces such as `event.create('mymod:cool_gem')` and data-pack namespaces not owned by a mod). Adapters wrap it with `template("@", namespace())` as <code>\`@${RegistryTypes.Namespace}\`</code>, providing completion for `'@create'`. It is not divided by registry: a namespace's validity does not depend on which registry contains it. A filter with no matches simply returns an empty result, not an error.
 
-<a id="wiki-section-22"></a>
+<a id="wiki-section-23"></a>
 ### Manual declarations
 
 `NekoCommonManualDeclarations` in common and platform manual declarations supply handwritten `.d.ts` fragments to `@manual/index.d.ts` for content reflection cannot express.
 
-<a id="wiki-section-23"></a>
+<a id="wiki-section-24"></a>
 ### Snippets
 
 `NekoCatalogPlatformProvider.snippets()` supplies IDE snippets. Scripts can add more through `ProbeEvents.snippets`.
 
-<a id="wiki-section-24"></a>
+<a id="wiki-section-25"></a>
 ## Add a custom backend (developer guide)
 
 Built-in `typescript:builtin` / `python:builtin` occupy those names. Third parties can **replace** an implementation by choosing the same language with a different `name`, or **add** a new output type through a new language id, such as Lua, a JSON inventory, or a documentation site.
 
-<a id="wiki-section-25"></a>
+<a id="wiki-section-26"></a>
 ### Minimal working example
 
 A backend implements only `languageId()` / `name()` / `render(ctx)`. The following complete example exports collected classes as a JSON inventory:
@@ -472,7 +483,7 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 
 `/nekojs probe json` then generates `.neko_probe/json/classes.json`. `/nekojs probe json list` selects it explicitly, and `/nekojs probe all` also includes it.
 
-<a id="wiki-section-26"></a>
+<a id="wiki-section-27"></a>
 ### render contract (the only required rendering method)
 
 - Return a map of paths relative to the output directory (`/`-separated, such as `@package/net/minecraft/index.d.ts`) to UTF-8 text. **Do not touch disk**.
@@ -480,7 +491,7 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 - If render throws, that backend is marked failed and its message appears in command output. Old output is retained in full.
 - If a precondition is unmet, such as missing data, throw `IllegalArgumentException`; the message is shown to the user unchanged.
 
-<a id="wiki-section-27"></a>
+<a id="wiki-section-28"></a>
 ### Optional overrides
 
 | Method | Default | When to override |
@@ -492,7 +503,7 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 | `resetEditorConfig(...)` | Empty | Clean up editor settings you wrote when `/nekojs probe reset_config` runs |
 | `generate(ctx)` | Render + disk output | **Normally do not override**. Custom disk output/stale cleanup/locked-file retries are error-prone; reserve this for exceptional requirements. |
 
-<a id="wiki-section-28"></a>
+<a id="wiki-section-29"></a>
 ### Rules
 
 These three rules are enforced by code:
@@ -531,7 +542,7 @@ The same five nodes use these coordinate reads for `net.minecraft.core.SectionPo
 
 Only these three zero-argument instance method declarations are omitted in TS. Inherited numeric Beans, real getters and static methods such as `SectionPos.x(long)` remain. Existing direct JavaScript calls still work. On these nodes, `section["x()"]()` reads a number and fails when called, so it is not a replacement. Regenerate declarations to use the updated contract. Other classes, Java/Python and runtime behavior remain unchanged.
 
-<a id="wiki-section-29"></a>
+<a id="wiki-section-30"></a>
 ## Current Probe limitations
 
 > These are known boundaries to keep in mind.
@@ -542,7 +553,7 @@ Only these three zero-argument instance method declarations are omitted in TS. I
 4. **Version drift**: probe is manually triggered, so adding mods/registered content makes declarations stale. Run `/nekojs probe` again.
 5. **Python stub generics flattening**: type variables render as `Any`, without generic parameter relationships. This is sufficient for everyday completion, not full typing.
 
-<a id="wiki-section-30"></a>
+<a id="wiki-section-31"></a>
 ## Test probe
 
 Tests under `common/src/test/.../probe/` include:
@@ -556,7 +567,7 @@ Tests under `common/src/test/.../probe/` include:
 
 See these tests for probe's testable behavior.
 
-<a id="wiki-section-31"></a>
+<a id="wiki-section-32"></a>
 ## Next steps
 
 - [Annotations](annotations_us): accurate output through `@Remap` / `@RemapByPrefix` / `@HideFromJS` / `@PlatformAvailability`.

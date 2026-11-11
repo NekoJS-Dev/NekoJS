@@ -16,7 +16,7 @@ NekoJS 当前代码库包含 NeoForge 和 Fabric 两组节点。本文是平台�
 | NeoForge | 26.1.2 | 支持 | 25 | 主力版本节点 |
 | NeoForge | 26.2.0 | 支持 | 25 | 主力版本节点 |
 | Fabric | 26.1.2 | 当前仓库构建节点 | 25 | Loader 专属 API 子集；核对安装制品与 profile |
-| Fabric | 26.2.0 | 当前仓库构建节点 | 25 | Loader 专属 API 子集；核对安装制品与 profile |
+| Fabric | 26.2 | 当前仓库构建节点（`26.2.0-fabric`） | 25 | Loader 专属 API 子集；核对安装制品与 profile |
 
 Fabric 节点已经覆盖脚本加载、配方、网络、probe、注册表的一部分、常用事件和按键绑定，但不等于与 NeoForge 功能完全相同。发布状态以 [Releases](https://github.com/NekoJS-Dev/NekoJS/releases) 为准。
 

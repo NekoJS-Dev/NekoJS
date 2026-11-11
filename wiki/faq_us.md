@@ -116,11 +116,14 @@ A:
 - **Cleanroom 1.12.2**: outside the current version graph; this repository does not establish HEI/JEI refresh behavior.
 
 <a id="wiki-section-19"></a>
-### Q: `event.recipes.create.mixing(...)` fails
+### Q: A namespaced recipe call fails, or Probe declares it as `never`
 
-A: This type has neither a handler nor a schema. Either:
-1. Use raw JSON: `event.custom({ type: 'create:mixing', ... })`.
-2. Write a data-driven schema JSON for it (see [Recipe system: data-driven schema](recipe-system_us#wiki-section-13)), then you can use positional arguments.
+A: Check the installed mods, current recipe definition and diagnostics first. A name such as `create:mixing` does not by itself mean that no schema exists. Distinguish these cases:
+
+- **No dedicated constructor was discovered**: check mod loading, native serializer discovery and the relevant plugin or schema registration. You can use `event.custom(...)` with the mod's actual complete recipe format, but must still validate the serializer and real recipe result; it does not synthesize arbitrary recipe semantics.
+- **Recognized but explicitly unsupported**: Probe emits `recipeName: never`, and the corresponding runtime path rejects calls. Inspect the source resource, JSON path and `NEKO-52xx` reason. Do not hide the problem by changing the declaration to `any` or manually adding overloads.
+
+In older builds, `NEKO-5242 Unsupported inherited schema: minecraft:shaped` / `minecraft:special` identifies a parent integration gap, not an unsupported entire mod. Current NekuJS supplies the supported native contracts for those two parents and corrects the mistaken use of `hidden` metadata as a runtime call ban. Upgrade, restart and regenerate Probe before checking the result. Other unknown parents or unsupported factory semantics can still yield `never`; editing generated files is not a fix. See [Recipe system](recipe-system_us), [Probe type generation](probe-type-generation_us) and [Error reference](error-reference_us).
 
 <a id="wiki-section-20"></a>
 ### Q: What is a recipe id, and how do I set it?

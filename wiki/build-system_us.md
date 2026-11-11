@@ -24,6 +24,8 @@ stonecutter {
 - **`versions/<node>/`**: node parameters (`deps.*` in `gradle.properties`) plus node-specific sources for differences too large for convenient guarding, such as GUI / `PostEffectManager` implementations from before the 26.x split.
 - **Build logic stays out of node scripts**: entry scripts only declare conventions; all build logic lives in buildSrc.
 
+Node ids are not always Minecraft dependency versions: `26.2.0-fabric` currently pins `deps.minecraft=26.2` and Fabric API `0.159.0+26.2`; use the node id in Gradle task paths.
+
 <a id="wiki-section-3"></a>
 ## Entry scripts and convention plugins
 
@@ -73,7 +75,7 @@ Scan scopes differ: guard rules inspect only `src/**/*.java` (the shared tree); 
 
 **Replacements are configuration, not discipline**: `!mc_ids` handles pure renaming such as `ResourceLocation` ↔ `Identifier` and is enabled globally by default. `mc_legacy_api` is disabled by default and enabled locally with file-level `//~ mc_legacy_api`, only when that file does not contain the token on one side.
 
-**sandboxCheck** aggregates guardLint and every node's `check`; run it locally before submitting.
+**sandboxCheck** aggregates guardLint, `check` for Java subprojects (including the nodes), and external-addon fixture isolation; run it locally before submitting. It does not launch the CI Fabric game-server smoke.
 
 <a id="wiki-section-6"></a>
 ## Everyday commands
@@ -90,19 +92,21 @@ Scan scopes differ: guard rules inspect only `src/**/*.java` (the shared tree); 
 
 The active node is the node compiled/run directly in the IDE, selected by `stonecutter active "…"` in `stonecutter.gradle.kts`.
 
+Keep evidence levels separate: node builds compile/package the Minecraft/loader implementation and run their configured checks; JVM tests are not a running game. Both loader conventions attach isolated `platformGateTest` coverage checks to `check`. NeoForge also attaches `nativeRecipeProbeTest` (real registry/recipe checks in an isolated JVM); `nbtSmokeTest` is another JVM `Test` task, not a game-server smoke. The CI Fabric `runServer` smoke exercises only its startup/server-started fixture, not complete API, client rendering, restart, or multiplayer acceptance.
+
 <a id="wiki-section-7"></a>
 ## Add a Minecraft version (three steps)
 
-1. For `versions/<新版本>/gradle.properties`, copy the adjacent node and change `deps.minecraft` / `deps.neo` / `deps.jei` (Curse file id) / `deps.mc_range` / `deps.neo_range` / `deps.java`.
+1. For `versions/<new-version>/gradle.properties`, copy the adjacent node and change `deps.minecraft` / `deps.neo` / `deps.jei` (Curse file id) / `deps.mc_range` / `deps.neo_range` / `deps.java`.
 2. Add the node name to the version graph in `settings.gradle.kts`.
 3. Add one entry to the build matrix in `.github/workflows/ci-build.yml`; the list is handwritten because there are few nodes.
 
 <a id="wiki-section-8"></a>
 ## CI
 
-`.github/workflows/ci-build.yml` uses a handwritten node matrix: `:common:check` → `guardLint` → NeoForge `nbtSmokeTest` → `npm run test:probe-types` → node `build` tasks, including Fabric 26.1.2/26.2.0 → each Fabric matrix leg verifies the downloaded Fabric jar and then runs a development-server smoke test. A commit title of `update <版本>` triggers release publication. GitHub Release and CurseForge tasks depend on both Fabric smoke legs; Fabric files remain explicitly excluded until publication is enabled separately. Runtime smoke uses versioned fixtures and stops after seeing startup/server-started markers. CI obtains JDKs through `actions/setup-java`; the repository no longer fixes `org.gradle.java.home`. Local users configure it in user-level `~/.gradle/gradle.properties` or export `JAVA_HOME`.
+`.github/workflows/ci-build.yml` uses a handwritten node matrix: `:common:check` / `:common-api-processor:test` → `guardLint` → NeoForge `nbtSmokeTest` → `npm run test:probe-types` → node `build` tasks, including Fabric 26.1.2/26.2.0 → each Fabric matrix leg verifies the downloaded Fabric jar and then runs a development-server smoke test. A commit title of `update <version>` triggers release publication. GitHub Release and CurseForge tasks depend on both Fabric smoke legs; Fabric files remain explicitly excluded until publication is enabled separately. Runtime smoke uses versioned fixtures and stops after seeing startup/server-started markers. CI obtains JDKs through `actions/setup-java`; the repository no longer fixes `org.gradle.java.home`. Local users configure it in user-level `~/.gradle/gradle.properties` or export `JAVA_HOME`.
 
-CI also runs `python tools/test_active_node_sources.py` and `python tools/verify-active-node-sources.py`. The regression suite covers restoration, failure/stale-summary detection, and preservation of existing probe paths; the verifier checks actual compile/resource task inputs through `tools/verify-node-source-selection.init.gradle`. A version node must select its own override, not silently compile the shared twin.
+After the node builds, CI also runs `npm run test:probe-native-jsx`, `python3 -m unittest discover -s tools -p test_active_node_sources.py`, `python3 tools/verify-active-node-sources.py --target build/active-source-matrix`, and the source-root/coverage checks in `tools/nekojs-ci-gates.py`. The regression suite covers restoration, failure/stale-summary detection, and preservation of existing probe paths; the verifier checks actual compile/resource task inputs through `tools/verify-node-source-selection.init.gradle`. A version node must select its own override, not silently compile the shared twin.
 
 <a id="wiki-section-9"></a>
 ## Known boundaries

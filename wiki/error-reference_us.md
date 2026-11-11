@@ -128,20 +128,99 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-4053` | Bean method projection rejected | Bean方法投影的真实来源、零参签名或收集器无效 |
 | `NEKO-4054` | Item component string conversion failed | 物品组件字符串无法解析或序列化 |
 | `NEKO-4055` | Authoring query or transport request rejected | AI 查询或传输请求被拒绝；响应的机器码和 JSON 路径提供具体原因 |
-
+| `NEKO-4056` | Resource ID conversion rejected | Strict resource syntax or a real native ID is required; legacy `ID.of` parsing is unchanged. |
+| `NEKO-4057` | API module publication or access rejected | Check the mod owner, exposure target, export name, public type, event allowlist, and selected script environment. |
 | `NEKO-4060` | Script options rejected | Unknown fields, incorrect types, or out-of-range values reject registration |
 | `NEKO-4061` | Post-effect builder rejected | A sealed or invalid builder rejects the candidate declaration |
 | `NEKO-4062` | Render registration rejected | Invalid rendering arguments, callback, or declaration metadata reject registration |
 | `NEKO-4063` | Script input declaration rejected | The input-shape provider cannot be constructed, returns an invalid shape, or requires a missing adapter target |
+| `NEKO-4064` | Script output declaration rejected | A method's explicit TypeScript output expression is blank |
+| `NEKO-4065` | Script output view rejected | The view must be an implemented public non-generic interface; native input contracts are unchanged. |
+| `NEKO-4066` | Probe declaration retained with incomplete public members | A missing optional public signature prevents native method-set reflection. Independent members remain; inspect `incompleteMembers` and do not treat the closure as complete. |
+| `NEKO-4090` | Mixin preparation/restart required or declaration/library rejected | Restart after successful preparation; otherwise check cache selection/ownership, actual loader admission, exact profile, descriptor and supported options. See [MixinJS troubleshooting](mixinjs_us#wiki-section-9). |
+| `NEKO-4091` | Mixin callback authority or bridge ownership rejected | Use a locally trusted candidate and callback file; another live root cannot replace the bridge lease. |
+| `NEKO-4092` | Native hook bypassed or callback decision discarded | Check thread, synchronous return, control lifetime and strict ABI conversion. |
+
 
 <a id="wiki-section-6"></a>
 ## Recipes and data
+
+The entries below in the `NEKO-5240`–`NEKO-5279` range belong to NekuJS recipe-schema import, not a promise of compatibility with every KubeJS addon. A recognized definition whose semantics cannot be honored is declared as `never` by Probe and rejected by the corresponding runtime constructor. Fix or implement the diagnosed semantics rather than bypassing the declaration.
 
 | Code | English summary | Chinese message |
 |---|---|---|
 | `NEKO-5001` | could not convert value to JSON | 无法转换为 JSON |
 | `NEKO-5002` | JSON must be an object | JSON 必须是对象 |
 | `NEKO-5003` | unknown recipe filter key | RecipeFilterAdapter: unknown key |
+| `NEKO-5200` | selected recipe method threw a checked exception; no overload or schema fallback | 已选配方方法抛出受检异常，保留原因，不再尝试重载或 schema 回退 |
+| `NEKO-5201` | selected recipe method is inaccessible; invocation rejected | 已选配方方法不可访问，调用被拒绝 |
+| `NEKO-5202` | native type adapter acceptance or conversion failed; original cause preserved, not an overload mismatch | 原生类型适配器判定或转换失败，保留原始原因，不作为重载不匹配处理 |
+| `NEKO-5210` | invalid advanced recipe definition or inconsistent field/alias/function metadata | 高级配方定义或字段、别名、函数元数据不一致 |
+| `NEKO-5211` | known recipe profile is explicitly unsupported; no handler/raw fallback | 已知配方模型不受支持，不回退到处理器或原始配方 |
+| `NEKO-5212` | multiple named arguments target the same canonical field | 多个命名参数指向同一个字段 |
+| `NEKO-5213` | required schema field is missing | 缺少必需的配方字段 |
+| `NEKO-5214` | no schema constructor accepts the supplied arguments | 没有配方构造器接受当前参数 |
+| `NEKO-5215` | recipe field encoder returned no JSON value | 配方字段编码器未返回 JSON 值 |
+| `NEKO-5216` | declarative schema function received arguments | 声明式配方函数不接受参数 |
+
+| `NEKO-5240` | Invalid schema value, shape, resource ID, field role or missing property | Invalid schema value, shape, resource ID, field role or missing property; inspect the resource and JSON path in the diagnostic. |
+| `NEKO-5241` | Duplicate schema resource ID | Duplicate schema resource ID; inspect the resource and JSON path in the diagnostic. |
+| `NEKO-5242` | Missing or unsupported parent schema | Missing or unsupported parent schema; inspect the resource and JSON path in the diagnostic. |
+| `NEKO-5243` | Schema parent cycle | Schema parent cycle; inspect the resource and JSON path in the diagnostic. |
+| `NEKO-5244` | Invalid key ordering, duplicate key or incompatible requiredness | Invalid key ordering, duplicate key or incompatible requiredness; inspect the resource and JSON path in the diagnostic. |
+| `NEKO-5245` | Unknown schema key | Unknown schema key; inspect the resource and JSON path in the diagnostic. |
+| `NEKO-5246` | Unsupported component or missing semantic codec | Unsupported component or missing semantic codec; inspect the resource and JSON path in the diagnostic. |
+| `NEKO-5247` | Invalid component constant or default-writing policy | Invalid component constant or default-writing policy; inspect the resource and JSON path in the diagnostic. |
+| `NEKO-5248` | Duplicate constructor key or arity | Duplicate constructor key or arity; inspect the resource and JSON path in the diagnostic. |
+| `NEKO-5249` | Ambiguous field alias or function/setter conflict | Ambiguous field alias or function/setter conflict; inspect the resource and JSON path in the diagnostic. |
+| `NEKO-5250` | Unsupported custom factory, processor, mapping or function behavior | Unsupported custom factory, processor, mapping or function behavior; inspect the resource and JSON path in the diagnostic. |
+| `NEKO-5251` | Abstract schema dependency is not callable | Abstract schema dependency is not callable; inspect the resource and JSON path in the diagnostic. |
+| `NEKO-5279` | Recipe schema resource read failed or root is not an object | Recipe schema resource read failed or root is not an object; inspect the resource and JSON path in the diagnostic. |
+
+| `NEKO-5306` | String component requires a string value | String component requires a string value |
+| `NEKO-5307` | Pattern map requires nonempty single-character non-space keys | Pattern map requires nonempty single-character non-space keys |
+| `NEKO-5308` | Crafting category input type is invalid | Crafting category input type is invalid |
+| `NEKO-5309` | Native shaped preparation failed | Native shaped preparation failed |
+
+| `NEKO-5320` | duplicate programmatic schema | 程序式配方模型重复 |
+| `NEKO-5321` | duplicate recipe factory | 配方工厂重复 |
+| `NEKO-5322` | duplicate schema key | 模型字段重复 |
+| `NEKO-5323` | required key follows optional key | 必需字段位于可选字段之后 |
+| `NEKO-5324` | null default cannot always be written | 空默认值不能始终写出 |
+| `NEKO-5325` | invalid list bounds | 列表边界无效 |
+| `NEKO-5326` | programmatic list spreading is unsupported | 尚不支持程序式列表展开 |
+| `NEKO-5327` | override references an undeclared key | 覆盖引用了未声明字段 |
+| `NEKO-5328` | unknown schema key | 模型字段不存在 |
+| `NEKO-5329` | decoded list size is outside bounds | 解码后列表长度越界 |
+| `NEKO-5330` | recipe serializer is not registered | 配方序列化器未注册 |
+| `NEKO-5331` | legacy target is already attached | 兼容方法目标已绑定 |
+| `NEKO-5332` | native recipe field decode failed | 原生配方字段解码失败 |
+| `NEKO-5333` | native recipe field encode failed | 原生配方字段编码失败 |
+| `NEKO-5334` | key belongs to another schema | 字段属于其他配方模型 |
+| `NEKO-5335` | legacy target has no native builder session | 兼容方法目标尚未绑定原生构建器 |
+| `NEKO-5336` | original component rejected a value | 原附属组件拒绝该值 |
+| `NEKO-5337` | duplicate field alias | 字段别名重复 |
+| `NEKO-5338` | duplicate field function | 字段方法重复 |
+| `NEKO-5339` | factory returned an incompatible fluent target | 工厂返回了不兼容的方法目标 |
+| `NEKO-5340` | programmatic default encode failed | 程序式默认值编码失败 |
+| `NEKO-5341` | unknown native component mapping | 原生组件映射不存在 |
+| `NEKO-5342` | programmatic component encode failed | 程序式组件编码失败 |
+| `NEKO-5343` | component requires an array | 组件需要数组 |
+| `NEKO-5344` | recipe number is not an exact safe integer or is out of bounds | 配方整数不精确、不安全或越界 |
+| `NEKO-5345` | component requires its original typed host value | 组件需要原始 Java 类型对象 |
+| `NEKO-5346` | programmatic component decode failed | 程序式组件解码失败 |
+| `NEKO-5347` | forced programmatic constructor overrides are unsupported | 尚不支持程序式构造器强制覆盖 |
+| `NEKO-5350` | host does not support native builder sessions | 宿主不支持原生构建器会话 |
+| `NEKO-5352` | host requires a native JSON builder | 宿主需要原生 JSON 构建器 |
+| `NEKO-5353` | host has no borrowed registry access | 宿主缺少借用的注册表访问 |
+| `NEKO-5360` | expected a recipe number | 需要配方数值 |
+| `NEKO-5361` | expected a recipe boolean | 需要配方布尔值 |
+| `NEKO-5362` | tag belongs to a different registry | 标签属于其他注册表 |
+| `NEKO-5363` | expected a tag identifier | 需要标签标识符 |
+| `NEKO-5364` | resource key belongs to a different registry | 资源键属于其他注册表 |
+| `NEKO-5365` | expected a resource identifier | 需要资源标识符 |
+| `NEKO-5366` | wrapped list size is outside bounds | 转换后的列表长度越界 |
+| `NEKO-5367` | structured conversion requires the caller active Graal context | 结构化转换需要调用方已进入的 Graal 上下文 |
 
 <a id="wiki-section-7"></a>
 ## JSX UI visual and resource contract

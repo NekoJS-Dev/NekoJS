@@ -335,13 +335,24 @@ probe 生成后会把以下配置**幂等合并**进每个脚本目录的 `jscon
 | `$Foo_` | 适配器输入别名（`Foo` 是目标类型名） |
 | `java:` / `@side-only` / `@special` | 模块标识符前缀 |
 
+<a id="wiki-section-17"></a>
+### 阅读原生输入类型与配方签名
+
+`$Foo_` 只有在已注册适配器或内置集合确实定义输入合同时才存在，并非为每个主机类自动捏造的别名。集合声明区分**主机值与访客输入**：原生 `$List<$Payload>` 并不等同于元素已转换成 `$Payload_` 的列表。如果真实适配器提供 `$Payload_`，合同可能保留为 `($List<$Payload> | $Payload_[])`。只有主机与访客类型实参相同，才复用更短的 `$List_<T>` / `$Collection_<T>` / `$Iterable_<T>`。`Set` 仍只接收主机对象；Map 的对象分支保留 `Partial<Record<...>>` 及属性键限制，不会把任意主机键改成字符串。参见[规范别名与集合规则](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java#L79-L142)、[别名复用](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java#L233-L254)及[类型适配器边界](type-adapters_cn)。
+
+原生配方 handler 暴露可见 Java 重载与真实泛型返回类型，不会统一伪装成某个 schema 专用 builder；未绑定 Java 变量按上界投影。由转换器负责的 schema 字段可以递归声明实际接收的输入类型，普通原生泛型适配器则保留其真正接收的主机侧实参。有字段的 schema 保留**完整命名 options 对象重载**，并与构造器导出的位置重载、必填/默认字段及规范键与别名互斥关系共同存在。命名的 `...Options` 声明共享完整对象合同，不会删去较少使用的字段。参见 [handler catalog](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/catalog/RecipeNamespaceCatalogEntry.java#L66-L94)、[schema 重载](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/RecipeEventDeclarationGenerator.java#L238-L255)及[配方调用合同](recipe-system_cn#wiki-section-8)。
+
+可调用声明共享**含缩进在内的 120 字符软行宽**。较长参数列表按已经渲染好的参数逐行换行，续行多缩进四格；普通构造器、方法、注解重载及结构化事件、managed API、配方调用都使用这一规则。它不改变可选性、重载数量、返回值或完整 options 合同。单个复杂参数/返回类型、零参数调用或预先渲染的声明仍可能超过 120 字符：这不是解析器，也不是硬截断上限。参见[格式化器](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeScriptDeclarationFormatter.java#L5-L27)。
+
+配方成员显示为 `name: never` 表示 catalog 已记录明确拒绝，不是因为 TS 类型复杂就为了易读而隐藏。应查看当前配置的 schema 编译诊断；例如 `NEKO-5242` 涉及兼容图中的父 schema 解析。结果取决于当前实际支持的父定义、组件和 factory，而不是整个 mod 的统一兼容开关。这与 options 的 `alias?: never` 用来禁止同时传入规范键与别名不同。参见[配方拒绝与兜底诊断](recipe-system_cn#wiki-section-19)及[生成器拒绝分支](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/RecipeEventDeclarationGenerator.java#L188-L208)。
+
 所以约束是有条件的，不是普遍的：
 
 - **写一个新语言的 backend**（Lua、JSON 清单、文档站…）：跟这张表毫无关系，随便怎么组织产物。
 - **替换 TypeScript backend 但想直接复用现有编辑器接线**：沿用这套名字最省事，什么都不用改。
 - **替换 TypeScript backend 且想用自己的布局**：可以，但要同时改两处编辑器接线，否则脚本里的 `@side-only/...` 解析不到。一是 backend 上的 `contributeEditorConfig`——probe 跑完后合并进 `jsconfig.json` 的那批路径别名；二是插件钩子 `NekoJSPlugin.modifyWorkspaceConfig`——`WorkspaceGenerator` 在工作区首次生成（`jsconfig.json` 还不存在时）写的那份配置独立硬编码了同一批别名，不改它的话首次开服到第一次跑 probe 之间那份 jsconfig 是错的。另外已有脚本写死了这些模块说明符，所以换布局对脚本作者是 breaking change。
 
-<a id="wiki-section-17"></a>
+<a id="wiki-section-18"></a>
 ## 关键类
 
 | 类 | 位置 | 职责 |
@@ -362,7 +373,7 @@ probe 生成后会把以下配置**幂等合并**进每个脚本目录的 `jscon
 | `AdapterAliasGenerator` | `common/.../probe/` | 从 `AdapterInputShape` 渲染 `$Foo_` 别名 |
 | `TypeAliasRegistry` | `common/.../probe/types/` | TS 输入别名（适配器/枚举/集合放宽）；Java `Type` → `ApiTypeRef` 的唯一映射在 `TypeReflector.toRef`，TS/Python 共用 |
 
-<a id="wiki-section-18"></a>
+<a id="wiki-section-19"></a>
 ## 数据源：catalog snapshot
 
 `NekoScriptCatalog.snapshot(runtime)` 生成不可变 `NekoScriptCatalogSnapshot`，backend 只消费 snapshot（纯函数 `(snapshot, collectedClasses, ir)`）。这是关键解耦点。
@@ -379,15 +390,15 @@ snapshot 包含：
 - `typeDocs`：`TypeDocsRegister` 的内容（描述/示例/参数文档）
 - `manualDeclarations`：手动 `.d.ts`
 
-<a id="wiki-section-19"></a>
+<a id="wiki-section-20"></a>
 ## 给 probe 喂数据（插件作者）
 
-<a id="wiki-section-20"></a>
+<a id="wiki-section-21"></a>
 ### 绑定自带类型
 
 `registry.register("Foo", new FooJS())` —— probe 会反射 `FooJS` 的公共方法。要带 JSDoc，直接在类/方法/参数上标注 `@Doc`/`@Param`/`@Return` 注解（`TypeReflector` 消费后生成进 JSDoc），或用编程式 `registerTypeDocs`（`TypeDocsRegister.register(...)` / `registerManualDeclaration(...)`，见 [插件开发](plugin-development_cn)）。
 
-<a id="wiki-section-21"></a>
+<a id="wiki-section-22"></a>
 ### 注册表字面量
 
 通过 `NekoCatalogPlatformProvider.registryTypes()` 提供注册表 id 列表，probe 生成 `@special/types/index.d.ts`（如所有物品 id 的字符串字面量 union），让脚本里 `'minecraft:stone'` 有补全。
@@ -404,22 +415,22 @@ snapshot 包含：
 
 - `RegistryTypes.Namespace`——两个数据源的并集：`NekoCatalogPlatformProvider.modIds()`（三平台都取加载器的 mod 列表，覆盖「装了但没往这个注册表注册东西」的 mod）与全部注册表条目 id 的 `:` 前缀（覆盖脚本 `event.create('mymod:cool_gem')`、数据包等不属于任何 mod 的命名空间）。适配器用 `template("@", namespace())` 包成 <code>\`@${RegistryTypes.Namespace}\`</code>，于是 `'@create'` 也有补全。不按注册表切分：一个命名空间能不能写与它出现在哪个注册表无关，过滤不到东西只是空结果而不是错误。
 
-<a id="wiki-section-22"></a>
+<a id="wiki-section-23"></a>
 ### 手动声明
 
 `NekoCommonManualDeclarations`（common）/ 平台 manual declarations 提供手写的 `.d.ts` 片段，进 `@manual/index.d.ts`。用于无法反射表达的内容。
 
-<a id="wiki-section-23"></a>
+<a id="wiki-section-24"></a>
 ### Snippet
 
 `NekoCatalogPlatformProvider.snippets()` 提供 IDE 代码片段；脚本侧可用 `ProbeEvents.snippets` 追加。
 
-<a id="wiki-section-24"></a>
+<a id="wiki-section-25"></a>
 ## 新增自定义 backend（开发者指南）
 
 内置 `typescript:builtin` / `python:builtin` 已占位；第三方用同语言不同 `name` **替换**实现，或用新语言 id **新增**一种产物（如 Lua、JSON 清单、文档站）。
 
-<a id="wiki-section-25"></a>
+<a id="wiki-section-26"></a>
 ### 最小可用示例
 
 一个 backend 只需实现 `languageId()` / `name()` / `render(ctx)` 三个方法。下面是一个把收集到的类导出成 JSON 清单的完整例子：
@@ -464,7 +475,7 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 
 之后 `/nekojs probe json` 生成 `.neko_probe/json/classes.json`（`/nekojs probe json list` 精确指定，`/nekojs probe all` 也会带上它）。
 
-<a id="wiki-section-26"></a>
+<a id="wiki-section-27"></a>
 ### render 契约（唯一必须实现的渲染方法）
 
 - 返回「相对输出目录的路径（`/` 分隔，如 `@package/net/minecraft/index.d.ts`）→ UTF-8 文本内容」；**不触碰磁盘**。
@@ -472,7 +483,7 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 - render 抛异常 → 该 backend 记为失败（消息进命令输出），旧输出自动完整保留。
 - 前置条件不满足（如缺数据）直接抛 `IllegalArgumentException`，消息会原样展示给用户。
 
-<a id="wiki-section-27"></a>
+<a id="wiki-section-28"></a>
 ### 可选覆盖
 
 | 方法 | 默认 | 何时覆盖 |
@@ -484,7 +495,7 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 | `resetEditorConfig(...)` | 空 | `/nekojs probe reset_config` 时清理你写的编辑器配置 |
 | `generate(ctx)` | render + 落盘 | **一般不要覆盖**——自管落盘/陈旧清理/锁重试极易出错，仅极端特殊需求 |
 
-<a id="wiki-section-28"></a>
+<a id="wiki-section-29"></a>
 ### 规则
 
 这三条是代码真的会拦你的：
@@ -523,7 +534,7 @@ NeoForge 1.21.1、26.1.2、26.2.0 及 Fabric 26.1.2、26.2.0 的生成声明采�
 
 仅省略这三个零参实例方法的 TS 声明，保留继承的数字 Bean、真实 getter 和静态 `SectionPos.x(long)` 等方法。JavaScript 原来的直接方法调用继续可用；`section["x()"]()` 在这些节点会读取数字后调用失败，不能用作替代写法。刷新声明即可使用新合同；其他类、Java/Python 和运行时行为保持。
 
-<a id="wiki-section-29"></a>
+<a id="wiki-section-30"></a>
 ## Probe 的当前局限
 
 > 这些是已知边界，列在这里让你知道。
@@ -534,7 +545,7 @@ NeoForge 1.21.1、26.1.2、26.2.0 及 Fabric 26.1.2、26.2.0 的生成声明采�
 4. **版本偏差**：probe 是手动触发的，新加 mod/注册内容后类型声明会过期，需重新 `/nekojs probe`。
 5. **Python stub 泛型展平**：类型变量渲染为 `Any`，不保留泛型参数关系（够日常补全，非完整类型）。
 
-<a id="wiki-section-30"></a>
+<a id="wiki-section-31"></a>
 ## 测试 probe
 
 `common/src/test/.../probe/` 下有：
@@ -548,7 +559,7 @@ NeoForge 1.21.1、26.1.2、26.2.0 及 Fabric 26.1.2、26.2.0 的生成声明采�
 
 详见这些测试了解 probe 的可测边界。
 
-<a id="wiki-section-31"></a>
+<a id="wiki-section-32"></a>
 ## 下一步
 
 - [注解体系](annotations_cn) —— `@Remap`/`@RemapByPrefix`/`@HideFromJS`/`@PlatformAvailability` 让 probe 输出准确。

@@ -34,7 +34,7 @@ For example, calling `ServerEvents.recipes(...)` in `client_scripts` causes an e
 <a id="wiki-section-4"></a>
 ## Supported file extensions
 
-`.js`, `.mjs`, `.cjs`, `.ts` (erasable TypeScript), `.jsx`/`.tsx` (classic runtime JSX lowering), and `.py` (built-in Python subset transpilation).
+`.js`, `.mjs`, `.cjs`, `.ts` (erasable TypeScript), `.jsx`/`.tsx` (JSX lowering: classic by default, automatic runtime optionally enabled), and `.py` (built-in Python subset transpilation).
 
 See [TypeScript and JSX](typescript-and-jsx_us).
 
@@ -62,6 +62,8 @@ Scripts are sorted and loaded according to these rules:
 
 - `/nekojs reload` (defaults to reloading `server`)
 - `/nekojs reload server` / `client` / `test`
+
+Reload results appear in chat and logs. NekoJS does not display a script reload progress bar on the screen.
 
 | Operation | Boundary |
 |---|---|

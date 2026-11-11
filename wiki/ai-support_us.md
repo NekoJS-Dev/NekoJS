@@ -12,12 +12,11 @@ Discover the installed bundle → generate a successful TypeScript Probe snapsho
 <a id="wiki-section-2"></a>
 ## Offline entry points
 
-Paths below start at the game directory and assume the default `[output].directory = ".github/neko_ai"`. First read `nekojs/config/ai-location.json` and use its `directory` for a customized AI root.
+Paths below start at the game directory and assume the default `[output].directory = ".github/neko_ai"`. Read `[output].directory` from `nekojs/config/ai.toml` for a customized AI root; use the default if the file or setting is absent.
 
 | Path | Purpose |
 |---|---|
 | `nekojs/config/ai.toml` | Output, documentation, query, connection and control settings |
-| `nekojs/config/ai-location.json` | Pure locator: `{"schemaVersion":1,"directory":".github/neko_ai"}` by default |
 | `.github/neko_ai/current.json` | Active bundle pointer; bundle/manifest paths are relative to .github/neko_ai/ |
 | `.github/neko_ai/bundled/<bundleId>/` | Versioned English documentation; do not edit in place |
 | `.github/neko_ai/environment.json` | Environment and apiSnapshotDirectory |
@@ -131,7 +130,7 @@ Replace both paths. `--game-dir` points to the **game directory containing nekoj
 
 No listener, token or `ai.toml` connection change is needed. The client initializes protocol **2025-11-25**, sends `notifications/initialized`, then calls `nekojs_context`, `nekojs_capabilities` and `nekojs_schema` before queries. The same seven tools and catalogued bundled resources are available over stdio; use `resources/list` then `resources/read`, and inspect `structuredContent`, `isError` and coverage. There are no HTTP session headers or DELETE requests; stop the client-owned helper when finished (EOF exits 0).
 
-The helper accepts required `--game-dir` exactly once and optional `--ai-dir <game-relative-directory>` once, in either order. Discovery priority is explicit override → strict pure-JSON locator `nekojs/config/ai-location.json` (at most 4096 bytes) → default `.github/neko_ai/environment.json` if present → legacy `nekojs/ai/environment.json` only when both locator/default descriptor are absent. Invalid, escaping or missing selected exports fail closed. Modern `apiSnapshotDirectory` is exactly the selected root's `snapshots/`. It reads exported `apiEnabled` but does **not** parse `ai.toml`, create config/token/listeners or write game data. Restart the game after API configuration changes to re-export them. Each context/API request validates changed environment/pointer/snapshots; identity changes require helper restart. Docs come from the helper's own verified English bundle (`context.documentation.bundleId`). Offline results describe the **last export**, not live mods or game state.
+The helper accepts required `--game-dir` exactly once and optional `--ai-dir <game-relative-directory>` once, in either order. Discovery priority is explicit override → read-only `[output].directory` from `nekojs/config/ai.toml` (at most 64 KiB; missing setting uses the default) → default `.github/neko_ai/environment.json` if configuration is absent → legacy `nekojs/ai/environment.json` only when both configuration/default descriptor are absent. Invalid configuration fails closed. The obsolete ai-location.json is no longer read or generated. Invalid, escaping or missing selected exports fail closed. Modern `apiSnapshotDirectory` is exactly the selected root's `snapshots/`. It reads exported `apiEnabled` and uses ai.toml only for directory selection; it does not read tokens, create config/listeners or write game data. A changed output selection requires helper restart. Restart the game after API configuration changes to re-export them. Each context/API request validates changed environment/pointer/snapshots; identity changes require helper restart. Docs come from the helper's own verified English bundle (`context.documentation.bundleId`). Offline results describe the **last export**, not live mods or game state.
 
 <a id="wiki-section-7"></a>
 ### Startup and offline limits

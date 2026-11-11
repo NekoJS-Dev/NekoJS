@@ -7,7 +7,7 @@
 
 NekoJS provides a UI runtime for describing Minecraft client Screens with JSX. It is neither a browser DOM nor a React compatibility layer. It converts JSX component trees into controlled Minecraft UI nodes and manages layout, input, state updates, and lifecycle.
 
-> **Current scope**: client Screen UI is currently available only on **NeoForge 26.x**. It can only be created in `client_scripts/`; UI support is not currently guaranteed for Fabric, NeoForge 1.21.1, or Cleanroom. See [Platforms and compatibility](platform-compatibility_us).
+> **Current scope**: the managed `ClientUI` Screen binding is available only on **NeoForge 26.x**, in `client_scripts/`; it is absent on Fabric, NeoForge 1.21.1, and dedicated servers. Compiling JSX/TSX does not create this native binding or establish UI compatibility. Cleanroom UI support is not promised. See [Platforms and compatibility](platform-compatibility_us).
 
 <a id="wiki-section-2"></a>
 ## Getting started

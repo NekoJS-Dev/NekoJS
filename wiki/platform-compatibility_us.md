@@ -16,7 +16,7 @@ The current NekoJS codebase contains two groups of nodes: NeoForge and Fabric. T
 | NeoForge | 26.1.2 | Supported | 25 | A primary version node |
 | NeoForge | 26.2.0 | Supported | 25 | A primary version node |
 | Fabric | 26.1.2 | Current repository build node | 25 | Loader-specific API subset; verify the installed artifact/profile |
-| Fabric | 26.2.0 | Current repository build node | 25 | Loader-specific API subset; verify the installed artifact/profile |
+| Fabric | 26.2 | Current repository build node (`26.2.0-fabric`) | 25 | Loader-specific API subset; verify the installed artifact/profile |
 
 Fabric nodes already cover script loading, recipes, networking, probe, some registry features, common events, and key bindings. This does not mean that they have complete feature parity with NeoForge. Refer to [Releases](https://github.com/NekoJS-Dev/NekoJS/releases) for publication status.
 

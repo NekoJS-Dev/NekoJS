@@ -23,7 +23,7 @@ console.info('hello')
 
 **Placement matters**: the scanner (`ScriptContainer.preload`) reads downward from the first line of the file and stops with `break` at the first line that is neither empty nor starts with `//`. Properties must therefore be in the **opening comment block**. Empty lines and other `//` comments may appear between them, but once an `import`, a `/* */` block comment, or any code appears, later `// priority:` lines are no longer read. Incorrect placement produces **no error or log message**; the property simply uses its default, causing symptoms such as an unexpected load order or an ineffective `disable`.
 
-Unknown keys are also silently ignored (property names come from a registry; plugins can add them through `registerScriptProperty`, see [Plugin development](plugin-development_us)). Misspelling `priorty:` therefore fails silently too. Failed value parsing falls back to the property default without a guaranteed warning. The whole trimmed value is parsed: put explanations on a separate comment line, not after an integer directive.
+Unknown keys are also silently ignored (property names come from a registry; plugins can add them through `registerScriptProperty`, see [Plugin development](plugin-development_us)). Misspelling `priorty:` therefore fails silently too. A recognized property whose value parser throws produces a warning and that occurrence is not applied; an earlier successfully parsed value (or otherwise the default) remains. The whole trimmed value is parsed: put explanations on a separate comment line, not after an integer directive.
 
 <a id="wiki-section-3"></a>
 ## Property overview

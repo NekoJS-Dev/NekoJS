@@ -10,7 +10,7 @@ NekoJS has **built-in** TypeScript and JSX support, with no additional compilati
 <a id="wiki-section-2"></a>
 ## TypeScript (`.ts`)
 
-The built-in TypeScript frontend erases/lowers TS syntax, leaving plain JS for execution. It is not a full TS compiler, but the supported syntax covers most practical cases.
+The built-in TypeScript frontend erases/lowers the supported TS syntax listed below, leaving plain JS for execution. It does not run `tsc` or check type annotations. Use your editor or a separate TypeScript check against the current Probe declarations; successful script loading is not proof of static type correctness.
 
 <a id="wiki-section-3"></a>
 ### Supported syntax

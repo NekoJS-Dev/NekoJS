@@ -23,6 +23,8 @@
 | `@Param(name, value)` | METHOD/CONSTRUCTOR | 参数文档 → `@param` 行；可重复 |
 | `@Return("...")` | METHOD | 返回值文档 → `@returns` 行 |
 | `@Overload({"id: string"})` | METHOD/CONSTRUCTOR | 手写 `.d.ts` 附加签名；可重复 |
+| `@ScriptInput(MyShape.class)` | PARAMETER | 由具有 public 无参构造器的 `ScriptInputShapeProvider` 提供结构化 TypeScript 输入 |
+| `@ScriptOutput("{ readonly width: number }")` | METHOD | 为 Java 反射无法描述的返回值声明明确的 TypeScript 类型 |
 | `@DeprecatedNekojs` | TYPE/METHOD/CONSTRUCTOR/FIELD | 脚本面弃用 → JSDoc `@deprecated`（编辑器划线） |
 
 除 `@CalledByDynamicCode` 使用 `SOURCE` 外，保留策略为 `RUNTIME`。并非每个注解都有 `@Documented`；命名/可见性/插件/平台注解不能一概而论，该元注解也不决定脚本可调用性。
@@ -120,9 +122,9 @@ public interface EntityExtension extends EntitySpec {
 }
 ```
 
-- `Scope.ALL`：所有平台可用；`NF_ONLY`：仅 NeoForge 1.21.1/26.x；`CR_ONLY`：仅 Cleanroom 1.12.2。
+- `Scope.ALL`：Spec 所覆盖的全部目标；`NF_ONLY`：NeoForge 1.21.1/26.x；`NF26_ONLY`：仅 NeoForge 26.x。`CR_ONLY` 是保留的旧 Cleanroom 标记，不代表存在受支持的构建节点。Fabric 的可用性仍须单独检查；注解不会补出尚未实现的桥接。
 - 覆盖检查由 `SpecCoverageProcessor`（annotation processor）在编译期做：每个平台 `Extension` 必须覆写 Spec 接口的每个 `neko$` 方法，漏一个是编译 ERROR。**只要接上 `annotationProcessor(project(":common-api-processor"))` 这层就生效**，不需要额外选项。
-- 但**平台范围检查要额外开**：`Scope` 语义（哪个平台该实现哪些）只在编译时传了 `-Anekojs.platform=<平台>` 之后才校验，不传则只做覆盖检查。本仓只在 NeoForge 节点传（`buildSrc/.../nekojs.neoforge-node.gradle.kts`），fabric 节点刻意不传。第三方插件若没接处理器，`@RemapByPrefix("neko$")` + Spec 接口这套写法在你自己的 mod 里就是**纯约定**——好处仍在（`neko$` 前缀避免与 MC 原生方法碰撞、remap 一次剥掉），只是没人替你检查覆盖完整性。
+- 但**平台范围检查要额外开**：`Scope` 语义（哪个平台该实现哪些）只在编译时传了 `-Anekojs.platform=<平台>` 之后才校验，处理器接受 `nf121`、`nf26` 和旧 `cr`；旧值 `nf` 因无法区分版本而被拒绝。不传则只做覆盖检查。本仓只在 NeoForge 节点传（`buildSrc/.../nekojs.neoforge-node.gradle.kts`），fabric 节点刻意不传。第三方插件若没接处理器，`@RemapByPrefix("neko$")` + Spec 接口这套写法在你自己的 mod 里就是**纯约定**——好处仍在（`neko$` 前缀避免与 MC 原生方法碰撞、remap 一次剥掉），只是没人替你检查覆盖完整性。
 
 ---
 
@@ -201,6 +203,8 @@ public static IngredientJS anyTag(String tag) { ... }
 
 - 已实现：`@Remap`/`@RemapByPrefix`/`@HideFromJS` 由运行时 `MemberVisibilityQuery`/`MemberRemapper` 消费（脚本运行时生效），probe 生成的 `.d.ts` 名字/可见性与运行时一致。
 - 已实现：文档注解（`@Doc`/`@Param`/`@Return`）经 `TypeReflector` → IR docs → `.d.ts` JSDoc（见上方「文档注解」）。
+- 已实现：`@ScriptInput(Provider.class)` 仅把标注的方法/构造器参数的 TypeScript 输入替换为 `Provider.inputShape()`。提供者须实现 `ScriptInputShapeProvider` 并具有 public 无参构造器。它不转换或校验运行时值，不改变 Java 参数类型、输出类型或 Python 输出；普通参数保留原有输入投影。声明的形状必须与真实转换器一致。
+- 已实现：`@ScriptOutput` 替换方法的 TypeScript 返回类型，对 Bean getter 和继承声明也生效；不转换运行时值，不改变 Python 输出，显式 Probe 类型编辑优先。外部类型用内联 `import('module').Type` 引用，对应模块需由目录或反射闭包提供。如果返回值仍支持 Java 方法，应使用交叉类型保留 Java 类型，例如 JSX 宿主的尺寸 Map。空表达式以 `NEKO-4064` 拒绝生成；表达式是否有效通过生成声明的类型检查验证。
 
 <a id="wiki-section-15"></a>
 ## 下一步

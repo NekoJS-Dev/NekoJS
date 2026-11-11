@@ -133,7 +133,14 @@ event.shapeless('minecraft:dirt', ['minecraft:sand', 'minecraft:gravel'])
 <a id="wiki-section-8"></a>
 ### 方式二：`event.recipes.<namespace>.<type>(...)`
 
-解析顺序为已注册 handler、schema、原始 JSON。**不能把直接快捷方法的参数顺序套用到所有命名空间方法。** 内置 handler 只提供 `crafting_shaped`/`crafting_shapeless`；烹饪和锻造走当前 schema。兜底烹饪 schema 的顺序是 `ingredient, result, experience?, cookingtime?`，与结果优先的 `event.smelting` 不同。有 schema 时优先使用命名字段，并检查当前节点的 probe/schema。
+对可调用的配方，解析顺序为已注册 handler、schema、原始 JSON。已知配置若带有 `unsupportedReason`，会优先拒绝调用，而不是静默转到 handler 或原始 JSON 兜底。**不能把直接快捷方法的参数顺序套用到所有命名空间方法。** 内置 handler 提供 `crafting_shaped`/`crafting_shapeless`；烹饪和锻造取决于当前节点最终生效的 schema。请查看生成的重载，或在 schema 支持时使用命名字段。参见[运行时解析](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeNamespaceProxy.java#L64-L77)。
+
+<a id="wiki-section-9"></a>
+### 原生 handler 与 schema 的调用合同
+
+原生 handler 声明保留**所有可见重载**及真实 Java 返回类型，包括已声明的泛型结构；不会因配方名字相同就把返回值改成某个 schema builder。未绑定的 Java 类型变量按上界近似，不会凭空生成未声明的 TS 类型变量。只有末尾连续的 `Optional` 参数允许省略；中间的可选槽仍是必传位置，可传 null/undefined。这条反射调用路径上的 Java varargs 仍要求传一个数组，不支持散列为多个参数。参见 [handler 元数据](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/catalog/RecipeNamespaceCatalogEntry.java#L66-L94)、[参数转换](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeReflectionUtil.java#L70-L96)及 [Optional 尾部规则](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeReflectionUtil.java#L183-L188)。
+
+schema 使用自身声明的构造器，并在有字段时保留**完整命名 options 对象重载**，与位置参数形式并存。命名选项保留必填、默认值及规范键与别名的互斥关系，不是只列几个常用字段的简化示例；链式 setter 同样沿用完整字段输入合同。生成器可能为较长的 options 对象声明命名类型，避免重复展开。参见 [schema 重载生成](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/RecipeEventDeclarationGenerator.java#L238-L255)与 [Probe 类型约定](probe-type-generation_cn#wiki-section-16)。
 
 将完整示例放入 `server_scripts/namespace-recipes.js`：
 
@@ -157,10 +164,10 @@ ServerEvents.recipes(event => {
 
 > 自动 id 是实现派生的 `nekojs:<prefix>_<8位十六进制hash>`，可能追加冲突后缀；整合包应使用显式唯一 id。
 
-<a id="wiki-section-9"></a>
+<a id="wiki-section-10"></a>
 ### 方式三：`event.custom(...)` / `event.builder(...)` —— 原始 JSON
 
-任何类型都可以直接传 JSON 对象：
+对于已安装的 serializer，可以直接提供符合当前节点/mod 实际配方格式的完整 JSON 对象；这不会推导缺失字段、安装 serializer，也不代表任意 addon 都已受支持：
 
 ```javascript
 // custom：必须包含 type
@@ -183,7 +190,7 @@ event.builder('minecraft:crafting_shapeless')
 
 ---
 
-<a id="wiki-section-10"></a>
+<a id="wiki-section-11"></a>
 ## RecipeJsonBuilder（链式）
 
 `event.builder(type)`、`event.recipes.<ns>.<type>(...)`、`event.custom(...)` 都返回链式 builder。
@@ -208,7 +215,7 @@ event.builder('minecraft:crafting_shapeless')
 
 ---
 
-<a id="wiki-section-11"></a>
+<a id="wiki-section-12"></a>
 ## 查询 / 遍历
 
 | 方法 | 说明 |
@@ -235,7 +242,7 @@ event.forEach({ output: 'minecraft:iron_ingot' }, recipe => {
 
 ---
 
-<a id="wiki-section-12"></a>
+<a id="wiki-section-13"></a>
 ## 原料动作（Ingredient Actions）
 
 > 仅 **NeoForge 26.x**。对配方消耗原料时的"合成余量"（crafting remainder）做定制：
@@ -277,10 +284,16 @@ ServerEvents.recipes(event => {
 
 ---
 
-<a id="wiki-section-13"></a>
+<a id="wiki-section-14"></a>
 ## 数据驱动 Schema
 
-NekoJS 能自动发现绝大多数原版/mod 配方类型的 schema（反射 MC 的 `RecipeSerializer.codec()`），所以 `event.recipes.minecraft.smelting(...)` 这类位置参数写法开箱即用。
+自动发现会扫描已注册的 serializer，结合当前节点已知的原版合同与 codec 检查、启发式规则提取 schema。存在 serializer **不代表**已经具备完整字段 schema、正确的位置构造器，或支持某个 addon 的所有组件。复杂或不透明 codec 的发现结果可能有限，应检查最终 catalog 与生成声明，不能据此推断整个 mod 都兼容。参见[原生扫描器](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/api/recipe/definition/MinecraftRecipeSchemaScanner.java#L33-L74)及 [codec 检查与兜底](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/api/recipe/definition/MinecraftRecipeSchemaScanner.java#L117-L159)。
+
+可选的 NekuJS addon 会把受支持的兼容资源与程序化 schema 编译进**同一套原生 NekoJS schema 注册表**，复用原生转换和 Probe 声明；这不是运行上游 Rhino/KubeJS，也不是第二套配方引擎。兼容范围仍受实际导入的插件、组件 codec、schema 继承及已实现的 factory 操作限制。参见[桥接发布](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/addons/nekujs/src/main/java/com/tkisor/nekujs/bridge/LegacyRuntimeBridge.java#L75-L107)与[原生参数转换](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeReflectionUtil.java#L70-L143)。
+
+NekuJS 为 `minecraft:shaped` 和 `minecraft:special` 提供共享原生父 schema 依赖；它们不会作为合成出来的额外方法覆盖原版 handler，子定义仍保留自己的 serializer ID。`special` 保留 `category` 的原生 codec、`misc` 默认值和零位置参数构造；上游 `hidden` 是描述元数据，不再被误当作运行时禁止调用。`shaped` 提供结果、图案、单字符原料映射、分类及通知字段，在原生编码生命周期中处理空原料和图案一致性。
+
+因此原始 Mekanism addon 的 `mek_data` 继承 shaped，`bin_extract`、`bin_insert`、`clear_configuration` 继承 special，不需要按这些配方名特判。原生父模型只支持原版默认镜像／收缩行为，不声明支持 `noMirror`、`noShrink` 等非默认 KubeJS 控制；未知工厂、处理器及映射仍明确拒绝。升级后重启实例并重新生成 Probe，不能用旧声明判断新模型是否已生效。
 
 如果你想给一个**自定义/未知类型**定义 schema（让位置参数和字段校验生效），写一个 JSON 文件：
 
@@ -304,7 +317,7 @@ NekoJS 能自动发现绝大多数原版/mod 配方类型的 schema（反射 MC 
 }
 ```
 
-<a id="wiki-section-14"></a>
+<a id="wiki-section-15"></a>
 ### 顶层字段
 
 | 键 | 必填? | 默认 | 含义 |
@@ -314,7 +327,7 @@ NekoJS 能自动发现绝大多数原版/mod 配方类型的 schema（反射 MC 
 | `constructors` | 可选 | 所有字段按声明顺序 | 位置构造器：字段名数组的数组 |
 | `fields` | **必填** | 无 | 字段名与字段定义的映射 |
 
-<a id="wiki-section-15"></a>
+<a id="wiki-section-16"></a>
 ### 字段定义
 
 | 键 | 默认 | 含义 |
@@ -326,19 +339,19 @@ NekoJS 能自动发现绝大多数原版/mod 配方类型的 schema（反射 MC 
 | `default` | — | 默认 JSON 值 |
 | `role` | 按名字推断 | `INPUT` / `OUTPUT` / `OTHER`（控制 `replaceInput`/`replaceOutput` 的键识别） |
 
-<a id="wiki-section-16"></a>
+<a id="wiki-section-17"></a>
 ### 写坏了会怎样
 
 `RecipeTypeDefinitionJsonLoader.parse` 对这几条直接抛异常（加载该 JSON 时失败）：缺 `fields` 或 `fields` 为空对象、某个字段定义不是对象、`constructors` 里某项不是数组、`constructors` 引用了 `fields` 里没有的字段名、`kind` 写了不认识的值（`RecipeFieldKind.parse` 的 `valueOf` 抛）。
 
 `role` 例外：值不合法时**不报错**，静默退回按字段名推断（`RecipeFieldRoles.roleOfName`）——所以拼错 `role` 的症状是 `replaceInput` 认不出这个键，而不是启动失败。
 
-<a id="wiki-section-17"></a>
+<a id="wiki-section-18"></a>
 ### `kind` 取值
 
 `json`、`string`、`int`、`number`、`boolean`、`ingredient`、`item_stack`、`fluid_stack`、`fluid_ingredient`、`sized_fluid_ingredient`（大小写不敏感，接受 kebab-case）。
 
-<a id="wiki-section-18"></a>
+<a id="wiki-section-19"></a>
 ### Schema 优先级
 
 NekoJS 的配方 schema 有三个来源，按优先级合并：
@@ -351,10 +364,10 @@ NekoJS 的配方 schema 有三个来源，按优先级合并：
 
 ---
 
-<a id="wiki-section-19"></a>
+<a id="wiki-section-20"></a>
 ## 未知类型兜底
 
-**写 schema 从来不是必需的。** 如果某个 namespace/type 完全没有 schema 也没有 handler，NekoJS 会走**原始 JSON 兜底**（`FallbackNamespaceProxy`）：你传一个 JS 对象，NekoJS 自动设上 `type` 并注册：
+提交完整配方 JSON 不要求先定义字段 schema。对没有 handler 或 schema 的未知 namespace/type，原始 JSON 兜底接受一个对象并补上 `type`。它**不是**绕过已知被拒绝配置的通道，最终仍要求已安装的 serializer 能接受这份 JSON：
 
 ```javascript
 event.recipes.mymod.unknown_type({
@@ -363,16 +376,23 @@ event.recipes.mymod.unknown_type({
 })
 ```
 
-兜底代理对任何成员名都返回一个函数（`hasMember` 恒为 true），所以 `event.recipes.<任意>.<任意>` 永远不会「方法不存在」。代价是它**不校验任何东西**：
+原始 JSON 兜底接受任意成员名，但“成员存在”并不能证明对应 serializer 或作者调用合同有效。它不进行配方字段校验：
 
-- 必须是**恰好一个**带成员的对象参数。传字符串、传多个参数、或转 JSON 失败时，整个调用变成 no-op、返回 `null`，只在 debug 级日志留一条。返回 `null` 意味着后面接 `.id(...)` 会当场报「不能读 null 的属性」——这通常是你第一眼看到的症状。
+- 必须是**恰好一个**带成员的对象参数；不匹配的参数形状返回 `null`，此时立即接 `.id(...)` 可能失败。错误处理取决于入口：[FallbackNamespaceProxy](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/FallbackNamespaceProxy.java#L41-L61) 捕获转换/注册异常、记录 debug 日志并返回 `null`；[RecipeNamespaceProxy](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeNamespaceProxy.java#L195-L209) 的原始 JSON 分支不捕获这些异常。两者都不会把 handler 执行错误或已知被拒绝的配置转成成功的兜底调用。
 - 字段名/类型对不对，只有游戏加载该配方时才会知道。
 
 schema 换来的是位置参数写法、字段必填校验、`replaceInput`/`replaceOutput` 的键识别，以及 probe 生成的补全。只想塞一个 JSON 进去的话，兜底或 `event.custom({...})` 就够了。
 
+<a id="wiki-section-21"></a>
+### 诊断声明为 `never` 的配方成员
+
+配方成员若显示为 `some_profile: never`，表示**最终 catalog 已记录明确的拒绝原因**（`unsupportedReason`）。生成器不会为这个名字继续提供可调用的 handler/schema 替代项，运行时也会用 `NEKO-5211` 拒绝，而不是转入未知类型兜底。这与 options 字段里的 `input?: never` 不同：后者是在正常可调用的命名参数中表达规范键与别名互斥。参见[声明拒绝分支](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/RecipeEventDeclarationGenerator.java#L188-L208)与[运行时拒绝分支](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeNamespaceProxy.java#L64-L77)。
+
+先查看启动时的 schema 编译诊断，定位资源、JSON 路径和配方 id；更换 mod/资源或安装修复后重新生成 Probe。例如，`NEKO-5242` 表示兼容图中的父 schema 解析失败，不是行宽限制，也不能推断整个 mod 或原生 serializer 都不受支持。补齐受支持的父定义可解决这类能力缺口；其他未支持的组件/factory 仍需各自实现。不要用 TS 强转掩盖原因，也不要认为放宽扫描白名单就能修复。参见[父定义解析](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/addons/nekujs/src/main/java/com/tkisor/nekujs/recipe/schema/RecipeSchemaGraphCompiler.java#L75-L95)。单独使用 `event.custom` 时仍须提供实际已安装 serializer 的合法 JSON；它不会复现被拒绝配置的构造器、默认值或动作。
+
 ---
 
-<a id="wiki-section-20"></a>
+<a id="wiki-section-22"></a>
 ## 平台差异
 
 | 平台 | 配方 reload |
@@ -381,7 +401,7 @@ schema 换来的是位置参数写法、字段必填校验、`replaceInput`/`rep
 | **Fabric 26.x** | 支持 `/nekojs reload server` 重跑配方脚本，具体 API 以当前节点实现为准。 |
 | **NeoForge 26.x / 1.21.1** | 支持。`/nekojs reload server` 从缓存的 `baseJsons` 重建工作集、重跑配方脚本并替换 `RecipeManager`（服务端合成即时生效）；JEI/REI 配方面板可能需要客户端刷新。 |
 
-<a id="wiki-section-21"></a>
+<a id="wiki-section-23"></a>
 ## 下一步
 
 - [全局绑定](global-bindings_cn) —— `Item`/`Ingredient` 等参考。

@@ -45,7 +45,7 @@ nekojs/
                               (legacy config/nekojs-engine.toml is a read-only fallback)
 ```
 
-The separate AI documentation root defaults to `.github/neko_ai` and is selected by `[output].directory` in `nekojs/config/ai.toml`; `nekojs/config/ai-location.json` locates it. The private token stays under `nekojs/config/`, not `.neko_probe`. See [AI-assisted authoring](ai-support_us); do not commit the token.
+The separate AI documentation root defaults to `.github/neko_ai` and is selected by `[output].directory` in `nekojs/config/ai.toml`; tools read that setting directly. The private token stays under `nekojs/config/`, not `.neko_probe`. See [AI-assisted authoring](ai-support_us); do not commit the token.
 
 All four script directories support `.js`, `.mjs`, `.cjs`, `.ts`, `.jsx`, `.tsx`, and `.py`. `.py` files are transpiled from NekoJS's Python subset and do not require an external Python runtime. See [Script basics](script-basics_us).
 
@@ -63,6 +63,8 @@ nekojs/packs/my_pack/
 └── client_scripts/
     └── hud.js
 ```
+
+This minimal manifest has no `formatVersion`, so it uses the **legacy directory-pack** rules below. A pack declaring `formatVersion: 1` instead uses a strict manifest, explicit entries, dependency ordering and a pack-owned Context; see [Versioned script packs](script-packs_us). The permissive legacy manifest rules do not apply to that format.
 
 - **Load order**: global packs (alphabetically by id) → world packs → standalone directories.
 - **Enable/disable**: `/nekojs packs` displays configured intent, not runtime activation.

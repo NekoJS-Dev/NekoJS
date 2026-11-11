@@ -9,6 +9,8 @@
 
 > 本页是参考手册。每个绑定的方法签名都列出，括号里是参数，箭头后是返回值。
 
+现有全局绑定继续受支持。内置或插件 API 也可经 [`nekojs/api/stable` 与 `nekojs/api/version`](module-system_cn#wiki-api-modules) 发布；仅模块导出的成员不会自动成为全局变量。导入前请查当前 Script Type 与节点生成的声明。
+
 ---
 
 <a id="wiki-section-2"></a>
@@ -732,7 +734,7 @@ MyEvents.bossKilled.post({ boss: 'ender_dragon' })
 | `SoundEvents` | `net.minecraft.sounds.SoundEvents` | 原版声音事件 |
 | `ParticleTypes` | `net.minecraft.core.particles.ParticleTypes` | 原版粒子类型 |
 | `EntityType` | `net.minecraft.world.entity.EntityType` | 实体类型常量 |
-| `MobEffects` | `net.minecraft.core.registries.MobEffects`（或对应） | 药水效果常量 |
+| `MobEffects` | `net.minecraft.world.effect.MobEffects`（或节点映射后的对应类） | 药水效果常量 |
 | `MobEffectInstance` | Mob 效果实例类 | 药水效果实例 |
 | `DamageTypes` | 伤害类型常量 | — |
 | `Identifier` | `net.minecraft.resources.Identifier`（26.x）/ `ResourceLocation`（1.21.1） | 资源标识 |

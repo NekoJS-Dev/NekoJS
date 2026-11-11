@@ -32,6 +32,7 @@
 - 模块系统 / Module system · [中文](module-system_cn) · [EN](module-system_us)
 - TypeScript 与 JSX / TypeScript and JSX · [中文](typescript-and-jsx_cn) · [EN](typescript-and-jsx_us)
 - JSX 客户端 UI / JSX client UI · [中文](jsx-client-ui_cn) · [EN](jsx-client-ui_us)
+- MixinJS（实验性） / MixinJS (experimental) · [中文](mixinjs_cn) · [EN](mixinjs_us)
 - Node.js 兼容 / Node.js compatibility · [中文](nodejs-compatibility_cn) · [EN](nodejs-compatibility_us)
 
 ## 插件开发者 / Plugin developers

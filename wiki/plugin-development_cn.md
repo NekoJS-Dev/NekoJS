@@ -93,7 +93,7 @@ public class MyHelperJS {
 - **抛 `IllegalStateException`**：走 `Sealable` 的那些扩展点（TypeDocs / Lifecycle / NodeModules / RecipeNamespaces / RecipeLifecycle / RecipeSchemas），以及 `ScriptPropertyRegistry`、`ProbeBackendRegistry`、`ScriptCompilerRegistry`。这类你会立刻知道自己写错了。
 - **静默丢弃**：`BindingRegistry`、`JSTypeAdapterRegistry`、`EventGroupRegistry` 目前没有封口检查，晚到的注册会被收进集合但永远不会被读。这类最难查——没有任何报错，只是你的绑定不存在。
 
-所有方法都有 default 空实现，按需覆盖：
+只需覆盖用到的钩子。多数便捷回调默认是空实现；生命周期注册钩子已把这些回调接入注册表，`generatedLangs()` 默认返回 `en_us`。覆写注册钩子而不调用默认实现，会替换这部分默认接线。
 
 <a id="wiki-section-6"></a>
 ### 生命周期
@@ -119,6 +119,19 @@ public class MyHelperJS {
 | `registerTypeDocs(TypeDocsRegister)` | 注册类型文档（编程式 API；也可使用 `@Doc` / `@Param` / `@Return` 注解） |
 | `registerNodeTypeDocs(...)` | 注册 Node 模块类型声明 |
 | `registerNodeModules(...)` | 注册 Node 兼容模块 |
+
+**可选的归属方 API 模块**
+
+原有 `registerBinding` 钩子也支持仅导出到模块的注册：
+
+```java
+registry.register(com.tkisor.nekojs.api.data.Binding.of("MyHelper", new MyHelperJS()),
+        exposure -> exposure.versioned());
+```
+
+若加载器发现的 addon 归属 id 是 `myaddon`，脚本可用 `import { MyHelper } from "nekojs/api/version/myaddon"` 导入。这个重载**不会同时创建全局变量**；原有 `register(name, value)` 仍注册全局。必须且只能选择一次 `versioned()` 或 `stable()`。归属方来自插件发现，不是脚本提供的模块路径；缺失归属方或重复模块导出会以 `NEKO-4057` 失败。
+
+`stable()` 对应 `nekojs/api/stable/myaddon`，会检查公共类型是否泄漏原生类型，不会自动把 Minecraft helper 变成跨平台 API。已有 stable/version 模块导出、全局绑定和自定义 Node 模块是不同注册通道。只能在 bootstrap 收集阶段注册；普通脚本 reload 不会重新发现插件或收集贡献。
 
 <a id="wiki-section-8"></a>
 ### 事件
@@ -323,7 +336,7 @@ dependencies {
 <a id="wiki-section-21"></a>
 ## 完整示例
 
-见 NekoJS 内置插件 `src/main/java/com/tkisor/nekojs/core/NekoJSCorePlugin.java`——它注册了所有内置绑定/适配器/事件，是最好的参考实现。
+请按功能查看对应内置实现，不要假设一个类拥有全部贡献：`src/main/java/com/tkisor/nekojs/core/NekoJSCorePlugin.java` 负责原生贡献，`common/.../core/plugin/NekoCommonBuiltinPlugin.java` 负责共享绑定、编译器和类型文档贡献，`NekoBuiltinPointsPlugin` 注册现有扩展 Point。Fabric 还有自己的平台插件；节点本地覆盖优先于共享源码树。
 
 <a id="wiki-section-22"></a>
 ## 下一步

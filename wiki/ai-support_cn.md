@@ -12,12 +12,11 @@ NekoJS 默认导出可离线阅读的英文 AI 文档包，同时支持**游戏�
 <a id="wiki-section-2"></a>
 ## 离线入口与文件
 
-以下路径均从游戏目录开始，按默认 `[output].directory = ".github/neko_ai"` 展示。先读 `nekojs/config/ai-location.json`，若自定义目录，以下 AI 根目录应替换为其中的 `directory`。
+以下路径均从游戏目录开始，按默认 `[output].directory = ".github/neko_ai"` 展示。从 `nekojs/config/ai.toml` 读取 `[output].directory`；文件或配置项不存在时使用默认目录。若自定义目录，以下 AI 根目录应相应替换。
 
 | 路径 | 用途 |
 |---|---|
 | `nekojs/config/ai.toml` | 输出、文档、查询、连接与控制配置 |
-| `nekojs/config/ai-location.json` | 纯定位数据，默认为 `{"schemaVersion":1,"directory":".github/neko_ai"}` |
 | `.github/neko_ai/current.json` | 当前文档包指针；其中 `bundle`、`manifest` 相对于 `.github/neko_ai/` |
 | `.github/neko_ai/bundled/<bundleId>/` | 不可原地修改的版本化英文文档包 |
 | `.github/neko_ai/environment.json` | 环境信息与 `apiSnapshotDirectory` |
@@ -128,7 +127,7 @@ java -jar /absolute/path/nekojs-1.1.0-preview3-authoring-stdio.jar --game-dir /a
 
 无需监听器、token 或修改 `ai.toml` 的连接设置。客户端完成 **2025-11-25** 初始化并发送 `notifications/initialized` 后，先调用 `nekojs_context`、`nekojs_capabilities` 和 `nekojs_schema`。stdio 提供相同七个工具及列出的文档资源；先 `resources/list` 再 `resources/read`，检查 `structuredContent`、`isError` 和 coverage。没有 HTTP 会话头或 DELETE；结束时停止客户端持有的辅助进程（EOF 退出码为 0）。
 
-辅助进程要求 `--game-dir` 恰好一次，可选 `--ai-dir <游戏相对目录>` 一次，顺序不限。发现优先级：显式覆盖 → 严格纯 JSON 的 `nekojs/config/ai-location.json`（最多 4096 字节）→ 存在时的默认 `.github/neko_ai/environment.json` → 仅在定位文件与默认描述都不存在时使用旧 `nekojs/ai/environment.json`。选中的导出无效、缺失或越界时拒绝，不静默回退。新版 `apiSnapshotDirectory` 必须是所选根目录的 `snapshots/`。读取导出的 `apiEnabled`，**不解析 ai.toml**，不创建配置/token/监听器或写游戏数据。API 配置变化后须重启游戏重新导出；每次 context/API 请求验证变化的环境、指针与快照，环境标识变化须重启辅助进程。文档来自辅助 JAR 自带的已验证英文包（`context.documentation.bundleId`）。离线结果只描述**最后导出**，不代表实时模组或世界状态。
+辅助进程要求 `--game-dir` 恰好一次，可选 `--ai-dir <游戏相对目录>` 一次，顺序不限。发现优先级：显式覆盖 → 只读 `nekojs/config/ai.toml` 的 `[output].directory`（配置文件最多 64 KiB；缺少配置项则使用默认值）→ 配置文件缺失时使用默认 `.github/neko_ai/environment.json` → 仅在配置文件与默认描述都不存在时使用旧 `nekojs/ai/environment.json`。无效配置会拒绝启动。旧 ai-location.json 不再读取或生成。选中的导出无效、缺失或越界时拒绝，不静默回退。新版 `apiSnapshotDirectory` 必须是所选根目录的 `snapshots/`。读取导出的 `apiEnabled`，仅使用 ai.toml 选择目录；不读取 token，不创建配置或监听器，不写游戏数据。修改输出目录后需重启辅助进程。API 配置变化后须重启游戏重新导出；每次 context/API 请求验证变化的环境、指针与快照，环境标识变化须重启辅助进程。文档来自辅助 JAR 自带的已验证英文包（`context.documentation.bundleId`）。离线结果只描述**最后导出**，不代表实时模组或世界状态。
 
 <a id="wiki-section-7"></a>
 ### 启动与离线限制

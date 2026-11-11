@@ -57,15 +57,16 @@ NekoJS/
 │   ├── main/java/           #   版本差异用 //? if >=26 守卫和 replacements 表达
 │   │                        #   加载器差异用 //? if neoforge / //? if fabric 整文件守卫
 │   ├── main/resources*/     #   AT / mixins / interface injection（26.x 与 1.21.1 分层）
-│   └── test/java/           #   共享测试
+│   ├── test/java/           #   共享测试
+│   └── fabric/              #   Fabric 原始 Java/资源/模板；不经预处理
 ├── versions/                # 每节点的参数（gradle.properties）+ 该节点专属源码
 │   ├── 1.21.1/  26.1.2/  26.2.0/     # NeoForge 节点
 │   ├── 26.1.2-fabric/                # Fabric 26.1.2 节点
-│   └── 26.2.0-fabric/                # Fabric 26.2.0 节点（当前复用 source bridge）
+│   └── 26.2.0-fabric/                # Fabric 26.2 节点（节点 ID：26.2.0-fabric）
 └── settings.gradle.kts      # stonecutter 版本图 + 两个引擎子项目
 ```
 
-节点专属源码有两种用途：一是各版本的 compat 实现（`platform/compat/` 下的门面实现），二是两个时代差异大到不便用守卫表达的孪生文件——共享树放 26.x 主干，`versions/1.21.1/src/` 放同名的 1.21.1 实现，stonecutter 按节点选用其中一份。
+节点专属源码有两种用途：一是各版本的 compat 实现（`platform/compat/` 下的门面实现），二是两个时代差异大到不便用守卫表达的孪生文件——共享树放 26.x 主干，`versions/1.21.1/src/` 放同名的 1.21.1 实现，`nekojs.node-sources` 保证节点内同相对路径文件优先于共享树、raw Fabric 与生成源码，包括 active 节点。Fabric 节点显式挂载共同的原始加载器根 `src/fabric`；原跨节点 source bridge 已删除。
 
 详见 [构建系统](build-system_cn)。
 
@@ -88,6 +89,7 @@ GraalJS Polyglot `Context` 的装配与生命周期：
 
 - **TypeScript**：`NekoTypeScriptCompiler` 是手写的 lexer 基础**可擦除 TS**前端，擦除类型注解、`type`/`interface`、泛型、`as`/`satisfies`，把 `enum`/`namespace` 转 IIFE。
 - **JSX**：`NekoJsxCompiler` 把 JSX lowering 到 `__nekoJsxFactory` 调用（classic runtime）。
+- **Python**：`core/compiler/python/PythonToJsCompiler` 通过 lexer → parser → JavaScript emitter 转译 Python 子集，再由 GraalJS 执行；不是 CPython 或 GraalPy。
 - **ESM**：`core/module/esm/` 提供原生 lexer/parser/linker/evaluator。`ModuleReloadCoordinator` 使受影响模块的代内 CJS/ESM 身份、链接与依赖记录失效。这是缓存操作，不是事务式运行时切换或文件监视器；仅保存文件不会激活改动。完整代重载、旧式文件重跑与独立的数据或资源重载见[命令](commands_cn)。
 - **Node shim**：`core/node/` 提供 fs/path/buffer/crypto/process/timers/util/events/assert/os/test 的 Java+JS 实现。
 - **`java:` 模块**：`NekoModuleResolver` 把 `java:package/path` 解析为合成 ESM 模块。
@@ -121,7 +123,7 @@ NekoJS 的扩展模型是**插件即 API**：
 
 要注意它的定位：**这是给脚本做 feature detection 用的信息面**——脚本读 `Platform.get().capabilities()` 判断某个特性能不能用，平台实现负责把声明写准。引擎内部的功能裁剪不看这些标志位，而是走 `IPlatform` 的默认方法（没实现的平台默认返回空或 null）。
 
-spec 的平台范围是另一套机制，用 `@PlatformAvailability(Scope)` 声明：`ALL` / `NF_ONLY`（26.x 与 1.21.1）/ `NF26_ONLY`（只有 26.x）/ `CR_ONLY`。编译期由 `SpecCoverageProcessor` 按 `-Anekojs.platform=nf26|nf121|cr` 强制检查。
+spec 的平台范围是另一套机制，用 `@PlatformAvailability(Scope)` 声明：`ALL` / `NF_ONLY`（26.x 与 1.21.1）/ `NF26_ONLY`（只有 26.x）/ `CR_ONLY`。当前 NeoForge 节点在编译期接入 `SpecCoverageProcessor`，传入 `-Anekojs.platform=nf26|nf121`。`CR_ONLY` 是 legacy scope，不代表当前构建节点。Fabric 尚未接入此注解处理器；其 `check` 改由独立的非处理器 `platformGateTest` 检查 contract/spec 与 event/surface 覆盖。这不是完整跨加载器兼容性证据。
 
 <a id="wiki-section-9"></a>
 ## 字节码注入机制

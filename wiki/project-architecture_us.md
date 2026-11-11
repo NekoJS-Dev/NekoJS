@@ -57,15 +57,16 @@ NekoJS/
 │   ├── main/java/           # Version differences: //? if >=26 guards and replacements
 │   │                        # Loader differences: whole-file //? if neoforge / //? if fabric guards
 │   ├── main/resources*/     # AT / mixins / interface injection (26.x and 1.21.1 resource layers)
-│   └── test/java/           # Shared tests
+│   ├── test/java/           # Shared tests
+│   └── fabric/              # Raw Fabric Java/resources/templates; not preprocessed
 ├── versions/                # Per-node gradle.properties and node-specific sources
 │   ├── 1.21.1/  26.1.2/  26.2.0/     # NeoForge nodes
 │   ├── 26.1.2-fabric/                # Fabric 26.1.2 node
-│   └── 26.2.0-fabric/                # Fabric 26.2.0 node (currently reuses the source bridge)
+│   └── 26.2.0-fabric/                # Fabric 26.2 node (node id: 26.2.0-fabric)
 └── settings.gradle.kts      # Stonecutter version graph and the two engine subprojects
 ```
 
-Node-specific sources serve two purposes: version-specific compat implementations (facades under `platform/compat/`) and paired files for differences between eras that are too large to express conveniently with guards. The shared tree holds the 26.x implementation; `versions/1.21.1/src/` holds the same-named 1.21.1 implementation, and Stonecutter selects one for each node.
+Node-specific sources serve two purposes: version-specific compat implementations (facades under `platform/compat/`) and paired files for differences between eras that are too large to express conveniently with guards. The shared tree holds the 26.x implementation; `versions/1.21.1/src/` holds the same-named 1.21.1 implementation, and `nekojs.node-sources` enforces node-local same-relative-path precedence over shared, raw Fabric, and generated sources, including the active node. Fabric nodes explicitly mount the common raw loader root `src/fabric`; the former cross-node source bridge is gone.
 
 See [Build system](build-system_us).
 
@@ -88,6 +89,7 @@ Assembly and lifecycle of GraalJS Polyglot `Context`:
 
 - **TypeScript**: `NekoTypeScriptCompiler` is a handwritten lexer-based **erasable TS** frontend. It removes type annotations, `type` / `interface`, generics, `as` / `satisfies`, and lowers `enum` / `namespace` to IIFEs.
 - **JSX**: `NekoJsxCompiler` lowers JSX to `__nekoJsxFactory` calls using the classic runtime.
+- **Python**: `core/compiler/python/PythonToJsCompiler` transpiles a Python subset through lexer → parser → JavaScript emitter, then executes through GraalJS; this is not CPython or GraalPy.
 - **ESM**: `core/module/esm/` supplies the native lexer/parser/linker/evaluator. `ModuleReloadCoordinator` invalidates generation-owned CJS/ESM identities, links and dependency records for affected modules. This cache operation is not a transactional runtime swap or a filesystem watcher; saving a file alone does not activate changes. See [Commands](commands_us) for full generation reload, legacy file rerun and separate data/resource reload.
 - **Node shims**: `core/node/` supplies Java+JS implementations of fs/path/buffer/crypto/process/timers/util/events/assert/os/test.
 - **`java:` modules**: `NekoModuleResolver` resolves `java:package/path` into synthetic ESM modules.
@@ -121,7 +123,7 @@ This uses **explicit singleton initialization**, not Java ServiceLoader:
 
 Its role matters: **this is an information interface for script feature detection**. Scripts read `Platform.get().capabilities()` to decide whether a feature is available; platform implementations must report capabilities accurately. Internal engine feature selection does not use these flags; it uses `IPlatform` default methods, which return empty results or null when a platform has not implemented them.
 
-Spec platform scope is a separate mechanism, declared through `@PlatformAvailability(Scope)`: `ALL` / `NF_ONLY` (26.x and 1.21.1) / `NF26_ONLY` (26.x only) / `CR_ONLY`. `SpecCoverageProcessor` enforces it at compile time according to `-Anekojs.platform=nf26|nf121|cr`.
+Spec platform scope is a separate mechanism, declared through `@PlatformAvailability(Scope)`: `ALL` / `NF_ONLY` (26.x and 1.21.1) / `NF26_ONLY` (26.x only) / `CR_ONLY`. The current NeoForge nodes wire `SpecCoverageProcessor` at compile time with `-Anekojs.platform=nf26|nf121`. `CR_ONLY` is a legacy scope, not a current build node. Fabric has not wired this annotation processor; its `check` instead includes the isolated, non-processor `platformGateTest` for contract/spec and event/surface coverage. This is not full cross-loader compatibility evidence.
 
 <a id="wiki-section-9"></a>
 ## Bytecode injection

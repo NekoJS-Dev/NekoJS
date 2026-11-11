@@ -23,6 +23,8 @@
 | `@Param(name, value)` | METHOD/CONSTRUCTOR | Parameter documentation rendered as `@param` lines; repeatable |
 | `@Return("...")` | METHOD | Return-value documentation rendered as `@returns` lines |
 | `@Overload({"id: string"})` | METHOD/CONSTRUCTOR | Additional handwritten `.d.ts` signatures; repeatable |
+| `@ScriptInput(MyShape.class)` | PARAMETER | Explicit structural TypeScript input supplied by a public no-argument `ScriptInputShapeProvider` |
+| `@ScriptOutput("{ readonly width: number }")` | METHOD | Explicit TypeScript return type for values Java reflection cannot describe |
 | `@DeprecatedNekojs` | TYPE/METHOD/CONSTRUCTOR/FIELD | Script-facing deprecation rendered as JSDoc `@deprecated`, shown struck through in editors |
 
 Retention is `RUNTIME` except `@CalledByDynamicCode` (`SOURCE`). `@Documented` is not universal: naming/visibility/plugin/platform annotations do not all carry it; inspect the declaration rather than assuming it affects callability.
@@ -121,9 +123,9 @@ public interface EntityExtension extends EntitySpec {
 }
 ```
 
-- `Scope.ALL`: available on every platform; `NF_ONLY`: NeoForge 1.21.1/26.x only; `CR_ONLY`: Cleanroom 1.12.2 only.
+- `Scope.ALL`: every target covered by the Spec; `NF_ONLY`: NeoForge 1.21.1/26.x; `NF26_ONLY`: NeoForge 26.x only. `CR_ONLY` is a retained legacy Cleanroom marker, not a supported build node. Fabric availability must be checked separately; this annotation does not implement a missing bridge.
 - `SpecCoverageProcessor`, an annotation processor, checks coverage at compile time. Each platform `Extension` must override every `neko$` method in the Spec interface; one missing method produces a compile ERROR. **Configuring `annotationProcessor(project(":common-api-processor"))` enables this**, with no extra option required.
-- **Platform-scope checks need an additional option**: `Scope` semantics, determining which platform should implement which members, are checked only when compilation passes `-Anekojs.platform=<平台>`. Without it, only override coverage is checked. This repository passes the option only for NeoForge nodes (`buildSrc/.../nekojs.neoforge-node.gradle.kts`); Fabric nodes deliberately omit it. In an addon without the processor, `@RemapByPrefix("neko$")` + Spec interfaces are **only a convention**. The advantages remain, including avoiding native method collisions and stripping prefixes in one place, but nothing verifies complete override coverage for you.
+- **Platform-scope checks need an additional option**: `Scope` semantics, determining which platform should implement which members, are checked only when compilation passes `-Anekojs.platform=<platform>`. Accepted processor tags are `nf121`, `nf26` and the legacy `cr`; the old `nf` value is rejected because it cannot distinguish Minecraft versions. Without the option, only override coverage is checked. This repository passes the option only for NeoForge nodes (`buildSrc/.../nekojs.neoforge-node.gradle.kts`); Fabric nodes deliberately omit it. In an addon without the processor, `@RemapByPrefix("neko$")` + Spec interfaces are **only a convention**. The advantages remain, including avoiding native method collisions and stripping prefixes in one place, but nothing verifies complete override coverage for you.
 
 ---
 
@@ -202,6 +204,8 @@ The following four items are **conventions**, with no checks enforcing them. The
 
 - Implemented: `@Remap` / `@RemapByPrefix` / `@HideFromJS` are consumed by runtime `MemberVisibilityQuery` / `MemberRemapper` and affect script execution. Generated `.d.ts` names and visibility match runtime behavior.
 - Implemented: documentation annotations (`@Doc` / `@Param` / `@Return`) flow through `TypeReflector` to IR docs and `.d.ts` JSDoc, as described above.
+- Implemented: `@ScriptInput(Provider.class)` replaces only the annotated method/constructor parameter's TypeScript input with `Provider.inputShape()`. The provider must implement `ScriptInputShapeProvider` and have a public no-argument constructor. It does not convert or validate runtime values, change the Java parameter type, broaden output types, or change Python output. Ordinary parameters keep their normal input projection; keep the declared shape consistent with the actual converter.
+- Implemented: `@ScriptOutput` replaces a method's TypeScript return type, including Bean getters and inherited declarations. It does not convert runtime values or change Python output. Explicit Probe type edits take precedence. Use inline `import('module').Type` references for external types; the referenced module must already be supplied by the catalog or reflection closure. Include the Java type in an intersection when its methods remain available, as the JSX host does for its dimension Maps. Blank expressions reject generation with `NEKO-4064`; consumers should type-check the generated declarations to validate the expression.
 
 <a id="wiki-section-15"></a>
 ## Next steps

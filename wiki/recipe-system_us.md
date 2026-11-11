@@ -133,7 +133,14 @@ event.shapeless('minecraft:dirt', ['minecraft:sand', 'minecraft:gravel'])
 <a id="wiki-section-8"></a>
 ### Method 2: `event.recipes.<namespace>.<type>(...)`
 
-Resolution tries a registered handler first, then a schema, then raw JSON. **Do not copy the direct-helper argument order to every namespace method.** The built-in handler only supplies `crafting_shaped`/`crafting_shapeless`; cooking and smithing use the installed schema. The fallback cooking schema orders `ingredient, result, experience?, cookingtime?`, unlike result-first `event.smelting`. Prefer named fields when a schema is available and inspect the current probe/schema for the installed node.
+For a callable profile, resolution tries a registered handler, then a schema, then raw JSON. A known profile carrying an `unsupportedReason` is checked first and rejected instead of silently using a handler or raw fallback. **Do not copy the direct-helper argument order to every namespace method.** The built-in handler supplies `crafting_shaped`/`crafting_shapeless`; cooking and smithing depend on the effective schema and installed node. Inspect its generated overloads or use named fields when that schema supports them. See [runtime resolution](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeNamespaceProxy.java#L64-L77).
+
+<a id="wiki-section-9"></a>
+### Native handler and schema contracts
+
+Native handler declarations retain **every visible overload** and the actual Java return type, including its declared generic structure; they are not renamed to a similarly named schema builder. Unbound Java type variables are approximated by their upper bounds, not invented as undeclared TypeScript variables. Only a trailing suffix of `Optional` parameters can be omitted; an interior optional slot remains required and accepts null/undefined. Java varargs on this reflected route still require one array argument, not spread arguments. See [handler metadata](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/catalog/RecipeNamespaceCatalogEntry.java#L66-L94), [arity/conversion](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeReflectionUtil.java#L70-L96), and [Optional suffix rules](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeReflectionUtil.java#L183-L188).
+
+A schema uses its own declared constructors and keeps the **full named-options object overload** when fields exist, alongside positional forms. Named options preserve required/defaulted fields and canonical-or-alias exclusivity; they are not a reduced sample of convenient fields. Chained setters retain the same whole-field input contract. The generated options type may be named to avoid repeating a long object. See [schema overload emission](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/RecipeEventDeclarationGenerator.java#L238-L255) and [Probe type conventions](probe-type-generation_us#wiki-section-16).
 
 Place this complete example in `server_scripts/namespace-recipes.js`:
 
@@ -157,10 +164,10 @@ Recipe objects, ingredient maps, filters, and schema JSON are structured data, n
 
 > Generated ids are implementation-derived `nekojs:<prefix>_<8-hex hash>` values with collision suffixes; use explicit unique ids for stable pack behavior.
 
-<a id="wiki-section-9"></a>
+<a id="wiki-section-10"></a>
 ### Method 3: `event.custom(...)` / `event.builder(...)` - raw JSON
 
-For any type, you can pass a JSON object directly:
+For an installed serializer, you can supply a complete JSON object matching that node/mod's actual recipe format. This route does not infer missing fields, install a serializer, or certify arbitrary addon support:
 
 ```javascript
 // custom: must include type
@@ -183,7 +190,7 @@ event.builder('minecraft:crafting_shapeless')
 
 ---
 
-<a id="wiki-section-10"></a>
+<a id="wiki-section-11"></a>
 ## RecipeJsonBuilder (chained calls)
 
 `event.builder(type)`, `event.recipes.<ns>.<type>(...)`, and `event.custom(...)` all return a chainable builder.
@@ -208,7 +215,7 @@ event.builder('minecraft:crafting_shapeless')
 
 ---
 
-<a id="wiki-section-11"></a>
+<a id="wiki-section-12"></a>
 ## Querying / iterating
 
 | Method | Description |
@@ -235,7 +242,7 @@ event.forEach({ output: 'minecraft:iron_ingot' }, recipe => {
 
 ---
 
-<a id="wiki-section-12"></a>
+<a id="wiki-section-13"></a>
 ## Ingredient actions (Ingredient Actions)
 
 > **NeoForge 26.x** only. Customize the crafting remainder when a recipe consumes ingredients:
@@ -278,10 +285,16 @@ A recipe can have multiple actions, but only the **first** matching action appli
 
 ---
 
-<a id="wiki-section-13"></a>
+<a id="wiki-section-14"></a>
 ## Data-driven schemas
 
-NekoJS automatically discovers schemas for most vanilla/mod recipe types (by reflecting Minecraft's `RecipeSerializer.codec()`), so positional forms such as `event.recipes.minecraft.smelting(...)` work out of the box.
+Automatic discovery scans registered serializers using node-specific known vanilla contracts and codec inspection/heuristics. A serializer being present does **not** guarantee a complete field schema, correct positional constructor, or support for every addon component. Complex or opaque codecs can produce limited discovery results; inspect the effective catalog and generated declarations rather than assuming a mod-wide compatibility guarantee. See [the native scanner](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/api/recipe/definition/MinecraftRecipeSchemaScanner.java#L33-L74) and [codec inspection/fallbacks](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/api/recipe/definition/MinecraftRecipeSchemaScanner.java#L117-L159).
+
+With the optional NekuJS addon, supported compatibility resources and programmatic schemas are compiled into the **same native NekoJS schema registry**. They reuse native conversion and Probe declarations; this is not an upstream Rhino/KubeJS runtime or a second recipe engine. Compatibility remains bounded by the imported plugins, component codecs, schema inheritance and factory operations actually implemented. See [bridge publication](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/addons/nekujs/src/main/java/com/tkisor/nekujs/bridge/LegacyRuntimeBridge.java#L75-L107) and [native argument conversion](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeReflectionUtil.java#L70-L143).
+
+NekuJS supplies shared native parent dependencies for `minecraft:shaped` and `minecraft:special`; these do not publish synthetic methods over vanilla handlers, and children retain their own serializer IDs. The special parent preserves its native category codec, `misc` default and zero-positional-argument constructor. Upstream `hidden` is descriptive metadata, not a runtime call prohibition. The shaped parent supplies result, pattern, single-character ingredient keys, category and notification fields, with empty-ingredient cleanup and cross-field validation in the native encode lifecycle.
+
+Consequently, the original Mekanism addon's `mek_data` inherits shaped, while `bin_extract`, `bin_insert` and `clear_configuration` inherit special without recipe-name exceptions. The native parent supports vanilla default mirror/shrink behavior; it does not advertise non-default KubeJS controls such as `noMirror` or `noShrink`. Unknown factories, processors and mappings remain explicit failures. Restart the updated instance and regenerate Probe before evaluating the new definitions; old declarations do not update themselves.
 
 To define a schema for a **custom/unknown type** (enabling positional arguments and field validation), write a JSON file:
 
@@ -305,7 +318,7 @@ To define a schema for a **custom/unknown type** (enabling positional arguments 
 }
 ```
 
-<a id="wiki-section-14"></a>
+<a id="wiki-section-15"></a>
 ### Top-level fields
 
 | Key | Required? | Default | Meaning |
@@ -315,7 +328,7 @@ To define a schema for a **custom/unknown type** (enabling positional arguments 
 | `constructors` | Optional | All fields in declaration order | Positional constructors: an array of arrays of field names |
 | `fields` | **Required** | None | Mapping of field names to field definitions |
 
-<a id="wiki-section-15"></a>
+<a id="wiki-section-16"></a>
 ### Field definitions
 
 | Key | Default | Meaning |
@@ -327,19 +340,19 @@ To define a schema for a **custom/unknown type** (enabling positional arguments 
 | `default` | — | Default JSON value |
 | `role` | Inferred from the name | `INPUT` / `OUTPUT` / `OTHER` (controls key recognition by `replaceInput`/`replaceOutput`) |
 
-<a id="wiki-section-16"></a>
+<a id="wiki-section-17"></a>
 ### What happens with an invalid definition
 
 `RecipeTypeDefinitionJsonLoader.parse` throws immediately for these cases (loading the JSON fails): missing `fields` or an empty `fields` object; a field definition that is not an object; an entry in `constructors` that is not an array; a constructor referring to a field name absent from `fields`; or an unknown `kind` value (`valueOf` in `RecipeFieldKind.parse` throws).
 
 `role` is an exception: an invalid value **does not produce an error**. It silently falls back to inference from the field name (`RecipeFieldRoles.roleOfName`). A misspelled `role` therefore causes `replaceInput` to fail to recognize the key, rather than causing startup to fail.
 
-<a id="wiki-section-17"></a>
+<a id="wiki-section-18"></a>
 ### `kind` values
 
 `json`, `string`, `int`, `number`, `boolean`, `ingredient`, `item_stack`, `fluid_stack`, `fluid_ingredient`, `sized_fluid_ingredient` (case-insensitive; kebab-case is accepted).
 
-<a id="wiki-section-18"></a>
+<a id="wiki-section-19"></a>
 ### Schema priority
 
 NekoJS merges recipe schemas from three sources in priority order:
@@ -352,10 +365,10 @@ A higher-priority schema can override a lower-priority schema. For runtime queri
 
 ---
 
-<a id="wiki-section-19"></a>
+<a id="wiki-section-20"></a>
 ## Fallback for unknown types
 
-**Defining a schema is never required.** When a namespace/type has neither a schema nor a handler, NekoJS uses the **raw JSON fallback** (`FallbackNamespaceProxy`): pass a JS object, and NekoJS sets `type` automatically and registers it:
+A field schema is not required to submit complete recipe JSON. For an unrecognized namespace/type with no handler or schema, the raw fallback accepts one object and supplies its `type`. This is **not** an escape hatch for a known rejected profile, and successful registration still depends on the installed serializer accepting the JSON:
 
 ```javascript
 event.recipes.mymod.unknown_type({
@@ -364,16 +377,23 @@ event.recipes.mymod.unknown_type({
 })
 ```
 
-The fallback proxy returns a function for any member name (`hasMember` is always true), so `event.recipes.<anything>.<anything>` never reports that the method does not exist. The tradeoff is that it **validates nothing**:
+A raw fallback accepts arbitrary member names, but a member existing does not prove a valid recipe serializer or authoring contract. It performs no recipe field validation:
 
-- There must be **exactly one** object argument with members. A string, multiple arguments, or a failure to convert to JSON makes the entire call a no-op that returns `null`, with only a debug-level log entry. Returning `null` means a subsequent `.id(...)` immediately reports that a property cannot be read from null; this is often the first symptom you see.
+- There must be **exactly one** object argument with members; incompatible argument shapes return `null`, so immediately chaining `.id(...)` can fail. Error handling depends on the entry point: [FallbackNamespaceProxy](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/FallbackNamespaceProxy.java#L41-L61) catches conversion/registration exceptions, logs at debug level and returns `null`; the raw branch of [RecipeNamespaceProxy](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeNamespaceProxy.java#L195-L209) does not catch those exceptions. Neither behavior turns a handler execution error or a known rejected profile into a successful fallback.
 - Incorrect field names/types are detected only when the game loads the recipe.
 
 Schemas provide positional arguments, required-field validation, key recognition for `replaceInput`/`replaceOutput`, and probe-generated completion. If you only need to insert JSON, the fallback or `event.custom({...})` is enough.
 
+<a id="wiki-section-21"></a>
+### Diagnosing a recipe member typed as `never`
+
+A recipe member such as `some_profile: never` means the **effective catalog carries a known rejection** (`unsupportedReason`). The generator does not advertise a callable handler/schema alternative for that name, and the runtime rejects it with `NEKO-5211` rather than using the unknown-type fallback. This is different from an options field such as `input?: never`, which deliberately makes canonical and alias keys mutually exclusive. See [declaration rejection](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/RecipeEventDeclarationGenerator.java#L188-L208) and [runtime rejection](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeNamespaceProxy.java#L64-L77).
+
+Inspect the startup schema-compilation diagnostic for the affected resource, JSON path and recipe id, then regenerate Probe after changing mods/resources or installing a fix. For example, `NEKO-5242` identifies a parent-schema resolution failure in the compatibility graph; it is not a line-length limit or evidence that the entire mod/native serializer is unsupported. Supported parent definitions can resolve that feature gap; other unsupported components/factories need their own implementation. Do not hide the problem with a TypeScript cast or assume increasing the scan allowlist fixes it. See [parent resolution](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/addons/nekujs/src/main/java/com/tkisor/nekujs/recipe/schema/RecipeSchemaGraphCompiler.java#L75-L95). A separate `event.custom` route still requires the actual installed serializer's valid JSON and does not reproduce a rejected profile's constructors, defaults or actions.
+
 ---
 
-<a id="wiki-section-20"></a>
+<a id="wiki-section-22"></a>
 ## Platform differences
 
 | Platform | Recipe reload |
@@ -382,7 +402,7 @@ Schemas provide positional arguments, required-field validation, key recognition
 | **Fabric 26.x** | Supports rerunning recipe scripts through `/nekojs reload server`; the current node implementation determines the API. |
 | **NeoForge 26.x / 1.21.1** | Supported. `/nekojs reload server` rebuilds the working set from cached `baseJsons`, reruns recipe scripts, and replaces `RecipeManager` (server-side crafting takes effect immediately); the JEI/REI panel may need a client refresh. |
 
-<a id="wiki-section-21"></a>
+<a id="wiki-section-23"></a>
 ## Next steps
 
 - [Global bindings](global-bindings_us) - Reference for `Item`/`Ingredient` and other bindings.

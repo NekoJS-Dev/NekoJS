@@ -132,4 +132,4 @@ Configurable post-effect definitions now have a real `event.register(id, build =
 
 ---
 
-[Previous: JSX client UI](jsx-client-ui_us) · [Contents](Home) · [Next: Node.js compatibility](nodejs-compatibility_us)
+[Previous: JSX client UI](jsx-client-ui_us) · [Contents](Home) · [Next: MixinJS (experimental)](mixinjs_us)
