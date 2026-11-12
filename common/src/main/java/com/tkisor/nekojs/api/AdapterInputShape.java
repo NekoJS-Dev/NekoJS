@@ -41,7 +41,9 @@ public sealed interface AdapterInputShape permits
         AdapterInputShape.RegistryTagValue,
         AdapterInputShape.NamespaceValue,
         AdapterInputShape.TemplateValue,
-        AdapterInputShape.RawValue {
+        AdapterInputShape.RawValue,
+        AdapterInputShape.CallableValue,
+        AdapterInputShape.NamedValue {
 
     // ===================== 静态工厂 =====================
 
@@ -59,6 +61,10 @@ public sealed interface AdapterInputShape permits
     static RegistryTagValue registryTag(String typeName) { return new RegistryTagValue(typeName); }
     static NamespaceValue namespace() { return new NamespaceValue(); }
     static RawValue raw(String ts) { return new RawValue(ts); }
+    /** Names a reusable part of an adapter input without changing its accepted values. */
+    static NamedValue named(String suffix, AdapterInputShape shape) { return new NamedValue(suffix, shape); }
+    /** A callback with required parameters and a typed result; parameter host types are not input-coerced. */
+    static CallableValue callable(List<Slot> parameters, AdapterInputShape result) { return new CallableValue(parameters, result); }
     /** 字面量模板：{@code prefix + hole}，如 {@code template("#", registryTag("Item"))}。 */
     static TemplateValue template(String prefix, AdapterInputShape hole) {
         return new TemplateValue(prefix, hole, "");
@@ -135,6 +141,36 @@ public sealed interface AdapterInputShape permits
     record TemplateValue(String prefix, AdapterInputShape hole, String suffix) implements AdapterInputShape {}
     /** 逃生舱：直接给出任意 TypeScript 片段。 */
     record RawValue(String ts) implements AdapterInputShape {}
+
+    /** Typed callbacks with fixed, required parameters, shared by TypeScript and Python declarations. */
+    record CallableValue(List<Slot> parameters, AdapterInputShape result) implements AdapterInputShape {
+        public CallableValue {
+            parameters = List.copyOf(parameters);
+            java.util.Objects.requireNonNull(result, "result");
+            java.util.Set<String> names = new java.util.HashSet<>();
+            for (Slot parameter : parameters) {
+                if (!parameter.required() || parameter.name() == null || !parameter.name().matches("[A-Za-z_$][A-Za-z0-9_$]*")
+                        || !names.add(parameter.name())) {
+                    throw new IllegalArgumentException("[NEKO-4063] Callable input shapes require uniquely named, required parameters.");
+                }
+                java.util.Objects.requireNonNull(parameter.shape(), "parameter shape");
+            }
+        }
+    }
+
+    /**
+     * A presentation-only input section. TypeScript prefixes its suffix with the adapter target name;
+     * renderers without an adapter owner inline the wrapped shape. Repeated suffixes must resolve
+     * to the same type; conflicting host/input positions or definitions are rejected.
+     */
+    record NamedValue(String suffix, AdapterInputShape shape) implements AdapterInputShape {
+        public NamedValue {
+            if (suffix == null || !suffix.matches("[A-Za-z_$][A-Za-z0-9_$]*")) {
+                throw new IllegalArgumentException("[NEKO-4063] Named input shapes require an identifier suffix.");
+            }
+            java.util.Objects.requireNonNull(shape, "shape");
+        }
+    }
 
     /**
      * 对象字面量的一个字段。

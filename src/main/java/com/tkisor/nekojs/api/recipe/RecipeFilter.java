@@ -21,7 +21,7 @@ import java.util.List;
  * <h2>JS usage</h2>
  * <pre>
  * { mod: "minecraft" }                          — match by mod ID
- * { type: "minecraft:crafting_shaped" }         — match by recipe type
+ * { type: "minecraft:crafting_shaped" }         — match by serializer ID
  * { output: "minecraft:stick" }                 — match by output item
  * { input: "#minecraft:planks" }                — match by input ingredient
  * { and: [{mod:"minecraft"}, {output:"stick"}] }— logical AND
@@ -149,10 +149,23 @@ public interface RecipeFilter {
         }
     }
 
+    /** Matches the serializer identity, distinguishing shaped and shapeless crafting. */
     record ByType(String type) implements RecipeFilter {
+        public ByType { type = Identifier.parse(type).toString(); }
+
         @Override
         public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
-            return BuiltInRegistries.RECIPE_TYPE.getKey(holder.value().getType()).toString().equals(type);
+            return type.equals(String.valueOf(BuiltInRegistries.RECIPE_SERIALIZER.getKey(holder.value().getSerializer())));
+        }
+    }
+
+    /** Explicit native recipe-type matching, separate from serializer-based type filters. */
+    record ByRecipeType(String type) implements RecipeFilter {
+        public ByRecipeType { type = Identifier.parse(type).toString(); }
+
+        @Override
+        public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
+            return type.equals(String.valueOf(BuiltInRegistries.RECIPE_TYPE.getKey(holder.value().getType())));
         }
     }
 }

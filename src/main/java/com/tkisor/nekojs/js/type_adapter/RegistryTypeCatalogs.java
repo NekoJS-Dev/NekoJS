@@ -33,6 +33,8 @@ public final class RegistryTypeCatalogs {
         sources.put("ParticleType", BuiltInRegistries.PARTICLE_TYPE);
         sources.put("BlockEntityType", BuiltInRegistries.BLOCK_ENTITY_TYPE);
         sources.put("CreativeModeTab", BuiltInRegistries.CREATIVE_MODE_TAB);
+        sources.put("RecipeSerializer", BuiltInRegistries.RECIPE_SERIALIZER);
+        sources.put("RecipeType", BuiltInRegistries.RECIPE_TYPE);
         return sources;
     }
 

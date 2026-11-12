@@ -5,8 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.api.data.ValueConversionException;
-import com.tkisor.nekojs.platform.IPlatform;
-import com.tkisor.nekojs.platform.Platform;
+import com.tkisor.nekojs.testfixture.RecipeFilterPlatformFixture;
 import com.tkisor.nekojs.testfixture.NativeLoadingServicesTestFixture;
 import com.tkisor.nekojs.testfixture.VanillaRegistryProbe;
 import graal.graalvm.polyglot.Context;
@@ -19,7 +18,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Proxy;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Exercises existing object conversion with real native components in the isolated codec profile. */
 @Tag("native-recipe-probe")
 class ItemStackAdapterComponentsTest {
+    private static RecipeFilterPlatformFixture platformScope;
+
     @BeforeAll
     static void bootstrapNativeRegistries() {
         NativeLoadingServicesTestFixture.initialize();
@@ -34,16 +34,12 @@ class ItemStackAdapterComponentsTest {
         String failure = "Native item component metadata bootstrap failed: " + VanillaRegistryProbe.metadataFailure();
         if (NativeLoadingServicesTestFixture.requiresIsolatedRegistryMetadata()) assertTrue(metadata, failure);
         else org.junit.jupiter.api.Assumptions.assumeTrue(metadata, failure);
-        try {
-            Platform.instance();
-        } catch (IllegalStateException uninitialized) {
-            Platform.init((IPlatform) Proxy.newProxyInstance(IPlatform.class.getClassLoader(),
-                    new Class<?>[]{IPlatform.class}, (proxy, method, arguments) -> {
-                        if (method.getName().equals("isClient")) return false;
-                        if (method.getName().equals("toString")) return "NativeComponentServerFixture";
-                        throw new UnsupportedOperationException("Unexpected platform operation: " + method.getName());
-                    }));
-        }
+        platformScope = RecipeFilterPlatformFixture.open();
+    }
+
+    @org.junit.jupiter.api.AfterAll
+    static void restoreOwnedPlatform() {
+        if (platformScope != null) platformScope.close();
     }
 
     @Test

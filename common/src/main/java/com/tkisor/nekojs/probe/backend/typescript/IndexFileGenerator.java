@@ -146,6 +146,19 @@ public final class IndexFileGenerator {
             if (decl != null && decl.effectiveTypeName() != null) declaredNames.add("$" + decl.effectiveTypeName());
             if (authoredClasses.contains(fqn)) authoredImports.addAll(importCache.getOrDefault(fqn, Set.of()));
         }
+        // Local input sections reserve symbols before imports are allocated. They are not extra host imports.
+        for (String simpleName : classNames) {
+            String fqn = packageName + "." + simpleName;
+            if (hiddenClasses.contains(fqn)) continue;
+            var adapter = adapterAliasGenerator.getAlias(fqn);
+            if (adapter == null) continue;
+            for (var named : adapter.namedAliases()) {
+                if (!declaredNames.add(named.aliasName())) {
+                    throw new IllegalArgumentException("[NEKO-4063] Named input section collides with a module declaration: "
+                            + named.aliasName());
+                }
+            }
+        }
         Set<String> extraImports = new LinkedHashSet<>();
         for (String simpleName : classNames) {
             extraImports.addAll(irRenderer.getExtraImports(packageName + "." + simpleName));
@@ -235,9 +248,7 @@ public final class IndexFileGenerator {
                 if (adapterAlias != null) {
                     adapterAlias.doc().ifPresent(doc ->
                         sb.append("    /** ").append(doc.replace("\n", "\n     * ")).append(" */\n"));
-                    sb.append("    export type ").append(adapterAlias.aliasName())
-                      .append(adapterAlias.typeParameters())
-                      .append(" = ").append(adapterAlias.union()).append(";\n");
+                    sb.append(adapterAlias.declarations("    "));
                     continue;
                 }
                 EnumAlias enumAlias = enumAliasCache.get(fullName);

@@ -37,20 +37,27 @@ ServerEvents.recipes(event => {
 <a id="wiki-section-3"></a>
 ## 过滤器（RecipeFilter）
 
-很多方法接受一个「过滤器」对象来选中一批配方。同一对象的成员按“与”组合，数组按“或”组合，字符串表示精确配方 id。`{}` 有意匹配全部；未知对象键会被拒绝（`NEKO-5003`），不会静默扩大匹配范围。显式 `{ and: [a, b] }` 要求每个子过滤器都匹配；`{ or: [a, b] }` 与普通数组满足任意一个即可。空 `and` 匹配全部，空 `or` 和普通空数组不匹配任何配方。`and`/`or` 的非数组值保留所传过滤器本身的含义。 参见[当前解析器](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/js/type_adapter/RecipeFilterAdapter.java#L65-L110)。
+过滤器接受原生实例、精确配方 id、`"*"`（全部）、`"-"`（不匹配）、正则、返回布尔值的上下文函数，以及嵌套数组／对象。同一对象成员按“与”组合，普通数组按“或”组合；`{}` 匹配全部，未知键仍被拒绝（`NEKO-5003`），不会静默扩大删除范围。显式 `{ and: [a, b] }` 要求每项匹配，`{ or: [a, b] }` 任意一项即可；空 AND 为真，空 OR／普通空数组为假。非数组 group 值保留原过滤器含义。
 
 | 键 | 值 | 含义 |
 |---|---|---|
 | `mod` | mod id | 来自该 mod 的配方 |
-| `type` | `"minecraft:crafting_shaped"` | 指定配方类型 |
-| `output` | `"minecraft:stick"` 或 `"#minecraft:planks"` | 输出物品/标签（有补全） |
-| `input` | 物品 id 或 `"#tag"` | 输入配料（有补全） |
+| `type` | serializer id | 按配方 serializer 匹配，区分 shaped／shapeless；可补全 |
+| `recipeType` | 原生 type id | 显式匹配较宽类别，如 `minecraft:crafting` |
+| `output` | 物品／配料输入或 `{match, exact?}` | 产物匹配，支持原生堆栈与组件 |
+| `input` | 配料／物品输入或 `{match, exact?}` | 原生配料交集／具体堆栈见证匹配 |
 | `group` | 字符串 | 配方组 |
-| `id` | 配方 id | 精确 id（命名空间可省，默认 `minecraft:`） |
+| `id` | 配方 id／正则 | 精确 id（默认 `minecraft:`）或正则筛选 |
 | `idStartsWith` / `idEndsWith` / `idContains` | 字符串 | id 子串匹配 |
 | `and` | 过滤器或过滤器数组 | 数组内每一项都必须匹配；单个过滤器保留原意 |
 | `or` | 过滤器数组 | 或 |
 | `not` | 过滤器 | 非 |
+
+**迁移：** `type` 现在按 serializer 而不是原生 `RecipeType` 匹配。旧 `{type: "minecraft:crafting"}` 应改为 `{recipeType: "minecraft:crafting"}`；只找有序合成则用 `{type: "minecraft:crafting_shaped"}`。`type`／`recipeType` 省略命名空间时默认 `minecraft:`。`id`、`mod`、`group` 支持 JS `RegExp`、Java `Pattern` 及斜杠正则字符串；JS 正则每次重置并恢复 `lastIndex`，斜杠字符串采用 Java `find` 语义和 `dixmsuU` 标志。
+
+函数写法：`event.count(match => match.recipe.mod === "minecraft")`。原生只读上下文提供 `match.recipe`／`getRecipe()`，配方视图提供 `getOrCreateId()`、`getMod()`、`getType()`（serializer）和 `getGroup()`；它不是 Rhino 上下文或可变 schema/builder。返回值必须为布尔值；回调异常不会被吞掉。JS 正则／回调不能跨脚本代际或线程保留使用。
+
+`input`／`output` 支持适配器认可的 Ingredient、ItemStack、数组和带组件的物品对象；忽略数量，默认只约束物品与显式组件补丁。`{match: stack, exact: true}` 比较完整原生组件。精确配料输入使用原生等值；精确输出要求具体物品堆栈。未知嵌套键、不支持的 `componentType` 会报错；这不代表完整支持 KubeJS 流体或 addon schema 的替换匹配。现代节点的配方检查仍受现有 shaped/shapeless/single-item/cooking 门面限制。Probe 从真实适配器与注册表生成声明；旧生成文件需用新构建重启后重新生成，不能手改当作运行时修复。
 
 ```javascript
 event.remove({ mod: 'minecraft', output: 'minecraft:stick' })   // 来自 minecraft 的木棍配方

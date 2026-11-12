@@ -181,6 +181,11 @@ final class ProbeClassCollector {
             object.slots().forEach(slot -> collectShapeToQueue(slot.shape(), queue));
         } else if (shape instanceof com.tkisor.nekojs.api.AdapterInputShape.TemplateValue template) {
             collectShapeToQueue(template.hole(), queue);
+        } else if (shape instanceof com.tkisor.nekojs.api.AdapterInputShape.NamedValue named) {
+            collectShapeToQueue(named.shape(), queue);
+        } else if (shape instanceof com.tkisor.nekojs.api.AdapterInputShape.CallableValue callable) {
+            callable.parameters().forEach(parameter -> collectShapeToQueue(parameter.shape(), queue));
+            collectShapeToQueue(callable.result(), queue);
         }
     }
 

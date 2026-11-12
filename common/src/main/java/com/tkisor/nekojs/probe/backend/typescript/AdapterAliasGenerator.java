@@ -143,17 +143,21 @@ public final class AdapterAliasGenerator {
             arguments.add(parameter.name);
         }
         String argumentList = arguments.isEmpty() ? "" : "<" + String.join(", ", arguments) + ">";
+        String parameterList = declarations.isEmpty() ? "" : "<" + String.join(", ", declarations) + ">";
+        NamedScope named = new NamedScope("$" + selfSimple, parameterList, argumentList,
+                entry.shapes().stream().noneMatch(AdapterAliasGenerator::containsOpaqueNewline));
         ShapeContext context = new ShapeContext(
                 aliasRegistry.reference(target.getName(), "$" + selfSimple) + argumentList,
                 aliasRegistry.reference(target.getName(), "$" + selfSimple + "_") + argumentList,
-                selfPackage, imports, usedRegistries, references, true);
+                selfPackage, imports, usedRegistries, references, true, named);
         Set<String> rendered = new LinkedHashSet<>();
         for (AdapterInputShape shape : entry.shapes()) {
             rendered.add(render(shape, context, false));
         }
-        String parameterList = declarations.isEmpty() ? "" : "<" + String.join(", ", declarations) + ">";
-        return new AdapterAlias("$" + selfSimple + "_", parameterList, String.join(" | ", rendered), imports,
-                !usedRegistries.isEmpty(), entry.syntaxDoc(), references);
+        String union = String.join(" | ", rendered);
+        String formatted = named.aliases.isEmpty() || !named.pretty ? union : "\n    | " + String.join("\n    | ", rendered);
+        return new AdapterAlias("$" + selfSimple + "_", parameterList, union, imports,
+                !usedRegistries.isEmpty(), entry.syntaxDoc(), references, List.copyOf(named.aliases.values()), formatted);
     }
 
     /**
@@ -165,7 +169,7 @@ public final class AdapterAliasGenerator {
         return alias == null ? null : alias.aliasName();
     }
 
-    /** 单个适配器目标的渲染结果。 */
+    /** One adapter input alias and the reusable sections emitted beside it. */
     public record AdapterAlias(
             String aliasName,
             String typeParameters,
@@ -173,19 +177,58 @@ public final class AdapterAliasGenerator {
             Set<String> importFqns,
             boolean usesRegistry,
             Optional<String> doc,
-            Set<String> referenceFqns
+            Set<String> referenceFqns,
+            List<NamedAlias> namedAliases,
+            String formattedUnion
     ) {
+        public AdapterAlias {
+            namedAliases = List.copyOf(namedAliases);
+        }
+
+        public AdapterAlias(String aliasName, String typeParameters, String union, Set<String> importFqns,
+                            boolean usesRegistry, Optional<String> doc, Set<String> referenceFqns) {
+            this(aliasName, typeParameters, union, importFqns, usesRegistry, doc, referenceFqns, List.of(), union);
+        }
+
         public AdapterAlias(String aliasName, String typeParameters, String union, Set<String> importFqns,
                             boolean usesRegistry, Optional<String> doc) {
             this(aliasName, typeParameters, union, importFqns, usesRegistry, doc, importFqns);
         }
+
+        /** Emits the complete declaration group, including every referenced local section. */
+        public String declarations(String indent) {
+            // Opaque multiline type text may contain literal newlines; never indent inside it.
+            if (formattedUnion.equals(union)) {
+                StringBuilder inline = new StringBuilder(indent).append("export type ").append(aliasName)
+                        .append(typeParameters).append(" = ").append(union).append(";\n");
+                for (NamedAlias named : namedAliases) {
+                    inline.append("\n").append(indent).append("export type ").append(named.aliasName())
+                            .append(named.typeParameters()).append(" = ").append(named.type()).append(";\n");
+                }
+                return inline.toString();
+            }
+            StringBuilder result = new StringBuilder();
+            appendDeclaration(result, indent, aliasName, typeParameters, formattedUnion);
+            for (NamedAlias named : namedAliases) {
+                result.append((char) 10);
+                appendDeclaration(result, indent, named.aliasName(), named.typeParameters(), named.type());
+            }
+            return result.toString();
+        }
+    }
+
+    public record NamedAlias(String aliasName, String typeParameters, String type) {}
+
+    private static void appendDeclaration(StringBuilder result, String indent, String name, String parameters, String type) {
+        String text = "export type " + name + parameters + " =" + (type.startsWith("\n") ? "" : " ") + type + ";";
+        for (String line : text.split("\n", -1)) result.append(indent).append(line).append('\n');
     }
 
     /** Renders explicit callable shapes with the same host references as adapter aliases. */
     public static RenderedShape renderShape(AdapterInputShape shape, TypeAliasRegistry aliases, boolean input) {
         Set<String> references = new LinkedHashSet<>();
         Set<String> registries = new LinkedHashSet<>();
-        ShapeContext context = new ShapeContext(null, null, "", new LinkedHashSet<>(), registries, references, input);
+        ShapeContext context = new ShapeContext(null, null, "", new LinkedHashSet<>(), registries, references, input, null);
         String type = new AdapterAliasGenerator(aliases).render(shape, context, true);
         return new RenderedShape(type, java.util.Collections.unmodifiableSet(references), !registries.isEmpty());
     }
@@ -196,7 +239,7 @@ public final class AdapterAliasGenerator {
 
     private record ShapeContext(String hostSelf, String inputSelf, String selfPackage,
                                 Set<String> imports, Set<String> usedRegistries, Set<String> references,
-                                boolean inputHosts) {}
+                                boolean inputHosts, NamedScope named) {}
 
     /**
      * @param nested 是否处于嵌套位置（数组元素 / 对象槽位 / 联合成员 / 模板洞）。嵌套位置的
@@ -206,6 +249,7 @@ public final class AdapterAliasGenerator {
      */
     private String render(AdapterInputShape shape, ShapeContext context, boolean nested) {
         return switch (shape) {
+            case AdapterInputShape.NamedValue v -> renderNamed(v, context, nested);
             case AdapterInputShape.StringValue v -> "string";
             case AdapterInputShape.LiteralValue v -> "\"" + v.text().replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
             case AdapterInputShape.NumberValue v -> "number";
@@ -258,8 +302,106 @@ public final class AdapterAliasGenerator {
             case AdapterInputShape.TemplateValue v -> "`" + v.prefix()
                     + "${" + render(v.hole(), context, true) + "}"
                     + v.suffix() + "`";
+            case AdapterInputShape.CallableValue v -> {
+                ShapeContext parameterContext = new ShapeContext(context.hostSelf(), context.hostSelf(), context.selfPackage(),
+                        context.imports(), context.usedRegistries(), context.references(), false, context.named());
+                List<String> parameters = new ArrayList<>();
+                for (Slot parameter : v.parameters()) {
+                    parameters.add(parameter.name() + ": " + render(parameter.shape(), parameterContext, true));
+                }
+                yield "((" + String.join(", ", parameters) + ") => " + render(v.result(), context, true) + ")";
+            }
             case AdapterInputShape.RawValue v -> v.ts();
         };
+    }
+
+    private static final class NamedScope {
+        private final String prefix;
+        private final String parameters;
+        private final String arguments;
+        private final boolean pretty;
+        private final Map<String, NamedAlias> aliases = new LinkedHashMap<>();
+        private final Set<String> rendering = new LinkedHashSet<>();
+
+        private NamedScope(String prefix, String parameters, String arguments, boolean pretty) {
+            this.prefix = prefix;
+            this.parameters = parameters;
+            this.arguments = arguments;
+            this.pretty = pretty;
+        }
+    }
+
+    private String renderNamed(AdapterInputShape.NamedValue named, ShapeContext context, boolean nested) {
+        NamedScope scope = context.named();
+        if (scope == null) return render(named.shape(), context, nested);
+        String name = scope.prefix + named.suffix() + "_";
+        if (!scope.rendering.add(name)) {
+            throw new IllegalArgumentException("[NEKO-4063] Recursive named input section: " + name);
+        }
+        NamedAlias previous = scope.aliases.putIfAbsent(name, null);
+        String type;
+        try {
+            type = renderNamedBody(named.shape(), context, nested);
+        } finally {
+            scope.rendering.remove(name);
+        }
+        NamedAlias declaration = new NamedAlias(name, scope.parameters, type);
+        if (previous != null && !previous.equals(declaration)) {
+            throw new IllegalArgumentException("[NEKO-4063] Conflicting named input section: " + name);
+        }
+        scope.aliases.put(name, declaration);
+        return name + scope.arguments;
+    }
+
+    private String renderNamedBody(AdapterInputShape shape, ShapeContext context, boolean nested) {
+        if (!context.named().pretty) return render(shape, context, nested);
+        if (shape instanceof AdapterInputShape.ObjectValue object && !object.slots().isEmpty()) {
+            StringBuilder result = new StringBuilder("{\n");
+            for (Slot slot : object.slots()) {
+                result.append("    ").append(quoteKey(slot.name())).append(slot.required() ? "" : "?")
+                        .append(": ").append(render(slot.shape(), context, true)).append(";\n");
+            }
+            return result.append('}').toString();
+        }
+        if (shape instanceof AdapterInputShape.UnionValue union) {
+            List<AdapterInputShape> members = new ArrayList<>();
+            flattenUnion(union, members);
+            boolean multiline = members.stream().anyMatch(AdapterInputShape.ObjectValue.class::isInstance);
+            List<String> types = new ArrayList<>();
+            for (AdapterInputShape member : members) {
+                String type = multiline ? renderNamedBody(member, context, true) : render(member, context, true);
+                if (member instanceof AdapterInputShape.RawValue && !type.matches("[A-Za-z_$][A-Za-z0-9_$.]*")) {
+                    type = "(" + type + ")";
+                }
+                types.add(multiline ? type.replace("\n", "\n    ") : type);
+            }
+            return multiline ? "\n    | " + String.join("\n    | ", types) : String.join(" | ", types);
+        }
+        return render(shape, context, nested);
+    }
+
+    private static boolean containsOpaqueNewline(AdapterInputShape shape) {
+        if (shape instanceof AdapterInputShape.RawValue raw) return raw.ts().contains("\n") || raw.ts().contains("\r");
+        if (shape instanceof AdapterInputShape.NamedValue named) return containsOpaqueNewline(named.shape());
+        if (shape instanceof AdapterInputShape.ArrayOfValue array) return containsOpaqueNewline(array.element());
+        if (shape instanceof AdapterInputShape.UnionValue union) return union.members().stream().anyMatch(AdapterAliasGenerator::containsOpaqueNewline);
+        if (shape instanceof AdapterInputShape.ObjectValue object) return object.slots().stream().anyMatch(slot -> containsOpaqueNewline(slot.shape()));
+        if (shape instanceof AdapterInputShape.TemplateValue template) {
+            return template.prefix().contains("\n") || template.suffix().contains("\n") || containsOpaqueNewline(template.hole());
+        }
+        if (shape instanceof AdapterInputShape.CallableValue callable) {
+            return containsOpaqueNewline(callable.result())
+                    || callable.parameters().stream().anyMatch(slot -> containsOpaqueNewline(slot.shape()));
+        }
+        return false;
+    }
+
+    private static void flattenUnion(AdapterInputShape shape, List<AdapterInputShape> members) {
+        if (shape instanceof AdapterInputShape.UnionValue union) {
+            for (AdapterInputShape member : union.members()) flattenUnion(member, members);
+        } else {
+            members.add(shape);
+        }
     }
 
     private String renderObject(List<Slot> slots, ShapeContext context) {

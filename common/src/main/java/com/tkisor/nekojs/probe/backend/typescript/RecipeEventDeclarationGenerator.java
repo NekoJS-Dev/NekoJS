@@ -54,14 +54,18 @@ public final class RecipeEventDeclarationGenerator {
         for (var namespace : namespaces.stream().sorted(Comparator.comparing(RecipeNamespaceCatalogEntry::namespace)).toList()) {
             for (var schema : namespace.schemaTypes().stream().sorted(Comparator.comparing(RecipeSchemaTypeEntry::type)).toList()) {
                 if (!hasBuilder(schema) || schema.fields().stream().noneMatch(field ->
-                        field.inputType() != null || field.inputShape() instanceof AdapterInputShape.UnionValue
-                        || field.inputShape() instanceof AdapterInputShape.ObjectValue
-                        || field.inputShape() instanceof AdapterInputShape.ArrayOfValue)) continue;
+                        field.inputType() != null || isStructuralInput(field.inputShape()))) continue;
                 options.put(new SchemaKey(namespace.namespace(), schema.type()), allocateName(typeName(namespace.namespace())
                         + "$" + typeName(schema.type()) + "Options", occupied));
             }
         }
         return new InputAliases(Collections.unmodifiableMap(options));
+    }
+
+    private static boolean isStructuralInput(AdapterInputShape shape) {
+        if (shape instanceof AdapterInputShape.NamedValue named) return isStructuralInput(named.shape());
+        return shape instanceof AdapterInputShape.UnionValue || shape instanceof AdapterInputShape.ObjectValue
+                || shape instanceof AdapterInputShape.ArrayOfValue;
     }
 
     private static String allocateName(String base, Set<String> occupied) {

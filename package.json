@@ -43,6 +43,7 @@
     "test:probe-api-modules": "tsc -p common/build/probe-ts-api-modules/tsconfig.json",
     "test:probe-global-type-simplification": "tsc -p common/build/probe-ts-global-type-simplification/tsconfig.json",
     "test:probe-native-recipe-handlers": "tsc -p common/build/probe-ts-native-recipe-handlers/tsconfig.json",
+    "test:probe-recipe-filter": "tsc -p versions/1.21.1/build/probe-ts-recipe-filter/tsconfig.json",
     "test:probe-recipe-input-alias": "tsc -p common/build/probe-ts-recipe-input-alias/plain/tsconfig.json && tsc -p common/build/probe-ts-recipe-input-alias/collisions/tsconfig.json && tsc -p common/build/probe-ts-recipe-readable/tsconfig.json && node scripts/test-recipe-input-completions.mjs",
     "test:probe-mixin-hooks": "tsc -p common/build/probe-ts-mixin-hooks/tsconfig.json && tsc -p common/build/probe-ts-mixin-declarations/tsconfig.json && node scripts/test-mixin-completions.mjs"
   },

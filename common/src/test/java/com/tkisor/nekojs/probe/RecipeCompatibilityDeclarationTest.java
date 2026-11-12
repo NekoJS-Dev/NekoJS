@@ -214,7 +214,24 @@ class RecipeCompatibilityDeclarationTest {
         assertFalse(ProbeClassCollector.collect(empty, config).contains(RecipeShapeHost.class));
     }
 
+    @Test
+    void collectorUnwrapsNamedCallbackParametersAndResultsWithoutLosingHostDependencies() {
+        var shape = named("Predicate", callable(List.of(Slot.req("value", host(RecipeShapeHost.class))),
+                host(RecipeShapeResult.class)));
+        var definition = definition("test", "named_callback", "test:named_callback", Map.of("value",
+                field("value", shape, false, null)), List.of(List.of("value")), Map.of(), Map.of());
+        var namespace = new RecipeNamespaceCatalogEntry("test", null, List.of("named_callback"), true,
+                List.of(), List.of(), List.of(RecipeSchemaTypeEntry.from(definition)));
+        var snapshot = new NekoScriptCatalogSnapshot(List.of(ScriptType.SERVER), List.of(), List.of(), List.of(),
+                List.of(namespace), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
+                List.of(), null, Map.of(), List.of());
+        var collected = ProbeClassCollector.collect(snapshot, ProbeConfig.defaultConfig());
+        assertTrue(collected.contains(RecipeShapeHost.class), collected::toString);
+        assertTrue(collected.contains(RecipeShapeResult.class), collected::toString);
+    }
+
     public static final class RecipeShapeHost {}
+    public static final class RecipeShapeResult {}
 
     private static RecipeFieldDefinition field(String name, AdapterInputShape shape, boolean array,
                                                 JsonPrimitive defaultValue) {

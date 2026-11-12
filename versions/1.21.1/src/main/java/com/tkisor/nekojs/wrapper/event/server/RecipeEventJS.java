@@ -531,12 +531,14 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     private boolean passFilter(ResourceLocation id, JsonObject jsonObj, RecipeFilter filter) {
+        Recipe<?> recipe;
         try {
-            Recipe<?> tempRecipe = Recipe.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), jsonObj).getOrThrow();
-            return filter.test(new RecipeHolder<>(id, tempRecipe), registries);
-        } catch (Exception e) {
+            recipe = Recipe.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), jsonObj).getOrThrow();
+        } catch (Exception invalidRecipe) {
             return false;
         }
+        // A callback failure is not a non-match; let the owning script report it.
+        return filter.test(new RecipeHolder<>(id, recipe), registries);
     }
 
     public void validateRecipe(ResourceLocation id, JsonObject json) {
@@ -647,6 +649,16 @@ public class RecipeEventJS implements RecipeLifecycleContext {
 
     public static List<Ingredient> getIngredients(Recipe<?> recipe) {
         return recipe.getIngredients();
+    }
+
+    /** Reads the native result stack, including its components. */
+    public static ItemStack getRecipeOutputStack(Recipe<?> recipe, HolderLookup.Provider registries) {
+        return recipe.getResultItem(registries);
+    }
+
+    /** Enumerates native ingredient representatives for overlap checks. */
+    public static List<ItemStack> getIngredientStacks(Ingredient ingredient) {
+        return java.util.Arrays.asList(ingredient.getItems());
     }
 
     // ---- 版本中立静态助手（对应共享树 26.x 版同名方法；供 RecipeFilter 零守卫调用） ----

@@ -2,9 +2,28 @@
 
 Recipe scripts normally belong to SERVER. Resolve `ServerEvents.recipes` and inspect its Event Object before using operations. Prefer the current instance's `event.recipes.<namespace>.<type>` signatures over examples from another modpack.
 
-Recipe filters are data objects. Keys such as `id`, `type`, `input`, `output`, `and`, `or`, and `not` have recipe-specific meanings; they are unrelated to the authoring query language's `all`, `any`, and `some` predicates.
+Recipe filters accept native filter values, exact ID strings, `"*"` (all), `"-"` (none), regular expressions, boolean-returning context predicates, arrays and structured objects. Object fields such as `id`, `type`, `input`, `output`, `and`, `or` and `not` are unrelated to the authoring query language’s `all`, `any` and `some` predicates.
 
 Fields of one object are AND. Use `{ and: [{ mod: "minecraft" }, { idContains: "chest" }] }` to require every child filter; `{ or: [a, b] }` and a plain filter array accept any child. Empty `and` matches everything; empty `or` and a plain empty array match nothing. Non-array group values retain the supplied filter's meaning. Unknown filter keys are rejected, so do not use misspellings to express an unconstrained filter.
+
+`type` matches the **recipe serializer ID**, for example `minecraft:crafting_shaped`; `recipeType` explicitly matches the broader native recipe type, for example `minecraft:crafting`. IDs without a namespace default to `minecraft`. Migrate old `type: "minecraft:crafting"` queries to `recipeType`; serializer matching intentionally distinguishes shaped from shapeless crafting. Probe completes these fields from the real `RecipeSerializer` and `RecipeType` catalogs.
+
+Probe presents `$RecipeFilter_` through named Expression, Conditions, Input and Output sections. These are TypeScript-only aliases, not Java classes, constructors or new runtime Bindings. Scripts keep passing the same strings, objects, arrays and predicates. Exact output restrictions remain unchanged; rebuild/restart and run the instance’s normal Probe generation to refresh existing output.
+
+For ID, mod and group matching, JavaScript RegExp values use their actual `test` operation with `lastIndex` reset and restored on every match; Java `Pattern` and slash-pattern strings use Java `find` semantics. Slash strings support `dixmsuU`, not every JavaScript regex flag. Only the ID form interprets the exact `"*"` / `"-"` strings as all/none. Invalid patterns fail; an arbitrary object with a `test` method is not a RegExp.
+
+A predicate receives one native, read-only context. Use `match.recipe` (or `match.getRecipe()`) and the recipe view’s `getOrCreateId()`, `getMod()`, `getType()` (serializer) and `getGroup()`. Return a real boolean; exceptions/non-booleans are reported as script failures, not silently converted to a non-match. This is not Rhino’s context, schema editor or full KubeJS RecipeMatchContext. RegExp/predicate guest values remain owned by the current script generation; do not retain them across reloads or call them on foreign threads.
+
+```javascript
+// Inside ServerEvents.recipes; these are alternative selection examples.
+event.count({ type: "minecraft:crafting_shaped" })
+event.count({ recipeType: "minecraft:crafting" })
+event.count({ id: /^minecraft:.*planks$/ })
+event.count(match => match.recipe.mod === "minecraft")
+event.count({ output: { match: Item.of("minecraft:stick"), exact: true } })
+```
+
+`input` / `output` accept native Ingredient/ItemStack values and supported adapter input forms, including item/tag strings, arrays and structured stacks with components. Matching ignores stack count. A stack selector normally constrains its item and explicit component patch; `{match: stack, exact: true}` compares all native components instead. Input Ingredient matches use native representatives and acceptance predicates; exact Ingredient input uses native equality. Exact output matching requires a concrete stack. Unknown nested keys, unsupported `componentType` and invalid selectors fail closed. This is not a promise of schema-aware fluid/addon replacement matching. Modern recipe inspection remains bounded to the existing shaped/shapeless/single-item/cooking result/ingredient facades; do not infer coverage for every custom recipe serializer.
 
 An item tag (`#namespace:path`) is not an item stack. Check which adapter accepts it. Tags, recipe schemas, resource formats, and reload support can differ by version and loader.
 

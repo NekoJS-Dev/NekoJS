@@ -549,13 +549,15 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     private boolean passFilter(Identifier id, JsonObject jsonObj, RecipeFilter filter) {
+        Recipe<?> recipe;
         try {
-            Recipe<?> tempRecipe = Recipe.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), jsonObj).getOrThrow();
-            ResourceKey<Recipe<?>> recipeKey = ResourceKey.create(Registries.RECIPE, id);
-            return filter.test(new RecipeHolder<>(recipeKey, tempRecipe), registries);
-        } catch (Exception e) {
+            recipe = Recipe.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), jsonObj).getOrThrow();
+        } catch (Exception invalidRecipe) {
             return false;
         }
+        // A callback failure is not a non-match; let the owning script report it.
+        ResourceKey<Recipe<?>> recipeKey = ResourceKey.create(Registries.RECIPE, id);
+        return filter.test(new RecipeHolder<>(recipeKey, recipe), registries);
     }
 
     public void validateRecipe(Identifier id, JsonObject json) {
@@ -682,6 +684,20 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     /** 1.21.1 双参形状的桥接：26.x 的输出 id 从配方结果模板直接读出，registries 不参与求值。 */
     public static String getRecipeOutputId(Recipe<?> recipe, HolderLookup.Provider registries) {
         return getRecipeOutputId(recipe);
+    }
+
+    /** Resolves the same vanilla result shapes without discarding their components. */
+    public static ItemStack getRecipeOutputStack(Recipe<?> recipe, HolderLookup.Provider registries) {
+        if (recipe instanceof ShapedRecipe shaped) return shaped.result.create();
+        if (recipe instanceof ShapelessRecipe shapeless) return shapeless.result.create();
+        if (recipe instanceof SingleItemRecipe single) return single.result().create();
+        if (recipe instanceof AbstractCookingRecipe cooking) return cooking.result.create();
+        return ItemStack.EMPTY;
+    }
+
+    /** Enumerates native ingredient representatives for overlap checks. */
+    public static List<ItemStack> getIngredientStacks(Ingredient ingredient) {
+        return ingredient.items().map(ItemStack::new).toList();
     }
 
     /** 配方 id 的中立访问器：26.x 的 RecipeId 需要 .identifier() 解包，1.21.1 的 holder.id() 即 id 本体。 */

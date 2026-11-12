@@ -194,6 +194,53 @@ class RecipeFilterAdapterTest {
         }
     }
 
+    @Nested
+    @Tag("native-recipe-probe")
+    class EventCallbackSelection {
+        @BeforeAll
+        static void requireNativeMetadata() {
+            NativeLoadingServicesTestFixture.initialize();
+            boolean metadata = VanillaRegistryProbe.registryMetadataAvailable();
+            if (NativeLoadingServicesTestFixture.requiresIsolatedRegistryMetadata()) assertTrue(metadata);
+            else org.junit.jupiter.api.Assumptions.assumeTrue(metadata);
+        }
+
+        @Test
+        void callbackFailuresPropagateThroughTheActualEventRatherThanBecomingNonMatches() {
+            var registries = net.minecraft.core.RegistryAccess.fromRegistryOfRegistries(
+                    net.minecraft.core.registries.BuiltInRegistries.REGISTRY);
+            var recipe = com.google.gson.JsonParser.parseString("""
+                    {"type":"minecraft:crafting_shaped","pattern":["A"],
+                     "key":{"A":{"item":"minecraft:stone"}},"result":{"id":"minecraft:stone"}}
+                    """);
+            var event = new com.tkisor.nekojs.wrapper.event.server.RecipeEventJS(
+                    Map.of(Identifier.parse("nekojs:callback_failure"), recipe), registries);
+            try (var context = Context.newBuilder("js").allowExperimentalOptions(true).allowHostAccess(
+                    new com.tkisor.nekojs.core.NekoSharedHostAccess(java.util.List.of(new RecipeFilterAdapter())).get())
+                    .option("js.nashorn-compat", "true").option("js.ecmascript-version", "latest").build()) {
+                var throwing = new RecipeFilterAdapter().apply(context.eval("js",
+                        "match => { throw new Error('visible callback failure'); }"));
+                var failure = assertThrows(graal.graalvm.polyglot.PolyglotException.class, () -> event.count(throwing));
+                assertTrue(failure.getMessage().contains("visible callback failure"));
+                assertEquals(0, event.count(new RecipeFilterAdapter().apply(context.eval("js", "match => false"))));
+                assertEquals(1, event.count(new RecipeFilterAdapter().apply(context.asValue("*"))));
+                context.getBindings("js").putMember("event", event);
+                assertEquals(0, context.eval("js", "event.count(match => false)").asInt());
+                assertEquals(1, context.eval("js", "event.count(match => true)").asInt());
+                assertEquals(1, context.eval("js", """
+                        event.count(match => match.recipe === match.getRecipe()
+                            && match.recipe.mod === 'nekojs'
+                            && match.recipe.type === 'minecraft:crafting_shaped'
+                            && match.recipe.group === ''
+                            && match.recipe.getOrCreateId() === 'nekojs:callback_failure')
+                        """).asInt(), "The real host boundary must use the native context adapter, not the two-argument SAM");
+                var hostFailure = assertThrows(graal.graalvm.polyglot.PolyglotException.class, () -> context.eval("js",
+                        "event.count(match => { throw Error('host callback failure'); })"));
+                assertTrue(hostFailure.getMessage().contains("host callback failure"));
+            }
+        }
+    }
+
     @Test
     void nullIsRejectedButEmptyObjectMatchesEverything() {
         // null：test()=false，apply 不应被路由到；直接调用保持 null（历史行为）

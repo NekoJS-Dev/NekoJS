@@ -711,6 +711,21 @@ public final class PythonProbeBackend implements ProbeBackend {
             case AdapterInputShape.NamespaceValue v -> renderNamespaceInput(modIds, registries, largeRegistries);
             // Python 没有模板字面量类型：整个模板退化为 str（前后缀语法无法表达，字段语义已由 doc 覆盖）
             case AdapterInputShape.TemplateValue v -> "str";
+            case AdapterInputShape.NamedValue v -> renderInputShape(v.shape(), selfFqn, inputFqns, availableFqns,
+                    registries, modIds, largeRegistries, typeR);
+            case AdapterInputShape.CallableValue v -> {
+                List<String> parameters = new ArrayList<>();
+                boolean complete = true;
+                for (AdapterInputShape.Slot parameter : v.parameters()) {
+                    String rendered = renderInputShape(parameter.shape(), selfFqn, inputFqns, availableFqns,
+                            registries, modIds, largeRegistries, typeR);
+                    if (rendered == null) { complete = false; break; }
+                    parameters.add(rendered);
+                }
+                String result = renderInputShape(v.result(), selfFqn, inputFqns, availableFqns,
+                        registries, modIds, largeRegistries, typeR);
+                yield !complete || result == null ? null : typeR.callableName() + "[[" + String.join(", ", parameters) + "], " + result + "]";
+            }
             case AdapterInputShape.RawValue v -> {
                 NekoJS.LOGGER.debug("Python probe: skip adapter raw TS input '{}'", v.ts());
                 yield null;

@@ -144,6 +144,11 @@ jobs:
         # 单个 build 已按依赖链覆盖 compileJava → test → check（隔离门禁/verifyDevModSourceSets）
         run: ./gradlew :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build --console=plain
 
+      - name: Verify native recipe filter selection and declarations
+        run: |
+          ./gradlew :1.21.1:nativeRecipeProbeTest --console=plain
+          npm run test:probe-recipe-filter
+
       - name: Typecheck native JSX host consumers
         run: npm run test:probe-native-jsx
 

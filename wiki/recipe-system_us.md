@@ -37,20 +37,27 @@ ServerEvents.recipes(event => {
 <a id="wiki-section-3"></a>
 ## Filters (RecipeFilter)
 
-Many methods accept a filter object to select a group of recipes. Members of one object are combined with AND; an array is OR, and a string is an exact recipe-id filter. `{}` intentionally matches everything. Unknown object keys are rejected (`NEKO-5003`) instead of silently broadening the filter. Explicit `{ and: [a, b] }` requires every child filter to match; `{ or: [a, b] }` and a plain array match any child. Empty `and` matches everything, while empty `or` and a plain empty array match nothing. A non-array `and`/`or` value keeps the supplied filter’s meaning. See the [current parser](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/js/type_adapter/RecipeFilterAdapter.java#L65-L110).
+Filters accept native instances, exact recipe IDs, `"*"` (all), `"-"` (none), regular expressions, boolean-returning context predicates and nested arrays/objects. Object members combine with AND; plain arrays combine with OR. `{}` matches everything; unknown keys are still rejected (`NEKO-5003`) instead of silently broadening destructive selection. Explicit `{ and: [a, b] }` requires every child, while `{ or: [a, b] }` accepts any child. Empty AND is true; empty OR and plain empty arrays are false. A non-array group value retains the supplied filter’s meaning.
 
 | Key | Value | Meaning |
 |---|---|---|
 | `mod` | mod id | Recipes from this mod |
-| `type` | `"minecraft:crafting_shaped"` | A specific recipe type |
-| `output` | `"minecraft:stick"` or `"#minecraft:planks"` | Output item/tag (with completion) |
-| `input` | Item id or `"#tag"` | Input ingredient (with completion) |
+| `type` | Serializer id | Match the serializer, distinguishing shaped/shapeless; completed from its registry |
+| `recipeType` | Native type id | Explicitly match the broader type, e.g. `minecraft:crafting` |
+| `output` | Item/ingredient input or `{match, exact?}` | Match the output, including native stacks and components |
+| `input` | Ingredient/item input or `{match, exact?}` | Match native ingredient overlap or a concrete stack witness |
 | `group` | String | Recipe group |
-| `id` | Recipe id | Exact id (the namespace can be omitted; defaults to `minecraft:`) |
+| `id` | Recipe id or regex | Exact id (default namespace `minecraft:`) or regex |
 | `idStartsWith` / `idEndsWith` / `idContains` | String | Match substrings of the id |
 | `and` | Filter or filter array | Every array element must match; a single filter keeps its meaning |
 | `or` | Array of filters | OR |
 | `not` | Filter | NOT |
+
+**Migration:** `type` now selects the serializer, not the broad native `RecipeType`. Replace old `{type: "minecraft:crafting"}` with `{recipeType: "minecraft:crafting"}`; use `{type: "minecraft:crafting_shaped"}` for shaped crafting only. Missing namespaces default to `minecraft:`. `id`, `mod` and `group` also accept JS RegExp, Java Pattern and slash-pattern strings. JS regex matching resets/restores `lastIndex`; slash strings use Java `find` and `dixmsuU` flags.
+
+Predicate example: `event.count(match => match.recipe.mod === "minecraft")`. The native read-only context exposes `recipe` / `getRecipe()`; its recipe view has `getOrCreateId()`, `getMod()`, `getType()` (serializer) and `getGroup()`. This is not a Rhino context or mutable schema/builder. Return a real boolean; callback exceptions propagate. Do not retain guest regex/predicate values across script generations or threads.
+
+`input` / `output` accept supported Ingredient/ItemStack adapter forms, arrays and component-bearing stack objects. Count is ignored. Default stack matching constrains the item and explicit component patch; `{match: stack, exact: true}` compares full native components. Exact Ingredient input uses native equality; exact output requires a concrete stack. Unknown nested keys and unsupported `componentType` fail. Full KubeJS fluid/addon-schema replacement matching is not implied. Modern recipe inspection remains bounded by the existing shaped/shapeless/single-item/cooking facades. Probe declarations come from actual adapters and registries; restart with the new build and regenerate old output instead of hand-editing declarations as a runtime fix.
 
 ```javascript
 event.remove({ mod: 'minecraft', output: 'minecraft:stick' })   // Stick recipes from minecraft
