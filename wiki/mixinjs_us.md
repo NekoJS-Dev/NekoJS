@@ -5,41 +5,47 @@
 <a id="wiki-section-1"></a>
 # MixinJS (experimental)
 
-MixinJS separates native method injection into **startup-loaded declarations** and **callbacks replaced by script reload**. When explicitly enabled, NeoForge 26.x prepares an internal game library automatically; legacy NeoForge and Fabric use dependency-bearing carrier mods. It does not dynamically add Mixins to a running game.
+MixinJS lets a script run code at the start or the return of a Minecraft Java method. It can read the arguments, change the return value or cancel the call. It has two parts:
 
-> **Development experiments only.** Nonempty carriers are rejected in production. Build/JVM checks are not gameplay acceptance. A bounded NeoForge 26.1.2 development dedicated-server smoke exercised loader discovery, Sponge transformation and one non-cancellable SERVER callback; that does not establish full native ABI, client, cross-loader or production-mapping acceptance. See the evidence boundary below. This is not a production deployment guarantee.
+1. An **injection declaration** that says which method to inject into. The loader applies it at game startup, so changing it needs a game restart.
+2. A **callback** in an ordinary script that decides what happens at the injection point. You can change callbacks at any time with `/nekojs reload`.
 
-**Runtime opt-in (default off)**
+> **This is an experimental feature for development environments only.** In a normal game (production environment), NekoJS refuses to load injections. So far only simple cases have been verified, on a NeoForge 26.1.2 development dedicated server. Other versions, loaders and client setups have not been fully tested. Do not use it in a released modpack or on a real server.
 
-Native MixinJS execution is disabled by default. To opt into the experimental development path, create or edit `<game>/nekojs/config/engine.toml`, preserving its other settings:
+<a id="wiki-section-2"></a>
+## Before you start: turn MixinJS on
+
+MixinJS is off by default. Add this to `nekojs/config/engine.toml`:
 
 ```toml
 [mixinjs]
 enabled = true
 ```
 
-Missing or malformed runtime configuration leaves MixinJS disabled. The old `<game>/config/nekojs-engine.toml` is only a read-only fallback when the canonical file is absent; use the canonical file for new edits. This is one engine setting (`SandboxConfig.mixinJsEnabled` internally), not a separate MixinJS configuration file or a system-property bypass. Enabling it does not enable script reflection or ASM access. See [Configuration](configuration_us) for the separate engine, Probe, and AI settings.
+Then **fully restart the game**. Every later change to this switch, including turning it off, needs a full restart. `/nekojs reload` and `/nekojs probe` do not reread it.
 
-Set the value before launching and **fully restart** after changing it, including when turning it off. Script reload and Probe do not toggle it. While disabled, automatic startup preparation, loader admission, installed native callback slots and installed-hook Probe overloads remain inactive; declaration editing, Probe editor declarations and offline validation/build tooling stay usable. Existing generated carriers or cache files do not enable execution by themselves.
+- If the config file is missing or malformed, MixinJS stays off.
+- MixinJS does not need `allowAsm` or `allowReflection`, and turning it on does not turn those on.
+- While it is off, code completion for declaration files and the offline tool still work. Injections just do not take effect.
 
-`enabled = true` is an opt-in, **not a production unlock**. Development-only admission and the existing profile, local-trust, thread and ABI checks still apply.
-
-<a id="wiki-section-2"></a>
-## 1. Separate declarations from callbacks
-
-| Content | Location | Activation |
-|---|---|---|
-| Injection declarations: target class, method descriptor, injection point, Hook ID | `nekojs/mixins/*.mixin.js` or `*.mixin.ts` | With the engine opt-in enabled, NeoForge 26.x: automatic preparation and restart; legacy/Fabric: offline build, install and restart |
-| Runtime callbacks: read arguments and replace results | `nekojs/server_scripts/` or `nekojs/client_scripts/` | After enabled startup and loader admission, load or reload the matching Script Type |
-
-Declarations are not ordinary script entries. Only offline declarations import `nekojs/mixin`; ordinary scripts use the `MixinEvents` Event Group.
+For other settings, see [Configuration](configuration_us).
 
 <a id="wiki-section-3"></a>
-## 2. Write an offline declaration
+## How it works
 
-For example, create `nekojs/mixins/max-health.mixin.js`:
+| Part | Where it goes | How it takes effect |
+|---|---|---|
+| Injection declaration: target class, method, injection point, Hook ID | `*.mixin.js` or `*.mixin.ts` under `nekojs/mixins/` | Generate the injection file, then fully restart the game |
+| Callback: read arguments, change the return value | `nekojs/server_scripts/` or `nekojs/client_scripts/` | After the game loads the injection, load or reload it like any script |
 
-```js
+The two parts are linked by a **Hook ID** such as `demo:max_health`. Declaration files use `import { Mixin } from "nekojs/mixin"`. Ordinary scripts use the global `MixinEvents`.
+
+<a id="wiki-section-4"></a>
+## 1. Write an injection declaration
+
+This example sets every mob's maximum health to 40. Create `nekojs/mixins/max-health.mixin.js`:
+
+```javascript
 import { Mixin } from "nekojs/mixin";
 
 Mixin.target("net.minecraft.world.entity.LivingEntity", target => {
@@ -48,36 +54,47 @@ Mixin.target("net.minecraft.world.entity.LivingEntity", target => {
         build.cancellable = true;
         build.scriptType = "SERVER";
         build.thread = "SERVER_MAIN";
-        build.require = 1;
     });
 });
 ```
 
-The class and method names must match the **exact runtime namespace** of the class bytes supplied to the tool. Do not assume these example names, or development mapping names, apply to every version and loader. An injection targets that exact method implementation, not every override: a subclass override that never calls the targeted superclass method bypasses it. Check the actual receiver and override chain; `require = 1` and Probe completion do not prove that every virtual call reaches the target.
+- The first argument is the **method name plus its full JVM descriptor**: `getMaxHealth()F` means no arguments, returns float; `tick()V` means no arguments, returns void.
+- The second argument is the Hook ID, in the form `namespace:path`. It may only contain lowercase letters, digits, `_`, `.`, `-` and `/`. It must be unique across all loaded declarations.
+- Class and method names must be the **names the running game actually uses**. They can differ between Minecraft versions and loaders. NekoJS does not translate mappings for you.
 
-| Field | Supported values | Default |
+Fields you can set:
+
+| Field | Values | Default |
 |---|---|---|
-| `at` | `HEAD`, `RETURN` | `HEAD` |
-| `cancellable` | Boolean; permits cancellation or result replacement | `false` |
+| `at` | `HEAD` (start of the method), `RETURN` (when it returns) | `HEAD` |
+| `cancellable` | Must be `true` to cancel the call or change the return value | `false` |
 | `scriptType` | `SERVER`, `CLIENT` | `SERVER` |
-| `thread` | Matching `SERVER_MAIN` or `CLIENT_MAIN` | `SERVER_MAIN` |
+| `thread` | Must match `scriptType`: `SERVER_MAIN` or `CLIENT_MAIN` | `SERVER_MAIN` |
 | `require` | Only `1` | `1` |
-| `staticMethod` | Whether the target is static; must match its bytecode | `false` |
+| `staticMethod` | `true` when the target is a static method; must match the real method | `false` |
 
-A selector needs a complete JVM descriptor: `getMaxHealth()F` takes no arguments and returns float; `tick()V` takes no arguments and returns void. Hook IDs use `namespace:path` and must be unique across loaded carriers.
+Note that the injection only applies to the method in the class you name. If a subclass overrides the method and does not call the parent version, calls on that subclass skip your injection.
 
-The offline evaluator has no Java lookup, filesystem, network or process API. Apart from `nekojs/mixin`, only confined relative static imports with explicit extensions are allowed; relative modules currently support side effects, not exports. Dynamic imports, top-level await, asynchronous builders, unknown fields and execution beyond the statement budget fail. Declaration callbacks must synchronously return `undefined`. The isolated declaration Context retains a private **100,000-statement budget**; this is not an ordinary script execution limit. The removed `scriptEvaluationTimeoutSeconds`, `scriptStatementLimit`, and `scriptRunawayTimeoutSeconds` engine settings do not configure this evaluator.
+Declaration files run in a separate, restricted environment:
 
-<a id="wiki-section-4"></a>
-## 3. Prepare declarations
+- No access to Java classes, files or the network.
+- They can import only `nekojs/mixin` and relative files with a `.js` or `.ts` extension. Imported files cannot export anything.
+- No default imports, dynamic `import()` or top-level `await`.
+- `build => { ... }` must finish synchronously and return nothing. Setting an unknown field is an error.
+- One run may execute at most 100,000 statements.
 
-**NeoForge 26.1.2 / 26.2.0:** keep declarations in the development instance's `nekojs/mixins/`. NekoJS reads target class resources without initializing targets and automatically prepares `mods/nekojs-mixins-auto-<hash>.jar`. This is a loader game library, not an independent mod-list entry. You do not build or install a carrier manually. First preparation and structural changes stop startup with `NEKO-4090`; fully restart to use the new library. Removing all declarations clears the active selection and requires a restart if it was loaded. Compilation failure preserves the previous selection and stops startup. An atomic selection file under `nekojs/.cache/mixins/` enables only one hash; older immutable libraries remain inert to avoid replacing or deleting loader-locked archives on Windows. They may be removed while the game is stopped.
+<a id="wiki-section-5"></a>
+## 2. Generate and load the injection
 
-**Legacy NeoForge / Fabric, or offline validation:** use the tool below. A modern offline build also produces a game library; avoid combining manually installed artifacts with automatic workspace preparation.
+**NeoForge 26.1.2 and 26.2.0: generated for you.** Put your declarations in `nekojs/mixins/` and start the game. NekoJS generates `mods/nekojs-mixins-auto-<hash>.jar`, then stops this launch with `NEKO-4090` and asks you to restart. After the next start, the injection is active.
 
-The tool reads bytecode directly from a target JAR or class directory without initializing target classes. It requires this repository's build environment; it is not an in-game command.
+- The jar does not appear in the mod list, and you do not install it yourself.
+- Every time you change a declaration, it is regenerated and you need to restart once more.
+- After you delete all declarations, the next launch no longer loads the injection. If the injection was loaded at that point, you need one more restart.
+- Old jars are not deleted, but they are not loaded either. Delete them by hand while the game is closed.
+- Do not also install an injection jar by hand; that causes an error.
 
-To avoid PowerShell JSON quoting problems, create `mixin-args.json` at the repository root:
+**Older NeoForge and Fabric: build it yourself.** This needs this repository's development setup. You run it with Gradle from the repository root; it is not an in-game command. First create `mixin-args.json` (a separate argument file avoids PowerShell quoting problems):
 
 ```json
 [
@@ -95,86 +112,85 @@ To avoid PowerShell JSON quoting problems, create `mixin-args.json` at the repos
 ./gradlew.bat :common:packTool -PpackArgsFile=mixin-args.json
 ```
 
-Replace `runtime-targets.jar` with your actual target bytecode path. The exact versions and physical side must match the development instance. The `26.2.0` repository node reports Minecraft `26.2` at runtime: use `--minecraft 26.2` with NeoForge `26.2.0.57` for that profile. Automatic preparation reads the native identity. For Fabric, use `--loader fabric` and the actual Fabric Loader version, not the Fabric API version.
+- Replace `--classes` with a jar or folder that contains the target classes' bytecode.
+- Versions must match the running environment exactly. On a 26.2.0 environment, the Minecraft version is `26.2`. For Fabric, use `--loader fabric` and set `--loader-version` to the Fabric Loader version, not the Fabric API version.
+- `--side client` is for the client (including a single-player world's built-in server) and may contain both SERVER and CLIENT hooks. `--side server` is for a dedicated server and cannot contain CLIENT hooks.
 
-After validation, change `validate` to `build`, append `"--output", "build/demo-mixins.jar"` to the argument array, and run the same command. Existing output files are never overwritten; choose a new path or handle the old file yourself.
+Once validation passes, change `validate` to `build`, add `"--output", "build/demo-mixins.jar"` and run the same command. An existing output file is never overwritten, so pick a new path.
 
-The current tool uses the `runtime` namespace and explicitly disables remapping in generated Mixins. **There is no general development-to-production mapping conversion.** Missing classes, incorrect descriptors, static/instance mismatches and unsupported methods fail offline validation.
+Put the generated jar in the development instance's `mods/`, remove any older copy, and fully restart the game. The jar depends on NekoJS; the loader rejects it if NekoJS is missing.
 
-<a id="wiki-section-5"></a>
-## 4. Activate and fully restart
-
-First set the engine opt-in before launch; changing it requires a full restart. For automatic NeoForge 26.x preparation, restart after the preparation notice. The next launch must actually admit the managed library before callbacks can load; merely finding the file on disk is insufficient. Do not edit the owned cache or install extra manual copies.
-
-For legacy NeoForge / Fabric:
-
-1. Place the carrier JAR in the development instance's `mods/` directory, keeping NekoJS and its dependencies installed.
-2. Remove the old carrier when replacing it to avoid duplicate Hook IDs.
-3. Fully stop and restart the instance so its native loader discovers the carrier during normal startup.
-4. Confirm that Minecraft, loader/version, physical side and ABI match the current environment.
-
-Legacy NeoForge and Fabric carriers declare **NekoJS as a mandatory loader dependency**; without it the loader rejects the carrier. All newly generated artifacts also have an early plugin gate: missing NekoJS, a disabled or unreadable engine opt-in, a mismatched profile or a production environment disables their injections before linking the runtime bridge. Thus an orphaned modern game library does not inject without NekoJS. This gate does not establish live-loader acceptance.
-
-A declaration change takes effect only after preparation/build and a full restart. Ordinary reload cannot add, remove or reweave native injection structure.
-
-`--side client` selects a physical client profile, which can include SERVER callbacks for an integrated server. `--side server` selects a dedicated-server profile and cannot contain CLIENT callbacks. These profile capabilities do not establish real dedicated-server acceptance.
+Either way, **after changing a declaration you must regenerate and fully restart**. `/nekojs reload` cannot add, remove or change injections.
 
 <a id="wiki-section-6"></a>
-## 5. Bind a Hook in an ordinary script
+## 3. Write the callback in a script
 
-After the loader admits the carrier, create `nekojs/server_scripts/max-health.js`:
+Once the injection is loaded, create `nekojs/server_scripts/max-health.js`:
 
-```js
+```javascript
 MixinEvents.inject("demo:max_health", event => {
     event.returnValue = 40;
 });
 ```
 
-Do not write `event => event.returnValue = 40`: it returns a number and discards the control decision. Callbacks must synchronously return `undefined`; they must not be async functions or return Promises.
+Run `/nekojs reload`. Every mob's maximum health is now 40.
 
-- Only matching SERVER or CLIENT scripts can bind; STARTUP and TEST are unsupported.
-- Each installed Hook allows one callback. An unknown ID, wrong Script Type or duplicate binding fails candidate loading.
-- The entry, callback origin and entire module session must be locally trusted. Remote dependencies, unknown origins and virtually generated callbacks cannot obtain binding authority.
-- Script types with installed Hooks use the candidate transaction even on initial load. Successful reload replaces callbacks; failure or duplicate bindings preserve the previous generation.
-- World teardown clears SERVER and CLIENT callbacks. Load or reload the matching Script Type to bind them again. Process-lifetime injection structure remains installed.
+**The callback must not return a value.** Do not write `event => event.returnValue = 40`: that returns 40, and the change for that call is thrown away. The callback cannot be an `async` function or return a Promise either.
 
-See [Script basics](script-basics_us) and [Commands](commands_us) for script directories and reload usage.
+- Put the callback in the folder that matches the declaration's `scriptType`: `SERVER` in `server_scripts`, `CLIENT` in `client_scripts`. Startup and test scripts cannot use it.
+- Each Hook takes exactly one callback. An unknown Hook ID, the wrong script type or a second registration makes that load fail, and the game keeps the last scripts that loaded successfully.
+- Callbacks must come from local script files. Script packs synced from a server cannot register callbacks.
+- A successful reload replaces the old callback with the new one.
+- Leaving the world clears callbacks. They are registered again the next time the scripts load.
 
 <a id="wiki-section-7"></a>
-## 6. Event object and control rules
+## 4. The event object
 
-| Member | Contract |
+| Member | Meaning |
 |---|---|
-| `self` | Native receiver, or null for a static method. The property is read-only; the native object is not necessarily immutable. |
-| `args` | Read-only native argument tuple; neither the property nor tuple elements can be replaced. Referenced native objects/arrays are not deep-frozen. |
-| `returnValue` | Original result at RETURN; no result yet at HEAD. Writable only for cancellable non-void Hooks. |
-| `cancel()` | Available only for cancellable void HEAD Hooks. Non-void HEAD Hooks must supply a return value. |
+| `self` | The object the method was called on; `null` for a static method |
+| `args` | The method's arguments, read-only |
+| `returnValue` | At `RETURN`, the original return value; at `HEAD`, nothing yet. You can only change it when `cancellable = true` and the method returns a value |
+| `cancel()` | Cancels the call. Only for a method with `cancellable = true` and `at = "HEAD"` that returns void |
 
-An unchanged RETURN preserves its original result. An exception, invalid write or non-`undefined` callback result discards all control writes from that invocation. Catching an invalid write does not restore earlier writes. **This does not roll back effects already applied to native objects, the world or other external resources.**
+- If you leave `returnValue` alone, the method returns its original result.
+- If the callback throws, writes a value that is not allowed, or returns a value, **every change for that call is discarded** and the method runs as normal. Anything else the callback already did (such as changing a block in the world) is not undone.
+- `event` is only valid while the callback runs. Do not keep it for a timer or async code.
 
-The control object is valid only during its synchronous callback and expires immediately afterward. Do not retain it for timers or asynchronous work. Candidate execution, wrong native threads and same-Hook reentry bypass callbacks and preserve native behavior; native invocations do not queue or wait for a script thread. Different Hooks can nest.
+The callback is skipped, and the method runs as normal, when:
+
+- scripts are in the middle of a reload;
+- the method is called on the wrong thread (for example a SERVER hook off the server main thread);
+- the callback triggers the same Hook again while it runs.
+
+A wrong-thread call or a failed callback logs a `NEKO-4092` warning once.
 
 <a id="wiki-section-8"></a>
-## 7. Types and unsupported capabilities
+## 5. Supported types and limits
 
-Supported values are boolean, one UTF-16 code-unit char, range-checked byte/short/int, finite float/double, assignable native references and native arrays. References accept null, and String results accept JavaScript strings. Ordinary JavaScript objects and arrays cannot impersonate arbitrary native references.
+Arguments and return values can be: boolean, char (a single character), byte / short / int (range-checked), float / double (must be finite), and Java objects and arrays (the type must match; `null` is allowed). A method that returns String accepts a JavaScript string. A plain JavaScript object or array cannot stand in for a Java object.
 
-Currently unsupported: signatures containing long (including long arrays), BigInt return replacement, constructors, class initializers, abstract/native/synthetic/bridge methods, injection points other than HEAD/RETURN, runtime classpath injection and dynamic reweaving.
+Not supported yet:
 
-Declaration-editor completion and offline tooling remain available while MixinJS is disabled; the `MixinEvents` helper may still exist without installed callback slots. After running [Probe](probe-type-generation_us), TypeScript receives literal Hook ID overloads and self/argument/result types only when execution is enabled, from **loader-admitted plans**. Pending declarations do not acquire installed-Hook types. If completion is missing, first check the engine opt-in, then whether the carrier loaded and its profile matches.
+- methods with `long` (including `long[]`) in their arguments or return value;
+- constructors and static initializers;
+- abstract, native, synthetic and bridge methods;
+- injection points other than `HEAD` and `RETURN`;
+- adding or changing injections while the game is running.
 
+**Code completion:** declaration files always get completion for `nekojs/mixin`. When MixinJS is on and the injection is loaded, running [`/nekojs probe`](probe-type-generation_us) makes `MixinEvents.inject` suggest the types of `self`, the arguments and the return value for each Hook ID. If there are no suggestions, first check that the switch is on, then check that the injection really loaded.
+
+<a id="wiki-mixinjs-troubleshooting"></a>
 <a id="wiki-section-9"></a>
-## 8. Troubleshooting and acceptance boundary
+## Troubleshooting
 
-| Diagnostic | Check first |
+| Error code | Check first |
 |---|---|
-| `NEKO-4090` | Preparation/restart notice, cache ownership, loader admission, declarations, descriptors, duplicate IDs, exact profile and production rejection. |
-| `NEKO-4091` | Locally trusted sources, candidate registration authority and Runtime Root bridge ownership. |
-| `NEKO-4092` | Synchronous return requirement, return ABI, expired views, threads or callback bypass. |
+| `NEKO-4090` | Whether you need to restart as prompted; whether `[mixinjs] enabled` is on; whether this is a development environment; whether the declaration's class name, descriptor and fields are right; duplicate Hook IDs; whether the build's version, loader and `--side` match the running game; whether you mixed a generated jar with a hand-installed one |
+| `NEKO-4091` | Whether the callback comes from a local script file rather than a synced script pack |
+| `NEKO-4092` | Whether the callback returns a value or is async; whether the return value has the right type and range; whether `event` is used after the callback ended; whether the Hook ran on the wrong thread |
 
-See [Error and log reference](error-reference_us) for details. Loader/Mixin transformation failures may be reported by the loader itself rather than these diagnostics.
-
-Recorded development evidence includes NeoForge 26.1.2 headless-server automatic preparation, restart, real library discovery, Sponge transformation and one non-cancellable SERVER callback; the 26.2.0 record covers native startup, not a managed-hook fixture. A later local integrated-server control run is also recorded, but does not establish the complete ABI or reload matrix. Offline validation, common/JVM tests, TypeScript checks and node builds are separate from native acceptance; historical results do not establish acceptance for other profiles. Full client/server, static/ABI, legacy/Fabric and production-mapping acceptance remain incomplete; production admission stays disabled.
+For more error codes, see [Error and log reference](error-reference_us). Mixin errors reported by the loader itself do not carry these codes; check the game log.
 
 <!-- wiki-nav -->
 

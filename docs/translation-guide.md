@@ -47,6 +47,20 @@ node scripts/wiki-docs.mjs stamp python-scripts
 
 Use `stamp --all` only after reviewing the complete bilingual set. A successful automated check is not human acceptance. Current `translationStatus` values describe technical draft review; maintainer acceptance is reported separately.
 
+## Audience
+
+Write each page for its section's reader in [wiki-pages.json](wiki-pages.json). Script and modpack pages serve players who write scripts. They do not need engine internals.
+
+- Lead with the task: what to write, where to put it, how to apply it, and how to check the result.
+- Prefer plain words over internal terms. For example, write "the reload is discarded and the last working scripts stay in use" rather than "the candidate generation is discarded and the active generation is preserved".
+- Keep a limitation only when it changes what the reader should do. Put rare edge cases in a short note near the end, or move them to a contributor page.
+- Keep class names, Mixins, ticket numbers and implementation file paths out of script and modpack pages. Plugin and contributor pages may use them.
+- Do not describe historical or removed behavior unless a reader is likely to meet it, such as a removed command they may still try.
+
+All topic pages were rewritten in this style in November 2026. Use the home, quick start, script basics, commands and FAQ pages as reference examples.
+
+When other pages link to a section, add a fixed anchor such as `<a id="wiki-recipe-filters"></a>` above that heading in both languages and link to it. `#wiki-section-N` numbers change whenever headings are added or removed.
+
 ## Writing style
 
 Use direct English, active voice and one idea per sentence. Preserve requirement strength: 必须 = must, 应 = should, 可以 = can, 禁止 = must not. Use sentence-case headings. Natural sentence boundaries can differ between languages while section structure stays aligned.

@@ -5,145 +5,134 @@
 <a id="wiki-section-1"></a>
 # TypeScript and JSX
 
-NekoJS has **built-in** TypeScript and JSX support, with no additional compilation step.
+You can write scripts in TypeScript (`.ts`) and JSX (`.jsx`, `.tsx`). Put the file in a script folder and it runs. You do not need to install TypeScript or compile anything yourself.
 
 <a id="wiki-section-2"></a>
-## TypeScript (`.ts`)
+## TypeScript
 
-The built-in TypeScript frontend erases/lowers the supported TS syntax listed below, leaving plain JS for execution. It does not run `tsc` or check type annotations. Use your editor or a separate TypeScript check against the current Probe declarations; successful script loading is not proof of static type correctness.
-
-<a id="wiki-section-3"></a>
-### Supported syntax
-
-| Syntax | Status |
-|---|---|
-| Type annotations `let x: number` | Supported, erased |
-| `type` / `interface` declarations | Supported, erased |
-| Generics `<T>` (in type positions) | Supported, erased |
-| **Generic arrow functions `<T>(x: T) => T`** | Supported, `<T>` erased |
-| Union/intersection types `A \| B`, `A & B` | Supported, erased |
-| `as` / `satisfies` assertions (including chains such as `as unknown as T`) | Supported, erased |
-| `import type` / `export type` (entire statement) | Supported, erased |
-| **Inline `import { x, type T }` (TS 4.5+)** | Supported, erases only `type T` and retains `x` |
-| `declare` / `declare module` / `declare global` | Supported, erased |
-| Class member visibility modifiers `public`/`private`/`protected`/`readonly`/`abstract`/`override` | Supported, modifiers stripped and `static` retained |
-| Parameter properties `constructor(public x: number)` | Supported, converted into `this.x = x` assignments |
-| Function overload signatures `function f(): T;` | Supported, signature lines erased |
-| `implements IFoo, IBar` | Supported, erased |
-| Optional parameters `name?: T` | Supported, `?` and type erased |
-| Non-null assertions `a!.x` / `a!` | Supported, `!` erased |
-| Definite assignment assertions `x!: T` / `x!;` | Supported, `!` and type erased |
-| **`enum` / `const enum`** | Supported, lowered to runtime IIFE objects (two-way numeric mapping / one-way string mapping / auto-incrementing computed members) |
-| **`namespace` / `module`** | Supported, lowered to IIFEs; `export` members become `name.member = member` (nested scopes and namespace merging supported) |
-
-<a id="wiki-section-4"></a>
-### Unsupported syntax
-
-| Syntax | Reason / alternative |
-|---|---|
-| **Decorators `@Decorator`** | NekoJS is a scripting engine, not a TS framework; decorators are **not supported**. Encountering `@X` produces an explicit error. Alternative: wrap with an ordinary function (`const Foo = withDecorator(class Foo {...})`). |
-| Advanced features requiring type-based emit (such as runtime reflection based on the type system) | Use ordinary JS |
-
-<a id="wiki-section-5"></a>
-### Type checking
-
-The TypeScript frontend erases types but does not check them. To enable type checking, add this at the top of a `.js` file:
-
-```javascript
-// @ts-check
-```
-
-Or use a `.ts` file, where the IDE (VS Code) checks against the type declarations provided by `.neko_probe`.
-
-Java `Object` values can be numbers, strings, booleans or null, so declarations use `unknown`; narrow the value before accessing specific members. Default `List`, `Collection` and `Iterable` parameters accept their Java host containers or arrays, preserving host generic arguments separately from converted element inputs. Default `Set` parameters require a Java Set rather than an array; additional plugin adapters follow their declared input shapes. Map host types and record inputs remain separate, with records restricted to convertible property keys and corresponding values. These conversions do not automatically extend to concrete classes such as `ArrayList` or subinterfaces such as `SequencedCollection`, `SequencedSet`, `SortedMap` and `SequencedMap`; their exported input aliases retain Java host container types.
-
-When Java classes hide same-name static fields, the generator declares the class value separately from a merged instance interface, preserving instance inheritance, callable static methods and overloads. Graal child class values do not automatically expose parent static fields; read those through their declaring parent class. This representation does not change runtime classes or constructor permissions.
-
-<a id="wiki-section-6"></a>
-### Practical examples
+Create `nekojs/server_scripts/typed_recipes.ts`:
 
 ```typescript
-// server_scripts/typed_recipes.ts
-
 interface MyRecipe {
   output: string
   inputs: string[]
 }
 
-function addRecipe(event: any, r: MyRecipe): void {
-  event.shapeless(r.output, r.inputs)
-}
+const recipes: MyRecipe[] = [
+  { output: 'minecraft:dirt', inputs: ['minecraft:sand', 'minecraft:gravel'] },
+  { output: 'minecraft:stick', inputs: ['minecraft:bamboo'] }
+]
 
-ServerEvents.recipes((event: any) => {
-  const recipes: MyRecipe[] = [
-    { output: 'minecraft:dirt', inputs: ['minecraft:sand', 'minecraft:gravel'] },
-    { output: 'minecraft:stick', inputs: ['minecraft:bamboo'] }
-  ]
+ServerEvents.recipes(event => {
   for (const r of recipes) {
-    addRecipe(event, r)
+    event.shapeless(r.output, r.inputs)
   }
 })
 ```
 
+Run `/nekojs reload` to apply it, just like a `.js` file.
+
+**NekoJS does not check types.** It strips the type annotations and runs the result as plain JavaScript. A script with type errors still runs. To check types, use your editor: run `/nekojs probe`, then open the script folder in VS Code, and it underlines type errors.
+
+<a id="wiki-section-3"></a>
+### Supported syntax
+
+| Syntax | What happens at runtime |
+|---|---|
+| Type annotations, `type`, `interface`, generics, union types | Removed |
+| `as`, `satisfies`, non-null assertions `x!` | Removed |
+| `import type`, `export type`, `import { x, type T }` | Type parts removed, normal imports kept |
+| `declare`, `declare module`, `declare global` | Removed |
+| Optional parameters `name?: T`, overload signatures, `implements` | Removed |
+| `public`, `private`, `protected`, `readonly`, `abstract`, `override` | Modifier removed, `static` kept |
+| Parameter properties `constructor(public x: number)` | Turned into `this.x = x` |
+| `enum`, `const enum` | Turned into a plain object |
+| `namespace` | Turned into a plain object |
+
+<a id="wiki-section-4"></a>
+### Unsupported syntax
+
+**Decorators (`@Decorator`) are not supported** and cause an error. Wrap the class in a normal function call instead:
+
 ```typescript
-// Shared types and modules
+// Not supported:
+// @register
+// class Foo {}
+
+// Write this instead:
+const Foo = register(class Foo {})
+```
+
+Features that need type information at runtime (such as reflection based on types) are not available either. Types do not exist at runtime at all.
+
+<a id="wiki-section-5"></a>
+### Share types between files
+
+Put types in their own file and bring them in with `import type`:
+
+```typescript
 // lib/types.ts
-export interface Config {
+export interface ModConfig {
   version: number
   items: string[]
 }
-
-// main.ts
-import type { Config } from './lib/types.ts'
-import { readFileSync } from 'node:fs'
-
-const config: Config = JSON.parse(readFileSync('./config.json', 'utf8'))
-console.info(`加载配置 v${config.version}`)
 ```
 
-<a id="wiki-section-7"></a>
-## JSX / TSX (`.jsx` / `.tsx`)
+```typescript
+// main.ts
+import type { ModConfig } from './lib/types.ts'
 
-NekoJS includes JSX lowering and defaults to the **classic runtime**: JSX elements are rewritten as `globalThis.__nekoJsxFactory(type, props, ...children)`, and fragments use `globalThis.__nekoJsxFragment(...children)`.
+const config: ModConfig = { version: 1, items: ['minecraft:stone'] }
+console.info(`Config version ${config.version}`)
+```
+
+For working with several files, see [Module system](module-system_us).
+
+<a id="wiki-section-6"></a>
+### Java types in code completion
+
+The types generated by `/nekojs probe` differ from everyday TypeScript in a few places:
+
+- Java's `Object` appears as `unknown`. Check the type before using it, for example with `if (typeof value === 'string')`.
+- When a parameter is a `List`, `Collection` or `Iterable`, you can pass a JavaScript array.
+- When a parameter is a `Set`, an array is not accepted. Pass a real Java `Set`.
+
+<a id="wiki-section-7"></a>
+## JSX
+
+JSX lets you write HTML-like tags inside JavaScript. You can use it in `.jsx` and `.tsx` files:
+
+```jsx
+// client_scripts/tree.jsx
+const tree = (
+  <panel title="Status">
+    <label text="Health" />
+    <label text="Hunger" />
+  </panel>
+)
+console.info(tree.type)                // panel
+console.info(tree.props.title)         // Status
+console.info(tree.children.length)     // 2
+```
+
+**JSX on its own only builds a tree of data. It does not show anything on screen.** To build an interactive screen in Minecraft, see [JSX client UI](jsx-client-ui_us) (NeoForge 26.x only).
+
+The usual JSX syntax works: elements, self-closing tags, fragments `<>...</>`, spread props `{...props}`, expressions `{x}`, `{cond && <A/>}`, `{list.map(...)}`, and components `<Foo/>` and `<Foo.Bar/>`. HTML entities such as `&amp;` and `&lt;` in text are decoded.
 
 <a id="wiki-section-8"></a>
-### Supported JSX features
+### Default mode (classic)
 
-| Feature | Description |
-|---|---|
-| Elements `<div>...</div>`, self-closing elements `<br/>`, fragments `<>...</>` | Supported |
-| String/boolean/expression attributes, spread attributes `{...obj}` | Supported |
-| Text children, expression children `{expr}`, nested elements | Supported |
-| Uppercase components `<Foo/>` (as references), lowercase `<div/>` (as strings), member expressions `<Foo.Bar/>` | Supported |
-| **HTML entity decoding** (`&amp;` becomes `&`, `&lt;` becomes `<`, `&#39;` becomes `'`, `&quot;` becomes `"`, plus numeric/hexadecimal entities) | Supported entities decode in both element text and quoted string attribute values |
-| **Namespaced tags** `<svg:rect/>` | Supported, the entire name is passed through to the factory |
-| **Generic components** `<Foo<number>/>` (TSX) | Supported, the JSX layer passes through `Foo<number>` and TS erasure removes `<number>` |
-| Nested JSX inside expressions (`{cond && <X/>}`, `{arr.map(x => <X/>)}`) | Supported |
+By default each JSX element compiles to a call to `globalThis.__nekoJsxFactory(type, props, ...children)`, and a fragment compiles to `globalThis.__nekoJsxFragment(...children)`.
 
-<a id="wiki-section-9"></a>
-### Classic runtime (default)
+NekoJS already provides both functions. They return objects like the one in the example above, with `type`, `props` and `children`. If you want a different shape, replace them:
 
 ```javascript
-// Define a jsx factory first (or use it in a client rendering scenario)
-globalThis.__nekoJsxFactory = (type, props, ...children) => {
-  // Your JSX element handler
-  return { type, props, children }
-}
+globalThis.__nekoJsxFactory = (type, props, ...children) => ({ type, props, children })
 globalThis.__nekoJsxFragment = (...children) => children
 ```
 
-```jsx
-// client_scripts/ui.jsx
-const element = (
-  <div className="container">
-    <h1>标题 &amp; 副标题</h1>   {/* &amp; in text is decoded to & */}
-    <p>内容</p>
-  </div>
-)
-```
-
-<a id="wiki-section-10"></a>
-### Automatic runtime (optional)
+<a id="wiki-section-9"></a>
+### Automatic mode (optional)
 
 Set this in `nekojs/config/engine.toml`:
 
@@ -151,51 +140,46 @@ Set this in `nekojs/config/engine.toml`:
 jsxAutomaticRuntime = true
 ```
 
-When enabled, the compiler imports `jsx`, `jsxs`, and `Fragment` from the built-in `nekojs/jsx-runtime` module. This module ships with NekoJS; users do not need to place a file of the same name in `nekojs/node_modules/`. A custom file with that name does not override the built-in module either.
+Restart the game, then run `/nekojs probe` again to update the editor settings.
 
-```jsx
-// client_scripts/ui.jsx
-const element = <Panel title="状态">内容</Panel>
+In this mode, JSX imports `jsx`, `jsxs` and `Fragment` from the built-in module `nekojs/jsx-runtime`, the same way JSX works since React 17. The module ships with NekoJS; you do not put anything in `node_modules`. [JSX client UI](jsx-client-ui_us) uses this module.
+
+How the two modes differ:
+
+| | Classic (default) | Automatic |
+|---|---|---|
+| Compiles to | `__nekoJsxFactory(...)` | `jsx(...)` / `jsxs(...)` |
+| Children | Passed as extra arguments | Placed in `props.children` |
+| `key` prop | Stays in props | Passed separately as the third argument |
+| Customising | Replace the two global functions | Uses the built-in module; cannot be replaced |
+
+<a id="wiki-section-10"></a>
+## Editor setup
+
+`/nekojs probe` creates a `jsconfig.json` in each script folder so that VS Code understands TypeScript and JSX. The JSX settings follow `jsxAutomaticRuntime`:
+
+| Setting | Classic (default) | Automatic |
+|---|---|---|
+| `jsx` | `react` | `react-jsx` |
+| `jsxFactory` / `jsxFragmentFactory` | `__nekoJsxFactory` / `__nekoJsxFragment` | Not set |
+| `jsxImportSource` | Not set | `nekojs` |
+
+NekoJS manages these settings. If you edit them by hand, the next probe puts them back.
+
+To type-check a `.js` file too, add this as its first line:
+
+```javascript
+// @ts-check
 ```
 
-The automatic runtime puts JSX children in `props.children`: zero or one child uses `jsx`, multiple children use `jsxs`, and fragments use `Fragment`. If you need fully custom rendering behavior, use the default classic runtime and provide `globalThis.__nekoJsxFactory` / `globalThis.__nekoJsxFragment`.
-
-A JSX `key` is extracted into the automatic runtime call's third argument; in classic lowering it remains a prop. Syntax acceptance is not a promise that the selected host understands a tag/prop. The built-in Screen host has its own fixed primitive/prop allowlist (NeoForge 26.x only); a custom classic factory can instead produce ordinary data. Use [Script API style](script-api-style_us) to distinguish data/props objects from callback-last NekoJS definition builders; see [Client rendering](client-rendering_us) for non-JSX drawing.
-
-> JSX itself handles only syntax lowering and VNode generation. To create an interactive Minecraft Screen, use [JSX client UI](jsx-client-ui_us). Ordinary JSX can still describe custom data trees or rendering configuration; it does not create a Screen automatically.
+For more on code completion and probe, see [Probe type generation](probe-type-generation_us).
 
 <a id="wiki-section-11"></a>
-## Configuration
-
-`jsconfig.json` is generated automatically, and JSX mode **follows engine configuration** (`jsxAutomaticRuntime` in `nekojs/config/engine.toml`): when disabled (the default), it uses the classic runtime with these key fields:
-
-| Field | Value |
-|---|---|
-| `module` | `ESNext` |
-| `jsx` | `react` |
-| `jsxFactory` | `__nekoJsxFactory` |
-| `jsxFragmentFactory` | `__nekoJsxFragment` |
-
-The JSX mode in `jsconfig.json` follows `engine.toml`: when disabled (the default), it uses the classic runtime with `jsx: "react"`, `jsxFactory`, and `jsxFragmentFactory`; when enabled, it uses `jsx: "react-jsx"` and `jsxImportSource: "nekojs"`, and removes the two classic factory keys. WorkspaceGenerator writes this configuration on first generation, and probe subsequently reconciles the engine-managed JSX keys. Manual changes to these keys are corrected on the next generation.
-
-The automatic runtime uses NekoJS's built-in `nekojs/jsx-runtime`; users do not need to create `node_modules/nekojs/jsx-runtime.js`. Plugins or external workspace generators can call `JSConfigModel#useAutomaticJsxRuntime()` to generate the same configuration.
-
-See [Probe type generation](probe-type-generation_us).
-
-<a id="wiki-section-12"></a>
-## Limits and scope
-
-- **Erasable TS is not full TS**. The built-in TS frontend is intentionally lightweight to avoid bundling a large TS dependency. Decorators and other features without NekoJS lowering semantics that require type-based emit are rejected, with error messages guiding you toward alternatives. `enum` and `namespace` are supported NekoJS lowering extensions.
-- TS **types do not participate in runtime behavior**: after erasure, the code is ordinary JS.
-- More advanced TS/TSX/JSX syntax will continue to be added to the built-in language frontend; switching to an external compiler dependency is not planned.
-
-<a id="wiki-section-13"></a>
 ## Next steps
 
-- [JSX client UI](jsx-client-ui_us) - Creating NeoForge 26.x client Screens with JSX.
-- [Module system](module-system_us) - ESM/CJS/java: imports.
-- [Global bindings](global-bindings_us) - Using TS type declarations with bindings.
-- [Node.js compatibility](nodejs-compatibility_us).
+- [JSX client UI](jsx-client-ui_us): build in-game screens with JSX (NeoForge 26.x).
+- [Module system](module-system_us): multiple files, npm packages and `java:` imports.
+- [Global bindings](global-bindings_us): tools you can use directly.
 
 <!-- wiki-nav -->
 

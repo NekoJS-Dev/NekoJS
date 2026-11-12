@@ -5,138 +5,130 @@
 <a id="wiki-section-1"></a>
 # 脚本属性
 
-脚本属性是以注释形式写在脚本文件里的指令，控制脚本的加载行为。
+脚本属性是写在脚本文件开头的特殊注释，用来控制这个文件的加载：先后顺序、是否加载、在哪些模组存在时加载。
 
 <a id="wiki-section-2"></a>
-## 语法
+## 写法
 
-所有属性都是 `// key: value` 形式的单行注释：
+每个属性占一行，格式是 `// 名称: 值`：
 
 ```javascript
 // priority: 100
 // modloaded: create, jei
-// after: ./lib/init.js
-// disable:
+// after: lib/init.js
 
 console.info('hello')
 ```
 
-**位置不是随便放的**：扫描器（`ScriptContainer.preload`）从文件第一行往下读，遇到第一个既不是空行也不以 `//` 开头的行就 `break`。所以属性必须写在文件**开头的注释块**里——中间可以夹空行、也可以夹别的 `//` 注释行，但一旦出现 `import`、`/* */` 块注释或任何代码，后面的 `// priority:` 就再也读不到了。写错位置**不报错、不打日志**，属性就是取默认值，症状是「加载顺序不对」或「disable 没生效」。
+属性必须写在文件**最开头**。NekoJS 从第一行往下读，读到第一行不是 `//` 注释、也不是空行的内容就停下。所以：
 
-不认识的 key 同样静默忽略（属性名来自注册表，插件可以经 `registerScriptProperty` 往里加，见 [插件开发](plugin-development_cn)），所以拼错 `priorty:` 也是无声失败。值解析失败或自定义读取器返回 `null` 时，会在写入前拒绝该值，并用一条 `NEKO-1025` 警告记录属性名、文件、实际行号和原因；保留最近成功读取的值，没有有效值才使用默认值。例如先写 `// priority: 7` 再写 `// priority: invalid`，优先级仍为 `7`；首条无效时保持默认 `0`，后续有效指令仍可覆盖。此警告本身不会禁用脚本。解析的是整段去空白后的值，因此说明应另起注释行，不能追加在整数属性后面。
+- 属性之间可以有空行和普通的 `//` 注释。
+- `import`、`/* */` 块注释或任何代码之后的属性都不会被读取。
+
+写错位置或拼错属性名（比如 `priorty`）都**不会报错**，属性只是不生效。如果加载顺序不对或者 `disable` 没起作用，先检查这两点。
+
+改了属性之后，重载这类脚本（例如 `/nekojs reload`）就会生效；启动脚本要重启游戏。
 
 <a id="wiki-section-3"></a>
-## 属性一览
+## 所有属性
 
-| 属性 | 类型 | 默认 | 作用 |
+| 属性 | 值 | 默认 | 作用 |
 |---|---|---|---|
 | `priority` | 整数 | `0` | 数字越大越先加载 |
-| `modloaded` | 逗号分隔的 mod id 列表 | — | 仅当**所有**列出的 mod 都存在时才运行（AND 语义） |
-| `disable` | 存在即禁用（包括空值） | 启用 | 禁用该脚本 |
-| `after` | 逗号分隔的路径列表 | — | 在列出的文件之后加载 |
+| `after` | 逗号分隔的路径 | 无 | 在列出的文件之后加载 |
+| `modloaded` | 逗号分隔的模组 ID | 无 | 列出的模组**全部**存在时才加载 |
+| `disable` | 任意，可以为空 | 不禁用 | 不加载这个文件 |
 
 <a id="wiki-section-4"></a>
-## priority —— 控制加载顺序
+## priority：控制加载顺序
 
 ```javascript
-// Runs before lower-priority scripts
 // priority: 1000
 ```
 
-数字越大越先跑。常用于「初始化共享数据/注册全局事件」的库脚本，确保它在业务脚本之前执行。
+数字越大越先加载，可以是负数。适合用在初始化共享数据的“库”脚本上，让它比其他脚本先运行。
 
-> STARTUP 脚本的 priority 还会影响注册顺序（数字大的先注册）。
+启动脚本按同样的顺序运行，所以 priority 大的启动脚本里的注册也会先发生。
+
+值只能是一个整数。`// priority: 10 先加载` 这样在后面附带说明会让这一行无效，说明请另起一行写。值无效时，日志里会出现 `NEKO-1025` 警告，写明文件和行号，这一行被忽略。
 
 <a id="wiki-section-5"></a>
-## modloaded —— 条件加载
-
-```javascript
-// modloaded: create, jei
-```
-
-只有当 `create` **和** `jei` 都加载时才运行此脚本。常用于「与某 mod 联动」的脚本，避免缺失 mod 时报错。
-
-也可以加上 `graal`（Graal 前置 mod），用于确保运行时存在。
-
-<a id="wiki-section-6"></a>
-## disable —— 临时禁用
-
-```javascript
-// disable:
-// disable: true
-// disable: 暂时注释掉，等修好
-```
-
-文件开头出现 `// disable:` 就会禁用脚本，值可以为空；即使写 `// disable: false` 也仍然禁用。要恢复加载，需要移除这条属性。
-
-<a id="wiki-section-7"></a>
-## after —— 显式声明依赖
-
-让当前脚本在指定的其他脚本之后加载，用于建立明确的加载依赖。
+## after：在指定文件之后加载
 
 ```javascript
 // after: lib/init.js, lib/constants.js
 ```
 
-路径格式：
+路径的写法：
 
 | 写法 | 含义 |
 |---|---|
-| `aaa/bbb.js` | 相对当前脚本类型根目录的路径 |
-| `./ccc.js` | 相对当前文件所在目录 |
-| `nekojs/aaa/bbb.js` | 显式 `nekojs/` 前缀，相对脚本类型根目录（等价于 `aaa/bbb.js`） |
-| `nekojs:<类型>/bbb.js` | `nekojs:` 前缀 + 脚本类型根目录（如 `nekojs:server/lib.js`） |
-| `<类型>/bbb.js` | 以脚本类型目录名开头（如 `server/lib.js`） |
-| `aaa/*` | `aaa/` 文件夹下的所有文件 |
-| `aaa/bbb.js, ccc.js` | 多个用逗号分隔 |
+| `lib/init.js` | 相对于这类脚本的根目录，例如 `server_scripts/lib/init.js` |
+| `./helper.js` | 相对于当前文件所在的目录 |
+| `lib/*` | `lib/` 目录下的所有文件 |
+| `server/lib/init.js` | 带上脚本类型名（`startup`、`server`、`client`、`test`），和 `lib/init.js` 相同 |
+| `nekojs:server/lib/init.js` | 同上，加了 `nekojs:` 前缀 |
 
-路径里的反斜杠 `\` 一律视为 `/`。
+多个路径用逗号分隔。反斜杠 `\` 会当作 `/` 处理。
 
-依赖边只在**同 priority 组内、且双方都会执行**（`shouldRun`）的脚本之间生效。这带来两种「被忽略」，症状不同：
+**after 只在 priority 相同的文件之间起作用。** 两个文件 priority 不同时，永远是 priority 大的先加载，`after` 会被安静地忽略，日志里也没有提示。所以“写了 `after` 却没效果、日志也没报错”，最常见的原因就是两个文件 priority 不一样。
 
-| 情况 | 处理 |
-|---|---|
-| 引用指向的路径在本批次里根本不存在 | 忽略，并记录一条 warning（`after 依赖排序存在问题：...`） |
-| 引用命中了某个脚本，但它在别的 priority 组 / 被 `disable` 或 `modloaded` 挡掉 / 就是自己 | **静默**忽略，不打日志 |
+指向被 `disable` 或 `modloaded` 跳过的文件，同样会被安静地忽略。
 
-所以「`after` 写了却没生效、日志也干净」的最常见原因是两个文件 priority 不同。
+路径找不到对应文件时，日志会出现 `NEKO-1004` 警告。几个文件互相 `after` 形成循环时，也会报 `NEKO-1004`，这些文件改回按路径顺序加载。
+
+<a id="wiki-section-6"></a>
+## modloaded：模组存在时才加载
+
+```javascript
+// modloaded: create, jei
+```
+
+只有 `create` 和 `jei` **都**已安装时，这个文件才会加载。适合写某个模组的联动脚本：没装这个模组时脚本直接跳过，不会报错。
+
+这里要写模组 ID，不是模组的显示名称。模组 ID 可以在模组列表里查看。
+
+<a id="wiki-section-7"></a>
+## disable：暂时停用
+
+```javascript
+// disable:
+```
+
+只要文件开头有 `disable` 这一行，这个文件就不会加载。冒号后面写什么都一样：`// disable: false` **也会**停用，可以用来写停用原因。要重新启用，删掉这一行。
 
 <a id="wiki-section-8"></a>
-## 完整示例
+## 加载顺序怎么决定
+
+同一类脚本的加载顺序：
+
+1. 按 `priority` 从大到小排。
+2. priority 相同的文件，按 `after` 调整先后。
+3. 其余的按文件路径的字母顺序。
+
+简单的用法：用 `priority` 把文件分成几批，用 `after` 在同一批内部排先后。
 
 ```javascript
 // priority: 500
 // modloaded: create
 // after: lib/init.js
 
-// This script:
-// 1. Has priority=500 and runs before default scripts
-// 2. Runs only when Create is installed
-// 3. Runs after lib/init.js only when it is enabled and also has priority=500
-// 4. Logs integration initialization
+// 这个文件：
+// 1. 比默认 priority 0 的文件先加载
+// 2. 只在安装了 Create 时加载
+// 3. 如果 lib/init.js 也是 priority 500，就排在它后面
 
 console.info('Create integration initialized')
 ```
 
 <a id="wiki-section-9"></a>
-## 与 priority 的关系
+## 注意事项
 
-`priority` 和 `after` 一起决定加载顺序（`ScriptLoadOrderSorter`，引擎在加载时执行，不是建议）：
+- **Python 脚本不支持脚本属性。** `.py` 文件里写 `# priority:` 不会被读取。见 [Python 脚本](python-scripts_cn)。
+- **脚本包有自己的依赖顺序。** 脚本包声明的前置包总会先加载，提高 priority 也改变不了。见 [脚本包](script-packs_cn)。
+- 插件可以注册新的脚本属性，见 [插件开发](plugin-development_cn)。
 
-1. 先按 `priority` 降序稳定排序。
-2. 同 priority 内，按 `after` 声明的依赖做稳定拓扑排序（Kahn）。
-3. 仍无法决定的，保持发现顺序——文件发现是 `Files.walk(...).sorted()`，即路径字典序。
-4. 同组内成环时，**整组回退**到步骤 1/3 的顺序，并打一条 warning 列出成环的脚本。
-
-「用 `priority` 粗分批次，用 `after` 在同批次内精确定位」是这套规则的推论：`after` 跨不了 priority 组。
-
-版本化包还会在这些文件偏好之后强制执行清单或包的前置依赖，不能提高 `priority` 来绕过。脚本属性不是文件监视订阅：改动在相关脚本重新发现或重载时生效，不是保存即生效。更改启用或排序时使用完整类型或包重载，见[脚本基础](script-basics_cn)与[脚本包](script-packs_cn)。
-
-<a id="wiki-section-10"></a>
-## 下一步
-
-- [脚本基础](script-basics_cn) —— 脚本类型与 reload。
-- [模块系统](module-system_cn) —— 用 `require`/`import` 拆分多文件。
+另见：[脚本基础](script-basics_cn)、[模块系统](module-system_cn)（用 `require` / `import` 拆分文件）。
 
 <!-- wiki-nav -->
 

@@ -5,126 +5,73 @@
 <a id="wiki-section-1"></a>
 # Quick start
 
-This page takes you from an empty setup to your first running NekoJS script.
+This page walks you through installing NekoJS, writing your first script, changing a recipe and adding a new item. It takes about 15 minutes.
 
 <a id="wiki-section-2"></a>
-## 1. Install prerequisites
+## 1. Install
 
-NekoJS depends on [Graal](https://www.curseforge.com/minecraft/mc-mods/graal), which provides the GraalJS runtime. **25.1.3.7 or later** is required. Earlier versions lack the regex language, so scripts using regular expressions fail with `No language for id regex found`.
+You need two mods:
 
-1. Download **NekoJS** and the corresponding **Graal** from [CurseForge](https://www.curseforge.com/minecraft/search?search=NekoJS) or [GitHub Releases](https://github.com/NekoJS-Dev/NekoJS/releases), matching your Minecraft / NeoForge or Fabric version.
-2. Put both jars in the `mods/` folder.
-3. Start the game.
+- **NekoJS**: download it from [CurseForge](https://www.curseforge.com/minecraft/search?search=NekoJS) or [GitHub Releases](https://github.com/NekoJS-Dev/NekoJS/releases).
+- **[Graal](https://www.curseforge.com/minecraft/mc-mods/graal)**: the dependency that actually runs JavaScript. It must be **25.1.3.7 or newer**.
 
-> Fabric 26.x nodes in the current repository still provide an experimental API subset. See [Platforms and compatibility](platform-compatibility_us) for differences. Cleanroom 1.12.2 belongs to a separate legacy branch and is not part of this page's main setup process.
+Pick the files that match your Minecraft version and loader (NeoForge or Fabric). Put both in the `mods/` folder and start the game.
 
-> Versions must match. Release pages list the Minecraft, loader, and Java versions for each NekoJS artifact.
+> **For a NeoForge 1.21.1 dedicated server**, use the jar whose name ends in `-server`; clients use the normal jar. Never install both. Other versions ship a single jar.
 
-For repository builds of **NeoForge 1.21.1**, clients use the ordinary `.jar`; dedicated servers use the matching `-server.jar`, which also contains the ICU module missing from that server distribution. Install one NekoJS variant per directory, together with the corresponding Graal mod. The server variant conflicts with Minecraft's existing ICU module on clients; the ordinary client artifact lacks ICU on dedicated servers. `./gradlew :1.21.1:build` produces and verifies both variants. Artifact selection for NeoForge26.x and Fabric stays unchanged. Consult the release page for the files actually published.
+> If Graal is too old, any script that uses a regular expression fails with `No language for id regex found`. Update Graal when you see this.
 
 <a id="wiki-section-3"></a>
-## 2. Directory structure
+## 2. The nekojs folder
 
-After the first launch, a `nekojs/` folder is generated automatically in the game root directory:
+After the first launch, your game folder contains a new `nekojs/` folder. These are the folders you will use most:
 
 ```text
-.neko_probe/                # Type declaration output root (/nekojs probe generates it alongside nekojs)
 nekojs/
-├── startup_scripts/        # Startup scripts: register items/blocks, etc. (changes require a game restart)
-│   └── jsconfig.json
-├── server_scripts/         # Server scripts: recipes, event listeners (supports /nekojs reload)
-│   └── jsconfig.json
-├── client_scripts/         # Client scripts: GUI, particles, keys (supports client reload)
-│   └── jsconfig.json
-├── test_scripts/           # Test scripts: explicitly run through /nekojs test
-├── packs/                  # Optional: script packs (see the next section)
-├── node_modules/           # External pure-JS npm dependencies
-├── assets/                 # Assets
-├── data/                   # Data packs
-└── config/                 # engine.toml, probe.toml and ai.toml (separate settings)
-                              (legacy config/nekojs-engine.toml is a read-only fallback)
+├── startup_scripts/   # Startup scripts: register new items and blocks. Restart the game after changes
+├── server_scripts/    # Server scripts: change recipes, listen to game events. Apply with /nekojs reload
+├── client_scripts/    # Client scripts: HUD, key bindings, screens. Apply with /nekojs reload client
+├── test_scripts/      # Test scripts: only run when you execute /nekojs test
+├── assets/            # Resources: textures, models, language files
+├── data/              # Data pack content
+├── packs/             # Optional: package scripts for distribution, see "Script packs"
+└── config/            # Configuration files, see "Configuration"
 ```
 
-The separate AI documentation root defaults to `.github/neko_ai` and is selected by `[output].directory` in `nekojs/config/ai.toml`; tools read that setting directly. The private token stays under `nekojs/config/`, not `.neko_probe`. See [AI-assisted authoring](ai-support_us); do not commit the token.
+Script files can be `.js`, `.ts`, `.jsx`, `.tsx`, `.mjs`, `.cjs` or `.py`. If you are new, use `.js`.
 
-See [Configuration](configuration_us) for engine, Probe and AI defaults, restart requirements and legacy-file migration. The three files do not control the same features.
-
-All four script directories support `.js`, `.mjs`, `.cjs`, `.ts`, `.jsx`, `.tsx`, and `.py`. `.py` files are transpiled from NekoJS's Python subset and do not require an external Python runtime. See [Script basics](script-basics_us).
+> A script in the wrong folder is the most common reason a script "does nothing". Recipe changes belong in `server_scripts`; item registration belongs in `startup_scripts`. See [Script basics](script-basics_us).
 
 <a id="wiki-section-4"></a>
-### Script packs (optional)
-
-Besides the four standalone script directories, you can organize scripts into packs: place a
-`manifest.json` and the pack's own `startup_scripts/`, `server_scripts/`, and other subdirectories under `nekojs/packs/<pack-id>/`:
-
-```text
-nekojs/packs/my_pack/
-├── manifest.json           # {"id": "my_pack", "name": "我的包", "version": "1.0.0"}
-├── server_scripts/
-│   └── boss.js
-└── client_scripts/
-    └── hud.js
-```
-
-This minimal manifest has no `formatVersion`, so it uses the **legacy directory-pack** rules below. A pack declaring `formatVersion: 1` instead uses a strict manifest, explicit entries, dependency ordering and a pack-owned Context; see [Versioned script packs](script-packs_us). The permissive legacy manifest rules do not apply to that format.
-
-- **Load order**: global packs (alphabetically by id) → world packs → standalone directories.
-- **Enable/disable**: `/nekojs packs` displays configured intent, not runtime activation.
-  `/nekojs packs disable GLOBAL:my_pack` saves the state file (overriding manifest `enabled`).
-  Bare IDs must match uniquely, and save failures do not report success. Reload the relevant server/client/test type to apply; STARTUP changes require a restart.
-- **Execution queries**: `/nekojs packs status server` shows completed entry outcomes in the current generation;
-  `/nekojs packs plan server` shows current file order and exclusions without evaluating or compiling scripts.
-- **World packs (NeoForge / Fabric 26.x)**: place them under `<world-folder>/nekojs_packs/<pack-id>/`.
-  Entering the world mounts them; leaving clears their listeners and timers. Current-world edits and enablement apply on the relevant type reload.
-- **Remote cache packs**: mounted SERVER_CACHE content can be queried, but local enablement commands cannot change its remote authorization.
-- Manifest fields are parsed permissively: `id`/`name`/`version`/`description`/`authors`/`enabled`/`clientSync`
-  (`clientSync` defaults to `true`; set it to `false` to exclude that pack from multiplayer distribution, as described below). Each pack's script directories also get an automatically generated `jsconfig.json`,
-  with the same editor completion as standalone directories.
-- Both loaders mount directory-pack `data/<namespace>/**`. Fabric discovers directories before initial data loading; use native `/reload` for later data changes and F3+T for client assets. Directory mounting does not imply that every data-generation Script Event is available on both platforms. See [Script packs](script-packs_us) for resource precedence, remote restrictions, and loading boundaries.
-
-<a id="wiki-section-5"></a>
-### Multiplayer script pack distribution (server → client)
-
-Servers can automatically distribute script packs to connecting clients. Clients verify and finish executing pack scripts **before vanilla registry validation**
-(remote scripts still use the ClassFilter/Watchdog sandbox). Enable this in the server's `nekojs/config/engine.toml`:
-
-```toml
-[packSync]
-mode = "all"           # off (default) | hashOnly (compare hashes without execution) | all
-allowUnsigned = false   # Whether to accept unsigned packs
-```
-
-- **Signatures**: put `signature = { algorithm = "Ed25519", keyId = "...", publicKey = "<X.509 base64>", signature = "<base64>" }` in the manifest
-  (the signature covers the canonical manifest without the signature key, plus all file contents).
-- **Trust**: a client connecting to an untrusted server for the first time is **disconnected** and shown its address. Run
-  `/nekojs trust <address>` in a single-player world on that client, then reconnect to receive packs. Trust also pins the server's current signing public key (silent key rotation is rejected).
-- **Cache**: packs are cached in `nekojs/server_packs/`, bucketed by a hash of the server address. The local cache is reused if the hash has not changed.
-- Cleanroom 1.12.2 is outside the current five-node graph; this repository does not establish its synchronization behavior.
-
-<a id="wiki-section-6"></a>
 ## 3. Your first script
 
-Create `hello.js` under `nekojs/server_scripts/`:
+Create `nekojs/server_scripts/hello.js`:
 
 ```javascript
-// server_scripts/hello.js
-
-console.info('[NekoJS] Server script loaded')
+console.info('Hello, NekoJS!')
 ```
 
-Enter a world, or run `/nekojs reload server` in an already running world. The log should show `[NekoJS] Server script loaded`. Remove this file and reload SERVER when finished. A `ServerEvents.started` listener is different: ordinary reload does not replay server startup.
+Enter a world. If a world is already open, run:
 
-<a id="wiki-section-7"></a>
+```text
+/nekojs reload
+```
+
+Then open `logs/nekojs/server.log` in your game folder and you will see `Hello, NekoJS!`. Each script type has its own log: `startup.log`, `server.log`, `client.log` and `test.log`.
+
+> Saving a file does not apply it. Run a reload after every change.
+
+<a id="wiki-section-5"></a>
 ## 4. Change a recipe
 
-```javascript
-// server_scripts/recipes.js
+Create `nekojs/server_scripts/recipes.js`:
 
+```javascript
 ServerEvents.recipes(event => {
-  // Remove all vanilla stick recipes
+  // Remove every recipe that outputs sticks
   event.remove({ output: 'minecraft:stick' })
 
-  // Add a recipe: craft 4 sticks from 1 cobblestone
+  // Add: 1 cobblestone makes 4 sticks
   event.shaped('4x minecraft:stick', [
     'C'
   ], {
@@ -133,49 +80,58 @@ ServerEvents.recipes(event => {
 })
 ```
 
-In a disposable world, run **whole-type** `/nekojs reload server`; single-file reload does not run the same recipe follow-up. Put one cobblestone in the crafting grid: this example yields four sticks and removes other stick outputs. Inspect actual crafting, not only a recipe viewer. Remove this file and reload SERVER to restore the baseline; a viewer may require its own refresh.
+Run `/nekojs reload`, put one cobblestone in a crafting table, and you get 4 sticks. The original stick recipes are gone.
 
-See [Recipe system](recipe-system_us).
+If a recipe viewer such as JEI still shows the old recipes, re-enter the world; crafting already uses the new ones. To undo the change, delete the file and reload again.
 
-<a id="wiki-section-8"></a>
-## 5. Register a new item
+See [Recipe system](recipe-system_us) for more.
+
+<a id="wiki-section-6"></a>
+## 5. Add a new item
+
+New items must be registered in a **startup script**. Create `nekojs/startup_scripts/items.js`:
 
 ```javascript
-// startup_scripts/my_items.js
-
 RegistryEvents.register(event => {
-  event.item('mymod:cool_gem', b => {
-    b.maxStackSize = 16
-    b.rarity = 'rare'
+  event.item('mymod:cool_gem', item => {
+    item.maxStackSize = 16
+    item.rarity = 'rare'
   })
 })
 ```
 
-> Note: startup scripts execute during game startup. Registration changes require a game restart; `/nekojs reload startup` currently does not support reloading STARTUP scripts through an in-game command.
+**Restart the game** (startup scripts cannot be reloaded), then run `/give @s mymod:cool_gem`.
 
-Try this in a disposable world with matching client/server definitions. After restart, `/give @s mymod:cool_gem` checks registration; no texture/model or creative-tab entry is supplied here. Remove the file and restart only after discarding that test world/items; removing saved registry IDs can break existing data.
+The item shows a purple-and-black texture and the name `item.mymod.cool_gem` because it has no texture or name yet:
 
-See [Registering new content](registering-new-content_us).
+- Texture: put a PNG at `nekojs/assets/mymod/textures/item/cool_gem.png`
+- Name: write `{ "item.mymod.cool_gem": "Cool Gem" }` to `nekojs/assets/mymod/lang/en_us.json`
 
-<a id="wiki-section-9"></a>
-## 6. Enable IDE completion
+> Once an item has been used in a save, do not delete its registration script, or the items in that save are lost. Try new content in a test world first.
 
-1. Run `/nekojs probe` to generate TypeScript `.d.ts` files under `.neko_probe/typescript/`.
-2. For Python completion, also run `/nekojs probe python` and put `from nekojs import *` (or named imports such as `from nekojs import Item, ServerEvents`) at the top of every `.py` file using NekoJS APIs. Run `/nekojs probe all` to run all backends.
-3. Open `nekojs/server_scripts/` (or the relevant directory) in VS Code. Its `jsconfig.json` links the TypeScript type library.
-4. To run the default TS probe automatically when the server starts, set `runAtStartup = true` in `nekojs/config/probe.toml`; this option is disabled by default.
+See [Registering new content](registering-new-content_us) for more.
 
-<a id="wiki-section-10"></a>
+<a id="wiki-section-7"></a>
+## 6. Turn on code completion
+
+NekoJS can generate type declarations from your current game, including the mods you have installed, so VS Code can suggest events, methods and item IDs.
+
+1. Run `/nekojs probe` in game.
+2. In VS Code, **open the `nekojs/server_scripts` folder** (not the whole game folder).
+3. Type `ServerEvents.` and the suggestions appear.
+
+Run `/nekojs probe` again after adding mods or registering new content.
+
+For Python scripts, run `/nekojs probe python` and put `from nekojs import *` at the top of each `.py` file. See [Python scripts](python-scripts_us).
+
+<a id="wiki-section-8"></a>
 ## 7. Next steps
 
-- [Script basics](script-basics_us): script types, lifecycle, and reload behavior.
-- [Global bindings](global-bindings_us): all APIs, including `Item`, `Ingredient`, `Fluid`, `Text`, and `JsonIO`.
-- [Event reference](event-reference_us): all available events.
-- [Module system](module-system_us): split files, use npm dependencies, and import with `java:`.
-- [TypeScript and JSX](typescript-and-jsx_us): write scripts in TS.
-- [Script API style](script-api-style_us): events, Bindings, builders, Bean properties, and data objects.
-- [Data and state](data-and-state_us): choose persistence and synchronization deliberately.
-- [Client rendering](client-rendering_us): HUD, Screen overlays, world rendering, and post effects.
+- [Script basics](script-basics_us): the four script types, load order, and how to find errors.
+- [Commands](commands_us): every `/nekojs` command.
+- [Event reference](event-reference_us): which game events you can listen to.
+- [Global bindings](global-bindings_us): ready-to-use helpers such as `Item`, `Text` and `JsonIO`.
+- [FAQ](faq_us): start here when something goes wrong.
 
 <!-- wiki-nav -->
 

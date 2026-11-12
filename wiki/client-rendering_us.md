@@ -5,128 +5,193 @@
 <a id="wiki-section-1"></a>
 # Client rendering and post effects
 
-Put these scripts in `nekojs/client_scripts/`. Client callbacks run on the client owner thread, not the server thread. A dedicated server cannot draw a HUD or open a Screen. Use [JSX client UI](jsx-client-ui_us) for retained interactive Screens; the drawing callbacks here are immediate-mode.
+This page shows how client scripts draw on screen: HUD text, overlays on open screens, outlines in the world, and full-screen post effects such as invert or blur.
+
+All of these scripts go in `nekojs/client_scripts/`. Run `/nekojs reload client` after a change. A dedicated server has no screen, so none of this works there.
+
+Everything here redraws every frame, which suits displaying information. For interactive screens with buttons and text fields, see [JSX client UI](jsx-client-ui_us).
 
 <a id="wiki-section-2"></a>
-## Choose the actual platform surface
+## What each platform supports
 
-| Entry | NeoForge 1.21.1 | NeoForge 26.1.2 | NeoForge 26.2.0 | Fabric 26.x |
+| Feature | NeoForge 1.21.1 | NeoForge 26.1.2 | NeoForge 26.2.0 | Fabric 26.x |
 |---|---|---|---|---|
-| `ClientEvents.hud` / `screenRender` Painter | Available | Available | Available | Available |
-| `ClientEvents.hudRender(id, options, callback)` | Available | Available | Available | Not ported |
-| `ClientEvents.worldRender(id, options, callback)` | Available | Available | Available, staged submission | Not ported |
-| `ClientEvents.postEffects` / `PostEffects` | Available, legacy chain format | Available, modern chain format | Available, modern chain format | Not ported |
-| `ClientUI` retained JSX Screen | Unavailable | Available | Available | Unavailable |
+| `ClientEvents.hud` / `screenRender`: draw on the HUD and screens | Yes | Yes | Yes | Yes |
+| `ClientEvents.hudRender`: named HUD renderers | Yes | Yes | Yes | No |
+| `ClientEvents.worldRender`: outlines in the world | Yes | Yes | Yes | No |
+| `ClientEvents.postEffects` / `PostEffects`: post effects | Yes (legacy format) | Yes | Yes | No |
+| `KeyBindEvents`: custom key bindings | No | Yes | Yes | Yes |
 
-Availability above describes the implementation, not a recorded visual acceptance test. The 26.2 world helpers now use an independently owned staged buffer rather than the removed immediate buffer source. Refer to [Platforms and compatibility](platform-compatibility_us) before copying an example across loaders.
+Check [Platforms and compatibility](platform-compatibility_us) before copying an example to another loader.
 
 <a id="wiki-section-3"></a>
-## Draw over the HUD or current Screen
+## Draw on the HUD and screens
 
-This example works on the current NeoForge and Fabric nodes:
+Create `nekojs/client_scripts/painter.js`:
 
 ```javascript
-// nekojs/client_scripts/painter.js
+// Every frame, draw a translucent box and a line of text in the top-left of the HUD
 ClientEvents.hud(painter => {
   painter.rect(8, 8, 120, 18, 0xB020252B)
-  painter.text("NekoJS HUD", 14, 14, 0xFFFFFFFF)
+  painter.text('NekoJS HUD', 14, 14, 0xFFFFFFFF)
 })
 
+// While any screen is open (such as the inventory), show the mouse position
 ClientEvents.screenRender(event => {
   event.painter.text(`Mouse: ${event.mouseX}, ${event.mouseY}`, 8, 8)
 })
 ```
 
-Run `/nekojs reload client` on the client. Look for the HUD text while playing and mouse coordinates over an open Screen. Remove the file and reload CLIENT to remove the listeners. `painter`, `event.painter`, and native graphics objects belong to the current callback: do not retain them in timers, global state, or later frames.
+Run `/nekojs reload client`. The text appears on the HUD, and opening your inventory shows the mouse position. To remove them, delete the file and reload again.
 
-Painter provides text, rectangles/outlines, gradients, item icons, textures, transforms and clipping. It does not create buttons, focus, text inputs, layout, or a networked container menu. Keep render callbacks short; avoid blocking I/O and server/world mutations.
+Colors are `0xAARRGGBB`; the first two digits are the alpha. The `screenRender` event also has `event.screen` and `event.screenTitle`, so you can check which screen is open.
 
 <a id="wiki-section-4"></a>
-## Register a named HUD renderer (NeoForge)
+### What Painter can draw
+
+| Method | What it does |
+|---|---|
+| `text(text, x, y[, color])` / `centerText(...)` | Draw text / draw text centered on x |
+| `rect(x, y, w, h[, color])` / `outline(...)` | Filled rectangle / rectangle outline |
+| `gradient(x, y, w, h, top, bottom)` / `gradientH(...)` | Vertical / horizontal gradient |
+| `item(stack, x, y)` | Draw an item icon |
+| `texture(id, x, y, w, h, ...)` / `textureFull(...)` | Draw part of a texture / a whole texture |
+| `push()` / `translate(x, y)` / `pop()` | Save, offset and restore the coordinates |
+| `scissor(x, y, w, h)` / `resetScissor()` | Draw only inside an area / remove the limit |
+| `textWidth(text)` / `wrapText(text, maxWidth)` / `lineHeight()` | Measure and wrap text |
+
+You can also read `painter.width` and `painter.height` (the screen size) and `painter.partialTick`.
+
+> `painter` is only valid during the current callback. Do not keep it in `global` or a timer for later.
+
+<a id="wiki-section-5"></a>
+## Named HUD renderers (NeoForge)
+
+`ClientEvents.hudRender` gives a piece of HUD an id and lets you choose whether it draws before or after the vanilla HUD:
 
 ```javascript
 // nekojs/client_scripts/named-hud.js
-ClientEvents.hudRender("nekojs:status", {
-  layer: "foreground",
+ClientEvents.hudRender('nekojs:status', {
+  layer: 'foreground',
   priority: 10
 }, ctx => {
   ctx.rect(8, 32, 120, 18, 0xB020252B)
-  ctx.text("Named HUD renderer", 12, 36, 0xFFFFFFFF)
+  ctx.text('Named HUD renderer', 12, 36, 0xFFFFFFFF)
 })
 ```
 
-The supported forms are `(id, callback)` and `(id, options, callback)`. Options can be `{ layer, priority }`, a layer string, or a numeric priority. The default is `normal`, priority `0`. The object is explicit scheduling data, **not** a builder callback or an event payload. It accepts only optional `layer` and `priority` fields; unknown fields, inappropriate layers, and wrong types reject registration. Priority must be a finite signed 32-bit integer (`-2147483648` through `2147483647`); fractions and out-of-range values are no longer silently truncated. Probe emits fields and layer literals from the same runtime schema. TypeScript `number` alone cannot enforce integer bounds.
+After a reload, this text appears below the previous example.
 
-- HUD layers: `background` before the vanilla HUD; `normal` then `foreground` after it.
-- Within each layer, lower priorities draw first. Equal-priority order is not a stable ordering contract.
-- The callback receives `(ctx, graphics)`; use the version-independent helpers on `ctx` when possible. Raw graphics differ between 1.21.1 and 26.x. Read-only Bean properties include `ctx.width`, `ctx.height`, and `ctx.partialTick`. Drawing remains method calls such as `ctx.text(...)`, `rect(...)`, `texture(...)`, and `item(...)`.
-- Registering the same id again replaces that id in the generation. On successful full CLIENT reload, the whole renderer batch is replaced; omitted ids retire. A failed candidate keeps the previous active batch.
+- **Forms**: `hudRender(id, callback)` or `hudRender(id, options, callback)`. `options` can be `{ layer, priority }`, just a layer name string, or just a priority number.
+- **Layers**: `background` draws before the vanilla HUD (so the vanilla HUD covers it); `normal` and then `foreground` draw after it. The default is `normal`.
+- **Priority**: within a layer, lower numbers draw first. The default is `0`; it must be an integer.
+- **Callback**: `ctx` has Painter-like methods (`text`, `rect`, `outline`, `gradient`, `texture`, `item`, `scissor` and so on), plus `ctx.width`, `ctx.height` and `ctx.partialTick`. The second argument is the native graphics object, which differs between versions; avoid it when you can.
+- **Updating and removing**: registering the same id again replaces it. After a reload, any id your scripts no longer register disappears. So deleting the script and reloading removes it.
 
-After loading, observe the text below the Painter example. For cleanup, remove this file and run `/nekojs reload client`. There is no documented script-side renderer builder or per-id removal Binding; reload the intended complete batch.
+Unknown fields in `options`, an unknown layer name, or a non-integer priority make the registration fail with an error.
 
-<a id="wiki-section-5"></a>
-## World-space lines (NeoForge)
+<a id="wiki-section-6"></a>
+## Outlines in the world (NeoForge)
 
 ```javascript
 // nekojs/client_scripts/world-lines.js
-ClientEvents.worldRender("nekojs:origin-box", {
-  layer: "late",
+// Draw a green one-block box at world position (0, 64, 0)
+ClientEvents.worldRender('nekojs:origin-box', {
+  layer: 'normal',
   priority: 0
 }, ctx => {
   ctx.box(0, 64, 0, 1, 65, 1, 0xFF00FF00)
 })
 ```
 
-Run `/nekojs reload client` in a disposable world and view the block-sized box at world coordinates `(0, 64, 0)`. No block is placed. NeoForge 1.21.1, 26.1.2, and 26.2.0 submit the outline; on 26.2 one `box` batches all twelve edges into one independently owned staged submission. Each helper call owns a temporary stage with GPU allocations rounded to at least 262,144 bytes; limit calls per frame and prefer one `box` over twelve `line` calls. Source/geometry regressions are not actual GPU visual acceptance. Remove the file and reload CLIENT to retire it.
+After a reload, go near `(0, 64, 0)` to see the box. It is only drawn lines; no block is placed.
 
-World layers are `early` after translucent blocks, `normal` after weather, and `late` after the level render. The default is `normal`; priorities sort ascending within a layer. On 26.2 vanilla may clear the main depth buffer before `AfterLevel`, so `late` does not guarantee original world occlusion; prefer the earlier `normal` stage for depth-sensitive outlines and verify the actual node visually. `ctx.cameraPos` and `ctx.partialTick` describe the frame. `line(...)` and `box(...)` take world coordinates; the helper subtracts the camera position. They do not register entities, change world blocks, or provide an arbitrary GPU pipeline.
+- `ctx.box(minX, minY, minZ, maxX, maxY, maxZ, color)` draws the 12 edges of a box.
+- `ctx.line(x1, y1, z1, x2, y2, z2, color[, width])` draws one line.
+- All coordinates are world coordinates; you do not subtract the camera position yourself. `ctx.cameraPos` and `ctx.partialTick` describe the current frame.
+- There are three layers: `early` (after translucent blocks), `normal` (after weather, the default) and `late` (after the whole world is drawn). Lower priorities draw first within a layer.
+- Forms, priority and id rules are the same as for `hudRender`.
 
-<a id="wiki-section-6"></a>
-## Declare post effects separately from activating them (NeoForge)
+Use one `box` call rather than twelve `line` calls. Every call has a fixed cost, so fewer calls per frame is better.
 
-The declaration event collects an inert candidate plan. For example, **26.x only**:
+> On 26.2, lines drawn in the `late` layer may not be hidden behind blocks. If an outline should be hidden by walls, use the `normal` layer.
 
-```javascript
-// nekojs/client_scripts/effect-declarations.js
-ClientEvents.postEffects(event => {
-  event.register("nekojs:sample_blur", build => {
-    build.blurRadius = 4
-    build.blurRounds = 1
-  })
-})
-```
+<a id="wiki-section-7"></a>
+## Post effects (NeoForge)
 
-Identifying arguments come first and configuration last. Set the builder properties inside its callback; it is sealed afterward and cannot be retained for later mutation. No extra `build()` call is needed. The legacy object/Map overload remains, with node-specific fields and strict validation: misspelled fields and wrong value types fail instead of being ignored. On 26.x, `blurRadius` must be finite in `[0, 64]` and `blurRounds` must be an integer in `[1, 8]`; invalid values are no longer clamped.
+Post effects change the whole picture, for example invert, blur or the creeper view.
 
-Load with `/nekojs reload client`. `register` returning true means the declaration was collected, not that a shader is visible or that the whole candidate committed. Invalid declarations fail batch preflight; a rejected candidate retains the previous declarations. Query the committed set with `PostEffects.hasDefinition(id)`, `installed()`, and `activeGeneration()`. Remove the file and reload CLIENT to retire the declaration. `event.unregister(id)` also declares retirement at commit; the old `PostEffects.register/unregister` runtime entry is absent.
+<a id="wiki-section-8"></a>
+### Turning effects on and off
 
-| Version | Accepted declaration configuration | Resource-backed activation path |
-|---|---|---|
-| NeoForge 1.21.1 | `chainJson` or `program` | `assets/<namespace>/shaders/post/<path>.json` |
-| NeoForge 26.x | `chainJson`, or `fragmentShader` with optional `fragmentShaderId` / `uniformsJson`, or `blurRadius` with optional `blurRounds`; optional `fragmentShaders` / `vertexShaders` tables | `assets/<namespace>/post_effect/<path>.json` |
-
-The chain JSON schemas differ by Minecraft version. A declaration alone does not mount a corresponding activatable resource: declaration-only ids are refused by `set`. Supply the correct resource-pack chain or choose an available vanilla/resource-pack effect. `PostEffects.hasDefinition(id)` and `PostEffects.isAvailable(id)` answer different questions.
-
-A separate **NeoForge 26.x runtime** example toggles an existing resource using G (`KeyBindEvents` is absent on 1.21.1; Fabric has its own key-binding implementation but no `PostEffects`):
+The simplest use is toggling an effect that ships with vanilla. This example toggles invert with the G key (`KeyBindEvents` needs 26.x; NeoForge 1.21.1 does not have it):
 
 ```javascript
 // nekojs/client_scripts/effect-key.js
-KeyBindEvents.register("nekojs:toggle_invert", "key.keyboard.g")
-KeyBindEvents.pressed("nekojs:toggle_invert", event => {
-  if (PostEffects.isAvailable("minecraft:invert")) {
-    PostEffects.toggle("minecraft:invert")
+KeyBindEvents.register('nekojs:toggle_invert', 'key.keyboard.g')
+
+KeyBindEvents.pressed('nekojs:toggle_invert', event => {
+  if (PostEffects.isAvailable('minecraft:invert')) {
+    PostEffects.toggle('minecraft:invert')
   }
 })
 ```
 
-After CLIENT reload, press G in-game (or the rebound key). Availability depends on active resources. Press it again to clear the same effect. `PostEffects.clear()` clears the current effect explicitly; `current()` reports the selected id, and the read-only `active` Bean property reports application state. A true `set`/`toggle` result is acceptance, not GPU compilation or visual completion. Runtime `set`, `clear`, and `toggle` are immediate client actions, outside the reload declaration transaction; avoid invoking them during candidate top-level evaluation. Clear the picture before removing the key script; removing a listener is not an undo of its prior runtime effect.
+After a reload, press G to invert the picture and press it again to restore it. Players can rebind the key in the controls menu.
 
-<a id="wiki-section-7"></a>
-## Client bindings and current API style
+Common `PostEffects` methods:
 
-CLIENT exposes `Minecraft`, `Screen`, `Window`, `KeyMapping`, and `InputConstants` class bindings. Their presence is an advanced native access path, not a cross-version wrapper promise. `ClientUI` has the narrower NeoForge 26.x scope above. On the NeoForge/Fabric 26.x key-binding surface, `KeyBindEvents.register(id, key[, category])` is a positional registration entry; `pressed`, `released`, and `tick` are event subscriptions and may select an id before the callback. Native registration events such as `registerMenuScreens` and `registerKeyMappings` are lifecycle-specific; a late reload cannot replay the loader startup phase automatically. See [Event reference](event-reference_us).
+| Method | What it does |
+|---|---|
+| `set(id)` | Turn an effect on |
+| `toggle(id)` | Turn it on if it is off, or off if it is on |
+| `clear()` | Turn off the current effect |
+| `current()` | The current effect id, or `null` |
+| `isAvailable(id)` | Whether resource packs provide this effect; it must be available to turn on |
+| `presets()` | Effects that ship with vanilla: `minecraft:invert`, `spider`, `creeper`, `blur`, `entity_outline`, `transparency` |
 
-Configurable post-effect definitions now have a real `event.register(id, build => ...)` overload; the validated object overload remains compatible. Renderer options stay explicit scheduling data in `{ layer, priority }`, not an invented builder. JSX props/VNodes, Painter data, and shader JSON retain their own data contracts. Use published methods for actions and read-only Bean properties for exposed getters.
+`PostEffects.active` tells you whether an effect is currently applied.
+
+A `true` result from `set` or `toggle` only means the request was accepted; the picture changes on a later frame.
+
+> An effect you turned on does **not** turn off when you delete the script and reload. Call `PostEffects.clear()` before removing such a script. Also, do not call `set` at the top level of a script; call it from a key press or another event.
+
+<a id="wiki-section-9"></a>
+### Declaring your own effects
+
+To use your own shader settings, declare them in `ClientEvents.postEffects`. This example works **on 26.x only**:
+
+```javascript
+// nekojs/client_scripts/effect-declarations.js
+ClientEvents.postEffects(event => {
+  event.register('nekojs:sample_blur', build => {
+    build.blurRadius = 4   // 0 to 64
+    build.blurRounds = 1   // an integer from 1 to 8
+  })
+})
+```
+
+Run `/nekojs reload client`. Check that the declaration took effect with `PostEffects.hasDefinition('nekojs:sample_blur')`; `PostEffects.installed()` lists every declared id. Remove the declaration and reload to drop it, or call `event.unregister(id)` inside the event.
+
+The supported settings differ by version:
+
+| Version | Settings you can use | Effect resource file location |
+|---|---|---|
+| NeoForge 1.21.1 | `chainJson` or `program` | `assets/<namespace>/shaders/post/<path>.json` |
+| NeoForge 26.x | `chainJson`; or `fragmentShader` (optionally with `fragmentShaderId` and `uniformsJson`); or `blurRadius` (optionally with `blurRounds`); plus optional `fragmentShaders` and `vertexShaders` | `assets/<namespace>/post_effect/<path>.json` |
+
+**Declaring an effect does not make it available.** A declaration only supplies shader content. To turn an effect on with `set`, a resource pack must also contain an effect file with the same id (see the table for the path). If there is a declaration but no resource file, `set` returns `false` and logs a warning. That is why `hasDefinition` (is it declared?) and `isAvailable` (can it be turned on?) are different checks.
+
+The chain JSON format differs between the two versions; do not copy one into the other.
+
+A misspelled setting, a wrong type or an out-of-range value makes the reload fail, and the previous declarations stay in use.
+
+<a id="wiki-section-10"></a>
+## Native client classes
+
+Client scripts can also use the native classes `Minecraft`, `Screen`, `Window`, `KeyMapping` and `InputConstants` directly. These are Minecraft's own classes, so their methods can change between versions; check them yourself when you switch versions.
+
+Registration events such as `registerKeyMappings` and `registerMenuScreens` fire only once, while the game starts, and a reload does not fire them again. Restart the game after changing such scripts. See the [Event reference](event-reference_us).
 
 <!-- wiki-nav -->
 

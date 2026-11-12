@@ -5,379 +5,284 @@
 <a id="wiki-section-1"></a>
 # 注册新内容
 
-在 `startup_scripts/` 里通过**单一入口** `RegistryEvents.register` 注册新内容。注册脚本在游戏启动阶段执行；新增或修改注册内容后必须重启游戏。当前 `/nekojs reload startup` 会拒绝执行，不能从运行中的命令重跑 STARTUP 脚本。
-
-下面的完整示例适用于 NeoForge，包含其专有的流体注册入口。Fabric 可使用其中的物品和方块部分。
-
-```javascript
-// startup_scripts/my_content.js
-RegistryEvents.register(event => {
-  event.item('mymod:cool_gem', b => {
-    b.maxStackSize = 16
-    b.rarity = 'rare'
-    b.fireResistant = true
-  })
-
-  event.block('mymod:custom_block', b => {
-    b.hardness = 3.0
-    b.sound = 'stone'
-    b.requiresTool = true
-    b.lightLevel = 7
-  })
-
-  // NeoForge only.
-  event.fluid('mymod:molten_iron', b => {
-    b.density = 3000
-    b.viscosity = 2000
-    b.lightLevel = 12
-  })
-})
-```
+新物品、方块、实体等内容写在 `startup_scripts/` 里，用 `RegistryEvents.register` 注册。注册只在游戏启动时进行，所以每次增改注册内容都要**重启游戏**。`/nekojs reload startup` 会被拒绝。
 
 <a id="wiki-section-2"></a>
-## 入口形态
+## 快速上手
 
-- `event.<registry>(id, cb)` —— 当前平台已登记的注册表糖方法，例如 `item` / `block` / `entityType` / `creativeModeTab` / `mobEffect` / `potion` / `soundEvent` / `particleType` / `villagerType`。具体入口随平台变化。Java 中存在注册表键或 builder 类，不等于已经提供默认 builder 或原生注册阶段。
-- `event.<registry>(id, typeName, cb)` —— 同上，但显式指定第三方插件登记的命名类型。
-- `event.custom(id, typeName, cb)` —— 按全局唯一类型名登记。
-- `event.register(registry, id, supplier)` —— 裸 supplier 入口，`registry` 为糖名或完整键。
-
-> `fluid`、`enchantment` 等入口不是跨平台能力：FluidBuilder 当前仅 NeoForge 可用；附魔 builder 仅适用于 NeoForge 1.21.1，26.x 应使用数据包，Fabric 当前不提供对应注册面。
-
-核心工厂选择已有的原生 builder 实现；通用入口不保证能随意新增 Java 行为，也不保证跨版本注册表支持。`event.register(...)` 的 supplier 会推迟到原生注册阶段调用，不能绕过平台可用范围或重启要求。
-
-**builder 暴露 Bean 属性**：数据属性直接赋值（`b.maxStackSize = 16`），只有"动作"和复合配置保留方法（`b.noItem()`、`b.food(cb)`、`b.tag(...)`）。
-
-写错什么会当场炸（全是脚本执行期抛异常，日志里是这条 startup 脚本的报错）：
-
-- 同注册表同 id 注册两次 → `IllegalStateException`（`RegistryRepository`，fail-fast，不是后者覆盖前者）。
-- 注册表名不认识 → `unknown registry 'xxx'`，提示可用糖名或完整键的形式。
-- 类型名不认识 → `unknown type 'xxx' for registry '...'; known types: [...]`，直接列出该注册表下已登记的类型。
-- 拼错糖方法名 → `RegistryEvent has no member 'xxx'; known: [...]`，列出当前平台实际存在的全部入口。
-- 少传/传错回调 → `IllegalArgumentException`。ID 可以是字符串或当前平台的 `Identifier`（1.21.1 为 `ResourceLocation`）宿主对象，其他值会被拒绝。
-
-反过来说，**builder 上什么都不设也是合法的**：`event.item('mymod:x', b => {})` 会用表里列出的默认值注册出一个能用的物品。下面各表的「默认」列就是不写时的取值。
-
-<a id="wiki-section-3"></a>
-## ItemBuilder —— 物品
-
-| 成员 | 说明 |
-|---|---|
-| `maxStackSize` | 最大堆叠数（默认 64；设了 `maxDamage` 时忽略） |
-| `maxDamage` | 最大耐久（>0 时替代堆叠数） |
-| `fireResistant` | 抗火（默认 false） |
-| `rarity` | `'common'` \| `'uncommon'` \| `'rare'` \| `'epic'`（默认 common） |
-| `glowing` | 发光（默认 false） |
-| `burnTime` | 燃料燃烧时间 tick（>0 时物品可作熔炉/高炉/烟熏炉燃料） |
-| `groupTab` | 分配到创造标签页（如 `'minecraft:building_blocks'` 或自定义 tab id；null=不分配） |
-| `component(id, value)` / `components` | JSON 组件配置；属性替换显式组件全集，方法替换单个条目。先应用普通默认属性，再应用显式组件。null 不表示删除。 |
-| `jukeboxPlayable` | 唱片歌曲资源键，例如 `'minecraft:cat'`；五节点均可用。 |
-| `trimMaterial` | 锻造纹饰材料资源键，例如 `'minecraft:diamond'`；仅 26.x。提供材料，而非给物品应用盔甲纹饰。 |
-| `parentModel` | 父模型 id；设置它或纹理配置才启用自动资源生成。 |
-| `texture(id)` / `texture(slot, id)` / `textures` | 设置 layer0、指定纹理槽，或替换整个槽映射；引用已有 PNG 资源。 |
-| `food(cb)` | 设为食物（接 `FoodBuilder` 回调，见下） |
-| `tag(tags...)` | 给物品打 tag（见[下方 tag 说明](#wiki-section-11)） |
-
-> 物品 tooltip 不在 builder 上设置——用客户端事件 [`ItemEvents.tooltip`](event-reference_cn#wiki-section-11) 按物品 id 添加。
-
-> 注册后物品的默认材质/模型按 `assets/mymod/textures/item/cool_gem.png` / `assets/mymod/models/item/cool_gem.json` 解析（标准原版资源路径）。可在 `nekojs/assets/` 下放资源。
-
-这些配置也适用于 `build.item(item => { ... })` 内的 BlockItem。回调成功后配置会复制并冻结，后续不能继续修改保留的 builder。批量赋值先整体校验再替换。原始 `minecraft:jukebox_playable` / `minecraft:provides_trim_material` 与同名便捷属性不能同时配置。
+新建 `nekojs/startup_scripts/content.js`：
 
 ```javascript
 RegistryEvents.register(event => {
-  event.item('mymod:gem', build => {
-    build.component('minecraft:rarity', 'epic')
-    build.components = { 'minecraft:max_stack_size': 16, 'minecraft:rarity': 'epic' }
-    build.parentModel = 'minecraft:item/generated'
-    build.texture('minecraft:item/diamond')
+  event.item('mymod:cool_gem', item => {
+    item.maxStackSize = 16
+    item.rarity = 'rare'
+    item.fireResistant = true
   })
-  event.item('mymod:record', build => { build.jukeboxPlayable = 'minecraft:cat' })
+
+  event.block('mymod:gem_block', block => {
+    block.hardness = 3.0
+    block.sound = 'stone'
+    block.requiresTool = true
+    block.lightLevel = 7
+  })
 })
 ```
 
-组件值必须符合当前节点 Minecraft codec 的 JSON 格式，仅接受普通对象、数组、基本值；拒绝函数和任意 Java 对象。26.x 在原版组件初始化阶段使用注册表上下文解码，错误值或引用使该阶段失败；禁止覆盖原版 `item_name`、`item_model` 身份组件。1.21.1 在构建物品时使用普通 JsonOps 解码，依赖注册表上下文的 codec 不受通用 JSON 入口支持，会明确报错；歌曲便捷属性使用原版 ResourceKey 实现。未知/不可序列化组件及非法耐久与堆叠组合均失败；此 API 不注册新组件类型。
+重启游戏后执行 `/give @s mymod:cool_gem` 和 `/give @s mymod:gem_block`。方块会自动带一个同名物品，所以也能直接拿到手里。
 
-自动物品资源支持 NeoForge 和 Fabric。Fabric 目录资源桥在客户端首次枚举资源前及资源重载时生成已注册物品的资源；只有原生注册成功后才发布文件，所有权检查会保留用户修改的文件。未配置模型或纹理的物品不生成文件。省略父模型时采用 `minecraft:item/generated`，省略纹理时采用 `layer0: '<命名空间>:item/<路径>'`；PNG 由作者提供。资源值使用不带扩展名的 id，省略命名空间表示 minecraft。
+这时它们显示成紫黑格子，名字是 `item.mymod.cool_gem`。这是因为还没有材质和名称，做法见下文的 [材质、模型和名称](#wiki-assets)。
 
-NeoForge 1.21.1 写入 `assets/<命名空间>/models/item/<路径>.json`；26.x 额外写入 `assets/<命名空间>/items/<路径>.json` 并引用前者。首次加载和重载均在资源枚举前生成。现有 `Assets.itemModel` 仍只写模型文件，1.21.1 仍不提供 Assets Binding。
+> 物品在存档里用过之后，不要随便删掉它的注册代码，否则存档里的这些物品会消失。建议先在测试世界里试。
 
-所有权索引持久化在 `nekojs/.nekojs-item-assets/ownership.json`。已有无所有权文件、用户编辑和插件/脚本显式输出优先；模型/物品定义之一被修改时整组跳过并报 `NEKO-6008`，不覆盖。删除声明时只删除仍归自动生成所有且内容未变的文件，永不删除纹理。发布前暂存整组，I/O 失败时恢复旧文件；不承诺进程中途崩溃的恢复。索引应与资源一起保留，读取失败会拒绝生成而非重置所有权。
+<a id="wiki-section-3"></a>
+## 基本写法
+
+`event` 上的方法以注册表命名，例如 `event.item`、`event.block`、`event.entityType`。每个方法接收两个参数：ID 和一个配置函数。
+
+```javascript
+RegistryEvents.register(event => {
+  event.item('mymod:ruby', item => {
+    item.maxStackSize = 16   // 普通设置：直接赋值
+    item.tag('c:gems')       // 动作：调用方法
+  })
+})
+```
+
+- 普通设置直接赋值，例如 `item.maxStackSize = 16`。
+- 动作和复杂配置调用方法，例如 `item.food(...)`、`item.tag(...)`、`block.noItem()`。
+- 什么都不设也可以。`event.item('mymod:x', item => {})` 会用默认值注册一个能用的物品。下面各表写了默认值。
+
+内置可用的方法：
+
+| 方法 | 注册什么 |
+|---|---|
+| `event.item` | 物品 |
+| `event.block` | 方块，默认带同名物品 |
+| `event.fluid` | 流体（仅 NeoForge） |
+| `event.entityType` | 实体 |
+| `event.creativeModeTab` | 创造标签页 |
+| `event.mobEffect` | 状态效果 |
+| `event.potion` | 药水 |
+| `event.soundEvent` | 声音 |
+| `event.particleType` | 粒子类型 |
+| `event.villagerType` | 村民类型 |
+| `event.enchantment` | 附魔（仅 NeoForge 1.21.1） |
+
+其他模组或插件可能会增加更多方法。方法名拼错时，报错会列出当前能用的全部方法。
 
 <a id="wiki-section-4"></a>
-### FoodBuilder（`food(cb)` 回调）
+## 物品
+
+| 属性 | 默认值 | 说明 |
+|---|---|---|
+| `maxStackSize` | `64` | 最大堆叠数，1 到 99。设了 `maxDamage` 时无效 |
+| `maxDamage` | `0` | 最大耐久。大于 0 时物品不能堆叠 |
+| `fireResistant` | `false` | 掉进岩浆不会烧掉 |
+| `rarity` | `'common'` | 稀有度：`'common'`、`'uncommon'`、`'rare'`、`'epic'` |
+| `glowing` | `false` | 显示附魔光效 |
+| `burnTime` | `0` | 作为燃料能烧多少 tick，大于 0 时可以放进熔炉 |
+| `groupTab` | 无 | 放进哪个创造标签页，例如 `'minecraft:building_blocks'` |
+| `jukeboxPlayable` | 无 | 放进唱片机播放的歌曲，例如 `'minecraft:cat'` |
+| `trimMaterial` | 无 | 让物品成为盔甲纹饰材料，例如 `'minecraft:diamond'`（仅 26.x） |
+| `food(...)` | — | 设为食物，见下方 |
+| `tag(...)` | — | 加入标签，见 [在注册时加入标签](#wiki-builder-tags) |
+| `component(id, value)` / `components` | — | 直接设置物品组件 |
+| `parentModel` / `texture(...)` | — | 自动生成物品模型，见 [材质、模型和名称](#wiki-assets) |
+
+<a id="wiki-section-5"></a>
+### 食物
+
+```javascript
+RegistryEvents.register(event => {
+  event.item('mymod:cheese', item => {
+    item.food(food => {
+      food.nutrition(4)
+      food.saturation(0.6)
+      food.fastEat()
+      food.effect('minecraft:speed', 200, 0, 0.5)   // 效果、时长（tick）、等级、概率
+    })
+  })
+})
+```
 
 | 方法 | 说明 |
 |---|---|
-| `nutrition(v)` / `saturation(v)` | 营养 / 饱和度 |
-| `alwaysEat()` / `fastEat()` | 总可吃 / 快速食用 |
-| `effect(effectId, durationTicks, amplifier, probability)` | 食用后概率获得效果 |
-
-<a id="wiki-section-5"></a>
-## BlockBuilder —— 方块
-
-| 成员 | 说明 |
-|---|---|
-| `hardness` / `resistance` | 硬度 / 抗爆（默认 1.5） |
-| `lightLevel` | 亮度（默认 0） |
-| `requiresTool` | 需要正确工具才能掉落（默认 false） |
-| `sound` | `'wood'` \| `'stone'` \| `'metal'` \| `'glass'` \| `'grass'` \| `'gravel'` \| `'wool'` \| `'sand'` \| `'snow'` \| `'amethyst'` |
-| `mapColor` | 地图颜色名（如 `'dirt'`/`'water'`/`'gold'`/`'color_red'`/`'nether'`，默认 stone） |
-| `renderType` | `'solid'` \| `'cutout'` \| `'cutout_mipped'` \| `'translucent'`（默认 solid） |
-| `item` | **预创建的 BlockItem 子 builder**——直接改字段：`b.item.maxStackSize = 16` |
-| `unbreakable()` | 不可破坏（动作） |
-| `noItem()` | 不生成 BlockItem（等价 `b.item = null`，动作） |
-| `item(cb)` | 配置自动创建的 BlockItem（便捷面，等价直改 `b.item` 字段） |
-| `tag(tags...)` | 给**方块**打 tag；给 BlockItem 打物品 tag 用 `b.item.tag(...)` |
-
-默认会自动生成一个同名 BlockItem。**连带注册三件套**：子 builder 构造期预创建、`noItem()` 置 null 抑制、对象间经懒引用连接——`b.item` 的配置只在 BlockItem 真正注册时生效。
-
-> **renderType 平台差异**：1.21.1 上会实际生效（经 `ItemBlockRenderTypes.setRenderLayer` 应用渲染层）。26.x（1.21.5+）渲染为**模型驱动**——需要模型 JSON 贴图引用加 `"force_translucent": true`（或贴图带 alpha）；声明了 `renderType = 'translucent'` 的方块在 NeoForge 26.x 会自动生成带该标记的默认模型（没自写模型时）。Fabric 未接入该自动方块模型生成器，需要自行提供原生模型资源。
+| `nutrition(n)` / `saturation(n)` | 恢复的饥饿值 / 饱和度 |
+| `alwaysEat()` | 饱的时候也能吃 |
+| `fastEat()` | 吃得更快 |
+| `effect(效果, 时长, 等级, 概率)` | 吃完后按概率获得状态效果 |
 
 <a id="wiki-section-6"></a>
-## FluidBuilder —— 流体（仅 NeoForge）
+### 物品组件
 
-> Fabric 26.x 当前没有流体注册和流体配方面；Cleanroom 内容属于独立 legacy 分支。
-
-NeoForge 上可注册完整的自定义流体：可放置、流动并用桶舀取。一次注册会产出流体类型、source/flowing 流体、液体方块和桶物品。
-
-| 成员 | 说明 |
-|---|---|
-| `displayName` | 翻译 key（如 `fluid.mymod.molten_iron`） |
-| `density` | 原生 `FluidType` 密度（默认 1000）；不保证流体分层或置换行为 |
-| `temperature` / `viscosity` / `lightLevel` | 原生 `FluidType` 温度 / 黏度 / 发光（默认 300 / 1000 / 0）；流动调度另由 `tickRate` 控制 |
-| `canConvertToSource` | 是否可无限生成源（默认 false，对标 1.21 原版水） |
-| `slopeFindDistance` / `levelDecreasePerBlock` | 流动寻路距离（默认 4）/ 每格下降等级（默认 1） |
-| `explosionResistance` / `tickRate` | 抗爆（默认 100）/ 流动 tick 间隔（默认 5） |
-| `bucket` / `block` | 是否注册桶（`<id>_bucket`）/ 液体方块（id = 流体 id），默认都 true |
-| `noBucket()` / `noBlock()` | 抑制对应连带注册（动作；等价 `b.bucket = false`） |
-| `tag(tags...)` | source 与 flowing 两个流体都进 tag |
+需要设置上面没有的属性时，可以直接写物品组件。值的格式和原版数据包里的组件 JSON 一样：
 
 ```javascript
 RegistryEvents.register(event => {
-  event.fluid('mymod:molten_iron', b => {
-    b.density = 3000
-    b.viscosity = 2000
-    b.temperature = 1500
-    b.lightLevel = 12
-    b.slopeFindDistance = 3
-    // b.noBucket()   // 不注册桶
-    // b.noBlock()    // 不注册液体方块
+  event.item('mymod:gem', item => {
+    item.component('minecraft:rarity', 'epic')
   })
 })
 ```
 
-自动注册产物：`<id>`（source 流体）、`flowing_<id>`（flowing 流体）、`<id>`（液体方块）、`<id>_bucket`（桶）。流体纹理/模型需自行放资源包（26.x 走模型驱动，1.21.1 走 `IClientFluidTypeExtensions`）。
+`item.components = { ... }` 会替换掉之前设置的所有组件，`item.component(id, value)` 只改一个。组件在普通属性之后应用。值写错时游戏会在启动时报错。
+
+物品的提示文字不在这里设置，请用客户端事件 `ItemEvents.tooltip`，见 [事件参考](event-reference_cn)。
 
 <a id="wiki-section-7"></a>
-## EntityTypeBuilder —— 脚本化实体
+## 方块
 
-默认实体使用 `NekoScriptMob`（`PathfinderMob`），NeoForge 1.21.1/26.x 与 Fabric 26.x 均自动注册真正可绘制的人形模型：默认使用原版僵尸纹理、走动/头部/挥动动画和 0.5 格阴影，不再使用空 renderer。可替换人形纹理，或为原生实体选择兼容的原生 renderer。
-
-| 成员 | 说明 |
-|---|---|
-| `category` | 实体类别名：`'creature'`/`'monster'`/`'hostile'`/`'ambient'`/`'water_creature'`/`'water_ambient'`/`'underground_water_creature'`/`'axolotls'`/`'misc'` |
-| `width` / `height` | 碰撞箱宽 × 高（默认 0.6 / 1.8；或用 `size(w, h)`） |
-| `trackingRange` / `updateInterval` | 追踪范围 / 同步间隔 tick（默认 8 / 3） |
-| `receiveVelocityUpdates` / `fireImmune` / `noSave` / `noSummon` | 布尔开关（默认 true / false / false / false） |
-| `spawnEgg(bgColor, hlColor)` | 自动注册 `<id>_spawn_egg` 生物蛋（动作） |
-| `attributes(cb)` | 属性表（`maxHealth`/`movementSpeed`/`followRange`/`attackDamage`/`armor`/`armorToughness`/`knockbackResistance`） |
-| `renderer` | 默认 `'humanoid'`；也可为原生 Java renderer 完整类名，仅客户端加载；必须有公开 `(EntityRendererProvider.Context)` 构造器并接受该实体类 |
-| `texture` | 默认 `'minecraft:textures/entity/zombie/zombie.png'`；人形模型使用 64×64 纹理，资源包可以覆盖 |
-| `shadowRadius` | 阴影半径，默认 0.5；必须为有限非负数 |
-| `factory(javaFactory)` | 原生 Java `BiFunction<EntityType, Level, LivingEntity>`；拒绝 JavaScript/Graal 回调，以免 STARTUP Context 被双端不同线程访问 |
-| `entityClass(clazz)` | 选择公开、非抽象的原生 `LivingEntity` 类；公开 `(EntityType, Level)` 构造器在注册前校验 |
-| `attributeBase(entityType)` | 继承已有原生实体类型的完整默认属性 |
-| `attributeSupplier(supplier)` | 指定完整原生属性基线；用于没有 `createAttributes()` 的自定义类 |
-| `goals(cb)` | AI 目标（见[GoalBuilder](#wiki-section-12)） |
-| `tag(tags...)` | 给实体类型打 tag（如 `'minecraft:raiders'`） |
+| 属性 | 默认值 | 说明 |
+|---|---|---|
+| `hardness` | `1.5` | 硬度，决定挖掘时间 |
+| `resistance` | `1.5` | 爆炸抗性 |
+| `lightLevel` | `0` | 亮度，0 到 15 |
+| `requiresTool` | `false` | 是否必须用正确的工具挖才会掉落 |
+| `sound` | `'stone'` | 声音：`'wood'`、`'stone'`、`'metal'`、`'glass'`、`'grass'`、`'gravel'`、`'wool'`、`'sand'`、`'snow'`、`'amethyst'` |
+| `mapColor` | `'stone'` | 地图上的颜色，例如 `'dirt'`、`'water'`、`'gold'`、`'red'` |
+| `renderType` | `'solid'` | 渲染方式：`'solid'`、`'cutout'`、`'cutout_mipped'`、`'translucent'` |
+| `unbreakable()` | — | 变成不可破坏的方块 |
+| `item` | — | 自动生成的同名物品，可以直接设置它的属性 |
+| `noItem()` | — | 不生成同名物品 |
+| `tag(...)` | — | 把**方块**加入标签 |
 
 ```javascript
 RegistryEvents.register(event => {
-  event.entityType('mymod:test_mob', b => {
-    b.category = 'monster'
-    b.size(0.6, 1.8)
-    b.spawnEgg(0x8a6f4d, 0xffe2b3)
-    b.attributes(a => a.maxHealth(18).movementSpeed(0.3).attackDamage(4))
-    b.goals(g => g.floatInWater(0).target(2, 'minecraft:player', true).meleeAttack(4, 1.2, false))
+  event.block('mymod:ruby_ore', block => {
+    block.hardness = 3.0
+    block.requiresTool = true
+    block.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
+
+    // 设置自动生成的物品
+    block.item.maxStackSize = 16
+    block.item.tag('c:ores')
   })
 })
 ```
 
-原生实体例（NeoForge/Fabric 26.x）：
+只写了 `requiresTool = true` 而没有加入 `minecraft:mineable/pickaxe` 这类标签时，方块用什么工具挖都不会掉落。
+
+名字拼错的 `sound` 和 `mapColor` 不会报错，会退回 `'stone'`。
+
+关于 `renderType`：在 1.21.1 上直接生效。在 26.x 上透明效果由模型决定，需要模型里写 `"force_translucent": true` 或贴图带透明度。NeoForge 26.x 会为设置了 `'translucent'`、又没有自带模型的方块自动生成这样的模型；Fabric 需要自己提供模型。
+
+<a id="wiki-section-8"></a>
+## 流体（仅 NeoForge）
+
+一次 `event.fluid` 会注册一整套可以放置、流动、用桶装起来的流体：
+
+```javascript
+RegistryEvents.register(event => {
+  event.fluid('mymod:molten_iron', fluid => {
+    fluid.density = 3000
+    fluid.viscosity = 2000
+    fluid.temperature = 1500
+    fluid.lightLevel = 12
+    // fluid.noBucket()   // 不要桶
+    // fluid.noBlock()    // 不要液体方块
+  })
+})
+```
+
+上面的代码会注册：静止流体 `mymod:molten_iron`、流动流体 `mymod:flowing_molten_iron`、液体方块 `mymod:molten_iron` 和桶 `mymod:molten_iron_bucket`。
+
+| 属性 | 默认值 | 说明 |
+|---|---|---|
+| `displayName` | 无 | 名称的翻译键，例如 `'fluid.mymod.molten_iron'` |
+| `density` / `temperature` / `viscosity` | `1000` / `300` / `1000` | 密度、温度、黏度 |
+| `lightLevel` | `0` | 亮度 |
+| `canConvertToSource` | `false` | 能否像水一样形成无限水源 |
+| `slopeFindDistance` / `levelDecreasePerBlock` | `4` / `1` | 寻找下坡的距离 / 每流一格降低的高度 |
+| `tickRate` | `5` | 流动速度，数值越大流得越慢 |
+| `explosionResistance` | `100` | 爆炸抗性 |
+| `noBucket()` / `noBlock()` | — | 不注册桶 / 不注册液体方块 |
+| `tag(...)` | — | 静止和流动两种流体都加入标签 |
+
+流体的材质和模型需要自己放进资源包。
+
+<a id="wiki-section-9"></a>
+## 实体
+
+```javascript
+RegistryEvents.register(event => {
+  event.entityType('mymod:test_mob', mob => {
+    mob.category = 'monster'
+    mob.size(0.6, 1.8)
+    mob.spawnEgg(0x8a6f4d, 0xffe2b3)
+    mob.attributes(attr => attr.maxHealth(18).movementSpeed(0.3).attackDamage(4))
+    mob.goals(goals => goals
+      .floatInWater(0)
+      .meleeAttack(2, 1.2, false)
+      .target(4, 'minecraft:player', true))
+  })
+})
+```
+
+不做额外设置时，实体是一个用僵尸材质的人形生物，会走动、转头、挥手。
+
+| 属性 | 默认值 | 说明 |
+|---|---|---|
+| `category` | `'creature'` | 类别：`'creature'`、`'monster'`、`'ambient'`、`'water_creature'`、`'water_ambient'`、`'underground_water_creature'`、`'axolotls'`、`'misc'` |
+| `width` / `height` | `0.6` / `1.8` | 碰撞箱大小，也可以写 `size(宽, 高)` |
+| `trackingRange` / `updateInterval` | `8` / `3` | 同步距离（区块）/ 同步间隔（tick） |
+| `fireImmune` / `noSave` / `noSummon` | `false` | 免疫火焰 / 不随存档保存 / 不能用 `/summon` 召唤 |
+| `texture` | 僵尸材质 | 64×64 人形材质，例如 `'mymod:textures/entity/test_mob.png'` |
+| `shadowRadius` | `0.5` | 阴影大小 |
+| `spawnEgg(底色, 斑点色)` | — | 同时注册生物蛋 `<id>_spawn_egg` |
+| `attributes(...)` | — | 属性：`maxHealth`、`movementSpeed`、`followRange`、`attackDamage`、`armor`、`armorToughness`、`knockbackResistance` |
+| `goals(...)` | — | AI 行为，见下方 |
+| `tag(...)` | — | 加入实体标签，例如 `'minecraft:raiders'` |
+
+生物蛋的颜色只在 NeoForge 1.21.1 上生效。26.x 上要换生物蛋外观，需要在资源包里提供 `assets/<命名空间>/items/<名字>_spawn_egg.json`。
+
+<a id="wiki-section-10"></a>
+### 使用原版或模组的实体类
+
+想让实体沿用某个现有生物的行为和外观，可以指定 Java 类和渲染器：
 
 ```javascript
 const Zombie = Java.type('net.minecraft.world.entity.monster.zombie.Zombie')
+
 RegistryEvents.register(event => {
-  event.entityType('mymod:native_mob', build => {
-    build.entityClass(Zombie)
-    build.renderer = 'net.minecraft.client.renderer.entity.ZombieRenderer'
+  event.entityType('mymod:my_zombie', mob => {
+    mob.entityClass(Zombie)
+    mob.renderer = 'net.minecraft.client.renderer.entity.ZombieRenderer'
   })
 })
 ```
 
-1.21.1 的僵尸类名是 `net.minecraft.world.entity.monster.Zombie`；renderer 类名不变。构造器在 `entityClass(...)` 配置时解析，缺失、非公开、抽象或不是 `LivingEntity` 的类会立即失败。实体创建后还会检查返回对象的 `EntityType` 必须是本次注册的类型。
+在 1.21.1 上僵尸的类名是 `net.minecraft.world.entity.monster.Zombie`。
 
-原生类的公开静态 `createAttributes()` 会自动提供完整属性基线。没有该方法时必须显式选择 `attributeBase(...)` 或 `attributeSupplier(...)`，避免丢失飞行速度、增援概率等特殊属性。`attributes(...)` **只覆盖回调中显式配置的属性**，未配置的值完整保留基线，不会把原生默认值重置为 NekoJS 的七种常见默认值。默认 `NekoScriptMob` 使用完整 Mob 属性基线；无法推断实体类的 opaque Java factory 也必须具备 Mob 必需属性（包括 `FOLLOW_RANGE`），基线不完整或值非有限数会在注册前拒绝。
-
-原生 Java factory 必须独立于 guest Context，能在服务器线程和客户端线程使用。普通 `factory((type, level) => ...)` 被明确拒绝，推荐使用 `entityClass(...)`。`renderer`、`texture` 与 `shadowRadius` 是可读写 Bean 属性，配置写作 `build.texture = 'mymod:textures/entity/mob.png'`，不是延迟执行的脚本 factory。
-
-`renderer = 'humanoid'` 使用通用人形外观，`texture`/`shadowRadius` 作用于此 renderer。指定原生 renderer 后外观由其原生模型、纹理与阴影逻辑决定；客户端在安装前检查 renderer 的实体泛型，拒绝例如把 `ZombieRenderer` 用到普通 `NekoScriptMob`。声明只保存类名，不在专用服务器加载客户端类。
-
-`GoalEvents.register` 同样适用于原版及本脚本注册的实体。`GoalBuilder.custom(...)` / `customTarget(...)` 只接受原生 Java `Function<Mob, Goal>`，不接受 `mob => goal` guest 闭包；脚本可用 `customClass(...)` / `customTargetClass(...)` 选择满足公开 `(Mob)` 构造器契约的原生 Goal 类，见下方。
-
-**生物蛋版本差异**：NeoForge 1.21.1 颜色**生效**（运行时染色）；26.x 两个加载器的颜色参数不参与运行时染色。NeoForge 自动生成默认蛋模型，Fabric 仅对未提供物品定义的已注册生物蛋回退到原版鸡蛋模型。自定义外观需在资源包提供 `assets/<ns>/items/<path>_spawn_egg.json`，其模型引用相应几何与纹理；仅放入 PNG 不会自动替换默认引用。有效自定义定义和其他插件提供的模型优先，损坏的自定义定义仍保留原生错误，不被回退掩盖。
-
-<a id="wiki-section-8"></a>
-## EnchantmentBuilder —— 附魔（仅 NeoForge 1.21.1）
-
-> 26.x 的附魔是数据驱动注册表，不能使用这里的运行时 builder；请使用数据包。Fabric 26.x 当前也没有对应注册面。源码中保留的 builder 不代表 26.x 注册通道可用。
-
-| 成员 | 说明 |
-|---|---|
-| `supportedItems` | 可附魔的物品标签 id（如 `'minecraft:enchantable/weapon'`，`#` 前缀 tolerated；null=空集合） |
-| `weight` / `maxLevel` | 权重（默认 1）/ 最大等级（默认 1） |
-| `minCostBase` / `minCostPerLevel` | 最小消耗 `base + perLevel * (level - 1)` |
-| `maxCostBase` / `maxCostPerLevel` | 最大消耗曲线（同上） |
-| `anvilCost` | 铁砧成本（默认 0） |
-| `slots` | `'any'`/`'armor'`/`'chest'`/`'feet'`/`'head'`/`'legs'`/`'hand'`/`'mainhand'`/`'offhand'`（默认 mainhand） |
-| `tag(tags...)` | 给附魔打 tag（如 `'minecraft:treasure'`） |
-
-> 此 builder 不挂附魔效果组件，也未暴露 `EnchantmentEffectComponents` 配置。定义字段不保证已有可用的游戏效果，也不保证其他版本的原生注册可用。
-
-<a id="wiki-section-9"></a>
-## CreativeTabBuilder —— 创造标签页
-
-| 成员 | 说明 |
-|---|---|
-| `title` | 标签页标题 |
-| `icon` | 图标（物品 id 字符串或 ItemStack；null 回退屏障图标） |
-| `add(item)` | 添加条目（物品 id 字符串或 ItemStack） |
-
-```javascript
-RegistryEvents.register(event => {
-  event.creativeModeTab('mymod:cool_tab', b => {
-    b.title = '我的模组'
-    b.icon = 'mymod:cool_gem'
-    b.add('mymod:cool_gem')
-    b.add('mymod:custom_block')
-  })
-})
-```
-
-注册后在 `ItemBuilder` 的 `groupTab` 字段里引用该标签页。
-
-<a id="wiki-section-10"></a>
-## 简单注册表
-
-只运行当前平台支持的入口；下方附魔部分仅适用于 NeoForge 1.21.1。`PotionBuilder.effect(...)` 在配置时立即解析效果，找不到的 id 会被静默忽略。同一次收集回调中刚声明的自定义效果尚未注册，因此药水示例使用已有原版效果。
-
-```javascript
-RegistryEvents.register(event => {
-  // 状态效果
-  event.mobEffect('mymod:shock', b => { b.category = 'harmful'; b.color = 0x00FF00 })
-
-  // 药水（可含多个效果实例，effect 为追加方法）
-  event.potion('mymod:shock_potion', b => {
-    b.effect('minecraft:poison', 600, 0)                      // (效果, 时长tick, 等级)
-    b.effect('minecraft:speed', 3600, 1, false, true)    // (+环境效果, 显示粒子/图标)
-  })
-
-  // 声音（fixedRange=null 时由声音定义决定）
-  event.soundEvent('mymod:thunder_clap', b => { b.fixedRange = 64 })
-
-  // 粒子类型
-  event.particleType('mymod:sparkle', b => { b.overrideLimiter = true })
-
-  // 核心未登记默认 paintingVariant 工厂。
-  // 此形态需要插件提供 builder，并且平台有相应的原生注册阶段：
-  // event.paintingVariant('mymod:epic_painting', b => {
-  //   b.width = 32; b.height = 16; b.title = '大海'
-  // })
-
-  // 村民类型（纯标识，无配置）
-  event.villagerType('mymod:miner', b => {})
-
-  // NeoForge 1.21.1 only; use a datapack on 26.x.
-  event.enchantment('mymod:ice_bane', b => {
-    b.supportedItems = 'minecraft:enchantable/weapon'
-    b.weight = 5; b.maxLevel = 3
-    b.minCostBase = 5; b.minCostPerLevel = 5
-    b.maxCostBase = 20; b.maxCostPerLevel = 5
-    b.anvilCost = 2; b.slots = 'mainhand'
-  })
-})
-```
+- 这个类会自动带上原版生物的全部属性。`attributes(...)` 只改你写到的那几项。
+- 类没有自带属性时，用 `attributeBase('minecraft:zombie')` 借用一个现有实体的属性。
+- `factory(...)` 不接受 JavaScript 函数，请改用 `entityClass(...)`。
 
 <a id="wiki-section-11"></a>
-## tag —— 给注册内容打标签
+## AI 行为
 
-注册时就能预埋 tag：26.x 的**物品、方块、实体类型、流体、附魔、画作变体** builder 实现有 `tag(...)` 方法。实现类上有方法不等于注册表可用；附魔与画作仍受上面的注册限制约束。这是「方块不掉落 / 物品进不了 tag」问题的正解——不用再手写 datapack JSON 或等 `ServerEvents.tags`。
-
-```javascript
-RegistryEvents.register(event => {
-  event.item('mymod:my_pick', b => {
-    b.tag('c:tools/pickaxe', 'minecraft:mineable/pickaxe'.replace('mineable/', 'needs_'))
-    // 一次可传多个，也可多次调用
-  })
-
-  event.block('mymod:my_ore', b => {
-    b.hardness = 3.0; b.requiresTool = true
-    b.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
-  })
-
-  event.entityType('mymod:raider_golem', b => {
-    b.category = 'monster'
-    b.tag('minecraft:raiders')
-  })
-})
-```
-
-规则与语义：
-
-- **参数格式**：`'namespace:name'` 或裸 `'name'`（→ `'minecraft:name'`）；带 `#` 前缀也能识别；一次可传多个。
-- **生效时机**：`.tag(...)` 先记成「待写条目」，等 tag 加载阶段（`ServerEvents.tags` 的分发点）自动灌入。**服务器每次启动 / `/reload` 都会重新应用**。
-- **与 `ServerEvents.tags` 组合**：待写条目在该事件**之前**注入，脚本监听器里仍可 `add`/`remove` 覆盖。
-- **流体的特殊性**：tag 同时打在 source（`<id>`）与 flowing（`flowing_<id>`）两个流体上。
-- **方块的 BlockItem**：`block` builder 的 `tag(...)` 打**方块 tag**；给自动 BlockItem 打物品 tag 用 `b.item.tag(...)`。
-- **支持范围**：`item` / `block` / `entityType` / `fluid` / `enchantment` / `paintingVariant`；本页其他 builder 未暴露 `tag(...)`。
-- 26.x 的 tag 目录与注册表同名（`data/<ns>/tags/item/...`，单数形式）。
-
-> builder tag 经 `ServerEvents.tags` 生效的路径目前仅接入 **NeoForge 26.x**；1.21.1 的 builder 无此方法，用 [事件参考](event-reference_cn) 中的 `ServerEvents.tags` 或 datapack JSON。Fabric 对应注册面仍是子集。
-
-<a id="wiki-section-12"></a>
-## GoalBuilder —— AI 目标
-
-`goals(g => ...)` 回调里用的 builder。内置方法提供缺省或显式 `priority` 重载；自定义方法必须传 `priority`（数字越小优先级越高）。
+`goals(...)` 里可以用这些方法。第一个参数是优先级，数字越小越优先，可以省略：
 
 | 方法 | 说明 |
 |---|---|
-| `floatInWater(priority?)` | 水中漂浮 |
-| `randomStroll(speed)` / `randomStroll(priority, speed)` | 随机走动 |
-| `meleeAttack(speed, longMemory)` / `meleeAttack(priority, speed, longMemory)` | 近战攻击 |
-| `panic(speed)` / `panic(priority, speed)` | 恐慌逃跑 |
-| `target(id)` / `target(priority, id)` / `target(priority, id, mustSee)` | 追击最近的目标 |
-| `hurtByTarget()` / `hurtByTarget(priority)` | 被攻击后反击 |
-| `lookAt(id, radius)` / `lookAt(priority, id, radius)` | 看向附近目标 |
-| `avoid(id, radius, speed)` / `avoid(priority, id, radius, speed)` | 逃离附近目标 |
-| `custom(priority, javaFactory)` | 原生 Java `Function<Mob, Goal>`，为当前 mob 创建普通 Goal；拒绝 guest 闭包 |
-| `customTarget(priority, javaFactory)` | 同上，加入 target selector |
-| `customClass(priority, goalClass)` | 公开、非抽象的原生 Goal 类，必须具有公开 `(Mob)` 构造器 |
-| `customTargetClass(priority, goalClass)` | 同样的类/构造器契约，加入 target selector |
+| `floatInWater(优先级?)` | 在水里浮起来 |
+| `randomStroll(速度)` | 随便走走 |
+| `meleeAttack(速度, 是否一直追)` | 近战攻击 |
+| `panic(速度)` | 受伤后乱跑 |
+| `target(实体ID, 必须看见?)` | 把附近这种实体当作目标 |
+| `hurtByTarget()` | 谁打它就反击谁 |
+| `lookAt(实体ID, 距离)` | 看向附近的这种实体 |
+| `avoid(实体ID, 距离, 速度)` | 躲开附近的这种实体 |
+| `customClass(优先级, Goal类)` / `customTargetClass(优先级, Goal类)` | 使用模组或原版的 Goal 类 |
 
-`target/lookAt/avoid` 的目标接受实体 id 字符串或原生 `LivingEntity` Java 类对象。常用内置映射仅用于裸名称或 `minecraft:` 命名空间；`mymod:zombie` 不会错误地匹配 `minecraft:zombie`。NekoJS 注册实体按完整 id 解析为实际配置的原生类（默认 `NekoScriptMob`）；opaque factory 无法推断类时须显式传 Java 类。建议始终使用完整的 `namespace:id`。
+实体 ID 请写完整，例如 `'minecraft:player'`。自定义 Goal 类必须有一个只接收 `Mob` 参数的公开构造器。
 
-内置方法仍可在脚本 `goals(build => ...)` 中链式配置。自定义 Goal factory 则由永久注册表保存，必须独立于脚本 generation Context，不能写 `custom(priority, mob => ...)`，也不能用捕获 guest Context 的 Java adapter 绕过限制。类入口在配置时校验类和构造器，每个 mob 使用独立构造出的 Goal；仅有 `(PathfinderMob)` 等较窄参数的构造器不符合 `(Mob)` 入口契约。
+<a id="wiki-section-12"></a>
+### 给已有实体加 AI
 
-为原生 mob 追加 Goal 的 join-level 路径使用 weak identity 去重，同一对象重新进入世界不会重复追加，新对象仍独立应用；默认脚本实体在自己的 Goal 初始化路径消费配置。
-
-<a id="wiki-section-13"></a>
-## GoalEvents —— 给已有实体追加 AI
-
-不创建新实体，而是给**已有实体类型**（包括原版）加 goal。
+`GoalEvents.register` 不创建新实体，而是给已有实体（包括原版生物）加行为。同样写在 `startup_scripts` 里：
 
 ```javascript
-// startup_scripts/pig_goals.js
 GoalEvents.register(event => {
   event.forType('minecraft:pig', goals => {
     goals.panic(0, 2.0).randomStroll(6, 0.8)
@@ -385,80 +290,242 @@ GoalEvents.register(event => {
 })
 ```
 
-<a id="wiki-section-14"></a>
-## 资源与本地化
-
-资源缺失**不影响注册**：物品照样注册出来、能拿在手上，只是显示成紫黑格 + 未翻译的 key。想让它看起来正常，路径由原版资源解析决定（不是 NekoJS 的规定，改不了）：
-
-- **物品/方块材质**：`nekojs/assets/<mod>/textures/item/<name>.png`、`textures/block/<name>.png`。
-- **模型 JSON**：`nekojs/assets/<mod>/models/item/<name>.json` 等。
-- **语言文件**：`nekojs/assets/<mod>/lang/zh_cn.json`；键名由原版按注册表拼出，物品是 `item.<mod>.<name>`、方块 `block.<mod>.<name>`、实体 `entity.<mod>.<name>`。
-
-<a id="wiki-section-15"></a>
-## DynamicRegistryEvents —— 服务器运行中注册（实验性，仅 NeoForge 26.x）
-
-通过 `DynamicRegistryEvents.dynamicRegistry` 声明运行期内容。启动前在服务器及客户端的 `nekojs/config/engine.toml` 中启用 `[dynamicRegistry] enabled = true`。回调只收集定义；候选提交成功并通过同步门禁后才激活注册。
+<a id="wiki-section-13"></a>
+## 创造标签页
 
 ```javascript
-// server_scripts/dynamic.js
-DynamicRegistryEvents.dynamicRegistry(event => {
-  event.item('mymod:ruby', build => {
-    build.maxStackSize = 64
-    build.rarity = 'epic'
-    build.fireResistant = true
-    build.mode = 'world'
-  })
-  event.soundEvent('mymod:boom', build => { build.fixedRange = 16 })
-  event.mobEffect('mymod:wither_touch', build => {
-    build.category = 'harmful'
-    build.color = 0x8B0000
+RegistryEvents.register(event => {
+  event.creativeModeTab('mymod:main', tab => {
+    tab.title = '我的模组'
+    tab.icon = 'mymod:cool_gem'
+    tab.add('mymod:cool_gem')
+    tab.add('mymod:gem_block')
   })
 })
 ```
 
-Builder 使用 Bean 属性或显式 setter（`build.mode = 'world'` / `build.setMode('world')`），不返回立即注册的 handle。`/nekojs registry` 查看已激活的认领状态；遗漏项标记 stale 并保留实际注册。无效或变更定义会拒绝整批候选并保留旧 active。旧 `DynamicRegistry` Binding 和链式 Builder 已移除。
+`icon` 和 `add` 都可以写物品 ID 或 `Item.of(...)`。不设图标时显示屏障。也可以在物品上写 `item.groupTab = 'mymod:main'` 把它放进这个标签页。
 
-此运行时事件只有 `item`、`soundEvent`、`mobEffect`，没有通用 `register(type, ...)`，也没有 block/fluid/entity 入口或对象配置重载。`world`（默认）与 `reloadable` 当前只是记账模式，**实际都保留 stale 条目**；脚本重载不会注销内容，预期的世界结束清理尚未接入生命周期事件。不能把 mode 当成删除或替换支持。无效回调输入会毒化整批候选。实验时使用新 id/可丢弃世界，保持服务端与客户端 opt-in/定义一致。这与仍需进程重启的 STARTUP `RegistryEvents.register` 不同。参见[脚本 API 风格](script-api-style_cn)。
+<a id="wiki-section-14"></a>
+## 其他内容
 
+```javascript
+RegistryEvents.register(event => {
+  // 状态效果：category 可以是 'beneficial'、'harmful'、'neutral'（默认）
+  event.mobEffect('mymod:shock', effect => {
+    effect.category = 'harmful'
+    effect.color = 0x00FF00
+  })
+
+  // 药水：effect(效果, 时长tick, 等级)，可以写多次
+  event.potion('mymod:shock_potion', potion => {
+    potion.effect('minecraft:poison', 600, 0)
+    potion.effect('minecraft:speed', 3600, 1, false, true)   // 再加：是否为信标效果、是否显示粒子
+  })
+
+  // 声音：fixedRange 不设时由声音本身决定
+  event.soundEvent('mymod:thunder_clap', sound => {
+    sound.fixedRange = 64
+  })
+
+  // 粒子类型
+  event.particleType('mymod:sparkle', particle => {
+    particle.overrideLimiter = true
+  })
+
+  // 村民类型：没有可设置的属性
+  event.villagerType('mymod:miner', villager => {})
+})
+```
+
+药水只能使用游戏里已经存在的效果，ID 写错时这个效果会被忽略，不会报错。同一个脚本里刚注册的效果此时还不存在，所以上面用的是原版效果。
+
+<a id="wiki-section-15"></a>
+### 附魔（仅 NeoForge 1.21.1）
+
+```javascript
+RegistryEvents.register(event => {
+  event.enchantment('mymod:ice_bane', ench => {
+    ench.supportedItems = 'minecraft:enchantable/weapon'
+    ench.weight = 5
+    ench.maxLevel = 3
+    ench.minCostBase = 5
+    ench.minCostPerLevel = 5
+    ench.maxCostBase = 20
+    ench.maxCostPerLevel = 5
+    ench.anvilCost = 2
+    ench.slots = 'mainhand'
+  })
+})
+```
+
+这样注册的附魔可以出现在附魔台和书上，但**没有任何实际效果**，效果需要自己用事件实现。Minecraft 26.x 上附魔改为由数据包定义，请把附魔 JSON 放在 `nekojs/data/` 下。
+
+<a id="wiki-builder-tags"></a>
 <a id="wiki-section-16"></a>
+## 在注册时加入标签
+
+物品、方块、流体、实体和附魔可以在注册时直接加入标签，不用再单独写数据包 JSON：
+
+```javascript
+RegistryEvents.register(event => {
+  event.item('mymod:ruby_pickaxe', item => {
+    item.maxDamage = 500
+    item.tag('minecraft:pickaxes', 'c:tools/mining_tool')
+  })
+
+  event.block('mymod:ruby_ore', block => {
+    block.requiresTool = true
+    block.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
+  })
+
+  event.entityType('mymod:raider_golem', mob => {
+    mob.tag('minecraft:raiders')
+  })
+})
+```
+
+- 一次可以传多个标签，也可以调用多次。
+- 只写名字时默认是 `minecraft:`。开头带 `#` 也可以。
+- 方块的 `tag` 加的是方块标签。要给同名物品加物品标签，写 `block.item.tag(...)`。
+- 流体的标签会同时加给静止和流动两种流体。
+- 每次服务器启动和执行 `/reload` 时都会重新应用。它们先于 `ServerEvents.tags` 加入，所以脚本里仍然可以再增删。
+
+这个功能目前只在 **NeoForge 26.x** 上生效。在 1.21.1 和 Fabric 上，请用 `ServerEvents.tags` 或数据包 JSON，见 [事件参考](event-reference_cn)。
+
+<a id="wiki-assets"></a>
+<a id="wiki-section-17"></a>
+## 材质、模型和名称
+
+没有材质和名称不影响注册，物品照样能用，只是显示成紫黑格子和翻译键。资源放在 `nekojs/assets/` 下，路径和原版资源包一样：
+
+| 内容 | 路径 |
+|---|---|
+| 物品材质 | `nekojs/assets/<命名空间>/textures/item/<名字>.png` |
+| 方块材质 | `nekojs/assets/<命名空间>/textures/block/<名字>.png` |
+| 模型 | `nekojs/assets/<命名空间>/models/item/<名字>.json` 等 |
+| 名称 | `nekojs/assets/<命名空间>/lang/zh_cn.json`（英文用 `en_us.json`） |
+
+语言文件的键是 `item.<命名空间>.<名字>`、`block.<命名空间>.<名字>` 或 `entity.<命名空间>.<名字>`：
+
+```json
+{
+  "item.mymod.cool_gem": "酷炫宝石",
+  "block.mymod.gem_block": "宝石块"
+}
+```
+
+改完资源按 F3+T 刷新。
+
+<a id="wiki-section-18"></a>
+### 自动生成物品模型
+
+只放了物品材质、不想手写模型时，可以让 NekoJS 生成模型：
+
+```javascript
+RegistryEvents.register(event => {
+  event.item('mymod:cool_gem', item => {
+    item.texture('mymod:item/cool_gem')
+  })
+})
+```
+
+- 设置了 `parentModel` 或 `texture(...)` 的物品才会生成模型。都不设时不生成。
+- `parentModel` 默认是 `'minecraft:item/generated'`，材质默认是 `<命名空间>:item/<名字>`。
+- `texture(slot, id)` 可以设置其他材质槽，`textures = { ... }` 一次设置全部。
+- PNG 材质需要自己提供，NekoJS 只生成模型 JSON。
+- 你手动改过的文件不会被覆盖，此时日志里会出现 `NEKO-6008`。
+- 生成记录保存在 `nekojs/.nekojs-item-assets/`，请和资源一起保留。
+
+<a id="wiki-section-19"></a>
+## 服务器运行中注册（实验性）
+
+这是仅 NeoForge 26.x 可用的实验功能，可以不重启游戏就添加少量内容。先在服务器和每个客户端的 `nekojs/config/engine.toml` 中开启，然后重启：
+
+```toml
+[dynamicRegistry]
+enabled = true
+```
+
+然后在 `server_scripts` 里写：
+
+```javascript
+DynamicRegistryEvents.dynamicRegistry(event => {
+  event.item('mymod:ruby', item => {
+    item.maxStackSize = 64
+    item.rarity = 'epic'
+    item.fireResistant = true
+  })
+  event.soundEvent('mymod:boom', sound => { sound.fixedRange = 16 })
+  event.mobEffect('mymod:wither_touch', effect => {
+    effect.category = 'harmful'
+    effect.color = 0x8B0000
+  })
+})
+```
+
+限制：
+
+- 只有 `item`、`soundEvent`、`mobEffect` 三种，属性也只有上面这些。
+- 内容一旦加入就不会被删掉。从脚本里删掉后，它会被标记为过期，但仍然存在。`/nekojs registry` 可以查看状态，`/nekojs registry stale` 列出过期的条目。
+- 有一项定义无效时，这一批都不生效，之前的内容保持不变。
+- 服务器和客户端要开启同样的配置、使用同样的脚本。
+- 请用新的 ID 和可以丢弃的测试世界来尝试。
+
+<a id="wiki-section-20"></a>
 ## 从旧写法迁移
 
-现在 `RegistryEvents` 只有 `register` 一个入口，builder 的数据通过公开属性赋值（包括 Bean/proxy setter），不代表都是 Java public field。下表仅说明实际已暴露 builder 的语法，不会新增工厂或解锁注册表：
+旧版本每种注册表有单独的入口，属性用链式方法设置。现在统一用 `RegistryEvents.register`，属性直接赋值：
 
 | 旧写法 | 新写法 |
 |---|---|
 | `RegistryEvents.item(e => e.create(id, b => ...))` | `RegistryEvents.register(e => e.item(id, b => ...))` |
-| `RegistryEvents.block(...)` / `.fluid(...)` / 等每个注册表一个入口 | 同上，`event.<registry>(id, b => ...)` |
-| `builder.maxStackSize(16)` | `b.maxStackSize = 16` |
-| `builder.fireResistant()` / `.glowing()` | `b.fireResistant = true` / `b.glowing = true` |
-| `builder.rarity('rare')` | `b.rarity = 'rare'` |
-| `builder.group('tab_id')` | `b.groupTab = 'tab_id'` |
-| `builder.hardness(3).resistance(6)` | `b.hardness = 3` `b.resistance = 6` |
-| `builder.sound('wood')` / `.mapColor('dirt')` | `b.sound = 'wood'` / `b.mapColor = 'dirt'` |
-| `builder.requiresTool()` / `.renderType('translucent')` | `b.requiresTool = true` / `b.renderType = 'translucent'` |
-| `builder.item(cb)`（配置自动 BlockItem） | `b.item.xxx = ...` 直改，或仍可用 `b.item(cb)` |
-| `fluid.bucket(false)` / `.block(false)` | `b.noBucket()` / `b.noBlock()`（或 `b.bucket = false` / `b.block = false`） |
-| `entity.category('monster')` / `.fireImmune()` | `b.category = 'monster'` / `b.fireImmune = true` |
-| `enchantment.minCost(5, 5)` / `.maxCost(20, 5)` | `b.minCostBase = 5` `b.minCostPerLevel = 5` / `b.maxCostBase = 20` `b.maxCostPerLevel = 5` |
-| `enchantment.supportedItems('#...')` / `.slots('mainhand')` | `b.supportedItems = '...'` / `b.slots = 'mainhand'` |
-| `sound.fixedRange(64)` | `b.fixedRange = 64` |
-| `particle.overrideLimiter(true)` | `b.overrideLimiter = true` |
-| `painting.width(2).height(2).assetId(...)` | `b.width = 2` `b.height = 2` `b.assetId = '...'` |
-| `effect.category('harmful').color(...)` | `b.category = 'harmful'` `b.color = ...` |
-| 保留不变：`b.food(cb)`、`b.tag(...)`、`b.unbreakable()`、`b.noItem()`、`b.size(w,h)`、`b.spawnEgg(a,b)`、`b.attributes(cb)`、`b.goals(cb)`、`potion.effect(...)` | —— 动作/复合配置仍是方法 |
+| `RegistryEvents.block(...)` 等每种一个入口 | `event.block(id, b => ...)` 等 |
+| `b.maxStackSize(16)` | `b.maxStackSize = 16` |
+| `b.fireResistant()` / `b.glowing()` | `b.fireResistant = true` / `b.glowing = true` |
+| `b.group('tab_id')` | `b.groupTab = 'tab_id'` |
+| `b.hardness(3).resistance(6)` | `b.hardness = 3`，`b.resistance = 6` |
+| `b.requiresTool()` | `b.requiresTool = true` |
+| `fluid.bucket(false)` / `fluid.block(false)` | `b.noBucket()` / `b.noBlock()` |
+| `entity.fireImmune()` | `b.fireImmune = true` |
+| `enchantment.minCost(5, 5)` | `b.minCostBase = 5`，`b.minCostPerLevel = 5` |
 
-<a id="wiki-section-17"></a>
+`food(...)`、`tag(...)`、`unbreakable()`、`noItem()`、`size(...)`、`spawnEgg(...)`、`attributes(...)`、`goals(...)`、`potion.effect(...)` 这些动作仍然是方法，写法不变。
+
+<a id="wiki-section-21"></a>
+## 常见错误
+
+注册脚本出错时，报错写在 `logs/nekojs/startup.log`，也可以用 `/nekojs error` 查看：
+
+| 报错 | 原因 |
+|---|---|
+| `Duplicate registration '...'` | 同一个 ID 注册了两次。后一次不会覆盖前一次，而是直接报错 |
+| `RegistryEvent has no member '...'` | 方法名拼错，或当前平台没有这种注册表。报错会列出能用的方法 |
+| `unknown registry '...'` | `event.register` 里的注册表名写错 |
+| `... expects a builder callback as the last argument` | 少了配置函数 |
+| `... expects an id string like 'mymod:thing'` | ID 不是字符串 |
+| `maxStackSize must be in [1, 99] ...` | 属性值超出范围，其他属性也有类似检查 |
+
+> 进阶用法：`event.register('item', 'mymod:raw', () => ...)` 可以直接提供一个创建对象的函数，注册表名可以写 `'item'` 或 `'minecraft:item'`。`event.<注册表>(id, 类型名, 配置函数)` 和 `event.custom(id, 类型名, 配置函数)` 用来调用插件提供的其他构建器类型。
+
+<a id="wiki-section-22"></a>
 ## 平台差异
 
-- **NeoForge 1.21.1**：支持本页的大部分 builder；附魔 builder 仅在此版本的运行时注册面可用。
-- **NeoForge 26.x**：支持 STARTUP 注册 builder 的主要面，但附魔改为数据驱动注册，不能使用 `event.enchantment(...)`。
-- **Fabric 26.x**：支持注册 builder 的子集；实体类型 builder 使用可见的人形模型/64×64 僵尸纹理，可配置原生 renderer；GoalBuilder 支持内置脚本配置和原生 factory/类自定义入口。`Capabilities` / `CapabilityEvents` 已接入真实 Fabric Lookup/Transfer，不等同于 NeoForge 原生类型或标准跨模组能量 API。FluidBuilder、VillagerTrades、附魔和若干平台专属注册面仍不可用。详见 [平台与兼容性](platform-compatibility_cn)。
-- Cleanroom 1.12.2 使用独立 legacy 分支的旧管线；当前仓库不验证本页写法在该分支的可用性。
+| 功能 | NeoForge 26.x | NeoForge 1.21.1 | Fabric 26.x |
+|---|---|---|---|
+| 物品、方块、实体、创造标签页、效果、药水、声音、粒子、村民类型 | ✅ | ✅ | ✅ |
+| 流体 | ✅ | ✅ | ❌ |
+| 附魔 | ❌（用数据包） | ✅ | ❌ |
+| 注册时加入标签 | ✅ | ❌ | ❌ |
+| 自动生成物品模型 | ✅ | ✅ | ✅ |
+| 服务器运行中注册 | ✅（实验性） | ❌ | ❌ |
 
-<a id="wiki-section-18"></a>
+更多平台差异见 [平台与兼容性](platform-compatibility_cn)。
+
+<a id="wiki-section-23"></a>
 ## 下一步
 
-- [事件参考](event-reference_cn) —— `RegistryEvents` / `GoalEvents`。
+- [事件参考](event-reference_cn)：`RegistryEvents`、`GoalEvents`、`ServerEvents.tags`。
 - [快速开始](quick-start_cn)
 
 <!-- wiki-nav -->

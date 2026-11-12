@@ -5,158 +5,154 @@
 <a id="wiki-section-1"></a>
 # Script basics
 
-NekoJS separates scripts into directories by **script type (`ScriptType`)**. Each type has different loading times, reload behavior, and available APIs.
+This page covers three things: which folder a script belongs in, how to apply your changes, and how to find errors.
 
 <a id="wiki-section-2"></a>
-## Script types
+## The four script types
 
-| Directory | ScriptType | Purpose | Automatic loading | Reload behavior |
-|---|---|---|---|---|
-| `nekojs/startup_scripts/` | STARTUP | Register items/blocks/entity types/Goals. Runs once at game startup. | Yes | Command reload is unsupported; changes require a game restart |
-| `nekojs/server_scripts/` | SERVER | Modify recipes, listen to server events, and interact with world state. | Yes | Hot reload with `/nekojs reload` |
-| `nekojs/client_scripts/` | CLIENT | Client-only features: GUI, particles, key bindings, and client events. | Yes | Hot reload with `/nekojs reload client` (integrated client only) |
-| `nekojs/test_scripts/` | TEST | Explicitly executed test scripts. | No | `/nekojs test` or `/nekojs reload test` |
+NekoJS tells scripts apart by folder. Scripts in different folders run at different times and can use different APIs.
+
+| Folder | When it runs | What it is for | How to apply changes |
+|---|---|---|---|
+| `startup_scripts/` | Once, while the game starts | Registering new items, blocks and entities | **Restart the game** |
+| `server_scripts/` | When a world loads | Recipes, player and world events, custom commands | `/nekojs reload` |
+| `client_scripts/` | While the game starts (client only) | HUD, key bindings, screens, item tooltips | `/nekojs reload client` |
+| `test_scripts/` | Only when you run it | Tests that check your scripts behave correctly | `/nekojs test` |
+
+A quick rule:
+
+- **Adding new things** (items, blocks) → `startup_scripts`
+- **Changing game rules or data** (recipes, events) → `server_scripts`
+- **Changing what the player sees or presses** → `client_scripts`
 
 <a id="wiki-section-3"></a>
-## API visibility (side gating)
+## Which APIs each type can use
 
-To prevent misuse, each script type can only access APIs for its corresponding side:
+Server scripts can only use server APIs, and client scripts can only use client APIs. Using the wrong one fails immediately — for example, calling `ServerEvents.recipes(...)` in `client_scripts`.
 
-| Script type | Available APIs |
+| Script | Available APIs |
 |---|---|
-| STARTUP | Server APIs + client APIs (both sides are visible during startup) |
-| SERVER | Server APIs only |
-| CLIENT | Client APIs only |
-| TEST | Server APIs only |
+| Startup | Both server and client |
+| Server | Server only |
+| Client | Client only |
+| Test | Server only |
 
-For example, calling `ServerEvents.recipes(...)` in `client_scripts` causes an error.
+The [Event reference](event-reference_us) and [Global bindings](global-bindings_us) note which script types can use each event and binding.
 
 <a id="wiki-section-4"></a>
-## Supported file extensions
+## File types
 
-`.js`, `.mjs`, `.cjs`, `.ts` (erasable TypeScript), `.jsx`/`.tsx` (JSX lowering: classic by default, automatic runtime optionally enabled), and `.py` (built-in Python subset transpilation).
+| Extension | Description |
+|---|---|
+| `.js` | Plain JavaScript; recommended for beginners |
+| `.mjs` / `.cjs` | Explicitly an ES module / a CommonJS module |
+| `.ts` | TypeScript; type annotations are removed before running, and types are not checked |
+| `.jsx` / `.tsx` | JavaScript / TypeScript with JSX syntax |
+| `.py` | The Python subset NekoJS supports; no Python installation needed |
 
-See [TypeScript and JSX](typescript-and-jsx_us).
+See [TypeScript and JSX](typescript-and-jsx_us) and [Python scripts](python-scripts_us).
 
 <a id="wiki-section-5"></a>
+## Applying changes
+
+Saving a file does **not** apply it. After a change, do the following for its script type:
+
+| You changed | Do this |
+|---|---|
+| A server script | `/nekojs reload` (same as `/nekojs reload server`) |
+| A client script | `/nekojs reload client` (on NeoForge, F3+T also reloads them) |
+| A test script | `/nekojs test` |
+| A startup script | Restart the game. `/nekojs reload startup` is rejected |
+
+To rerun a single file, use `/nekojs reload server recipes.js` (the path is relative to `server_scripts`; TAB completes it). For everyday work, reloading the whole type is more reliable.
+
+<a id="wiki-section-6"></a>
+### What happens when a reload fails
+
+When you reload a whole type (for example with `/nekojs reload`) and any one of the new scripts throws an error, **the whole reload is discarded and the game keeps using the last scripts that loaded successfully**. A mistake never leaves the game half old, half new. Fix the error and reload again.
+
+Note that things a script already did are not undone. If a script wrote a file or gave a player an item before it failed, those changes stay.
+
+<a id="wiki-section-7"></a>
+### The recipe viewer did not refresh
+
+After `/nekojs reload`, recipes work on the server immediately, so you can test them by crafting. Recipe viewers such as JEI or REI sometimes keep showing old recipes; re-enter the world to refresh them.
+
+<a id="wiki-section-8"></a>
 ## Load order
 
-Scripts are sorted and loaded according to these rules:
-
-1. **`priority` property** (higher numbers run first; default 0).
-2. **`after` property** (declares dependencies; see [Script properties](script-properties_us)).
-3. Within a priority group, `after` orders enabled scripts; remaining ties use discovery/path order. Versioned pack prerequisites can override file-priority preferences; see [Script packs](script-packs_us).
+Scripts of the same type load in file path order by default. To control the order, add a comment at the **very top** of the file:
 
 ```javascript
 // priority: 100
-// This script runs before scripts with the default priority=0
 ```
 
-<a id="wiki-section-6"></a>
-## Reload behavior in detail
+Higher numbers load first; the default is 0. To make one file load after another, use `// after: lib/init.js`.
 
-<a id="wiki-section-7"></a>
-### Server / client / test
-
-**Full generation reload** prepares and executes a candidate before replacing a healthy active generation. Failed candidates release their own Context/listeners/timers and preserve the active generation. Ordinary reload does not rebuild the runtime root or Plugin Runtime. This guarantee does not apply to the legacy single-file path below.
-
-- `/nekojs reload` (defaults to reloading `server`)
-- `/nekojs reload server` / `client` / `test`
-
-Reload results appear in chat and logs. NekoJS does not display a script reload progress bar on the screen.
-
-| Operation | Boundary |
-|---|---|
-| Full type reload | Candidate generation; TEST uses the reload-and-run flow, not an assertion-pass guarantee |
-| `/nekojs reload server path/to/file.js` | Legacy active-Context rerun; tracked dependants may rerun too, with no candidate rollback |
-| Versioned pack reload | Package/type operation, with dependency/domain affected sets; not a file rerun |
-| Native `/reload` / F3+T | Server data packs / client resources, separate from script generations |
-
-File paths are relative to the script type root and support TAB completion. Saving a file alone does not trigger auto-reload. See [Commands](commands_us) for owner-thread restrictions and post-commit recipe/data refresh.
-
-> Transactional reload protects the commit of a managed script generation. A failed candidate retains the active environment, but external effects on the world, files, or arbitrary Java objects are not necessarily rolled back. Reload is not a transaction over game state.
-
-Managed lifecycle operations are serialized per ScriptType manager; concurrent requests do not build overlapping candidates. Reload from inside a managed event/timer callback is rejected as reentrant. This does not make guest-created threads or arbitrary Java objects safe, and the internal synchronized owner entry does not automatically marshal work to a dedicated thread.
-
-<a id="wiki-section-8"></a>
-### Startup scripts
-
-Startup scripts execute only during game startup. Registration changes require a game restart. `/nekojs reload startup` currently rejects execution; it cannot rerun STARTUP scripts through an in-game command.
+These comments must be at the start of the file. If they come after code, they are ignored without any error. See [Script properties](script-properties_us) for every available comment.
 
 <a id="wiki-section-9"></a>
-### Recipe hot reload
+## Sharing data between scripts
 
-| Platform | Recipe reload |
-|---|---|
-| **Cleanroom 1.12.2** | Separate legacy branch; this repository does not verify recipe reload or viewer refresh behavior. |
-| **Fabric 26.x** | Supports rerunning recipe scripts through `/nekojs reload server`; the current node implementation determines the recipe surface. |
-| **NeoForge (26.x / 1.21.1)** | Supported. `/nekojs reload server` rebuilds the working set from cached `baseJsons`, reruns recipe scripts, and replaces `RecipeManager` (immediately effective on the server); the JEI/REI viewer may need a client refresh. |
+Each script file has its own scope: a variable defined in one file is not visible in another. To share data:
 
-<a id="wiki-section-10"></a>
-## Global variables and scope
-
-- Each script file has its own module scope (ESM) or function scope (CJS).
-- **`global`** is a state container shared within the current `ScriptType` and retained after ordinary reload. A SERVER `global.counter` does not automatically appear as CLIENT `global.counter`.
-- **`shared`** is an explicit state container for sharing across script types within the same NekoJS runtime. It only provides in-process memory sharing, not network synchronization or save persistence.
-
-These are runtime-owned stores, not a promise that guest objects/functions survive a Context closing. Store simple durable values, not old event/player/module references. Legacy type state lasts for the runtime root, including ordinary reload/world switches; root close clears it. Versioned pack `global` is scoped to the pack/source/session and ends with that session; see [Script packs](script-packs_us). See [Node.js compatibility](nodejs-compatibility_us) for timer ownership and filesystem read/write limits.
+- **`global`**: shared by scripts of the same type. For example, all server scripts share one `global`.
+- **`shared`**: shared by scripts of all types. For example, a server script writes and a client script reads (single player only, within the same game process).
 
 ```javascript
 // server_scripts/a.js
 global.counter = global.counter ?? 0
-shared.message = 'server is ready'
 
-// server_scripts/b.js (still readable after ordinary reload)
+// server_scripts/b.js
 ServerEvents.tickPost(event => {
-  global.counter = (global.counter || 0) + 1
+  global.counter++
 })
-
-// client_scripts/hud.js (cross-type reads must use shared)
-const message = shared.message
 ```
 
-`global` is not `globalThis`. Reload reruns initializers, so the example initializes the scalar only when absent. Candidate top-level `global`/`shared` writes read their own staged values and publish only on successful commit; this is not deep rollback of nested objects.
+`global` and `shared` keep their contents across reloads, but **are gone when the game closes**. They also cannot carry data between a server and a client in multiplayer.
 
-See the `global` and `shared` entries in [Global bindings](global-bindings_us).
+To save data to disk, sync it to clients, or store it on players and items, see [Data and state](data-and-state_us).
+
+<a id="wiki-section-10"></a>
+## Finding errors
+
+Script errors do not crash the game. Check in this order:
+
+1. Run `/nekojs error` to see whether there are errors.
+2. Run `/nekojs view_all_errors` to see the full list (on NeoForge it opens an error panel).
+3. Open `logs/nekojs/<type>.log`, for example `logs/nekojs/server.log`.
+
+An error message shows the file, line and column, and the line of code that failed:
+
+```text
+> 12 |   event.shapd('minecraft:stone', ...)
+     |         ^
+```
+
+What happens next depends on the script type:
+
+- **Server, client and test scripts**: if any file fails during a reload, none of that reload's changes apply and the last working version stays in use (see "What happens when a reload fails" above). Fix the error and reload.
+- **Startup scripts**: the failing file is skipped and the others still run.
+- **Errors inside event callbacks** (for example, code inside `ServerEvents.recipes(event => { ... })`): only that one error is recorded; the script and other events keep working.
 
 <a id="wiki-section-11"></a>
-## Error handling
+### Spelling checks before loading
 
-- NekoJS catches script exceptions and records them in `logs/nekojs/<type>.log`; they do not crash the game.
-- Error reports include the file, line, and column, along with a source excerpt (`>` marks the error line and `^` points to the error column). Syntax errors (SyntaxError) also identify the relevant line/column.
-- Use `/nekojs error` to check whether there are any script errors.
-- Use `/nekojs view_all_errors` to send the full error list to chat.
-- Entry-evaluation failures mark that entry disabled. Event/timer callback errors are recorded separately; they do not guarantee that the whole script is disabled. Host/Graal cancellation or resource exhaustion can isolate the active environment until explicit full reload.
+Before loading scripts, NekoJS checks spelling. If you write `event.rec`, it suggests "did you mean `recipes`?". These are hints only and never stop a script from running.
 
-Normal script execution no longer configures an evaluation timeout, cumulative statement limit, or runaway watchdog. The retired `scriptEvaluationTimeoutSeconds`, `scriptStatementLimit`, and `scriptRunawayTimeoutSeconds` engine keys do not restore those controls. An infinite loop or a never-settling entry promise can therefore block loading/reloading; keep work bounded and yield deliberately. Structured JSON/NBT/file bounds and separate authoring-tool waits still apply.
+If there are too many hints or false alarms, set `scriptMemberValidation = false` in `nekojs/config/engine.toml`.
 
 <a id="wiki-section-12"></a>
-### Static checks before loading (preflight)
+### Watch out for infinite loops
 
-During script loading/reloading, NekoJS performs **advisory** static checks on the source (they do not block execution). Results also appear in the error panel and logs:
-
-- **Member spelling checks** for global bindings (`Item`/`Ingredient`/`Utils`, etc.) and event callback parameters (for example, `event.rec` suggests similar members related to `recipes`).
-- Type flow through chained calls (`Item.of('x').typo()`), local variable types, and unknown identifiers (`Util.x`, calls to undeclared functions).
-
-These checks are heuristic. Dynamic member access (`Utils[key]`) and bare identifiers in cases such as `typeof x` are neither incorrectly flagged nor covered. To disable false positives or unwanted messages, set `scriptMemberValidation = false` in `nekojs/config/engine.toml`.
+NekoJS does not forcibly stop a script that never finishes. An infinite loop, or an `await` on a Promise that never completes, freezes the game. Also keep work light in events that fire often, such as `tick`.
 
 <a id="wiki-section-13"></a>
-## Workspace and IDE configuration
-
-When first creating a workspace, NekoJS generates `jsconfig.json` for script directories. Running `/nekojs probe` generates or updates:
-
-- TypeScript `.d.ts` files under `.neko_probe/typescript/`;
-- The `.neko_probe/python/nekojs/` stub package after running `/nekojs probe python`;
-- VS Code snippets and editor configuration managed by each backend.
-
-Automatic execution of the default TS probe on server startup is controlled by `runAtStartup` in `probe.toml` and is disabled by default. Open the relevant script directory directly in VS Code for completion. See [Probe type generation](probe-type-generation_us).
-
-<a id="wiki-section-14"></a>
 ## Next steps
 
-- [Script properties](script-properties_us): details of `priority`/`modloaded`/`disable`/`after`.
-- [Global bindings](global-bindings_us): all top-level APIs.
-- [Event reference](event-reference_us): listen to game events.
+- [Script properties](script-properties_us): full usage of `priority`, `modloaded`, `disable` and `after`.
+- [Commands](commands_us): every `/nekojs` command.
+- [Global bindings](global-bindings_us): every ready-to-use helper.
 
 <!-- wiki-nav -->
 

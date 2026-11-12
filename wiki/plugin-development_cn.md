@@ -5,30 +5,14 @@
 <a id="wiki-section-1"></a>
 # 插件开发
 
-> 本页教你写一个 **NekoJS 插件 mod**（addon）—— 即一个独立的 mod，给 NekoJS 添加新的绑定、事件、适配器、配方 schema 等。
+NekoJS 插件是一个普通的 Minecraft 模组，它用 Java 给脚本添加新功能：新的全局绑定、事件组、类型适配器、配方命名空间、补全声明等。
+
+NekoJS 自己的内置功能也是用同一套插件接口实现的，所以插件能做的事情和内置功能一样多。
 
 <a id="wiki-section-2"></a>
-## 插件是什么
+## 第一个插件
 
-NekoJS 的扩展模型是**插件即 API**：内置功能（`NekoJSCorePlugin`）和第三方插件实现同一个接口 `NekoJSPlugin`，走同一套钩子。
-
-插件是具体的 `NekoJSPlugin` 实现类，需要无参构造器，并按需实现钩子。发现方式取决于加载器：
-
-- **NeoForge：** 标注 `@RegisterNekoJSPlugin`，由 FML 注解扫描发现。
-- **Fabric：** 在 addon 的 `fabric.mod.json` 中声明 `nekojs` entrypoint；只有注解不会发现第三方 addon。管理器允许没有注解元数据，默认优先级为 1000。
-
-```json
-{"entrypoints":{"nekojs":["com.example.myaddon.MyAddonPlugin"]}}
-```
-
-上述 JSON 仅是合并到完整 Fabric mod manifest 的片段，不是完整替代文件。共享管理器检查接口/具体类，并在 bootstrap 时通过反射实例化；该反射路径的失败会记录错误并跳过插件。Fabric 在交给共享管理器之前已获取 entrypoint 实例，因此实例创建也可能先在 Fabric 自己的加载路径失败。有注解时仍使用其 priority、requiredMods 和 clientOnly 元数据。
-
-包名、类名、源码目录、一个 mod 放几个插件类都**没有任何约束**：类名不必以 `Plugin` 结尾，也不必集中放在某个包下。本页示例里 `com.example.myaddon` 这种排布只是可读性习惯。
-
-脚本侧贡献遵循[脚本 API 风格](script-api-style_cn)：辅助函数使用命名 Binding，订阅使用事件组，仅在实际支持时使用可读/可写属性，已有 builder API 的配置回调放最后。任意 JSON/输入数据并不等于通用 builder 配置对象。
-
-<a id="wiki-section-3"></a>
-## 最小插件
+下面的插件给所有脚本加一个全局绑定 `MyHelper`。
 
 ```java
 package com.example.myaddon;
@@ -37,12 +21,8 @@ import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 
-@RegisterNekoJSPlugin(
-    priority = 500,
-    requiredMods = { "mymod" }    // 仅当 mymod 加载时启用本插件
-)
+@RegisterNekoJSPlugin
 public class MyAddonPlugin implements NekoJSPlugin {
-
     @Override
     public void registerBinding(BindingRegistry registry) {
         registry.register("MyHelper", new MyHelperJS());
@@ -53,241 +33,270 @@ public class MyAddonPlugin implements NekoJSPlugin {
 ```java
 package com.example.myaddon;
 
+import com.tkisor.nekojs.api.annotation.Doc;
+
 public class MyHelperJS {
-    public int add(int a, int b) { return a + b; }
+    @Doc("Adds two integers.")
+    public int add(int a, int b) {
+        return a + b;
+    }
 }
 ```
 
-这样脚本里调用 `MyHelper.add(1, 2)` 会返回 `3`。
+在脚本里使用：
 
-> 想给方法加 JSDoc 描述？可以使用 `@Doc`、`@Param`、`@Return` 等注解，或者在下文使用编程式 `registerTypeDocs`。注解会进入 probe 生成的声明文件；未实现的规划项见 [注解体系](annotations_cn)。
+```javascript
+// server_scripts/test.js
+console.info(MyHelper.add(1, 2)) // 3
+```
+
+验证步骤：
+
+1. 把插件模组、NekoJS 和 Graal 一起放进 `mods/`，启动游戏。
+2. 进入世界，查看 `logs/nekojs/server.log` 是否输出 `3`。
+3. 执行 `/nekojs probe`，在 VS Code 里输入 `MyHelper.`，应能看到 `add` 和它的说明。
+
+<a id="wiki-section-3"></a>
+## 让 NekoJS 发现插件
+
+插件类必须实现 `NekoJSPlugin`，是具体类（不是接口或抽象类），并且有公开的无参构造器。不同加载器的发现方式不同：
+
+| 加载器 | 怎么注册 |
+|---|---|
+| NeoForge | 在类上标注 `@RegisterNekoJSPlugin`，NekoJS 扫描所有模组找到它 |
+| Fabric | 在 `fabric.mod.json` 里声明 `nekojs` entrypoint。只有注解不会被发现 |
+
+Fabric 的 entrypoint 片段（合并进你的 `fabric.mod.json`）：
+
+```json
+{
+  "entrypoints": {
+    "nekojs": ["com.example.myaddon.MyAddonPlugin"]
+  }
+}
+```
+
+两个平台都支持时，注解和 entrypoint 都写上。Fabric 上如果类也有注解，会读取注解里的 `priority`、`requiredMods`、`clientOnly`；没有注解时优先级是 1000。
+
+包名、类名和一个模组里有几个插件类都没有限制。
 
 <a id="wiki-section-4"></a>
-## @RegisterNekoJSPlugin 详解
+### @RegisterNekoJSPlugin 的参数
 
 ```java
 @RegisterNekoJSPlugin(
-    priority = 1000,                  // 加载优先级，数字越大越先（默认 1000；内置 CORE_PRIORITY = Integer.MAX_VALUE）
-    clientOnly = false,               // 仅客户端加载
-    requiredMods = { "mymod" }        // 仅当所有列出的 mod 都存在时加载（AND）
+    priority = 1000,              // 越大越先运行，默认 1000
+    clientOnly = false,           // true 时专用服务器上不加载
+    requiredMods = { "create" }   // 列出的模组都存在才加载
 )
 ```
 
-| 元素 | 默认 | 作用 |
+| 参数 | 默认值 | 作用 |
 |---|---|---|
-| `priority` | `1000` | 加载优先级（降序）。`CORE_PRIORITY` 是最大优先级；相同数值仍按下方规则排序。 |
-| `clientOnly` | `false` | 仅客户端进程加载（专用服务器跳过）。 |
-| `requiredMods` | `{}` | 所有列出的 mod 都存在才加载。 |
+| `priority` | `1000` | 插件运行顺序，大的先运行。内置核心插件用 `NekoJSPlugin.CORE_PRIORITY`（`Integer.MAX_VALUE`），总是最先 |
+| `clientOnly` | `false` | 只在客户端加载，专用服务器上跳过 |
+| `requiredMods` | `{}` | 列出的模组全部存在时才加载，适合写联动插件 |
 
-> **顺序契约**：排序键是 priority 降序，同 priority 的相对顺序由实现类 FQN 再由 owner id 字典序兜底（`NekoJSBasePluginManager.ORDER`）——所以同一份 classpath 上顺序是确定的，但它取决于你的**类名**，改个类名就会变，不是可以依赖的契约。需要确定性地覆盖内置实现时用各注册表的显式 API（如 `ScriptCompilerRegistry.replaceLanguage`）；编译器按扩展名查找是「后注册者胜」，即优先级**低于**内置的插件可用普通 `register` 覆盖内置语言。同一插件类被同一 owner 重复发现（classpath 重复条目）会自动去重，只注册一次。
+priority 相同时，按插件类的完整类名排序。这个顺序是稳定的，但改类名就会变，不要依赖它。
+
+插件被跳过（缺少前置模组或 `clientOnly`）时只记 debug 日志。插件类无法实例化时会记 error 日志 `Failed to instantiate plugin ...`。
 
 <a id="wiki-section-5"></a>
-## NekoJSPlugin 钩子一览
+## 钩子在什么时候运行
 
-> **双形态模型（ADR-0010）**：每条通道的**事实源**是自包含扩展点文件（`core.plugin` 包的 `XxxPoint`：冲突策略、产物冻结、依赖关系全在点内）；`NekoJSPlugin` 的钩子是各点的**门面投影**。覆写基接口钩子（推荐、最简）与 implements `XxxPoint.Contributor`（显式形态）由同一个点收集，**效果完全等价**——两种都行，本页统一按基接口钩子描述。（`PluginHookPairingTest` 是本仓的内部守护：给基接口新增收集型方法时必须配对一个 Point，否则 CI 红。这是贡献 NekoJS 本体时的约束，写插件用不到。）
+`NekoJSPlugin` 的方法都有默认空实现，只覆写需要的就行。钩子分两类：
 
-**写入窗口**：所有注册表都只在 bootstrap 的收集阶段有意义，也就是只在钩子的调用栈里。**别把 registry 存成字段留着以后用**——收集结束后写进去的东西不会被任何人读到。要延后决定就在钩子里注册一个能延后求值的对象。
+- **注册钩子**（`registerXxx`）：在游戏启动时 NekoJS 初始化插件期间各调用一次，把内容登记进 NekoJS。只能在钩子运行期间往传进来的 registry 里写；不要把 registry 存起来以后用，之后写入的内容不会生效，部分 registry 还会抛 `IllegalStateException`。
+- **回调钩子**（`init`、`afterScriptsLoaded` 等）：在对应时刻被调用，覆写即生效。
 
-违反的后果分两种，取决于是哪个注册表：
-
-- **抛 `IllegalStateException`**：走 `Sealable` 的那些扩展点（TypeDocs / Lifecycle / NodeModules / RecipeNamespaces / RecipeLifecycle / RecipeSchemas），以及 `ScriptPropertyRegistry`、`ProbeBackendRegistry`、`ScriptCompilerRegistry`。这类你会立刻知道自己写错了。
-- **没有注册表级封口检查**：`BindingRegistry`、`JSTypeAdapterRegistry` 的晚到唯一条目会进入不再被消费的集合。`EventGroupRegistry` 也没有注册表级封口检查，但合并到已有冻结组会抛 `IllegalStateException`；新增组无法更新已经发布的快照。不要依赖其中任一种失败形式。
-
-只需覆盖用到的钩子。多数便捷回调默认是空实现；生命周期注册钩子已把这些回调接入注册表，`generatedLangs()` 默认返回 `en_us`。覆写注册钩子而不调用默认实现，会替换这部分默认接线。
+普通的 `/nekojs reload` 不会重新调用注册钩子。修改插件后要重启游戏。
 
 <a id="wiki-section-6"></a>
-### 生命周期
-
-| 钩子 | 时机 |
-|---|---|
-| `init()` | Plugin Runtime bootstrap 完成后、startup 脚本加载前 |
-| `initStartup()` | startup 脚本加载完成后 |
-| `afterInit()` | 所有 mod 初始化完成后（NeoForge：`FMLLoadCompleteEvent`） |
-| `beforeScriptsLoaded(ScriptType)` | 首次加载或完整 reload 前，不含单文件热重载 |
-| `afterScriptsLoaded(ScriptType)` | 首次加载或完整 reload 后，不含单文件热重载 |
-| `registerLifecycleHooks(PluginLifecycleRegister)` | 编程式注册以上五个生命周期回调（default 实现即 `this::init` 等五连，通常直接覆写便捷回调即可） |
-| `beforeRecipeLoading(...)` | 配方加载前（可改原始 JSON map） |
-| `afterRecipes(...)` | 配方数据提交到 RecipeManager 之后 |
+## 钩子一览
 
 <a id="wiki-section-7"></a>
-### 绑定与类型
+### 绑定、类型和模块
 
 | 钩子 | 作用 |
 |---|---|
-| `registerBinding(BindingRegistry)` | 注册全局 JS 绑定（详见下） |
-| `registerAdapters(JSTypeAdapterRegistry)` | 注册 JS→Java 类型适配器（见 [类型适配器](type-adapters_cn)） |
-| `registerTypeDocs(TypeDocsRegister)` | 注册类型文档（编程式 API；也可使用 `@Doc` / `@Param` / `@Return` 注解） |
-| `registerNodeTypeDocs(...)` | 注册 Node 模块类型声明 |
-| `registerNodeModules(...)` | 注册 Node 兼容模块 |
-
-**可选的归属方 API 模块**
-
-原有 `registerBinding` 钩子也支持仅导出到模块的注册：
-
-```java
-registry.register(com.tkisor.nekojs.api.data.Binding.of("MyHelper", new MyHelperJS()),
-        exposure -> exposure.versioned());
-```
-
-若加载器发现的 addon 归属 id 是 `myaddon`，脚本可用 `import { MyHelper } from "nekojs/api/version/myaddon"` 导入。这个重载**不会同时创建全局变量**；原有 `register(name, value)` 仍注册全局。必须且只能选择一次 `versioned()` 或 `stable()`。归属方来自插件发现，不是脚本提供的模块路径；缺失归属方或重复模块导出会以 `NEKO-4057` 失败。
-
-`stable()` 对应 `nekojs/api/stable/myaddon`，会检查公共类型是否泄漏原生类型，不会自动把 Minecraft helper 变成跨平台 API。已有 stable/version 模块导出、全局绑定和自定义 Node 模块是不同注册通道。只能在 bootstrap 收集阶段注册；普通脚本 reload 不会重新发现插件或收集贡献。
+| `registerBinding(BindingRegistry)` | 注册全局绑定，见下文 |
+| `registerAdapters(JSTypeAdapterRegistry)` | 注册类型适配器，让 Java 参数接受字符串、对象等多种 JS 输入。见 [类型适配器](type-adapters_cn) |
+| `registerTypeDocs(TypeDocsRegister)` | 补充或替换补全声明，见下文 |
+| `registerNodeModules(NodeModuleRegister)` | 注册可以 `require('id')` 的 JS 模块 |
+| `registerNodeTypeDocs(TypeDocsRegister)` | 给这些模块提供 `declare module` 声明 |
 
 <a id="wiki-section-8"></a>
 ### 事件
 
 | 钩子 | 作用 |
 |---|---|
-| `registerEvents(EventGroupRegistry)` | 注册事件组（见 [事件扩展](event-extensions_cn)） |
-| `registerClientEvents(EventGroupRegistry)` | 注册客户端事件组 |
+| `registerEvents(EventGroupRegistry)` | 注册事件组（服务端和通用） |
+| `registerClientEvents(EventGroupRegistry)` | 注册只在客户端存在的事件组 |
+
+写法见 [事件扩展](event-extensions_cn)。
 
 <a id="wiki-section-9"></a>
 ### 配方
 
 | 钩子 | 作用 |
 |---|---|
-| `registerRecipeNamespaces(RecipeNamespaceRegister)` | 注册配方命名空间（handler 类） |
-| `registerRecipeSchemas(RecipeSchemaRegister)` | 注册配方 schema（Java 端） |
-| `registerRecipeLifecycleHooks(RecipeLifecycleRegister)` | 注册配方生命周期钩子 |
+| `registerRecipeNamespaces(RecipeNamespaceRegister)` | 注册 `event.recipes.<namespace>.<method>(...)` 的 Java 实现 |
+| `registerRecipeSchemas(RecipeSchemaRegister)` | 注册或修正配方类型的字段定义 |
+| `registerRecipeLifecycleHooks(RecipeLifecycleRegister)` | 注册配方加载前后的回调；默认实现会接上 `beforeRecipeLoading` 和 `afterRecipes` |
+
+配方 schema 的优先级从高到低：脚本里的 `event.registerSchema` > 数据驱动 > 插件 > 自动扫描。
 
 <a id="wiki-section-10"></a>
-### Probe / 工作区
+### 脚本语言、属性和工作区
 
 | 钩子 | 作用 |
 |---|---|
-| `registerProbeBackends(ProbeBackendRegistry)` | 注册 probe backend（按 `(languageId, name)` 二维登记）。内置的两个 backend（TS 的 `.d.ts` 与 Python 的 `.pyi`，均命名 `builtin`）由 common 的 `NekoProbeBuiltinPlugin` 经**同一个钩子**注册——第三方加新语言 backend 或用不同 `name` 提供替代实现；同 `(语言, 名字)` 冲突在 bootstrap 结束时 `lock()` 抛异常崩溃。接口上只有 `languageId()` / `name()` / `render(ctx)` 三个方法没有 default（`priority()`、`requiresIr()`、`outputDir(...)`、`contributeEditorConfig(...)` 都有 default，`generate(ctx)` 默认先在内存渲染、校验路径，再原地同步输出；渲染失败保留旧输出，写入失败可能留下部分更新），完整示例见 [Probe 类型生成 · 新增自定义 backend](probe-type-generation_cn) |
-| `modifyWorkspaceConfig(JSConfigModel, env)` | 修改自动生成的 jsconfig.json |
-| `registerScriptCompilers(ScriptCompilerRegistry)` | 注册自定义脚本编译器（新语言前端） |
-| `registerScriptProperty(ScriptPropertyRegistry)` | 注册自定义脚本属性（`// key:`） |
+| `registerScriptCompilers(ScriptCompilerRegistry)` | 注册新的脚本语言或文件扩展名 |
+| `registerScriptProperty(ScriptPropertyRegistry)` | 注册新的脚本属性（`// key: value`），见 [脚本属性](script-properties_cn) |
+| `registerProbeBackends(ProbeBackendRegistry)` | 注册新的补全声明生成器，见 [Probe 类型生成](probe-type-generation_cn) |
+| `modifyWorkspaceConfig(JSConfigModel, String)` | 在写出各脚本目录的 `jsconfig.json` 前修改它 |
+| `registerApiSurface(ApiContributionRegistry)` | 提供 API 表面元数据 |
 
 <a id="wiki-section-11"></a>
-### 附加数据 / 资源生成
+### 生命周期回调
 
-| 钩子 | 作用 |
+| 方法 | 什么时候调用 |
 |---|---|
-| `attachServerData(...)` / `attachLevelData(...)` / `attachPlayerData(...)` | 给 Server/Level/Player 挂 `AttachedData` |
-| `registerApiSurface(ApiContributionRegistry)` | 贡献 API surface 条目 |
-| `generateData(DataGeneratorJS)` | `ServerEvents.generateData` 前触发，与脚本共享 generator |
-| `generateAssets(DataGeneratorJS)` | `ClientEvents.generateAssets` 前触发 |
-| `generateLang(LangGeneratorJS)` | 语言文件生成钩子 |
+| `init()` | 插件初始化完成后，启动脚本加载之前 |
+| `initStartup()` | 启动脚本加载完成后 |
+| `afterInit()` | 所有模组初始化完成后（NeoForge 的 `FMLLoadCompleteEvent`） |
+| `beforeScriptsLoaded(ScriptType)` | 某类脚本完整加载或完整重载之前；单文件重载不触发 |
+| `afterScriptsLoaded(ScriptType)` | 某类脚本完整加载或完整重载之后；单文件重载不触发 |
+| `beforeRecipeLoading(RecipeLifecycleContext)` | 配方加载前，可以修改原始配方 JSON |
+| `afterRecipes(RecipeLifecycleContext)` | 配方全部加载完成后 |
+
+如果覆写了 `registerLifecycleHooks` 或 `registerRecipeLifecycleHooks` 却没有调用默认实现，对应的便捷回调就不会再被调用。
 
 <a id="wiki-section-12"></a>
-### 自定义通道（进阶）
+### 数据和资源生成
 
-第三方也可以定义自己的收集型扩展点，走与内置相同的 V2 builder（完整语义见 ADR-0001/0002）：
+| 方法 | 作用 |
+|---|---|
+| `attachServerData` / `attachLevelData` / `attachPlayerData` | 给服务器、维度、玩家挂只存在内存里的自定义数据，不保存 |
+| `generateData(DataGeneratorJS)` | 生成数据包内容，在脚本的 `ServerEvents.generateData` 之前运行，和脚本共用同一个 generator |
+| `generateAssets(DataGeneratorJS)` | 生成资源包内容，在脚本的 `ClientEvents.generateAssets` 之前运行 |
+| `generateLang(LangGeneratorJS)` | 生成语言文件条目 |
+| `generatedLangs()` | 声明要为哪些语言调用 `generateLang`，默认 `en_us` |
+
+`generateLang` 会对本轮涉及的**每种**语言各调用一次，包括其他插件和脚本要求的语言。只生成一种语言时，在回调里先判断 `generator.getLang()`：
 
 ```java
-public final class MyChannelPoint {
-    public static final String ID = "myaddon:my_channel";
-    public interface Contributor extends NekoJSPlugin {
-        default void registerMyChannel(MyCollector collector) {}
-    }
-    public static final NekoPluginExtensionPoint<Contributor, MyCollector, MyProduct> POINT =
-        NekoPluginExtensionPoint.<Contributor, MyCollector, MyProduct>builder(ID, Contributor.class)
-            .merge(MergePolicy.append())
-            .initializer(ctx -> new MyCollector())
-            .collector(Contributor::registerMyChannel)
-            .finish(MyCollector::snapshot)
-            .build();
+@Override
+public void generateLang(LangGeneratorJS generator) {
+    if (!"zh_cn".equals(generator.getLang())) return;
+    // add zh_cn entries here
 }
-// 插件实现 NekoPluginExtensionProvider，在 registerPluginExtensionPoints 里
-// registry.register(MyChannelPoint.POINT) 注册，返回的 handle 在 bootstrap 完成后取产物。
 ```
-
-这段里哪些是必须的：扩展点 id 不能为 null、空串或纯空白（在 `build()` 构造扩展点时校验，否则抛 `IllegalArgumentException`），`initializer` / `collector` / `merge` / `finish` **四个都必须调用**，缺一个 `build()` 就抛 `IllegalStateException`——`merge` 刻意不给默认值，因为冲突策略是扩展点的语义核心，得由你明确选（`append` / `firstWin` / `overrideWarn` / `failFast`）。另外 bootstrap 冻结后再 `register` 扩展点抛 `IllegalStateException`，同 id 重复注册抛 `IllegalArgumentException`。
-
-`ID` 用 `<你的 modid>:<通道名>`、把 `Contributor` 嵌在 `XxxPoint` 中、字段叫 `POINT`，都是约定（id 唯一性是硬要求，格式不是）。**Contributor 类型必须直接或间接继承 `NekoJSPlugin`**，扩展点和 builder 的泛型边界会强制这一点。片段中的 `MyCollector`、`MyProduct` 是 addon 自己定义的类型，不是额外的 NekoJS API。
 
 <a id="wiki-section-13"></a>
-## 注册绑定（registerBinding）
+## 注册全局绑定
 
-`BindingRegistry` 按 `ScriptType` 注册。绑定分两类：
-
-<a id="wiki-section-14"></a>
-### 简单绑定：`register(name, value)`
+`registerBinding` 对每种脚本类型各调用一次，传入的 registry 对应其中一种类型。
 
 ```java
 @Override
 public void registerBinding(BindingRegistry registry) {
+    // 所有脚本类型都可用
     registry.register("MyHelper", new MyHelperJS());
 
-    // 限定脚本类型
-    registry.register(ScriptType.CLIENT, "ClientHelper", new ClientHelperJS());
+    // 只在客户端脚本里可用
+    registry.register(ScriptType.CLIENT, "MyClientHelper", new MyClientHelperJS());
 
-    // 直接绑 Java 类（脚本里能当构造器用）
-    registry.register("MyItemHelper", MyItemHelper.class);
+    // 绑定一个 Java 类：脚本里可以访问静态成员，也可以 new
+    registry.register("MyMath", MyMath.class);
 }
 ```
 
-> **同名绑定是首胜的**：`register(...)` 返回 `boolean`，名字已被占用时返回 `false`、只在 `nekojs.bootstrap` logger 打一条 warn（`BindingRegistry.BindingRegistryImpl`），不抛异常也不覆盖。内置绑定通常以 `CORE_PRIORITY` 先注册，所以较低优先级插件无法用普通 `register` 替换 `Item`、`Ingredient` 这类名字；同为最大优先级时仍按类名/owner 排序，这不是替换 API——想确认自己的绑定真的进去了就检查返回值。旧式全局绑定名没有格式校验（不要求命名空间前缀，模块导出名则会校验），但它是脚本里的全局标识符，取个带自己 mod 特征的名字纯粹是为了不撞车。
+- 值可以是对象实例（脚本调用它的公开方法）或 `Class`（脚本访问静态成员）。
+- **同名绑定先注册的生效。** 后注册的会被忽略，`register` 返回 `false`，日志出现 `NEKO-4001` 警告。内置插件优先级最高，所以不能用同名绑定替换 `Item`、`Ingredient` 这类内置绑定。
+- 名字没有格式要求，但它是脚本的全局变量名，建议带上模组特征以免冲突。
+- 专用服务器上不会收集 `CLIENT` 类型的绑定。
+
+<a id="wiki-section-14"></a>
+### 导出为 API 模块
+
+除了全局变量，也可以把绑定只作为模块导出，让脚本用 `import` 引入：
+
+```java
+registry.register(Binding.of("MyHelper", new MyHelperJS()), exposure -> exposure.versioned());
+```
+
+```javascript
+import { MyHelper } from 'nekojs/api/version/myaddon'
+```
+
+- 模块路径里的 `myaddon` 是插件所属模组的 ID，由加载器提供。
+- `versioned()` 导出到 `nekojs/api/version/<modid>`；`stable()` 导出到 `nekojs/api/stable/<modid>`。必须且只能选一个。
+- `stable()` 会检查公开类型里有没有 Minecraft 或加载器的类，有就拒绝。需要暴露原生类型的类标注 `@ScriptNativeBridge` 才能通过。
+- 这种写法**不会**同时创建全局变量。
+- 缺少模组归属、导出名不合法或重复导出，都会报 `NEKO-4057`。
+
+模块的用法见 [模块系统](module-system_cn#wiki-api-modules)。
 
 <a id="wiki-section-15"></a>
-### 组合绑定：`DelegatingBinding`（helper + 原版类）
+### 绑定的值类型
 
-如果你的绑定既要 helper 方法又要暴露一个 MC 类的静态成员，用 `DelegatingBinding`（`Item` 绑定就是它的用户）：
+`Binding.of(name, value)` 根据值本身推断类型。值是代理对象（如 `ProxyObject`）时，Java 反射看不到它的成员，加载前的成员检查和补全生成都会出错。这时用三参数形式指明真正承载成员的类：
 
 ```java
-import com.tkisor.nekojs.js.DelegatingBinding;
-
-@Override
-public void registerBinding(BindingRegistry registry) {
-    // 成员访问先查 extensions（helper 方法），其余委托 targetClass 的静态成员
-    registry.register(Binding.of("MyBlock", new DelegatingBinding(
-        new MyBlockHelperJS(),                            // helper 方法
-        net.minecraft.world.level.block.Block.class,      // 委托目标 MC 类静态成员
-        Set.of("of", "empty")                             // helper 提供的扩展方法名
-    ), MyBlockHelperJS.class));
-}
+registry.register(Binding.of("MyBlock", new DelegatingBinding(
+        new MyBlockHelperJS(),                          // 提供 of / empty
+        net.minecraft.world.level.block.Block.class,    // 其余静态成员委托给它
+        Set.of("of", "empty")
+), MyBlockHelperJS.class));
 ```
 
-> 注意：`DelegatingBinding` 必须在 GraalJS 访问时（Context 活跃）才 `asValue` 包装原始对象，不能在构造时求值（否则 helper 拿到分离的 Value 全返回 null）。它是 `ProxyObject` 而非 Java Class 镜像，所以 `Java.type('...Item').of()` 拿不到扩展方法。
+`DelegatingBinding` 先在 helper 上查找列出的成员，其余转给目标类的静态成员。内置的 `Item` 绑定就是这样实现的。它只是代理对象，`Java.type(...)` 拿到的原生类上没有这些扩展方法。
+
+`Binding.close(ScriptType)` 在该类脚本运行环境被重置或关闭时调用，不是每次 reload 都调用。
 
 <a id="wiki-section-16"></a>
-## Binding 接口
+## 补全和文档
 
-如果想完全自定义绑定行为，实现 `Binding` 接口（`SimpleBinding`/`TypedBinding` 是内置 record）：
+写插件时，有两种方式让绑定在编辑器里有提示和说明：
 
-```java
-public interface Binding {
-    String name();
-    Object value();
-    default Class<?> valueType() {
-        Object value = value();
-        return value == null ? Void.class : value instanceof Class<?> type ? type : value.getClass();
-    }
-    default void close(ScriptType type) {}  // Teardown/reset hook
-}
-```
+1. **注解**：在类和方法上标 `@Doc`、`@Param`、`@Return` 等。见 [注解](annotations_cn)。
+2. **`registerTypeDocs`**：用代码登记，适合注解写不了的情况。
 
-`valueType()` 对 `ProxyObject`/动态成员绑定的很关键——preflight 校验器和 probe 都靠它知道绑定有哪些成员，避免反射不到动态成员时误报。上面的代理示例提供 `MyBlockHelperJS.class`，让 helper 方法可被反射，但这不会把代理变成 Java 类。**清理不是逐 generation 执行**：`Binding.close(type)` 走 ScriptManager 的 teardown/reset 路径，不会在每次 SERVER/CLIENT/TEST 事务式 reload 时触发；不要把它当作普通 generation 的释放回调。
-
-<a id="wiki-section-17"></a>
-## 类型文档
-
-给绑定的方法/字段加文档（probe 会生成进 `.d.ts` 的 JSDoc）有两条路：**注解式**（`@Doc`/`@Param`/`@Return` 标在各自支持的声明上，`TypeReflector` 消费后进 IR；`@Param` 应标在方法/构造器上，不能直接标在参数上）与**编程式** `registerTypeDocs`：
+给全局绑定写说明，或指定它在声明里的类型：
 
 ```java
 @Override
 public void registerTypeDocs(TypeDocsRegister docs) {
-    docs.register(new TypeDocCatalogEntry(...));          // 常规类型文档
-    docs.registerManualDeclaration(new ManualDeclarationCatalogEntry(...));  // wrapper/helper 人工声明
+    docs.register(TypeDocCatalogEntry.binding(
+            "MyHelper",            // binding name
+            null,                  // type override; null uses the reflected type
+            "Math helpers for my addon.",
+            List.of("MyHelper.add(1, 2)")));
 }
 ```
 
-**单一真相源是 `TypeDocsRegister`**。内置 wrapper/helper 的人工声明注册收敛在 `NekoCommonManualDeclarations`。
+`TypeDocsRegister` 还有几种更进阶的登记方式：
 
-全局手写声明使用 Java 类型时，通过 `withReferences` 显式关联类型名，不能假定同名 Binding 同时是类型。例如：
+| 方法 | 用途 |
+|---|---|
+| `register(TypeDocCatalogEntry)` | 全局绑定的说明、示例和类型覆盖 |
+| `registerManualDeclaration(ManualDeclarationCatalogEntry)` | 手写一段全局 TypeScript 声明 |
+| `registerClassDeclaration(ClassDeclarationCatalogEntry)` | 用手写声明替换某个 Java 类生成的 TypeScript 声明 |
+| `registerBeanAliasExclusion(...)` / `registerBeanMethodProjection(...)` | 调整 Bean 属性在声明里的样子 |
+
+手写声明里用到 Java 类型时，要用 `withReferences` 显式指明：
 
 ```java
 docs.registerManualDeclaration(ManualDeclarationCatalogEntry.of(
-        "example:stack", "type ExampleStack = StackValue;", "A script-visible item stack.", List.of())
+        "myaddon:stack", "type MyStack = StackValue;", "A script-visible item stack.", List.of())
         .withReferences(Map.of("StackValue",
                 ManualDeclarationCatalogEntry.TypeReference.host(ItemStack.class))));
 ```
 
-`host` 保留宿主成员；`input` 使用同一 Java 类型已注册的输入适配器。依赖会补入 TS 声明，主扫描配置不变；隐藏、排除或不可生成的显式依赖以 `NEKO-4033` 拒绝，同一全局别名指向不同类型或不同输入方式以 `NEKO-4051` 拒绝。生成器在 `@manual/references.d.ts` 使用内联 import，不把原有全局声明转成模块。已有六参数构造函数继续可用；无引用的声明保持原样。此机制只影响 TypeScript，不开放额外运行时权限。
+`TypeReference.host(...)` 引用 Java 类型本身；`TypeReference.input(...)` 引用这个类型的输入别名（适配器接受的所有输入形式）。
 
-当 Java 反射无法表达 TypeScript 的推导关系时，可以注册手写类声明：
+替换类声明时，Java 反射表达不了的泛型关系可以手写：
 
 ```java
 docs.registerClassDeclaration(ClassDeclarationCatalogEntry.of(
@@ -300,54 +309,113 @@ docs.registerClassDeclaration(ClassDeclarationCatalogEntry.of(
         """));
 ```
 
-声明体替换对应 `java:` 包模块中的生成类，不要添加 `declare module` 外壳。保留标准导出名 `$JavaName`（嵌套类使用 `$Outer$Inner`）。`$JavaName_` 等输入别名仍由生成器提供，包括枚举与函数接口别名，不要在声明体中重复定义。引用其他 Java 类型时，使用带 `Set<Class<?>>` 的重载列全依赖，包括具有输入别名的类型。依赖按当前扫描规则进入 Probe 收集；必需依赖被排除、隐藏或不可生成时，以 `NEKO-4033` 使本次生成失败。
+写类声明时注意：
 
-Java 包声明在所有 Script Type 间共享，因此替换全局生效。`registerTypeDocs` 和 `registerNodeTypeDocs` 均通过现有类型文档 Point 收集。同一类取最高 `priority`；相同优先级的冲突定义以 `NEKO-4032` 拒绝，完全相同的定义可重复注册。`ProbeEvents.modifyType` 的隐藏操作优先于替换；其他反射成员编辑会被手写声明体覆盖。该功能只改变 TypeScript 声明，需要插件保证声明与 Java 运行时实现一致。
+- 只写类体，不要加 `declare module`。类名保持生成器的格式 `$JavaName`（嵌套类是 `$Outer$Inner`）。
+- 不要重复定义 `$JavaName_` 这样的输入别名，生成器会自动提供。
+- 声明里用到其他 Java 类型时，用带 `Set<Class<?>>` 的 `of` 重载列出依赖。依赖被隐藏或无法生成时报 `NEKO-4033`。
+- 同一个类有多份替换时，优先级最高的生效；优先级相同但内容不同，报 `NEKO-4032`。
+- 替换只影响 TypeScript 声明。声明必须和 Java 的实际行为一致，NekoJS 不会检查。
 
-当依赖具有相同导出名，或与目标类同名时，在手写声明中用 `import("java:example/package").$Foo` 这样的内联类型消除歧义，同时保留显式依赖集合。生成器为冲突的 import 分配私有名称，不改写手写文本；仅与反射 import 冲突且自身无歧义的手写依赖保留标准名称。被 `modifyType` 重命名的反射依赖也保留标准 Java 类型和值导出，包括标准枚举输入别名。枚举替换只读取常量名，不反射无关成员签名，也不初始化枚举。
+内置插件的手写声明集中在 `NekoCommonManualDeclarations`，可以作为参考。
+
+<a id="wiki-section-17"></a>
+## 自定义扩展点
+
+如果你的插件要让**其他插件**往它这里登记内容（比如你提供一个机器框架，让别的模组注册机器），可以定义自己的扩展点。它和 NekoJS 内置钩子用的是同一套机制。
+
+```java
+public final class MachinesPoint {
+    public static final String ID = "myaddon:machines";
+
+    // 其他插件实现这个接口来贡献内容
+    public interface Contributor extends NekoJSPlugin {
+        default void registerMachines(MachineCollector collector) {}
+    }
+
+    public static final NekoPluginExtensionPoint<Contributor, MachineCollector, List<Machine>> POINT =
+            NekoPluginExtensionPoint.<Contributor, MachineCollector, List<Machine>>builder(ID, Contributor.class)
+                    .merge(MergePolicy.append())
+                    .initializer(ctx -> new MachineCollector())
+                    .collector(Contributor::registerMachines)
+                    .finish(MachineCollector::snapshot)
+                    .build();
+}
+```
+
+定义扩展点的插件同时实现 `NekoPluginExtensionProvider`，在 `registerPluginExtensionPoints` 里注册它：
+
+```java
+@RegisterNekoJSPlugin
+public class MyAddonPlugin implements NekoPluginExtensionProvider {
+    private static NekoPluginExtensionHandle<List<Machine>> machines;
+
+    @Override
+    public void registerPluginExtensionPoints(NekoPluginExtensionRegistry registry) {
+        machines = registry.register(MachinesPoint.POINT);
+    }
+
+    public static List<Machine> machines() {
+        return machines.result();   // available after plugin bootstrap
+    }
+}
+```
+
+规则：
+
+- `initializer`、`collector`、`merge`、`finish` 四个都必须设置，缺一个 `build()` 就抛 `IllegalStateException`。
+- `merge` 没有默认值，要自己选冲突策略：`append()`、`firstWin()`、`overrideWarn()`、`failFast()`。
+- ID 必须全局唯一，和内置的 `nekojs:*` 也不能重复，重复时抛 `IllegalArgumentException`。建议用 `<你的 modid>:<名字>`。
+- 只能在 `registerPluginExtensionPoints` 里注册扩展点，之后注册抛 `IllegalStateException`。
+- 需要用到另一个扩展点的结果时，用 `dependsOn(...)` 声明依赖。
+- `MachineCollector`、`Machine` 是你自己的类型，不是 NekoJS API。
+
+每个内置钩子都对应 `com.tkisor.nekojs.core.plugin` 包里的一个 `XxxPoint`。直接覆写 `NekoJSPlugin` 的钩子，和实现对应的 `XxxPoint.Contributor` 接口，效果完全相同。
 
 <a id="wiki-section-18"></a>
 ## 跨平台插件
 
-如果你的插件要支持多个平台：
-- **抽象 MC 类型**：尽量用 common 的抽象（`NekoId` 而非 `Identifier`/`ResourceLocation`）。
-- **加载器专属代码**：把它和通用代码隔开。NekoJS 自己的做法是共享一棵源码树 `src/`，加载器差异用 `//? if neoforge` / `//? if fabric` 整文件守卫表达，差异大到守卫不划算的文件放到节点目录 `versions/<node>/src/`；你的插件可以照搬这套，也可以简单地开独立 sourceSet。运行时行为差异用 `Platform.capabilities()` feature-gate。
-- **`requiredMods`**：用注解的 `requiredMods` 控制平台相关加载。
+- 尽量使用 NekoJS 的平台无关类型，例如用 `NekoId` 代替 Minecraft 的 `Identifier` / `ResourceLocation`。
+- 运行时功能差异用 `Platform.capabilities()` 判断，不要按加载器名硬编码。
+- 只适用于某个平台的插件用 `requiredMods` 或 `clientOnly` 控制加载。
+- 如果要在多个平台的 Extension 接口里实现同一组方法，可以使用 Spec 接口模式，见 [注解](annotations_cn)。
 
 <a id="wiki-section-19"></a>
 ## Gradle 依赖
 
-插件 mod 的 `build.gradle` 里加：
+NekoJS 目前没有发布 Maven 制品，插件直接依赖 NekoJS 的发布 jar。Graal 从 CurseMaven 获取：
 
 ```groovy
+repositories {
+    maven { url = "https://cursemaven.com" }
+}
+
 dependencies {
-    compileOnly 'curse.maven:graal-1504336:8762962'   // Graal 前置（25.1.3.7，NeoForge 构建；Fabric 构建的文件 id 是 8762963）
-    compileOnly files('libs/nekojs-<version>.jar')
+    // Graal 25.1.3.7. File 8762962 is the NeoForge build; use 8762963 for Fabric.
+    compileOnly "curse.maven:graal-1504336:8762962"
+    // The NekoJS release jar for your Minecraft version and loader.
+    compileOnly files("libs/nekojs-<version>.jar")
 }
 ```
 
-> 注：插件当前的实际编译依赖是**平台 fat jar**（文件名中的 `<version>` 替换为目标 Release 版本，内含 `:common` 全部类）。NekoJS 还没有可单独依赖的稳定 SPI 制品，引擎没有发布 Maven 制品，所以公开 API 目前没有语义化版本背书。
+NekoJS 的公开 API 目前没有语义化版本保证。升级 NekoJS 后请重新编译并测试插件。
 
 <a id="wiki-section-20"></a>
-## 测试你的插件
+## 参考：内置插件
 
-1. 把你的插件 mod 和 NekoJS + Graal 一起放进 `mods/`。
-2. 启动游戏，看日志确认插件被发现（搜你的插件类名）。
-3. 在脚本里调用你注册的绑定。
-4. 跑 `/nekojs probe`，检查 `.d.ts` 里有没有你的绑定的声明（含 `registerTypeDocs` 补充的 JSDoc）。
+内置功能分布在几个插件里，适合作为参考：
 
-<a id="wiki-section-21"></a>
-## 完整示例
+- `common/.../core/plugin/NekoCommonBuiltinPlugin.java`：平台无关的绑定、编译器、脚本属性和类型文档。
+- `src/main/java/.../core/NekoJSCorePlugin.java`：Minecraft 相关的绑定、适配器和事件。
+- `NekoBuiltinPointsPlugin`：注册所有内置扩展点。
+- Fabric 另有 `FabricCorePlugin`。
 
-请按功能查看对应内置实现，不要假设一个类拥有全部贡献：`src/main/java/com/tkisor/nekojs/core/NekoJSCorePlugin.java` 负责原生贡献，`common/.../core/plugin/NekoCommonBuiltinPlugin.java` 负责共享绑定、编译器和类型文档贡献，`NekoBuiltinPointsPlugin` 注册现有扩展 Point。Fabric 还有自己的平台插件；节点本地覆盖优先于共享源码树。
+下一步：
 
-<a id="wiki-section-22"></a>
-## 下一步
-
-- [类型适配器](type-adapters_cn) —— `JSTypeAdapter`，让 Java 方法自动接受多种 JS 输入。
-- [事件扩展](event-extensions_cn) —— 注册自定义事件组。
-- [注解体系](annotations_cn) —— `@Remap`/`@RemapByPrefix`/`@HideFromJS`/`@PlatformAvailability` 等。
-- [Probe 类型生成](probe-type-generation_cn) —— 你的绑定怎么进 `.d.ts`。
+- [类型适配器](type-adapters_cn)：让 Java 方法接受多种 JS 输入。
+- [事件扩展](event-extensions_cn)：注册自定义事件组。
+- [注解](annotations_cn)：控制成员名、可见性和补全说明。
+- [Probe 类型生成](probe-type-generation_cn)：绑定怎样生成到 `.d.ts`。
 
 <!-- wiki-nav -->
 

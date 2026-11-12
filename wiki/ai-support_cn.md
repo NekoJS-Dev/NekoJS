@@ -5,33 +5,130 @@
 <a id="wiki-section-1"></a>
 # AI 辅助脚本编写
 
-NekoJS 默认导出可离线阅读的英文 AI 文档包，同时支持**游戏运行时的内置 MCP**和**读取离线导出的独立 MCP stdio 辅助进程**，两者均提供只读编写查询。内置 MCP 另有独立启用的命令与完整 SERVER/CLIENT/TEST reload 工具，默认全部关闭。它不是 AI 模型或聊天服务，也不会自动修改 AI 客户端配置。
+NekoJS 能让 Claude、Copilot、Cursor 这类 AI 编程工具更准确地帮你写脚本。它做两件事：
 
-推荐流程：找到当前文档包 → 成功生成 TypeScript Probe 快照 → 按需选择游戏内 MCP 或独立 stdio → 查询精确签名 → 在游戏内验证脚本。调用形态见[脚本 API 约定](script-api-style_cn)；客户端 HUD/world 绘制与后处理见[专门说明](client-rendering_cn)，不要把其他项目的对象配置示例直接当成 NekoJS 的新重载。随模组发布的 handbook、Skill、AGENTS 模板和示例是 AI 使用的规范资料；Wiki 是面向用户的说明，不替代实例内文档。
+- **导出文档**：把 NekoJS 的英文手册、示例和 AI 指令文件放进游戏目录，AI 可以直接读。默认开启。
+- **提供查询服务（MCP）**：AI 可以查到你这个实例里真实存在的事件、方法和参数，而不是凭记忆猜。默认关闭。
+
+NekoJS 本身不是 AI 模型，也不会自动修改你的 AI 工具配置。
+
+推荐流程：
+
+1. 让 AI 读导出的文档。
+2. 在游戏里执行 `/nekojs probe`，生成 API 快照。
+3. 选一种方式把 AI 工具连上查询服务。
+4. AI 写完脚本后，你在游戏里 reload 并确认效果。
 
 <a id="wiki-section-2"></a>
-## 离线入口与文件
+## 导出的文件
 
-以下路径均从游戏目录开始，按默认 `[output].directory = ".github/neko_ai"` 展示。从 `nekojs/config/ai.toml` 读取 `[output].directory`；文件或配置项不存在时使用默认目录。若自定义目录，以下 AI 根目录应相应替换。
+文档默认导出到游戏目录下的 `.github/neko_ai/`。常用文件：
 
-| 路径 | 用途 |
+| 路径 | 内容 |
 |---|---|
-| `nekojs/config/ai.toml` | 输出、文档、查询、连接与控制配置 |
-| `.github/neko_ai/current.json` | 当前文档包指针；其中 `bundle`、`manifest` 相对于 `.github/neko_ai/` |
-| `.github/neko_ai/bundled/<bundleId>/` | 不可原地修改的版本化英文文档包 |
-| `.github/neko_ai/environment.json` | 环境信息与 `apiSnapshotDirectory` |
-| `.github/neko_ai/connection.json` | 本实例端点、监听状态、协议版本与 token 文件位置；不含 token |
-| `nekojs/config/ai.token` | 开启监听时才创建的本机 bearer 凭据 |
-| `.github/neko_ai/snapshots/current.json` | 所选 AI 根目录下的结构化快照指针 |
+| `nekojs/config/ai.toml` | AI 功能的配置 |
+| `.github/neko_ai/current.json` | 指向当前文档包；里面的路径相对于 `.github/neko_ai/` |
+| `.github/neko_ai/bundled/<bundleId>/` | 文档包本体：手册、示例、Skill。不要手动修改 |
+| `.github/neko_ai/AGENTS.md` | 给 AI 的入口说明 |
+| `.github/neko_ai/environment.json` | 当前实例的环境信息 |
+| `.github/neko_ai/connection.json` | 查询服务的地址和状态（不含密钥） |
+| `.github/neko_ai/snapshots/` | `/nekojs probe` 生成的 API 快照 |
+| `nekojs/config/ai.token` | 查询服务的访问密钥，开启服务后才会生成 |
 
-文档导出不扫描类，也不开启端口。所选 AI 根目录包含 `bundled/`、`current.json`、`environment.json`、`connection.json`、`snapshots/`、`agents/`、`AGENTS.md` 和 `README.md`；缺失的入口文件在这里创建，不放在 `nekojs/` 或工作区根目录。已知且未修改的生成角色路由可安全刷新，已编辑路由和用户文件保留。同一 ID 下修改过的文档包会拒绝覆盖。切换目录不会盲目搬移或删除旧文件，关闭导出也不会删除它们。
+几点说明：
 
-`output.directory` 不接受绝对路径、路径穿越或逃离游戏目录的链接。配置与私密凭据仍在 `nekojs/config/`；声明、补全片段与编辑器配置仍使用原有 Probe 位置。AI 根目录的 `agents/` 不会自动被 VS Code 发现；可选 `[output].editor_agents = true` 才写标准 `.github/agents/` 桥接，默认 false。这里的 `AGENTS.md` 也不是自动生效的工作区指令；请显式配置客户端读取，或将选定指引合入自己的指令文件。
+- `AGENTS.md` 不会被 AI 工具自动读取。你需要在 AI 工具里指定它，或者把需要的内容合并进你自己的指令文件。
+- `agents/` 目录也不会被 VS Code 自动发现。想写到标准的 `.github/agents/`，在配置里设 `[output].editor_agents = true`。
+- 想换导出目录，改 `[output].directory`。它必须是游戏目录内的相对路径。换目录不会移动或删除旧文件。
+- 文档包被修改过的话，NekoJS 不会覆盖它，而是报错。需要更新时删掉旧包让它重新导出。
 
 <a id="wiki-section-3"></a>
-## 默认配置
+## 生成 API 快照
 
-`nekojs/config/ai.toml` 的默认值如下（省略生成文件中的英文注释）：
+文档只是说明书。想让 AI 查到**你这个实例**里具体有哪些方法，需要先在游戏里执行：
+
+```text
+/nekojs probe
+```
+
+它会生成代码补全用的类型声明，同时生成 AI 查询用的快照。加了模组或改了注册内容之后，再执行一次。普通的 `/nekojs reload` 不会刷新快照。详见 [Probe 类型生成](probe-type-generation_cn)。
+
+<a id="wiki-section-4"></a>
+## 方式一：游戏运行时连接
+
+游戏开着的时候，直接连游戏内置的查询服务，不用另外安装东西。
+
+1. 打开 `nekojs/config/ai.toml`，在 `[mcp]` 下设置 `enabled = true`。
+2. **重启游戏**并保持运行。打开 `.github/neko_ai/connection.json`，确认 `listening` 是 `true`，`mcp` 一般是 `http://127.0.0.1:8767/mcp`。
+3. 在 AI 工具里添加一个 MCP 服务器，类型选 Streamable HTTP，填入上面的地址，再加一个请求头 `Authorization: Bearer <密钥>`。密钥是 `nekojs/config/ai.token` 文件的内容。
+
+如果你的 AI 工具用 `mcpServers` 配置文件，可以这样写：
+
+```json
+{
+  "mcpServers": {
+    "nekojs": {
+      "url": "http://127.0.0.1:8767/mcp",
+      "headers": {"Authorization": "Bearer <token>"}
+    }
+  }
+}
+```
+
+不同 AI 工具的配置方式不一样，有的是在设置界面里填。连上之后，工具列表里应该能看到 `nekojs_context` 等工具。游戏关闭后服务也随之停止。
+
+<a id="wiki-section-5"></a>
+## 方式二：游戏关闭时也能用
+
+独立的 stdio 辅助程序读取游戏上次导出的文档和快照，游戏关着也能用。它由 AI 工具自己启动，不需要开端口，也不需要密钥。
+
+准备：
+
+- **Java 21 或更高版本**。
+- 和你的 NekoJS 版本对应的 `nekojs-1.1.0-preview3-authoring-stdio.jar`。它不是模组，不要放进 `mods/`。从源码构建时由 `:common:authoringStdioJar` 生成，输出到 `common/build/libs/`。
+- 至少启动过一次游戏，并成功执行过 `/nekojs probe`。
+
+启动命令：
+
+```sh
+java -jar /absolute/path/nekojs-1.1.0-preview3-authoring-stdio.jar --game-dir /absolute/game/directory
+```
+
+在 AI 工具的 `mcpServers` 配置里这样写：
+
+```json
+{
+  "mcpServers": {
+    "nekojs": {
+      "command": "java",
+      "args": ["-jar", "/absolute/path/nekojs-1.1.0-preview3-authoring-stdio.jar", "--game-dir", "/absolute/game/directory"]
+    }
+  }
+}
+```
+
+替换两个路径：
+
+- `--game-dir` 是**包含 `nekojs/` 文件夹的游戏目录**，不是 `nekojs/` 本身，也不是存档目录。
+- 建议都用绝对路径。Windows 上可以写成 `D:/Games/Instance`，省得在 JSON 里转义反斜杠。
+- AI 工具找不到 `java` 时，把 `command` 换成 Java 21 的完整路径。
+
+它查到的是**上次导出时**的状态。改了模组或脚本后，要重新进游戏执行 `/nekojs probe`；如果改了 `ai.toml` 的导出目录或游戏环境变了，还要重启这个辅助程序。
+
+<a id="wiki-section-6"></a>
+### 连不上时
+
+- `--help` 会打印用法。参数错误、找不到导出文件时，程序以退出码 2 退出，原因写在 stderr。
+- 默认按 `ai.toml` 的 `[output].directory` 找导出目录。需要手动指定时加 `--ai-dir <游戏目录内的相对路径>`。
+- 查询提示 `not-ready`：还没成功执行过 `/nekojs probe`。
+- 提示 `disabled`：`ai.toml` 里 `[api].enabled` 是 `false`。改回 `true`，重启游戏重新导出。
+- 提示 `unavailable`：快照文件有问题，或游戏环境变了。重新 probe，再重启辅助程序。
+- 辅助程序的标准输出只用于通信。不要在启动脚本里往 stdout 打印任何东西。
+
+<a id="wiki-section-7"></a>
+## 配置参考
+
+`nekojs/config/ai.toml` 的默认内容：
 
 ```toml
 [output]
@@ -59,145 +156,34 @@ reload = false
 command_allowlist = []
 ```
 
-- 文档默认开启；游戏内 HTTP 和 HTTP MCP 默认关闭（不影响独立 stdio），`api.enabled = true` 本身不会打开端口。
-- 仅使用游戏内可选传输时，按需将 `[http].enabled` 或 `[mcp].enabled` 设为 `true`；两者共用 `[mcp].port`。
-- host 只接受字面值 `127.0.0.1`，不支持 `0.0.0.0`、远程绑定或 IPv6。端口必须为 1–65535 的整数，布尔设置不能写成字符串。
-- `documentation.agents` 只接受 `create-if-missing` 或 `off`。
-- `api.enabled = false` 禁用 resolve/members/query/batch，但不禁用 context、capabilities、schema 或文档。
-- **修改后重启游戏进程**；普通脚本 reload 不重建根运行时的监听器。配置错误、端口冲突等会使 AI 支持初始化失败（NEKO-1019），不会因此终止整个游戏。
-
-<a id="wiki-section-4"></a>
-## 生成并发现快照
-
-先调用 `context`、`capabilities` 和 `schema`。context 返回 `environmentId`、`snapshotId` 和 `indexState`；索引可能为 `not-ready`、`ready`、`disabled` 或 `unavailable`。
-
-导出文档不等于生成 API 索引。需要在游戏内成功运行 **TypeScript Probe**（具体命令见已安装版本的 `/nekojs probe` 帮助与 [Probe 类型生成](probe-type-generation_cn)）。普通脚本 reload 不重新生成索引。
-
-Probe 先写不可变、按摘要命名的 JSON 文件，再原子切换 `current.json`。查询运行时在 context/API 请求时检查文件摘要、环境和快照 ID，验证后才加载；发布失败不替换之前已验证的快照。不要手改索引，也不要混用其他实例的快照。结构化 AI 快照固定在所选 AI 根目录的 `snapshots/`，由 `environment.apiSnapshotDirectory` 报告；更改 Probe 声明 baseDir 不会搬移该快照。
-
-<a id="wiki-section-5"></a>
-## 游戏内 MCP：游戏运行时连接
-
-同时支持**游戏内 MCP**与**独立 stdio**。游戏已运行时，可直接使用内置服务，无需另外安装或启动辅助 JAR：
-
-1. 在 `nekojs/config/ai.toml` 的 `[mcp]` 下设置 `enabled = true`（默认 false），保留 `host = "127.0.0.1"` 和 `port = 8767`。`[http].enabled` 可保持 false；它控制普通 JSON 路由，不是 MCP。
-2. 完整重启游戏进程并保持运行。读取 `.github/neko_ai/connection.json`：`listening` 应为 true，`mcp` 通常为 `http://127.0.0.1:8767/mcp`；修改端口后以实际描述文件 URL 为准。
-3. 在 AI 客户端新增支持 Streamable HTTP/JSON 响应的 MCP 连接，填入该 URL 和 `Authorization: Bearer <token>`。在本机把 `<token>` 替换为 `nekojs/config/ai.token` 内容；保密保存，描述文件本身不会包含 token。
-
-客户端只需要 **URL + bearer 凭据**，不需要 Java 命令、JAR 路径或 `--game-dir`。支持 `mcpServers` 对象以及 `url`、`headers` 的客户端可参考：
-
-```json
-{
-  "mcpServers": {
-    "nekojs": {
-      "url": "http://127.0.0.1:8767/mcp",
-      "headers": {"Authorization": "Bearer <token>"}
-    }
-  }
-}
-```
-
-具体设置结构取决于客户端，也可能通过连接对话框或显式传输设置完成。客户端自动处理 **2025-11-25** 初始化及会话头；后面的手写 JSON-RPC 仅供自定义客户端或调试，不是用户连接的必经步骤。确认工具已列出后，先调用 `nekojs_context`、`nekojs_capabilities`、`nekojs_schema`；API 查询仍需成功生成的 TypeScript Probe 快照。
-
-该方式需显式开启，不是自动发现或零配置；没有 GUI 开关、自动修改客户端配置或自动连接。游戏关闭后内置服务结束；需要离线导出时使用下面的独立模式。
-
-<a id="wiki-section-6"></a>
-## 另一模式：独立 MCP stdio 读取离线导出
-
-使用 **Java 21 或更新版本**及对应发布版本的独立 `nekojs-1.1.0-preview3-authoring-stdio.jar`（构建输出为 `common/build/libs/nekojs-1.1.0-preview3-authoring-stdio.jar`；构建任务 `:common:authoringStdioJar`，也包含在 `assemble` 中）。它不是模组 JAR 或游戏启动器。先启动一次游戏导出环境，再成功运行 TypeScript Probe 供 API 查询；之后即使游戏关闭，也能读取最后一次导出。
-
-让 AI 客户端启动**独立进程**，不是接管游戏标准输入。以下示例合并到使用 `mcpServers` 对象的客户端设置中；不同客户端的设置文件位置可能不同。
-
-```sh
-java -jar /absolute/path/nekojs-1.1.0-preview3-authoring-stdio.jar --game-dir /absolute/game/directory
-```
-
-```json
-{
-  "mcpServers": {
-    "nekojs": {
-      "command": "java",
-      "args": ["-jar", "/absolute/path/nekojs-1.1.0-preview3-authoring-stdio.jar", "--game-dir", "/absolute/game/directory"]
-    }
-  }
-}
-```
-
-替换两个路径。`--game-dir` 是**包含 nekojs/ 的游戏目录**，不是 nekojs 本身、存档、JAR 目录或本仓库。推荐绝对路径和独立参数数组；含空格的路径保持为一个数组元素。Windows 可写成 `D:/Games/Instance`，避免 JSON 反斜杠转义。客户端 PATH 找不到 Java 时，改为 Java 21+ 可执行文件的绝对路径。NekoJS 不会自动安装或修改客户端设置。
-
-无需监听器、token 或修改 `ai.toml` 的连接设置。客户端完成 **2025-11-25** 初始化并发送 `notifications/initialized` 后，先调用 `nekojs_context`、`nekojs_capabilities` 和 `nekojs_schema`。stdio 提供七个快照/文档工具及列出的文档资源；先 `resources/list` 再 `resources/read`，检查 `structuredContent`、`isError` 和 coverage。没有 HTTP 会话头或 DELETE；结束时停止客户端持有的辅助进程（EOF 退出码为 0）。
-
-辅助进程要求 `--game-dir` 恰好一次，可选 `--ai-dir <游戏相对目录>` 一次，顺序不限。发现优先级：显式覆盖 → 只读 `nekojs/config/ai.toml` 的 `[output].directory`（配置文件最多 64 KiB；缺少配置项则使用默认值）→ 配置文件缺失时使用默认 `.github/neko_ai/environment.json` → 仅在配置文件与默认描述都不存在时使用旧 `nekojs/ai/environment.json`。无效配置会拒绝启动。旧 ai-location.json 不再读取或生成。选中的导出无效、缺失或越界时拒绝，不静默回退。新版 `apiSnapshotDirectory` 必须是所选根目录的 `snapshots/`。读取导出的 `apiEnabled`，仅使用 ai.toml 选择目录；不读取 token，不创建配置或监听器，不写游戏数据。修改输出目录后需重启辅助进程。API 配置变化后须重启游戏重新导出；每次 context/API 请求验证变化的环境、指针与快照，环境标识变化须重启辅助进程。文档来自辅助 JAR 自带的已验证英文包（`context.documentation.bundleId`）。离线结果只描述**最后导出**，不代表实时模组或世界状态。
-
-<a id="wiki-section-7"></a>
-### 启动与离线限制
-
-`--help` 向 stderr 输出用法并以 0 退出；参数、目录或环境导出缺失/无效时退出码为 2。`--game-dir <directory>` 必须且只能提供一次；相对路径按客户端工作目录解析。`not-ready` 需成功 Probe；元数据/schema 和文档不需要快照。`disabled` / `INDEX_DISABLED` 需启用 API 并重启游戏重新导出。`unavailable` / `INDEX_UNAVAILABLE` 需检查描述文件/快照，或在环境变化后重启辅助进程，而不是静默回退到旧数据。
-
-stdio 使用 UTF-8、逐行 JSON-RPC，每行一个对象，不接受批次数组。输入/输出帧上限为 64 KiB；输入超限会关闭连接，输出超限需减少字段/分页。stdout 只用于协议，诊断写入 stderr；不可合并两者或插入 shell 欢迎文字。辅助进程不开端口、不创建 token、不写游戏数据，也不能限制 AI 客户端自身文件工具的权限。
+- **改完要重启游戏**，reload 不会让配置生效。
+- `[mcp].enabled` 打开游戏内 MCP，`[http].enabled` 打开普通 JSON 接口。两者共用 `[mcp].port`。独立 stdio 不受这两项影响。
+- `host` 只能是 `127.0.0.1`，只允许本机访问。端口是 1–65535 的整数。
+- `documentation.agents` 只能是 `create-if-missing` 或 `off`。
+- `[api].enabled = false` 会关闭 API 查询，但文档仍然可读。
+- `[control]` 是实时操作的开关，见下文 [实时操作](#wiki-live-controls)。
+- 配置写错或端口被占用时，AI 功能不会启动，日志里有 `NEKO-1019`。游戏本身照常运行。
 
 <a id="wiki-section-8"></a>
-## 进阶：可选 HTTP 与 curl
+## AI 能查什么
 
-重启后读取连接描述文件，使用其 `http` 或 `mcp` 地址及 `listening` 状态；禁用的端点为 null。`tokenFile` 相对于游戏目录（`tokenFileBase: "game-directory"`），不是描述文件目录。
+连上之后，AI 一般先调用 `nekojs_context`、`nekojs_capabilities` 和 `nekojs_schema` 了解环境，再用下面四个工具查 API：
 
-以下示例适用于 POSIX shell、curl 和默认 HTTP 地址；在游戏目录执行，其他 shell 使用等价的私密 token 读取方式。先启用 HTTP，并按发现结果调整端口：
-
-```sh
-TOKEN="$(tr -d '\r\n' < nekojs/config/ai.token)"
-BASE='http://127.0.0.1:8767/api/v1/authoring'
-curl --fail-with-body -H "Authorization: Bearer $TOKEN" "$BASE/context"
-curl --fail-with-body -H "Authorization: Bearer $TOKEN" "$BASE/capabilities"
-curl --fail-with-body -H "Authorization: Bearer $TOKEN" "$BASE/schema"
-# Save the resolve request below as request.json and replace the discovered IDs.
-curl --fail-with-body -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' --data-binary @request.json "$BASE/resolve"
-unset TOKEN
-```
-
-所有路由都要求 `Authorization: Bearer <token>`。统一前缀为 `/api/v1/authoring/`：
-
-| 方法 | 操作 |
+| 工具 | 用途 |
 |---|---|
-| GET | context、capabilities、schema |
-| POST JSON | resolve、members、query、batch |
+| `nekojs_resolve` | 按名字找符号，例如 `Item` |
+| `nekojs_members` | 列出某个符号的方法和属性 |
+| `nekojs_query` | 按条件筛选，例如“第一个参数是 string 的 `of` 重载” |
+| `nekojs_batch` | 一次发送最多 10 个查询 |
 
-不接受 URL 查询参数，scope 和过滤条件放在 JSON 请求体。HTTP 成功也不代表查询覆盖完整，必须检查结果内容。
+这七个工具在两种方式下都可用。查询只读，不会执行脚本、修改文件或 reload。
+
+下面的请求示例主要给想了解细节或自己写客户端的人看。普通 AI 工具会自己构造这些请求。
 
 <a id="wiki-section-9"></a>
-## 进阶参考：手写 HTTP MCP 请求
+### resolve 和 members
 
-以下仅供调试或自定义客户端使用，普通客户端会自动处理这些交换。需要支持 **Streamable HTTP 的 JSON 响应模式**、bearer 请求头和 **2025-11-25** 协议。地址使用连接文件中的 `mcp`（默认 `http://127.0.0.1:8767/mcp`），不是普通 HTTP API 前缀。
-
-1. 向该地址 POST JSON-RPC initialize，携带 `Authorization: Bearer <token>`、`Content-Type: application/json`、`Accept: application/json, text/event-stream`：
-
-```json
-{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"local-authoring-client","version":"1"}}}
-```
-
-2. 读取响应中的协议版本和 `Mcp-Session-Id` 响应头。后续 POST 保留 bearer/Accept/Content-Type，并增加该会话头及 `MCP-Protocol-Version: 2025-11-25`。
-3. POST 不带 id 的 `{"jsonrpc":"2.0","method":"notifications/initialized"}`；成功为无响应体的 HTTP 202。随后调用 tools/list、resources/list，先查询 context：
-
-```json
-{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"nekojs_context","arguments":{}}}
-```
-
-4. 依次读取 `nekojs_capabilities`、`nekojs_schema`，再调用 `nekojs_resolve`、`nekojs_members`、`nekojs_query`、`nekojs_batch`。参数与同名 HTTP 操作一致。检查 `structuredContent` 和 `isError`，不只看 HTTP 状态。
-5. resources/read 只能读取 resources/list 列出的 `nekojs://docs/<bundleId>/<path>` 文档 URI，不可读取任意文件。完成后向 MCP 地址 DELETE，携带 bearer、会话和协议头。最多 32 个会话，闲置 30 分钟过期；过期或进程重启后重新初始化。
-
-stdio 由上面的独立辅助进程提供，不是游戏监听器的传输。**不支持**旧式 SSE 端点、GET 事件流（GET /mcp 返回 405）、prompts、资源订阅或服务端主动请求。Accept 中包含 text/event-stream 是传输要求，不表示服务会推送 SSE。客户端若强制要求这些能力，请改用文件或普通 HTTP 工作流。
-
-<a id="wiki-section-10"></a>
-## 查询示例
-
-每次 scope 都要指定发现的 environmentId、scriptType 和 language；scriptType 使用大写 STARTUP/SERVER/CLIENT/TEST，目前 language 仅为 typescript，memberView 仅为 declared。发现后显式固定 snapshotId；仅初次选择当前快照时可以省略。下列尖括号是占位符，发送前必须替换；示例名称不保证每个实例都提供。
-
-<a id="wiki-section-11"></a>
-### 先 resolve，再 members
-
-**已实现的查询面：**七个快照/文档 MCP 工具为 `nekojs_context`、`nekojs_capabilities`、`nekojs_schema`、`nekojs_resolve`、`nekojs_members`、`nekojs_query` 和 `nekojs_batch`。`query.from` 仅接受 `symbols`、`members`、`events`、`inputAdapters`、`declarations`；`some` 仅关联成员的 `parameters`。应读取返回的字段目录，不要自行假定过滤器、世界查询或求值工具。
-
-POST resolve，或将相同对象传给 nekojs_resolve：
+先用 resolve 按名字找到符号：
 
 ```json
 {
@@ -207,7 +193,9 @@ POST resolve，或将相同对象传给 nekojs_resolve：
 }
 ```
 
-检查所有候选，绑定与类可能同名。取所选结果的 **symbolId** 放进 **scope.ownerSymbolId**，不是放名称。exact 为默认匹配，prefix 需要显式选择。POST members：
+`environmentId` 和 `snapshotId` 从 `nekojs_context` 的结果里拿。`scriptType` 用大写，`language` 目前只能是 `typescript`。同名的绑定和类可能同时出现，要看清楚选哪个。
+
+再把选中结果的 `symbolId`（不是名字）填进 `ownerSymbolId`，查它的成员：
 
 ```json
 {
@@ -217,12 +205,12 @@ POST resolve，或将相同对象传给 nekojs_resolve：
 }
 ```
 
-arity 判断可接受调用实参数量区间是否重叠，包含可选参数与变长参数语义，不是原始参数数量。每个可调用记录对应一个实际发射的重载，不把多个重载混成一组。
+`arity` 按“能接受几个参数”匹配，会考虑可选参数和变长参数。每个重载单独返回一条。
 
-<a id="wiki-section-12"></a>
-### 关联同一参数与同一重载
+<a id="wiki-section-10"></a>
+### query
 
-POST query：该请求查找名为 of 且**第一个参数本身**的显示类型为 string 的重载，不从不同参数或重载拼凑条件：
+查找名为 `of`、且**第一个参数**类型是 `string` 的重载：
 
 ```json
 {
@@ -239,12 +227,12 @@ POST query：该请求查找名为 of 且**第一个参数本身**的显示类�
 }
 ```
 
-资源包括 symbols、members、events、inputAdapters、declarations。布尔组合使用 all/any/not，参数关联使用 some。字段、操作符、select 与结构化请求约束以 capabilities/schema 为准。声明原文可选择 path、sha256、text；过大的文本请直接读取本地生成的声明文件。类型 ID/显示文本是保守元数据，不提供跨模块或别名的可赋值关系推断。
+`from` 可以是 `symbols`、`members`、`events`、`inputAdapters`、`declarations`。条件用 `all`/`any`/`not` 组合，`some` 用来要求“同一个参数”同时满足几个条件。可用的字段和操作符以 `nekojs_schema` 返回的为准。
 
-<a id="wiki-section-13"></a>
-### Batch
+<a id="wiki-section-11"></a>
+### batch
 
-POST batch：子项是 query 对象，不是任意操作，共用外层 scope/快照，不能各自覆盖 scope：
+一次发多个查询，共用外层的 scope：
 
 ```json
 {
@@ -256,72 +244,71 @@ POST batch：子项是 query 对象，不是任意操作，共用外层 scope/�
 }
 ```
 
-逐一检查 results 内各项的 status，以及 result 或 error，不因其他子项成功就忽略失败。
+每个子查询有自己的 `status`，要逐个检查。
+
+<a id="wiki-section-12"></a>
+### 看懂查询结果
+
+- **查不到不等于不存在。** 结果里的 `coverage` 不完整时，空结果不能说明 API 不存在。有些手写声明、继承关系和事件签名没有完整索引，这时直接去读生成的声明文件。
+- **分页**：把返回的 `page.nextCursor` 填进下一次请求的 `page.cursor`，其他条件保持不变。游标 15 分钟后过期。
+- **上限**：每页默认 20 条、最多 100 条；`select` 最多 32 个字段；batch 1–10 个查询；请求和响应各最多 64 KiB。超了就少选字段、减小页数。
+- 写错字段名或操作符会直接报错，不会被忽略。
+- 不支持 Python 成员、执行脚本、写文件或任意 Java 反射。
+
+| 查询错误 | 怎么办 |
+|---|---|
+| `INDEX_NOT_READY` | 在游戏里成功执行一次 `/nekojs probe` |
+| `INDEX_DISABLED` | 把 `[api].enabled` 改为 `true`，重启游戏 |
+| `INDEX_UNAVAILABLE` | 检查快照文件、配置和日志 |
+| `SCOPE_CONFLICT` | 重新调用 `nekojs_context`，用当前实例的 ID |
+| `SNAPSHOT_EXPIRED` | 重新调用 `nekojs_context`，从头再查 |
+| `RESPONSE_TOO_LARGE` | 减少字段或页大小，或者直接读本地文件 |
+
+<a id="wiki-section-13"></a>
+## 示例脚本
+
+文档包里的 `handbook/scripting-examples.md` 有 15 个完整场景：每个都给出完整代码、放在哪里、怎么触发、应该看到什么、怎么清理。文件在包内的 `examples/` 目录。
+
+用测试世界试，一次只装一个场景。服务端示例放进 `nekojs/server_scripts/authoring-examples/`，其他类型放进对应脚本目录下的同名子目录。
+
+| 场景 | 包内文件 | 怎么触发 | 应该看到 |
+|---|---|---|---|
+| 登录欢迎 | `server/player-login.js` | reload 后重新登录 | 登录时收到欢迎消息 |
+| 配方 | `server/recipes.js` | `/nekojs reload` | 木棍配方被替换，新增燧石和玻璃配方 |
+| 物品标签 | `server/item-tags.js` | NeoForge：`/nekojs reload` 后再执行原版 `/reload` | 物品标签 stones 含石头、不含花岗岩 |
+| 方块标签 | `server/block-tags.js` | NeoForge：`/nekojs reload` 后再执行原版 `/reload` | 方块标签 stones 含石头 |
+| 注册新内容 | `startup/registry.js` | 重启游戏 | 红宝石物品和方块 |
+| 物品组件 | `server/item-components.js` | `/nekojs reload`，看日志 | 修改一个内存里的物品，不发给玩家 |
+| 共享状态与定时器 | `startup/shared-config.js` + `server/state-and-timer.js` | 先重启，再 `/nekojs reload` | 共享的问候语、递增的计数、延迟日志 |
+| 客户端 UI | `client/counter.tsx` | 仅 NeoForge 26.x，`/nekojs reload client` | 计数界面，按按钮数字增加 |
+| 控件 | `client/controls.tsx` | 仅 NeoForge 26.x，`/nekojs reload client` | 开关、滑块、选择器和输入框 |
+| 表单与对话框 | `client/forms-and-dialogs.tsx` | 仅 NeoForge 26.x，`/nekojs reload client` | 输入校验、确认对话框、只读预览 |
+| 多窗口 | `client/workspace.tsx` | 仅 NeoForge 26.x，`/nekojs reload client` | Notes/Tools/Preview 三个窗口，可最小化 |
+| CommonJS | `modules/hello.cjs` + `modules/lib/message.cjs` | `/nekojs reload`，保持相对路径 | 日志输出 `Hello, NekoJS!` |
+| 断言测试 | `test/assertions.js` | `/nekojs test` | 三个断言通过 |
+| 日志 | `greeting.js` | `/nekojs reload` | 一条加载日志 |
+| 事件订阅 | `event-subscription.js` | `/nekojs reload` | 观察配方事件，不修改配方 |
 
 <a id="wiki-section-14"></a>
-## 覆盖、分页与限制
+### 第一个示例：登录欢迎
 
-- 检查 items、coverage.state/scope/unresolvedRecords、warnings 和 page。元数据缺失为 unknown，即使取反也不是 true；精确查询不自动退化成模糊查询。**覆盖不完整时，最后一页为空也不能证明 API 不存在。**
-- declared 包括实际发射的声明与已物化投影，不会展开所有继承泛型。手写声明、字面量重载、capture 视图可能只有声明文本；绑定继承与冲突、事件回调签名、适配器别名也未完整索引。应沿来源读取声明。
-- 不支持 Python 成员、effective 继承视图、assignableTo、任意 Java 反射、SQL、脚本求值、写脚本、运行 Probe 或触发 reload。
-- 下一页将返回的 page.nextCursor 放入 page.cursor，保持操作、scope、过滤、select、排序不变；可调整页大小。检查 page.endOfResults 与 page.stopReason。内存仅保留最近加载的三个快照，游标在 15 分钟或进程关闭后失效；SNAPSHOT_EXPIRED 后刷新 context 并重查，不拼接不同快照的结果。
-- 每页默认 20、最多 100 条；select 最多 32 项、排序最多 3 项；谓词最多 32 节点/4 层，in/notIn 最多 100 值；batch 为 1–10 项。不认识的字段、操作符或错误类型会报错而非忽略。
-- HTTP 请求体/响应最多 64 KiB、并发交换最多 2 个、单次交换期限 10 秒。缩小页或 select；过大声明使用文件方式阅读。
+把下面的代码放进 `nekojs/server_scripts/authoring-examples/player-login.js`，执行 `/nekojs reload`，然后退出重新登录：
 
-| 查询错误 | 下一步 |
-|---|---|
-| INDEX_NOT_READY | 成功运行 TypeScript Probe |
-| INDEX_DISABLED | 检查 api.enabled 并重启 |
-| INDEX_UNAVAILABLE | 检查快照、配置与日志 |
-| SCOPE_CONFLICT | 重新发现当前实例环境 |
-| SNAPSHOT_EXPIRED | 刷新 context，重新查询 |
-| RESPONSE_TOO_LARGE | 减少字段/页大小，或读取本地文件 |
-
-<a id="wiki-section-15"></a>
-## 实用脚本：选择一个完整场景
-
-不要只停留在连接示例。先从 `.github/neko_ai/current.json` 找到当前包，再读包内 `handbook/scripting-examples.md`：其中有 15 个场景、全部 17 个源文件的完整代码、目标路径、触发方式、预期观察、清理步骤与平台条件。`examples/metadata.json` 记录安装文件组和验证级别。下表路径均相对于包内 `examples/`。
-
-使用可丢弃实例/世界，备份现有脚本，每次只安装所选场景的一份。普通 SERVER 文件放入 `nekojs/server_scripts/authoring-examples/`；STARTUP、CLIENT、TEST 分别放入对应的 `startup_scripts`、`client_scripts`、`test_scripts` 下同名子目录。CommonJS 两文件放入 SERVER 的 `authoring-examples/modules/`，保留 `lib/` 子目录；状态场景两文件分属 STARTUP 与 SERVER。两种 MCP 模式都不安装脚本文件。查询工具与独立 stdio 仍只读；下文单独启用的游戏内操作可执行 allowlist 命令或 reload 脚本。
-
-| 场景 | 包内文件 | 触发方式 / 条件 | 预期观察 |
-|---|---|---|---|
-| 登录欢迎 | `server/player-login.js` | SERVER reload 后重新登录 | 新登录玩家收到消息 |
-| 配方 | `server/recipes.js` | 整个 SERVER reload，检查配方后处理 | 替换木棍配方，添加燧石与玻璃配方 |
-| 物品标签 | `server/item-tags.js` | NeoForge：SERVER reload 后执行原版 `/reload` | 物品 stones 标签含石头，不含花岗岩 |
-| 方块标签 | `server/block-tags.js` | NeoForge：SERVER reload 后执行原版 `/reload` | 独立的方块 stones 标签含石头 |
-| 启动注册 | `startup/registry.js` | 完整重启进程，客户端/服务端定义一致 | 红宝石物品和方块；方块物品自动创建 |
-| 物品组件 | `server/item-components.js` | SERVER reload，检查日志 | 修改内存中的物品堆，不发放到背包 |
-| 状态与定时器 | `startup/shared-config.js` + `server/state-and-timer.js` | 先重启一次，再 SERVER reload | 共享问候语、类型内递增计数、延迟日志 |
-| 客户端 UI | `client/counter.tsx` | 仅 NeoForge 26.x，CLIENT reload | 计数界面打开，按钮递增文本 |
-| 控件 | `client/controls.tsx` | 仅 NeoForge 26.x，CLIENT reload；单独安装 | 开关、步进滑块、选择器与单行输入 |
-| 表单与对话框 | `client/forms-and-dialogs.tsx` | 仅 NeoForge 26.x，CLIENT reload；单独安装 | 本地校验、确认 Alex x3、查看只读预览 |
-| 工作区 | `client/workspace.tsx` | 仅 NeoForge 26.x，CLIENT reload；单独安装 | 独立的 Notes/Tools/Preview 窗口；最小化并恢复 Notes |
-| CommonJS | `modules/hello.cjs` + `modules/lib/message.cjs` | SERVER reload，保留相对路径 | 输出 `Hello, NekoJS!` |
-| 断言 | `test/assertions.js` | `/nekojs test` | 三个断言通过 |
-| 日志热身 | `greeting.js` | SERVER reload | 一条示例加载日志 |
-| 事件热身 | `event-subscription.js` | SERVER reload | 观察配方事件，不修改配方 |
-
-<a id="wiki-section-16"></a>
-### 第一个游戏脚本：登录欢迎
-
-**NeoForge 1.21.1/26.x：**将下面完整代码放入 `nekojs/server_scripts/authoring-examples/player-login.js`，执行 `/nekojs reload server` 后重新连接。**Fabric 26.x** 应将文件中的 `event.entity` 换为 `event.player`；加载器 payload 不同：
-
-```js
+```javascript
 // Place in server_scripts. The callback runs for future logins, not existing players.
 PlayerEvents.loggedIn(event => {
     event.entity.sendMessage("Welcome to NekoJS!");
 });
 ```
 
-之后登录的玩家收到 `Welcome to NekoJS!`；已经在线的玩家不会补发。删除复制的文件后 reload SERVER，即可取消后续欢迎。事件组订阅使用加载器特有的 Bean 属性：NeoForge 原生玩家事件暴露 `event.entity`，Fabric 包装事件暴露 `event.player`。玩家句柄只在回调内使用。随包 `player-login.js` 现已使用 NeoForge 属性；其中注释说明了 Fabric 所需的单个属性替换。
+登录时会收到 `Welcome to NekoJS!`，已经在线的玩家不会收到。**Fabric** 上要把 `event.entity` 换成 `event.player`。
 
-<a id="wiki-section-17"></a>
-### 配方示例与验收
+<a id="wiki-section-15"></a>
+### 配方示例
 
-只在可丢弃世界中复制到 `nekojs/server_scripts/authoring-examples/recipes.js`：
+这个示例会替换原版木棍配方，请在测试世界里用。放进 `nekojs/server_scripts/authoring-examples/recipes.js`：
 
-```js
+```javascript
 // Use a disposable world: this replaces the vanilla stick recipe.
 ServerEvents.recipes(event => {
     event.remove({ id: "minecraft:stick" });
@@ -337,50 +324,133 @@ ServerEvents.recipes(event => {
 });
 ```
 
-执行整个 `/nekojs reload server` 并等待配方后处理完成，而非只确认脚本提交。预期：两块竖放的橡木木板通过 `nekojs_example:sticks` 合成四根木棍；两块沙砾通过 `nekojs_example:flint` 无序合成一个燧石；`nekojs_example:glass` 以 0.1 经验、配置时长 200 tick 将沙子烧成玻璃。旧的 `minecraft:stick` 配方被移除，原版玻璃配方可能仍存在。实际操作工作台/熔炉验收；删除文件并完整 reload SERVER 后检查基础配方恢复，资源或查看器状态过期时也要检查其 reload 结果。
-
-标签需在已实现的 NeoForge 路径依次完成 SERVER reload 与原版 `/reload`；Fabric hook 尚未完整实现。注册内容必须重启进程并使用可丢弃存档，示例未提供资源或创造标签页条目。UI 仅适用 NeoForge 26.x 的 `ClientUI`，1.21.1/Fabric 应跳过。状态只在当前进程内共享，不是磁盘保存或客户端/服务端同步。组件示例只创建独立的内存物品堆，不修改背包。切换场景前按 cookbook 中该分支的步骤清理。
-
-验证标签区分隔离契约检查、真实引擎执行、带平台夹具的真实引擎执行；这些都不是 Minecraft 世界内验收。配方、标签、注册、玩家回调与 UI 的实机结果必须单独记录。复制陌生调用前，检查当前实例声明与 profile。
+执行 `/nekojs reload` 后：两块竖放的橡木木板合成 4 根木棍；两块沙砾无序合成 1 个燧石；熔炉把沙子烧成玻璃。删掉文件再 reload，原版木棍配方就回来了。
 
 <a id="wiki-live-results"></a>
-**可查询的实时运行结果：**游戏内 MCP 在七个快照/文档工具之外增加只读 `nekojs_errors`、`nekojs_operation_status`；带相同认证的 HTTP 增加 POST `errors`、`operation_status`。无需 Probe 快照或 mutation 开关。离线 stdio 仍为七个工具，不宣称实时结果；伪造调用以 `LIVE_STATE_UNAVAILABLE` 拒绝，不派发任务。
+<a id="wiki-section-16"></a>
+## 查看实时运行结果
 
-- 错误：`{"scriptType":"SERVER","limit":25}`（均可省略，类型大写，最多 100 条）。检查 `available`、`errors`、`returned`、`totalIsExact`、`truncated`。行数据复用冻结诊断：错误 ID、类型、phase/owner、代次、相对源码位置和有界不可信消息；不输出原始异常、宿主堆栈或源码片段。这是当前公开错误集，不是持久历史或全局日志。约 20 KiB 投影最多扫描 10,000 条；总数不精确时为 null。没有供应器时明确不可用，不伪造空的实时快照。
-- 操作：`{"operationId":"<已接纳回包中的完整 UUID>"}`。检查 `found`、`state`（queued/running/timed_out_pending/terminal）、`terminal`、`claimed`、`initialResult`、`latestResult`。查询不派发、不重放。已领取的超时操作可随后完成，原响应保持不变。复用 64 条审计迁移与待处理集合，不新建操作日志；未知与已淘汰 ID 均为 `unknown_or_expired`。退役追踪可成为终态，但副作用仍未知。此查询不保留命令正文、参数或反馈。
-- TEST：`context.testRunReport` 为最近结束的一次尝试，不是当前操作进度；尚无报告时为 null，离线不可用。字段为 `executionCompleted`、`executionSucceeded`、`passed`、`failed`、可空 `assertionsPassed` 与 `overallPassed`。捕获了失败断言也仍为失败；零断言为 null/未证实。计数是本次 legacy 与脚本包的增量，范围是原有执行/drain 窗口。TEST 控制回包/审计也包含该报告：`TEST_ASSERTIONS_FAILED` 可同时出现 `committed:true` / `effects:committed`。执行结束或零断言事务成功不等于整体断言通过。
+使用游戏内 MCP 时，除了上面七个工具，还有两个只读工具。它们不需要 API 快照，也不需要开启实时操作。独立 stdio 没有这两个工具。
+
+| 工具 | 参数示例 | 返回什么 |
+|---|---|---|
+| `nekojs_errors` | `{"scriptType":"SERVER","limit":25}` | 当前的脚本错误列表：错误 ID、脚本类型、文件、行列号和简短消息。两个参数都可省略，最多 100 条 |
+| `nekojs_operation_status` | `{"operationId":"<完整 UUID>"}` | 某个实时操作的后续状态，只查询，不会重新执行 |
+
+开启了 `[http]` 时，也可以 POST 到 `errors` 和 `operation_status` 这两个 HTTP 接口。
+
+另外，`nekojs_context` 结果里的 `testRunReport` 是最近一次 `/nekojs test` 的结果，包括 `passed`、`failed` 和 `overallPassed`。一个断言都没有执行时，`overallPassed` 为 `null`，不算通过。
 
 <a id="wiki-live-controls"></a>
-<a id="wiki-section-18"></a>
-## 按需启用的实时 MCP 操作
+<a id="wiki-section-17"></a>
+## 实时操作（默认关闭）
 
-授权前先读当前文档包的 `handbook/live-controls.md`。普通 HTTP 查询与 query batch 仍只读；只有**游戏内 MCP**可公布这两个工具。独立 stdio 没有实时宿主，即使游戏配置启用了控制，有效操作请求仍返回 `LIVE_RUNTIME_REQUIRED`（409）。
+开启后，AI 可以通过游戏内 MCP 执行你允许的服务器命令，或 reload 脚本。只有游戏内 MCP 有这个功能，独立 stdio 和普通 HTTP 接口都没有。
 
-1. 备份脚本与存档，在可丢弃世界中操作，并获得用户对具体操作的明确授权。
-2. 启用 `[mcp].enabled`，再在 `[control]` 中独立选择：窄范围命令测试可用 `commands = true` 与 `command_allowlist = ["list"]`；需要完整 SERVER、CLIENT 或 TEST reload 时才启用 `reload = true`。默认分别为 false、false、空 allowlist，不用的保持关闭。
-3. 完整重启进程，再按上文 URL/bearer 流程连接。命令、SERVER 和 TEST 需要正在运行的专用/内置服务器；CLIENT 需要客户端进程中的活动运行时，不要求有服务器，专用服务器不能 reload CLIENT。刷新 `tools/list`，检查 `context.liveControls` 或 `capabilities.liveControls`；`liveControls.reloadTypes` 按 `server`、`client`、`test` 顺序列出当前可用且策略已启用的目标，关闭或无可用目标时为 `[]`。至少一个目标可用才公布 reload 工具；输入 schema 的三种枚举值不证明对应运行时可用。伪造隐藏工具调用不会绕过检查。描述文件的 `readOnly` 只说明配置策略，不证明目标 owner 当前可用。
+> AI 执行的命令和 reload 会真实改变你的世界。请先备份脚本和存档，最好在测试世界里用，并且每次都明确知道 AI 要做什么。
 
-| 工具 | 工具参数 | 效果与限制 |
+开启步骤：
+
+1. 在 `ai.toml` 中开启 `[mcp].enabled`。
+2. 在 `[control]` 里只打开需要的功能：
+   - 允许执行命令：`commands = true`，并在 `command_allowlist` 里列出允许的命令，例如 `["list"]`。
+   - 允许 reload：`reload = true`。
+3. 重启游戏，按“方式一”连接。AI 工具里会多出下面的工具。
+
+| 工具 | 参数示例 | 作用 |
 |---|---|---|
-| `nekojs_execute_game_command` | `{"command":"list","timeoutMs":5000}` | 一条精确命令根 allowlist 匹配的服务器命令，可带开头斜杠；最多 2048 字符，不接受控制/行分隔字符或首尾空白 |
-| `nekojs_reload_scripts` | `{"type":"server","timeoutMs":5000}` | 在实际 owner 上 reload 一个完整 `server`、`client` 或 `test` 代次；仅 SERVER 含配方/脚本数据包后处理；不支持单文件/局部/`all`、原版 reload 或 Probe |
+| `nekojs_execute_game_command` | `{"command":"list","timeoutMs":5000}` | 执行一条在允许列表里的服务器命令 |
+| `nekojs_reload_scripts` | `{"type":"server","timeoutMs":5000}` | 完整 reload 一种脚本：`server`、`client` 或 `test` |
 
-命令源固定为非玩家、权限等级 2（gamemaster）、无实体冒充，位置为主世界原点。要求玩家或更高权限的命令可能失败。allowlist 精确匹配根标记，不匹配前缀或过滤参数；`list` 与 `minecraft:list` 不同。最多 128 个根、每个最多 128 字符，仅小写字母、数字、`_`、`.`、`-` 与可选 `namespace:`。**allowlist 不是沙箱**：`execute` 或插件分派根可能允许强大嵌套操作。反馈仅属于本次请求，是最多 64 条/8192 字符的净化纯文本，不是全局日志或管理员广播。完成取实际命令结果；同步分派返回但没有结果回调时按失败处理，不视为成功。
+**命令**：
 
-reload 使用小写 `server`、`client` 或 `test`；例如将参数替换为 `{"type":"client","timeoutMs":5000}` 或 `{"type":"test","timeoutMs":5000}`。CLIENT 等待客户端 owner 的真实候选完成，不将排队视为成功；它没有服务端配方/资源后处理，专用服务器会以 `RELOAD_UNAVAILABLE` 拒绝。TEST 需要实时服务器 owner，使用现有 TEST reload-and-run 流程，并在原有 timer-drain 窗口后返回观察到的断言报告；不认证未来回调。SERVER 保留配方/脚本数据包后处理。STARTUP 必须重启进程（`RESTART_REQUIRED`），单文件/局部、`all` 等其他不支持的类型返回 `UNSUPPORTED_RELOAD`。分别检查 `committed` 和 `postprocessingSucceeded`；`committed: true` 加 `RELOAD_POSTPROCESSING_FAILED` 表示候选已提交而后处理失败，不是回滚。CLIENT/TEST 的 `postprocessingSucceeded: true` 表示候选完成且没有服务端后处理，不证明 UI 行为或测试断言通过。即使候选回滚，也不能撤销任意外部副作用。tag 流程仍按示例指南执行额外原版 reload。
+- 允许列表按命令的第一个词精确匹配。`list` 和 `minecraft:list` 算两个不同的命令。
+- 命令以权限等级 2 执行，不是以玩家身份执行。需要玩家身份或更高权限的命令会失败。
+- **允许列表不是沙箱。** 允许了 `execute` 这类命令，就等于允许了它能做的所有事。只放你确实需要的命令。
+- 需要服务器正在运行（单人世界也可以）。
 
-检查 MCP 的 `isError` 与 `structuredContent`。已接纳结果含 `operationId`、`operation`、`status`、`code`、`effects`、`retryable`、`output`、`outputTruncated` 和操作完成字段；reload 结果与审计元数据包含选定的小写 `type`。接纳前拒绝是错误对象。`timeoutMs` 为 1–8000 整数，默认 5000。排队中过期的任务不会随后执行（`effects: "none"`）；已开始后超时/中断可能是 `effects: "unknown"`，不等于回滚、保证取消或可以盲目重试。命令和所有 reload 目标共用一个活动操作槽位。在该操作的 owner 代次内，已领取操作占用槽位直到实际完成，即使客户端已超时；目标停止/代次变化可退役旧槽位，但不会使已开始的副作用变得已知或可安全重试。后续请求得到 `CONTROL_BUSY`。`retryable` 只表示任务未被领取，不自动授权重复操作。`CONTROL_DISABLED`、`COMMAND_NOT_ALLOWED`、`STALE_RUNTIME` 区分策略、allowlist 和代次拒绝。CLIENT 没有活动客户端运行时时返回 `RELOAD_UNAVAILABLE`；命令或 SERVER/TEST 没有实时服务器时返回 `LIVE_RUNTIME_REQUIRED`。可以用只读 `operation_status` 按已接纳的 `operationId` 查询后续元数据；最初的超时响应不会事后改写。**HTTP/MCP 响应丢失不证明操作未执行**；重新尝试前应先检查本机诊断与实际状态，并另行获得明确授权。传输超时后不得自动重试有副作用的操作。
+**reload**：
 
-记录真实平台/配置、操作、观察结果与清理。源码/夹具测试不证明真实世界效果；**人工验收仍待维护者给出实际结论**。测试后关闭不用的控制并重启。
+- `server` 和 `test` 需要服务器正在运行；`client` 需要客户端，专用服务器不能 reload client。
+- 不支持 `startup`（需要重启游戏），也不支持只 reload 单个文件。
+- `server` reload 包含配方的重新应用。标签仍需要再执行一次原版 `/reload`。
+- 结果里分别看 `committed`（脚本是否生效）和 `postprocessingSucceeded`（配方等后续处理是否成功）。
+
+**超时**：`timeoutMs` 是 1–8000 的整数，默认 5000。超时**不代表操作没有执行**，它可能仍在进行或已经完成。不要直接重试，先用 `nekojs_operation_status` 查询，或者在游戏里确认实际状态。同一时间只能有一个操作在进行。
+
+常见的拒绝原因：
+
+| 返回码 | 原因 |
+|---|---|
+| `CONTROL_DISABLED` | `[control]` 里没有开启这个功能 |
+| `COMMAND_NOT_ALLOWED` | 命令不在允许列表里 |
+| `CONTROL_BUSY` | 已有另一个操作在进行 |
+| `LIVE_RUNTIME_REQUIRED` | 没有正在运行的服务器；独立 stdio 也总是返回这个 |
+| `RELOAD_UNAVAILABLE` | 没有可用的客户端，无法 reload client |
+| `RESTART_REQUIRED` | 请求 reload startup，需要重启游戏 |
+| `UNSUPPORTED_RELOAD` | 不支持的 reload 类型 |
+| `STALE_RUNTIME` | 世界已关闭或切换，旧操作不再执行 |
+| `RELOAD_POSTPROCESSING_FAILED` | 脚本已经生效，但配方等后续处理失败。这不是回滚 |
+| `TEST_ASSERTIONS_FAILED` | 测试脚本执行了，但有断言失败 |
+
+用完后，把不需要的开关关掉并重启游戏。文档包里的 `handbook/live-controls.md` 有更详细的说明。
+
+<a id="wiki-section-18"></a>
+## 进阶：普通 HTTP 接口
+
+开启 `[http].enabled` 并重启后，可以用 curl 之类的工具直接请求。所有接口都在 `/api/v1/authoring/` 下，都要带 `Authorization: Bearer <密钥>`。下面的例子在游戏目录下的 POSIX shell 里执行：
+
+```sh
+TOKEN="$(tr -d '\r\n' < nekojs/config/ai.token)"
+BASE='http://127.0.0.1:8767/api/v1/authoring'
+curl --fail-with-body -H "Authorization: Bearer $TOKEN" "$BASE/context"
+curl --fail-with-body -H "Authorization: Bearer $TOKEN" "$BASE/capabilities"
+curl --fail-with-body -H "Authorization: Bearer $TOKEN" "$BASE/schema"
+# Save the resolve request above as request.json and replace the discovered IDs.
+curl --fail-with-body -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' --data-binary @request.json "$BASE/resolve"
+unset TOKEN
+```
+
+| 方法 | 接口 |
+|---|---|
+| GET | `context`、`capabilities`、`schema` |
+| POST JSON | `resolve`、`members`、`query`、`batch`、`errors`、`operation_status` |
+
+不接受 URL 查询参数，条件都放在 JSON 请求体里。HTTP 返回成功不代表查询结果完整，仍要看 `coverage`。
 
 <a id="wiki-section-19"></a>
-## 安全与验证
+## 进阶：手写 MCP 请求
 
-以下网络与 token 限制仅适用于可选的游戏内 HTTP，不适用于独立 stdio 辅助进程。监听只接受 IPv4 loopback。Host 必须匹配 localhost 或 127.0.0.1 及端口，若带 Origin 则必须匹配本机 HTTP origin。token 使用随机 bearer 凭据，并限制 POSIX 权限或 Windows owner ACL；能够读取 token 的受信任本机进程仍可认证。
+只有自己写客户端或调试时才需要。服务使用 Streamable HTTP 的 JSON 响应模式，协议版本 **2025-11-25**。
 
-不要转发端口、公开代理或把 token 放进版本库、提示词、截图、共享日志。这里没有 OAuth、TLS 或远程访问授权方案；浏览器 Host/Origin 校验不替代凭据保密。关闭进程会关闭监听/会话/查询缓存并将本实例连接描述标为离线。
+1. 向 `mcp` 地址 POST initialize，带上 `Authorization: Bearer <密钥>`、`Content-Type: application/json` 和 `Accept: application/json, text/event-stream`：
 
-查询只能辅助编写，不能验证游戏行为。检查生成声明、按脚本类型进行正常加载/reload/重启，并记录真正执行过的验证。详见 [脚本基础](script-basics_cn)、[TypeScript 与 JSX](typescript-and-jsx_cn)、[命令](commands_cn) 和 [错误与日志参考](error-reference_cn)（NEKO-1019、NEKO-4055）。
+```json
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"local-authoring-client","version":"1"}}}
+```
+
+2. 记下响应头里的 `Mcp-Session-Id`。之后每个请求都带上它和 `MCP-Protocol-Version: 2025-11-25`。
+3. POST `{"jsonrpc":"2.0","method":"notifications/initialized"}`，成功时返回 HTTP 202。然后就可以调用工具了：
+
+```json
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"nekojs_context","arguments":{}}}
+```
+
+4. 结果看 `structuredContent` 和 `isError`，不要只看 HTTP 状态码。`resources/read` 只能读 `resources/list` 列出的文档。
+5. 用完后对 `mcp` 地址发 DELETE。会话闲置 30 分钟过期，最多同时 32 个。
+
+不支持旧式 SSE、GET 事件流（GET /mcp 返回 405）、prompts 和资源订阅。
+
+<a id="wiki-section-20"></a>
+## 安全
+
+- 查询服务只监听本机 `127.0.0.1`。不要做端口转发，也不要放到公网代理后面。
+- `ai.token` 相当于密码。不要提交到 Git，不要贴进聊天、截图或日志。本机上能读到这个文件的程序都能访问服务。
+- 没有 TLS 和远程授权，只适合本机使用。
+- AI 查到的信息只能帮助写代码，不能证明脚本在游戏里一定正确。最终效果要你在游戏里确认。
+
+相关页面：[脚本基础](script-basics_cn)、[TypeScript 与 JSX](typescript-and-jsx_cn)、[命令](commands_cn)、[错误与日志参考](error-reference_cn)。
 
 <!-- wiki-nav -->
 

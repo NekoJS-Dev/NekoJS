@@ -5,41 +5,47 @@
 <a id="wiki-section-1"></a>
 # MixinJS（实验性）
 
-MixinJS 将原生方法注入分成两部分：**随加载器启动的声明产物**，以及**可随脚本 reload 替换的回调**。明确启用后，NeoForge 26.x 自动准备内部游戏库；旧版 NeoForge 和 Fabric 使用带强制依赖的载体模组。它不是在运行中的游戏里动态添加 Mixin。
+MixinJS 让脚本在 Minecraft 的某个 Java 方法开头或返回时插一段代码，读取参数、改返回值或取消调用。用法分两部分：
 
-> **当前仅供开发环境实验。** 非空载体在生产环境中会被拒绝。构建/JVM 检查不等于游戏内验收。NeoForge 26.1.2 开发独立服务端的有限冒烟已覆盖加载器发现、Sponge 变换和一个不可取消的 SERVER 回调；这不代表完整原生 ABI、客户端、跨加载器或生产映射已验收。具体证据边界见下文，不构成正式服部署保证。
+1. 写一个**注入声明**，说明要注入哪个方法。它在游戏启动时由加载器生效，改了必须重启游戏。
+2. 在普通脚本里写**回调**，决定注入点要做什么。回调可以用 `/nekojs reload` 随时修改。
 
-**运行时开关（默认关闭）**
+> **这是实验功能，只能在开发环境里用。** 在正式游戏（生产环境）里，NekoJS 会拒绝加载注入。目前只在 NeoForge 26.1.2 开发环境的专用服务器上验证过简单场景，其他版本、加载器和客户端组合都还没有完整测试。不要用在正式整合包或服务器上。
 
-MixinJS 原生执行默认关闭。若要明确选择开发环境实验，请在保留其他设置的前提下创建或编辑 `<game>/nekojs/config/engine.toml`：
+<a id="wiki-section-2"></a>
+## 开始之前：开启 MixinJS
+
+MixinJS 默认关闭。在 `nekojs/config/engine.toml` 里加上：
 
 ```toml
 [mixinjs]
 enabled = true
 ```
 
-运行时配置缺失或格式损坏时，MixinJS 保持关闭。旧路径 `<game>/config/nekojs-engine.toml` 只在规范文件不存在时作为只读兜底；新增修改请使用规范路径。这是同一个引擎设置（内部字段为 `SandboxConfig.mixinJsEnabled`），不是单独的 MixinJS 配置文件，也没有系统属性旁路。启用它不会同时开放脚本反射或 ASM 权限。 三类引擎、Probe 与 AI 配置的分工见[配置指南](configuration_cn)。
+然后**完全重启游戏**。以后每次改这个开关（包括关掉）都要完全重启，`/nekojs reload` 和 `/nekojs probe` 都不会重新读取它。
 
-请在启动前设置，并在每次修改后**完整重启**，关闭时也一样。脚本 reload 和 Probe 都不会切换此值。关闭时，自动启动准备、加载器接纳、已安装原生回调槽及已安装 Hook 的 Probe 重载均不启用；声明编辑、Probe 编辑器声明与离线校验/构建工具仍可使用。已有载体或缓存文件本身不会启用执行。
+- 配置文件缺失或格式错误时，MixinJS 保持关闭。
+- 开启 MixinJS 不需要打开 `allowAsm` 或 `allowReflection`，也不会顺带打开它们。
+- 关闭时，写声明文件的代码补全和离线工具仍然可以用，只是注入不会生效。
 
-`enabled = true` 仅表示明确选择实验功能，**不是生产环境解锁**。仅开发环境接纳，以及既有环境配置、本地信任、线程和 ABI 检查仍然有效。
-
-<a id="wiki-section-2"></a>
-## 1. 区分声明与回调
-
-| 内容 | 放置位置 | 生效方式 |
-|---|---|---|
-| 注入声明：目标类、方法描述符、注入点、Hook ID | `nekojs/mixins/*.mixin.js` 或 `*.mixin.ts` | 引擎开关启用后，NeoForge 26.x 自动准备后重启；旧版/Fabric 离线构建、安装并重启 |
-| 运行时回调：读取参数、修改返回值 | `nekojs/server_scripts/` 或 `nekojs/client_scripts/` | 启用后启动并经加载器接纳，再按对应 Script Type 加载或 reload |
-
-声明文件不属于普通脚本入口。只有离线声明导入 `nekojs/mixin`；普通脚本使用事件组 `MixinEvents`。
+其他配置项见 [配置参考](configuration_cn)。
 
 <a id="wiki-section-3"></a>
-## 2. 编写离线声明
+## 工作原理
 
-例如，在 `nekojs/mixins/max-health.mixin.js` 中写：
+| 部分 | 放在哪里 | 怎么生效 |
+|---|---|---|
+| 注入声明：目标类、方法、注入位置、Hook ID | `nekojs/mixins/` 下的 `*.mixin.js` 或 `*.mixin.ts` | 生成注入文件，然后完全重启游戏 |
+| 回调：读参数、改返回值 | `nekojs/server_scripts/` 或 `nekojs/client_scripts/` | 游戏加载注入后，像普通脚本一样加载或 reload |
 
-```js
+两部分靠 **Hook ID**（例如 `demo:max_health`）对应起来。声明文件用 `import { Mixin } from "nekojs/mixin"`；普通脚本用全局的 `MixinEvents`。
+
+<a id="wiki-section-4"></a>
+## 1. 编写注入声明
+
+下面这个例子把所有生物的最大生命值改成 40。新建 `nekojs/mixins/max-health.mixin.js`：
+
+```javascript
 import { Mixin } from "nekojs/mixin";
 
 Mixin.target("net.minecraft.world.entity.LivingEntity", target => {
@@ -48,36 +54,47 @@ Mixin.target("net.minecraft.world.entity.LivingEntity", target => {
         build.cancellable = true;
         build.scriptType = "SERVER";
         build.thread = "SERVER_MAIN";
-        build.require = 1;
     });
 });
 ```
 
-此例的类名和方法名必须与传给工具的**精确运行时命名空间**一致。不能将示例名称或开发映射中的名称直接视为适用于所有版本和加载器。注入只针对该方法的精确实现，不覆盖所有重写：子类重写若不调用被注入的父类方法，就会绕过注入。请检查实际接收者和重写链；`require = 1` 与 Probe 补全都不能证明每次虚调用会到达目标。
+- 第一个参数是**方法名加完整的 JVM 描述符**：`getMaxHealth()F` 表示没有参数、返回 float；`tick()V` 表示没有参数、返回 void。
+- 第二个参数是 Hook ID，格式是 `命名空间:路径`，只能用小写字母、数字和 `_`、`.`、`-`、`/`。所有已加载的声明里不能重名。
+- 类名和方法名必须是**当前游戏运行时实际使用的名字**。不同 Minecraft 版本和加载器的名字可能不同，NekoJS 不会帮你转换映射。
 
-| 字段 | 当前支持值 | 默认值 |
+可以设置的字段：
+
+| 字段 | 可选值 | 默认值 |
 |---|---|---|
-| `at` | `HEAD`、`RETURN` | `HEAD` |
-| `cancellable` | 布尔值；允许取消或替换返回值 | `false` |
+| `at` | `HEAD`（方法开头）、`RETURN`（方法返回时） | `HEAD` |
+| `cancellable` | `true` 才能取消调用或修改返回值 | `false` |
 | `scriptType` | `SERVER`、`CLIENT` | `SERVER` |
-| `thread` | 与类型匹配的 `SERVER_MAIN`、`CLIENT_MAIN` | `SERVER_MAIN` |
-| `require` | 仅 `1` | `1` |
-| `staticMethod` | 是否为静态目标方法；必须与字节码一致 | `false` |
+| `thread` | 和 `scriptType` 对应：`SERVER_MAIN` 或 `CLIENT_MAIN` | `SERVER_MAIN` |
+| `require` | 只能是 `1` | `1` |
+| `staticMethod` | 目标是静态方法时设为 `true`，必须和实际方法一致 | `false` |
 
-方法选择器必须含完整 JVM 描述符：`getMaxHealth()F` 表示无参数、返回 float；`tick()V` 表示无参数、返回 void。Hook ID 使用 `namespace:path`，已加载的多个载体之间不能重名。
+注意：注入只作用于你指定的那个类里的方法。如果子类重写了这个方法，又没有调用父类的版本，对子类对象的调用就不会经过你的注入。
 
-离线求值器没有 Java 类查找、文件、网络或进程 API。除 `nekojs/mixin` 外，仅允许受源目录约束、带明确扩展名的相对静态导入；当前相对模块仅适用于副作用导入，不支持导出。动态导入、顶层 await、异步 builder、未知字段和超出语句预算的执行均会失败。声明回调必须同步返回 `undefined`。隔离的声明 Context 仍有私有的 **100,000 条语句预算**，并非普通脚本执行限制；已移除的引擎设置 `scriptEvaluationTimeoutSeconds`、`scriptStatementLimit`、`scriptRunawayTimeoutSeconds` 不控制此求值器。
+声明文件运行在一个单独的受限环境里：
 
-<a id="wiki-section-4"></a>
-## 3. 准备声明产物
+- 不能访问 Java 类、文件、网络。
+- 只能导入 `nekojs/mixin`，以及带 `.js` 或 `.ts` 扩展名的相对路径文件。被导入的文件不能有导出。
+- 不能用默认导入、动态 `import()`、顶层 `await`。
+- `build => { ... }` 必须同步执行完，不能返回值。写了不存在的字段会报错。
+- 单次运行最多执行 100,000 条语句。
 
-**NeoForge 26.1.2 / 26.2.0：** 将声明放在开发实例的 `nekojs/mixins/`。NekoJS 读取目标 class 资源但不初始化目标类，并自动准备 `mods/nekojs-mixins-auto-<hash>.jar`。它属于加载器的游戏库，不作为独立条目显示在模组列表中，无需手动构建或安装载体。首次准备和结构变更会以 `NEKO-4090` 停止本次启动，完整重启后使用新库。删除全部声明时清空启用选择；若本次已加载该库，仍需重启。编译失败会保留原选择并停止启动。`nekojs/.cache/mixins/` 下原子更新的选择文件只启用一个哈希；为避免覆盖或删除 Windows 上被加载器锁住的归档，旧的不可变库保留但不注入，可在游戏关闭时删除。
+<a id="wiki-section-5"></a>
+## 2. 生成并加载注入
 
-**旧版 NeoForge / Fabric，或离线校验：** 使用下面的工具。高版本离线构建也会生成游戏库；不要将手动安装的产物与工作区自动准备混用。
+**NeoForge 26.1.2 和 26.2.0：自动生成。** 把声明放进 `nekojs/mixins/` 后启动游戏。NekoJS 会自动生成 `mods/nekojs-mixins-auto-<hash>.jar`，然后以 `NEKO-4090` 停止这次启动，提示你重启。再次启动后注入就生效了。
 
-工具从目标 JAR 或 class 目录直接读取字节码，不初始化目标类。运行工具需要本仓库的构建环境；这不是游戏内命令。
+- 这个 jar 不会出现在模组列表里，不用手动安装。
+- 以后每次改了声明，都会重新生成并要求重启一次。
+- 删掉所有声明后，下次启动就不再加载注入。如果当时注入已经加载，还要再重启一次。
+- 旧的 jar 不会被自动删除，但也不会被加载。可以在游戏关闭时手动删掉。
+- 不要同时手动安装注入 jar，否则会报错。
 
-为了避免 PowerShell 的 JSON 引号问题，在仓库根目录创建 `mixin-args.json`：
+**旧版 NeoForge 和 Fabric：手动构建。** 需要本仓库的开发环境，在仓库根目录用 Gradle 运行，不是游戏内命令。先新建 `mixin-args.json`（单独放参数文件，可以避开 PowerShell 的引号问题）：
 
 ```json
 [
@@ -95,86 +112,85 @@ Mixin.target("net.minecraft.world.entity.LivingEntity", target => {
 ./gradlew.bat :common:packTool -PpackArgsFile=mixin-args.json
 ```
 
-将 `runtime-targets.jar` 替换为实际的目标字节码路径；版本号和物理侧别也必须与开发运行环境完全匹配。仓库的 `26.2.0` 节点运行时将 Minecraft 标识为 `26.2`，该配置应使用 `--minecraft 26.2` 和 NeoForge `26.2.0.57`；自动准备会读取原生标识。Fabric 使用 `--loader fabric` 和实际 Fabric Loader 版本，而不是 Fabric API 版本。
+- `--classes` 换成包含目标类字节码的 jar 或目录。
+- 版本号要和运行环境完全一致。26.2.0 环境里 Minecraft 版本写 `26.2`。Fabric 写 `--loader fabric`，`--loader-version` 填 Fabric Loader 的版本，不是 Fabric API 的版本。
+- `--side client` 用于客户端（单人游戏的内置服务器也算），可以包含 SERVER 和 CLIENT 两种 Hook。`--side server` 用于专用服务器，不能包含 CLIENT Hook。
 
-校验成功后，把参数中的 `validate` 改为 `build`，追加 `"--output", "build/demo-mixins.jar"`，再运行同一命令。已有输出文件不会被覆盖，需选择新路径或自行处理旧文件。
+校验通过后，把 `validate` 改成 `build`，再加上 `"--output", "build/demo-mixins.jar"`，运行同一条命令。输出文件已存在时不会覆盖，要换一个路径。
 
-当前工具使用 `runtime` 命名空间，生成的 Mixin 显式关闭重映射；**没有通用的开发映射到生产映射转换功能**。缺失类、错误描述符、静态形式不匹配或不支持的方法会在离线校验阶段失败。
+把生成的 jar 放进开发环境的 `mods/`，删掉旧版本的 jar，然后完全重启游戏。这个 jar 依赖 NekoJS，没装 NekoJS 时加载器会拒绝它。
 
-<a id="wiki-section-5"></a>
-## 4. 激活并完整重启
-
-先在启动前设置引擎开关；修改开关必须完整重启。NeoForge 26.x 自动准备完成后，按提示重启。下一次启动必须由加载器真正接纳受管游戏库，不能只凭磁盘上有文件就加载回调。不要编辑自有缓存或额外安装手动副本。
-
-旧版 NeoForge / Fabric：
-
-1. 将生成的载体 JAR 放入该开发实例的 `mods/`，保留 NekoJS 及其依赖。
-2. 替换载体时移除旧副本，避免重复 Hook ID。
-3. 完整停止并重启实例，让原生加载器在正常启动阶段发现载体。
-4. 确认载体的 Minecraft、加载器及版本、物理侧别和 ABI 与当前环境匹配。
-
-旧版 NeoForge 和 Fabric 载体都声明 **NekoJS 为加载器强制依赖**；缺少 NekoJS 时加载器会拒绝该载体。所有新生成产物另带早期插件保护：NekoJS 缺失、引擎开关关闭或运行时配置无法读取、环境配置不匹配或处于生产环境时，在链接运行时桥之前禁用注入。因此高版本残留的游戏库不会在缺少 NekoJS 时注入。这道保护尚不等于真实加载器验收。
-
-修改声明后，仍需完成准备/构建并完整重启才能生效。普通 reload 也不能添加、删除或重织原生注入结构。
-
-`--side client` 是物理客户端配置，可以含集成服务端的 SERVER 回调；`--side server` 是独立服务端配置，不能含 CLIENT 回调。这些配置能力不代表真实独立服务端验收已经完成。
+不管哪种方式，**改了声明都要重新生成并完全重启**。`/nekojs reload` 不能增加、删除或修改注入。
 
 <a id="wiki-section-6"></a>
-## 5. 在普通脚本中绑定 Hook
+## 3. 在脚本里写回调
 
-载体已被加载器接纳后，在 `nekojs/server_scripts/max-health.js` 中写：
+注入加载后，新建 `nekojs/server_scripts/max-health.js`：
 
-```js
+```javascript
 MixinEvents.inject("demo:max_health", event => {
     event.returnValue = 40;
 });
 ```
 
-不要写成 `event => event.returnValue = 40`：它会返回数字，导致本次控制决定被丢弃。回调必须同步返回 `undefined`，不能是 async 函数，也不能返回 Promise。
+执行 `/nekojs reload`，生物的最大生命值就变成 40 了。
 
-- 仅对应类型的 SERVER、CLIENT 脚本可绑定；STARTUP、TEST 不支持。
-- 一个已安装的 Hook 只允许一个回调；未知 ID、类型不符或重复绑定会使候选加载失败。
-- 入口、回调来源及整个模块会话必须是本地可信来源；远程依赖、来源不明或虚拟生成的回调不能取得绑定权限。
-- 有已安装 Hook 的脚本类型，其首次加载也走候选事务。成功 reload 替换回调；失败或重复绑定保留旧代回调。
-- 世界退出清理 SERVER、CLIENT 回调；后续需要加载或 reload 对应脚本类型重新绑定。进程级注入结构仍然存在。
+**回调不能有返回值。** 不要写成 `event => event.returnValue = 40`，这样会返回 40，这次的修改会被丢弃。回调也不能是 `async` 函数，不能返回 Promise。
 
-脚本目录及 reload 的基本用法见 [脚本基础](script-basics_cn) 和 [命令](commands_cn)。
+- 回调要写在和声明的 `scriptType` 对应的目录里：`SERVER` 写在 `server_scripts`，`CLIENT` 写在 `client_scripts`。启动脚本和测试脚本不能用。
+- 每个 Hook 只能有一个回调。Hook ID 不存在、脚本类型不对或者重复注册，都会让这次加载失败，游戏继续用上一次成功加载的脚本。
+- 回调必须写在本地的脚本文件里。从服务器同步下来的脚本包不能注册回调。
+- reload 成功后，新回调替换旧回调。
+- 退出世界时回调会被清除，下次加载脚本时重新注册。
 
 <a id="wiki-section-7"></a>
-## 6. 事件对象与控制规则
+## 4. 事件对象
 
-| 成员 | 契约 |
+| 成员 | 说明 |
 |---|---|
-| `self` | 原生接收者；静态方法为 null。属性只读，不表示原生对象不可变。 |
-| `args` | 只读的原生参数元组；不能替换属性或元组元素，不表示其引用的原生对象/数组被深度冻结。 |
-| `returnValue` | RETURN 时为原始结果；HEAD 时尚无结果。仅 cancellable 的非 void Hook 可写。 |
-| `cancel()` | 仅 cancellable、void、HEAD Hook 可用；非 void HEAD 必须设置返回值。 |
+| `self` | 被调用方法所属的对象。静态方法时是 `null` |
+| `args` | 方法的参数，只读 |
+| `returnValue` | `RETURN` 时是原本的返回值，`HEAD` 时还没有值。只有 `cancellable = true` 且方法有返回值时才能修改 |
+| `cancel()` | 取消这次调用。只能用于 `cancellable = true`、`at = "HEAD"`、返回 void 的方法 |
 
-未修改的 RETURN 保留原结果。异常、非法写入或非 `undefined` 返回会丢弃本次所有控制写入；即使脚本捕获非法写入的异常，之前的写入也不会恢复。**这不能回滚对原生对象、世界或其他外部资源已经产生的副作用。**
+- 不改 `returnValue` 时，方法照常返回原来的结果。
+- 回调抛出异常、写了不允许的值、或者有返回值时，**这次调用的所有修改都作废**，方法按原样执行。但回调里已经做的其他事（比如改了世界里的方块）不会被撤销。
+- `event` 只在回调执行期间有效。不要把它存起来在定时器或异步代码里用。
 
-事件控制对象仅在同步回调期间有效；回调后访问会失效，不能保存它供定时器或异步任务使用。候选执行期间、原生线程不匹配或同一 Hook 重入时会跳过回调，保留原生行为；不会排队等待脚本线程。不同 Hook 可以嵌套。
+以下情况回调会被跳过，方法按原样执行：
+
+- 脚本正在 reload 的过程中；
+- 方法在错误的线程上被调用（例如 SERVER Hook 不在服务器主线程上）；
+- 回调执行时又触发了同一个 Hook。
+
+线程不对或回调出错时，日志里会出现一次 `NEKO-4092` 警告。
 
 <a id="wiki-section-8"></a>
-## 7. 类型与当前不支持的能力
+## 5. 支持的类型与限制
 
-支持 boolean、单个 UTF-16 code unit 的 char、范围检查后的 byte/short/int、有限 float/double，以及类型可赋值的原生引用和原生数组。引用允许 null，String 返回值接受 JavaScript 字符串；普通 JS 对象和数组不能冒充任意原生引用。
+参数和返回值支持：boolean、char（一个字符）、byte / short / int（会检查范围）、float / double（必须是有限数）、Java 对象和数组（类型必须匹配，可以是 `null`）。返回 String 的方法可以直接赋 JavaScript 字符串。普通的 JavaScript 对象和数组不能当作 Java 对象返回。
 
-当前不支持含 long（包括 long 数组）的签名、BigInt 返回值替换、构造器、类初始化器、abstract/native/synthetic/bridge 方法、HEAD/RETURN 以外的注入点，以及运行时注入类路径或动态重织。
+目前不支持：
 
-MixinJS 关闭时仍可使用声明编辑器补全及离线工具；`MixinEvents` 辅助对象也可能存在，但没有已安装的回调槽。运行 [Probe](probe-type-generation_cn) 后，仅在执行已启用时，TypeScript 才为**加载器已接纳的计划**生成 Hook ID 字面量重载及 self、参数、返回值类型。待构建声明文件不会提前获得“已安装”类型。没有提示时，先检查引擎开关，再检查载体是否实际加载及环境配置是否匹配。
+- 参数或返回值里有 `long`（包括 `long[]`）的方法；
+- 构造器和静态初始化块；
+- abstract、native、synthetic、bridge 方法；
+- `HEAD` 和 `RETURN` 以外的注入位置；
+- 在游戏运行时添加或修改注入。
 
+**代码补全：** 写声明文件时，`nekojs/mixin` 总是有补全。MixinJS 开启并且注入已加载时，执行 [`/nekojs probe`](probe-type-generation_cn) 后，`MixinEvents.inject` 会按 Hook ID 提示 `self`、参数和返回值的类型。没有提示时，先确认开关已打开，再确认注入确实被加载了。
+
+<a id="wiki-mixinjs-troubleshooting"></a>
 <a id="wiki-section-9"></a>
-## 8. 故障排查与验收边界
+## 故障排查
 
-| 诊断码 | 优先检查 |
+| 错误码 | 先检查什么 |
 |---|---|
-| `NEKO-4090` | 自动准备与重启提示、缓存归属、加载器接纳、声明、描述符、重复 ID、精确配置、生产环境拒绝。 |
-| `NEKO-4091` | 本地可信来源、候选注册权限、Runtime Root 桥接所有权。 |
-| `NEKO-4092` | 同步返回要求、返回值 ABI、过期对象、线程或回调旁路。 |
+| `NEKO-4090` | 是否需要按提示重启；`[mixinjs] enabled` 是否打开；是否在开发环境；声明里的类名、描述符和字段是否正确；Hook ID 是否重复；构建时的版本、加载器和 `--side` 是否和运行环境一致；有没有混用自动生成和手动安装的 jar |
+| `NEKO-4091` | 回调是否写在本地脚本文件里，而不是同步下来的脚本包 |
+| `NEKO-4092` | 回调是否有返回值或是 async 函数；返回值类型和范围是否正确；是否在回调结束后还在用 `event`；Hook 是否在错误的线程上被调用 |
 
-详细说明见 [错误与日志参考](error-reference_cn)。普通加载器/Mixin 变换失败也可能由加载器自身报告，而不是上述诊断码。
-
-既有开发记录包括 NeoForge 26.1.2 无界面服务端的自动准备、重启、真实游戏库发现、Sponge 变换及一个不可取消的 SERVER 回调；26.2.0 的记录覆盖原生启动，并未包含受管 Hook 测试样例。后续也记录过一次本地集成服务端控制场景运行，但不代表完整 ABI 或 reload 矩阵验收。离线校验、公共/JVM 测试、TypeScript 检查及节点构建与原生验收不同，历史结果不能证明其他环境配置已验收。完整客户端/服务端、静态方法/ABI、旧版/Fabric 及生产映射验收仍未完成，生产接纳保持关闭。
+更多错误码见 [错误与日志参考](error-reference_cn)。加载器自己的 Mixin 报错不会带上面这些错误码，要看游戏日志。
 
 <!-- wiki-nav -->
 

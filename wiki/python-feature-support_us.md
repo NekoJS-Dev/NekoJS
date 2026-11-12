@@ -3,190 +3,115 @@
 > **English** · [中文](python-feature-support_cn)
 
 <a id="wiki-section-1"></a>
-# Python feature support (for the NekoJS JS transpiler)
+# Python feature support
 
-> This document compares modern Python language features (3.10 – 3.14) with the current support in NekoJS's built-in Python→JS transpiler. Its purposes are: ① to understand what recent Python versions provide; ② to decide which features the transpiler should add or skip.
->
-> The **NekoJS transpiler** parses a Python **subset** into an AST, lowers it to JavaScript, and executes it with GraalJS. The key question for each feature is therefore: **can it map cleanly to JS?** (GraalJS natively supports ES2020+, including classes, generators, async/await, template strings, optional chaining, etc.)
->
-> Status markers: ✅ supported　🟡 partially supported　❌ unsupported (intentionally skipped)　⏳ possible future extension
->
-> This page compares language features and transpiler design choices. For whether something is currently usable in scripts, consult the support table and limits in [Python scripts](python-scripts_us). If the pages conflict, the implementation and Python scripts page take precedence.
+This page lists the language features added in recent Python versions (3.8 through 3.14) and whether they work in NekoJS.
 
----
+NekoJS converts Python code to JavaScript before running it, and supports only part of Python. For everyday syntax (functions, classes, comprehensions, f-strings and so on), see [Python scripts](python-scripts_us). This page answers one question: "I learned this in a recent Python version. Can I use it in NekoJS?"
+
+Status values in the tables:
+
+- **Works**: write it as usual.
+- **Partly**: works with limits; see the notes.
+- **No**: fails with an error, or gives a wrong result.
+- **N/A**: interpreter, performance or standard library changes that don't affect scripts.
 
 <a id="wiki-section-2"></a>
-## 1. Recent Python version features (3.10 – 3.14)
+## Summary
 
-> Version numbers and PEPs come from the official whatsnew / PEP indexes (links at the end).
+- Works: the walrus operator `:=`, `match` / `case` (some patterns), and type annotations (including `int | str`, `list[int]` and `Self`; all are ignored).
+- Doesn't work: `async` / `await`, positional-only `/` and keyword-only `*` parameters, `except*`, the `type` statement and `[T]` generic syntax, t-strings, and dict merge `|`.
+- There is no Python standard library, so modules such as `typing`, `asyncio` and `tomllib` can't be imported. You can write `Self` or `List` in annotations, but don't write `from typing import ...`.
 
 <a id="wiki-section-3"></a>
-### Python 3.10
+## Python 3.8
 
-| Feature | PEP | Syntax example | JS transpilation | NekoJS status |
-|---|---|---|---|---|
-| Structural pattern matching `match`/`case` | PEP 634 subset | `match x:\n  case 1: ...` | Moderate (if/else lowering) | ⚠️ Documented pattern subset; mapping, OR captures and class patterns have limits |
-| Parenthesized multiple context managers | — | `with (a as x, b as y):` | Multiple unparenthesized items are supported | ❌ Parenthesized item lists are not parsed; use `with a as x, b as y:` |
-| `X \| Y` union type annotations | PEP 604 | `def f(x: int \| str)` | Easy (annotations are discarded) | ✅ (annotations discarded) |
-| More precise error locations (with `^` indicators) | — | — | Unrelated to transpilation | — |
+| Feature | Example | Status | Notes |
+|---|---|---|---|
+| Walrus operator | `if (n := len(xs)) > 3:` | Partly | Define the variable with a normal assignment first; see "Known issues" in [Python scripts](python-scripts_us) |
+| Positional-only parameters | `def f(a, /, b):` | No | Parse error |
+| f-string `=` for debugging | `f'{x=}'` | No | No error, but only the value is printed, without the `x=` prefix |
 
 <a id="wiki-section-4"></a>
-### Python 3.11
+## Python 3.9
 
-| Feature | PEP | Syntax example | JS transpilation | NekoJS status |
-|---|---|---|---|---|
-| Exception groups `ExceptionGroup` + `except*` | PEP 654 | `raise ExceptionGroup(...)` / `except* ValueError:` | Difficult (no native JS equivalent; needs emulation) | ❌ |
-| `asyncio.TaskGroup` (structured concurrency) | — | `async with asyncio.TaskGroup() as tg:` | Part of stdlib/async | ❌ |
-| `add_note` (exception notes) | — | `e.add_note('...')` | Easy (object properties) | ❌ (not mapped) |
-| `typing.Self` annotation | PEP 673 | `def copy(self) -> Self:` | Parsed annotation is discarded without resolving its name | ✅ Annotation erasure only; no `typing` runtime module compatibility implied |
-| tomllib (standard library TOML parsing) | PEP 680 | — | stdlib, unrelated | — |
-| Fine-grained traceback locations, speedups (Faster CPython) | — | — | Unrelated to transpilation | — |
+| Feature | Example | Status | Notes |
+|---|---|---|---|
+| Dict merge operators | `a \| b`, `a \|= b` | No | No error, but the result is wrong. Use `{**a, **b}` |
+| Built-in generic annotations | `x: list[int] = []` | Works | The annotation is ignored |
+| `str.removeprefix` / `removesuffix` | `s.removeprefix('a')` | No | Runtime error. Use a slice instead |
 
 <a id="wiki-section-5"></a>
-### Python 3.12
+## Python 3.10
 
-| Feature | PEP | Syntax example | JS transpilation | NekoJS status |
-|---|---|---|---|---|
-| New type parameter syntax (`type` statement + `[T]` generics) | PEP 695 | `type ListOrSet[T] = ...` / `def f[T]():` | Annotation-level; can simply be discarded | ❌ (`[T]`/`type` statements not parsed) |
-| Formalized f-strings (PEP 701: arbitrary expressions, nested quotes, backslashes, comments, nested f-strings) | PEP 701 | `f"{f'{x}'}"`, `f"{'\n'.join(xs)}"` | Moderate (needs a stronger tokenizer) | 🟡 (interpolation and format specifiers supported; same-quote nested f-strings and comments unsupported; backslash escapes inside strings work) |
-| Per-interpreter GIL | PEP 684 | — | Runtime/interpreter level, unrelated | — |
-| `@override` decorator (typing) | PEP 698 | `@override\ndef m():` | Annotations can simply be discarded | ❌ (class method decorators limited to `@staticmethod`/`@classmethod`/`@property`) |
-| Buffer protocol exposed to Python | PEP 688 | — | C level, unrelated | — |
-| Inlined comprehensions (performance optimization without semantic change) | PEP 709 | — | No semantic change, unrelated | — |
+| Feature | Example | Status | Notes |
+|---|---|---|---|
+| `match` / `case` | `match x:` | Partly | Literals, `_`, captures, `\|`, list and dict patterns, keyword class patterns and `if` guards work. Positional class patterns such as `Point(0, 0)` don't |
+| Union type annotations | `def f(x: int \| str):` | Works | The annotation is ignored |
+| Parenthesized context managers | `with (a as x, b as y):` | No | Drop the parentheses: `with a as x, b as y:` |
 
 <a id="wiki-section-6"></a>
-### Python 3.13
+## Python 3.11
 
-| Feature | PEP | Syntax example | JS transpilation | NekoJS status |
-|---|---|---|---|---|
-| Experimental free-threaded builds (optional GIL) | PEP 703 | — | Runtime build, unrelated | — |
-| Type parameter defaults, `TypeVar` defaults | PEP 696 | `class Guild[T = str]:` | Annotation-level | ❌ |
-| `@deprecated` decorator | PEP 702 | `@deprecated` | Annotation-level | ❌ |
-| New interactive REPL, colored tracebacks | — | — | Unrelated to transpilation | — |
-| Local variable consistency (`locals()` semantics) | PEP 667 | — | Unrelated to transpilation | — |
+| Feature | Example | Status | Notes |
+|---|---|---|---|
+| Exception groups | `except* ValueError:` | No | Parse error |
+| Exception notes | `e.add_note('...')` | No | |
+| `Self` annotation | `def copy(self) -> Self:` | Works | The annotation is ignored |
+| `asyncio.TaskGroup`, `tomllib` | | No | No standard library |
 
 <a id="wiki-section-7"></a>
-### Python 3.14
+## Python 3.12
 
-| Feature | PEP | Syntax example | JS transpilation | NekoJS status |
-|---|---|---|---|---|
-| Template strings: **t-strings** | PEP 750 | `t"hello {name}"` → `Template` object | Difficult (produces an object rather than a string; requires a Template type) | ❌ (too new; skipped for now) |
-| **Deferred evaluation** of annotations | PEP 649 / 749 | Annotations stored as deferred expressions | Annotation-level (we already discard them) | — (annotations discarded) |
-| Standard library subinterpreter support | PEP 734 | — | Runtime, unrelated | — |
-| Free-threading improvements, tail-call interpreter (CEval) | — | — | Runtime, unrelated | — |
-
-> **Summary**: among the new **syntax-level** features in 3.10–3.14, the ones that matter to a JS transpiler are `match/case` (3.10), relaxed f-strings (3.12 PEP 701), and t-strings (3.14 PEP 750). The rest are either annotation/type-level features (the transpiler already discards annotations) or runtime/interpreter/standard library features (unrelated to translating Python into JS).
-
----
+| Feature | Example | Status | Notes |
+|---|---|---|---|
+| `type` statement | `type Pair = tuple[int, int]` | No | Parse error |
+| Type parameter syntax | `def first[T](xs):` | No | Parse error. Remove `[T]` |
+| Relaxed f-strings | `f"{f"{x}"}"` | Partly | Using the other quote type inside works (`f"{'a'}"`); nesting the same quote type or writing comments inside `{}` doesn't |
+| `@override` | `@override` | No | Methods accept only `@staticmethod`, `@classmethod` and `@property` |
 
 <a id="wiki-section-8"></a>
-## 2. Core syntax features (general, not version-specific)
+## Python 3.13
 
-The following table lists capabilities commonly wanted in a practical Python scripting subset, with **current NekoJS support** and **expected JS mappings**.
+| Feature | Example | Status | Notes |
+|---|---|---|---|
+| Type parameter defaults | `class Box[T = int]:` | No | Type parameter syntax itself isn't supported |
+| `@deprecated` | `@deprecated('use g')` | No | Decorators can't take arguments |
+| New REPL, free-threaded builds | | N/A | |
 
 <a id="wiki-section-9"></a>
-### Statements
+## Python 3.14
 
-| Feature | Syntax example | Expected JS mapping | NekoJS status |
+| Feature | Example | Status | Notes |
 |---|---|---|---|
-| Functions `def` (default parameters / `*args` / `**kwargs`) | `def f(a, b=1, *args, **kw):` | `function` (`**kwargs` triggers a prologue) | ✅ |
-| Classes and inheritance | `class C(B):` | JS `class` / `extends` | ⚠️ Single inheritance; class-body assignments are per-instance fields, not shared Python class attributes |
-| `super()` | `super().__init__(x)` | `super(x)` / `super.m()` | ✅ |
-| `@staticmethod` / `@classmethod` | `@staticmethod` / `@classmethod` | `static` methods; classmethod binds `cls=this` | ✅ |
-| Properties `@property` | `@property\ndef x(self):` | JS getter (read-only) | ✅ |
-| `if` / `elif` / `else` | — | `if / else if / else` | ✅ |
-| `for x in iter` / `while` | — | `for...of` / `while` | ✅ |
-| `with` context managers | `with cm as x:` | Inline acquire + try/finally | ✅ |
-| `try` / `except` / `else` / `finally` | — | `try/catch/finally` + instanceof | ✅ |
-| Assignment (chained / tuple unpacking / augmented) | `a=b=v`, `a,b=...`, `+=` | `var` / destructuring | ✅ |
-| Walrus `:=` | `if (n:=f()):` | `(n = f())` | ✅ |
-| `assert` | `assert c, msg` | `if (!__nekoTruthy(c)) throw new AssertionError(msg)` | ✅ |
-| `del` | `del d[k]` | `delete d[k]` | ✅ |
-| `raise` / bare `raise` / `raise ... from` | — | `throw` / rethrow | ✅ (`from` parsed then ignored) |
-| `global` / `nonlocal` | `global x` | — | ❌ |
-| `return` / `break` / `continue` / `pass` | — | Same names | ✅ |
-| `import` / `from ... import` | — | ESM `import` | ✅ |
-| Type annotations (parameters / return / variables) | `x: int = 5` | Parsed then discarded | ✅ (discarded) |
-| `match` / `case` pattern matching | `match x:` | Lowered to an if/else chain | ⚠️ Documented subset, not full PEP 634; see [Python scripts](python-scripts_us) |
-| `async def` / `await` / `async for` / `async with` | — | JS async/await | ❌ (GraalJS supports it, but the value is low) |
+| Template strings (t-strings) | `t'hello {name}'` | No | Parse error |
+| Deferred evaluation of annotations | | N/A | NekoJS ignores annotations anyway |
 
 <a id="wiki-section-10"></a>
-### Expressions
+## Older syntax that doesn't work
 
-| Feature | Syntax example | Expected JS mapping | NekoJS status |
-|---|---|---|---|
-| int/float/str/bool/None literals | — | number/string/boolean/null | ✅ |
-| f-strings (including format specifiers such as `:.2f`, `!r`) | `f'{x:.2f}'` | Template literals + `__nekoFmt` | ✅ |
-| t-strings (3.14) | `t"{x}"` | Template object | ❌ |
-| Attribute / index / call | `a.b` / `a[i]` / `f()` | Same forms | ✅ |
-| Keyword calls | `f(a=1, b=2)` | Trailing marked object + prologue | ✅ (target requires `**kwargs` or the print/sorted/min/max keyword special cases) |
-| Arithmetic / comparison / boolean / bitwise operations | `+ - * / // % **`, `and/or/not`, `& \| ^ ~ << >>` | Helper-backed arithmetic/truthiness where implemented, otherwise JS operators | ⚠️ Zero division, floor/modulo and sequence repetition have helpers; container bitwise operations are not Python set/dict operations |
-| Conditional `a if c else b` | — | `(__nekoTruthy(c) ? a : b)` | ✅ Uses the subset truthiness helper |
-| `in` / `not in` / `is` / `is not` | — | `__nekoIn` / `===` | ✅ (arrays, strings, dict own keys, and Map/Set) |
-| Chained comparisons | `a < b < c` | `(a<b) && (b<c)` | ⚠️ Short-circuits, but middle operands may be evaluated twice; store side-effecting calls first |
-| Slices (arbitrary steps, negative indices) | `xs[::2]`, `xs[::-1]`, `xs[-1]` | Helper / `slice` | ✅ |
-| List / tuple / dictionary / set literals | `[1,2]`, `(1,2)`, `{k:v}`, `{1,2}` | Array / array / object / `Set` | ✅ |
-| `lambda` | `lambda x: x*2` | Arrow function | ✅ (no `**kwargs`) |
-| Comprehensions (list / dictionary / set, multiple `for` and `if` clauses) | `[x for a in A for b in B if c]` | `.filter().map()` / nested `flatMap` | ✅ |
-| Generator expressions `(x for x in xs)` | — | Immediately invoked `function*` | ✅ |
-| `yield` / `yield from` | — | `function*` / `yield` / `yield*` | ✅ |
-| Dictionary merge `\|` (3.9) | `d1 \| d2` | `Bitwise OR` (not specialized for dict) | ❌ (treated as bitwise OR) |
-| Literal string concatenation `"a" "b"` | — | Implicit concatenation | ✅ |
+These aren't new features, but people often ask about them:
+
+| Syntax | Status | Alternative |
+|---|---|---|
+| `async` / `await`, `async for`, `async with` | No | Use event callbacks |
+| `global` / `nonlocal` | No | Keep state in a dict or list |
+| Starred assignment `a, *rest = xs` | No | `a = xs[0]` and `rest = xs[1:]` |
+| `str.format` | No | f-strings |
+| Multiple base classes | No | Single inheritance or composition |
+
+For the full list of unsupported syntax and alternatives, see [Python scripts](python-scripts_us).
 
 <a id="wiki-section-11"></a>
-### Built-in functions
+## References
 
-Built-ins mapped by NekoJS (see the "Built-in functions" table in [Python scripts](python-scripts_us)): `range / len / print / abs / min / max / sum / str / int / float / bool / list / dict / set / tuple / sorted / any / all / enumerate / reversed / map / filter / zip / round / divmod / ord / chr / pow / hex / oct / bin / repr / format / isinstance / type / callable / getattr / hasattr / setattr / delattr / iter / next / frozenset`.
-
-Still unmapped: `id / vars / globals / locals / eval / exec / input / open / complex / ...` (mostly reflection, IO, or features that do not fit the JS runtime).
-
----
-
-<a id="wiki-section-12"></a>
-## 3. Suggested implementation priorities for the NekoJS transpiler
-
-| Feature | Priority | Reason | Expected mapping |
-|---|---|---|---|
-| dict merge `\|` | 🟢 Low | Uncommon; `{...a, ...b}` is sufficient | Specialize dict operands into spread merging |
-| Relaxed f-strings, PEP 701 | 🟡 Medium | Same-quote nesting / backslashes / comments | Requires a stronger f-string tokenizer (the current FStringParser handles most cases) |
-| `global`/`nonlocal` | 🔴 Low/skip | JS module scope semantics differ substantially and are difficult to map faithfully | Skip; encourage return values/containers |
-| `async`/`await` | 🔴 Low | GraalJS supports it, but integrating a script-side event loop is complex | Skip for now |
-| Exception groups `except*` | 🔴 Low | No native JS equivalent; expensive to emulate | Skip |
-| t-strings (3.14) | 🔴 Low | Too new; requires a `Template` type | Skip |
-| Type annotation evaluation | 🔴 Low | Unrelated to the transpilation target (static types) | Always discard |
-
-> High-value extensions **completed** in this round: generators/yield, `with`, nested comprehensions, arbitrary slice steps, f-string format specifiers, `**kwargs` + keyword calls, `assert`/`del`/walrus, `try/else`, bare `raise`, type annotation discarding, extended built-ins, `match`/`case` (the documented pattern subset), `@property`/`@classmethod`, and `getattr`/`hasattr`/`setattr`/`delattr`/`iter`/`next`/`frozenset`.
-
----
-
-<a id="wiki-section-13"></a>
-## 4. GraalJS / ES capability comparison
-
-| Python construct | ES equivalent | Description |
-|---|---|---|
-| `class` + inheritance | `class` + `extends` | Single inheritance; instance-field/class-construction restrictions differ from Python |
-| Generators / `yield` / `yield from` | `function*` / `yield` / `yield*` | Native GraalJS |
-| `async`/`await` | `async`/`await` | Native GraalJS (script-side event loop required) |
-| `with` (context manager) | No native equivalent → try/finally + `__enter__`/`__exit__` | NekoJS inline lowering |
-| `**kwargs` | No native equivalent → trailing marked object + prologue | NekoJS convention |
-| f-strings | Template literals `` ` ` `` | Format specifiers require a custom `__nekoFmt` |
-| Comprehensions | `.map`/`.filter`/`.flatMap` | One-to-one mapping |
-| Slices | `Array.prototype.slice` + step helper | Steps require a custom implementation |
-| Dictionaries | Plain objects | String-only keys; integer keys reordered |
-| Sets | `Set` | One-to-one mapping |
-| Tuples | Arrays | Not immutable |
-
----
-
-<a id="wiki-section-14"></a>
-## Reference links
-
-- [What's New in Python 3.10](https://docs.python.org/3/whatsnew/3.10.html)　·　[3.11](https://docs.python.org/3/whatsnew/3.11.html)　·　[3.12](https://docs.python.org/3/whatsnew/3.12.html)　·　[3.13](https://docs.python.org/3.13/whatsnew/3.13.html)　·　[3.14](https://docs.python.org/3/whatsnew/3.14.html)
-- [PEP 634 / 636 — match/case (3.10)](https://peps.python.org/pep-0636/)
-- [PEP 654 — Exception Groups and `except*` (3.11)](https://peps.python.org/pep-0654/)
-- [PEP 695 — Type parameter syntax (3.12)](https://peps.python.org/pep-0695/)　·　[PEP 701 — Formalized f-strings (3.12)](https://peps.python.org/pep-0701/)
-- [PEP 703 — Free threading (3.13)](https://peps.python.org/pep-0703/)　·　[PEP 696 — Type parameter defaults (3.13)](https://peps.python.org/pep-0696/)
-- [PEP 750 — Template strings, t-strings (3.14)](https://peps.python.org/pep-0750/)　·　[PEP 649 / 749 — Deferred annotation evaluation (3.14)](https://peps.python.org/pep-0649/)
+- [What's New in Python](https://docs.python.org/3/whatsnew/index.html): official release notes for each version.
+- [PEP 572 — Assignment expressions (3.8)](https://peps.python.org/pep-0572/)
+- [PEP 636 — match/case tutorial (3.10)](https://peps.python.org/pep-0636/)
+- [PEP 654 — Exception groups and `except*` (3.11)](https://peps.python.org/pep-0654/)
+- [PEP 695 — Type parameter syntax (3.12)](https://peps.python.org/pep-0695/)
+- [PEP 701 — Formalized f-string syntax (3.12)](https://peps.python.org/pep-0701/)
+- [PEP 750 — Template strings (3.14)](https://peps.python.org/pep-0750/)
 
 <!-- wiki-nav -->
 

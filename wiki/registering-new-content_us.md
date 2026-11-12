@@ -5,378 +5,284 @@
 <a id="wiki-section-1"></a>
 # Registering new content
 
-Register new content in `startup_scripts/` through the **single entry point** `RegistryEvents.register`. Registration scripts run during game startup; you must restart the game after adding or changing registered content. `/nekojs reload startup` currently rejects execution and cannot rerun STARTUP scripts from a command while the game is running.
-
-The complete example below targets NeoForge and includes its fluid registration entry. On Fabric, use the item and block portions.
-
-```javascript
-// startup_scripts/my_content.js
-RegistryEvents.register(event => {
-  event.item('mymod:cool_gem', b => {
-    b.maxStackSize = 16
-    b.rarity = 'rare'
-    b.fireResistant = true
-  })
-
-  event.block('mymod:custom_block', b => {
-    b.hardness = 3.0
-    b.sound = 'stone'
-    b.requiresTool = true
-    b.lightLevel = 7
-  })
-
-  // NeoForge only.
-  event.fluid('mymod:molten_iron', b => {
-    b.density = 3000
-    b.viscosity = 2000
-    b.lightLevel = 12
-  })
-})
-```
+New items, blocks, entities and other content go in `startup_scripts/` and are registered with `RegistryEvents.register`. Registration only happens while the game starts, so you must **restart the game** after adding or changing registered content. `/nekojs reload startup` is rejected.
 
 <a id="wiki-section-2"></a>
-## Entry-point forms
+## Quick start
 
-- `event.<registry>(id, cb)` - Convenience methods for registries registered on the current platform, such as `item` / `block` / `entityType` / `creativeModeTab` / `mobEffect` / `potion` / `soundEvent` / `particleType` / `villagerType`. The available entries vary by platform. A registry key or a builder class existing in Java does not by itself supply a default builder or a native registration pass.
-- `event.<registry>(id, typeName, cb)` - The same, but explicitly selects a named type registered by a third-party plugin.
-- `event.custom(id, typeName, cb)` - Register by a globally unique type name.
-- `event.register(registry, id, supplier)` - A direct supplier entry point; `registry` is a convenience name or a full key.
+Create `nekojs/startup_scripts/content.js`:
 
-> Entries such as `fluid` and `enchantment` are not cross-platform capabilities: FluidBuilder is currently available only on NeoForge; the enchantment builder applies only to NeoForge 1.21.1. Use datapacks on 26.x; Fabric currently does not provide the corresponding registration surface.
+```javascript
+RegistryEvents.register(event => {
+  event.item('mymod:cool_gem', item => {
+    item.maxStackSize = 16
+    item.rarity = 'rare'
+    item.fireResistant = true
+  })
 
-The core factories select existing native builder implementations; the generic entries are not a promise of arbitrary new Java behavior or cross-version registry support. `event.register(...)` defers its supplier until the native registration pass; a supplier does not bypass platform availability or restart requirements.
+  event.block('mymod:gem_block', block => {
+    block.hardness = 3.0
+    block.sound = 'stone'
+    block.requiresTool = true
+    block.lightLevel = 7
+  })
+})
+```
 
-**Builders expose Bean properties**: assign data properties directly (`b.maxStackSize = 16`). Only actions and compound configuration retain methods (`b.noItem()`, `b.food(cb)`, `b.tag(...)`).
+Restart the game, then run `/give @s mymod:cool_gem` and `/give @s mymod:gem_block`. A block automatically gets an item with the same ID, so you can hold it too.
 
-Invalid input fails immediately (all of these throw while the script executes and are logged as errors in that startup script):
+At this point both show up as purple-and-black squares named `item.mymod.cool_gem`. They have no texture or name yet; see [Textures, models and names](#wiki-assets) below.
 
-- Registering the same id twice in the same registry → `IllegalStateException` (`RegistryRepository`, fail-fast; the later entry does not override the earlier one).
-- An unrecognized registry name → `unknown registry 'xxx'`, with a hint to use an available convenience name or full key.
-- An unrecognized type name → `unknown type 'xxx' for registry '...'; known types: [...]`, listing the types registered for that registry.
-- A misspelled convenience method → `RegistryEvent has no member 'xxx'; known: [...]`, listing all entry points actually available on the current platform.
-- A missing/invalid callback → `IllegalArgumentException`. IDs accept strings or host `Identifier` values (`ResourceLocation` on 1.21.1); other values are rejected.
-
-Conversely, **leaving every builder setting unset is valid**: `event.item('mymod:x', b => {})` registers a usable item using the defaults listed below. The default values in these tables are what apply when you omit a setting.
+> Once an item has been used in a world, do not just delete its registration code, or those items will vanish from the save. Try new content in a test world first.
 
 <a id="wiki-section-3"></a>
-## ItemBuilder - items
+## The basic pattern
 
-| Member | Description |
-|---|---|
-| `maxStackSize` | Maximum stack size (default 64; ignored when `maxDamage` is set) |
-| `maxDamage` | Maximum durability (>0 replaces stackability) |
-| `fireResistant` | Fire resistance (default false) |
-| `rarity` | `'common'` \| `'uncommon'` \| `'rare'` \| `'epic'` (default common) |
-| `glowing` | Glint (default false) |
-| `burnTime` | Fuel burn time in ticks (>0 lets the item fuel furnaces/blast furnaces/smokers) |
-| `groupTab` | Assign to a creative tab (for example `'minecraft:building_blocks'` or a custom tab id; null = no assignment) |
-| `component(id, value)` / `components` | Explicit JSON component values; the map property replaces the explicit set, the method replaces one entry. Defaults are applied first, then explicit components. Null does not remove a component. |
-| `jukeboxPlayable` | Song resource key, e.g. `'minecraft:cat'`; available on all five nodes. |
-| `trimMaterial` | Material resource key, e.g. `'minecraft:diamond'`; 26.x only. This supplies a trim material, rather than applying armor trim to this item. |
-| `parentModel` | Model parent id; setting this or textures opts into automatic resource generation. |
-| `texture(id)` / `texture(slot, id)` / `textures` | Set `layer0`, a named slot, or replace all slots. Values are resource ids referencing existing PNG files. |
-| `food(cb)` | Make it food (a `FoodBuilder` callback; see below) |
-| `tag(tags...)` | Add item tags (see [tag details below](#wiki-section-11)) |
-
-> Item tooltips are not configured on the builder. Add them by item id through the client event [`ItemEvents.tooltip`](event-reference_us#wiki-section-11).
-
-The new configuration also works in `build.item(item => { ... })` for a BlockItem. Configuration is copied and frozen after the callback succeeds; retain no mutable builder to modify it later. Bulk writes validate before replacing previous values. Raw `minecraft:jukebox_playable` / `minecraft:provides_trim_material` values conflict with the corresponding named property, so use one form per component.
+The methods on `event` are named after registries, such as `event.item`, `event.block` and `event.entityType`. Each takes two arguments: an ID and a function that configures the content.
 
 ```javascript
 RegistryEvents.register(event => {
-  event.item('mymod:gem', build => {
-    build.component('minecraft:rarity', 'epic')
-    build.components = { 'minecraft:max_stack_size': 16, 'minecraft:rarity': 'epic' }
-    build.parentModel = 'minecraft:item/generated'
-    build.texture('minecraft:item/diamond')
+  event.item('mymod:ruby', item => {
+    item.maxStackSize = 16   // a plain setting: assign it
+    item.tag('c:gems')       // an action: call a method
   })
-  event.item('mymod:record', build => { build.jukeboxPlayable = 'minecraft:cat' })
 })
 ```
 
-Component values must match the current node's Minecraft codec JSON, using plain objects, arrays and primitives. Functions and arbitrary Java objects are rejected. On 26.x, decoding uses the native registry lookup during component initialization, and invalid values/references fail that loading phase. Native `item_name` and `item_model` identity components cannot be overridden on 26.x. On 1.21.1, codecs run during item construction with plain JSON operations; codecs requiring a registry provider are unavailable through the generic JSON entry and fail explicitly. The song convenience property uses the native key implementation. Unknown/non-serializable types and invalid durability/stack combinations fail; this API does not register new component types.
+- Assign plain settings, for example `item.maxStackSize = 16`.
+- Call methods for actions and nested configuration, for example `item.food(...)`, `item.tag(...)` and `block.noItem()`.
+- Setting nothing is fine too. `event.item('mymod:x', item => {})` registers a working item with default values. The tables below list the defaults.
 
-Automatic item resources are available on NeoForge and Fabric. Fabric's directory resource bridge generates registered item assets before the initial client resource enumeration and on resource reload. Files are published only after native registration succeeds; the ownership checks preserve user-modified files. Items with no model or texture settings generate no files. An omitted parent becomes `minecraft:item/generated`, and omitted textures become `layer0: '<namespace>:item/<path>'`. Supply the PNG yourself. All resource values use full ids (an omitted namespace means `minecraft`), without filename extensions.
+Built-in methods:
 
-NeoForge 1.21.1 writes `assets/<namespace>/models/item/<path>.json`. NeoForge 26.x also writes `assets/<namespace>/items/<path>.json`, referencing that model. Generation runs before resource enumeration on initial load and reload. Existing `Assets.itemModel` still writes only the model file; the `Assets` binding remains absent on 1.21.1.
+| Method | Registers |
+|---|---|
+| `event.item` | Items |
+| `event.block` | Blocks, with a matching item by default |
+| `event.fluid` | Fluids (NeoForge only) |
+| `event.entityType` | Entities |
+| `event.creativeModeTab` | Creative tabs |
+| `event.mobEffect` | Status effects |
+| `event.potion` | Potions |
+| `event.soundEvent` | Sounds |
+| `event.particleType` | Particle types |
+| `event.villagerType` | Villager types |
+| `event.enchantment` | Enchantments (NeoForge 1.21.1 only) |
 
-Automatic files have a persisted ownership index at `nekojs/.nekojs-item-assets/ownership.json`. Existing unowned files, user edits and explicit plugin/script output take precedence. A changed model/definition causes its group to be skipped with `NEKO-6008`; automatic generation never overwrites it. Removed declarations delete only unchanged files still owned by automatic generation. Textures are never deleted. Publication stages the group and restores prior files on an I/O failure; it does not promise recovery from a process crash midway through publication. Keep the index with these resources; an unreadable index rejects generation rather than resetting ownership.
-
+Other mods or plugins can add more methods. If you misspell a method name, the error lists every method available right now.
 
 <a id="wiki-section-4"></a>
-### FoodBuilder (the `food(cb)` callback)
+## Items
 
-| Method | Description |
-|---|---|
-| `nutrition(v)` / `saturation(v)` | Nutrition / saturation |
-| `alwaysEat()` / `fastEat()` | Always edible / fast eating |
-| `effect(effectId, durationTicks, amplifier, probability)` | Chance to apply an effect when eaten |
+| Property | Default | Notes |
+|---|---|---|
+| `maxStackSize` | `64` | Maximum stack size, 1 to 99. Ignored when `maxDamage` is set |
+| `maxDamage` | `0` | Maximum durability. Above 0, the item does not stack |
+| `fireResistant` | `false` | Does not burn in lava |
+| `rarity` | `'common'` | `'common'`, `'uncommon'`, `'rare'` or `'epic'` |
+| `glowing` | `false` | Shows the enchantment glint |
+| `burnTime` | `0` | How many ticks it burns as fuel; above 0 it works in furnaces |
+| `groupTab` | None | Which creative tab it appears in, such as `'minecraft:building_blocks'` |
+| `jukeboxPlayable` | None | Song played in a jukebox, such as `'minecraft:cat'` |
+| `trimMaterial` | None | Makes the item an armor trim material, such as `'minecraft:diamond'` (26.x only) |
+| `food(...)` | — | Makes it food; see below |
+| `tag(...)` | — | Adds it to tags; see [Adding tags at registration](#wiki-builder-tags) |
+| `component(id, value)` / `components` | — | Sets item components directly |
+| `parentModel` / `texture(...)` | — | Generates an item model; see [Textures, models and names](#wiki-assets) |
 
 <a id="wiki-section-5"></a>
-## BlockBuilder - blocks
+### Food
 
-| Member | Description |
+```javascript
+RegistryEvents.register(event => {
+  event.item('mymod:cheese', item => {
+    item.food(food => {
+      food.nutrition(4)
+      food.saturation(0.6)
+      food.fastEat()
+      food.effect('minecraft:speed', 200, 0, 0.5)   // effect, duration in ticks, amplifier, chance
+    })
+  })
+})
+```
+
+| Method | Notes |
 |---|---|
-| `hardness` / `resistance` | Hardness / explosion resistance (default 1.5) |
-| `lightLevel` | Light level (default 0) |
-| `requiresTool` | Requires the correct tool to drop items (default false) |
-| `sound` | `'wood'` \| `'stone'` \| `'metal'` \| `'glass'` \| `'grass'` \| `'gravel'` \| `'wool'` \| `'sand'` \| `'snow'` \| `'amethyst'` |
-| `mapColor` | Map color name (for example `'dirt'`/`'water'`/`'gold'`/`'color_red'`/`'nether'`; default stone) |
-| `renderType` | `'solid'` \| `'cutout'` \| `'cutout_mipped'` \| `'translucent'` (default solid) |
-| `item` | **Pre-created BlockItem child builder**: assign fields directly, for example `b.item.maxStackSize = 16` |
-| `unbreakable()` | Make unbreakable (action) |
-| `noItem()` | Do not create a BlockItem (equivalent to `b.item = null`; action) |
-| `item(cb)` | Configure the automatically created BlockItem (a convenience form equivalent to directly changing `b.item` fields) |
-| `tag(tags...)` | Add **block** tags; use `b.item.tag(...)` for item tags on the BlockItem |
-
-A BlockItem with the same name is created automatically by default. **Co-registration has three parts**: the child builder is pre-created during construction, `noItem()` sets it to null to suppress it, and lazy references link the objects. The configuration of `b.item` takes effect only when the BlockItem is actually registered.
-
-> **renderType platform differences**: it takes effect on 1.21.1 (the render layer is applied through `ItemBlockRenderTypes.setRenderLayer`). On 26.x (1.21.5+), rendering is **model-driven**: the model JSON texture reference needs `"force_translucent": true` (or a texture with alpha). For blocks declaring `renderType = 'translucent'`, NeoForge 26.x automatically generates a default model containing this flag when you have not supplied a model. This automatic block-model generator is not connected on Fabric; supply the native model resources there.
+| `nutrition(n)` / `saturation(n)` | Hunger and saturation restored |
+| `alwaysEat()` | Can be eaten when full |
+| `fastEat()` | Eaten faster |
+| `effect(effect, duration, amplifier, chance)` | Gives a status effect after eating, with the given chance |
 
 <a id="wiki-section-6"></a>
-## FluidBuilder - fluids (NeoForge only)
+### Item components
 
-> Fabric 26.x currently has no fluid registration or fluid recipe surface; Cleanroom content belongs to a separate legacy branch.
-
-On NeoForge, you can register a complete custom fluid that can be placed, flow, and be collected with a bucket. One registration produces the fluid type, source/flowing fluids, fluid block, and bucket item.
-
-| Member | Description |
-|---|---|
-| `displayName` | Translation key (for example `fluid.mymod.molten_iron`) |
-| `density` | Native `FluidType` density (default 1000); not a promise of fluid layering or displacement |
-| `temperature` / `viscosity` / `lightLevel` | Native `FluidType` temperature / viscosity / light emission (defaults 300 / 1000 / 0); flow scheduling uses `tickRate` |
-| `canConvertToSource` | Whether sources can be generated infinitely (default false; comparable to vanilla water in 1.21) |
-| `slopeFindDistance` / `levelDecreasePerBlock` | Flow pathfinding distance (default 4) / level decrease per block (default 1) |
-| `explosionResistance` / `tickRate` | Explosion resistance (default 100) / flow tick interval (default 5) |
-| `bucket` / `block` | Whether to register a bucket (`<id>_bucket`) / fluid block (id = fluid id); both default to true |
-| `noBucket()` / `noBlock()` | Suppress the corresponding co-registration (actions; equivalent to `b.bucket = false`) |
-| `tag(tags...)` | Add both source and flowing fluids to the tag |
+For properties not listed above, set item components directly. Values use the same format as component JSON in vanilla data packs:
 
 ```javascript
 RegistryEvents.register(event => {
-  event.fluid('mymod:molten_iron', b => {
-    b.density = 3000
-    b.viscosity = 2000
-    b.temperature = 1500
-    b.lightLevel = 12
-    b.slopeFindDistance = 3
-    // b.noBucket()   // Do not register a bucket
-    // b.noBlock()    // Do not register a fluid block
+  event.item('mymod:gem', item => {
+    item.component('minecraft:rarity', 'epic')
   })
 })
 ```
 
-Automatically registered objects: `<id>` (source fluid), `flowing_<id>` (flowing fluid), `<id>` (fluid block), and `<id>_bucket` (bucket). You must provide fluid textures/models in a resource pack (26.x is model-driven; 1.21.1 uses `IClientFluidTypeExtensions`).
+`item.components = { ... }` replaces every component set before it; `item.component(id, value)` changes one. Components apply after the plain properties. A wrong value makes the game report an error at startup.
+
+Item tooltips are not set here. Use the client event `ItemEvents.tooltip`; see [Event reference](event-reference_us).
 
 <a id="wiki-section-7"></a>
-## EntityTypeBuilder - scripted entities
+## Blocks
 
-The default entity uses `NekoScriptMob` (`PathfinderMob`). NeoForge 1.21.1/26.x and Fabric 26.x all automatically register a genuinely visible humanoid model: it uses the vanilla zombie texture, walking/head/swing animations, and a 0.5-block shadow by default, rather than an empty renderer. You can replace the humanoid texture or select a compatible native renderer for a native entity.
-
-| Member | Description |
-|---|---|
-| `category` | Entity category name: `'creature'`/`'monster'`/`'hostile'`/`'ambient'`/`'water_creature'`/`'water_ambient'`/`'underground_water_creature'`/`'axolotls'`/`'misc'` |
-| `width` / `height` | Hitbox width × height (defaults 0.6 / 1.8; or use `size(w, h)`) |
-| `trackingRange` / `updateInterval` | Tracking range / synchronization interval in ticks (defaults 8 / 3) |
-| `receiveVelocityUpdates` / `fireImmune` / `noSave` / `noSummon` | Boolean switches (defaults true / false / false / false) |
-| `spawnEgg(bgColor, hlColor)` | Automatically register an `<id>_spawn_egg` spawn egg (action) |
-| `attributes(cb)` | Attribute configuration (`maxHealth`/`movementSpeed`/`followRange`/`attackDamage`/`armor`/`armorToughness`/`knockbackResistance`) |
-| `renderer` | Defaults to `'humanoid'`; can also be the fully qualified class name of a native Java renderer, loaded only on the client; it must have a public `(EntityRendererProvider.Context)` constructor and accept this entity class |
-| `texture` | Defaults to `'minecraft:textures/entity/zombie/zombie.png'`; the humanoid model uses a 64×64 texture, which resource packs can override |
-| `shadowRadius` | Shadow radius, default 0.5; must be finite and non-negative |
-| `factory(javaFactory)` | Native Java `BiFunction<EntityType, Level, LivingEntity>`; rejects JavaScript/Graal callbacks to prevent access to the STARTUP Context from different threads on the two sides |
-| `entityClass(clazz)` | Select a public, non-abstract native `LivingEntity` class; its public `(EntityType, Level)` constructor is validated before registration |
-| `attributeBase(entityType)` | Inherit the complete default attributes of an existing native entity type |
-| `attributeSupplier(supplier)` | Specify a complete native attribute baseline; for custom classes without `createAttributes()` |
-| `goals(cb)` | AI goals (see [GoalBuilder](#wiki-section-12)) |
-| `tag(tags...)` | Add entity type tags (for example `'minecraft:raiders'`) |
+| Property | Default | Notes |
+|---|---|---|
+| `hardness` | `1.5` | How long it takes to mine |
+| `resistance` | `1.5` | Explosion resistance |
+| `lightLevel` | `0` | Light level, 0 to 15 |
+| `requiresTool` | `false` | Only drops when mined with the right tool |
+| `sound` | `'stone'` | `'wood'`, `'stone'`, `'metal'`, `'glass'`, `'grass'`, `'gravel'`, `'wool'`, `'sand'`, `'snow'` or `'amethyst'` |
+| `mapColor` | `'stone'` | Color on maps, such as `'dirt'`, `'water'`, `'gold'` or `'red'` |
+| `renderType` | `'solid'` | `'solid'`, `'cutout'`, `'cutout_mipped'` or `'translucent'` |
+| `unbreakable()` | — | Makes the block unbreakable |
+| `item` | — | The matching item; set its properties directly |
+| `noItem()` | — | Do not create a matching item |
+| `tag(...)` | — | Adds the **block** to tags |
 
 ```javascript
 RegistryEvents.register(event => {
-  event.entityType('mymod:test_mob', b => {
-    b.category = 'monster'
-    b.size(0.6, 1.8)
-    b.spawnEgg(0x8a6f4d, 0xffe2b3)
-    b.attributes(a => a.maxHealth(18).movementSpeed(0.3).attackDamage(4))
-    b.goals(g => g.floatInWater(0).target(2, 'minecraft:player', true).meleeAttack(4, 1.2, false))
+  event.block('mymod:ruby_ore', block => {
+    block.hardness = 3.0
+    block.requiresTool = true
+    block.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
+
+    // Configure the matching item
+    block.item.maxStackSize = 16
+    block.item.tag('c:ores')
   })
 })
 ```
 
-Native entity example (NeoForge/Fabric 26.x):
+If you set `requiresTool = true` without adding a tag like `minecraft:mineable/pickaxe`, the block drops nothing no matter which tool mines it.
+
+A misspelled `sound` or `mapColor` does not throw; it falls back to `'stone'`.
+
+About `renderType`: on 1.21.1 it works directly. On 26.x, transparency comes from the model, which needs `"force_translucent": true` or a texture with transparency. NeoForge 26.x generates such a model for blocks set to `'translucent'` that have no model of their own; on Fabric you provide the model yourself.
+
+<a id="wiki-section-8"></a>
+## Fluids (NeoForge only)
+
+One `event.fluid` call registers a complete fluid that can be placed, flows and fits in a bucket:
+
+```javascript
+RegistryEvents.register(event => {
+  event.fluid('mymod:molten_iron', fluid => {
+    fluid.density = 3000
+    fluid.viscosity = 2000
+    fluid.temperature = 1500
+    fluid.lightLevel = 12
+    // fluid.noBucket()   // no bucket
+    // fluid.noBlock()    // no liquid block
+  })
+})
+```
+
+This registers the source fluid `mymod:molten_iron`, the flowing fluid `mymod:flowing_molten_iron`, the liquid block `mymod:molten_iron` and the bucket `mymod:molten_iron_bucket`.
+
+| Property | Default | Notes |
+|---|---|---|
+| `displayName` | None | Translation key for the name, such as `'fluid.mymod.molten_iron'` |
+| `density` / `temperature` / `viscosity` | `1000` / `300` / `1000` | Density, temperature and viscosity |
+| `lightLevel` | `0` | Light level |
+| `canConvertToSource` | `false` | Whether it forms infinite sources like water |
+| `slopeFindDistance` / `levelDecreasePerBlock` | `4` / `1` | How far it looks for a slope / how much it drops per block |
+| `tickRate` | `5` | Flow speed; higher is slower |
+| `explosionResistance` | `100` | Explosion resistance |
+| `noBucket()` / `noBlock()` | — | Skip the bucket / skip the liquid block |
+| `tag(...)` | — | Adds both the source and flowing fluid to tags |
+
+You provide the fluid's textures and models in a resource pack.
+
+<a id="wiki-section-9"></a>
+## Entities
+
+```javascript
+RegistryEvents.register(event => {
+  event.entityType('mymod:test_mob', mob => {
+    mob.category = 'monster'
+    mob.size(0.6, 1.8)
+    mob.spawnEgg(0x8a6f4d, 0xffe2b3)
+    mob.attributes(attr => attr.maxHealth(18).movementSpeed(0.3).attackDamage(4))
+    mob.goals(goals => goals
+      .floatInWater(0)
+      .meleeAttack(2, 1.2, false)
+      .target(4, 'minecraft:player', true))
+  })
+})
+```
+
+With no extra setup, the entity is a humanoid with the zombie texture that walks, turns its head and swings its arms.
+
+| Property | Default | Notes |
+|---|---|---|
+| `category` | `'creature'` | `'creature'`, `'monster'`, `'ambient'`, `'water_creature'`, `'water_ambient'`, `'underground_water_creature'`, `'axolotls'` or `'misc'` |
+| `width` / `height` | `0.6` / `1.8` | Hitbox size; `size(width, height)` also works |
+| `trackingRange` / `updateInterval` | `8` / `3` | Sync distance (chunks) / sync interval (ticks) |
+| `fireImmune` / `noSave` / `noSummon` | `false` | Immune to fire / not saved with the world / cannot be summoned with `/summon` |
+| `texture` | Zombie texture | A 64×64 humanoid texture, such as `'mymod:textures/entity/test_mob.png'` |
+| `shadowRadius` | `0.5` | Shadow size |
+| `spawnEgg(baseColor, spotColor)` | — | Also registers the spawn egg `<id>_spawn_egg` |
+| `attributes(...)` | — | `maxHealth`, `movementSpeed`, `followRange`, `attackDamage`, `armor`, `armorToughness`, `knockbackResistance` |
+| `goals(...)` | — | AI behavior; see below |
+| `tag(...)` | — | Adds it to entity tags, such as `'minecraft:raiders'` |
+
+Spawn egg colors only apply on NeoForge 1.21.1. On 26.x, change the egg's look by providing `assets/<namespace>/items/<name>_spawn_egg.json` in a resource pack.
+
+<a id="wiki-section-10"></a>
+### Using a vanilla or modded entity class
+
+To reuse the behavior and look of an existing mob, set its Java class and renderer:
 
 ```javascript
 const Zombie = Java.type('net.minecraft.world.entity.monster.zombie.Zombie')
+
 RegistryEvents.register(event => {
-  event.entityType('mymod:native_mob', build => {
-    build.entityClass(Zombie)
-    build.renderer = 'net.minecraft.client.renderer.entity.ZombieRenderer'
+  event.entityType('mymod:my_zombie', mob => {
+    mob.entityClass(Zombie)
+    mob.renderer = 'net.minecraft.client.renderer.entity.ZombieRenderer'
   })
 })
 ```
 
-In 1.21.1, the zombie class name is `net.minecraft.world.entity.monster.Zombie`; the renderer class name is unchanged. The constructor is resolved when `entityClass(...)` is configured. Missing constructors, non-public or abstract classes, and classes that are not `LivingEntity` fail immediately. After entity creation, the returned object's `EntityType` is also checked: it must be the type registered by this declaration.
+On 1.21.1 the zombie class is `net.minecraft.world.entity.monster.Zombie`.
 
-A native class's public static `createAttributes()` automatically supplies the complete attribute baseline. If that method is absent, explicitly select `attributeBase(...)` or `attributeSupplier(...)` to avoid losing special attributes such as flying speed or reinforcement chance. `attributes(...)` **overrides only the attributes explicitly configured in the callback**; all unconfigured values retain the baseline, rather than resetting native defaults to NekoJS's seven common defaults. The default `NekoScriptMob` uses the complete Mob attribute baseline. An opaque Java factory whose entity class cannot be inferred must also supply the required Mob attributes (including `FOLLOW_RANGE`). An incomplete baseline or a non-finite value is rejected before registration.
-
-A native Java factory must be independent of the guest Context and usable on both the server and client threads. A plain `factory((type, level) => ...)` is explicitly rejected; `entityClass(...)` is recommended. `renderer`, `texture`, and `shadowRadius` are readable/writable Bean properties, configured as `build.texture = 'mymod:textures/entity/mob.png'`, not deferred script factories.
-
-`renderer = 'humanoid'` uses a generic humanoid appearance; `texture`/`shadowRadius` apply to that renderer. With a native renderer, its native model, texture, and shadow logic determine the appearance. Before installation, the client checks the renderer's entity generic type and rejects cases such as using `ZombieRenderer` for a plain `NekoScriptMob`. Declarations store only class names and do not load client classes on dedicated servers.
-
-`GoalEvents.register` also applies to vanilla entities and entities registered by these scripts. `GoalBuilder.custom(...)` / `customTarget(...)` accept only native Java `Function<Mob, Goal>`, not `mob => goal` guest closures. Scripts can use `customClass(...)` / `customTargetClass(...)` to select native Goal classes satisfying the public `(Mob)` constructor contract; see below.
-
-**Spawn egg version differences**: colors **take effect** on NeoForge 1.21.1 through runtime tinting. Neither 26.x loader uses these arguments for runtime tinting. NeoForge generates a default egg model; Fabric falls back to the vanilla egg model only for registered eggs without an item definition. A custom appearance requires `assets/<namespace>/items/<path>_spawn_egg.json` referencing the appropriate model and texture; supplying a PNG alone does not change the default reference. Custom definitions and visible plugin models have priority. Malformed custom definitions retain native errors rather than being hidden by the fallback.
-
-<a id="wiki-section-8"></a>
-## EnchantmentBuilder - enchantments (NeoForge 1.21.1 only)
-
-> Enchantments on 26.x use a data-driven registry and cannot use this runtime builder; use datapacks instead. Fabric 26.x currently has no corresponding registration surface either. A builder remaining in the source does not mean the 26.x registration path is available.
-
-| Member | Description |
-|---|---|
-| `supportedItems` | Tag id for enchantable items (for example `'minecraft:enchantable/weapon'`; a `#` prefix is tolerated; null = empty set) |
-| `weight` / `maxLevel` | Weight (default 1) / maximum level (default 1) |
-| `minCostBase` / `minCostPerLevel` | Minimum cost `base + perLevel * (level - 1)` |
-| `maxCostBase` / `maxCostPerLevel` | Maximum cost curve (same formula) |
-| `anvilCost` | Anvil cost (default 0) |
-| `slots` | `'any'`/`'armor'`/`'chest'`/`'feet'`/`'head'`/`'legs'`/`'hand'`/`'mainhand'`/`'offhand'` (default mainhand) |
-| `tag(tags...)` | Add enchantment tags (for example `'minecraft:treasure'`) |
-
-> This builder attaches no enchantment effect components and exposes no `EnchantmentEffectComponents` configuration. Its definition fields are not a guarantee of working gameplay effects or native registration on another version.
-
-<a id="wiki-section-9"></a>
-## CreativeTabBuilder - creative tabs
-
-| Member | Description |
-|---|---|
-| `title` | Tab title |
-| `icon` | Icon (item id string or ItemStack; null falls back to the barrier icon) |
-| `add(item)` | Add an entry (item id string or ItemStack) |
-
-```javascript
-RegistryEvents.register(event => {
-  event.creativeModeTab('mymod:cool_tab', b => {
-    b.title = 'My mod'
-    b.icon = 'mymod:cool_gem'
-    b.add('mymod:cool_gem')
-    b.add('mymod:custom_block')
-  })
-})
-```
-
-After registration, refer to this tab from the `groupTab` field on `ItemBuilder`.
-
-<a id="wiki-section-10"></a>
-## Simple registries
-
-Choose only entries supported by your platform; the enchantment portion below is NeoForge 1.21.1-only. `PotionBuilder.effect(...)` resolves the effect immediately during configuration and silently omits unresolved ids. A custom effect merely declared in the same collection callback is not yet registered, so the potion example uses existing vanilla effects.
-
-```javascript
-RegistryEvents.register(event => {
-  // Status effect
-  event.mobEffect('mymod:shock', b => { b.category = 'harmful'; b.color = 0x00FF00 })
-
-  // Potion (can contain multiple effect instances; effect appends an instance)
-  event.potion('mymod:shock_potion', b => {
-    b.effect('minecraft:poison', 600, 0)                      // (effect, duration in ticks, level)
-    b.effect('minecraft:speed', 3600, 1, false, true)    // (+ambient, show particles/icon)
-  })
-
-  // Sound (when fixedRange=null, the sound definition determines the range)
-  event.soundEvent('mymod:thunder_clap', b => { b.fixedRange = 64 })
-
-  // Particle type
-  event.particleType('mymod:sparkle', b => { b.overrideLimiter = true })
-
-  // No default paintingVariant factory is registered by core.
-  // This form requires a plugin-provided builder and a supported native registry pass:
-  // event.paintingVariant('mymod:epic_painting', b => {
-  //   b.width = 32; b.height = 16; b.title = 'The sea'
-  // })
-
-  // Villager type (identifier only; no configuration)
-  event.villagerType('mymod:miner', b => {})
-
-  // NeoForge 1.21.1 only; use a datapack on 26.x.
-  event.enchantment('mymod:ice_bane', b => {
-    b.supportedItems = 'minecraft:enchantable/weapon'
-    b.weight = 5; b.maxLevel = 3
-    b.minCostBase = 5; b.minCostPerLevel = 5
-    b.maxCostBase = 20; b.maxCostPerLevel = 5
-    b.anvilCost = 2; b.slots = 'mainhand'
-  })
-})
-```
+- The class brings all of the mob's vanilla attributes. `attributes(...)` only changes the ones you write.
+- If the class has no attributes of its own, borrow another entity's with `attributeBase('minecraft:zombie')`.
+- `factory(...)` does not accept JavaScript functions; use `entityClass(...)` instead.
 
 <a id="wiki-section-11"></a>
-## tag - tagging registered content
+## AI behavior
 
-You can declare tags during registration: the 26.x builder implementations for **items, blocks, entity types, fluids, enchantments, and painting variants** provide `tag(...)`. A method on a builder implementation does not establish that its registry is available: enchantments and painting variants retain the registration limitations above. This addresses cases where a block does not drop or an item is missing from a tag, without requiring handwritten datapack JSON or waiting for `ServerEvents.tags`.
+These methods work inside `goals(...)`. The first argument is the priority, where lower runs first; you can leave it out:
 
-```javascript
-RegistryEvents.register(event => {
-  event.item('mymod:my_pick', b => {
-    b.tag('c:tools/pickaxe', 'minecraft:mineable/pickaxe'.replace('mineable/', 'needs_'))
-    // Pass multiple tags at once, or call this multiple times
-  })
+| Method | Notes |
+|---|---|
+| `floatInWater(priority?)` | Floats in water |
+| `randomStroll(speed)` | Wanders around |
+| `meleeAttack(speed, keepChasing)` | Melee attack |
+| `panic(speed)` | Runs around after being hurt |
+| `target(entityId, mustSee?)` | Targets nearby entities of this type |
+| `hurtByTarget()` | Fights back against whatever hurts it |
+| `lookAt(entityId, distance)` | Looks at nearby entities of this type |
+| `avoid(entityId, distance, speed)` | Runs from nearby entities of this type |
+| `customClass(priority, goalClass)` / `customTargetClass(priority, goalClass)` | Uses a Goal class from a mod or vanilla |
 
-  event.block('mymod:my_ore', b => {
-    b.hardness = 3.0; b.requiresTool = true
-    b.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
-  })
-
-  event.entityType('mymod:raider_golem', b => {
-    b.category = 'monster'
-    b.tag('minecraft:raiders')
-  })
-})
-```
-
-Rules and semantics:
-
-- **Argument format**: `'namespace:name'` or bare `'name'` (→ `'minecraft:name'`); a `#` prefix is recognized too; you can pass multiple values at once.
-- **When it takes effect**: `.tag(...)` records pending entries, which are inserted automatically during tag loading (the dispatch point for `ServerEvents.tags`). **They are reapplied on every server startup / `/reload`**.
-- **Combining with `ServerEvents.tags`**: pending entries are inserted **before** that event; script listeners can still override them with `add`/`remove`.
-- **Fluids**: the tag is applied to both the source (`<id>`) and flowing (`flowing_<id>`) fluid.
-- **BlockItem for a block**: `tag(...)` on a `block` builder adds **block tags**; use `b.item.tag(...)` for item tags on the automatically created BlockItem.
-- **Supported registries**: `item` / `block` / `entityType` / `fluid` / `enchantment` / `paintingVariant`; the other builders on this page do not expose `tag(...)`.
-- On 26.x, tag directories use the registry name (`data/<ns>/tags/item/...`, singular).
-
-> Builder tag application through `ServerEvents.tags` is currently connected only on **NeoForge 26.x**. The 1.21.1 builders do not have this method; use `ServerEvents.tags` from the [event reference](event-reference_us), or datapack JSON. Fabric's corresponding registration surface is still a subset.
+Write full entity IDs, such as `'minecraft:player'`. A custom Goal class needs a public constructor that takes only a `Mob`.
 
 <a id="wiki-section-12"></a>
-## GoalBuilder - AI goals
+### Adding AI to existing entities
 
-This is the builder used in the `goals(g => ...)` callback. Built-in methods provide default-priority or explicit `priority` overloads; custom methods require `priority` (lower numbers mean higher priority).
-
-| Method | Description |
-|---|---|
-| `floatInWater(priority?)` | Float in water |
-| `randomStroll(speed)` / `randomStroll(priority, speed)` | Wander randomly |
-| `meleeAttack(speed, longMemory)` / `meleeAttack(priority, speed, longMemory)` | Melee attack |
-| `panic(speed)` / `panic(priority, speed)` | Flee in panic |
-| `target(id)` / `target(priority, id)` / `target(priority, id, mustSee)` | Pursue the nearest target |
-| `hurtByTarget()` / `hurtByTarget(priority)` | Retaliate after being attacked |
-| `lookAt(id, radius)` / `lookAt(priority, id, radius)` | Look at a nearby target |
-| `avoid(id, radius, speed)` / `avoid(priority, id, radius, speed)` | Avoid a nearby target |
-| `custom(priority, javaFactory)` | Native Java `Function<Mob, Goal>` that creates a regular Goal for this mob; rejects guest closures |
-| `customTarget(priority, javaFactory)` | The same, added to the target selector |
-| `customClass(priority, goalClass)` | Public, non-abstract native Goal class with a public `(Mob)` constructor |
-| `customTargetClass(priority, goalClass)` | The same class/constructor contract, added to the target selector |
-
-Targets for `target/lookAt/avoid` accept entity id strings or native `LivingEntity` Java class objects. Common built-in mappings apply only to bare names or the `minecraft:` namespace; `mymod:zombie` does not incorrectly match `minecraft:zombie`. NekoJS-registered entities resolve by full id to the actual configured native class (default `NekoScriptMob`). When the class cannot be inferred from an opaque factory, pass a Java class explicitly. Always using the full `namespace:id` is recommended.
-
-Built-in methods can still be chained inside the script's `goals(build => ...)` callback. Custom Goal factories are retained by the permanent registry, however, and must be independent of the script generation Context. Do not use `custom(priority, mob => ...)`, or bypass the restriction with a Java adapter capturing the guest Context. Class entry points validate the class and constructor during configuration, and each mob receives its own newly constructed Goal. A constructor accepting only a narrower parameter such as `(PathfinderMob)` does not satisfy the `(Mob)` entry-point contract.
-
-The join-level path that adds Goals to native mobs uses weak identity deduplication: the same object reentering the world does not receive duplicate Goals, while new objects are handled independently. Default scripted entities consume their configuration through their own Goal initialization path.
-
-<a id="wiki-section-13"></a>
-## GoalEvents - adding AI to existing entities
-
-Instead of creating new entities, add goals to **existing entity types**, including vanilla types.
+`GoalEvents.register` does not create entities. It adds behavior to existing ones, including vanilla mobs. It also goes in `startup_scripts`:
 
 ```javascript
-// startup_scripts/pig_goals.js
 GoalEvents.register(event => {
   event.forType('minecraft:pig', goals => {
     goals.panic(0, 2.0).randomStroll(6, 0.8)
@@ -384,80 +290,242 @@ GoalEvents.register(event => {
 })
 ```
 
-<a id="wiki-section-14"></a>
-## Resources and localization
-
-Missing resources **do not affect registration**: the item is still registered and can be held, but displays a purple-and-black missing texture and an untranslated key. To give it the intended appearance, follow vanilla resource-resolution paths (these are not defined by NekoJS and cannot be changed):
-
-- **Item/block textures**: `nekojs/assets/<mod>/textures/item/<name>.png`, `textures/block/<name>.png`.
-- **Model JSON**: `nekojs/assets/<mod>/models/item/<name>.json`, and so on.
-- **Language files**: `nekojs/assets/<mod>/lang/zh_cn.json`; vanilla builds keys from the registry: `item.<mod>.<name>` for items, `block.<mod>.<name>` for blocks, and `entity.<mod>.<name>` for entities.
-
-<a id="wiki-section-15"></a>
-## DynamicRegistryEvents — runtime registration (experimental, NeoForge 26.x only)
-
-Use `DynamicRegistryEvents.dynamicRegistry` for server runtime declarations. Enable `[dynamicRegistry] enabled = true` in `nekojs/config/engine.toml` on both server and clients before starting. Callbacks collect inert definitions; registry activation happens only after a successful candidate commit and the synchronization gate.
+<a id="wiki-section-13"></a>
+## Creative tabs
 
 ```javascript
-// server_scripts/dynamic.js
-DynamicRegistryEvents.dynamicRegistry(event => {
-  event.item('mymod:ruby', build => {
-    build.maxStackSize = 64
-    build.rarity = 'epic'
-    build.fireResistant = true
-    build.mode = 'world'
-  })
-  event.soundEvent('mymod:boom', build => { build.fixedRange = 16 })
-  event.mobEffect('mymod:wither_touch', build => {
-    build.category = 'harmful'
-    build.color = 0x8B0000
+RegistryEvents.register(event => {
+  event.creativeModeTab('mymod:main', tab => {
+    tab.title = 'My Mod'
+    tab.icon = 'mymod:cool_gem'
+    tab.add('mymod:cool_gem')
+    tab.add('mymod:gem_block')
   })
 })
 ```
 
-Builders use Bean properties or explicit setters (`build.mode = 'world'` / `build.setMode('world')`). No immediate registration handle is returned. `/nekojs registry` reports committed activation claims; omitted entries become stale and remain physically registered. Invalid or changed definitions reject the batch and retain the previous active state. The old `DynamicRegistry` binding and fluent builders have been removed.
+`icon` and `add` accept an item ID or `Item.of(...)`. Without an icon, the tab shows a barrier. You can also put an item into the tab with `item.groupTab = 'mymod:main'`.
 
-Only `item`, `soundEvent`, and `mobEffect` exist on this runtime event; there is no generic `register(type, ...)`, block/fluid/entity entry or object-config overload. `world` (default) and `reloadable` are currently bookkeeping modes with the **same stale-retain behavior**. Neither mode unregisters content on script reload; the intended world-end cleanup is not wired to a lifecycle event. Do not rely on a mode as removal or replacement support. Invalid callback input poisons the whole candidate batch. Use fresh ids/disposable worlds when experimenting, and keep server/client opt-in and definitions consistent. This is distinct from STARTUP `RegistryEvents.register`, which still requires a process restart. See [Script API style](script-api-style_us).
+<a id="wiki-section-14"></a>
+## Other content
 
+```javascript
+RegistryEvents.register(event => {
+  // Status effect: category is 'beneficial', 'harmful' or 'neutral' (default)
+  event.mobEffect('mymod:shock', effect => {
+    effect.category = 'harmful'
+    effect.color = 0x00FF00
+  })
+
+  // Potion: effect(effect, duration in ticks, amplifier); call it as often as you like
+  event.potion('mymod:shock_potion', potion => {
+    potion.effect('minecraft:poison', 600, 0)
+    potion.effect('minecraft:speed', 3600, 1, false, true)   // plus: ambient (beacon-style), show particles
+  })
+
+  // Sound: without fixedRange, the sound definition decides
+  event.soundEvent('mymod:thunder_clap', sound => {
+    sound.fixedRange = 64
+  })
+
+  // Particle type
+  event.particleType('mymod:sparkle', particle => {
+    particle.overrideLimiter = true
+  })
+
+  // Villager type: nothing to configure
+  event.villagerType('mymod:miner', villager => {})
+})
+```
+
+Potions can only use effects that already exist in the game. A misspelled effect ID is silently skipped. An effect registered in the same script does not exist yet at that point, which is why the example uses vanilla effects.
+
+<a id="wiki-section-15"></a>
+### Enchantments (NeoForge 1.21.1 only)
+
+```javascript
+RegistryEvents.register(event => {
+  event.enchantment('mymod:ice_bane', ench => {
+    ench.supportedItems = 'minecraft:enchantable/weapon'
+    ench.weight = 5
+    ench.maxLevel = 3
+    ench.minCostBase = 5
+    ench.minCostPerLevel = 5
+    ench.maxCostBase = 20
+    ench.maxCostPerLevel = 5
+    ench.anvilCost = 2
+    ench.slots = 'mainhand'
+  })
+})
+```
+
+An enchantment registered this way shows up in enchanting tables and on books, but **does nothing by itself**; implement its effect with events. On Minecraft 26.x enchantments are defined by data packs, so put the enchantment JSON under `nekojs/data/`.
+
+<a id="wiki-builder-tags"></a>
 <a id="wiki-section-16"></a>
-## Migrating from older syntax
+## Adding tags at registration
 
-`RegistryEvents` now has only the `register` entry point, and builder data uses exposed properties (including Bean/proxy-backed setters), not necessarily public Java fields. The table describes syntax only where that builder is actually exposed; it does not add a factory or unlock a registry:
+Items, blocks, fluids, entities and enchantments can join tags right where you register them, with no separate data pack JSON:
 
-| Old syntax | New syntax |
-|---|---|
-| `RegistryEvents.item(e => e.create(id, b => ...))` | `RegistryEvents.register(e => e.item(id, b => ...))` |
-| `RegistryEvents.block(...)` / `.fluid(...)` / other per-registry entries | The same: `event.<registry>(id, b => ...)` |
-| `builder.maxStackSize(16)` | `b.maxStackSize = 16` |
-| `builder.fireResistant()` / `.glowing()` | `b.fireResistant = true` / `b.glowing = true` |
-| `builder.rarity('rare')` | `b.rarity = 'rare'` |
-| `builder.group('tab_id')` | `b.groupTab = 'tab_id'` |
-| `builder.hardness(3).resistance(6)` | `b.hardness = 3` `b.resistance = 6` |
-| `builder.sound('wood')` / `.mapColor('dirt')` | `b.sound = 'wood'` / `b.mapColor = 'dirt'` |
-| `builder.requiresTool()` / `.renderType('translucent')` | `b.requiresTool = true` / `b.renderType = 'translucent'` |
-| `builder.item(cb)` (configure the automatic BlockItem) | Assign `b.item.xxx = ...` directly, or continue to use `b.item(cb)` |
-| `fluid.bucket(false)` / `.block(false)` | `b.noBucket()` / `b.noBlock()` (or `b.bucket = false` / `b.block = false`) |
-| `entity.category('monster')` / `.fireImmune()` | `b.category = 'monster'` / `b.fireImmune = true` |
-| `enchantment.minCost(5, 5)` / `.maxCost(20, 5)` | `b.minCostBase = 5` `b.minCostPerLevel = 5` / `b.maxCostBase = 20` `b.maxCostPerLevel = 5` |
-| `enchantment.supportedItems('#...')` / `.slots('mainhand')` | `b.supportedItems = '...'` / `b.slots = 'mainhand'` |
-| `sound.fixedRange(64)` | `b.fixedRange = 64` |
-| `particle.overrideLimiter(true)` | `b.overrideLimiter = true` |
-| `painting.width(2).height(2).assetId(...)` | `b.width = 2` `b.height = 2` `b.assetId = '...'` |
-| `effect.category('harmful').color(...)` | `b.category = 'harmful'` `b.color = ...` |
-| Unchanged: `b.food(cb)`, `b.tag(...)`, `b.unbreakable()`, `b.noItem()`, `b.size(w,h)`, `b.spawnEgg(a,b)`, `b.attributes(cb)`, `b.goals(cb)`, `potion.effect(...)` | Actions/compound configuration remain methods |
+```javascript
+RegistryEvents.register(event => {
+  event.item('mymod:ruby_pickaxe', item => {
+    item.maxDamage = 500
+    item.tag('minecraft:pickaxes', 'c:tools/mining_tool')
+  })
 
+  event.block('mymod:ruby_ore', block => {
+    block.requiresTool = true
+    block.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
+  })
+
+  event.entityType('mymod:raider_golem', mob => {
+    mob.tag('minecraft:raiders')
+  })
+})
+```
+
+- Pass several tags at once or call `tag` several times.
+- A bare name means `minecraft:`. A leading `#` is fine.
+- A block's `tag` adds block tags. For item tags on the matching item, use `block.item.tag(...)`.
+- A fluid's tags go on both the source and the flowing fluid.
+- The tags are applied again every time the server starts and on `/reload`. They are added before `ServerEvents.tags` runs, so your scripts can still add or remove entries.
+
+This currently only works on **NeoForge 26.x**. On 1.21.1 and Fabric, use `ServerEvents.tags` or data pack JSON; see [Event reference](event-reference_us).
+
+<a id="wiki-assets"></a>
 <a id="wiki-section-17"></a>
-## Platform differences
+## Textures, models and names
 
-- **NeoForge 1.21.1**: supports most builders on this page; the enchantment builder is available only on this version's runtime registration surface.
-- **NeoForge 26.x**: supports the main STARTUP registration builder surface, but enchantments use data-driven registration and cannot use `event.enchantment(...)`.
-- **Fabric 26.x**: supports a subset of registration builders. The entity type builder uses a visible humanoid model/64×64 zombie texture and allows native renderer configuration. GoalBuilder supports built-in script configuration and native factory/class entry points for custom goals. `Capabilities` / `CapabilityEvents` are connected to real Fabric Lookup/Transfer, which does not mean NeoForge native types or a standard cross-mod energy API. FluidBuilder, VillagerTrades, enchantments, and some platform-specific registration surfaces remain unavailable. See [Platforms and compatibility](platform-compatibility_us).
-- Cleanroom 1.12.2 uses the older pipeline on a separate legacy branch; this repository does not verify whether the syntax on this page works there.
+Missing textures and names do not stop registration. The item still works; it just shows a purple-and-black square and its translation key. Put resources under `nekojs/assets/`, using the same paths as a vanilla resource pack:
+
+| Content | Path |
+|---|---|
+| Item texture | `nekojs/assets/<namespace>/textures/item/<name>.png` |
+| Block texture | `nekojs/assets/<namespace>/textures/block/<name>.png` |
+| Models | `nekojs/assets/<namespace>/models/item/<name>.json` and so on |
+| Names | `nekojs/assets/<namespace>/lang/en_us.json` (`zh_cn.json` for Chinese) |
+
+Language keys are `item.<namespace>.<name>`, `block.<namespace>.<name>` or `entity.<namespace>.<name>`:
+
+```json
+{
+  "item.mymod.cool_gem": "Cool Gem",
+  "block.mymod.gem_block": "Gem Block"
+}
+```
+
+Press F3+T after changing resources.
 
 <a id="wiki-section-18"></a>
+### Generating item models
+
+If you have an item texture and do not want to write a model by hand, NekoJS can generate it:
+
+```javascript
+RegistryEvents.register(event => {
+  event.item('mymod:cool_gem', item => {
+    item.texture('mymod:item/cool_gem')
+  })
+})
+```
+
+- Only items with `parentModel` or `texture(...)` set get a model. Items with neither get nothing.
+- `parentModel` defaults to `'minecraft:item/generated'`; the texture defaults to `<namespace>:item/<name>`.
+- `texture(slot, id)` sets another texture slot; `textures = { ... }` sets them all at once.
+- You provide the PNG textures; NekoJS only writes the model JSON.
+- Files you edited by hand are never overwritten; the log shows `NEKO-6008` when that happens.
+- The generation record lives in `nekojs/.nekojs-item-assets/`. Keep it together with your resources.
+
+<a id="wiki-section-19"></a>
+## Registering while the server runs (experimental)
+
+This experimental feature, available only on NeoForge 26.x, adds a small set of content without restarting the game. First enable it in `nekojs/config/engine.toml` on the server and on every client, then restart:
+
+```toml
+[dynamicRegistry]
+enabled = true
+```
+
+Then write this in `server_scripts`:
+
+```javascript
+DynamicRegistryEvents.dynamicRegistry(event => {
+  event.item('mymod:ruby', item => {
+    item.maxStackSize = 64
+    item.rarity = 'epic'
+    item.fireResistant = true
+  })
+  event.soundEvent('mymod:boom', sound => { sound.fixedRange = 16 })
+  event.mobEffect('mymod:wither_touch', effect => {
+    effect.category = 'harmful'
+    effect.color = 0x8B0000
+  })
+})
+```
+
+Limits:
+
+- Only `item`, `soundEvent` and `mobEffect` exist, with only the properties shown above.
+- Content is never removed once added. If you delete it from the script, it is marked stale but stays. `/nekojs registry` shows the status and `/nekojs registry stale` lists stale entries.
+- If any definition is invalid, the whole batch is skipped and the previous content stays as it was.
+- The server and clients must use the same setting and the same scripts.
+- Experiment with new IDs in a throwaway test world.
+
+<a id="wiki-section-20"></a>
+## Migrating from the old style
+
+Older versions had one entry point per registry and set properties with chained methods. Now everything goes through `RegistryEvents.register` and properties are assigned:
+
+| Old | New |
+|---|---|
+| `RegistryEvents.item(e => e.create(id, b => ...))` | `RegistryEvents.register(e => e.item(id, b => ...))` |
+| `RegistryEvents.block(...)` and one entry point per registry | `event.block(id, b => ...)` and so on |
+| `b.maxStackSize(16)` | `b.maxStackSize = 16` |
+| `b.fireResistant()` / `b.glowing()` | `b.fireResistant = true` / `b.glowing = true` |
+| `b.group('tab_id')` | `b.groupTab = 'tab_id'` |
+| `b.hardness(3).resistance(6)` | `b.hardness = 3`, `b.resistance = 6` |
+| `b.requiresTool()` | `b.requiresTool = true` |
+| `fluid.bucket(false)` / `fluid.block(false)` | `b.noBucket()` / `b.noBlock()` |
+| `entity.fireImmune()` | `b.fireImmune = true` |
+| `enchantment.minCost(5, 5)` | `b.minCostBase = 5`, `b.minCostPerLevel = 5` |
+
+Actions such as `food(...)`, `tag(...)`, `unbreakable()`, `noItem()`, `size(...)`, `spawnEgg(...)`, `attributes(...)`, `goals(...)` and `potion.effect(...)` are still methods and work as before.
+
+<a id="wiki-section-21"></a>
+## Common errors
+
+Errors in registration scripts are written to `logs/nekojs/startup.log`; `/nekojs error` shows them too:
+
+| Error | Cause |
+|---|---|
+| `Duplicate registration '...'` | The same ID was registered twice. The second one does not replace the first; it throws |
+| `RegistryEvent has no member '...'` | The method name is misspelled, or this platform lacks that registry. The error lists the available methods |
+| `unknown registry '...'` | The registry name in `event.register` is wrong |
+| `... expects a builder callback as the last argument` | The configuration function is missing |
+| `... expects an id string like 'mymod:thing'` | The ID is not a string |
+| `maxStackSize must be in [1, 99] ...` | A property value is out of range; other properties have similar checks |
+
+> Advanced: `event.register('item', 'mymod:raw', () => ...)` takes a function that creates the object directly; the registry can be written as `'item'` or `'minecraft:item'`. `event.<registry>(id, typeName, configure)` and `event.custom(id, typeName, configure)` use other builder types provided by plugins.
+
+<a id="wiki-section-22"></a>
+## Platform differences
+
+| Feature | NeoForge 26.x | NeoForge 1.21.1 | Fabric 26.x |
+|---|---|---|---|
+| Items, blocks, entities, creative tabs, effects, potions, sounds, particles, villager types | ✅ | ✅ | ✅ |
+| Fluids | ✅ | ✅ | ❌ |
+| Enchantments | ❌ (use a data pack) | ✅ | ❌ |
+| Adding tags at registration | ✅ | ❌ | ❌ |
+| Generating item models | ✅ | ✅ | ✅ |
+| Registering while the server runs | ✅ (experimental) | ❌ | ❌ |
+
+See [Platform compatibility](platform-compatibility_us) for more platform differences.
+
+<a id="wiki-section-23"></a>
 ## Next steps
 
-- [Event reference](event-reference_us) - `RegistryEvents` / `GoalEvents`.
+- [Event reference](event-reference_us): `RegistryEvents`, `GoalEvents`, `ServerEvents.tags`.
 - [Quick start](quick-start_us)
 
 <!-- wiki-nav -->

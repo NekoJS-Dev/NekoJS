@@ -5,23 +5,23 @@
 <a id="wiki-section-1"></a>
 # Configuration
 
-NekoJS keeps its editable configuration under the game directory's `nekojs/config/`. Engine permissions, declaration generation and AI authoring are separate settings: enabling one does not enable the others.
+All NekoJS configuration files live in `nekojs/config/` inside the game directory. Most people never need to change anything; the defaults work for normal scripting.
 
 <a id="wiki-section-2"></a>
-## Which file to edit
+## Configuration files
 
-| File | Purpose | Main guide |
+| File | What it controls | Details |
 |---|---|---|
-| `nekojs/config/engine.toml` | Script permissions, module/JSX options, pack synchronization, experimental dynamic registration and MixinJS opt-in | This page |
-| `nekojs/config/probe.toml` | Probe enablement, scan filters and declaration backends/output | [Probe type generation](probe-type-generation_us) |
-| `nekojs/config/ai.toml` | Exported authoring material, local HTTP/MCP listener and separately authorized live controls | [AI-assisted authoring](ai-support_us) |
+| `nekojs/config/engine.toml` | Script permissions, module and JSX options, error logs, script pack sync, experimental features | This page |
+| `nekojs/config/probe.toml` | How code completion declarations are generated | [Probe type generation](probe-type-generation_us) |
+| `nekojs/config/ai.toml` | AI authoring material export and the local HTTP/MCP service | [AI-assisted scripting](ai-support_us) |
 
-Generated `.neko_probe/` declarations and script-directory `jsconfig.json` files are not engine configuration. Change their canonical settings instead of repeatedly hand-editing generated output. AI output defaults to `.github/neko_ai`; private tokens stay under `nekojs/config/` and must not be committed.
+`engine.toml` and `probe.toml` are created on first launch. Missing keys are added later automatically, each with a short comment.
+
+The `.neko_probe/` folder in the game directory and the `jsconfig.json` files in script folders are generated, not configuration. Manual edits are overwritten the next time they are generated.
 
 <a id="wiki-section-3"></a>
-## Engine defaults
-
-This is a current default-settings reference, not an instruction to enable experimental features. TOML names and types are significant: use booleans, not quoted strings. Root keys must appear before the first table header.
+## Default engine.toml
 
 ```toml
 allowThreads = false
@@ -44,40 +44,59 @@ enabled = false
 enabled = false
 ```
 
-| Key | Default | Meaning and limits |
+| Key | Default | What it does |
 |---|---|---|
-| `allowThreads` | `false` | Permits unmanaged guest-created threads; this does not make concurrent access to one Graal Context safe. |
-| `allowReflection` | `false` | Relaxes reflection-related class restrictions for trusted scripts; unrelated host/class restrictions still apply. |
-| `allowAsm` | `false` | Relaxes ASM/bytecode class restrictions; it is not the MixinJS activation switch. |
-| `allowFsWriteOutsideNekojs` | `false` | Extends Node filesystem writes/deletes from `nekojs/` to the game directory, not arbitrary paths outside it; containment checks remain and protected engine configuration is still not script-writable. |
-| `enableEsmAuthoring` | `true` | Enables ESM authoring support; see the ESM/CJS rules in [Module system](module-system_us). |
-| `conciseScriptErrorLogs` | `true` | Uses source-focused error logs; `false` requests verbose details. |
-| `jsxAutomaticRuntime` | `false` | Selects automatic JSX lowering instead of the classic factory; this alone does not add a React runtime or change supported UI platforms. See [TypeScript and JSX](typescript-and-jsx_us). |
-| `scriptMemberValidation` | `true` | Reports supported binding/callback member mistakes; this is not full TypeScript checking. |
-| `packSync.mode` | `"off"` | `off`, `hashOnly` or `all`; selecting synchronization does not bypass pack trust, signatures or platform support. See [Script packs](script-packs_us). |
-| `packSync.allowUnsigned` | `false` | Rejects unsigned server packs by default. Do not relax it for an untrusted server. |
-| `dynamicRegistry.enabled` | `false` | Opts into experimental post-start registration on implemented platforms; does not make every registry or Fabric dynamic registration available. See [Registering new content](registering-new-content_us). |
-| `mixinjs.enabled` | `false` | Startup opt-in only. It does not relax the existing development-only/profile/trust/thread restrictions. See [MixinJS](mixinjs_us). |
+| `allowThreads` | `false` | Lets scripts create their own background threads. Can cause lag or resource leaks. |
+| `allowReflection` | `false` | Lets scripts use Java reflection to bypass access checks and change private data. |
+| `allowAsm` | `false` | Lets scripts manipulate Java bytecode directly. Mistakes can cause severe crashes. |
+| `allowFsWriteOutsideNekojs` | `false` | Lets `fs` write and delete anywhere in the game directory instead of only under `nekojs/`. Paths outside the game directory stay blocked, and `nekojs/config/` stays read-only. |
+| `enableEsmAuthoring` | `true` | Enables `import` / `export`. Turn it off only if you need pure CommonJS `require` behavior. See [Module system](module-system_us). |
+| `conciseScriptErrorLogs` | `true` | Error logs show only the short, source-focused message. Set `false` to log full stack traces when chasing a hard problem. |
+| `jsxAutomaticRuntime` | `false` | Compiles JSX with the automatic runtime, importing from the built-in `nekojs/jsx-runtime` module. The default is the classic runtime. See [TypeScript and JSX](typescript-and-jsx_us). |
+| `scriptMemberValidation` | `true` | Checks member names on Bindings and event callbacks before scripts load and reports typos to the error panel. It is not full type checking. Turn it off to skip the extra parsing. |
+| `packSync.mode` | `"off"` | Whether a multiplayer server sends script packs to clients. `off`: never; `hashOnly`: send hashes only, clients never run server packs; `all`: send packs and run them on the client. See [Script packs](script-packs_us). |
+| `packSync.allowUnsigned` | `false` | Whether to accept server script packs without a signature. By default they are rejected and the player is disconnected with a message. |
+| `dynamicRegistry.enabled` | `false` | Experimental: lets scripts register new content after the server has started. Not every platform or registry supports it. See [Registering new content](registering-new-content_us). |
+| `mixinjs.enabled` | `false` | Enables MixinJS. See [MixinJS](mixinjs_us). |
 
 <a id="wiki-section-4"></a>
-## Apply changes and migrate old files
+## Applying changes
 
-1. Stop the game or dedicated server and back up the current file.
-2. Edit the canonical file, keeping each key under its correct TOML table. Do not append root keys beneath `[mixinjs]` or duplicate an existing table.
-3. Restart the process. An ordinary script reload does not rebuild the root configuration or undo bytecode transformations. MixinJS captures an immutable early-startup setting, so both enabling and disabling it require a full restart.
-4. Check startup logs. A malformed engine file may fall back to default settings; a missing, unreadable, malformed or non-boolean early MixinJS setting never opts in. Fix the file rather than assuming that every requested setting applied.
-5. After editor-related changes, run `/nekojs probe` to refresh the TypeScript workspace; use `/nekojs probe python` for Python. These commands do not replace the engine restart.
+1. Close the game or dedicated server.
+2. Edit `nekojs/config/engine.toml`.
+3. Start it again.
 
-If the canonical engine file is absent and `config/nekojs-engine.toml` exists at the game root, it is honored as a **read-only legacy fallback**. It is not automatically moved or rewritten. Back it up and migrate it manually to `nekojs/config/engine.toml`; an existing canonical file takes precedence. Do not maintain conflicting copies.
+`engine.toml` is read once at startup. `/nekojs reload` does not re-read it.
 
-**Removed execution controls:** `scriptEvaluationTimeoutSeconds`, `scriptStatementLimit` and `scriptRunawayTimeoutSeconds` no longer configure normal scripts. The writable loader removes these old keys; the read-only legacy file is left unchanged. There is no replacement hidden execution deadline or watchdog. Infinite synchronous guest code may block its owner thread, and top-level `await` that never settles may leave loading pending. HTTP/authoring request waits, lifecycle cancellation and the private Mixin declaration evaluator's fixed budget are separate mechanisms and remain in place.
+After startup, the game log contains `Engine config loaded. Unsafe features enabled: false` (`true` if you turned on a permission switch). That line confirms the file was read.
+
+When editing TOML:
+
+- Write booleans without quotes: `allowThreads = true`, not `"true"`.
+- Keys without a table (such as `allowThreads`) must come before the first `[...]` header. Under `[mixinjs]` the key becomes `mixinjs.allowThreads` and has no effect.
+- Do not write the same table header twice.
+- If the file is malformed, or a top-level key has the wrong type, the log warns `Failed to load nekojs/config/engine.toml, using default sandbox config` and **every setting uses its default**.
+
+After changing `jsxAutomaticRuntime`, run `/nekojs probe` once so the editor's `jsconfig.json` matches.
 
 <a id="wiki-section-5"></a>
-## Security and troubleshooting
+## Safety advice
 
-Only run scripts and packs you trust. Permission switches are not a proof that arbitrary Java object access or host calls are safe, and they should not be enabled merely to silence an unrelated error. MixinJS does not require enabling `allowAsm` or `allowReflection`. Keep the AI listener and live controls default-off unless deliberately needed; never distribute its bearer token with a modpack.
+- Only run scripts and script packs you trust.
+- `allowThreads`, `allowReflection`, `allowAsm` and `allowFsWriteOutsideNekojs` all loosen restrictions. Turn them on only when you really need them, never just to silence an error.
+- On clients that join unknown servers, keep `packSync.allowUnsigned = false`.
+- MixinJS does not need `allowAsm` or `allowReflection`.
+- Scripts cannot modify files in `nekojs/config/`.
+- The AI service access token is stored in `nekojs/config/ai.token`. Do not commit it to a repository or ship it in a modpack.
 
-For script failures see [FAQ](faq_us) and [Error reference](error-reference_us). For commands that reload scripts, data or declarations, see [Commands](commands_us); those operations have different scopes.
+<a id="wiki-section-6"></a>
+## Old configuration
+
+**Old file location.** Early versions kept the engine settings in `config/nekojs-engine.toml`. NekoJS reads that file only when `nekojs/config/engine.toml` does not exist, and logs a reminder to migrate. The old file is read-only and is never moved or changed. Copy its contents to `nekojs/config/engine.toml` yourself, then delete the old file.
+
+**Removed keys.** `scriptEvaluationTimeoutSeconds`, `scriptStatementLimit`, `scriptRunawayTimeoutSeconds`, `prependRequirePatch`, `useNekoScriptLoader` and `useNativeEsmLoader` are no longer used and are deleted from the file at startup. Scripts now have no execution timeout: an endless loop in a script freezes the game, so avoid writing one.
+
+If a script fails, start with the [FAQ](faq_us) and the [Error reference](error-reference_us).
 
 <!-- wiki-nav -->
 

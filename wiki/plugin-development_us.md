@@ -5,30 +5,14 @@
 <a id="wiki-section-1"></a>
 # Plugin development
 
-> This page explains how to write a **NekoJS plugin mod** (addon): a separate mod that adds bindings, events, adapters, recipe schemas, and other features to NekoJS.
+A NekoJS plugin is an ordinary Minecraft mod that adds features to scripts from Java: new global bindings, event groups, type adapters, recipe namespaces, editor declarations and more.
+
+NekoJS's own built-in features use the same plugin interface, so a plugin can do anything the built-ins do.
 
 <a id="wiki-section-2"></a>
-## What is a plugin?
+## Your first plugin
 
-NekoJS follows a **plugins-as-API** extension model: built-in features (`NekoJSCorePlugin`) and third-party plugins implement the same `NekoJSPlugin` interface and use the same hooks.
-
-A plugin is a concrete `NekoJSPlugin` class with a no-argument constructor and the hooks it needs. Discovery is loader-specific:
-
-- **NeoForge:** annotate it with `@RegisterNekoJSPlugin` for FML annotation scanning.
-- **Fabric:** declare the class in the `nekojs` entrypoint of your addon's `fabric.mod.json`; an annotation alone does not discover a third-party addon. The manager accepts missing annotation metadata and defaults priority to 1000.
-
-```json
-{"entrypoints":{"nekojs":["com.example.myaddon.MyAddonPlugin"]}}
-```
-
-This JSON is a fragment to merge into a complete Fabric mod manifest, not a replacement manifest. The shared manager validates the interface/concrete class and reflectively instantiates accepted classes during bootstrap; failures in that reflection path log an error and skip the plugin. Fabric obtains the entrypoint instance before passing its class to this manager, so entrypoint creation can fail earlier through Fabric's own loading path. Annotation metadata still controls priority, required mods and client-only filtering when present.
-
-There are **no constraints** on package names, class names, source directories, or the number of plugin classes in one mod. A class name does not need to end in `Plugin`, and plugins do not have to share a particular package. Layouts such as `com.example.myaddon` in this page's examples are simply conventions for readability.
-
-Script-facing contributions should follow [Script API style](script-api-style_us): named bindings for helpers, event groups for subscriptions, readable/writable properties only where actually supported, and callback-last configuration where the current API implements it. Arbitrary JSON/input data is not a universal builder configuration map.
-
-<a id="wiki-section-3"></a>
-## Minimal plugin
+This plugin adds a global binding `MyHelper` to every script.
 
 ```java
 package com.example.myaddon;
@@ -37,12 +21,8 @@ import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 
-@RegisterNekoJSPlugin(
-    priority = 500,
-    requiredMods = { "mymod" }    // Enable this plugin only when mymod is loaded
-)
+@RegisterNekoJSPlugin
 public class MyAddonPlugin implements NekoJSPlugin {
-
     @Override
     public void registerBinding(BindingRegistry registry) {
         registry.register("MyHelper", new MyHelperJS());
@@ -53,242 +33,270 @@ public class MyAddonPlugin implements NekoJSPlugin {
 ```java
 package com.example.myaddon;
 
+import com.tkisor.nekojs.api.annotation.Doc;
+
 public class MyHelperJS {
-    public int add(int a, int b) { return a + b; }
+    @Doc("Adds two integers.")
+    public int add(int a, int b) {
+        return a + b;
+    }
 }
 ```
 
-Scripts can now call `MyHelper.add(1, 2)` and receive `3`.
+Use it in a script:
 
-> To add JSDoc descriptions to methods, use annotations such as `@Doc`, `@Param`, and `@Return`, or the programmatic `registerTypeDocs` hook described below. Annotations appear in probe-generated declarations; see [Annotations](annotations_us) for planned annotations that are not implemented yet.
+```javascript
+// server_scripts/test.js
+console.info(MyHelper.add(1, 2)) // 3
+```
+
+To check it works:
+
+1. Put your plugin mod, NekoJS and Graal in `mods/` and start the game.
+2. Join a world and check that `logs/nekojs/server.log` prints `3`.
+3. Run `/nekojs probe`. In VS Code, typing `MyHelper.` should show `add` with its description.
+
+<a id="wiki-section-3"></a>
+## Letting NekoJS find your plugin
+
+The plugin class must implement `NekoJSPlugin`, be a concrete class (not an interface or abstract class), and have a public no-argument constructor. Discovery differs by loader:
+
+| Loader | How to register |
+|---|---|
+| NeoForge | Annotate the class with `@RegisterNekoJSPlugin`; NekoJS scans all mods for it |
+| Fabric | Declare a `nekojs` entrypoint in `fabric.mod.json`. The annotation alone is not discovered |
+
+The Fabric entrypoint snippet (merge it into your `fabric.mod.json`):
+
+```json
+{
+  "entrypoints": {
+    "nekojs": ["com.example.myaddon.MyAddonPlugin"]
+  }
+}
+```
+
+To support both loaders, add both the annotation and the entrypoint. On Fabric, if the class also has the annotation, its `priority`, `requiredMods` and `clientOnly` are used; without it the priority is 1000.
+
+There are no rules for package names, class names or how many plugin classes one mod has.
 
 <a id="wiki-section-4"></a>
-## @RegisterNekoJSPlugin in detail
+### @RegisterNekoJSPlugin parameters
 
 ```java
 @RegisterNekoJSPlugin(
-    priority = 1000,                  // Load priority: larger values load first (default 1000; built-in CORE_PRIORITY = Integer.MAX_VALUE)
-    clientOnly = false,               // Load on the client only
-    requiredMods = { "mymod" }        // Load only when every listed mod is present (AND)
+    priority = 1000,              // higher runs first; default 1000
+    clientOnly = false,           // true: not loaded on a dedicated server
+    requiredMods = { "create" }   // loaded only when all listed mods are present
 )
 ```
 
-| Element | Default | Purpose |
+| Parameter | Default | Effect |
 |---|---|---|
-| `priority` | `1000` | Load priority, in descending order. `CORE_PRIORITY` is the maximum priority; equal values still use the tie-breaker below. |
-| `clientOnly` | `false` | Load in client processes only; skip on dedicated servers. |
-| `requiredMods` | `{}` | Load only when every listed mod is present. |
+| `priority` | `1000` | Plugin order; higher runs first. The built-in core plugin uses `NekoJSPlugin.CORE_PRIORITY` (`Integer.MAX_VALUE`) and always runs first |
+| `clientOnly` | `false` | Load only on the client; skipped on a dedicated server |
+| `requiredMods` | `{}` | Load only when every listed mod is present; useful for integration plugins |
 
-> **Ordering contract**: plugins are sorted by descending priority. Equal priorities are resolved by the implementation class FQN, then lexicographically by owner id (`NekoJSBasePluginManager.ORDER`). Ordering is deterministic for a given classpath, but depends on your **class name** and changes if that name changes; it is not a contract you should rely on. To override a built-in implementation deterministically, use the relevant registry's explicit API, such as `ScriptCompilerRegistry.replaceLanguage`. Compiler lookup by extension uses the last registration, so a plugin with **lower priority** than the built-in plugin can override a built-in language through ordinary `register`. Duplicate discovery of the same plugin class for the same owner, for example through duplicate classpath entries, is deduplicated automatically: the class is registered only once.
+Plugins with the same priority are ordered by fully qualified class name. The order is stable, but renaming the class changes it, so do not rely on it.
+
+A skipped plugin (missing required mod or `clientOnly`) only logs at debug level. A plugin class that cannot be instantiated logs the error `Failed to instantiate plugin ...`.
 
 <a id="wiki-section-5"></a>
-## NekoJSPlugin hooks
+## When hooks run
 
-> **Dual-form model (ADR-0010)**: each channel's **source of truth** is a self-contained extension point file (`XxxPoint` in `core.plugin`, containing its conflict policy, product freezing, and dependencies). `NekoJSPlugin` hooks are **facade projections** of those points. Overriding the base interface hook (recommended and simplest) and implementing `XxxPoint.Contributor` (the explicit form) are collected by the same point and are **equivalent**. Either form works; this page uses the base interface hooks throughout. (`PluginHookPairingTest` is an internal repository check: every new collection method on the base interface must have a corresponding Point or CI fails. This constraint applies when contributing to NekoJS itself, not when writing an addon.)
+Every `NekoJSPlugin` method has an empty default, so override only what you need. There are two kinds of hooks:
 
-**Registration window**: registries are meaningful only during the bootstrap collection phase, while the hook is on the call stack. **Do not save a registry in a field for later use**: anything written after collection finishes will never be read. If a decision needs to be deferred, register an object that can evaluate it later while you are still inside the hook.
+- **Registration hooks** (`registerXxx`) are called once each while NekoJS initializes plugins at game startup, to record your contributions. Write to the registry you are given only while the hook runs. Do not keep the registry for later: later writes have no effect, and some registries throw `IllegalStateException`.
+- **Callback hooks** (`init`, `afterScriptsLoaded` and so on) are called at the matching moment. Overriding them is enough.
 
-The consequence of registering too late depends on the registry:
-
-- **`IllegalStateException`**: extension points that use `Sealable` (TypeDocs / Lifecycle / NodeModules / RecipeNamespaces / RecipeLifecycle / RecipeSchemas), plus `ScriptPropertyRegistry`, `ProbeBackendRegistry`, and `ScriptCompilerRegistry`. These fail immediately.
-- **No registry-wide close check**: late unique entries in `BindingRegistry` and `JSTypeAdapterRegistry` enter collections that are no longer consumed. `EventGroupRegistry` also lacks a registry-wide close check, but merging into an existing frozen group throws `IllegalStateException`; a newly added group cannot update the published snapshot. Do not rely on either failure mode.
-
-Override only the hooks you need. Most convenience callbacks are empty by default; lifecycle registration hooks already delegate to those callbacks, and `generatedLangs()` defaults to `en_us`. Replacing a registration hook without calling its default implementation replaces that default wiring.
+A normal `/nekojs reload` does not call registration hooks again. Restart the game after changing a plugin.
 
 <a id="wiki-section-6"></a>
-### Lifecycle
-
-| Hook | Timing |
-|---|---|
-| `init()` | After Plugin Runtime bootstrap, before startup scripts load |
-| `initStartup()` | After startup scripts finish loading |
-| `afterInit()` | After all mods initialize (NeoForge: `FMLLoadCompleteEvent`) |
-| `beforeScriptsLoaded(ScriptType)` | Before an initial load or full reload; not per-file hot reload |
-| `afterScriptsLoaded(ScriptType)` | After an initial load or full reload; not per-file hot reload |
-| `registerLifecycleHooks(PluginLifecycleRegister)` | Register the five lifecycle callbacks above programmatically. The default implementation registers `this::init` and the other four; normally, override the convenience callbacks directly. |
-| `beforeRecipeLoading(...)` | Before recipes load; can modify the raw JSON map |
-| `afterRecipes(...)` | After recipe data is committed to RecipeManager |
+## Hook reference
 
 <a id="wiki-section-7"></a>
-### Bindings and types
+### Bindings, types and modules
 
 | Hook | Purpose |
 |---|---|
-| `registerBinding(BindingRegistry)` | Register global JS bindings; see below |
-| `registerAdapters(JSTypeAdapterRegistry)` | Register JS-to-Java type adapters; see [Type adapters](type-adapters_us) |
-| `registerTypeDocs(TypeDocsRegister)` | Register type documentation programmatically; `@Doc` / `@Param` / `@Return` annotations are also supported |
-| `registerNodeTypeDocs(...)` | Register Node module type declarations |
-| `registerNodeModules(...)` | Register Node-compatible modules |
-
-**Optional owner-scoped API modules**
-
-The ordinary `registerBinding` hook also supports module-only exports:
-
-```java
-registry.register(com.tkisor.nekojs.api.data.Binding.of("MyHelper", new MyHelperJS()),
-        exposure -> exposure.versioned());
-```
-
-For an addon resolved to owner id `myaddon`, scripts import this as `import { MyHelper } from "nekojs/api/version/myaddon"`. This overload does **not** additionally create a global; the original `register(name, value)` form remains global. Select exactly one `versioned()` or `stable()` target. The owner is supplied by plugin discovery, not by a script-provided module path. Missing owners and duplicate module exports fail with `NEKO-4057`.
-
-`stable()` uses `nekojs/api/stable/myaddon` and validates public types for native leaks; it does not automatically make a Minecraft-facing helper portable. Existing stable/version module exports, globals and custom Node modules are distinct registration channels. Register only during bootstrap; ordinary script reload does not discover a new plugin or recollect its contributions.
+| `registerBinding(BindingRegistry)` | Register global bindings; see below |
+| `registerAdapters(JSTypeAdapterRegistry)` | Register type adapters so Java parameters accept strings, objects and other JS inputs. See [Type adapters](type-adapters_us) |
+| `registerTypeDocs(TypeDocsRegister)` | Add or replace editor declarations; see below |
+| `registerNodeModules(NodeModuleRegister)` | Register JS modules loadable with `require('id')` |
+| `registerNodeTypeDocs(TypeDocsRegister)` | Provide `declare module` declarations for those modules |
 
 <a id="wiki-section-8"></a>
 ### Events
 
 | Hook | Purpose |
 |---|---|
-| `registerEvents(EventGroupRegistry)` | Register event groups; see [Event extensions](event-extensions_us) |
-| `registerClientEvents(EventGroupRegistry)` | Register client event groups |
+| `registerEvents(EventGroupRegistry)` | Register event groups (server and common) |
+| `registerClientEvents(EventGroupRegistry)` | Register event groups that exist only on the client |
+
+See [Event extensions](event-extensions_us) for how to write them.
 
 <a id="wiki-section-9"></a>
 ### Recipes
 
 | Hook | Purpose |
 |---|---|
-| `registerRecipeNamespaces(RecipeNamespaceRegister)` | Register recipe namespaces and their handler classes |
-| `registerRecipeSchemas(RecipeSchemaRegister)` | Register recipe schemas on the Java side |
-| `registerRecipeLifecycleHooks(RecipeLifecycleRegister)` | Register recipe lifecycle hooks |
+| `registerRecipeNamespaces(RecipeNamespaceRegister)` | Register the Java implementation behind `event.recipes.<namespace>.<method>(...)` |
+| `registerRecipeSchemas(RecipeSchemaRegister)` | Register or correct the field definitions of a recipe type |
+| `registerRecipeLifecycleHooks(RecipeLifecycleRegister)` | Register callbacks around recipe loading; the default wires up `beforeRecipeLoading` and `afterRecipes` |
+
+Recipe schema priority, highest first: `event.registerSchema` in scripts > data-driven > plugins > automatic scanning.
 
 <a id="wiki-section-10"></a>
-### Probe / workspace
+### Script languages, properties and workspace
 
 | Hook | Purpose |
 |---|---|
-| `registerProbeBackends(ProbeBackendRegistry)` | Register probe backends by the `(languageId, name)` pair. The two built-in backends (TS `.d.ts` and Python `.pyi`, both named `builtin`) are registered through **this same hook** by common's `NekoProbeBuiltinPlugin`. Third parties can add a language or provide an alternative implementation under a different `name`. A duplicate `(language, name)` causes `lock()` to throw at the end of bootstrap, aborting startup. Only `languageId()` / `name()` / `render(ctx)` lack defaults; `priority()` / `requiresIr()` / `outputDir(...)` / `contributeEditorConfig(...)` all have defaults, and the default `generate(ctx)` renders in memory, validates paths, then synchronizes output in place. Render failure preserves old output; a write failure may leave output partially updated. See [Probe type generation: adding a custom backend](probe-type-generation_us) for a complete example. |
-| `modifyWorkspaceConfig(JSConfigModel, env)` | Modify automatically generated jsconfig.json |
-| `registerScriptCompilers(ScriptCompilerRegistry)` | Register custom script compilers for new language frontends |
-| `registerScriptProperty(ScriptPropertyRegistry)` | Register custom script properties (`// key:`) |
+| `registerScriptCompilers(ScriptCompilerRegistry)` | Register a new script language or file extension |
+| `registerScriptProperty(ScriptPropertyRegistry)` | Register a new script property (`// key: value`); see [Script properties](script-properties_us) |
+| `registerProbeBackends(ProbeBackendRegistry)` | Register a new declaration generator; see [Probe type generation](probe-type-generation_us) |
+| `modifyWorkspaceConfig(JSConfigModel, String)` | Edit each script folder's `jsconfig.json` before it is written |
+| `registerApiSurface(ApiContributionRegistry)` | Provide API surface metadata |
 
 <a id="wiki-section-11"></a>
-### Attached data / resource generation
+### Lifecycle callbacks
 
-| Hook | Purpose |
+| Method | When it is called |
 |---|---|
-| `attachServerData(...)` / `attachLevelData(...)` / `attachPlayerData(...)` | Attach `AttachedData` to Server/Level/Player |
-| `registerApiSurface(ApiContributionRegistry)` | Contribute API surface entries |
-| `generateData(DataGeneratorJS)` | Run before `ServerEvents.generateData`, sharing the generator with scripts |
-| `generateAssets(DataGeneratorJS)` | Run before `ClientEvents.generateAssets` |
-| `generateLang(LangGeneratorJS)` | Language-file generation hook |
+| `init()` | After plugins are initialized, before startup scripts load |
+| `initStartup()` | After startup scripts load |
+| `afterInit()` | After all mods finish initializing (`FMLLoadCompleteEvent` on NeoForge) |
+| `beforeScriptsLoaded(ScriptType)` | Before a full load or full reload of one script type; single-file reloads do not trigger it |
+| `afterScriptsLoaded(ScriptType)` | After a full load or full reload of one script type; single-file reloads do not trigger it |
+| `beforeRecipeLoading(RecipeLifecycleContext)` | Before recipes load; you can edit the raw recipe JSON |
+| `afterRecipes(RecipeLifecycleContext)` | After all recipes have loaded |
+
+If you override `registerLifecycleHooks` or `registerRecipeLifecycleHooks` without calling the default implementation, the matching convenience callbacks are no longer called.
 
 <a id="wiki-section-12"></a>
-### Custom channels (advanced)
+### Data and resource generation
 
-Third parties can define their own collection extension points through the same V2 builder used by built-ins. See ADR-0001/0002 for the full semantics:
+| Method | Purpose |
+|---|---|
+| `attachServerData` / `attachLevelData` / `attachPlayerData` | Attach in-memory custom data to the server, a level or a player; it is not saved |
+| `generateData(DataGeneratorJS)` | Generate data pack content. Runs before the script `ServerEvents.generateData` and shares its generator |
+| `generateAssets(DataGeneratorJS)` | Generate resource pack content. Runs before the script `ClientEvents.generateAssets` |
+| `generateLang(LangGeneratorJS)` | Generate language file entries |
+| `generatedLangs()` | Declare which languages `generateLang` is called for; default `en_us` |
+
+`generateLang` is called once for **every** language in the current round, including languages requested by other plugins and scripts. If you only generate one language, check `generator.getLang()` first:
 
 ```java
-public final class MyChannelPoint {
-    public static final String ID = "myaddon:my_channel";
-    public interface Contributor extends NekoJSPlugin {
-        default void registerMyChannel(MyCollector collector) {}
-    }
-    public static final NekoPluginExtensionPoint<Contributor, MyCollector, MyProduct> POINT =
-        NekoPluginExtensionPoint.<Contributor, MyCollector, MyProduct>builder(ID, Contributor.class)
-            .merge(MergePolicy.append())
-            .initializer(ctx -> new MyCollector())
-            .collector(Contributor::registerMyChannel)
-            .finish(MyCollector::snapshot)
-            .build();
+@Override
+public void generateLang(LangGeneratorJS generator) {
+    if (!"zh_cn".equals(generator.getLang())) return;
+    // add zh_cn entries here
 }
-// Implement NekoPluginExtensionProvider in your plugin and call
-// registry.register(MyChannelPoint.POINT) in registerPluginExtensionPoints;
-// use the returned handle to obtain the product after bootstrap finishes.
 ```
-
-The required parts are: the point id must be nonblank (validated when `build()` constructs the point, otherwise `IllegalArgumentException`); **all four** of `initializer` / `collector` / `merge` / `finish` must be called or `build()` throws `IllegalStateException`. `merge` deliberately has no default because conflict policy is central to the extension point's semantics, so you must choose explicitly (`append` / `firstWin` / `overrideWarn` / `failFast`). Registering an extension point after bootstrap freezes throws `IllegalStateException`, and registering the same id twice throws `IllegalArgumentException`.
-
-Using `<your modid>:<channel name>` for `ID`, nesting `Contributor` inside `XxxPoint`, and naming the field `POINT` are conventions (id uniqueness is required, the format is not). **The contributor type must extend `NekoJSPlugin`, directly or indirectly**: the extension point and builder enforce that generic bound. `MyCollector` and `MyProduct` in this sketch are addon-defined types, not additional NekoJS APIs.
 
 <a id="wiki-section-13"></a>
-## Register bindings (registerBinding)
+## Registering global bindings
 
-`BindingRegistry` registers bindings by `ScriptType`. There are two forms:
-
-<a id="wiki-section-14"></a>
-### Simple bindings: `register(name, value)`
+`registerBinding` is called once per script type, and each call gets the registry for that type.
 
 ```java
 @Override
 public void registerBinding(BindingRegistry registry) {
+    // available to every script type
     registry.register("MyHelper", new MyHelperJS());
 
-    // Restrict the script type
-    registry.register(ScriptType.CLIENT, "ClientHelper", new ClientHelperJS());
+    // only available to client scripts
+    registry.register(ScriptType.CLIENT, "MyClientHelper", new MyClientHelperJS());
 
-    // Bind a Java class directly so scripts can use it as a constructor
-    registry.register("MyItemHelper", MyItemHelper.class);
+    // bind a Java class: scripts can use its static members and call new
+    registry.register("MyMath", MyMath.class);
 }
 ```
 
-> **The first binding with a given name wins**: `register(...)` returns `boolean`. When a name is already taken, it returns `false` and writes a warn message to the `nekojs.bootstrap` logger (`BindingRegistry.BindingRegistryImpl`); it neither throws nor replaces the binding. Built-in bindings normally register first at `CORE_PRIORITY`, so lower-priority plugins cannot replace names such as `Item` or `Ingredient` through ordinary `register`. An equal maximum priority still follows the class/owner tie-breaker and is not a replacement API. Check the return value to confirm registration succeeded. Legacy global binding names are not format-validated and do not need a namespace prefix (module export names are validated), but they are global identifiers in scripts; including something specific to your mod helps avoid collisions.
+- The value can be an instance (scripts call its public methods) or a `Class` (scripts use its static members).
+- **The first binding with a name wins.** Later ones are ignored, `register` returns `false`, and the log shows a `NEKO-4001` warning. Built-in plugins have the highest priority, so you cannot replace built-in bindings such as `Item` or `Ingredient` by reusing the name.
+- Names have no required format, but they are global variables in scripts. Include something specific to your mod to avoid clashes.
+- `CLIENT` bindings are not collected on a dedicated server.
+
+<a id="wiki-section-14"></a>
+### Exporting as an API module
+
+Instead of a global variable, a binding can be exported only as a module that scripts `import`:
+
+```java
+registry.register(Binding.of("MyHelper", new MyHelperJS()), exposure -> exposure.versioned());
+```
+
+```javascript
+import { MyHelper } from 'nekojs/api/version/myaddon'
+```
+
+- `myaddon` in the module path is the mod ID that owns the plugin, as reported by the loader.
+- `versioned()` exports to `nekojs/api/version/<modid>`; `stable()` exports to `nekojs/api/stable/<modid>`. Choose exactly one.
+- `stable()` rejects public types that expose Minecraft or loader classes. A class that must expose native types needs `@ScriptNativeBridge` to pass.
+- This form does **not** also create a global variable.
+- A missing mod owner, an invalid export name or a duplicate export fails with `NEKO-4057`.
+
+For how scripts use modules, see [Module system](module-system_us#wiki-api-modules).
 
 <a id="wiki-section-15"></a>
-### Delegating bindings: `DelegatingBinding` (helper + vanilla class)
+### The binding's value type
 
-If a binding needs both helper methods and a Minecraft class's static members, use `DelegatingBinding`; the `Item` binding uses this form:
+`Binding.of(name, value)` infers the type from the value. When the value is a proxy (such as `ProxyObject`), Java reflection cannot see its members, so the pre-load member check and declaration generation get it wrong. Use the three-argument form to name the class that really has those members:
 
 ```java
-import com.tkisor.nekojs.js.DelegatingBinding;
-
-@Override
-public void registerBinding(BindingRegistry registry) {
-    // Look up extensions (helper methods) first; delegate remaining static members to targetClass
-    registry.register(Binding.of("MyBlock", new DelegatingBinding(
-        new MyBlockHelperJS(),                            // Helper methods
-        net.minecraft.world.level.block.Block.class,      // Minecraft class whose static members are delegated
-        Set.of("of", "empty")                             // Extension method names supplied by the helper
-    ), MyBlockHelperJS.class));
-}
+registry.register(Binding.of("MyBlock", new DelegatingBinding(
+        new MyBlockHelperJS(),                          // provides of / empty
+        net.minecraft.world.level.block.Block.class,    // other static members go here
+        Set.of("of", "empty")
+), MyBlockHelperJS.class));
 ```
 
-> `DelegatingBinding` must wrap the original object with `asValue` during GraalJS access, while a Context is active, not during construction. Otherwise, the helper receives a detached Value and returns null everywhere. It is a `ProxyObject`, not a Java Class mirror, so `Java.type('...Item').of()` cannot access the extension methods.
+`DelegatingBinding` looks up the listed members on the helper first and sends everything else to the target class's static members. The built-in `Item` binding works this way. It is only a proxy: the native class from `Java.type(...)` does not have these extra methods.
+
+`Binding.close(ScriptType)` is called when that script type's runtime is reset or shut down, not on every reload.
 
 <a id="wiki-section-16"></a>
-## Binding interface
+## Completion and documentation
 
-To customize binding behavior completely, implement `Binding`; `SimpleBinding` and `TypedBinding` are the built-in records:
+There are two ways to give your bindings hints and descriptions in the editor:
 
-```java
-public interface Binding {
-    String name();
-    Object value();
-    default Class<?> valueType() {
-        Object value = value();
-        return value == null ? Void.class : value instanceof Class<?> type ? type : value.getClass();
-    }
-    default void close(ScriptType type) {}  // Teardown/reset hook
-}
-```
+1. **Annotations**: put `@Doc`, `@Param`, `@Return` and others on classes and methods. See [Annotations](annotations_us).
+2. **`registerTypeDocs`**: register them in code, for cases annotations cannot express.
 
-`valueType()` is important for `ProxyObject` and bindings with dynamic members: preflight validation and probe use it to discover members and avoid false errors when reflection cannot see dynamic members. The proxy example supplies `MyBlockHelperJS.class` so its helper methods can be reflected; this does not turn the proxy into a Java class. **Cleanup is not per-generation**: `Binding.close(type)` runs on ScriptManager teardown/reset paths, not every transactional SERVER/CLIENT/TEST reload. Do not use it as an ordinary-generation disposal callback.
-
-<a id="wiki-section-17"></a>
-## Type documentation
-
-There are two ways to document binding methods and fields, which probe emits as `.d.ts` JSDoc: **annotations** (`@Doc` / `@Param` / `@Return` on their supported declarations, consumed by `TypeReflector` into the IR; `@Param` belongs on a method/constructor, not directly on a parameter) and the **programmatic** `registerTypeDocs` hook:
+Describe a global binding, or set the type it has in declarations:
 
 ```java
 @Override
 public void registerTypeDocs(TypeDocsRegister docs) {
-    docs.register(new TypeDocCatalogEntry(...));          // Regular type documentation
-    docs.registerManualDeclaration(new ManualDeclarationCatalogEntry(...));  // Manual wrapper/helper declarations
+    docs.register(TypeDocCatalogEntry.binding(
+            "MyHelper",            // binding name
+            null,                  // type override; null uses the reflected type
+            "Math helpers for my addon.",
+            List.of("MyHelper.add(1, 2)")));
 }
 ```
 
-**`TypeDocsRegister` is the single source of truth**. Manual declaration registration for built-in wrappers/helpers is centralized in `NekoCommonManualDeclarations`.
+`TypeDocsRegister` has some more advanced methods:
 
-When a global authored declaration uses a Java type, associate its type name explicitly with `withReferences`. A Binding with the same name does not automatically declare a type. For example:
+| Method | Use |
+|---|---|
+| `register(TypeDocCatalogEntry)` | Description, examples and type override of a global binding |
+| `registerManualDeclaration(ManualDeclarationCatalogEntry)` | A hand-written global TypeScript declaration |
+| `registerClassDeclaration(ClassDeclarationCatalogEntry)` | Replace the TypeScript declaration generated for a Java class |
+| `registerBeanAliasExclusion(...)` / `registerBeanMethodProjection(...)` | Adjust how Bean properties appear in declarations |
+
+When a hand-written declaration uses Java types, name them with `withReferences`:
 
 ```java
 docs.registerManualDeclaration(ManualDeclarationCatalogEntry.of(
-        "example:stack", "type ExampleStack = StackValue;", "A script-visible item stack.", List.of())
+        "myaddon:stack", "type MyStack = StackValue;", "A script-visible item stack.", List.of())
         .withReferences(Map.of("StackValue",
                 ManualDeclarationCatalogEntry.TypeReference.host(ItemStack.class))));
 ```
 
-`host` retains host members; `input` uses the same Java type's registered input adapter. Dependencies are added to TS declarations without changing the primary scan configuration. Hidden, excluded, or unavailable explicit dependencies reject generation with `NEKO-4033`; conflicting types or input modes for one global alias reject it with `NEKO-4051`. The generator uses inline imports in `@manual/references.d.ts`, keeping existing global declarations out of module scope. The existing six-argument constructor remains available, and declarations without references keep their previous output. This only affects TypeScript and grants no additional runtime permissions.
+`TypeReference.host(...)` refers to the Java type itself; `TypeReference.input(...)` refers to its input alias (every input form its adapters accept).
 
-To express TypeScript inference that Java reflection cannot represent, register an authored class declaration:
+To replace a class declaration, you can write generic relationships that Java reflection cannot express:
 
 ```java
 docs.registerClassDeclaration(ClassDeclarationCatalogEntry.of(
@@ -301,54 +309,113 @@ docs.registerClassDeclaration(ClassDeclarationCatalogEntry.of(
         """));
 ```
 
-The body replaces the generated class in its `java:` package module; omit the `declare module` wrapper. Export its canonical `$JavaName` (`$Outer$Inner` for nested classes). The generator still owns input aliases such as `$JavaName_`, including enum and functional-interface aliases; do not redeclare them in the body. Use the overload with a `Set<Class<?>>` to list every referenced Java type, including types with input aliases. Those imports enter Probe collection under the configured scan filters; an excluded, hidden, or unavailable required dependency fails generation with `NEKO-4033`.
+When writing a class declaration:
 
-Replacements apply to every Script Type because Java package declarations are shared. Both `registerTypeDocs` and `registerNodeTypeDocs` contribute through the existing type-docs Points. The highest `priority` wins for a class; conflicting definitions at an equal priority fail with `NEKO-4032`. Identical definitions are idempotent. `ProbeEvents.modifyType` hiding takes precedence; other reflected member edits are replaced by the authored body. This only changes TypeScript declarations, so keep the body consistent with the Java runtime implementation.
+- Write only the class body, without `declare module`. Keep the generator's class name format `$JavaName` (nested classes are `$Outer$Inner`).
+- Do not redefine input aliases such as `$JavaName_`; the generator provides them.
+- If the declaration uses other Java types, list them with the `of` overload that takes a `Set<Class<?>>`. A hidden or ungeneratable dependency fails with `NEKO-4033`.
+- When one class has several replacements, the highest priority wins. Different definitions at the same priority fail with `NEKO-4032`.
+- Replacements only change TypeScript declarations. The declaration must match the real Java behavior; NekoJS does not check this.
 
-If dependencies share an exported name, or a dependency shares the target's name, use an inline type such as `import("java:example/package").$Foo` in the authored body. Keep those dependencies in the explicit import set. The generator gives conflicting imports private names without rewriting authored text; an unambiguous authored import keeps its canonical name when only reflected imports compete with it. A reflected dependency renamed by `modifyType` also retains its canonical Java type/value export, including the canonical enum input alias. Enum replacements read constant names without reflecting unrelated member signatures or initializing the enum.
+The built-in hand-written declarations live in `NekoCommonManualDeclarations` and make good references.
+
+<a id="wiki-section-17"></a>
+## Custom extension points
+
+If your plugin should let **other plugins** register things with it (for example, you provide a machine framework and other mods register machines), define your own extension point. It uses the same mechanism as NekoJS's built-in hooks.
+
+```java
+public final class MachinesPoint {
+    public static final String ID = "myaddon:machines";
+
+    // other plugins implement this interface to contribute
+    public interface Contributor extends NekoJSPlugin {
+        default void registerMachines(MachineCollector collector) {}
+    }
+
+    public static final NekoPluginExtensionPoint<Contributor, MachineCollector, List<Machine>> POINT =
+            NekoPluginExtensionPoint.<Contributor, MachineCollector, List<Machine>>builder(ID, Contributor.class)
+                    .merge(MergePolicy.append())
+                    .initializer(ctx -> new MachineCollector())
+                    .collector(Contributor::registerMachines)
+                    .finish(MachineCollector::snapshot)
+                    .build();
+}
+```
+
+The plugin that defines the point also implements `NekoPluginExtensionProvider` and registers it in `registerPluginExtensionPoints`:
+
+```java
+@RegisterNekoJSPlugin
+public class MyAddonPlugin implements NekoPluginExtensionProvider {
+    private static NekoPluginExtensionHandle<List<Machine>> machines;
+
+    @Override
+    public void registerPluginExtensionPoints(NekoPluginExtensionRegistry registry) {
+        machines = registry.register(MachinesPoint.POINT);
+    }
+
+    public static List<Machine> machines() {
+        return machines.result();   // available after plugin bootstrap
+    }
+}
+```
+
+Rules:
+
+- `initializer`, `collector`, `merge` and `finish` are all required; if one is missing, `build()` throws `IllegalStateException`.
+- `merge` has no default. Choose a conflict policy: `append()`, `firstWin()`, `overrideWarn()` or `failFast()`.
+- The ID must be globally unique, including against the built-in `nekojs:*` IDs; a duplicate throws `IllegalArgumentException`. Use `<your modid>:<name>`.
+- Extension points can only be registered inside `registerPluginExtensionPoints`; registering later throws `IllegalStateException`.
+- If you need another point's result, declare it with `dependsOn(...)`.
+- `MachineCollector` and `Machine` are your own types, not NekoJS API.
+
+Each built-in hook corresponds to an `XxxPoint` in the `com.tkisor.nekojs.core.plugin` package. Overriding the `NekoJSPlugin` hook and implementing the matching `XxxPoint.Contributor` interface have exactly the same effect.
 
 <a id="wiki-section-18"></a>
 ## Cross-platform plugins
 
-For plugins that support multiple platforms:
-- **Abstract Minecraft types**: prefer common abstractions such as `NekoId` over `Identifier` / `ResourceLocation`.
-- **Loader-specific code**: separate it from general code. NekoJS uses a single shared `src/` tree, with whole-file `//? if neoforge` / `//? if fabric` guards for loader differences and `versions/<node>/src/` for files whose differences are too large for practical guarding. Your plugin can use the same structure or separate sourceSets. Gate runtime behavior differences with `Platform.capabilities()`.
-- **`requiredMods`**: use the annotation's `requiredMods` field to control platform-dependent loading.
+- Prefer NekoJS's platform-neutral types, for example `NekoId` instead of Minecraft's `Identifier` / `ResourceLocation`.
+- Check runtime feature differences with `Platform.capabilities()` instead of hard-coding loader names.
+- Use `requiredMods` or `clientOnly` to control loading of plugins that only apply to some platforms.
+- To implement the same set of methods in several platforms' Extension interfaces, you can use the Spec interface pattern; see [Annotations](annotations_us).
 
 <a id="wiki-section-19"></a>
 ## Gradle dependencies
 
-Add this to the plugin mod's `build.gradle`:
+NekoJS does not publish Maven artifacts yet, so plugins depend on the NekoJS release jar directly. Graal comes from CurseMaven:
 
 ```groovy
+repositories {
+    maven { url = "https://cursemaven.com" }
+}
+
 dependencies {
-    compileOnly 'curse.maven:graal-1504336:8762962'   // Graal dependency (25.1.3.7, NeoForge build; Fabric build file id is 8762963)
-    compileOnly files('libs/nekojs-<version>.jar')
+    // Graal 25.1.3.7. File 8762962 is the NeoForge build; use 8762963 for Fabric.
+    compileOnly "curse.maven:graal-1504336:8762962"
+    // The NekoJS release jar for your Minecraft version and loader.
+    compileOnly files("libs/nekojs-<version>.jar")
 }
 ```
 
-> The actual compile dependency is currently the **platform fat jar**. Replace `<version>` in its filename with the target Release version; it includes all `:common` classes. NekoJS does not yet have a separately consumable stable SPI artifact, and the engine is not published to Maven, so the public API currently has no semantic-versioning guarantee.
+NekoJS's public API has no semantic versioning guarantee yet. Recompile and test your plugin after upgrading NekoJS.
 
 <a id="wiki-section-20"></a>
-## Test your plugin
+## Reference: built-in plugins
 
-1. Place your plugin mod in `mods/` together with NekoJS + Graal.
-2. Start the game and search the log for your plugin class name to confirm discovery.
-3. Call your registered bindings from a script.
-4. Run `/nekojs probe` and check the `.d.ts` files for your binding declarations, including JSDoc contributed by `registerTypeDocs`.
+The built-in features are spread over several plugins that make good references:
 
-<a id="wiki-section-21"></a>
-## Complete example
+- `common/.../core/plugin/NekoCommonBuiltinPlugin.java`: platform-neutral bindings, compilers, script properties and type docs.
+- `src/main/java/.../core/NekoJSCorePlugin.java`: Minecraft-facing bindings, adapters and events.
+- `NekoBuiltinPointsPlugin`: registers all built-in extension points.
+- Fabric also has `FabricCorePlugin`.
 
-Read the relevant built-in implementation rather than assuming one class owns every contribution: `src/main/java/com/tkisor/nekojs/core/NekoJSCorePlugin.java` contains native contributions, `common/.../core/plugin/NekoCommonBuiltinPlugin.java` contains shared bindings/compiler/type-doc contributions, and `NekoBuiltinPointsPlugin` registers the existing extension Points. Fabric also has its own platform plugin; node-local overrides take precedence over the shared source tree.
+Next steps:
 
-<a id="wiki-section-22"></a>
-## Next steps
-
-- [Type adapters](type-adapters_us): `JSTypeAdapter`, allowing Java methods to accept multiple JS input forms automatically.
+- [Type adapters](type-adapters_us): let Java methods accept several JS input forms.
 - [Event extensions](event-extensions_us): register custom event groups.
-- [Annotations](annotations_us): `@Remap` / `@RemapByPrefix` / `@HideFromJS` / `@PlatformAvailability` and more.
-- [Probe type generation](probe-type-generation_us): how your bindings enter `.d.ts` files.
+- [Annotations](annotations_us): control member names, visibility and editor descriptions.
+- [Probe type generation](probe-type-generation_us): how bindings end up in `.d.ts`.
 
 <!-- wiki-nav -->
 

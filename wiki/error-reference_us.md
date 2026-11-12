@@ -3,298 +3,311 @@
 > **English** · [中文](error-reference_cn)
 
 <a id="wiki-section-1"></a>
-# Error and log message reference
+# Error and log reference
 
-Messages that report a problem carry a stable code and a short English summary.
-The Chinese text is unchanged apart from the code prefix and the summary.
-The code is the lookup key and does not change when the wording does.
+When NekoJS reports a problem, the message starts with a `NEKO-xxxx` code. Copy the code and search this page for it.
 
-This page indexes NekoJS developer diagnostics, not every Java, mod or network exception. Structured HTTP/MCP machine codes such as `CONTROL_DISABLED` and `INDEX_UNAVAILABLE`, and operation states, are documented under [AI support](ai-support_us#wiki-live-controls); they are distinct from logged `NEKO-xxxx` identifiers. Include Script Type, source/line, phase and actual commit outcome in reports. A queueing message alone does not establish reload success.
+<a id="wiki-section-2"></a>
+## Finding errors
 
-An entry-evaluation failure marks that entry disabled and records its cause; do not generalize it into “every callback exception disables the whole runtime.” Event/timer callback reports have their own attribution. A context terminated by host cancellation or resource exhaustion invalidates its generation; an explicit full reload is required to recover, not a single-file rerun.
+1. Run `/nekojs error` to see whether there are errors, or `/nekojs view_all_errors` for the full list.
+2. Open `logs/nekojs/<type>.log`, for example `logs/nekojs/server.log`.
+3. Find the line starting with `[NEKO-xxxx]` and look up that code here.
 
-```
+When you report a problem, include the code, the full message, the script type, the file name and the line number.
+
+<a id="wiki-section-3"></a>
+## Message format
+
+A message has the code, a Chinese or English description, and an English summary after `—`:
+
+```text
 [NEKO-2004] 脚本输出行数超过 … 行上限，后续输出将被丢弃（防止日志无限增长） — script output line limit reached
 ```
 
-Where a message ends with a value, the summary comes before it:
+When a message ends with a specific value, the value comes after the summary:
 
+```text
+[NEKO-4005] 无法解析目标 — could not resolve goal target: minecraft:zombie
 ```
-[NEKO-4006] 未知方块实体类型 — unknown block entity type: minecraft:chest
-```
 
-Codes from #58 that have no call site on this branch are not used:
-`NEKO-1007` (the old candidate-context failure was replaced by the generation reload path),
-`NEKO-1011` / `NEKO-1012` (Cleanroom client load logs), and `NEKO-3001`–`NEKO-3004` (script sync size limits).
+Codes do not change when the wording changes, so always search by code.
 
-<a id="wiki-section-2"></a>
-## Script loading and reload
-
-| Code | English summary | Chinese message |
-|---|---|---|
-| `NEKO-1001` | failed to scan script directory | 扫描脚本目录失败 |
-| `NEKO-1002` | failed to create workspace directory | 无法初始化环境目录 |
-| `NEKO-1003` | script execution failed | 脚本执行失败 |
-| `NEKO-1004` | problem in after dependency order | 脚本 after 依赖排序存在问题 |
-| `NEKO-1005` | script unreadable, skipped | 无法读取脚本，已跳过 |
-| `NEKO-1006` | startup reload is not transactional | 脚本重载为非事务式语义 |
-| `NEKO-1008` | transactional script reload failed | 脚本事务重载失败，候选 generation 已关闭，active 环境保持不变 |
-| `NEKO-1009` | error closing old Node runtime | 关闭旧 Node runtime 时发生异常 |
-| `NEKO-1010` | error closing old context | 关闭旧上下文时发生异常 |
-| `NEKO-1013` | script pack state update or temporary cleanup failed | 脚本包状态保存或暂存文件清理失败 |
-| `NEKO-1014` | script pack state unreadable; discovery uses manifest default | 脚本包状态不可读取，发现时使用清单默认值 |
-| `NEKO-1016` | versioned pack descriptor or entry validation rejected | 新版脚本包描述或入口校验被拒绝 |
-| `NEKO-1017` | package activation, capability, operation or resource release rejected/failed | 包激活、能力、操作或资源释放被拒绝或失败 |
-| `NEKO-1018` | package author tool or embedded content admission failed | 包创建、校验、归档、安装、JAR 或已加载模组内容接入失败 |
-| `NEKO-1019` | Authoring bundle, configuration, snapshot or local service setup failed | AI 文档包、配置、声明快照或本地服务初始化失败；已有资料按具体错误保留 |
-| `NEKO-1020` | admitted authoring owner callback failed | 已接纳的 AI 所有者线程回调异常；未自动重放 |
-| `NEKO-1021` | authoring command rejected inside an active command context | 已有命令上下文时拒绝 AI 命令，避免排队后迟执行 |
-| `NEKO-1022` | authoring SERVER committed but postprocessing failed | SERVER 脚本已提交，但配方、脚本包或资源后处理失败 |
-| `NEKO-1023` | authoring live control requires server owner thread | 实时 AI 控制未在服务器所有者线程执行，操作被拒绝 |
-| `NEKO-1024` | authoring live server runtime is no longer current | 实时服务器已停止或更换，旧操作不得在新世界继续执行 |
-| `NEKO-1025` | script property rejected; previous value or default retained | 脚本属性解析失败；保留最近有效值或默认值，警告包含文件、实际行号和原因 |
-
-`NEKO-2001`, `NEKO-2002`, `NEKO-2003` and `NEKO-2005` are retired normal-execution budget diagnostics. Their former resource/statement-limit, runaway-watchdog and evaluation-timeout call sites were removed; old logs may still contain them. These identifiers remain historical references, not settings to enable or codes to reuse. `NEKO-2004` remains active: it caps emitted log lines, not script execution.
-
-Normal execution has no replacement automatic deadline or watchdog. Unresolved top-level await may remain pending, and infinite loops can block the owner thread/process. HTTP/authoring request waits, lifecycle cancellation/shutdown and the private offline Mixin declaration sandbox's fixed 100,000-statement limit are separate and remain applicable.
-
-Structured diagnostic `phase: WATCHDOG` and owner `Runaway Watchdog` retain their historical wire labels for generic cancelled, interrupted or resource-exhausted Polyglot contexts. Seeing those values does **not** establish that an automatic watchdog was installed or that a script hit an execution budget; inspect the actual cause and lifecycle.
-
-<a id="wiki-section-3"></a>
-## Sandbox and resource limits
-
-| Code | English summary | Chinese message |
-|---|---|---|
-| `NEKO-2004` | script output line limit reached | 脚本输出行数超过行上限 |
+Codes such as `CONTROL_DISABLED` and `INDEX_UNAVAILABLE` returned by the AI query service are a separate set; see [AI-assisted authoring](ai-support_us#wiki-live-controls).
 
 <a id="wiki-section-4"></a>
-## Data synchronization
+## Script loading and reload
 
-| Code | English summary | Chinese message |
+| Code | English summary | Details |
 |---|---|---|
-| `NEKO-3010` | persistent data sync skipped because the payload exceeds the limit | PData 同步因数据超过上限而跳过 |
-| `NEKO-3011` | server Item/Block modification sync rejected | 服务端 Item/Block modification 同步被客户端拒绝 |
-| `NEKO-3012` | dynamic registry message delivery failed | 动态注册表消息发送失败 |
-| `NEKO-3013` | dynamic registry configuration failed; connection disconnected | 动态注册表配置同步失败，连接已断开 |
-| `NEKO-3014` | malformed dynamic registry message or reply dropped | 无效动态注册表消息或回执已丢弃 |
-| `NEKO-3015` | dynamic registry sync reply could not be sent | 动态注册表同步回执发送失败 |
+| `NEKO-1001` | failed to scan script directory | Chinese log text: 扫描脚本目录失败 |
+| `NEKO-1002` | failed to create workspace directory | Chinese log text: 无法初始化环境目录 |
+| `NEKO-1003` | script execution failed | Chinese log text: 脚本执行失败 |
+| `NEKO-1004` | problem in after dependency order | Chinese log text: 脚本 after 依赖排序存在问题 |
+| `NEKO-1005` | script unreadable, skipped | Chinese log text: 无法读取脚本，已跳过 |
+| `NEKO-1006` | startup reload is not transactional | STARTUP registers items, blocks and entities that cannot be safely rolled back. Chinese log text: 脚本重载为非事务式语义 |
+| `NEKO-1008` | transactional script reload failed | The failed reload is discarded; the previous scripts stay in use. Chinese log text: 脚本事务重载失败，候选 generation 已关闭，active 环境保持不变 |
+| `NEKO-1013` | script pack state update or temporary cleanup failed | — |
+| `NEKO-1014` | script pack state unreadable; discovery uses manifest default | — |
+| `NEKO-1016` | versioned pack descriptor or entry validation rejected | — |
+| `NEKO-1017` | package activation, capability, operation or resource release rejected/failed | — |
+| `NEKO-1018` | package author tool or embedded content admission failed | — |
+| `NEKO-1019` | Authoring bundle, configuration, snapshot or local service setup failed | The game itself keeps running |
+| `NEKO-1020` | admitted authoring owner callback failed | Not retried automatically |
+| `NEKO-1021` | authoring command rejected inside an active command context | Rejected so it does not run late after queueing |
+| `NEKO-1022` | authoring SERVER committed but postprocessing failed | — |
+| `NEKO-1023` | authoring live control requires server owner thread | The live AI action did not run on the right thread |
+| `NEKO-1024` | authoring live server runtime is no longer current | The server or client stopped or changed; the old action does not continue in the new world |
+| `NEKO-1025` | script property rejected; previous value or default retained | The warning gives the file, line and reason |
 
 <a id="wiki-section-5"></a>
-## Registration and bindings
+## Log output limit
 
-| Code | English summary | Chinese message |
+| Code | English summary | Details |
 |---|---|---|
-| `NEKO-4001` | duplicate binding name ignored | 同名绑定已注册，后者被忽略（首胜） |
-| `NEKO-4002` | goal target must be a LivingEntity | 目标类型必须是 LivingEntity |
-| `NEKO-4003` | cannot infer target class from EntityType | 无法从 EntityType 推断目标类 |
-| `NEKO-4004` | unknown target entity | 未知目标实体 |
-| `NEKO-4005` | could not resolve goal target | 无法解析目标 |
-| `NEKO-4006` | unknown block entity type | 未知方块实体类型 |
-| `NEKO-4007` | unknown capability | 未知 capability（支持 item/energy/fluid） |
-| `NEKO-4008` | invalid entity factory or entity class constructor | 实体 factory 无效或实体类缺少 (EntityType, Level) 构造器 |
-| `NEKO-4009` | capability provider execution failed | capability provider 执行失败 |
-| `NEKO-4010` | capability provider returned an incompatible non-null value | capability provider 返回不兼容的非空类型 |
-| `NEKO-4011` | capability batch is no longer collecting or its native commit failed | capability 批次已结束收集或原生提交失败 |
-| `NEKO-4012` | capability factory argument is negative | capability 工厂参数不能为负数 |
-| `NEKO-4013` | client persistent data mirror is read-only | 客户端持久化数据镜像只读 |
-| `NEKO-4014` | duplicate capability provider | capability provider 重复注册 |
-| `NEKO-4017` | invalid persistent native goal factory or goal constructor | 持久原生 goal factory 或构造器无效 |
-| `NEKO-4018` | ItemStack persistent data is unavailable | ItemStack 持久化数据不可用 |
-| `NEKO-4019` | invalid or unknown capability target | capability 目标无效或未知 |
-| `NEKO-4020` | invalid native capability/provider/context input | 原生 capability、provider 或 context 输入无效 |
-| `NEKO-4024` | saved capability storage is missing, invalid, or outside its bounds | capability 存档字段缺失、无效或超出范围，保留当前数据 |
-| `NEKO-4025` | invalid entity renderer, texture, shadow, or native renderer constructor | 实体 renderer、纹理、阴影或原生渲染器构造器无效 |
-| `NEKO-4026` | texture dimensions must be positive | 纹理尺寸必须为正数 |
-| `NEKO-4027` | storage persistence attempted during an uncommitted transfer transaction | 未提交传输事务期间不能加载或保存存储 |
-| `NEKO-4028` | Fabric registry drain did not consume a selected pending registry | Fabric 注册表抽干未消费选定的待注册条目 |
-| `NEKO-4029` | Probe type reflection is incomplete; declarations may be omitted | Probe 类型反射不完整，部分声明可能缺失 |
-| `NEKO-4030` | Localization binding rejected invalid text or format arguments | 本地化 Binding 拒绝无效文本或格式参数 |
-| `NEKO-4031` | Authored class declaration registration rejected | 手写类声明注册被拒绝 |
-| `NEKO-4032` | Conflicting authored class declarations rejected at the same priority | 同优先级的手写类声明冲突，注册被拒绝 |
-| `NEKO-4033` | Authored class declaration dependency is unavailable, excluded, or hidden | 手写类声明依赖不可用、被排除或被隐藏 |
-| `NEKO-4034` | item component, model, texture or identifier configuration rejected | 物品组件、模型、纹理或标识符配置被拒绝 |
-| `NEKO-4035` | item definition modification rejected after startup collection | STARTUP 收集后物品定义已冻结，修改被拒绝 |
-| `NEKO-4036` | item component type or codec value rejected with item, component and node context | 物品组件类型或 codec 值被拒绝，消息包含物品、组件与节点上下文 |
-| `NEKO-4037` | Retired: Fabric automatic item resources now use the directory resource bridge. | 已停用：Fabric 自动物品资源已接入目录资源桥。 |
-| `NEKO-4038` | Probe predeclaration failed; the selected class is omitted from generated TypeScript | Probe 预声明失败，选定类未进入生成的 TypeScript |
-| `NEKO-4039` | Probe declaration task failed; some generated TypeScript declarations may be absent | Probe 声明任务失败，生成的 TypeScript 可能缺少部分声明 |
-| `NEKO-4040` | Activation claim publication rejected: unsupported registry | 激活认领发布遇到不支持的注册表，属于预检后的内部契约错误 |
-| `NEKO-4041` | Villager trade replay failed after resource reload; committed snapshot is unavailable | 资源重载后交易重放失败，已提交快照暂不可用 |
-| `NEKO-4042` | Dynamic registry rollback failed; the registry may retain partial writes | 动态注册回滚失败，未报告恢复成功 |
-| `NEKO-4043` | Villager trade batch rejected: generated ID collision | 交易批次生成的 ID 与已有非本域条目或另一个交易集冲突，写入前拒绝 |
-| `NEKO-4044` | Villager trade checkpoint read/restore failed | 交易注册表快照读取或恢复失败；恢复失败时查询不报告 active |
-| `NEKO-4045` | Unknown profession | 交易批次引用未知职业，整个候选被拒绝 |
-| `NEKO-4046` | Villager trade pool replacement failed | 静态交易池替换失败，不能报告成功 |
-| `NEKO-4047` | TypeScript Bean alias exclusion registration rejected | TypeScript Bean 派生属性排除条目无效或收集器不支持 |
-| `NEKO-4048` | Probe TypeScript dependency closure incomplete | Required types are excluded, hidden, or unavailable; inspect `@special/dependencies.json`. Generation does not certify a complete IDE check. |
-| `NEKO-4050` | Dynamic item fire resistance value rejected before activation | 动态物品火抗值不是规范的 `true` / `false`，激活前拒绝 |
-| `NEKO-4051` | Manual declaration type reference rejected | 手写声明的类型引用别名无效，或同名别名的目标类型、输入模式冲突 |
-| `NEKO-4052` | Registry type catalog rejected conflicting sources or symbols | 注册表类型目录存在同名异来源，或与标签/命名空间类型名冲突 |
-| `NEKO-4053` | Bean method projection rejected | Bean方法投影的真实来源、零参签名或收集器无效 |
-| `NEKO-4054` | Item component string conversion failed | 物品组件字符串无法解析或序列化 |
-| `NEKO-4055` | Authoring query or transport request rejected | AI 查询或传输请求被拒绝；响应的机器码和 JSON 路径提供具体原因 |
-| `NEKO-4056` | Resource ID conversion rejected | Strict resource syntax or a real native ID is required; legacy `ID.of` parsing is unchanged. |
-| `NEKO-4057` | API module publication or access rejected | Check the mod owner, exposure target, export name, public type, event allowlist, and selected script environment. |
-| `NEKO-4060` | Script options rejected | Unknown fields, incorrect types, or out-of-range values reject registration |
-| `NEKO-4061` | Post-effect builder rejected | A sealed or invalid builder rejects the candidate declaration |
-| `NEKO-4062` | Render registration rejected | Invalid rendering arguments, callback, or declaration metadata reject registration |
-| `NEKO-4063` | Script input declaration rejected | The input-shape provider cannot be constructed, returns an invalid shape, or requires a missing adapter target |
-| `NEKO-4064` | Script output declaration rejected | A method's explicit TypeScript output expression is blank |
-| `NEKO-4065` | Script output view rejected | The view must be an implemented public non-generic interface; native input contracts are unchanged. |
-| `NEKO-4066` | Probe declaration retained with incomplete public members | A missing optional public signature prevents native method-set reflection. Independent members remain; inspect `incompleteMembers` and do not treat the closure as complete. |
-| `NEKO-4090` | Mixin preparation/restart required or declaration/library rejected | First check `[mixinjs] enabled` in the default-off engine configuration and fully restart after changing it; restart after successful preparation; otherwise check cache selection/ownership, actual loader admission, exact profile, descriptor and supported options. See [MixinJS troubleshooting](mixinjs_us#wiki-section-9). |
-| `NEKO-4091` | Mixin callback authority or bridge ownership rejected | Use a locally trusted candidate and callback file; another live root cannot replace the bridge lease. |
-| `NEKO-4092` | Native hook bypassed or callback decision discarded | Check thread, synchronous return, control lifetime and strict ABI conversion. |
+| `NEKO-2004` | script output line limit reached | Chinese log text: 脚本输出行数超过行上限 |
 
+Script standard output and error output each log at most 100,000 lines; anything after that is dropped, with a single warning. This limits the log only, not script execution.
+
+NekoJS does not stop a script for running too long. An infinite loop or an `await` that never finishes freezes the game; see "Watch out for infinite loops" in [Script basics](script-basics_us).
 
 <a id="wiki-section-6"></a>
-## Recipes and data
+## Data synchronization
 
-`NEKO-5190`–`NEKO-5192` belong to the explicitly profiled crushing-schema import helper. A mismatch there does not mean every schema from the same addon or the general native schema compiler is unsupported.
-
-The entries below in the `NEKO-5240`–`NEKO-5279` range belong to NekuJS recipe-schema import, not a promise of compatibility with every KubeJS addon. A recognized definition whose semantics cannot be honored is declared as `never` by Probe and rejected by the corresponding runtime constructor. Fix or implement the diagnosed semantics rather than bypassing the declaration.
-
-| Code | English summary | Chinese message |
+| Code | English summary | Details |
 |---|---|---|
-| `NEKO-5001` | could not convert value to JSON | 无法转换为 JSON |
-| `NEKO-5002` | JSON must be an object | JSON 必须是对象 |
-| `NEKO-5003` | unknown recipe filter key | RecipeFilterAdapter: unknown key |
-| `NEKO-5190` | recipe schema source lacks an expected resource | 配方 schema 来源缺少预期资源 |
-| `NEKO-5191` | imported crushing schema profile differs from the explicitly supported resource shape | 导入的粉碎配方 schema 与明确支持的资源形状不同 |
-| `NEKO-5192` | recipe schema source parsing or validation failed | 配方 schema 来源解析或校验失败 |
-| `NEKO-5200` | selected recipe method threw a checked exception; no overload or schema fallback | 已选配方方法抛出受检异常，保留原因，不再尝试重载或 schema 回退 |
-| `NEKO-5201` | selected recipe method is inaccessible; invocation rejected | 已选配方方法不可访问，调用被拒绝 |
-| `NEKO-5202` | native type adapter acceptance or conversion failed; original cause preserved, not an overload mismatch | 原生类型适配器判定或转换失败，保留原始原因，不作为重载不匹配处理 |
-| `NEKO-5210` | invalid advanced recipe definition or inconsistent field/alias/function metadata | 高级配方定义或字段、别名、函数元数据不一致 |
-| `NEKO-5211` | known recipe profile is explicitly unsupported; no handler/raw fallback | 已知配方模型不受支持，不回退到处理器或原始配方 |
-| `NEKO-5212` | multiple named arguments target the same canonical field | 多个命名参数指向同一个字段 |
-| `NEKO-5213` | required schema field is missing | 缺少必需的配方字段 |
-| `NEKO-5214` | no schema constructor accepts the supplied arguments | 没有配方构造器接受当前参数 |
-| `NEKO-5215` | recipe field encoder returned no JSON value | 配方字段编码器未返回 JSON 值 |
-| `NEKO-5216` | declarative schema function received arguments | 声明式配方函数不接受参数 |
-
-| `NEKO-5240` | Invalid schema value, shape, resource ID, field role or missing property | Invalid schema value, shape, resource ID, field role or missing property; inspect the resource and JSON path in the diagnostic. |
-| `NEKO-5241` | Duplicate schema resource ID | Duplicate schema resource ID; inspect the resource and JSON path in the diagnostic. |
-| `NEKO-5242` | Missing or unsupported parent schema | Missing or unsupported parent schema; inspect the resource and JSON path in the diagnostic. |
-| `NEKO-5243` | Schema parent cycle | Schema parent cycle; inspect the resource and JSON path in the diagnostic. |
-| `NEKO-5244` | Invalid key ordering, duplicate key or incompatible requiredness | Invalid key ordering, duplicate key or incompatible requiredness; inspect the resource and JSON path in the diagnostic. |
-| `NEKO-5245` | Unknown schema key | Unknown schema key; inspect the resource and JSON path in the diagnostic. |
-| `NEKO-5246` | Unsupported component or missing semantic codec | Unsupported component or missing semantic codec; inspect the resource and JSON path in the diagnostic. |
-| `NEKO-5247` | Invalid component constant or default-writing policy | Invalid component constant or default-writing policy; inspect the resource and JSON path in the diagnostic. |
-| `NEKO-5248` | Duplicate constructor key or arity | Duplicate constructor key or arity; inspect the resource and JSON path in the diagnostic. |
-| `NEKO-5249` | Ambiguous field alias or function/setter conflict | Ambiguous field alias or function/setter conflict; inspect the resource and JSON path in the diagnostic. |
-| `NEKO-5250` | Unsupported custom factory, processor, mapping or function behavior | Unsupported custom factory, processor, mapping or function behavior; inspect the resource and JSON path in the diagnostic. |
-| `NEKO-5251` | Abstract schema dependency is not callable | Abstract schema dependency is not callable; inspect the resource and JSON path in the diagnostic. |
-| `NEKO-5279` | Recipe schema resource read failed or root is not an object | Recipe schema resource read failed or root is not an object; inspect the resource and JSON path in the diagnostic. |
-
-| `NEKO-5306` | String component requires a string value | String component requires a string value |
-| `NEKO-5307` | Pattern map requires nonempty single-character non-space keys | Pattern map requires nonempty single-character non-space keys |
-| `NEKO-5308` | Crafting category input type is invalid | Crafting category input type is invalid |
-| `NEKO-5309` | Native shaped preparation failed | Native shaped preparation failed |
-
-| `NEKO-5320` | duplicate programmatic schema | 程序式配方模型重复 |
-| `NEKO-5321` | duplicate recipe factory | 配方工厂重复 |
-| `NEKO-5322` | duplicate schema key | 模型字段重复 |
-| `NEKO-5323` | required key follows optional key | 必需字段位于可选字段之后 |
-| `NEKO-5324` | null default cannot always be written | 空默认值不能始终写出 |
-| `NEKO-5325` | invalid list bounds | 列表边界无效 |
-| `NEKO-5326` | programmatic list spreading is unsupported | 尚不支持程序式列表展开 |
-| `NEKO-5327` | override references an undeclared key | 覆盖引用了未声明字段 |
-| `NEKO-5328` | unknown schema key | 模型字段不存在 |
-| `NEKO-5329` | decoded list size is outside bounds | 解码后列表长度越界 |
-| `NEKO-5330` | recipe serializer is not registered | 配方序列化器未注册 |
-| `NEKO-5331` | legacy target is already attached | 兼容方法目标已绑定 |
-| `NEKO-5332` | native recipe field decode failed | 原生配方字段解码失败 |
-| `NEKO-5333` | native recipe field encode failed | 原生配方字段编码失败 |
-| `NEKO-5334` | key belongs to another schema | 字段属于其他配方模型 |
-| `NEKO-5335` | legacy target has no native builder session | 兼容方法目标尚未绑定原生构建器 |
-| `NEKO-5336` | original component rejected a value | 原附属组件拒绝该值 |
-| `NEKO-5337` | duplicate field alias | 字段别名重复 |
-| `NEKO-5338` | duplicate field function | 字段方法重复 |
-| `NEKO-5339` | factory returned an incompatible fluent target | 工厂返回了不兼容的方法目标 |
-| `NEKO-5340` | programmatic default encode failed | 程序式默认值编码失败 |
-| `NEKO-5341` | unknown native component mapping | 原生组件映射不存在 |
-| `NEKO-5342` | programmatic component encode failed | 程序式组件编码失败 |
-| `NEKO-5343` | component requires an array | 组件需要数组 |
-| `NEKO-5344` | recipe number is not an exact safe integer or is out of bounds | 配方整数不精确、不安全或越界 |
-| `NEKO-5345` | component requires its original typed host value | 组件需要原始 Java 类型对象 |
-| `NEKO-5346` | programmatic component decode failed | 程序式组件解码失败 |
-| `NEKO-5347` | forced programmatic constructor overrides are unsupported | 尚不支持程序式构造器强制覆盖 |
-| `NEKO-5350` | host does not support native builder sessions | 宿主不支持原生构建器会话 |
-| `NEKO-5352` | host requires a native JSON builder | 宿主需要原生 JSON 构建器 |
-| `NEKO-5353` | host has no borrowed registry access | 宿主缺少借用的注册表访问 |
-| `NEKO-5360` | expected a recipe number | 需要配方数值 |
-| `NEKO-5361` | expected a recipe boolean | 需要配方布尔值 |
-| `NEKO-5362` | tag belongs to a different registry | 标签属于其他注册表 |
-| `NEKO-5363` | expected a tag identifier | 需要标签标识符 |
-| `NEKO-5364` | resource key belongs to a different registry | 资源键属于其他注册表 |
-| `NEKO-5365` | expected a resource identifier | 需要资源标识符 |
-| `NEKO-5366` | wrapped list size is outside bounds | 转换后的列表长度越界 |
-| `NEKO-5367` | structured conversion requires the caller active Graal context | 结构化转换需要调用方已进入的 Graal 上下文 |
+| `NEKO-3010` | persistent data sync skipped because the payload exceeds the limit | — |
+| `NEKO-3011` | server Item/Block modification sync rejected | — |
+| `NEKO-3012` | dynamic registry message delivery failed | — |
+| `NEKO-3013` | dynamic registry configuration failed; connection disconnected | — |
+| `NEKO-3014` | malformed dynamic registry message or reply dropped | — |
+| `NEKO-3015` | dynamic registry sync reply could not be sent | — |
 
 <a id="wiki-section-7"></a>
-## JSX UI visual and resource contract
+## Registration and bindings
 
-| Code | Meaning |
-|---|---|
-| `NEKO-6008` | Automatic item resource group skipped because an existing file is externally owned or modified. |
-| `NEKO-6009` | Automatic item asset generation failed; publication failures attempt rollback and attach restoration failures as suppressed causes. |
-| `NEKO-6010` | Item asset ownership index cannot be read or validated; generation rejected without replacing it. |
-| `NEKO-6011` | Directory pack client resource reload failed; inspect the cause and native resource recovery. |
-| `NEKO-6012` | The native UI host rejected invalid or unknown read-only item configuration (resource id, non-air item, count or tooltip props); a failed candidate update retains the active UI. |
-
-| NEKO-6001 | A UI color prop is not a controlled color form (ARGB/RGB int, `#RGB`/`#RRGGBB`/`#AARRGGBB`, CSS basic named color). |
-| NEKO-6002 | A UI visual prop value is out of range or has the wrong type (`opacity`, `fontSize`, `borderWidth`, `radius`, `fit`, `crop`). |
-| NEKO-6003 | A UI resource identifier violates the controlled id grammar (lowercase `namespace:path`, no `..`). |
-| NEKO-6004 | A controlled UI resource id does not resolve in the resource roots. |
-| NEKO-6005 | Reading or uploading a resolved UI resource failed, including encoded input over the supported size limit. |
-| NEKO-6006 | A UI texture or crop size is invalid or exceeds the supported dimensions. |
-| NEKO-6007 | Decoding a resolved PNG resource into a usable UI image failed. |
+| Code | English summary | Details |
+|---|---|---|
+| `NEKO-4001` | duplicate binding name ignored | The first registration wins. Chinese log text: 同名绑定已注册，后者被忽略（首胜） |
+| `NEKO-4002` | goal target must be a LivingEntity | Chinese log text: 目标类型必须是 LivingEntity |
+| `NEKO-4003` | cannot infer target class from EntityType | Chinese log text: 无法从 EntityType 推断目标类 |
+| `NEKO-4004` | unknown target entity | Chinese log text: 未知目标实体 |
+| `NEKO-4005` | could not resolve goal target | Chinese log text: 无法解析目标 |
+| `NEKO-4006` | unknown block entity type | Raised when a block entity capability target cannot be found |
+| `NEKO-4007` | unknown capability | Supported: item, energy, fluid |
+| `NEKO-4008` | invalid entity factory or entity class constructor | The entity class needs an (EntityType, Level) constructor |
+| `NEKO-4009` | capability provider execution failed | — |
+| `NEKO-4010` | capability provider returned an incompatible non-null value | — |
+| `NEKO-4011` | capability batch is no longer collecting or its native commit failed | — |
+| `NEKO-4012` | capability factory argument is negative | — |
+| `NEKO-4013` | client persistent data mirror is read-only | — |
+| `NEKO-4014` | duplicate capability provider | — |
+| `NEKO-4017` | invalid persistent native goal factory or goal constructor | — |
+| `NEKO-4019` | invalid or unknown capability target | — |
+| `NEKO-4020` | invalid native capability/provider/context input | — |
+| `NEKO-4024` | saved capability storage is missing, invalid, or outside its bounds | The current data is kept |
+| `NEKO-4025` | invalid entity renderer, texture, shadow, or native renderer constructor | — |
+| `NEKO-4026` | texture dimensions must be positive | — |
+| `NEKO-4027` | storage persistence attempted during an uncommitted transfer transaction | — |
+| `NEKO-4028` | Fabric registry drain did not consume a selected pending registry | — |
+| `NEKO-4029` | Probe type reflection is incomplete; declarations may be omitted | — |
+| `NEKO-4030` | Localization binding rejected invalid text or format arguments | — |
+| `NEKO-4031` | Authored class declaration registration rejected | — |
+| `NEKO-4032` | Conflicting authored class declarations rejected at the same priority | — |
+| `NEKO-4033` | Authored class declaration dependency is unavailable, excluded, or hidden | — |
+| `NEKO-4034` | item component, model, texture or identifier configuration rejected | — |
+| `NEKO-4035` | item definition modification rejected after startup collection | — |
+| `NEKO-4036` | item component type or codec value rejected with item, component and node context | — |
+| `NEKO-4038` | Probe predeclaration failed; the selected class is omitted from generated TypeScript | — |
+| `NEKO-4039` | Probe declaration task failed; some generated TypeScript declarations may be absent | — |
+| `NEKO-4040` | Activation claim publication rejected: unsupported registry | An internal error; please report it |
+| `NEKO-4041` | Villager trade replay failed after resource reload; committed snapshot is unavailable | — |
+| `NEKO-4042` | Dynamic registry rollback failed; the registry may retain partial writes | — |
+| `NEKO-4043` | Villager trade batch rejected: generated ID collision | Rejected before anything is written |
+| `NEKO-4044` | Villager trade checkpoint read/restore failed | — |
+| `NEKO-4045` | Unknown profession | The whole batch of trades is rejected |
+| `NEKO-4046` | Villager trade pool replacement failed | — |
+| `NEKO-4047` | TypeScript Bean alias exclusion registration rejected | — |
+| `NEKO-4048` | Probe TypeScript dependency closure incomplete | Required types are excluded, hidden or unavailable; see `@special/dependencies.json`. A successful generation does not mean a complete IDE check |
+| `NEKO-4050` | Dynamic item fire resistance value rejected before activation | — |
+| `NEKO-4051` | Manual declaration type reference rejected | — |
+| `NEKO-4052` | Registry type catalog rejected conflicting sources or symbols | — |
+| `NEKO-4053` | Bean method projection rejected | — |
+| `NEKO-4054` | Item component string conversion failed | — |
+| `NEKO-4055` | Authoring query or transport request rejected | The response code and JSON path give the exact reason |
+| `NEKO-4056` | Resource ID conversion rejected | Strict resource syntax or a real native ID is required; legacy `ID.of` parsing is unchanged |
+| `NEKO-4057` | API module publication or access rejected | Check the mod owner, exposure target, export name, public type, event allowlist and script type |
+| `NEKO-4060` | Script options rejected | Unknown fields, wrong types or out-of-range values reject the registration |
+| `NEKO-4061` | Post-effect builder rejected | The builder was used after its callback ended, or its settings are invalid; the declaration does not apply |
+| `NEKO-4062` | Render registration rejected | Invalid arguments, callback or metadata |
+| `NEKO-4063` | Script input declaration rejected | The input-shape provider cannot be created, returns an invalid shape, or needs a missing adapter target |
+| `NEKO-4064` | Script output declaration rejected | A method's declared TypeScript return type is blank |
+| `NEKO-4065` | Script output view rejected | The view must be an implemented public non-generic interface |
+| `NEKO-4066` | Probe declaration retained with incomplete public members | A missing optional public signature prevents reflecting the full method list. Other members stay; see `incompleteMembers` |
+| `NEKO-4090` | Mixin preparation/restart required or declaration/library rejected | First check `[mixinjs] enabled` in the engine config (off by default) and fully restart after changing it; also restart after a successful preparation. Otherwise check the cache, loader acceptance, target environment, method descriptor and options. See [MixinJS troubleshooting](mixinjs_us#wiki-mixinjs-troubleshooting) |
+| `NEKO-4091` | Mixin callback authority or bridge ownership rejected | Use a locally trusted candidate and callback file; another running instance cannot take over the bridge |
+| `NEKO-4092` | Native hook bypassed or callback decision discarded | Check the thread, synchronous return value, control object lifetime and type conversion |
 
 <a id="wiki-section-8"></a>
-## JSX UI runtime lifecycle
+## Recipes, loot tables and data
 
-| Code | Meaning |
-|---|---|
-| NEKO-7001 | UI operation rejected: the root's generation is superseded or closed (stale handle). |
-| NEKO-7002 | Illegal UI root lifecycle transition (candidate/active/closing/closed). |
-| NEKO-7003 | JSX host adapter created outside a managed CLIENT script context. |
-| NEKO-7004 | UI mutation attempted off the client owner thread without explicit queueing. |
-| NEKO-7005 | UI root release failed during generation teardown; teardown continued. |
-| NEKO-7006 | Deferred UI work dropped: its generation never committed or was superseded. |
-| NEKO-7007 | JSX UI phase failure (render/layout/event/host) recorded into the diagnostics chain, including host clipboard read/write failure. |
-| NEKO-7008 | The native host rejected a control appearance outside the controlled color/state-field grammar. |
-| NEKO-7011 | The native host rejected an invalid slider configuration (non-finite range/value, non-positive step or out-of-range value). |
-| NEKO-7012 | The native host rejected invalid dialog props (missing/blank id, non-string title or non-boolean close flags). Common component/layout validation may instead report the phase through `NEKO-7007`. |
-| NEKO-7013 | Workspace authoring rejects invalid configuration/IDs or controller mutation during root publication. Construction/controller calls can throw directly; a UI phase may also wrap the cause as `NEKO-7007`. |
-| NEKO-7014 | Managed-mount authoring rejected non-positive/unrepresentable GUI region bounds, a region-only operation on an owned Screen mount, or another root handle/layout root ID. Construction, binding or pre-publication validation can reject directly; identical-handle binding is idempotent. It is not a new HTTP/MCP wire error. |
-| NEKO-7015 | A bundled diagnostic UI session is unavailable, closed, or failed to load/render/dispatch. On supported NeoForge 26.x clients, an active failed dashboard requests the native fallback once; closing/shutdown and late updates do not reopen it. This is not a new public Script API or packet status. |
+| Code | English summary | Details |
+|---|---|---|
+| `NEKO-2301` | Loot table JSON replacement unavailable; keeping the previous table | — |
+| `NEKO-5001` | could not convert value to JSON | Chinese log text: 无法转换为 JSON |
+| `NEKO-5002` | JSON must be an object | Chinese log text: JSON 必须是对象 |
+| `NEKO-5003` | unknown recipe filter key | — |
+| `NEKO-5200` | selected recipe method threw a checked exception; no overload or schema fallback | — |
+| `NEKO-5201` | selected recipe method is inaccessible; invocation rejected | — |
+| `NEKO-5202` | native type adapter acceptance or conversion failed; original cause preserved, not an overload mismatch | — |
+| `NEKO-5210` | invalid advanced recipe definition or inconsistent field/alias/function metadata | Fix the definition so that field mappings are not ambiguous or conflicting |
+| `NEKO-5211` | known recipe profile is explicitly unsupported; no handler/raw fallback | Check the source and the reason; it does not fall back to a generic recipe |
+| `NEKO-5212` | multiple named arguments target the same canonical field | Use either the field name or an alias, not both |
+| `NEKO-5213` | required schema field is missing | Add the field using the model's constructor arguments |
+| `NEKO-5214` | no schema constructor accepts the supplied arguments | Pass arguments in the order and number the model declares |
+| `NEKO-5215` | recipe field encoder returned no JSON value | Check the plugin that provides the model |
+| `NEKO-5216` | declarative schema function received arguments | A declarative function takes no arguments |
+| `NEKO-5350` | host does not support native builder sessions | — |
+| `NEKO-5352` | host requires a native JSON builder | — |
+| `NEKO-5353` | host has no borrowed registry access | — |
 
 <a id="wiki-section-9"></a>
-## JSX UI inspector
+## JSX UI: appearance and resources
 
 | Code | Meaning |
 |---|---|
-| NEKO-8001 | A runtime layout snapshot does not match the inspector read contract (runtime/host version skew); the last good frame is kept. |
+| `NEKO-6001` | Bad UI color format. Supported: ARGB/RGB integers, `#RGB`/`#RRGGBB`/`#AARRGGBB` and CSS basic color names |
+| `NEKO-6002` | A UI appearance value is out of range or the wrong type (`opacity`, `fontSize`, `borderWidth`, `radius`, `fit`, `crop`) |
+| `NEKO-6003` | Bad UI resource id; it must be lowercase `namespace:path` without `..` |
+| `NEKO-6004` | No file found for this UI resource id |
+| `NEKO-6005` | Reading or uploading a UI resource failed, including a file over the size limit |
+| `NEKO-6006` | A UI texture or crop size is invalid or too large |
+| `NEKO-6007` | A PNG resource could not be decoded |
+| `NEKO-6008` | Automatic item resources skipped because an existing file is external or was modified |
+| `NEKO-6009` | Automatic item resource generation failed; a failure while publishing attempts a rollback |
+| `NEKO-6010` | The item resource ownership index cannot be read or validated; nothing is generated and the index is not replaced |
+| `NEKO-6011` | Directory pack client resource reload failed; check the cause and whether vanilla resources recovered |
+| `NEKO-6012` | Invalid item settings in UI (resource id, air item, count or tooltip); a failed update keeps the current screen |
 
 <a id="wiki-section-10"></a>
+## JSX UI: runtime
+
+| Code | Meaning |
+|---|---|
+| `NEKO-7001` | UI action rejected: the screen belongs to scripts that were replaced by a reload or closed (stale handle) |
+| `NEKO-7002` | Invalid lifecycle transition of a UI root |
+| `NEKO-7003` | A JSX host was created outside CLIENT scripts |
+| `NEKO-7004` | UI changed directly off the client thread without queueing |
+| `NEKO-7005` | Releasing a UI root failed during reload cleanup; cleanup continues |
+| `NEKO-7006` | Delayed UI work dropped: its scripts never took effect or were replaced |
+| `NEKO-7007` | JSX UI failed while rendering, laying out, handling events or in the host, including clipboard failures |
+| `NEKO-7008` | Invalid color or state fields in a control appearance |
+| `NEKO-7011` | Invalid slider: range or value not finite, step not positive, or value out of range |
+| `NEKO-7012` | Invalid dialog props: missing or blank id, non-string title or non-boolean close flags. May also be reported as `NEKO-7007` |
+| `NEKO-7013` | Invalid Workspace settings or IDs, or the controller was changed while publishing. May also be reported as `NEKO-7007` |
+| `NEKO-7014` | Invalid mount region bounds, a region-only call on a full-Screen mount, or another root handle/layout root ID |
+| `NEKO-7015` | A built-in diagnostic screen is unavailable, closed, or failed to load, draw or handle events. On NeoForge 26.x a failed panel requests the native fallback once |
+| `NEKO-8001` | The UI inspector read a layout snapshot in a mismatched format (version skew); the last good frame is kept |
+
+<a id="wiki-section-11"></a>
+## NekuJS addon
+
+The codes below come from the NekuJS addon. They appear only when it is installed and you use mods written for KubeJS (for example their recipe schemas). The message names the resource and JSON path that failed; fix that definition. A recipe that is recognized but cannot be supported is declared as `never` by Probe and rejected when called.
+
+| Code | English summary | Details |
+|---|---|---|
+| `NEKO-5190` | recipe schema source lacks an expected resource | — |
+| `NEKO-5191` | imported crushing schema profile differs from the explicitly supported resource shape | — |
+| `NEKO-5192` | recipe schema source parsing or validation failed | — |
+| `NEKO-5240` | Invalid schema value, shape, resource ID, field role or missing property | — |
+| `NEKO-5241` | Duplicate schema resource ID | — |
+| `NEKO-5242` | Missing or unsupported parent schema | — |
+| `NEKO-5243` | Schema parent cycle | — |
+| `NEKO-5244` | Invalid key ordering, duplicate key or incompatible requiredness | — |
+| `NEKO-5245` | Unknown schema key | — |
+| `NEKO-5246` | Unsupported component or missing semantic codec | — |
+| `NEKO-5247` | Invalid component constant or default-writing policy | — |
+| `NEKO-5248` | Duplicate constructor key or arity | — |
+| `NEKO-5249` | Ambiguous field alias or function/setter conflict | — |
+| `NEKO-5250` | Unsupported custom factory, processor, mapping or function behavior | — |
+| `NEKO-5251` | Abstract schema dependency is not callable | — |
+| `NEKO-5279` | Recipe schema resource read failed or root is not an object | — |
+| `NEKO-5306` | String component requires a string value | — |
+| `NEKO-5307` | Pattern map requires nonempty single-character non-space keys | — |
+| `NEKO-5308` | Crafting category input type is invalid | — |
+| `NEKO-5309` | Native shaped preparation failed | — |
+| `NEKO-5320` | duplicate programmatic schema | — |
+| `NEKO-5321` | duplicate recipe factory | — |
+| `NEKO-5322` | duplicate schema key | — |
+| `NEKO-5323` | required key follows optional key | — |
+| `NEKO-5324` | null default cannot always be written | — |
+| `NEKO-5325` | invalid list bounds | — |
+| `NEKO-5326` | programmatic list spreading is unsupported | — |
+| `NEKO-5327` | override references an undeclared key | — |
+| `NEKO-5328` | unknown schema key | — |
+| `NEKO-5329` | decoded list size is outside bounds | — |
+| `NEKO-5330` | recipe serializer is not registered | — |
+| `NEKO-5331` | legacy target is already attached | — |
+| `NEKO-5332` | native recipe field decode failed | — |
+| `NEKO-5333` | native recipe field encode failed | — |
+| `NEKO-5334` | key belongs to another schema | — |
+| `NEKO-5335` | legacy target has no native builder session | — |
+| `NEKO-5336` | original component rejected a value | — |
+| `NEKO-5337` | duplicate field alias | — |
+| `NEKO-5338` | duplicate field function | — |
+| `NEKO-5339` | factory returned an incompatible fluent target | — |
+| `NEKO-5340` | programmatic default encode failed | — |
+| `NEKO-5341` | unknown native component mapping | — |
+| `NEKO-5342` | programmatic component encode failed | — |
+| `NEKO-5343` | component requires an array | — |
+| `NEKO-5344` | recipe number is not an exact safe integer or is out of bounds | — |
+| `NEKO-5345` | component requires its original typed host value | — |
+| `NEKO-5346` | programmatic component decode failed | — |
+| `NEKO-5347` | forced programmatic constructor overrides are unsupported | — |
+| `NEKO-5360` | expected a recipe number | — |
+| `NEKO-5361` | expected a recipe boolean | — |
+| `NEKO-5362` | tag belongs to a different registry | — |
+| `NEKO-5363` | expected a tag identifier | — |
+| `NEKO-5364` | resource key belongs to a different registry | — |
+| `NEKO-5365` | expected a resource identifier | — |
+| `NEKO-5366` | wrapped list size is outside bounds | — |
+| `NEKO-5367` | structured conversion requires the caller active Graal context | — |
+
+NekuJS also uses `NEKO-4190`–`NEKO-4287` and `NEKO-5280`–`NEKO-5305`; those messages are self-explanatory English.
+
+<a id="wiki-section-12"></a>
+## Retired codes
+
+Old logs may still contain these codes. They are no longer emitted and will not be reused.
+
+| Code | Status |
+|---|---|
+| `NEKO-1007` | Old reload failure message, replaced by `NEKO-1008` |
+| `NEKO-1009`, `NEKO-1010` | Messages about closing an old runtime/context; no longer emitted |
+| `NEKO-1011`, `NEKO-1012` | Old client load logs; unused |
+| `NEKO-2001`, `NEKO-2002`, `NEKO-2003`, `NEKO-2005` | Old execution time/statement limits; the feature was removed |
+| `NEKO-3001`–`NEKO-3004` | Old script sync size limits; unused |
+| `NEKO-4018` | ItemStack persistent data is unavailable; no longer emitted |
+| `NEKO-4037` | An old limit on Fabric automatic item resources; lifted |
+
+<a id="wiki-section-13"></a>
 ## Messages without a code
 
-Routine progress messages carry an English summary but no code.
+Routine progress messages have an English summary but no code.
 
-| English summary | Chinese message |
+| English summary | Meaning |
 |---|---|
-| no scripts to load | 没有需要加载的脚本 |
-| registering event groups | 正在为注册事件组 |
-| reloading one script file | 正在重载脚本文件 |
-| reloading scripts | 正在重载脚本 |
-| running test scripts | 正在运行 TEST 脚本 |
-| script file reload finished | 脚本文件重载完毕 |
-| script reload finished | 脚本重载完毕 |
-| scripts discovered | 发现了脚本 |
-| startup file reload falls back to full reload | STARTUP 注册不可逆，退化为完整 STARTUP 重载 |
-| test scripts finished | TEST 脚本运行完毕 |
-| workspace entry point created | 已初始化环境入口 |
+| no scripts to load | No scripts of this type were found |
+| registering event groups | Event groups are being registered for a script type |
+| reloading one script file | A single-file reload started |
+| reloading scripts | A reload started |
+| running test scripts | `/nekojs test` started |
+| script file reload finished | A single-file reload finished |
+| script reload finished | A reload finished |
+| scripts discovered | Scripts were found; the count is in the message |
+| startup file reload falls back to full reload | Startup scripts cannot reload one file, so all startup scripts reload |
+| test scripts finished | `/nekojs test` finished |
+| workspace entry point created | A default example script was created in an empty script folder |
 
 <!-- wiki-nav -->
 

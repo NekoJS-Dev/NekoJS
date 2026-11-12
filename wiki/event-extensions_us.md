@@ -5,45 +5,19 @@
 <a id="wiki-section-1"></a>
 # Event extensions
 
-> This page covers two topics: (1) how plugins register **custom event groups** so scripts can use them like `ServerEvents`; (2) how users use `ScriptEvents` in **startup scripts** to declare new event groups. Bridging native events is a separate operation described below.
+This page covers how to add new script events, in two ways:
+
+- **Plugin authors** declare an event group in Java, so scripts listen to your events the same way they use `ServerEvents`.
+- **Script authors** declare an event group with `ScriptEvents` in a startup script, without Java, and fire it from scripts.
+
+For the overall design of the event system, see [Project architecture](project-architecture_us#wiki-event-system).
 
 <a id="wiki-section-2"></a>
-## Concepts recap
+## Plugin event groups: minimal example
 
-NekoJS's event system, described in [Project architecture: event system](project-architecture_us#wiki-section-10), consists of:
+These four steps create a server event, `MyEvents.playerGreet`.
 
-- **`EventGroup`**: a named collection of buses. Factory methods such as `group.server("name", EventClass)` declare an event.
-- **`EventBus` / `CancellableEventBus` / `DispatchEventBus`**: three bus forms. The dispatch form routes by key, for example an item/block id.
-- **`EventBusJS`**: a GraalJS-facing `ProxyExecutable` allowing scripts to call `EventGroup.eventName(cb)`.
-- **`EventBusForgeBridge`**: bridges NeoForge native events into NekoJS buses.
-- **`FabricEventBusBridge`**: connects Fabric callback registrars to `EventBusJS` through `bind` / `bindTransformed`; `bindCancellable` forwards script cancellation through the callback adapter. `bindTransformed` skips payload conversion when there are no listeners; `bind` and `bindCancellable` post directly. Use `bindDispatched`, `bindTransformedDispatched`, or `bindCancellableDispatched` when the callback supplies a dispatch key.
-
-**Cross-loader consistency:** keep the script contract aligned where capability permits: `EventGroup`, event name, payload meaning, Script Type, and cancellation/dispatch semantics. NeoForge binds native events on `IEventBus`; Fabric binds Fabric callbacks. The bus and payload contract can stay consistent, while the registration lambda adapts each real callback signature. Use a mixin or explicitly record unavailable capability where no equivalent callback exists; do not imply unsupported behavior.
-
-Java snippets using Minecraft identifiers on this page use 26.x names. On 1.21.1, replace `Identifier` and its import with `ResourceLocation`. The neutral event-group contract itself remains available across versions.
-
-The repository's detailed maintainer Java/JS examples and placement guide is `docs/maintenance/adding-events-adapters.md`.
-Built-in event groups live under `bindings/event/` and are declared as interfaces with `static final` fields, for example:
-
-```java
-public interface ServerEvents {
-    EventGroup GROUP = EventGroup.of("ServerEvents");
-
-    EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
-    EventBusJS<TagEventJS, Identifier> TAGS =
-        GROUP.server("tags", TagEventJS.class, TAG_REGISTRY_KEY);   // Dispatch bus
-}
-```
-
-This organization is a **convention**. `EventGroup` is an ordinary object; it can be a static field in a class, an enum member, or even a field in a plugin instance. Interface constants are implicitly `public static final` and initialize once when the class loads. That suits the pattern of calling `registry.register(GROUP)` in `registerEvents` and `XXX.post(...)` elsewhere.
-
-<a id="wiki-section-3"></a>
-## Register custom event groups in a plugin
-
-<a id="wiki-section-4"></a>
-### Step 1: define the event object class
-
-Your event object is the `event` received by script callbacks. **There are no requirements on the class structure**: an ordinary class, a record, or even an existing Minecraft class can be used directly. No base class or interface is required:
+**1. The event object.** This is the `event` a script callback receives. It can be a plain class or a record and doesn't need to extend anything:
 
 ```java
 package com.example.myaddon;
@@ -53,56 +27,36 @@ import net.minecraft.server.level.ServerPlayer;
 public class PlayerGreetEvent {
     private final ServerPlayer player;
     private final String greeting;
+
     public PlayerGreetEvent(ServerPlayer player, String greeting) {
-        this.player = player; this.greeting = greeting;
+        this.player = player;
+        this.greeting = greeting;
     }
+
     public ServerPlayer getPlayer() { return player; }
     public String getGreeting() { return greeting; }
 }
 ```
 
-Script-visible members are determined by reflection and `@Remap` / `@HideFromJS` (see [Annotations](annotations_us) for probe limitations). Convenience factories detect cancellation support through the platform predicate, while an explicitly constructed bus can override it (see below). The getters above expose read-only Bean properties `event.player` and `event.greeting`; they do not add setters.
+The two getters become the read-only properties `event.player` and `event.greeting`.
 
-> To add JSDoc to the event object, annotate its methods/parameters with `@Doc` / `@Param` / `@Return`, which probe includes in JSDoc, or use programmatic `registerTypeDocs` (`TypeDocsRegister.register(...)`; see [Plugin development](plugin-development_us)).
-
-<a id="wiki-section-5"></a>
-### Step 2: declare the event group
+**2. The event group.** Create the group with `EventGroup.of` and declare events with its factory methods:
 
 ```java
 package com.example.myaddon;
 
-import com.tkisor.nekojs.api.event.DispatchKey;
-import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventBusJS;
-import net.minecraft.resources.Identifier;
+import com.tkisor.nekojs.api.event.EventGroup;
 
 public interface MyEvents {
     EventGroup GROUP = EventGroup.of("MyEvents");
 
-    // Ordinary server event
     EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET =
         GROUP.server("playerGreet", PlayerGreetEvent.class);
-
-    // Dispatch event keyed by Identifier
-    EventBusJS<PlayerGreetEvent, Identifier> CUSTOM =
-        GROUP.server("custom", PlayerGreetEvent.class, DispatchKey.of(Identifier.class));
 }
 ```
 
-`EventGroup` factory methods:
-
-| Method | Bus type | Purpose |
-|---|---|---|
-| `GROUP.server(name, eventClass)` | `EventBus` | Always uses `EventBusJS.of(type)`; cancellation is detected from the event class (`EventBusJS.eventCancellability(type)`), not the factory variant or callback form |
-| `GROUP.server(name, eventClass, dispatchKey)` | `DispatchEventBus` | Dispatch by key |
-| `GROUP.client(...)` / `GROUP.startup(...)` | Same as above | Client/startup side |
-
-These three factory groups are conveniences for `GROUP.add(name, ScriptType.X, bus)`. `add` is public; use it directly when constructing your own bus, for example to force cancellation support as shown below.
-
-`add` enforces two rules: a duplicate event name within a group throws `IllegalArgumentException`; once bootstrap finishes, `EventGroup` is frozen with `freeze()`, and subsequent `add` calls throw `IllegalStateException`. **Duplicate group names are not errors**: `EventGroupRegistry` merges by name, so two plugins using the same group name contribute events to the same group. This is also the supported way to extend another group's events. Only duplicate event names cause an error.
-
-<a id="wiki-section-6"></a>
-### Step 3: register the event group in your plugin
+**3. Register it.** Register the group in your plugin's `registerEvents`:
 
 ```java
 @Override
@@ -111,142 +65,110 @@ public void registerEvents(EventGroupRegistry registry) {
 }
 ```
 
-**Client/server dispatch:** use `registerClientEvents(EventGroupRegistry)` for client-only event groups. The `.server(...)` / `.client(...)` declaration controls script access, not the logical side or thread of a native callback. For native events fired on both logical sides, filter the bridge before posting (NeoForge provides `bind(bus, predicate)`); adapt Fabric registrars to the matching side. This is not client/server network forwarding.
-
-**Publish the same source event through an API module**
-
-Module publication is opt-in and uses the existing event declaration; it does not create another native bridge, bus or listener owner:
+**4. Fire it.** Call `post` at the right moment, for example while your mod handles a vanilla event:
 
 ```java
-EventGroup GROUP = EventGroup.of("MyEvents");
-EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET = GROUP.server(
-        "playerGreet", PlayerGreetEvent.class,
-        publication -> publication.versioned().scriptTypes(ScriptType.SERVER));
-```
-
-Register `GROUP` through `registerEvents` as before. For owner id `myaddon`, SERVER scripts can import `MyEvents` from `nekojs/api/version/myaddon`. This explicit publication scope does not widen the source bus and does not remove its existing global form. Calling both forms subscribes twice; they are not independent native event sources.
-
-`publication.stable()` publishes a payload only if its public types satisfy stable-module validation; use `stable(View.class, converter)` for an explicit projected payload. Projected cancellable events are currently rejected: this publication API has no control mapping for their cancellation semantics. Publish such an event without a payload projection, subject to its normal type checks. The group-wide `GROUP.expose(...)` form is also available; stable group publication requires an explicit `events(...)` allowlist. Unknown event names, duplicated publication targets, invalid views or an unavailable source scope fail with `NEKO-4057`, rather than fabricating a portable event. See [Plugin development](plugin-development_us) for binding module registration.
-
-<a id="wiki-section-7"></a>
-### Step 4: dispatch the event
-
-Post your event at the appropriate point, for example when your mod receives a vanilla event:
-
-```java
-import com.tkisor.nekojs.api.event.EventBusJS;
-
-// Ordinary event
 MyEvents.PLAYER_GREET.post(new PlayerGreetEvent(player, "Hello"));
-
-// Dispatch event, with a key
-MyEvents.CUSTOM.post(new PlayerGreetEvent(player, "Hello"), someIdentifier);
 ```
 
-> `post(...)` returns a boolean indicating cancellation. **A non-cancellable bus always returns false**, even if a script returns true. `GROUP.server(name, eventClass)` uses `EventBusJS.of(type)`, whose `eventCancellability(type)` check on NeoForge asks whether the event class `implements ICancellableEvent` (`NeoForgeRuntimeBootstrap`). A POJO such as the `PlayerGreetEvent` above is therefore non-cancellable.
->
-> To make a POJO event cancellable, bypass the convenience factory and construct the bus yourself:
->
-> ```java
-> EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET =
->     MyEvents.GROUP.add("playerGreet", ScriptType.SERVER, EventBusJS.of(PlayerGreetEvent.class, true));
-> ```
->
-> Replace the original declaration with this form; adding `playerGreet` a second time would fail the duplicate-name check. Only then is `boolean cancelled = PLAYER_GREET.post(...)` meaningful.
-
-<a id="wiki-section-8"></a>
-### Script-side usage
-
-Once registered, your events work like built-in events:
+Scripts listen like this:
 
 ```javascript
+// server_scripts/greet.js
 MyEvents.playerGreet(event => {
   console.info(`${event.player.getName().getString()} was greeted: ${event.greeting}`)
 })
+```
 
+Keeping the group in interface constants is only a convention. `EventGroup` is a plain object, and a static field on a class works just as well. Interface fields are implicitly `public static final` and initialized once when the class loads, which is convenient.
+
+<a id="wiki-section-3"></a>
+## Declaring events
+
+<a id="wiki-section-4"></a>
+### Factory methods
+
+| Method | Script side | Description |
+|---|---|---|
+| `GROUP.server(name, eventClass)` | Server | A normal event |
+| `GROUP.client(name, eventClass)` | Client | A normal event |
+| `GROUP.startup(name, eventClass)` | Startup | A normal event |
+| `GROUP.server(name, eventClass, dispatchKey)` | Server | Dispatched by key; `client`/`startup` work the same way |
+| `GROUP.add(name, scriptType, bus)` | Your choice | Pass a bus you built yourself, for example to force it cancellable |
+
+The factory methods are shorthand for `add`, which checks two things:
+
+- A duplicate event name within the group throws `IllegalArgumentException`.
+- Event groups are frozen after startup; calling `add` afterwards throws `IllegalStateException`.
+
+**A duplicate group name is not an error.** `EventGroupRegistry` merges groups by name, so if two plugins use the same group name, their events end up in one group. This is the proper way to add events to someone else's group. Only a duplicate event name fails.
+
+<a id="wiki-section-5"></a>
+### Dispatching by key
+
+A dispatched event lets a script listen for one key only, such as one item or one ID:
+
+```java
+EventBusJS<PlayerGreetEvent, Identifier> CUSTOM =
+    GROUP.server("custom", PlayerGreetEvent.class, DispatchKey.of(Identifier.class));
+
+// Pass the key when firing
+MyEvents.CUSTOM.post(new PlayerGreetEvent(player, "Hello"), someIdentifier);
+```
+
+```javascript
 MyEvents.custom('mymod:some_key', event => {
-  // Dispatch event: the first argument is the key
+  // Runs only when the key is mymod:some_key
 })
 ```
+
+`DispatchKey` has three factories: `of(keyType)`, `of(keyType, event -> key)` (computes the key from the event object) and `string()`. The key a script passes is converted to `keyType`, so type adapters apply here too.
+
+Once you pick a key type, avoid changing it. Changing it breaks the first argument of every existing script.
+
+The Java snippets on this page use 26.x class names. On 1.21.1, replace `Identifier` with `ResourceLocation`.
+
+<a id="wiki-section-6"></a>
+### Cancellable events
+
+`post` returns whether the event was cancelled. Only cancellable buses can return `true`. A non-cancellable bus always returns `false`, even if a script does `return true`.
+
+The factory methods decide cancellability from the event class:
+
+- **NeoForge**: the bus is cancellable only if the event class implements `ICancellableEvent`.
+- **Fabric**: buses created by the factory methods are never cancellable.
+
+So `PlayerGreetEvent` above is not cancellable. To make your own event cancellable, build the bus with `add` and **replace** the original declaration (don't add a second event with the same name):
+
+```java
+EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET =
+    MyEvents.GROUP.add("playerGreet", ScriptType.SERVER, EventBusJS.of(PlayerGreetEvent.class, true));
+
+boolean cancelled = PLAYER_GREET.post(new PlayerGreetEvent(player, "Hello"));
+```
+
+For a cancellable event with a key, use `EventBusJS.of(eventClass, true, dispatchKey)`.
+
+<a id="wiki-section-7"></a>
+### Client events and logical sides
+
+Register client-only event groups with `registerClientEvents(EventGroupRegistry)`. Dedicated servers don't load them.
+
+`.server(...)` and `.client(...)` only decide **which scripts can access** the event. They don't filter logical sides or switch threads for you. In singleplayer, many native events fire once on the client and once on the server. Before posting to a server event, filter out the client one; otherwise the server script is entered from the render thread and GraalJS fails with a multi-threaded access error. NeoForge's `bind(bus, predicate)` does exactly this; see below.
+
+Script access rules:
+
+- Server events can be used from server, startup and test scripts. Client events can be used from client and startup scripts.
+- Using an event where it isn't allowed fails with an error like `Event 'X.y' not available in CLIENT`.
+- An event name that doesn't exist fails with `No such event bus: X.y`.
+
+<a id="wiki-section-8"></a>
+## Bridging native events
 
 <a id="wiki-section-9"></a>
-## ScriptEvents: define events from scripts
+### NeoForge: EventBusForgeBridge
 
-NekoJS also provides a mechanism **for script authors**: declare a custom event group in `startup_scripts/`, then listen to it and trigger it from `server_scripts` / `client_scripts` just like a built-in event.
-The payload is the value supplied by the caller; NekoJS does not wrap it. These script-only examples are an alternative to the plugin-defined `MyEvents` above: choose another group name if that plugin group is registered.
-
-<a id="wiki-section-10"></a>
-### Declaration
-
-```javascript
-// startup_scripts/register_events.js
-ScriptEvents.server(event => event.register(
-  'MyEvents',    // Event group name, which becomes a global binding name
-  'bossKilled'   // Event name
-))
-
-ScriptEvents.client(event => event.register('MyClientEvents', 'hudRefresh'))
-```
-
-<a id="wiki-section-11"></a>
-### Object form
-
-```javascript
-ScriptEvents.server(event => event.register({ group: 'MyEvents', name: 'bossKilled' }))
-```
-
-<a id="wiki-section-12"></a>
-### Listen and trigger
-
-```javascript
-// server_scripts/use_custom.js
-MyEvents.bossKilled(payload => {
-  console.info(`Killed ${payload.boss}; dropped ${payload.loot}`)
-})
-
-// Trigger from any server script
-MyEvents.bossKilled.post({ boss: 'ender_dragon', loot: 'dragon_egg' })
-```
-
-```javascript
-// client_scripts/use_custom_client.js
-MyClientEvents.hudRefresh(payload => console.info(payload.reason))
-MyClientEvents.hudRefresh.post({ reason: 'manual' })
-```
-
-<a id="wiki-section-13"></a>
-### Rules
-
-Three rules actually throw exceptions (`ScriptEventsJS` / `ScriptEventRegistry`):
-
-- `group` and `name` must match `[A-Za-z_$][A-Za-z0-9_$]*`, otherwise `register` throws `IllegalArgumentException`.
-- A group name must not collide with a built-in event group or a built-in global binding under **any** ScriptType. A collision throws an exception containing `conflicts with built-in ...`.
-- Each `(ScriptType, group, name)` can be registered only once, **regardless of the source script**. An existing key throws; the same source does not permit replacement. Commands do not currently reload STARTUP, so changing custom event definitions requires a game restart.
-
-The other rules describe behavior:
-
-- Events declared with `ScriptEvents.server(...)` are available in `server_scripts`; those declared with `.client(...)` are available in `client_scripts`.
-- Listen with `Group.name(callback)` and trigger with `Group.name.post(payload)`; payload can be any JS value.
-- **Probe coverage**: dynamically declared groups/events enter the event catalog and probe generation (`.d.ts` / `.pyi`).
-- Changing startup definitions requires a restart; **server/client reload** updates listeners without declaring definitions again.
-- **Platform support**: available consistently on NeoForge (26.x / 1.21.1) and Fabric.
-
-<a id="wiki-section-14"></a>
-### Migration: the old native-event-class bridge form
-
-The old third parameter was a NeoForge event class, either its FQN or class object, with additional `priority` / `receiveCancelled` options.
-That model cannot be shared across loaders: Fabric events are callback interfaces, not event classes that can be registered by name. It has been removed:
-
-| Old form | Current form |
-| --- | --- |
-| `event.register('G', 'n', 'net.neoforged...Event$Post')` | `NativeEvents.onEvent('net.neoforged...Event$Post', e => {})` (NeoForge surface) |
-| `event.register({ group, name, event, priority, receiveCancelled })` | `NativeEvents.onEvent(priority, receiveCancelled, eventClass, handler)` (NeoForge surface) |
-| Named event groups across loaders | `event.register('G', 'n')`, then call `G.n.post(payload)` yourself at the appropriate point |
-
-<a id="wiki-section-15"></a>
-## EventBusForgeBridge
-
-Use `EventBusForgeBridge` when your group needs to bridge **native platform events** (NeoForge `IEventBus`):
+`EventBusForgeBridge` connects NeoForge `IEventBus` events to a NekoJS bus. Once bound, the bridge posts for you; you don't fire the event yourself:
 
 ```java
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
@@ -260,25 +182,124 @@ EventBusForgeBridge.create(NeoForge.EVENT_BUS)
         PlayerEvent.PlayerLoggedInEvent.class);
 ```
 
-`bind(...)` requires an event class extending NeoForge `Event`. The ordinary `PlayerGreetEvent` above instead uses `bindTransformed` to convert a real native login event, as shown here, or is posted by your own code. When the neutral bus is cancellable, the bridge propagates cancellation to native events implementing `ICancellableEvent`. See built-in groups, such as `FORGE_BRIDGE` at the end of `ServerEvents.java`.
+| Method | Use |
+|---|---|
+| `bind(bus)` / `bind(bus, priority, receiveCancelled)` | The event object is itself a NeoForge `Event`; post it directly |
+| `bind(bus, filter)` / `bind(bus, filter, priority, receiveCancelled)` | Post only events that pass `filter`; usually used to filter logical sides |
+| `bindTransformed(bus, transformer, eventClass)` | Convert the native event into your event object first, then post |
+| `bindCancellable(bus, cancelAction)` | The native event has no `ICancellableEvent` but its own way to "cancel" (such as setting damage to 0) |
 
-<a id="wiki-section-16"></a>
-## Design considerations
+When the bus is cancellable and the native event implements `ICancellableEvent`, a script cancel is written back to the native event automatically. `bindCancellable` requires a cancellable bus and fails at bind time otherwise.
 
-The following items distinguish recommendations from mechanisms:
+For how built-in groups do this, see `FORGE_BRIDGE` at the end of `ServerEvents.java`.
 
-1. **Keep event objects simple** (recommendation): POJOs and records produce the clearest reflected script interface. Complex objects also work, but expose a correspondingly more complex member set.
-2. **Keep dispatch keys stable** (recommendation): changing a dispatch key type (`Identifier` / `String` / `Class`) breaks the first argument of existing scripts. This is an API stability commitment you choose to make.
-3. **Cancellation comes from the event class** (mechanism), not from choosing a factory method. See the `post` discussion above.
-4. **Cross-side access throws** (mechanism): accessing an event declared with `.server(...)` from `client_scripts` makes `EventGroupJS.getMember` throw `Event 'X.y' not available in CLIENT`; an unknown event name throws `No such event bus`. Note that ScriptType predicates overlap: SERVER events are also available in STARTUP/TEST, and CLIENT events are also available in STARTUP.
-5. **Short-circuit when there are no listeners** (recommendation, but important on hot paths): expensive emitters such as probe should check `EventBusJS.hasListeners()` first and skip constructing the event object when no listeners exist.
+<a id="wiki-section-10"></a>
+### Fabric: FabricEventBusBridge
 
-<a id="wiki-section-17"></a>
+Fabric events are callback interfaces, so there is no event class to attach by name. `FabricEventBusBridge` hands the payload to a NekoJS bus while you register the callback:
+
+```java
+FabricEventBusBridge.create().bind(
+    CommandEvents.REGISTER,
+    listener -> CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+        listener.accept(new CommandRegistryEventJS(dispatcher, registryAccess))));
+```
+
+| Method | Use |
+|---|---|
+| `bind(bus, register)` | The callback payload is already the script event object |
+| `bindTransformed(bus, register, transform)` | Convert, then post; skips the conversion when no script is listening |
+| `bindCancellable(bus, register)` | Return the script's cancel result to the Fabric callback |
+| `bindDispatched` / `bindTransformedDispatched` / `bindCancellableDispatched` | Dispatched-by-key versions of the three above |
+
+Keep the event group, event name, payload and cancel rules the same on both loaders where you can. The real callback signatures differ, so the registration code is written separately. If Fabric has no matching API, implement it with a Mixin or state clearly that the event is unavailable on Fabric; don't pretend it works.
+
+<a id="wiki-section-11"></a>
+## Publishing to API modules
+
+Event groups are provided as global names by default. You can also publish the same event in the `nekojs/api/version/<modid>` or `nekojs/api/stable/<modid>` module, so scripts can `import` it (see [Module system](module-system_us#wiki-api-modules)):
+
+```java
+EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET = GROUP.server(
+        "playerGreet", PlayerGreetEvent.class,
+        publication -> publication.versioned().scriptTypes(ScriptType.SERVER));
+```
+
+Still register `GROUP` with `registerEvents`. If your mod ID is `myaddon`, server scripts can import `MyEvents` from `nekojs/api/version/myaddon`.
+
+- Publishing reuses the original event; there is no extra bus and no extra native listener. The global form keeps working. A script that subscribes through both forms registers two listeners.
+- `publication.stable()` only accepts payloads that pass the stable public-type check. Use `stable(View.class, converter)` to convert, but this conversion is not allowed for cancellable events.
+- You can also call `GROUP.expose(...)` for a whole group. A stable group must list the events to publish with `events(...)`.
+- Unknown event names, duplicate publications and invalid views fail with `NEKO-4057`.
+
+<a id="wiki-section-12"></a>
+## ScriptEvents: defining events in scripts
+
+Script authors can declare their own event groups without Java. Declare them in a startup script, then listen to and fire them from server or client scripts:
+
+```javascript
+// startup_scripts/register_events.js
+ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'))
+ScriptEvents.client(event => event.register('MyClientEvents', 'hudRefresh'))
+
+// The object form also works
+// ScriptEvents.server(event => event.register({ group: 'MyEvents', name: 'bossKilled' }))
+```
+
+```javascript
+// server_scripts/boss.js
+MyEvents.bossKilled(payload => {
+  console.info(`Killed ${payload.boss}, dropped ${payload.loot}`)
+})
+
+// Fire it from any server script
+MyEvents.bossKilled.post({ boss: 'ender_dragon', loot: 'dragon_egg' })
+```
+
+```javascript
+// client_scripts/hud.js
+MyClientEvents.hudRefresh(payload => console.info(payload.reason))
+MyClientEvents.hudRefresh.post({ reason: 'manual' })
+```
+
+- Events declared with `ScriptEvents.server` are used in server scripts; those declared with `ScriptEvents.client` in client scripts.
+- The value passed to `post` goes to listeners unchanged and can be any JS value. These events can't be cancelled, and `post` returns nothing.
+- Declarations are part of startup scripts, so changing them needs a game restart. `/nekojs reload` only updates listeners.
+- Declared events show up in the types generated by `/nekojs probe`.
+- Works on both NeoForge and Fabric.
+
+These cases fail with an error:
+
+- The group or event name is not a valid JS identifier (it must match `[A-Za-z_$][A-Za-z0-9_$]*`).
+- The group name matches a built-in event group or a built-in binding in any script type: `conflicts with built-in ...`.
+- The same group and event name was already declared for that script type: `Script event already registered`.
+
+If a plugin already registers an event group called `MyEvents`, scripts can't use that group name.
+
+<a id="wiki-section-13"></a>
+### Migrating from the old form
+
+The old `register` accepted a NeoForge event class as a third argument to attach a native event directly. That can't work on Fabric, so it was removed:
+
+| Old form | Current form |
+|---|---|
+| `event.register('G', 'n', 'net.neoforged...Event$Post')` | `NativeEvents.onEvent('net.neoforged...Event$Post', e => {})` (NeoForge only) |
+| `event.register({ group, name, event, priority, receiveCancelled })` | `NativeEvents.onEvent(priority, receiveCancelled, eventClass, handler)` (NeoForge only) |
+| A named event group that works on every loader | `event.register('G', 'n')`, then call `G.n.post(payload)` yourself at the right moment |
+
+<a id="wiki-section-14"></a>
+## Design tips
+
+- **Keep event objects simple.** Plain classes and records give the cleanest script members. Adjust members with `@Remap` and `@HideFromJS`, and add probe docs with `@Doc`; see [Annotations](annotations_us).
+- **Check for listeners when the payload is expensive.** On hot paths, call `EventBusJS.hasListeners()` first and skip building the event object when no script is listening.
+- **Listener exceptions don't reach your code.** `post` catches and logs exceptions thrown by listeners, then returns `false`.
+
+<a id="wiki-section-15"></a>
 ## Next steps
 
-- [Plugin development](plugin-development_us): the `registerEvents` hook.
-- [Annotations](annotations_us): control the event object's interface with `@Remap` / `@HideFromJS` / `@PlatformAvailability`.
-- [Event reference](event-reference_us): built-in event groups.
+- [Plugin development](plugin-development_us): `registerEvents` and the other plugin hooks.
+- [Annotations](annotations_us): control which members an event object shows to scripts.
+- [Event reference](event-reference_us): the list of built-in event groups.
 
 <!-- wiki-nav -->
 

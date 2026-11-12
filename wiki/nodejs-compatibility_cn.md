@@ -5,101 +5,105 @@
 <a id="wiki-section-1"></a>
 # Node.js 兼容
 
-NekoJS 内置一组 Node.js 核心模块 shim，让你能 `require`/`import` 常用的 Node API。**这是 shim，不是完整 Node.js 运行时**。
+NekoJS 自带一部分常用的 Node.js 模块，例如 `fs`、`path`、`buffer`。写法和在 Node.js 里一样，用 `import` 或 `require` 引入即可。
+
+但 NekoJS 不是 Node.js。只有下表里的模块可用，有些模块也只实现了常用部分。
 
 <a id="wiki-section-2"></a>
 ## 可用模块
 
-| 模块 | 说明 |
+| 模块 | 用途 |
 |---|---|
-| `node:buffer` / `buffer` | `Buffer`（通过 `__nekoNodeBuffer` 包装） |
-| `node:fs` / `fs` | 同步 + 回调 + promises API |
-| `node:path` / `path` | 路径处理 |
-| `node:util` / `util` | 工具函数 |
-| `node:assert` / `assert` | 断言（`node:assert/strict` 也可） |
-| `node:test` / `test` | 测试运行器（`import test from 'node:test'`） |
-| `node:timers` / `timers` | `setTimeout`/`setInterval` + `node:timers/promises` |
-| `node:process` / `process` | 进程信息 |
-| `node:events` / `events` | `EventEmitter` |
-| `node:os` / `os` | 操作系统信息 |
-| `node:module` / `module` | 模块系统辅助 |
-| `node:crypto` / `crypto` | 常用哈希、随机数和基础加密工具（以当前 shim 实际导出为准） |
+| `fs`、`fs/promises` | 读写文件，有同步、回调和 Promise 三种写法 |
+| `path` | 拼接和拆分路径 |
+| `buffer` | 二进制数据 `Buffer` |
+| `timers`、`timers/promises` | `setTimeout`、`setInterval`、`setImmediate` |
+| `events` | `EventEmitter` |
+| `util` | `format`、`inspect`、`promisify` 等工具函数 |
+| `assert`、`assert/strict` | 断言 |
+| `test` | 测试框架，只能在 `test_scripts` 里用 |
+| `crypto` | `randomUUID`、`randomBytes`、`createHash`、`createHmac`、`timingSafeEqual` |
+| `os` | 操作系统信息 |
+| `process` | 进程信息，例如 `process.env`、`process.cwd()` |
+| `module` | `createRequire`、`builtinModules`、`isBuiltin` |
 
-带 `node:` 前缀和不带前缀都能用（裸名也行）。
+带不带 `node:` 前缀都可以：`import fs from 'node:fs'` 和 `import fs from 'fs'` 是一样的。
 
-`process.versions.node` 是 shim 提供的元数据，不表示当前运行的是 Node.js，也不能据此认定面向该 Node 版本的 npm 包兼容。
-
-`process.exit()` 只记录请求的退出码并告警，不会停止游戏或脚本。`process.nextTick()` 使用 Promise 微任务近似，不保证与其他微任务之间完全相同的 Node 调度顺序。两者都不是进程控制或中断循环的 API。
+`Buffer`、`process`、`setTimeout` 等定时器函数，以及 `queueMicrotask`、`atob`、`btoa`、`performance.now()` 都是全局可用的，不需要 `import`。
 
 <a id="wiki-section-3"></a>
-## 常用 API 速查
+## 常用模块示例
 
 <a id="wiki-section-4"></a>
-### `node:fs`
+### node:fs
 
 ```javascript
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 
-// 同步
+// 同步写法
 fs.mkdirSync('nekojs/data', { recursive: true })
-fs.writeFileSync('nekojs/data/x.txt', 'hello')
-console.info(fs.readFileSync('nekojs/data/x.txt', 'utf8'))   // 'hello'
-fs.existsSync('nekojs/data/x.txt')                            // true
-fs.readdirSync('nekojs/data')                                 // ['x.txt']
-fs.statSync('nekojs/data/x.txt').isFile()                     // true
-fs.copyFileSync('nekojs/data/x.txt', 'nekojs/data/x-copy.txt')
-fs.renameSync('nekojs/data/x-copy.txt', 'nekojs/data/x-moved.txt')
-fs.rmSync('nekojs/data/x-moved.txt')
+fs.writeFileSync('nekojs/data/note.txt', 'hello')
+console.info(fs.readFileSync('nekojs/data/note.txt', 'utf8')) // hello
+console.info(fs.existsSync('nekojs/data/note.txt'))           // true
+console.info(fs.readdirSync('nekojs/data'))                   // [ 'note.txt' ]
 
-// promises
-await fsp.appendFile('nekojs/data/x.txt', ':more')
-const files = await fsp.readdir('nekojs/data')
+// Promise 写法
+await fsp.appendFile('nekojs/data/note.txt', ' world')
 ```
 
-回调形式（`fs.readFile(path, cb)`）也支持。
+还有 `statSync`、`copyFileSync`、`renameSync`、`rmSync`、`unlinkSync` 等常用函数。回调写法 `fs.readFile(path, callback)` 也支持。
 
-`fs` 的相对路径最初以**游戏目录**为基准，不是以导入它的脚本目录为基准。`process.chdir()` 可在同一沙盒边界内改变该 Context 的文件系统工作目录；相对 `import`/`require` 仍从导入模块的位置解析。示例的所有写入目标均位于 `nekojs/` 下，符合默认写入策略。
+相对路径从**游戏目录**算起，不是从脚本所在的目录算起。所以上面写的是 `nekojs/data/...`。
+
+> 只是想存一点 JSON 数据的话，用 `JsonIO` 更简单，见 [数据与状态](data-and-state_cn)。
 
 <a id="wiki-section-5"></a>
-### `node:path`
+### node:path
 
 ```javascript
 import path from 'node:path'
-path.join('a', 'b', 'c.txt')      // 'a/b/c.txt'
-path.resolve('a', 'b')            // 绝对路径
-path.extname('a.txt')             // '.txt'
-path.basename('/x/y/a.txt')       // 'a.txt'
+
+path.join('a', 'b', 'c.txt')  // 'a/b/c.txt'
+path.extname('a.txt')         // '.txt'
+path.basename('/x/y/a.txt')   // 'a.txt'
+path.resolve('a', 'b')        // 转成绝对路径
 ```
 
 <a id="wiki-section-6"></a>
-### `node:timers`
+### 定时器
 
 ```javascript
 import { setTimeout as delay } from 'node:timers/promises'
 
-// 全局 setTimeout/setInterval 也可用（无需 import）
-setTimeout(() => console.info('1秒后'), 1000)
+// 全局函数，直接用
+const id = setTimeout(() => console.info('1 秒后'), 1000)
+clearTimeout(id)
 
-// promises 形式
+// Promise 写法
 await delay(1000)
 console.info('等了 1 秒')
 ```
 
-> 全局 `setTimeout`/`setInterval`/`clearTimeout`/`clearInterval` 在脚本顶层即可用（已 patch 到 `globalThis`）。
+和 Node.js 的区别：
 
-定时器句柄是数字 ID，不是 Node.js 的 `Timeout` 对象；`.ref()` / `.unref()` 等方法不属于此 shim。使用对应的 `clearTimeout` / `clearInterval` / `clearImmediate` 清理。计时器运行时仍限制最多 1024 个注册任务、4096 个就绪队列回调及每次冲刷最多 256 个回调。这些是调度/资源边界，不是语句预算，也不能抢占已经运行的回调。
-
-上面的正延时示例适用于 SERVER/CLIENT/TEST。STARTUP 拒绝所有 interval 与正延时 timeout，允许零延时或 immediate 回调。调度器只把就绪任务入队：回调在脚本环境归属方冲刷队列时执行（包括等待模块求值期间、生命周期或 tick 分发，或 TEST 流程），不在调度器线程运行，也不保证精确的墙钟触发时刻。失败候选与被替换的代会取消各自的定时器，不应把旧回调当作持久状态。 定时器延时只是调度回调，不是执行截止时间，也不会中断同步循环。
+- 回调在游戏的 tick 里执行，时间不是精确到毫秒的。
+- `setTimeout` 返回一个数字 ID，没有 `.ref()`、`.unref()` 方法。用 `clearTimeout(id)` 取消。
+- **启动脚本里不能用 `setInterval`，也不能用延时大于 0 的 `setTimeout`**，会直接报错。延时为 0 的 `setTimeout` 和 `setImmediate` 可以用。
+- 同一时间最多挂着 1024 个定时器。用完记得清掉。
+- 重载脚本时，旧脚本的定时器会被取消。
 
 <a id="wiki-section-7"></a>
-### `node:test` + `node:assert`
+### node:test 与 node:assert
+
+在 `nekojs/test_scripts/` 里写测试：
 
 ```javascript
+// test_scripts/math_test.js
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-test('简单的加法', () => {
+test('加法', () => {
   assert.strictEqual(1 + 1, 2)
 })
 
@@ -109,92 +113,68 @@ test('异步测试', async () => {
 })
 ```
 
-在 `test_scripts/` 里写，用 `/nekojs test` 运行。详见 [脚本基础 - TEST 脚本](script-basics_cn)。
+执行 `/nekojs test` 运行，结果写在 `logs/nekojs/test.log`。`test.skip`、`test.only`、`test.todo`、`describe` 以及 `before` / `after` / `beforeEach` / `afterEach` 也都可以用。
+
+`node:test` 只能在测试脚本里用，在其他目录里调用会报 `node:test is only available in test_scripts. Use /nekojs test to run these files.`。`node:assert` 在哪里都能用。
 
 <a id="wiki-section-8"></a>
-### `node:buffer`
+### node:buffer
 
 ```javascript
-import { Buffer } from 'node:buffer'
 const buf = Buffer.from('hello', 'utf8')
 console.info(buf.length)          // 5
-console.info(buf.toString('hex')) // '68656c6c6f'
+console.info(buf.toString('hex')) // 68656c6c6f
 ```
 
+<a id="wiki-fs-access"></a>
 <a id="wiki-section-9"></a>
-## 访问范围限制
+## 文件访问范围
 
-| 操作 | 默认边界 |
+为了安全，脚本能访问的文件有限制：
+
+| 操作 | 允许的范围 |
 |---|---|
-| 读取 | 游戏目录内，并检查规范路径与符号链接逃逸 |
-| 新建、写入、删除、改名目标 | 仅 `nekojs/`；`allowFsWriteOutsideNekojs` 默认为 `false` |
-| 开启 `allowFsWriteOutsideNekojs=true` | 写入范围可扩大到游戏目录，但不能越出游戏目录 |
-| 受保护配置 | 即使开启该选项，`nekojs/config/` 与旧 `config/nekojs-engine.toml` 仍不可写 |
+| 读取 | 游戏目录里的任何文件 |
+| 新建、写入、删除、改名 | 只有 `nekojs/` 里的文件 |
+| 写 `nekojs/config/` | 不允许 |
 | 创建符号链接 | 不允许 |
 
-该选项位于 `nekojs/config/engine.toml`。文件系统检查不能保证任意 Java 宿主调用或不可信脚本安全。普通执行已没有求值超时、语句预算或失控 watchdog：`scriptEvaluationTimeoutSeconds`、`scriptStatementLimit`、`scriptRunawayTimeoutSeconds` 已移除，没有换成另一套默认限制。无限循环可能阻塞所属线程/进程。HTTP/authoring 请求等待上限与生命周期取消/关闭仍是独立机制；请求超时不能证明脚本已停止。 完整引擎默认值与迁移规则见[配置](configuration_cn)。
+超出范围的操作会直接报错：
 
 ```javascript
 import fs from 'node:fs'
-fs.writeFileSync('nekojs/data/x.txt', 'ok')      // 允许：位于 nekojs/ 下
-fs.writeFileSync('/etc/passwd', 'hacked')         // 拒绝：超出沙盒范围
+fs.writeFileSync('nekojs/data/x.txt', 'ok')  // 可以：在 nekojs/ 里
+fs.writeFileSync('options.txt', 'oops')      // 报错：在 nekojs/ 外面
 ```
+
+如果确实需要写 `nekojs/` 以外的文件，在 `nekojs/config/engine.toml` 里设置 `allowFsWriteOutsideNekojs = true`，然后重启游戏。开了以后，脚本可以写游戏目录里的任何文件，但游戏目录以外和 `nekojs/config/` 仍然不能写。见 [配置参考](configuration_cn)。
 
 <a id="wiki-section-10"></a>
-## npm 依赖
+## npm 包
 
-把**纯 JS** 的 npm 包放进 `nekojs/node_modules/`：
+纯 JavaScript 的 npm 包可以放进 `nekojs/node_modules/` 使用。具体做法和限制见 [模块系统](module-system_cn)。
 
-```javascript
-// nekojs/node_modules/greeting/index.cjs
-module.exports = name => `Hello, ${name}!`
-```
+简单说：
 
-```javascript
-// server_scripts/use_greeting.cjs
-const greet = require('greeting/index.cjs')
-console.info(greet('NekoJS')) // Hello, NekoJS!
-```
+- 不读 `package.json` 的 `main` 和 `exports`，入口不是 `index.js` 的包要写完整路径。
+- 带原生代码的包（例如 `sharp`、`better-sqlite3`）不能用。
+- 用到上面列表以外 Node API 的包跑不起来。
 
 <a id="wiki-section-11"></a>
-### npm 依赖限制
+## 和 Node.js 的其他区别
 
-纯 JavaScript 只是必要条件，不代表包一定兼容。NekoJS 解析器检查显式文件、扩展名候选与目录 `index` 文件，不实现 Node 的 package.json `main` 或 `exports` 解析；必要时指定兼容的明确入口路径。同步 `require()` 会拒绝尚未完成求值且含顶层 await 或异步静态依赖的 ESM，应改用 `import()`。
-
-| 限制 | 说明 |
-|---|---|
-| 原生 bindings | 不支持含 C/C++ 编译产物的包（`node-sass`、`sharp`、`better-sqlite3`、`canvas` 等） |
-| Node 运行时范围 | NekoJS 不是完整 Node 运行时；本表列出的核心模块可用，未实现的 API 不可用 |
-| 文件沙盒 | 依赖若访问游戏目录外的文件会被拒绝 |
-| 可信代码 | 脚本及其依赖应视为可信代码，尤其是在多人服务器中 |
+- **`process.exit()` 不会退出游戏**，只会在日志里打一条警告，脚本继续运行。
+- `process.versions.node` 是一个固定的版本号，只为了让某些包能识别环境，不代表真的在运行 Node.js。
+- `process.chdir()` 会改变 `fs` 相对路径的起点，但不影响 `import` / `require` 的相对路径。
+- `process.nextTick()` 的执行顺序和 Node.js 不完全一样。不要依赖它和 Promise 之间的先后顺序。
+- 没有 `http`、`net`、`child_process`、`worker_threads` 等模块。
 
 <a id="wiki-section-12"></a>
-## 实战：测试脚本示例
+## 接下来
 
-```javascript
-// test_scripts/node_fs_test.js
-import test from 'node:test'
-import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import fsp from 'node:fs/promises'
-
-test('fs 同步与 promises 都能用', async () => {
-  fs.writeFileSync('nekojs/data/test.txt', 'hello')
-  assert.strictEqual(fs.readFileSync('nekojs/data/test.txt', 'utf8'), 'hello')
-
-  await fsp.appendFile('nekojs/data/test.txt', ':promise')
-  assert.strictEqual(fs.readFileSync('nekojs/data/test.txt', 'utf8'), 'hello:promise')
-})
-```
-
-用 `/nekojs test` 运行。
-
-<a id="wiki-section-13"></a>
-## 下一步
-
-- [模块系统](module-system_cn) —— `java:` 导入、ESM/CJS 互操作。
-- [命令](commands_cn) —— `/nekojs test` 等。
-- [常见问题](faq_cn)。
+- [模块系统](module-system_cn)：多文件、npm 包、`java:` 导入。
+- [数据与状态](data-and-state_cn)：保存数据的更简单方式。
+- [命令](commands_cn)：`/nekojs test` 等命令。
 
 <!-- wiki-nav -->
 

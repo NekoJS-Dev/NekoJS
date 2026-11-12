@@ -5,196 +5,176 @@
 <a id="wiki-section-1"></a>
 # Node.js compatibility
 
-NekoJS includes a set of Node.js core module shims, so you can `require`/`import` common Node APIs. **These are shims, not a full Node.js runtime**.
+NekoJS ships a set of common Node.js modules, such as `fs`, `path` and `buffer`. You use them the same way as in Node.js, with `import` or `require`.
+
+NekoJS is not Node.js, though. Only the modules in the table below exist, and some of them cover only the commonly used parts.
 
 <a id="wiki-section-2"></a>
 ## Available modules
 
-| Module | Description |
+| Module | Use it for |
 |---|---|
-| `node:buffer` / `buffer` | `Buffer` (wrapped through `__nekoNodeBuffer`) |
-| `node:fs` / `fs` | Synchronous + callback + promises APIs |
-| `node:path` / `path` | Path handling |
-| `node:util` / `util` | Utility functions |
-| `node:assert` / `assert` | Assertions (`node:assert/strict` also works) |
-| `node:test` / `test` | Test runner (`import test from 'node:test'`) |
-| `node:timers` / `timers` | `setTimeout`/`setInterval` + `node:timers/promises` |
-| `node:process` / `process` | Process information |
-| `node:events` / `events` | `EventEmitter` |
-| `node:os` / `os` | Operating system information |
-| `node:module` / `module` | Module system helpers |
-| `node:crypto` / `crypto` | Common hashes, random numbers, and basic cryptographic utilities (subject to the current shim's actual exports) |
+| `fs`, `fs/promises` | Reading and writing files, in sync, callback and Promise styles |
+| `path` | Joining and splitting paths |
+| `buffer` | Binary data with `Buffer` |
+| `timers`, `timers/promises` | `setTimeout`, `setInterval`, `setImmediate` |
+| `events` | `EventEmitter` |
+| `util` | Helpers such as `format`, `inspect` and `promisify` |
+| `assert`, `assert/strict` | Assertions |
+| `test` | Test framework, only in `test_scripts` |
+| `crypto` | `randomUUID`, `randomBytes`, `createHash`, `createHmac`, `timingSafeEqual` |
+| `os` | Operating system information |
+| `process` | Process information such as `process.env` and `process.cwd()` |
+| `module` | `createRequire`, `builtinModules`, `isBuiltin` |
 
-Both forms work, with or without the `node:` prefix (bare names work too).
+The `node:` prefix is optional: `import fs from 'node:fs'` and `import fs from 'fs'` are the same.
 
-`process.versions.node` is shim-provided metadata, not evidence that Node.js itself is running or that a package targeting that Node version is compatible.
-
-`process.exit()` only records the requested exit code and warns; it does not stop the game or script. `process.nextTick()` uses a Promise-microtask approximation, not Node's exact ordering relative to every other microtask. Do not use either as a process-control or loop-interruption API.
+`Buffer`, `process`, the timer functions such as `setTimeout`, plus `queueMicrotask`, `atob`, `btoa` and `performance.now()` are globals. You do not need to import them.
 
 <a id="wiki-section-3"></a>
-## Common API reference
+## Examples of common modules
 
 <a id="wiki-section-4"></a>
-### `node:fs`
+### node:fs
 
 ```javascript
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 
-// Synchronous
+// Sync style
 fs.mkdirSync('nekojs/data', { recursive: true })
-fs.writeFileSync('nekojs/data/x.txt', 'hello')
-console.info(fs.readFileSync('nekojs/data/x.txt', 'utf8'))   // 'hello'
-fs.existsSync('nekojs/data/x.txt')                            // true
-fs.readdirSync('nekojs/data')                                 // ['x.txt']
-fs.statSync('nekojs/data/x.txt').isFile()                     // true
-fs.copyFileSync('nekojs/data/x.txt', 'nekojs/data/x-copy.txt')
-fs.renameSync('nekojs/data/x-copy.txt', 'nekojs/data/x-moved.txt')
-fs.rmSync('nekojs/data/x-moved.txt')
+fs.writeFileSync('nekojs/data/note.txt', 'hello')
+console.info(fs.readFileSync('nekojs/data/note.txt', 'utf8')) // hello
+console.info(fs.existsSync('nekojs/data/note.txt'))           // true
+console.info(fs.readdirSync('nekojs/data'))                   // [ 'note.txt' ]
 
-// promises
-await fsp.appendFile('nekojs/data/x.txt', ':more')
-const files = await fsp.readdir('nekojs/data')
+// Promise style
+await fsp.appendFile('nekojs/data/note.txt', ' world')
 ```
 
-Callback forms (`fs.readFile(path, cb)`) are also supported.
+Other common functions such as `statSync`, `copyFileSync`, `renameSync`, `rmSync` and `unlinkSync` are there too. The callback style, `fs.readFile(path, callback)`, also works.
 
-Relative `fs` paths initially resolve from the **game directory**, not from the importing script. `process.chdir()` changes that Context's filesystem working directory within the same sandbox; relative `import`/`require` still resolve from their importing module. The example keeps every write target under `nekojs/`, as required by the default write policy.
+Relative paths start from **the game folder**, not from the script's folder. That is why the example writes `nekojs/data/...`.
+
+> If you only want to store a little JSON, `JsonIO` is simpler. See [Data and state](data-and-state_us).
 
 <a id="wiki-section-5"></a>
-### `node:path`
+### node:path
 
 ```javascript
 import path from 'node:path'
-path.join('a', 'b', 'c.txt')      // 'a/b/c.txt'
-path.resolve('a', 'b')            // Absolute path
-path.extname('a.txt')             // '.txt'
-path.basename('/x/y/a.txt')       // 'a.txt'
+
+path.join('a', 'b', 'c.txt')  // 'a/b/c.txt'
+path.extname('a.txt')         // '.txt'
+path.basename('/x/y/a.txt')   // 'a.txt'
+path.resolve('a', 'b')        // an absolute path
 ```
 
 <a id="wiki-section-6"></a>
-### `node:timers`
+### Timers
 
 ```javascript
 import { setTimeout as delay } from 'node:timers/promises'
 
-// Global setTimeout/setInterval also work (no import needed)
-setTimeout(() => console.info('1秒后'), 1000)
+// Global functions, no import needed
+const id = setTimeout(() => console.info('one second later'), 1000)
+clearTimeout(id)
 
-// promises form
+// Promise style
 await delay(1000)
-console.info('等了 1 秒')
+console.info('waited one second')
 ```
 
-> Global `setTimeout`/`setInterval`/`clearTimeout`/`clearInterval` are available at script top level (patched onto `globalThis`).
+How they differ from Node.js:
 
-Timer handles are numeric IDs, not Node.js `Timeout` objects; methods such as `.ref()` / `.unref()` are not part of this shim. Clear them with the matching `clearTimeout` / `clearInterval` / `clearImmediate`. The timer runtime still caps registrations at 1024, queued ready callbacks at 4096 and one flush at 256 callbacks. These are scheduler/resource bounds, not a statement budget or a way to preempt a running callback.
-
-The positive-delay example is for SERVER/CLIENT/TEST scripts. STARTUP rejects every interval and any timeout with a positive delay; zero-delay/immediate callbacks are allowed. The scheduler only queues ready work: callbacks execute when the owning script environment flushes its queue (including module-await pumping, lifecycle/tick dispatch, or the TEST flow), not on the scheduler thread and not at an exact wall-clock instant. Failed candidates and retired generations cancel their timers; old callbacks must not be treated as persistent state. A timer delay schedules a callback; it is not an execution deadline and does not interrupt a synchronous loop.
+- Callbacks run during a game tick, so timing is not exact to the millisecond.
+- `setTimeout` returns a number. There is no `.ref()` or `.unref()`. Cancel it with `clearTimeout(id)`.
+- **Startup scripts cannot use `setInterval` or a `setTimeout` with a delay above 0**; it throws an error. `setTimeout` with a delay of 0 and `setImmediate` are fine.
+- At most 1024 timers can be pending at once. Clear the ones you no longer need.
+- When scripts reload, the old scripts' timers are cancelled.
 
 <a id="wiki-section-7"></a>
-### `node:test` + `node:assert`
+### node:test and node:assert
+
+Write tests in `nekojs/test_scripts/`:
 
 ```javascript
+// test_scripts/math_test.js
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-test('简单的加法', () => {
+test('addition', () => {
   assert.strictEqual(1 + 1, 2)
 })
 
-test('异步测试', async () => {
+test('async test', async () => {
   const result = await Promise.resolve({ success: true })
   assert.ok(result.success)
 })
 ```
 
-Write these in `test_scripts/` and run them with `/nekojs test`. See [Script basics - TEST scripts](script-basics_us).
+Run them with `/nekojs test`. Results go to `logs/nekojs/test.log`. `test.skip`, `test.only`, `test.todo`, `describe` and `before` / `after` / `beforeEach` / `afterEach` are available too.
+
+`node:test` works only in test scripts. Anywhere else it throws `node:test is only available in test_scripts. Use /nekojs test to run these files.` `node:assert` works everywhere.
 
 <a id="wiki-section-8"></a>
-### `node:buffer`
+### node:buffer
 
 ```javascript
-import { Buffer } from 'node:buffer'
 const buf = Buffer.from('hello', 'utf8')
 console.info(buf.length)          // 5
-console.info(buf.toString('hex')) // '68656c6c6f'
+console.info(buf.toString('hex')) // 68656c6c6f
 ```
 
+<a id="wiki-fs-access"></a>
 <a id="wiki-section-9"></a>
-## Access limits
+## File access limits
 
-| Operation | Default boundary |
+For safety, scripts can only reach some files:
+
+| Operation | Allowed where |
 |---|---|
-| Read | Game directory, with canonical-path/symlink escape checks |
-| Create/write/delete/rename targets | `nekojs/` only; `allowFsWriteOutsideNekojs=false` by default |
-| With `allowFsWriteOutsideNekojs=true` | Writes may extend to the game directory, never outside it |
-| Protected configuration | `nekojs/config/` and legacy `config/nekojs-engine.toml` remain unwritable even with the flag enabled |
-| Create symbolic links | Not allowed |
+| Read | Any file inside the game folder |
+| Create, write, delete, rename | Only files inside `nekojs/` |
+| Write to `nekojs/config/` | Never |
+| Create symbolic links | Never |
 
-The flag is in `nekojs/config/engine.toml`. Filesystem checks do not make arbitrary Java host calls or untrusted scripts safe. Normal execution no longer has evaluation timeouts, statement budgets or a runaway watchdog: `scriptEvaluationTimeoutSeconds`, `scriptStatementLimit` and `scriptRunawayTimeoutSeconds` were removed, not replaced by another default. Infinite loops may block the owner thread/process. HTTP/authoring request waits and lifecycle cancellation/shutdown remain separate; a request timeout does not prove the script stopped. The complete engine defaults and migration rules are in [Configuration](configuration_us).
+Anything outside these limits throws an error:
 
 ```javascript
 import fs from 'node:fs'
-fs.writeFileSync('nekojs/data/x.txt', 'ok')      // Allowed: under nekojs/
-fs.writeFileSync('/etc/passwd', 'hacked')         // Rejected: outside the sandbox
+fs.writeFileSync('nekojs/data/x.txt', 'ok')  // allowed: inside nekojs/
+fs.writeFileSync('options.txt', 'oops')      // error: outside nekojs/
 ```
+
+If you really need to write outside `nekojs/`, set `allowFsWriteOutsideNekojs = true` in `nekojs/config/engine.toml` and restart the game. Scripts can then write anywhere inside the game folder. Writing outside the game folder or to `nekojs/config/` is still refused. See [Configuration](configuration_us).
 
 <a id="wiki-section-10"></a>
-## npm dependencies
+## npm packages
 
-Place **pure JS** npm packages in `nekojs/node_modules/`:
+You can use pure-JavaScript npm packages by putting them in `nekojs/node_modules/`. See [Module system](module-system_us) for how and for the limits.
 
-```javascript
-// nekojs/node_modules/greeting/index.cjs
-module.exports = name => `Hello, ${name}!`
-```
+In short:
 
-```javascript
-// server_scripts/use_greeting.cjs
-const greet = require('greeting/index.cjs')
-console.info(greet('NekoJS')) // Hello, NekoJS!
-```
+- The `main` and `exports` fields of `package.json` are not read. If a package's entry is not `index.js`, use the full path.
+- Packages with native code (such as `sharp` or `better-sqlite3`) do not work.
+- A package that needs Node APIs beyond the list above will not run.
 
 <a id="wiki-section-11"></a>
-### npm dependency limits
+## Other differences from Node.js
 
-Pure JavaScript is necessary, not sufficient. The NekoJS resolver checks explicit files, extension candidates and directory `index` files; it does not implement Node package.json `main`/`exports` resolution. Choose a compatible explicit entry path where needed. Synchronous `require()` rejects not-yet-evaluated ESM with top-level await, including async static descendants; use `import()` for asynchronous loading.
-
-| Limit | Description |
-|---|---|
-| Native bindings | Packages containing compiled C/C++ code are not supported (`node-sass`, `sharp`, `better-sqlite3`, `canvas`, etc.) |
-| Node runtime coverage | NekoJS is not a full Node runtime; the core modules listed here are available, but unimplemented APIs are not |
-| File sandbox | Dependencies that access files outside the game directory are rejected |
-| Trusted code | Scripts and their dependencies should be treated as trusted code, especially on multiplayer servers |
+- **`process.exit()` does not quit the game.** It logs a warning and the script keeps running.
+- `process.versions.node` is a fixed version string so that some packages recognise the environment. It does not mean Node.js is running.
+- `process.chdir()` changes where `fs` relative paths start. It does not affect relative paths in `import` / `require`.
+- `process.nextTick()` does not run in exactly the same order as in Node.js. Do not rely on its order relative to Promises.
+- There are no `http`, `net`, `child_process` or `worker_threads` modules.
 
 <a id="wiki-section-12"></a>
-## Practical example: test script
-
-```javascript
-// test_scripts/node_fs_test.js
-import test from 'node:test'
-import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import fsp from 'node:fs/promises'
-
-test('fs 同步与 promises 都能用', async () => {
-  fs.writeFileSync('nekojs/data/test.txt', 'hello')
-  assert.strictEqual(fs.readFileSync('nekojs/data/test.txt', 'utf8'), 'hello')
-
-  await fsp.appendFile('nekojs/data/test.txt', ':promise')
-  assert.strictEqual(fs.readFileSync('nekojs/data/test.txt', 'utf8'), 'hello:promise')
-})
-```
-
-Run with `/nekojs test`.
-
-<a id="wiki-section-13"></a>
 ## Next steps
 
-- [Module system](module-system_us) - `java:` imports and ESM/CJS interoperability.
-- [Commands](commands_us) - `/nekojs test` and other commands.
-- [FAQ](faq_us).
+- [Module system](module-system_us): multiple files, npm packages and `java:` imports.
+- [Data and state](data-and-state_us): an easier way to save data.
+- [Commands](commands_us): `/nekojs test` and other commands.
 
 <!-- wiki-nav -->
 

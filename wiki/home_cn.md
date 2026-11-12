@@ -5,79 +5,61 @@
 <a id="wiki-section-1"></a>
 # NekoJS Wiki
 
-NekoJS 是一个基于 GraalJS 的 Minecraft 脚本运行时。你可以用 JavaScript、TypeScript、JSX 或 NekoJS 支持的 Python 子集编写脚本，修改配方、监听事件、注册内容，并在游戏内获得类型提示。
+NekoJS 是一个 Minecraft 脚本模组：用 JavaScript（也可以用 TypeScript 或 Python）写脚本，就能修改配方、监听游戏事件、添加新物品和方块，不需要写 Java，也不需要重新编译模组。
 
-本 Wiki 按使用场景组织：
-
-- **脚本作者**：从 [快速开始](quick-start_cn) 开始，再看 [脚本基础](script-basics_cn)、[全局绑定](global-bindings_cn) 和 [事件参考](event-reference_cn)。
-- **整合包作者**：重点看 [配方系统](recipe-system_cn)、[注册新内容](registering-new-content_cn)、[模块系统](module-system_cn) 和 [TypeScript 与 JSX](typescript-and-jsx_cn)。
-- **插件开发者**：从 [插件开发](plugin-development_cn) 开始，配合 [类型适配器](type-adapters_cn)、[事件扩展](event-extensions_cn) 和 [注解体系](annotations_cn)。
-- **项目贡献者**：阅读 [项目架构](project-architecture_cn)、[Probe 类型生成](probe-type-generation_cn) 和 [构建系统](build-system_cn)。
-
-> **先看平台状态**：如果你使用 Fabric，请先阅读 [平台与兼容性](platform-compatibility_cn)。Fabric 已有 26.x 构建节点，但 API 仍是 NeoForge 的子集，不能默认认为所有事件和绑定都可用。
+如果你用过 KubeJS，会觉得很熟悉：脚本放在游戏目录里，改完执行一条命令就能生效。
 
 <a id="wiki-section-2"></a>
-## 你能用 NekoJS 做什么
+## 我该从哪里开始？
 
-| 能力 | 说明 |
-|---|---|
-| JavaScript / TypeScript / JSX | `.js`、`.mjs`、`.cjs`、`.ts`、`.jsx`、`.tsx` 可直接放入脚本目录；`.py` 由内置 Python 转译器处理。 |
-| JSX 客户端 Screen UI | 仅 NeoForge 26.x；使用 [JSX 客户端 UI](jsx-client-ui_cn) 指南。 |
-| ESM 与 CommonJS | 支持 `import` / `export`、动态 `import()`、top-level await 和 `require()`。 |
-| 配方与数据 | 用 `ServerEvents.recipes` 修改配方；NeoForge 还提供更完整的数据生成和资源生成事件。 |
-| 类型提示 | `/nekojs probe` 默认生成 TypeScript 声明；`/nekojs probe python` 生成 Python stub；`/nekojs probe all` 运行全部 backend。 |
-| 事务式 reload | SERVER、CLIENT、TEST 脚本加载失败时，旧环境通常会保留；启动脚本改动仍需重启游戏。 |
-| Node.js 核心模块 | 提供受沙盒限制的 `fs`、`path`、`buffer`、`crypto`、`process`、`timers`、`util`、`events`、`assert`、`os`、`test` 等 shim。 |
+| 你是… | 先读 | 然后 |
+|---|---|---|
+| 第一次接触 NekoJS | [快速开始](quick-start_cn) | [脚本基础](script-basics_cn) |
+| 想改配方、加物品的整合包作者 | [配方系统](recipe-system_cn)、[注册新内容](registering-new-content_cn) | [事件参考](event-reference_cn)、[全局绑定](global-bindings_cn) |
+| 想用 TypeScript 或拆分多个文件 | [TypeScript 与 JSX](typescript-and-jsx_cn) | [模块系统](module-system_cn) |
+| 想用 Python 写脚本 | [Python 脚本](python-scripts_cn) | [Python 特性清单](python-feature-support_cn) |
+| 想写 Java 插件扩展 NekoJS | [插件开发](plugin-development_cn) | [类型适配器](type-adapters_cn)、[事件扩展](event-extensions_cn) |
+| 想参与 NekoJS 本身的开发 | [项目架构](project-architecture_cn) | [构建系统](build-system_cn) |
+
+遇到问题先看 [常见问题](faq_cn)；看到 `NEKO-xxxx` 错误码就去 [错误与日志参考](error-reference_cn) 查。
 
 <a id="wiki-section-3"></a>
-## 三十秒上手
+## 一分钟体验
 
-1. 安装与 Minecraft/加载器匹配的 NekoJS 和 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal)。Graal 需要 25.1.3.7 或更高版本。
-2. 启动游戏，等待根目录生成 `nekojs/` 工作区。
-3. 在 `nekojs/server_scripts/hello.js` 写入：
+1. 把 NekoJS 和前置模组 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal)（25.1.3.7 或更高）放进 `mods/`，启动游戏。
+2. 游戏目录下会出现 `nekojs/` 文件夹。新建 `nekojs/server_scripts/hello.js`：
 
 ```javascript
-console.info('[NekoJS] Server script loaded')
+console.info('Hello, NekoJS!')
 ```
 
-4. 进入世界，或执行 `/nekojs reload server`。看到日志输出后，继续阅读 [快速开始](quick-start_cn)。
+3. 进入世界，执行 `/nekojs reload`，然后打开 `logs/nekojs/server.log`，就能看到这行输出。
+
+完整步骤（包括改配方、加物品、开启代码补全）见 [快速开始](quick-start_cn)。
 
 <a id="wiki-section-4"></a>
-## 当前平台
+## NekoJS 能做什么
 
-| 平台 | 状态 |
-|---|---|
-| NeoForge 1.21.1 | 当前支持，Java 21 |
-| NeoForge 26.1.2 | 当前支持，Java 25 |
-| NeoForge 26.2.0 | 当前支持，Java 25 |
-| Fabric 26.1.2 | 当前仓库节点，Java 25；加载器 API 为子集 |
-| Fabric 26.2（节点 `26.2.0-fabric`） | 当前仓库节点，Java 25；加载器 API 为子集 |
-
-详细差异见 [平台与兼容性](platform-compatibility_cn)。发布状态以 [Releases](https://github.com/NekoJS-Dev/NekoJS/releases) 为准。
+| 想做的事 | 用什么 | 详细说明 |
+|---|---|---|
+| 添加、删除、修改配方 | `ServerEvents.recipes` | [配方系统](recipe-system_cn) |
+| 添加新物品、方块、实体 | `RegistryEvents.register`（启动脚本） | [注册新内容](registering-new-content_cn) |
+| 在玩家行为、方块破坏等时机执行代码 | `PlayerEvents`、`BlockEvents` 等事件 | [事件参考](event-reference_cn) |
+| 添加自定义命令 | `CommandEvents.register` | [事件参考](event-reference_cn#wiki-command-events) |
+| 在屏幕上画 HUD、做界面 | `ClientEvents`、JSX 界面 | [客户端绘制](client-rendering_cn)、[JSX 客户端 UI](jsx-client-ui_cn) |
+| 在编辑器里获得代码补全 | `/nekojs probe` 生成类型声明 | [Probe 类型生成](probe-type-generation_cn) |
+| 引用 npm 上的纯 JS 库 | `import` / `require` | [模块系统](module-system_cn) |
 
 <a id="wiki-section-5"></a>
-## 从哪里继续
+## 支持的版本
 
-- **第一次写脚本**： [快速开始](quick-start_cn)
-- **修改引擎选项、MixinJS 或迁移旧配置**：[配置参考](configuration_cn)
-- **想知道脚本何时运行**： [脚本基础](script-basics_cn)
-- **想查绑定和方法**： [全局绑定](global-bindings_cn)
-- **想让 AI 读取当前实例 API**： [AI 辅助脚本编写](ai-support_cn)
-- **想监听或取消事件**： [事件参考](event-reference_cn)
-- **想改配方**： [配方系统](recipe-system_cn)
-- **想注册物品、方块或实体**： [注册新内容](registering-new-content_cn)
-- **想用 JSX 写客户端 Screen**： [JSX 客户端 UI](jsx-client-ui_cn)
-- **想绘制 HUD/世界覆盖层或使用后处理**： [客户端绘制](client-rendering_cn)
-- **想分清事件、Binding、builder 和数据对象语法**： [脚本 API 风格](script-api-style_cn)
-- **选择持久化、同步或 generation 局部状态**：[数据与状态](data-and-state_cn)
-- **想拆分模块或使用 npm 包**： [模块系统](module-system_cn)
-- **遇到错误**： [常见问题](faq_cn)
-- **想写 Java 插件**： [插件开发](plugin-development_cn)
+| 加载器 | Minecraft | Java |
+|---|---|---|
+| NeoForge | 1.21.1 | 21 |
+| NeoForge | 26.1.2、26.2.0 | 25 |
+| Fabric | 26.1.2、26.2 | 25 |
 
-<a id="wiki-section-6"></a>
-## 维护说明
-
-本页支持矩阵仅覆盖当前仓库的五个节点；当前代码不能确认 Cleanroom 1.12.2 行为或制品发布状态。API 可用性请结合平台标记与当前实例生成的声明判断；实际发布制品以发布页为准。
+Fabric 版本能运行脚本、改配方、用大部分常用事件，但还缺少一些 NeoForge 上才有的功能。用 Fabric 前请看 [平台与兼容性](platform-compatibility_cn)。可下载的版本以 [Releases](https://github.com/NekoJS-Dev/NekoJS/releases) 为准。
 
 <!-- wiki-nav -->
 

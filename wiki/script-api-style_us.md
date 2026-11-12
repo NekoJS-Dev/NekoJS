@@ -3,82 +3,103 @@
 > **English** · [中文](script-api-style_cn)
 
 <a id="wiki-section-1"></a>
-# Script API conventions and object parameters
+# Script API conventions
 
-NekoJS favors **event groups, named Bindings, operations on event objects, configuration callbacks and Bean properties**. Reusing another project's implementation mechanism does not require copying its script-facing shape. This page separates callable interfaces from proposed cleanup; it does not teach unimplemented overloads.
+The NekoJS script API uses only a few fixed patterns. Once you know them, you can guess how a new event or helper works. Code copied from other projects such as KubeJS may use different patterns; rewrite it to match this page.
 
 <a id="wiki-section-2"></a>
-## Event groups subscribe
+## The four patterns
 
-An event is a member of its group. Required filters/selectors, where present, precede the callback. A configuration object does not create the group, and assigning group members does not define events.
-
-
-```js
-// server_scripts/welcome.js (NeoForge)
-PlayerEvents.loggedIn(event => {
-    event.entity.sendMessage("Welcome to NekoJS!");
-});
-```
-
-This login example targets NeoForge: the native PlayerEvent exposes `getEntity()` as `event.entity`. Fabric’s neutral login payload uses `event.player`; the same Script Event name does not guarantee identical payload members.
-
-Read callback data and event operations from event; use Bindings for general helpers. Consult the [event reference](event-reference_us) for timing, cancellation, Script Types and platform support instead of inferring them from names.
+| Pattern | Example | Used for |
+|---|---|---|
+| Event Group | `ServerEvents.recipes(event => { ... })` | Subscribing to a game event |
+| Binding | `Item.of('minecraft:stone')` | General helpers you call directly |
+| Configuration callback | `event.item(id, build => { ... })` | Creating new content and setting its properties |
+| Property | `event.player`, `build.maxStackSize = 16` | Reading or changing a value on an object |
 
 <a id="wiki-section-3"></a>
-## Bindings and configuration callbacks
+## Event Groups: subscribing to events
 
-Item.of, for example, is a method on a named Binding. Configurable definitions put identifying/required arguments first and the configuration callback last. This real registration entry belongs in startup_scripts. Static registration normally requires a process restart; dynamic registration is a separate constrained capability described under [registering content](registering-new-content_us).
+Events are grouped by purpose, such as `ServerEvents`, `PlayerEvents` and `ClientEvents`. Add the event name after the group and pass a callback:
 
-```js
-// startup_scripts/content.js
-RegistryEvents.register(event => {
-    event.item("nekojs_example:ruby", build => {
-        build.maxStackSize = 16;
-    });
-});
+```javascript
+// server_scripts/welcome.js
+PlayerEvents.loggedIn(event => {
+  event.entity.sendMessage('Welcome to NekoJS!')
+})
 ```
 
-The event coordinates creation; build configures the definition. They are distinct objects. No extra build() is needed. Chain calls only when those methods actually return the builder.
+The `event` your callback receives is the Event Object. Everything about this occurrence, data and actions alike, comes from it.
+
+Some events can be filtered by ID. The filter goes before the callback: `PlayerEvents.inventoryChanged('minecraft:diamond', event => { ... })`.
+
+To cancel a cancellable event, `return true` from the callback. There is no general `event.cancel()`.
+
+The same event can have different members on different loaders. The login event above uses `event.entity` on NeoForge; on Fabric, use `event.player` instead. For each event's script type, cancellability and members, see the [Event reference](event-reference_us).
 
 <a id="wiki-section-4"></a>
-## Bean properties are not arbitrary fields
+## Bindings: general helpers
 
-Published JavaBean read/write capabilities normally appear as script properties, subject to the actual wrapper and generated declaration:
+Names like `Item`, `Text` and `JsonIO` are available in every script without `require`. These are Bindings. Helpers that do not belong to one event live on Bindings, for example `Item.of(...)` to create an item stack.
 
-- Read-only properties cannot be assigned; write-only properties cannot be read.
-- Ordinary parameterized or operational methods do not become properties merely because their names contain get/set.
-- Use actually exposed properties such as event.player or the registration builder's maxStackSize; do not invent members from Java class names.
-- Repair runtime/declaration drift at its shared source rather than teaching users to bypass validation.
+See [Global bindings](global-bindings_us) for the full list.
 
 <a id="wiki-section-5"></a>
-## When {} carries legitimate data
+## Configuration callbacks: creating content
 
-| Shape | Meaning | Automatically replace with a builder? |
-|---|---|---|
-| event.remove({ id: "minecraft:stick" }) | Recipe filter data | No; this is the current filter contract |
-| Custom recipe JSON, components and shader JSON | Data/resource formats | No; preserve their structure and validation |
-| JSX props and UI.createRoot property/host options | UI property data and runtime interfaces | No; braces alone do not establish a problem |
-| MCP/HTTP request bodies | External protocol messages | No; these are not game-script event interfaces |
-| Many optional settings used to create a behavioral definition | Configurable-definition interface | Review whether a configuration callback and named operations fit better |
+To create something new, pass the required arguments such as the ID first, and a configuration callback **last**. The `build` object the callback receives sets the new content's properties:
+
+```javascript
+// startup_scripts/content.js
+RegistryEvents.register(event => {
+  event.item('nekojs_example:ruby', build => {
+    build.maxStackSize = 16
+    build.rarity = 'rare'
+  })
+})
+```
+
+`event` creates, `build` configures. Keep them apart. The definition is complete when the callback returns: do not call `build()`, and do not keep `build` to change it later.
+
+Item registration goes in `startup_scripts` and needs a game restart. See [Registering new content](registering-new-content_us).
 
 <a id="wiki-section-6"></a>
-## Explicit data options and real builders
+## Properties: read and write like variables
 
-These implemented interfaces serve different responsibilities:
+A Java object's `getXxx()` / `setXxx(value)` methods can be used as a property in scripts:
 
-- ClientEvents.hudRender(id, options, callback) / worldRender: options is explicit scheduling data { layer, priority }. Layer-string and integer-priority shorthands and (id, callback) remain supported. Runtime validation and Probe share fields and layer literals; unknown fields, invalid layers, and non-int32 priorities fail. This is not a definition builder.
-- ClientEvents.postEffects(event => event.register(id, build => { ... })): register provides a real node-specific post-effect builder with configuration last. On 26.x, example properties are build.blurRadius = 4 and build.blurRounds = 1; 1.21.1 has its own chainJson/program fields. The builder seals after the callback and requires no build() call. The legacy object/Map overload remains, with the same strict field/value validation.
+- Read: `event.player` is the same as `event.getPlayer()`.
+- Write: `build.maxStackSize = 16` is the same as `build.setMaxStackSize(16)`.
 
-See [client rendering and post effects](client-rendering_us) for complete examples, lifecycle and profiles. An installed post-effect definition is not necessarily an activatable resource.
+A property with only a getter is read-only; assigning to it is an error. Methods that take arguments stay method calls, such as `data.getInt('key')`.
 
-Verify runtime behavior, Probe output, and failure retention together. Braces alone do not decide whether an API follows the conventions: shader JSON, recipe filters, and render scheduling data retain appropriate data structures.
+When you are not sure whether a property is writable or what it is called, run `/nekojs probe` and trust the editor's completion. Do not guess from Java class names.
 
 <a id="wiki-section-7"></a>
-## Reviewing a borrowed implementation
+## When to pass an object
 
-Check the event group and Script Type, callback-last ordering, creation/configuration separation, property/method accuracy, candidate failure retention and declaration/runtime parity. Source comments identify some mechanisms borrowed from Katton; they do not prove every object parameter came from Katton or every port violates NekoJS conventions.
+Some APIs take a plain object `{ ... }`. These objects are just data, not another pattern:
 
-For an unlisted interface, inspect the current instance's Probe declarations and [precise AI queries](ai-support_us), then report missing or inconsistent coverage. Do not infer NekoJS members directly from another project's examples.
+| Use | Example | What the object holds |
+|---|---|---|
+| Recipe filter | `event.remove({ id: 'minecraft:stick' })` | Filter conditions |
+| Item input | `{ id: 'minecraft:stone', count: 2 }` | Item ID, count and components |
+| Render options | `ClientEvents.hudRender(id, { layer: 'foreground', priority: 10 }, ctx => { ... })` | Layer and priority (NeoForge only) |
+| Network data | `Network.sendToServer('example:ping', { a: 1 })` | NBT data to send |
+| JSON data | `JsonIO.write('example/save.json', { visits: 1 })` | JSON content to save |
+
+These objects accept only the documented fields. A misspelled field name usually fails with an error instead of being silently ignored.
+
+For full render option and post-effect examples, see [Client rendering and post effects](client-rendering_us).
+
+<a id="wiki-section-8"></a>
+## When you meet an unfamiliar API
+
+1. Run `/nekojs probe` and read the completion and parameter hints in your editor.
+2. Check the [Event reference](event-reference_us) and [Global bindings](global-bindings_us).
+3. With an AI assistant, let it query the current game instance's API. See [AI-assisted scripting](ai-support_us).
+
+An event or method with the same name in another project does not mean NekoJS has it. If completion does not show a member, treat it as missing.
 
 <!-- wiki-nav -->
 

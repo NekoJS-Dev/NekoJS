@@ -3,160 +3,191 @@
 > **中文** · [English](data-and-state_us)
 
 <a id="wiki-section-1"></a>
-# 数据、生命周期与权威来源
+# 数据与状态
 
-先选**谁拥有数据**，再选保存多久、怎样传输。共享内存、写入存档、发送数据包是三件不同的事。完整签名见 [global/shared](global-bindings_cn#wiki-section-41)、[JsonIO](global-bindings_cn#wiki-section-19)、[实体/玩家 PData](global-bindings_cn#wiki-section-4)、[ItemStack PData](global-bindings_cn#wiki-section-3)、[ClientData/clientData](global-bindings_cn#wiki-section-25) 和 [Network](global-bindings_cn#wiki-section-37)。
+脚本经常需要记住一些东西：一个计数器、玩家的进度、一份设置。本页说明数据应该放在哪里，以及它能保留多久。
 
 <a id="wiki-section-2"></a>
-## 该选哪一种
+## 选哪一种
 
-| 需求 | 选择 | 权威来源与生命周期 |
+| 需求 | 用什么 | 能保留多久 |
 |---|---|---|
-| 同类脚本多个文件共用缓存或计数器 | `global` | 同一运行时根内按 `ScriptType` 隔离；仅内存 |
-| 同一运行时内明确跨脚本类型共享 | `shared` | 只在同一运行时根/进程内共享；不是客户端与服务端通信 |
-| 重启后仍需读取的小型 JSON 文件 | `JsonIO.read/write` | 本地安装的数据目录；脚本明确决定何时读写 |
-| 随实体/玩家保存的数据 | `entity.pdata()` / `player.pdata()` | 服务端实体为权威；客户端只读同步镜像 |
-| 随物品堆叠流转的数据 | `stack.pdata()` | 原版 `CUSTOM_DATA` 组件；遵循堆叠的保存/同步路径 |
-| 界面需要服务端提供的最新值 | `ClientData.sync/syncTo` → `clientData` | 客户端临时缓存；不是存档或请求协议 |
-| 请求、动作或自定义响应 | `Network` + `NetworkEvents` | 显式消息；处理器负责校验，必要时另行存储 |
+| 同一类脚本的几个文件共用变量 | `global` | 到关闭游戏为止 |
+| 不同类型的脚本共用变量（单人游戏） | `shared` | 到关闭游戏为止 |
+| 重启游戏后还要读到的设置或记录 | `JsonIO` | 一直保留，保存在文件里 |
+| 跟着某个玩家或实体的数据 | `entity.pdata()` | 跟实体一起存进存档 |
+| 跟着某个物品的数据 | `stack.pdata()` | 跟物品一起存进存档 |
+| 服务端把数值推给客户端显示 | `ClientData` → `clientData` | 到客户端退出世界为止 |
+| 客户端和服务端互发消息 | `Network` + `NetworkEvents` | 不保存，收到时处理 |
+
+各个 API 的完整方法列表见 [全局绑定](global-bindings_cn)。
 
 <a id="wiki-section-3"></a>
-## 内存不等于存档
+## global 和 shared：内存里的共享数据
 
-`global` 是 NekoJS 状态容器，**不是** JavaScript 的 `globalThis`。普通脚本目录中，同类型文件共享 `global`；SERVER 与 CLIENT 各有自己的私有 `global`。`shared` 只在同一运行时根内跨类型共享。独立服务端与远程客户端拥有不同进程和运行时根。
-
-| 边界 | 实际行为 |
-|---|---|
-| 整类普通重载 | 根持有的存储保留。候选环境的顶层赋值、删除和 `clear()` 仅在成功提交后发布；旧代关闭会清除它拥有的客体值 |
-| 单文件重载/入口执行 | 受影响入口在活动环境中重跑；代码可能再次覆盖或增加已有值。这不是整代重载事务 |
-| 同一运行时根内停服或切世界 | 传统目录的存储仍保留；不能把它当作自动按世界隔离的存档 |
-| 运行时根关闭或进程重启 | 内存释放；新的独立运行时根从空状态开始 |
-
-显式启用的脚本包，其私有 `global` 按**脚本类型与来源实例**隔离。世界/连接作用域结束会释放相应私有存储；`shared` 仍由运行时根持有。不要把传统目录的切世界行为推广到所有脚本包。
-
-跨重载保留状态宜使用简单值。属于即将关闭的 GraalJS 代的对象/函数不是可靠的长期引用。候选隔离只覆盖受管**顶层**写入，不会回滚已有对象的深层修改、文件写入、数据包、Java 对象或世界变化。
+每个脚本文件的变量只在自己的文件里可见。要在文件之间共享，就写到 `global` 或 `shared` 上：
 
 ```javascript
-// server_scripts: every entry rerun increments this retained scalar.
-global.exampleLoads = (global.exampleLoads ?? 0) + 1
-shared.exampleMode = 'cooperative'
+// server_scripts/counter.js
+global.loads = (global.loads ?? 0) + 1
+shared.mode = 'cooperative'
+console.info('Server scripts loaded ' + global.loads + ' times')
 ```
+
+- **`global`**：同一类脚本共用。所有服务端脚本共用一个 `global`，客户端脚本有另一个，互相看不到。
+- **`shared`**：所有类型的脚本共用。只在同一个游戏进程里有效：单人游戏时服务端脚本写入、客户端脚本可以读到；多人游戏时服务器和玩家客户端是不同的进程，读不到对方的 `shared`。
+
+`global` 不是 JavaScript 的 `globalThis`。写在 `globalThis` 上的值不会共享。
 
 <a id="wiki-section-4"></a>
-## JsonIO：显式、受约束的本地持久化
+### 什么时候会清空
 
-路径相对于 `<游戏目录>/nekojs/data`，**不是当前世界存档目录**。需要隔离世界或服务器时，自行设计不同文件名/键。成功写入只替换文件：不会自动保存 `global`、跟踪后续修改、同步客户端，也不提供多写入者事务。重载回滚不会撤销已经完成的文件写入。
+- **reload**：保留。上面的例子每次 `/nekojs reload` 都会让 `global.loads` 加 1。
+- **退出世界、进入另一个世界**：保留。所以不要把它当成“每个存档一份”的数据。
+- **关闭游戏**：全部清空。需要长期保存的数据请用 `JsonIO` 或 PData。
 
-```javascript
-// An intentional one-time update, not an automatic save hook.
-const saved = JsonIO.read('example/visits.json')
-const visits = saved === null ? 0 : JSON.parse(saved.toString()).visits
-JsonIO.write('example/visits.json', { visits: visits + 1 })
-```
+reload 之后，**上一次加载时**存进去的 JavaScript 对象、数组和函数会被移除，只有数字、字符串和布尔值会留下来。需要跨 reload 保留复杂数据时，存成 JSON 字符串，或者每次加载时重新创建。
 
-`read` 返回 `$JsonValue`，仅文件不存在时返回 JavaScript `null`。文件内容是 JSON `null` 时，返回值的 `toString()` 为 `"null"`。无效 JSON/UTF-8、目录和 I/O 失败会抛错；业务数据结构也应自行校验。
-
-- 使用非空、正斜杠相对路径。绝对路径、盘符、反斜杠、空路径段、`.`/`..`、符号链接/重解析点穿越均被拒绝。
-- 支持 JSON 基本值、数组、普通对象或 `$JsonValue`；拒绝函数、宿主对象、循环引用及非有限数。JSON 重复键也被拒绝。
-- 限制包括深度 64、10,000 个节点，输入/字符串/输出各 1,048,576 字符；文件读取另有 3,145,728 字节上限。各项限制独立，不代表可以读写任意文件。
-- 使用带缩进的 UTF-8 JSON、临时文件及原子替换。不支持原子替换时直接失败，不退化为可能留下半个文件的覆盖。
+reload 失败时，这次加载对 `global.xxx = ...` 的赋值不会生效。但已经存在的对象如果被改了里面的内容（比如 `global.box.v = 2`），这个修改会保留。
 
 <a id="wiki-section-5"></a>
-## 实体/玩家 PData 与物品 PData
+## JsonIO：保存到文件
 
-<a id="wiki-section-6"></a>
-### 实体/玩家：服务端 NBT 与客户端镜像
-
-先调用方法 `pdata()`，再使用 `contains`、`getInt`、`putInt`、`putString`、`getCompound`、`putCompound` 等类型化方法。没有通用的 `put(key, object)` 或 `save()`。类型化读取在缺失时返回默认值；若“缺失”不同于零、假或空值，先用 `contains(key)`。
+`JsonIO` 把 JSON 保存到 `nekojs/data/` 下的文件里，关闭游戏后仍然存在：
 
 ```javascript
-// NeoForge server_scripts: PlayerLoggedInEvent exposes the player as entity.
+// server_scripts/visits.js
+const saved = JsonIO.read('example_store/visits.json')
+const visits = saved === null ? 0 : JSON.parse(saved.toString()).visits
+JsonIO.write('example_store/visits.json', { visits: visits + 1 })
+```
+
+- `JsonIO.read(path)`：文件不存在时返回 `null`。存在时返回一个 JSON 值，用 `toString()` 得到 JSON 文本。
+- `JsonIO.write(path, value)`：value 可以是普通对象、数组、字符串、数字、布尔值或 `null`。会自动创建目录。写入是原子的：要么写完整，要么保持原样，不会留下写了一半的文件。
+
+路径要求：
+
+- 用 `/` 分隔的相对路径，例如 `mymod/settings.json`，从 `nekojs/data/` 开始算。
+- 不能用绝对路径、盘符、反斜杠、`.` 或 `..`。
+
+只在需要时读写。`JsonIO` 不会自动保存 `global`，也不会自动同步给客户端。
+
+文件不分存档：所有世界读写的是同一个文件。需要按世界区分时，自己在文件名里加上区分用的名字。
+
+`nekojs/data/` 同时也是 NekoJS 的数据包目录。不要在里面用 `recipe`、`tags`、`loot_table` 这类数据包目录名，否则游戏会把你的 JSON 当成数据包内容加载。
+
+大小限制：嵌套最多 64 层、最多 10,000 个值，文本最多约 100 万个字符。超出限制、JSON 格式错误、函数或循环引用都会报错。
+
+<a id="wiki-section-6"></a>
+## PData：存在实体和物品上
+
+PData 是附加在实体或物品上的一小块 NBT 数据，随存档一起保存。先调用 `pdata()`，再用带类型的方法读写。
+
+<a id="wiki-section-7"></a>
+### 实体和玩家
+
+```javascript
+// server_scripts/visits.js（NeoForge；Fabric 上把 event.entity 换成 event.player）
 PlayerEvents.loggedIn(event => {
   const data = event.entity.pdata()
-  data.putInt('example:visits', data.getInt('example:visits') + 1)
+  const visits = data.getInt('example:visits') + 1
+  data.putInt('example:visits', visits)
+  event.entity.sendMessage('Visit #' + visits)
 })
 ```
 
-平台实体保存容器承载 `NekoJSPersistentData` 数据；玩家克隆处理会复制这部分数据。服务端写入先更新内存中的实体容器，并自动标脏等待同步；由 **Minecraft 的实体/世界保存生命周期**负责落盘，不是即时刷盘或外部备份。平台存储未安装时的后备实现仅保存在内存中。
+常用方法：
 
-数组、复合标签及 `copyTag()` 返回脱离原数据的副本。修改复合标签后用 `putCompound` 写回，或用 `edit(tag => { ... })` 在一次复制中批量修改。编辑回调抛错时，该批次不会保存。
+- 读：`getInt`、`getLong`、`getDouble`、`getString`、`getBoolean`、`getCompound` 等。键不存在时返回 0、`''` 或 `false`。需要区分“没有”和“值是 0”时，先用 `contains(key)`。
+- 写：`putInt`、`putString`、`putBoolean`、`putCompound` 等，还有 `remove(key)`、`clear()`。
+- 一次改多个值：`data.edit(tag => { tag.putInt('a', 1); tag.putString('b', 'x') })`。回调里出错时这批修改全部不保存。
 
-- 脏队列每个服务端刻最多处理 **256 个实体**，其余延后。`markDirty()` 只入队；`sync()` 请求立即快照，不占该队列预算（非服务端线程调用会调度到服务端）。两者都不是落盘方法。
-- 快照发送给跟踪实体的玩家，以及适用时的实体自身。开始跟踪会发送快照；停止跟踪/实体移除会发送清空快照。版本号防止旧包恢复过期镜像。
-- 超过 **32,768 个 Java `String.length()` 字符的 SNBT** 快照会跳过并记录 `NEKO-3010`，不会截断。这是同步限制，不是存档大小限制。此时脏队列项已移除，不会自动重试；客户端可能仍保留上一次有效值。
-- 客户端实体/玩家 `pdata()` 只读：写入、`edit`、`markDirty`、`sync` 均抛出 `NEKO-4013`。断线/世界切换会清除镜像，普通脚本重载不会。镜像可能缺失或延迟，不能作为权威依据。
+`getCompound` 返回的是副本，改完要用 `putCompound` 写回。
 
-**Fabric 保存格式与兼容性：**实体 mixin 现在保留完整 `NeoForgeData` 容器，桥接层只选择一次 `NekoJSPersistentData`，与 NeoForge 的规范格式一致；其他容器字段保留。回归覆盖真实桥接层、脚本读写、保存/加载与同步服务，但不替代真实世界重启或多人联机验收。
+数据会这样保存和同步：
 
-旧 Fabric 可能已写出 `NeoForgeData.NekoJSPersistentData.NekoJSPersistentData.<用户键>` 双层数据。修复后不会猜测、扁平化或删除它，脚本看到的仍是嵌套 compound，而不是自动提升后的键；这可能要求旧脚本调整读取路径。仅凭同名 compound 无法区分历史错误包装与合法用户数据。先备份并人工确认具体实体/玩家存档，再有意迁移或临时按嵌套路径读取；不要无条件批量拆包。
+- 在服务端写入后，NekoJS 自动把数据同步给能看到这个实体的玩家，你不需要做别的事。
+- 数据跟实体一起存进存档，由游戏正常的保存流程写入硬盘。
+- 玩家死亡重生、从末地返回时，数据会自动带到新的玩家实体上。
+- **客户端只能读，不能写。** 在客户端脚本里写入会报 `NEKO-4013`。客户端读到的是服务端同步过来的副本，可能稍有延迟。
 
-<a id="wiki-section-7"></a>
-### ItemStack：原版组件归属
+键名建议加上自己的前缀，例如 `example:visits`，避免和其他脚本冲突。
+
+<a id="wiki-section-8"></a>
+### 物品
 
 ```javascript
 const stack = Item.of('minecraft:paper')
-stack.pdata().putString('example:owner', 'guide')
+stack.pdata().putString('example:owner', 'Steve')
 ```
 
-这里编辑的是堆叠的**整个**原版 `CUSTOM_DATA` 组件，不是实体的 `NekoJSPersistentData` 子项。请使用自己的命名空间键；`clear()` 会删除整个组件，包括其他自定义数据。物品必须实际进入可保存的物品栏/世界路径，才能跨重启保留。
+物品的 PData 存在原版的 `minecraft:custom_data` 组件里，跟着物品走：放进箱子、丢在地上、交给别人，数据都还在。物品要真正进入物品栏或世界，才会被存档保存。
 
-它不走实体 PData 数据包，也没有客户端只读保护；继承的 `markDirty()`/`sync()` 钩子为空操作。但原版堆叠/组件同步仍可能携带数据。客户端修改不等于权威的服务端物品栏修改，创建本地堆叠也不会自动分发。
+这个组件也可能被其他模组或数据包使用。请用带前缀的键名；`clear()` 会删掉**整个**组件，包括别人的数据。
 
-<a id="wiki-section-8"></a>
-## ClientData 是缓存，Network 是协议
+物品数据请在服务端修改。客户端上改物品不会影响服务端的真实物品。
 
-服务端 `ClientData.sync(key, value)` 广播给已连接玩家；`syncTo(player, key, value)` 发送给指定玩家。同键重推会覆盖客户端缓存。值必须兼容 JSON，不能是任意 Java/客体对象。键必须非空白且不超过 **256 个 Java 字符**；发送端检查序列化 JSON 不超过 **32,768 个 `String.length()` 字符**，**不是 32 KB**。传输编解码器另有限制，仅通过字符检查不保证一定送达。
+<a id="wiki-section-9"></a>
+## ClientData：把数值推给客户端
+
+服务端可以把一些值推给客户端，客户端脚本用来显示 HUD 或界面。
 
 ```javascript
-// server_scripts: a targeted UI snapshot, not a durable save.
+// server_scripts/status.js（NeoForge；Fabric 上把 event.entity 换成 event.player）
 PlayerEvents.loggedIn(event => {
-  ClientData.syncTo(event.entity, 'example:status', { ready: true })
+  ClientData.syncTo(event.entity, 'example:status', { ready: true, score: 10 })
 })
 ```
 
 ```javascript
-// client_scripts: JSON null and a missing key both read as null.
-if (clientData.has('example:status')) {
-  console.log(clientData.get('example:status'))
+// client_scripts/status.js
+function readStatus() {
+  if (!clientData.has('example:status')) return null
+  return clientData.get('example:status')
 }
-console.log(clientData.keys(), clientData.size())
 ```
 
-`get(key)`、`has(key)`、`keys()`、`size()` 都是方法。`has` 区分“键缺失”和“明确推送 JSON `null`”；`keys()` 返回无序快照。收包直接更新缓存，不依赖脚本监听器。缓存跨普通脚本重载保留，但客户端卸载世界/断线时清空；重连或新玩家需要服务端明确重发。发送一次并不等于为未来玩家注册自动重放。
+- 服务端：`ClientData.sync(key, value)` 发给所有在线玩家，`ClientData.syncTo(player, key, value)` 发给一个玩家。同一个键再发一次会覆盖旧值。
+- 客户端：`clientData.get(key)`、`clientData.has(key)`、`clientData.keys()`、`clientData.size()`。键不存在时 `get` 返回 `null`。
+- 值必须是 JSON 能表示的数据：对象、数组、字符串、数字、布尔值或 `null`。
+- 键不能为空，最长 256 个字符。值转成 JSON 后最长 32,768 个字符，超出会直接报错。
 
-需要“收到消息就执行动作”时，使用 `Network.sendToServer`、`sendToPlayer`、`sendToAll` 配合 `NetworkEvents.server/client`。负载为 `CompoundTag`；通道名必须非空白且最多 64 字符。这些消息不会自动保存、同步 PData 或填充 `clientData`。
+客户端退出世界或断开连接时，这些数据全部清空；reload 不会清空。玩家每次进入服务器都需要服务端重新发送，所以通常写在登录事件里。
+
+<a id="wiki-section-10"></a>
+## Network：客户端和服务端互发消息
+
+需要“收到消息就做某件事”时，用 `Network` 发送，用 `NetworkEvents` 接收。消息按通道名区分：
 
 ```javascript
-// client_scripts: null becomes an empty CompoundTag.
-Network.sendToServer('example:refresh', null)
+// client_scripts/refresh.js
+Network.sendToServer('example:refresh', { page: 1 })
 ```
 
 ```javascript
-// server_scripts: publish server-selected data to the actual sender.
+// server_scripts/refresh.js
 NetworkEvents.server('example:refresh', event => {
   ClientData.syncTo(event.player, 'example:status', { ready: true })
 })
 ```
 
-实际请求必须校验权限、频率、负载结构与当前服务端状态；发送者取自 `event.player`，不能信任客户端自报身份。用作 JSON/NBT/网络**负载**的普通对象是合法数据，不是在用对象替代事件组或具名绑定。
+- 发送：客户端用 `Network.sendToServer(channel, data)`；服务端用 `Network.sendToPlayer(player, channel, data)` 或 `Network.sendToAll(channel, data)`。
+- 接收：服务端脚本用 `NetworkEvents.server(channel, event => { ... })`，客户端脚本用 `NetworkEvents.client(channel, event => { ... })`。
+- `event.data` 是收到的 NBT 数据；在服务端，`event.player` 是发消息的玩家。
+- `data` 可以是普通对象，会自动转成 NBT；传 `null` 时发送空数据。
+- 通道名不能为空，最长 64 个字符。
 
-<a id="wiki-section-9"></a>
-## 脚本类型与生命周期限制
+消息不会被保存。要保存，请在处理函数里自己写入 PData 或 `JsonIO`。
 
-绑定安装会筛选脚本可见接口，但“能访问”不等于“有权修改”：实体 PData 按实体的逻辑侧决定权限；ClientData 发送与 Network 方向要求相应服务端/客户端上下文。在正确脚本目录订阅对应事件组，不要在玩家/世界尚不存在的顶层访问它们。STARTUP 注册不是普通可重载状态；注册变更需要重启。参见[重载命令与边界](commands_cn)。
+服务端收到的消息来自玩家的客户端，可能被伪造。处理之前要检查：这个玩家有没有权限、发送是否过于频繁、数据格式是否正确。发送者以 `event.player` 为准，不要相信数据里写的玩家名。
 
-<a id="wiki-section-10"></a>
-## 源码依据与验证边界
+<a id="wiki-section-11"></a>
+## 注意事项
 
-以下结论来自实现与测试源码核对，不代表已完成游戏内实测。
-
-- [内存归属与脚本包作用域](https://github.com/NekoJS-Dev/NekoJS/blob/master/common/src/main/java/com/tkisor/nekojs/core/state/GlobalStateStores.java#L8-L92)、[客体值清理与候选写入](https://github.com/NekoJS-Dev/NekoJS/blob/master/common/src/main/java/com/tkisor/nekojs/core/state/GlobalStore.java#L14-L29)、[生命周期/客体值测试](https://github.com/NekoJS-Dev/NekoJS/blob/master/common/src/test/java/com/tkisor/nekojs/core/state/Ticket10GlobalStateTest.java#L548-L680)、[单文件重跑](https://github.com/NekoJS-Dev/NekoJS/blob/master/common/src/main/java/com/tkisor/nekojs/script/ScriptManager.java#L1432-L1502)。
-- [JSON 路径与文件操作](https://github.com/NekoJS-Dev/NekoJS/blob/master/common/src/main/java/com/tkisor/nekojs/core/api/json/JsonFileStore.java#L49-L245)、[值大小限制](https://github.com/NekoJS-Dev/NekoJS/blob/master/common/src/main/java/com/tkisor/nekojs/api/data/JsonValue.java#L30-L38)、[文件失败路径测试](https://github.com/NekoJS-Dev/NekoJS/blob/master/common/src/test/java/com/tkisor/nekojs/core/api/json/JsonFileStoreTest.java#L28-L132)。
-- [实体权限](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/main/java/com/tkisor/nekojs/api/inject/EntityExtension.java#L67-L76)、[类型化/副本/只读 API](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/main/java/com/tkisor/nekojs/wrapper/pdata/PersistentDataJS.java#L49-L164)、[队列与快照限制](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/main/java/com/tkisor/nekojs/wrapper/pdata/PDataSyncService.java#L27-L175)、[边界测试](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/test/java/com/tkisor/nekojs/wrapper/pdata/PDataSnapshotBehaviorTest.java#L44-L54)。
-- [NeoForge 保存容器桥接](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/main/java/com/tkisor/nekojs/NekoJSMod.java#L116-L133)；已修正的 Fabric 容器与调用链依据：[桥接层](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/fabric/java/com/tkisor/nekojs/fabric/FabricPDataSync.java#L98-L109)、[保存混入](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/fabric/java/com/tkisor/nekojs/fabric/mixin/NekoEntityPDataMixin.java#L53-L67)、[保存形状夹具](https://github.com/NekoJS-Dev/NekoJS/blob/master/versions/26.1.2-fabric/src/test/java/com/tkisor/nekojs/fabric/mixin/NekoEntityPDataSaveShapeTest.java#L99-L131)、[真实桥接层与同步服务回归](https://github.com/NekoJS-Dev/NekoJS/blob/master/versions/26.1.2-fabric/src/test/java/com/tkisor/nekojs/fabric/FabricPDataPersistenceTest.java#L71-L195)。这些夹具不能证明混入已在实机应用、世界存档持久化或多人网络送达。
-- [物品组件包装](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/main/java/com/tkisor/nekojs/wrapper/item/PersistentDataJS.java#L9-L22)、[同堆叠重读/组件清空测试](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/test/java/com/tkisor/nekojs/wrapper/pdata/ItemStackPersistentDataTest.java#L16-L27)。
-- [客户端读取方法](https://github.com/NekoJS-Dev/NekoJS/blob/master/common/src/main/java/com/tkisor/nekojs/bindings/static_access/ClientDataJS.java#L29-L56)、[键校验](https://github.com/NekoJS-Dev/NekoJS/blob/master/common/src/main/java/com/tkisor/nekojs/wrapper/clientdata/ClientDataStore.java#L35-L77)、[序列化字符限制](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/main/java/com/tkisor/nekojs/wrapper/clientdata/ClientDataSyncJS.java#L24-L56)、[客户端卸载清理](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/main/java/com/tkisor/nekojs/client/NekoJSClient.java#L97-L102)。
-- [Network 方向](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/main/java/com/tkisor/nekojs/wrapper/network/NetworkJS.java#L22-L46)、[通道校验](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/main/java/com/tkisor/nekojs/network/NekoScriptPayload.java#L13-L24)、[发送者属性](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/main/java/com/tkisor/nekojs/wrapper/network/NetworkDataEventJS.java#L29-L39)、[PData 扩展暴露范围](https://github.com/NekoJS-Dev/NekoJS/blob/master/src/main/java/com/tkisor/nekojs/api/NeoForgeCatalogPlatformProvider.java#L53-L64)。
+- **PData 太大时不同步。** 一个实体的 PData 转成文本超过 32,768 个字符时，不会同步给客户端，日志出现 `NEKO-3010`，客户端保留上一次收到的值。存档不受影响。PData 适合存少量数据，大量数据请用 `JsonIO`。
+- **一般不需要 `markDirty()` 和 `sync()`。** 写入后会自动同步。`sync()` 会立刻发送一次同步，不等下一个 tick；两者都和存盘无关。
+- **启动脚本的注册不能 reload。** 注册新内容需要重启游戏，见 [脚本基础](script-basics_cn)。
+- **旧版 Fabric 存档。** 早期的 Fabric 版本可能把实体 PData 多套了一层，存成了 `NekoJSPersistentData` 下面的同名子项。现在的版本不会自动修改这些数据。如果升级后读不到旧数据，试试 `data.getCompound('NekoJSPersistentData')`，确认后再迁移。迁移前先备份存档。
 
 <!-- wiki-nav -->
 

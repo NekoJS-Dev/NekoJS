@@ -5,115 +5,152 @@
 <a id="wiki-section-1"></a>
 # 事件参考
 
-NekoJS 把游戏事件按 **事件组（EventGroup）** 组织。传统事件组是顶层绑定；显式发布的 API 模块也可通过 import 暴露同一源事件。调用事件成员即可订阅，模块发布不会创建第二条总线。
-
-> **平台说明**：本页主要记录 NeoForge 事件名，不是已验收的跨平台完整目录。Fabric 26.x 已支持脚本加载、配方、网络、常用玩家/实体/方块/物品事件和按键绑定，但仍是子集；每个 NeoForge 专属或尚未移植的事件都会标注。完整差异见 [平台与兼容性](platform-compatibility_cn)。
-
-> **取消规则**：只有声明为可取消的事件总线，才可通过监听器返回 `true` 取消；平台桥接在支持时应用原生取消。普通总线不会因为回调返回 true 而变成可取消。`setCanceled` 等原生方法属于特定平台，不是通用脚本契约。
->
-> 原生事件载荷保留其已暴露的 Java 成员；Fabric 的自定义载荷和显式投影的 API 模块视图可能具有不同接口。请以当前实例的 Probe 输出为准，不要假设所有事件都具有全部原生 getter。历史注入的 `cancel()` / `isCancelled()` 不是当前取消 API；旧 Cleanroom 示例也不属于现有五个构建节点。
-
-```javascript
-ServerEvents.recipes(event => { /* ... */ })
-PlayerEvents.loggedIn(event => { /* ... */ })
-```
+本页列出 NekoJS 的所有事件组：每个事件什么时候触发、写在哪种脚本里、能不能取消、各平台是否可用。第一次写事件，先看 [脚本基础](script-basics_cn)。
 
 <a id="wiki-section-2"></a>
-## 事件监听基本形式
+## 怎么监听事件
+
+在脚本的**顶层**调用事件组上的方法，传入一个回调函数：
 
 ```javascript
-// Ordinary event: listener, or priority + listener
-PlayerEvents.loggedIn('HIGH', event => {
-  console.info('Player logged in')
-})
-
-// Dispatch event: key + listener, or priority + key + listener
-BlockEvents.broken('HIGH', 'minecraft:stone', event => {
-  console.info('Blocked stone breaking')
-  return true
-})
-
-// Dispatch event without a key: listen to all dispatched values
-ItemEvents.foodEaten(event => {
-  console.info('An item was eaten')
+// server_scripts/welcome.js
+PlayerEvents.loggedIn(event => {
+  console.info('有玩家进入了服务器')
 })
 ```
 
-优先级为 `HIGHEST`、`HIGH`、`NORMAL`、`LOW`、`LOWEST`（不区分大小写）；省略时为 `NORMAL`。分发事件的 `eventBus('HIGH', listener)` 中，`HIGH` 是**分发键**而不是优先级；显式优先级需要完整的 `(priority, key, listener)` 三个参数。只有可取消总线才能通过返回 `true` 取消。事件使用 `event.player` 等可读属性；属性存在并不代表可以赋值，也不要发明 getter。见 [Script API 风格](script-api-style_cn)。
+改完后执行对应的重载命令（服务端脚本用 `/nekojs reload`），触发一次事件，再看日志或 `/nekojs error` 确认回调跑了。
 
-> **重要**：事件监听必须在**顶层脚本作用域**注册（脚本加载阶段）。不能在事件回调内部再注册事件，会报错。
+监听必须写在顶层。在一个事件的回调里再注册另一个事件会报错。
 
----
+回调里的 `event` 是事件对象。读取信息用属性写法，例如 `event.player`、`event.entity`；也可以调用对应的方法，例如 `event.getPlayer()`。一个属性能读不代表能赋值。不确定有哪些成员时，执行 `/nekojs probe` 生成补全，在编辑器里查看。
 
 <a id="wiki-section-3"></a>
-## ServerEvents（服务端）
+### 只监听某个物品、方块或实体
 
-| 事件 | 事件对象 | 说明 |
-|---|---|---|
-| `tickPre` | `ServerTickEvent.Pre` | 每个服务端 tick 之前 |
-| `tickPost` | `ServerTickEvent.Post` | 每个服务端 tick 之后 |
-| **`recipes`** | [`RecipeEventJS`](recipe-system_cn) | **配方修改**（最常用） |
-| `afterRecipes` | `RecipeEventJS` | 配方数据整批解析并提交到 `RecipeManager` 之后触发（后处理/查询；此阶段的 JSON 修改不再生效，修改请在 `recipes` 中完成） |
-| `tradeDeclaration` | `VillagerTradeDeclarationEventJS` | 普通 SERVER 总线，收集交易候选定义，不是按 key 分发。 |
-| `tradeReload` | `VillagerTradeReloadEventJS` | 普通 SERVER 总线，交易候选 reload 生命周期。 |
-| `aboutToStart` | `ServerAboutToStartEvent` | 服务端即将启动 |
-| `starting` | `ServerStartingEvent` | 服务端启动中 |
-| `started` | `ServerStartedEvent` | 服务端启动完成（注册表已就绪，可安全调用 `Item.of(...)`） |
-| `stopping` | `ServerStoppingEvent` | 服务端停止中 |
-| `stopped` | `ServerStoppedEvent` | 服务端已停止 |
-| `datapackSync` | `OnDatapackSyncEvent` | 数据包同步 |
-| `tagsUpdated` | `TagsUpdatedEvent` | 标签重载完成 |
-| `lootTableLoad` | `LootTableLoadEvent` | 战利品表加载（可修改） |
-| **`lootTables`**（仅 NeoForge） | `LootTableEventJS` | **战利品表 JSON 管理**（getJson/setJson/create/remove/getIds，见下方） |
-| **`tags`**（分发，仅 NeoForge） | `TagEventJS` | **标签修改**；分发键是注册表 id（如 `'minecraft:item'`） |
-| **`generateData`**（分发，仅 NeoForge） | `DataGeneratorJS` | **数据生成**：写 datapack JSON（loot/advancement/worldgen 等），分发键是阶段（如 `'after_mods'`） |
+很多事件可以按 id 过滤，下文表格里标着“按 id”。把 id 写在回调前面，就只在这个对象上触发：
 
 ```javascript
+// 只在挖钻石矿时触发
+BlockEvents.broken('minecraft:diamond_ore', event => {
+  console.info('钻石矿被挖了')
+})
+
+// 不写 id，所有方块都会触发
+BlockEvents.broken(event => {
+  console.info('有方块被挖了')
+})
+```
+
+过滤用的 id 按事件不同，分别是物品 id、方块 id、实体类型 id，或其他字符串（如网络频道名、按键 id）。
+
+<a id="wiki-section-4"></a>
+### 优先级
+
+多个回调监听同一个事件时，可以在最前面加优先级：`HIGHEST`、`HIGH`、`NORMAL`（默认）、`LOW`、`LOWEST`，不区分大小写。
+
+```javascript
+PlayerEvents.loggedIn('HIGH', event => { /* 先执行 */ })
+
+// 按 id 过滤的事件：优先级、id、回调三个参数都要写
+BlockEvents.broken('HIGH', 'minecraft:stone', event => { /* ... */ })
+```
+
+注意：按 id 过滤的事件只传两个参数时，第一个参数会被当成 id。`BlockEvents.broken('HIGH', event => {})` 监听的是 id 为 `HIGH` 的方块，不是高优先级。
+
+<a id="wiki-section-5"></a>
+### 取消事件
+
+可以取消的事件，在回调里 `return true` 就会取消。例如阻止玩家挖石头：
+
+```javascript
+BlockEvents.broken('minecraft:stone', event => {
+  return true
+})
+```
+
+只有标着“可取消”的事件才有效。不能取消的事件，返回 `true` 不会有任何效果，也不会报错。各平台能取消的事件不完全一样，以下文表格为准。
+
+<a id="wiki-section-6"></a>
+## 各平台能用哪些事件组
+
+NeoForge 上所有事件组都可用。Fabric 26.x 支持大部分常用事件，但部分事件组只有一部分事件，有些还没有移植。
+
+| 事件组 | 用在哪种脚本 | NeoForge | Fabric 26.x |
+|---|---|---|---|
+| `ServerEvents` | 服务端 | 全部 | 没有 `lootTables`、`tags`、`generateData`；交易事件可以监听但不生效 |
+| `PlayerEvents` | 服务端 | 全部 | 全部 |
+| `EntityEvents` | 服务端 | 全部 | 没有 `useItem*` 系列 |
+| `BlockEvents` | 服务端 | 全部（`modification` 仅 26.x） | 没有 `entityMultiPlaced`、`toolModification` |
+| `ItemEvents` | 服务端；`tooltip` 在客户端 | 全部 | 全部 |
+| `LevelEvents` | 服务端 | 全部 | 没有旧名 `tick` |
+| `NetworkEvents` | 服务端 / 客户端 | 有 | 有 |
+| `RegistryEvents`、`GoalEvents` | 启动 | 有 | 有 |
+| `CapabilityEvents` | 启动 | 有 | 有，方法不同 |
+| `CommandEvents` | 服务端 | `register`、`command` | 只有 `register` |
+| `KeyBindEvents` | 客户端 | 仅 26.x | 有 |
+| `ClientEvents` | 客户端 | 全部 | 只有 `tickPre`、`tickPost`、`tick`、`hud`、`screenRender` |
+| `RecipeViewerEvents` | 客户端 | 需要安装 JEI | 没有 |
+| `ProbeEvents` | 服务端 | 有 | 没有 |
+| `ScriptEvents` | 启动 | 有 | 有 |
+
+Fabric 上的事件对象和 NeoForge 不同，成员名可能不一样。下文遇到这种情况会单独说明。完整的平台差异见 [平台与兼容性](platform-compatibility_cn)。
+
+<a id="wiki-server-events"></a>
+<a id="wiki-section-7"></a>
+## ServerEvents
+
+服务端生命周期、tick 和数据加载相关的事件。写在 `server_scripts` 里。
+
+| 事件 | 什么时候触发 | 说明 |
+|---|---|---|
+| `recipes` | 加载配方时 | **修改配方**，最常用。见 [配方系统](recipe-system_cn) |
+| `afterRecipes` | 配方全部加载完成后 | 只适合查询。这里改配方不会生效，改配方请用 `recipes` |
+| `tickPre` / `tickPost` | 每个服务端 tick 之前 / 之后 | 每秒 20 次，逻辑要轻 |
+| `aboutToStart` / `starting` | 服务端启动过程中 | |
+| `started` | 服务端启动完成 | 注册表已就绪，可以放心用 `Item.of(...)` |
+| `stopping` / `stopped` | 服务端停止中 / 已停止 | |
+| `datapackSync` | 向玩家同步数据包时 | |
+| `tagsUpdated` | 标签重新加载完成 | |
+| `lootTableLoad` | 每张战利品表加载时 | NeoForge 上可取消 |
+| `lootTables` | 数据重载时 | **按 id 读写战利品表**，仅 NeoForge，见下文 |
+| `tags` | 加载标签时 | **修改标签**，按注册表 id 过滤，仅 NeoForge，见下文 |
+| `generateData` | 数据重载时 | **生成数据包文件**，按阶段过滤（目前只有 `'after_mods'`），仅 NeoForge |
+| `tradeDeclaration` / `tradeReload` | 启动和 reload 时 | 村民交易，仅 NeoForge 生效 |
+
+```javascript
+// server_scripts/lifecycle.js
 ServerEvents.started(event => {
   console.info('服务端启动完成')
 })
-
-ServerEvents.tags('minecraft:item', event => {
-  event.add('minecraft:logs', 'mymod:custom_log')
-})
 ```
 
-> 上表中 `lootTables`、`tags` 和 `generateData` 当前仅在 NeoForge 注册。Fabric 的 `ServerEvents` 主要提供 `recipes`、`afterRecipes` 和已移植的生命周期事件；Fabric 脚本不要调用这些 NeoForge 事件。
+<a id="wiki-section-8"></a>
+### 战利品表：ServerEvents.lootTables
 
-Fabric 也注册 `tradeDeclaration`/`tradeReload`，但当前 unavailable trade-domain owner 在 preflight 显式拒绝收集到的整批声明。可订阅不代表交易修改成功；失败会保留旧 active，不是静默 no-op。
-
-<a id="wiki-section-4"></a>
-### ServerEvents.lootTables —— 战利品表 JSON 管理
-
-服务器数据重载时触发（先于战利品表解析，修改**当次重载即生效**）。事件对象 `LootTableEventJS`：
+仅 NeoForge。每次数据重载（进入世界、`/reload`）时触发，修改在这次重载里立刻生效。
 
 | 方法 | 说明 |
 |---|---|
-| `getJson(id)` | 指定战利品表的当前 JSON（含脚本修改）；未知 id 返回 `null` |
-| `setJson(id, json)` | 覆盖指定战利品表（json 为 JS 对象或 JSON 字符串） |
-| `modify(id, consumer)` | 便利修改：读当前 JSON → builder 回调 → 写回（见下方） |
-| `modifyBlockLoot(blockId, consumer)` | 批量修改方块表：方块 id / `'#tag'`（展开标签）/ `'*'` / 过滤函数 |
-| `modifyEntityLoot(entityId, consumer)` | 批量修改实体表：实体 id / `'*'` / 过滤函数 |
-| `create(id, json)` | 创建/覆盖战利品表（`setJson` 别名，允许不存在的 id） |
-| `remove(id)` | 删除战利品表（读取时得到空表） |
-| `getIds()` | 所有已知战利品表 id（含脚本创建的） |
+| `getJson(id)` | 读取战利品表当前的 JSON；不存在时返回 `null` |
+| `setJson(id, json)` | 整张替换。`json` 可以是 JS 对象或 JSON 字符串 |
+| `create(id, json)` | 新建一张表（id 可以原本不存在） |
+| `remove(id)` | 删除一张表，之后读到的是空表 |
+| `getIds()` | 所有战利品表 id，包括脚本新建的 |
+| `modify(id, table => {})` | 用回调修改一张表 |
+| `modifyBlockLoot(filter, table => {})` | 批量修改方块掉落。`filter` 可以是方块 id、`'#标签'`、`'*'` 或一个返回 true/false 的函数 |
+| `modifyEntityLoot(filter, table => {})` | 批量修改实体掉落。`filter` 可以是实体 id、`'*'` 或函数 |
 
-`modify` 回调参数是 `LootTableJS`：
+`modify` 系列回调拿到的 `table` 有这些方法：
 
-| LootTableJS | 说明 |
-|---|---|
-| `getType()` / `setType(str)` | 表类型（如 `'minecraft:chest'`） |
-| `getPools()` | 现有池列表（包装对象，改动直接生效） |
-| `addPool(consumer)` / `addPool(obj)` | 追加池：builder 回调或完整 pool JSON |
-
-`LootPoolJS`（池）：`rolls(数字或 [min,max])`、`getEntries()`、`addEntry(consumer)` / `addEntry(obj)`、`when(conditionJson)`、`toJson()`。
-
-`LootEntryJS`（条目）：`LootEntry.of(物品id / '#tag' / ItemStack / JS对象)`、`type()`、`name()`、`item()`、`weight(int)`、`when(conditionJson)`、`group(...)`。
+- 表：`getType()` / `setType(type)`、`getPools()`、`addPool(pool => {})` 或 `addPool(完整的 pool JSON)`。
+- 池：`rolls(次数)` 或 `rolls([最少, 最多])`、`addEntry(...)`、`getEntries()`、`when(条件 JSON)`。
+- 条目：`item(id)`、`weight(权重)`、`when(条件 JSON)`。`addEntry` 也可以直接传物品 id 字符串。
 
 ```javascript
 // server_scripts/loot.js
 ServerEvents.lootTables(event => {
-  // 给原版地牢箱子额外加一个物品
+  // 直接改 JSON：给地牢箱子加一颗钻石
   let json = event.getJson('minecraft:chests/simple_dungeon')
   json.pools.push({
     rolls: 1,
@@ -121,62 +158,57 @@ ServerEvents.lootTables(event => {
   })
   event.setJson('minecraft:chests/simple_dungeon', json)
 
-  // builder 写法：往钓鱼表加一个高权重物品
+  // 用回调：钓鱼有一半概率额外钓到幸运币
   event.modify('minecraft:gameplay/fishing', table => {
     table.addPool(pool => {
       pool.rolls(1).addEntry(entry => entry
-        .item('mymod:lucky_coin')      // 物品 id / ItemStack / '#tag'
+        .item('mymod:lucky_coin')
         .weight(5)
         .when({ condition: 'minecraft:random_chance', chance: 0.5 })
       )
     })
   })
 
-  // 新建一张表（配合箱子和 LootContext 使用）
-  event.create('mymod:chests/treasure', {
-    type: 'minecraft:chest',
-    pools: [{ rolls: 1, entries: [{ type: 'minecraft:item', name: 'mymod:test_mob_spawn_egg' }] }]
-  })
-
-  // 批量：所有原木方块额外掉一个苹果
+  // 所有原木额外掉一个苹果
   event.modifyBlockLoot('#minecraft:logs', table => {
     table.addPool(pool => pool.rolls(1).addEntry('minecraft:apple'))
   })
 
-  // 批量：过滤函数（匹配 minecraft 命名空间的所有方块表）
-  event.modifyBlockLoot(id => id.startsWith('minecraft:'), table => {
-    table.addPool(pool => pool.rolls(1).addEntry('minecraft:stick'))
-  })
-
-  // 批量：所有实体表加一条 5% 掉落的羽毛
+  // 所有实体有 5% 概率掉一根羽毛
   event.modifyEntityLoot('*', table => {
     table.addPool(pool => pool.rolls(1).addEntry(
       entry => entry.item('minecraft:feather').when({ condition: 'minecraft:random_chance', chance: 0.05 })
     ))
   })
 
-  // 删掉不想出现的表
+  // 新建一张表
+  event.create('mymod:chests/treasure', {
+    type: 'minecraft:chest',
+    pools: [{ rolls: 1, entries: [{ type: 'minecraft:item', name: 'minecraft:emerald' }] }]
+  })
+
+  // 删除一张表
   event.remove('minecraft:chests/jungle_temple')
 })
 ```
 
-> 注意：`getIds()/getJson()` 返回的是**最近一次加载后**（含修改）的数据；第一次进入世界前调用会得到空列表。修改在服务器数据重载（`/reload`）时统一应用。批量修改对**已知表**生效（`'*'` 与过滤函数不会枚举没有掉落表的方块/实体；精确 id 和 `#tag` 展开不受此限）。
+用 `'*'` 或函数批量修改时，只会处理已经有战利品表的方块和实体。写精确 id 或 `#标签` 不受这个限制。
 
-<a id="wiki-section-5"></a>
-### 全局战利品修改器（Global Loot Modifiers）
+<a id="wiki-section-9"></a>
+### 全局战利品修改器
 
-NeoForge 的全局修改器（对**每次掉落**追加/改写，区别于整表替换）通过 `generateData` 写 datapack JSON 实现——没有运行时事件（`LootModifierManager` 只读，且修改器须经 `neoforge:loot_modifiers/global_loot_modifiers.json` 名单启用）：
+全局战利品修改器（Global Loot Modifier）会作用于**每一次掉落**，而不是替换整张表。它没有对应的事件，要用 `generateData` 写数据包文件（仅 NeoForge）：
 
 ```javascript
 // server_scripts/modifiers.js
 ServerEvents.generateData('after_mods', event => {
-  // 1) 把修改器加进启用名单（NekoJS 数据包与其它包 layered 合并，不用 replace: true 以免覆盖别人的名单）
+  // 1) 把修改器加入启用列表。用 replace: false，不要覆盖其他模组的列表
   event.json('neoforge/loot_modifiers/global_loot_modifiers.json', {
     replace: false,
-    entries: ['mymod:add_apple']
+    entries: ['mymod:add_fishing_loot']
   })
-  // 2) 修改器本体：替换掉落物（replace），或追加（add，NeoForge 内置 LootModifier）
-  event.json('mymod/loot_modifiers/add_apple.json', {
+  // 2) 修改器本身：每次掉落时额外掷一次钓鱼战利品表
+  event.json('mymod/loot_modifiers/add_fishing_loot.json', {
     type: 'neoforge:add_loot_table',
     conditions: [],
     loot_table: 'minecraft:gameplay/fishing'
@@ -184,401 +216,441 @@ ServerEvents.generateData('after_mods', event => {
 })
 ```
 
-`neoforge:add_loot_table` 把另一张战利品表整体注入每次掉落；写自定义修改器需用 Java（`IGlobalLootModifier`）。
+文件写在 `nekojs/data` 下，路径相对于这个目录。`neoforge:add_loot_table` 是 NeoForge 自带的修改器类型；更复杂的修改器需要用 Java 编写。
 
-<a id="wiki-section-6"></a>
-### ServerEvents.tags —— 标签修改
+<a id="wiki-section-10"></a>
+### 标签：ServerEvents.tags
 
-修改 tag 内容。事件对象 `TagEventJS`：`add(tag, entry)`、`remove(tag, entry)`、`removeAll(tag)`、`replaceAll(tag, ...entries)`、`getEntries(tag)`。
+仅 NeoForge。按注册表 id 过滤，例如 `'minecraft:item'`、`'minecraft:block'`。
 
-**NeoForge（26.x / 1.21.1）**：分发键是注册表 id，在 tag loader 构建阶段触发（mixin 注入，早于 `tagsUpdated`）。26.x 上，注册 builder 的 `.tag(...)`（见[注册新内容 - tag](registering-new-content_cn#wiki-section-11)）待写条目会在事件分发**之前**注入——监听器里 `getEntries` 已能看到，`add`/`remove` 仍可覆盖。
+| 方法 | 说明 |
+|---|---|
+| `add(tag, id)` | 把一个条目加进标签 |
+| `remove(tag, id)` | 从标签里移除一个条目 |
+| `removeAll(tag)` | 清空标签 |
+| `replaceAll(tag, ...ids)` | 用给定条目替换标签的全部内容 |
+| `getEntries(tag)` | 读取标签当前的条目 |
 
 ```javascript
 // server_scripts/tags.js
 ServerEvents.tags('minecraft:item', event => {
-  event.add('minecraft:logs', 'mymod:custom_log')   // 把物品加进 tag
-  event.remove('minecraft:logs', 'minecraft:birch_log')  // 从 tag 移除
-  event.replaceAll('minecraft:planks', 'minecraft:oak_planks')  // 整体替换 tag 内容
+  event.add('minecraft:logs', 'mymod:custom_log')
+  event.remove('minecraft:logs', 'minecraft:birch_log')
+  event.replaceAll('minecraft:planks', 'minecraft:oak_planks')
 })
-ServerEvents.tags('minecraft:block', event => { /* 方块 tag */ })
+
+ServerEvents.tags('minecraft:block', event => {
+  // 方块标签
+})
 ```
 
-Fabric 当前没有发布这个标签编辑事件。Cleanroom 1.12.2 / `ore_dict` 示例属于旧实现，不适用于当前仓库。
+在 26.x 上，注册新物品时用 `.tag(...)` 声明的标签，在这个事件里已经能读到。
 
----
+<a id="wiki-section-11"></a>
+## PlayerEvents
 
-<a id="wiki-section-7"></a>
-## PlayerEvents（服务端）
+玩家相关的事件。写在 `server_scripts` 里。
 
-| 事件 | 分发? | 事件对象 | 说明 |
+| 事件 | 按 id 过滤 | 可取消 | 说明 |
 |---|---|---|---|
-| `loggedIn` | — | `PlayerLoggedInEvent` | 玩家加入 |
-| `loggedOut` | — | `PlayerLoggedOutEvent` | 玩家离开 |
-| `chat` | — | `ServerChatEvent` | 发送聊天 |
-| `tickPre` / `tickPost` | — | `PlayerTickEvent.Pre`/`Post` | 玩家 tick |
-| `cloned` | — | `PlayerEvent.Clone` | 玩家数据克隆（死亡/维度切换） |
-| `respawned` | — | `PlayerRespawnEvent` | 重生 |
-| `changedDimension` | — | `PlayerChangedDimensionEvent` | 切换维度 |
-| `advancement` | — | `AdvancementEarnEvent` | 获得成就 |
-| `containerOpened`（旧名 `inventoryOpened` 已弃用） | — | `PlayerContainerEvent.Open` | 打开容器 |
-| `containerClosed`（旧名 `inventoryClosed` 已弃用） | — | `PlayerContainerEvent.Close` | 关闭容器 |
-| `entityInteract` | — | `PlayerInteractEvent.EntityInteract` | 与实体交互 |
-| `crafted` | 按 `Item` | `ItemCraftedEvent` | 合成了某物品 |
-| `smelted` | 按 `Item` | `ItemSmeltedEvent` | 烧炼了某物品 |
-| `destroyed` | 按 `Item` | `PlayerDestroyItemEvent` | 损坏了某物品 |
-| `inventoryChanged` | 按 `Item` | `InventoryChangedEventJS` | 玩家物品栏内容变化（`event.item` / `event.slot`；如 `PlayerEvents.inventoryChanged('minecraft:stone', ...)`） |
+| `loggedIn` / `loggedOut` | — | — | 玩家进入 / 离开服务器 |
+| `chat` | — | NeoForge 可取消 | 玩家发送聊天消息。`event.message`、`event.username` 是字符串 |
+| `tickPre` / `tickPost` | — | — | 每个玩家每 tick 一次 |
+| `respawned` | — | — | 玩家重生 |
+| `cloned` | — | — | 死亡重生或从末地返回时复制玩家数据 |
+| `changedDimension` | — | — | 切换维度 |
+| `advancement` | — | — | 获得进度 |
+| `containerOpened` / `containerClosed` | — | — | 打开 / 关闭容器界面 |
+| `entityInteract` | — | 可取消 | 玩家右键实体 |
+| `crafted` | 物品 id | — | 合成出某物品 |
+| `smelted` | 物品 id | — | 从熔炉取出烧好的物品 |
+| `destroyed` | 物品 id | — | 物品耐久耗尽损坏 |
+| `inventoryChanged` | 物品 id | — | 物品栏里某一格变化。`event.item` 是物品栈，`event.slot` 是格子编号 |
 
 ```javascript
-PlayerEvents.inventoryChanged('minecraft:diamond', event => {
-  console.info(`玩家物品栏里出现了钻石（槽位 ${event.slot}）`)
-})
-```
-
-```javascript
+// server_scripts/players.js
 PlayerEvents.loggedIn(event => {
-  const player = event.entity
-  player.displayClientMessage(Text.of(`欢迎，${player.getName().getString()}！`), false)
+  // NeoForge 上玩家是 event.entity，Fabric 上是 event.player
+  const player = event.entity ?? event.player
+  player.displayClientMessage(Text.of('欢迎，' + player.getName().getString() + '！'), false)
 })
 
 PlayerEvents.crafted('minecraft:stick', event => {
-  console.info('玩家合成了一根木棍')
+  console.info('有人合成了木棍')
+})
+
+PlayerEvents.inventoryChanged('minecraft:diamond', event => {
+  console.info('物品栏第 ' + event.slot + ' 格放进了钻石')
 })
 ```
 
----
+旧名 `inventoryOpened`、`inventoryClosed` 仍可使用，新脚本请用 `containerOpened`、`containerClosed`。
 
-<a id="wiki-section-8"></a>
-## EntityEvents（服务端，按 `EntityType` 分发）
+<a id="wiki-section-12"></a>
+## EntityEvents
 
-| 事件 | 事件对象 | 说明 |
-|---|---|---|
-| `damagePre` | `LivingDamageEvent.Pre` | 受伤前（可取消：return true = 伤害归零——NeoForge 映射 `setNewDamage(0)`，伤害链仍走完、`damagePost` 仍以 0 触发；fabric 整体免除本次伤害。可 `event.setNewDamage(n)` 改值，仅 NeoForge） |
-| `damagePost` | `LivingDamageEvent.Post` | 受伤后 |
-| `death` | `LivingDeathEvent` | 死亡 |
-| `drops` | `LivingDropsEvent` | 掉落物（可修改） |
-| `finalizeSpawn` | `FinalizeSpawnEvent` | 生成判定 |
-| `tickPre` / `tickPost` | `EntityTickEvent` | 实体 tick |
-| `joinLevel` / `leaveLevel` | — | 进入/离开世界 |
-| `useItemStarted` / `useItemStopped` / `useItemFinished` / `useItemTick`（按 `Item` 分发，仅 NeoForge） | — | 使用物品过程 |
+实体相关的事件。写在 `server_scripts` 里。大部分事件可以按实体类型 id 过滤，例如 `'minecraft:zombie'`。
+
+| 事件 | 按 id 过滤 | 可取消 | 说明 |
+|---|---|---|---|
+| `damagePre` | 实体 id | 可取消 | 实体即将受到伤害，见下文 |
+| `damagePost` | 实体 id | — | 实体受到伤害之后 |
+| `death` | 实体 id | NeoForge 可取消 | 实体死亡 |
+| `drops` | 实体 id | 可取消 | 实体死亡掉落物品。取消后不掉落 |
+| `finalizeSpawn` | 实体 id | NeoForge 可取消 | 生物自然生成或刷怪笼生成时 |
+| `joinLevel` / `leaveLevel` | 实体 id | `joinLevel` 在 NeoForge 可取消 | 实体进入 / 离开世界 |
+| `tickPre` / `tickPost` | 实体 id | `tickPre` 在 NeoForge 可取消 | 实体每 tick 一次。实体很多，逻辑要轻 |
+| `useItemStarted` / `useItemTick` / `useItemStopped` / `useItemFinished` | 物品 id | 前三个可取消 | 开始使用 / 使用中每 tick / 中途松开 / 使用完成。仅 NeoForge |
 
 ```javascript
+// server_scripts/entities.js
 EntityEvents.death('minecraft:zombie', event => {
-  console.info('一只僵尸死在了', event.getEntity().blockPosition())
+  console.info('一只僵尸死在了 ' + event.entity.blockPosition())
+})
+
+// 玩家受到的伤害减半（NeoForge）
+EntityEvents.damagePre('minecraft:player', event => {
+  event.setNewDamage(event.getNewDamage() / 2)
 })
 ```
 
----
+取消 `damagePre` 的效果在两个平台上不同：
 
-<a id="wiki-section-9"></a>
-## BlockEvents（服务端，按 `Block` 分发）
+- **NeoForge**：伤害变成 0，`damagePost` 仍然会以 0 伤害触发。也可以用 `event.setNewDamage(数值)` 改伤害。
+- **Fabric**：这次伤害完全不发生。Fabric 上不能修改伤害数值，只能取消。
 
-| 事件 | 事件对象 | 说明 |
+<a id="wiki-section-13"></a>
+## BlockEvents
+
+方块相关的事件。写在 `server_scripts` 里。大部分事件按方块 id 过滤。
+
+| 事件 | 可取消 | 说明 |
 |---|---|---|
-| `broken` | `BreakBlockEvent` | 方块被破坏（可取消） |
-| `entityPlaced` | `BlockEvent.EntityPlaceEvent` | 被实体放置 |
-| `entityMultiPlaced` | `EntityMultiPlaceEvent` | 批量放置 |
-| `neighborNotify` | `NeighborNotifyEvent` | 邻接通知 |
-| `fluidPlaced` | — | 流体放置 |
-| `farmlandTrample` | — | 农田踩踏（可取消） |
-| `portalSpawn` | `PortalSpawnEvent` | 传送门生成 |
-| `toolModification` | — | 工具修饰 |
-| `placed` | `BlockEvent.EntityPlaceEvent` | 方块被放置（`entityPlaced` 的别名） |
-| `rightClicked` | `PlayerInteractEvent.RightClickBlock` | 右键方块 |
-| `leftClicked` | `PlayerInteractEvent.LeftClickBlock` | 左键方块 |
-| `randomTick` | `RandomTickEvent` | 方块随机 tick（仅对 `isRandomlyTicking()` 的方块；`event.getLevel()/getPos()/getState()/getRandom()`） |
-| `blockEntityTick` | `BlockEntityTickEvent` | 方块实体 tick（按 `BlockEntityType` 分发；`event.getBlockEntity()`） |
-| `modification` | `BlockModificationEventJS` | **运行时修改方块属性**（NeoForge 26.x；快照恢复语义，见下方） |
+| `broken` | 可取消 | 玩家破坏方块 |
+| `placed` / `entityPlaced` | 可取消 | 方块被放置（两个名字是同一事件） |
+| `entityMultiPlaced` | 可取消 | 一次放置多个方块，如床、门。仅 NeoForge |
+| `rightClicked` / `leftClicked` | 可取消 | 玩家右键 / 左键方块 |
+| `neighborNotify` | 可取消 | 方块通知周围方块更新 |
+| `fluidPlaced` | 可取消 | 流体生成方块，如岩浆遇水生成圆石 |
+| `farmlandTrample` | 可取消 | 耕地被踩坏 |
+| `portalSpawn` | 可取消 | 下界传送门生成 |
+| `toolModification` | 可取消 | 用工具改变方块，如斧头去皮、锄头耕地。仅 NeoForge |
+| `randomTick` | — | 方块随机刻。只对会随机刻的方块触发，例如小麦、草方块；石头不会触发 |
+| `blockEntityTick` | — | 方块实体每 tick 一次。按**方块实体类型** id 过滤，例如 `'minecraft:furnace'` |
+| `modification` | — | **修改方块属性**，见下文。不按 id 过滤 |
 
 ```javascript
-// 随机 tick：只对自然随机 tick 的方块触发（isRandomlyTicking，如小麦/草方块；
-// 石头等不会随机 tick 的方块不会触发）
-BlockEvents.randomTick('minecraft:wheat', event => {
-  // event.getLevel() / event.getPos() / event.getState() / event.getRandom()
+// server_scripts/blocks.js
+BlockEvents.broken('minecraft:diamond_ore', event => {
+  console.info(event.player.getName().getString() + ' 挖到了钻石矿')
 })
 
-// 方块实体 tick：监听熔炉每 tick
+// 禁止踩坏耕地
+BlockEvents.farmlandTrample(event => true)
+
+BlockEvents.randomTick('minecraft:wheat', event => {
+  // event.level、event.pos、event.state、event.random
+})
+
 BlockEvents.blockEntityTick('minecraft:furnace', event => {
-  const be = event.getBlockEntity()
+  const furnace = event.blockEntity
 })
 ```
 
-> **Cleanroom 1.12.2 差异**：事件名已统一到规范名（`broken`/`placed`，与 NeoForge 一致）；另有 `harvestDrops`（收获掉落）；没有 `toolModification`；不支持 `modification`。
+<a id="wiki-section-14"></a>
+### 修改方块属性：BlockEvents.modification
 
-<a id="wiki-section-10"></a>
-### BlockEvents.modification —— 运行时修改方块属性
-
-首次启动收集并验证修改计划；完整 SERVER 重载在候选环境中收集声明，不提前修改活动属性。成功提交时，owner 先恢复其基线，再应用完整的新计划。因此移除某条 `modify` 后，该修改在下次**成功**重载时回退；候选失败仍保留活动计划。这不保证任意 Java、世界或文件副作用回滚。可修改属性如下；未设置的 getter 读取当前值，可先读后写：
+修改已有方块的硬度、亮度等属性。支持 NeoForge 26.x 和 Fabric 26.x；1.21.1 不支持。
 
 | 属性 | 类型 | 说明 |
 |---|---|---|
-| `hardness` | `float >= 0` | 硬度（挖掘时间；石头 1.5、黑曜石 50） |
-| `resistance` | `float >= 0` | 爆炸抗性（基岩级用 `3600000`） |
-| `lightLevel` | `int 0..15` | 光照等级（萤石 15） |
-| `requiresTool` | `boolean` | 是否需要正确工具才会掉落 |
-| `friction` | `float 0..1` | 摩擦力（冰 0.98，默认 0.6） |
-| `jumpFactor` | `float` | 跳跃因子（原版方块 0.5..1） |
+| `hardness` | 不小于 0 的数 | 硬度，决定挖掘时间。石头 1.5，黑曜石 50 |
+| `resistance` | 不小于 0 的数 | 爆炸抗性。基岩级别用 `3600000` |
+| `lightLevel` | 0 到 15 的整数 | 发光亮度。萤石是 15 |
+| `requiresTool` | true / false | 是否必须用正确的工具挖才会掉落 |
+| `friction` | 0 到 1 的数 | 摩擦力。冰 0.98，普通方块 0.6 |
+| `jumpFactor` | 数 | 跳跃高度系数。原版方块在 0.5 到 1 之间 |
 
 ```javascript
 // server_scripts/block_mods.js
 BlockEvents.modification(event => {
   event.modify('minecraft:stone', block => {
     block.hardness = 2
-    block.resistance = 6
     block.lightLevel = 15     // 会发光的石头
     block.requiresTool = false
-    block.friction = 0.8      // 略滑
-    // block.jumpFactor = 1.2
+    block.friction = 0.8      // 有点滑
   })
 
-  // 也可以只改一项，或先读后写
+  // 先读当前值，再改
   event.modify('minecraft:obsidian', block => {
-    block.hardness = block.hardness / 2   // 读当前值再减半
+    block.hardness = block.hardness / 2
   })
 })
 ```
 
-> **可见性说明**：成功提交的计划会更新服务端方块属性与**所有已有方块状态**。当前 NeoForge 26.x owner 还会向已连接客户端发送已提交的 Item/Block 声明，并在玩家登录时补发；客户端验证后应用。这是声明同步，不保证区块立即重新计算光照，也不能据此宣称多人网络必定送达。方块修改仍仅支持 NeoForge 26.x；1.21.1 支持物品修改，但没有这里的方块接口。
+修改在服务器启动时生效，每次 `/nekojs reload` 都会按当前脚本重新应用一遍。所以删掉某条 `modify` 后 reload，这个方块就会恢复原样。reload 失败时，上一次的修改继续保留。
 
+修改会同步到已经连接的客户端，之后进入的玩家也会收到。已加载区块的光照可能不会马上刷新，重新加载区块即可。
 
-```javascript
-BlockEvents.broken('minecraft:diamond_ore', event => {
-  console.info('钻石矿被挖了！玩家：', event.getPlayer().getName().getString())
-})
-```
-
----
-
-<a id="wiki-section-11"></a>
+<a id="wiki-item-events"></a>
+<a id="wiki-section-15"></a>
 ## ItemEvents
 
-| 事件 | 类型 | 分发? | 事件对象 | 说明 |
-|---|---|---|---|---|
-| `rightClicked` | server | 按 `Item` | `PlayerInteractEvent.RightClickItem` | 右键物品 |
-| **`tooltip`** | **client** | 按 `Item` | `ItemTooltipEvent` | **修改物品 tooltip** |
-| `canPickUp` | server | 按 `Item` | `ItemEntityPickupEvent.Pre` | 能否捡起（返回 `true` 阻止；旧名 `pickedUpPre` 已弃用） |
-| `pickedUp` | server | 按 `Item` | `ItemEntityPickupEvent.Post` | 捡起后 |
-| `dropped` | server | 按 `Item` | `ItemTossEvent` | 丢弃 |
-| `entityInteracted` | server | 按 `Item` | `PlayerInteractEvent.EntityInteract` | 用物品与实体交互 |
-| `foodEaten` | server | 按 `Item` | `LivingEntityUseItemEvent.Finish` | 食用完成 |
-| `modification` | server | — | `ItemModificationEventJS` | **运行时修改物品默认属性**（NeoForge 26.x/1.21.1；快照恢复语义） |
+物品相关的事件。除 `tooltip` 外都写在 `server_scripts` 里。大部分事件按物品 id 过滤。
 
-> **Cleanroom 1.12.2 差异**：`dropped` 已统一到规范名（`ItemTossEvent`）；另有 `expire`（`ItemExpireEvent`）；无独立 Pre 变体，`pickedUp`/`canPickUp` 绑定同一事件（`pickedUpPre` 已弃用且从未在 1.12.2 存在）。`tooltip` 在 1.12.2 上是 server 类型。`modification` 在 1.12.2 上不支持（那个版本物品属性是字段模型，需要另做一套适配）。
+| 事件 | 脚本 | 可取消 | 说明 |
+|---|---|---|---|
+| `rightClicked` | 服务端 | 可取消 | 玩家手持物品右键 |
+| `entityInteracted` | 服务端 | 可取消 | 玩家手持物品右键实体 |
+| `canPickUp` | 服务端 | 见下文 | 玩家即将捡起物品 |
+| `pickedUp` | 服务端 | — | 玩家捡起物品之后 |
+| `dropped` | 服务端 | NeoForge 可取消 | 玩家丢出物品 |
+| `foodEaten` | 服务端 | — | 食物吃完，或盾、弓等物品使用完成 |
+| `modification` | 服务端 | — | **修改物品属性**，见下文。不按 id 过滤 |
+| `tooltip` | 客户端 | — | **修改物品提示文字**，见下文 |
 
-**修改物品默认属性示例**（`ItemEvents.modification`，在服务器启动及完整 SERVER 候选重载中收集；成功提交才替换 owner 持有的计划，候选失败保留活动计划。移除 `modify` 声明在下次成功重载时生效）：
+```javascript
+// server_scripts/items.js
+ItemEvents.rightClicked('minecraft:stick', event => {
+  event.player.displayClientMessage(Text.of('你挥了挥木棍'), false)
+})
+
+ItemEvents.foodEaten('minecraft:golden_apple', event => {
+  console.info('有人吃了金苹果')
+})
+```
+
+阻止捡起物品时，两个平台的写法不同：
+
+- **NeoForge**：调用 `event.setCanPickup(TriState.FALSE)`。这里返回 `true` 没有效果。
+- **Fabric**：在回调里 `return true`。
+
+旧名 `pickedUpPre` 等同于 `canPickUp`，新脚本请用 `canPickUp`。
+
+<a id="wiki-section-16"></a>
+### 修改物品属性：ItemEvents.modification
+
+修改已有物品的堆叠数量、稀有度、食物属性等。支持 NeoForge 1.21.1、NeoForge 26.x 和 Fabric 26.x。生效时机和 `BlockEvents.modification` 一样：启动时应用，每次 `/nekojs reload` 重新应用，删掉的修改会在下次 reload 后恢复。
+
+| 属性 | 说明 |
+|---|---|
+| `maxStackSize` | 最大堆叠数，1 到 99 |
+| `maxDamage` | 耐久值。大于 0 时 `maxStackSize` 不能大于 1 |
+| `rarity` | 稀有度：`'common'`、`'uncommon'`、`'rare'`、`'epic'` |
+| `fireResistant` | 是否不会被火烧毁 |
+| `food` | 食物属性，设为 `null` 表示不能再吃 |
+| `attackDamage` / `attackSpeed` | 主手攻击伤害 / 攻击速度的加成值 |
+| `tool` | 让物品能当工具挖所有方块，设为 `null` 表示移除 |
 
 ```javascript
 // server_scripts/item_mods.js
 ItemEvents.modification(event => {
   event.modify('minecraft:diamond', item => {
-    item.maxStackSize = 64     // 1..99
-    item.rarity = 'epic'       // 'common' | 'uncommon' | 'rare' | 'epic'
+    item.maxStackSize = 16
+    item.rarity = 'epic'
     item.fireResistant = true
-    // item.maxDamage = 2000   // 注意：maxDamage > 0 与 maxStackSize > 1 不能同时设置
   })
 
-  // 食物（对象字段均可省略：nutrition 默认 1、saturation 默认 0.1、canAlwaysEat 默认 false、
-  // eatSeconds 可选）。saturation 是系数语义（与 KubeJS 一致）：绝对饱和度 = nutrition × saturation × 2。
-  // 物品原本没有进食组件时会自动补一个（默认 1.6 秒）；有则沿用；显式给 eatSeconds 则替换时长
+  // 让木棍可以吃。各项都可以省略：nutrition 默认 1，saturation 默认 0.1
   event.modify('minecraft:stick', item => {
     item.food = { nutrition: 4, saturation: 0.6, canAlwaysEat: true, eatSeconds: 1.6 }
-    // item.food = null       // 移除食物：原本能吃的物品连进食动画组件一起移除（药水不受影响）
   })
 
-  // 武器属性：替换 base_attack_damage / base_attack_speed 修饰符（主手 ADD_VALUE），
-  // 其余属性修饰符原样保留，两个属性可只设其一。数值是"加成量"：玩家基础攻击伤害 2.0、
-  // 攻击速度 4.0 不包含在内
+  // 铁锭当剑用：总伤害 = 2 + 6，总攻速 = 4 - 2.4 = 1.6
   event.modify('minecraft:iron_ingot', item => {
-    item.attackDamage = 6    // 总攻击伤害 = 2.0 + 6
-    item.attackSpeed = -2.4  // 总攻击速度 = 4.0 - 2.4 = 1.6（剑的速度）
+    item.attackDamage = 6
+    item.attackSpeed = -2.4
   })
 
-  // 工具：写入 TOOL 组件的"全部方块生效"规则（按给定速度挖掘 + 视为正确工具，黑曜石也会掉落）。
-  // miningSpeed 必填（> 0），damagePerBlock 默认 1，canDestroyBlocksInCreative 默认 true。
-  // 26.x 物品侧没有挖掘等级可设（工具等级在方块组件上）
+  // 烈焰棒当万能工具：按速度 6 挖掘所有方块，并且都能掉落
   event.modify('minecraft:blaze_rod', item => {
     item.tool = { miningSpeed: 6 }
-    // item.tool = null      // 移除 TOOL 组件
   })
 })
 ```
 
-**修改 tooltip 示例**（写在 `client_scripts`）：
+几点说明：
+
+- `saturation` 是系数，和 KubeJS 一样。实际恢复的饱和度 = `nutrition` × `saturation` × 2。
+- 原本不能吃的物品设置 `food` 后，会自动获得进食动作，默认吃 1.6 秒。给了 `eatSeconds` 就用你给的时长。
+- `attackDamage` 和 `attackSpeed` 是加在玩家基础值上的数：基础攻击伤害 2，基础攻速 4。只设其中一个也可以，物品的其他属性加成不受影响。
+- `tool` 里 `miningSpeed` 必填，`damagePerBlock` 默认 1，`canDestroyBlocksInCreative` 默认 true。26.x 的物品上不能设挖掘等级。
+
+<a id="wiki-section-17"></a>
+### 物品提示：ItemEvents.tooltip
+
+写在 `client_scripts` 里，按物品 id 过滤。改完用 `/nekojs reload client`。
 
 ```javascript
 // client_scripts/tooltips.js
 ItemEvents.tooltip('minecraft:diamond', event => {
-  event.toolTip.add(Component.literal('闪耀夺目'))
-  event.toolTip.add(Component.literal('第二行普通文本'))
+  // NeoForge 用 event.toolTip，Fabric 用 event.lines
+  const lines = event.toolTip ?? event.lines
+  lines.add(Text.of('闪闪发光').gold())
 })
 ```
 
----
+<a id="wiki-section-18"></a>
+## LevelEvents
 
-<a id="wiki-section-12"></a>
-## LevelEvents（服务端）
+世界（维度）相关的事件。写在 `server_scripts` 里。
 
-| 事件 | 事件对象 | 说明 |
+| 事件 | 可取消 | 说明 |
 |---|---|---|
-| `loaded` / `unloaded` / `saved` | `LevelEvent` | 世界加载/卸载/保存 |
-| `tickPre` / `tickPost`（旧名 `tick` 已弃用） | `LevelTickEvent` | 世界 tick |
-| `explosionStart`（旧名 `beforeExplosion` 已弃用） | `ExplosionEvent.Start` | 爆炸开始（可取消） |
-| `explosionDetonate`（旧名 `afterExplosion` 已弃用） | `ExplosionEvent.Detonate` | 爆炸影响 |
+| `loaded` / `unloaded` / `saved` | — | 世界加载 / 卸载 / 保存 |
+| `tickPre` / `tickPost` | — | 每个世界每 tick 一次 |
+| `explosionStart` | 可取消 | 爆炸即将发生。取消后不会爆炸 |
+| `explosionDetonate` | — | 爆炸已经算出影响范围，即将破坏方块和伤害实体 |
 
----
+旧名 `beforeExplosion`、`afterExplosion`、`tick` 仍可使用，新脚本请用 `explosionStart`、`explosionDetonate`、`tickPost`。Fabric 没有 `tick`。
 
-<a id="wiki-section-13"></a>
-## NetworkEvents（按 channel 字符串分发）
+<a id="wiki-section-19"></a>
+## NetworkEvents
 
-跨客户端-服务端脚本通信。配合 [Network](global-bindings_cn#wiki-section-37) 绑定使用。
+让服务端脚本和客户端脚本互相发消息。按频道名过滤，频道名是你自己起的字符串。发送用 [Network](global-bindings_cn#wiki-network)。
 
-| 事件 | 类型 | 说明 |
+| 事件 | 脚本 | 说明 |
 |---|---|---|
-| `server` | server | 接收客户端发来的包：`event.channel`、`event.data`（CompoundTag）、`event.player` |
-| `client` | client | 接收服务端发来的包：`event.channel`、`event.data` |
+| `server` | 服务端 | 收到客户端发来的消息。`event.channel`、`event.data`、`event.player` |
+| `client` | 客户端 | 收到服务端发来的消息。`event.channel`、`event.data` |
 
-**完整示例**（客户端按键 → 通知服务端 → 服务端回包）：
+下面的例子是：客户端发请求，服务端处理后回复。
 
 ```javascript
-// client_scripts/key_handler.js
+// client_scripts/menu.js
 NetworkEvents.client('my_channel', event => {
-  console.info('收到服务端消息：', event.data)
+  console.info('服务端回复：', event.data)
 })
 
-// 在客户端按键事件里发包
+// 在按键等客户端事件里发送：
 // Network.sendToServer('my_channel', { action: 'open_menu' })
 ```
 
 ```javascript
-// server_scripts/menu_handler.js
+// server_scripts/menu.js
 NetworkEvents.server('my_channel', event => {
-  console.info(`玩家 ${event.player.getName().getString()} 发来：`, event.data)
+  console.info(event.player.getName().getString() + ' 发来：', event.data)
   Network.sendToPlayer(event.player, 'my_channel', { result: 'ok' })
 })
 ```
 
-> `data` 是 `CompoundTag`，GraalJS 会自动把 JS 对象转成 NBT。
+`data` 是 NBT 对象。发送时直接写普通 JS 对象，会自动转换。服务端收到的是客户端发来的数据，使用前要自己检查内容是否合理。
 
----
+<a id="wiki-section-20"></a>
+## RegistryEvents
 
-<a id="wiki-section-14"></a>
-## RegistryEvents（仅 STARTUP）
+注册新物品、方块、实体等内容。写在 `startup_scripts` 里，改完要**重启游戏**。完整写法见 [注册新内容](registering-new-content_cn)。
 
-注册新内容——**单入口** `register`，回调里的 `event` 是通用注册事件（每注册表一个糖方法）。详见 [注册新内容](registering-new-content_cn)。
-
-| 事件 | 事件对象 | 说明 |
-|---|---|---|
-| `register` | `RegistryEvent` | 收集回调（每轮启动 post 一次）；`event.item(id, b => ...)` / `event.block(...)` / `event.fluid(...)` / `event.entityType(...)` / `event.enchantment(...)` / `event.creativeModeTab(...)` / `event.mobEffect(...)` / `event.potion(...)` / `event.soundEvent(...)` / `event.particleType(...)` / `event.paintingVariant(...)` / `event.villagerType(...)` 糖方法 + `event.custom(id, typeName, cb)` / `event.register(registry, id, supplier)` |
-
-> 糖方法集来自 `registry_types` 扩展点登记的类型清单（有 default 类型才有糖方法），随平台注册表集合自动增减；`particleType` / `paintingVariant` 仅 NeoForge。Cleanroom 1.12.2 仍是旧的多入口管线，还没跟上这套写法。
-
-<a id="wiki-section-15"></a>
-## CapabilityEvents（STARTUP）
-
-<a id="wiki-section-16"></a>
-### NeoForge：原生 capability 注册
-
-在 NeoForge 1.21.1 / 26.x 上为普通方块、方块实体、实体和物品注册 provider。事件只在 mod 总线的
-`RegisterCapabilitiesEvent` 阶段提交一次；普通脚本 reload 不会重新修改原生 capability 注册表。
-收集期间验证 target id 和 capability scope，不调用 provider；原生查询到来后才执行 provider。
-成功提交后拒绝晚注册和二次提交，失败后也不能重试已部分修改的原生注册表。
-
-| 方法 | 说明 |
+| 事件 | 说明 |
 |---|---|
-| `registerBlock(blockId, capability, provider)` | 标准普通方块能力；provider 接收 `(level, pos, state, blockEntity, direction)`，`blockEntity` 可以为 `null` |
-| `registerBlockNative(blockId, nativeCapability, provider)` | 第三方 `BlockCapability`；provider 接收同样五个参数，最后一个为原生 context |
-| `registerBlockEntity(typeId, capability, provider)` | 兼容入口；provider 无参数，每次查询都会调用，不自动缓存其结果 |
-| `registerBlockEntityContext(typeId, capability, provider)` | 标准方块实体能力；provider 接收 `(blockEntity, direction)` |
-| `registerEntity(typeId, capability, provider)` | 标准实体能力；provider 接收 `(entity, context)`；额外支持 `'item_automation'` |
-| `registerItem(itemId, capability, provider)` | 标准物品能力；provider 接收 `(stack, context)` |
-| `registerBlockEntityNative(typeId, nativeCapability, provider)` | 使用第三方 `BlockCapability`；provider 接收 `(blockEntity, nativeContext)` |
-| `registerEntityNative(typeId, nativeCapability, provider)` | 使用第三方 `EntityCapability`；provider 接收 `(entity, nativeContext)` |
-| `registerItemNative(itemId, nativeCapability, provider)` | 使用第三方 `ItemCapability`；provider 接收 `(stack, nativeContext)` |
-
-标准能力名为 `'item'` / `'energy'` / `'fluid'`。Native 入口保留传入 capability 的
-`typeClass` / `contextClass` 契约；第三方对象可通过已安装模组的 `Java.type(...)` 静态字段或插件 Binding 取得，
-不需要 NekoJS 硬依赖 Curios、Botania 等模组。Native 入口使用不同名字，不与旧 Supplier 入口争抢脚本重载。
-
-原生上下文差异：
-
-| Scope | NeoForge 1.21.1 | NeoForge 26.x |
-|---|---|---|
-| Block entity item/energy/fluid | 可空 `Direction` | 可空 `Direction` |
-| Entity item | `null`（完整实体物品栏） | `null`（完整实体物品栏） |
-| Entity item_automation/energy/fluid | 可空 `Direction` | 可空 `Direction` |
-| Item item/energy/fluid | `null` | 原生 `ItemAccess`，不是 `Direction` |
-| 第三方 capability | 由原生 capability 的 `contextClass` 决定 | 同左 |
-
-所有 provider 可以返回 `null` 拒绝本次查询。非空结果必须实现原生 capability 的 `typeClass`；
-1.21.1 的物品流体能力要求 `IFluidHandlerItem`，不是仅实现 `IFluidHandler` 的独立罐。
-26.x 标准结果为 `ResourceHandler` / `EnergyHandler`；1.21.1 为 `IItemHandler` / `IEnergyStorage` / `IFluidHandler`（物品为 `IFluidHandlerItem`）。
-
-下面的 `ModCapabilityAccess` 是第三方模组或插件提供的 Binding；其 `ofEntity/ofItem` 返回该对象已拥有的 handler：
+| `register` | 在回调里用 `event.item(id, b => {})`、`event.block(...)`、`event.entityType(...)` 等方法注册内容 |
 
 ```javascript
-CapabilityEvents.register(event => {
-  event.registerEntity('minecraft:player', 'energy', (entity, direction) => {
-    return ModCapabilityAccess.ofEntity(entity, direction)
-  })
-  event.registerItemNative('mymod:accessory', ModCapabilityAccess.itemCapability, (stack, context) => {
-    return ModCapabilityAccess.ofItem(stack, context)
+// startup_scripts/items.js
+RegistryEvents.register(event => {
+  event.item('mymod:cool_gem', item => {
+    item.maxStackSize = 16
   })
 })
 ```
 
-provider 必须返回具体对象拥有的稳定 handler。不要在每次查询里调用 `Capabilities.itemHandler(...)`、
-`energyStorage(...)` 或 `fluidTank(...)` 创建全新空存储；也不要把一个可变存储共享给整个世界的同类型对象。
-注册只提供访问入口，不替代对象自己的存档、同步、生命周期和事务实现。方块能力发生可用性变化时，
-provider 的 owner 仍需调用原生 `level.invalidateCapabilities(pos)` 通知缓存。
+可用的注册方法随平台和版本变化。例如 `particleType`、`paintingVariant` 仅 NeoForge；26.x 上附魔改由数据包定义，不能用脚本注册。
 
-未知 id（含 defaulted registry 回退）、非法 capability/context、重复注册、provider 异常和返回类型错误
-均保留带 `NEKO-` 代码的失败；provider 注册回调由 loader 生命周期持有，需要更换时重启游戏。
+<a id="wiki-section-21"></a>
+## GoalEvents
 
-<a id="wiki-section-17"></a>
-### Fabric：原生 Lookup 注册
+给已有的生物添加 AI 行为。写在 `startup_scripts` 里。详见 [注册新内容](registering-new-content_cn)。
 
-Fabric 26.x 同样注册 `CapabilityEvents.register`。STARTUP 声明及对象注册完成后，批次验证通过再安装到真实的 `BlockApiLookup` / `EntityApiLookup` / `ItemApiLookup`；它不是 NeoForge 注册总线或空操作。注册具有 loader 生命周期，普通 reload 不重注册；晚注册、重复 provider、失败批次重试均会拒绝。
-
-| 方法 | 说明 |
+| 事件 | 说明 |
 |---|---|
-| `registerBlockEntity(typeId, capability, provider)` | 无参数 Supplier 兼容入口，每次查询调用，不自动缓存结果 |
-| `registerBlockEntityContext(typeId, capability, provider)` | 标准能力；provider 接收 `(blockEntity, direction)` |
-| `registerEntity(typeId, capability, provider)` | 无参数 Supplier 兼容入口 |
-| `registerEntityContext(typeId, capability, provider)` | 标准能力；provider 接收 `(entity, direction)` |
-| `registerItem(itemId, capability, provider)` | 无参数 Supplier 兼容入口 |
-| `registerItemContext(itemId, capability, provider)` | 标准能力；provider 接收 `(stack, containerItemContext)` |
-| `registerBlockLookup(blockId, lookup, provider)` | `BlockApiLookup`；provider 接收 `(level, pos, state, blockEntity, context)`，方块实体可空 |
-| `registerBlockEntityLookup(typeId, lookup, provider)` | `BlockApiLookup`；provider 接收 `(blockEntity, context)`，只为匹配该类型的方块实体提供结果 |
-| `registerEntityLookup(typeId, lookup, provider)` | `EntityApiLookup`；provider 接收 `(entity, context)` |
-| `registerItemLookup(itemId, lookup, provider)` | `ItemApiLookup`；provider 接收 `(stack, context)` |
+| `register` | 用 `event.forType(实体 id, goals => {})` 给某种生物添加 AI 目标 |
 
-标准能力名为 `'item'` / `'fluid'` / `'energy'`。方块及方块实体的 item/fluid 接入 `ItemStorage.SIDED` / `FluidStorage.SIDED`；物品接入 `ItemStorage.ITEM` / `FluidStorage.ITEM`。实体能力使用 NekoJS Lookup。block/entity 标准 context 是可空 `Direction`，item 是 `ContainerItemContext`，不是方向；自定义 Lookup 保留其 `apiClass` / `contextClass`，不能用错误类型替换。
+<a id="wiki-capability-events"></a>
+<a id="wiki-section-22"></a>
+## CapabilityEvents
 
-item/fluid provider 返回原生 Fabric Transfer `Storage<ItemVariant>` / `Storage<FluidVariant>`；energy 返回 NekoJS `FabricEnergyHandler`。Fabric 没有标准跨模组能量 API，此接口不自动桥接其他模组的能量能力。provider 返回 `null` 拒绝本次查询；异常及不兼容的非空结果仍是失败。
+让方块、实体或物品对外提供物品栏、能量、流体存储，其他模组（如管道、电线）就能和它互动。写在 `startup_scripts` 里，只在启动时注册一次，改了要**重启游戏**。存储对象用 [Capabilities](global-bindings_cn#wiki-capabilities) 创建。
 
-存储须由各 owner 持有并管理生命周期、存档与同步，Supplier 也不能每次查询新建空存储。标准查询可用 `Capabilities.getBlock/getEntity/getItem`，自定义 Lookup 使用自己的 `find(...)`；工厂事务、单位、`onChange` 及持久化边界见 [全局绑定](global-bindings_cn#wiki-section-26)。
+能力名用 `'item'`、`'energy'`、`'fluid'`。
 
----
+<a id="wiki-section-23"></a>
+### NeoForge
 
-<a id="wiki-section-18"></a>
-## CommandEvents（服务端）
-
-| 事件 | 事件对象 | 说明 |
-|---|---|---|
-| `register` | `RegisterCommandsEvent` / `FMLServerStartingEvent` | 注册命令（见下平台差异） |
-| `command` | `CommandEvent` | 命令执行 |
-
-<a id="wiki-section-19"></a>
-### NeoForge（26.x / 1.21.1）
-
-`event` 是 Brigadier 的 `RegisterCommandsEvent`，用 `event.getDispatcher()` 注册命令：
+| 方法 | provider 收到的参数 |
+|---|---|
+| `registerBlock(方块 id, 能力, provider)` | `(level, pos, state, blockEntity, direction)`，`blockEntity` 可能是 `null` |
+| `registerBlockEntityContext(方块实体类型 id, 能力, provider)` | `(blockEntity, direction)` |
+| `registerBlockEntity(方块实体类型 id, 能力, provider)` | 无参数。旧写法，每次查询都会调用 |
+| `registerEntity(实体 id, 能力, provider)` | `(entity, direction)`。实体还支持能力名 `'item_automation'` |
+| `registerItem(物品 id, 能力, provider)` | `(stack, context)` |
+| `registerBlockNative` / `registerBlockEntityNative` / `registerEntityNative` / `registerItemNative` | 参数同上，但第二个参数传其他模组的原生能力对象 |
 
 ```javascript
+// startup_scripts/capabilities.js
+// 'mymod:battery' 换成你注册的方块实体类型
+// 每个方块实体按位置分配自己的能量存储（这个例子不会把能量存进存档）
+const batteries = new Map()
+
+CapabilityEvents.register(event => {
+  event.registerBlockEntityContext('mymod:battery', 'energy', (blockEntity, direction) => {
+    const key = blockEntity.getBlockPos().toString()
+    if (!batteries.has(key)) {
+      batteries.set(key, Capabilities.energyStorage(10000, 100, 100))
+    }
+    return batteries.get(key)
+  })
+})
+```
+
+使用 `Native` 系列方法时，其他模组的能力对象可以用 `Java.type(...)` 从那个模组的类里取得，NekoJS 不需要依赖那个模组。
+
+物品能力的 `context` 在 1.21.1 上是 `null`，在 26.x 上是原生的 `ItemAccess`，不是方向。
+
+<a id="wiki-section-24"></a>
+### Fabric
+
+Fabric 上的方法名不同，底层使用 Fabric 的 Lookup API：
+
+| 方法 | provider 收到的参数 |
+|---|---|
+| `registerBlockEntityContext(方块实体类型 id, 能力, provider)` | `(blockEntity, direction)` |
+| `registerEntityContext(实体 id, 能力, provider)` | `(entity, direction)` |
+| `registerItemContext(物品 id, 能力, provider)` | `(stack, containerItemContext)` |
+| `registerBlockEntity` / `registerEntity` / `registerItem` | 无参数。旧写法，每次查询都会调用 |
+| `registerBlockLookup(方块 id, lookup, provider)` | `(level, pos, state, blockEntity, context)` |
+| `registerBlockEntityLookup(方块实体类型 id, lookup, provider)` | `(blockEntity, context)` |
+| `registerEntityLookup(实体 id, lookup, provider)` | `(entity, context)` |
+| `registerItemLookup(物品 id, lookup, provider)` | `(stack, context)` |
+
+`...Lookup` 系列用来接入其他模组自定义的 Lookup。Fabric 上物品和流体走 Fabric Transfer API，能和其他 Fabric 模组互通；能量用 NekoJS 自己的接口，不能直接和其他模组的能量系统互通。
+
+<a id="wiki-section-25"></a>
+### 写 provider 时要注意
+
+- **每个对象返回它自己的存储。** 不要在每次查询时新建一个空存储，也不要让同类的所有对象共用一个存储。
+- 不想对这次查询提供能力时，返回 `null`。
+- 注册只负责“让别人找到存储”。存储内容的保存、同步要自己处理。
+- 方块的能力发生变化（比如从有到无）时，NeoForge 上要调用 `level.invalidateCapabilities(pos)` 通知缓存。
+- id 不存在、能力名写错、重复注册、provider 报错或返回了错误类型，都会报带 `NEKO-` 代码的错误。
+
+<a id="wiki-command-events"></a>
+<a id="wiki-section-26"></a>
+## CommandEvents
+
+注册自定义命令。写在 `server_scripts` 里。
+
+| 事件 | 可取消 | 说明 |
+|---|---|---|
+| `register` | — | 注册命令。`event.dispatcher` 是原版的命令注册器 |
+| `command` | 可取消 | 有命令即将执行时。取消后命令不执行。仅 NeoForge |
+
+```javascript
+// server_scripts/commands.js
 const Commands = Java.type('net.minecraft.commands.Commands')
 
 CommandEvents.register(event => {
-  const dispatcher = event.getDispatcher()
-  dispatcher.register(
-    Commands.literal('hello')                // Native Brigadier builder
+  event.dispatcher.register(
+    Commands.literal('hello')
       .executes(ctx => {
         ctx.getSource().sendSuccess(() => Text.of('你好！'), false)
         return 1
@@ -587,307 +659,232 @@ CommandEvents.register(event => {
 })
 ```
 
-<a id="wiki-section-20"></a>
-### Cleanroom 1.12.2（无 Brigadier）
+命令用原版的 Brigadier 写法：`Commands.literal(...)` 定义命令名，`.executes(...)` 定义执行内容，返回 `1` 表示成功。改完执行 `/nekojs reload`，新命令就能用了。
 
-1.12.2 没有现代的 `RegisterCommandsEvent`/Brigadier。`CommandEvents.register` 拿到的是 `FMLServerStartingEvent`，脚本必须提供一个 `ICommand` 实现（通常继承 `CommandBase`）再 `event.registerServerCommand(cmd)`：
+`/nekojs` 命令本身由 NekoJS 注册，不需要脚本处理。
 
-```javascript
-// server_scripts/commands.js
-const CommandBase = Java.type('net.minecraft.command.CommandBase')
-const ICommand   = Java.type('net.minecraft.command.ICommand')
+<a id="wiki-keybind-events"></a>
+<a id="wiki-section-27"></a>
+## KeyBindEvents
 
-CommandEvents.register(event => {
-  event.registerServerCommand(new Java.adapter(CommandBase, ICommand, {
-    getName() { return 'hello' },
-    getUsage(sender) { return '/hello' },
-    execute(server, sender, args) {
-      sender.sendMessage(new TextComponentString('你好！'))
-    },
-    getRequiredPermissionLevel() { return 0 }
-  }))
-})
-```
+添加可以在“按键设置”里修改的自定义按键。写在 `client_scripts` 里。支持 NeoForge 26.x 和 Fabric 26.x，1.21.1 没有。
 
-要点：
+| 事件 | 说明 |
+|---|---|
+| `register(id, 按键[, 分类])` | 注册一个按键 |
+| `pressed` | 按下的那一刻触发一次 |
+| `released` | 松开的那一刻触发一次 |
+| `tick` | 按住期间每 tick 触发一次 |
 
-- **`register` 在每次服务端启动时触发一次**（与原版/mod 命令在 `FMLServerStartingEvent` 同阶段）。
-- `event.registerServerCommand(cmd)` 把命令注册到服务端命令表；`cmd` 须实现 `net.minecraft.command.ICommand`。
-- 脚本侧没有 brigadier 的 `.literal(...).executes(...)` 链；命令的参数解析要自己在 `execute` 里处理 `args` 字符串数组（可复用 `CommandBase.parseDouble`/`getBlock` 等辅助方法）。
-- `CommandEvents.command`（命令执行事件）两平台行为一致。
-
-> `/nekojs` 命令本身由 NekoJS 自动注册，无需脚本处理。
-
----
-
-<a id="wiki-section-21"></a>
-## KeyBindEvents（仅 CLIENT，26.x）
-
-脚本友好的按键绑定（KubeJS §7.4-6 对应功能）。全部在客户端线程触发，只在 `client_scripts` 可见。
+`pressed`、`released`、`tick` 都可以按按键 id 过滤。
 
 ```javascript
 // client_scripts/keybinds.js
-// 注册绑定（id 缺省命名空间为 nekojs；键名形如 'key.keyboard.g' / 'key.mouse.left'；
-// 分类可用原版拼写（'key.categories.movement' 或 'movement'）或自定义 id（'mymod:my_keys'））
+// id 不写命名空间时默认是 nekojs；按键名如 'key.keyboard.g'、'key.mouse.left'
+// 分类可以用原版的（如 'movement'），也可以自己起（如 'mymod:my_keys'）
 KeyBindEvents.register('mymod:special', 'key.keyboard.g', 'mymod:my_keys')
 
-// 按下（边沿触发：从松开到按下的那一 tick）
-KeyBindEvents.pressed(event => {
-    console.log(`${event.getId()} 按下`)
+KeyBindEvents.pressed('mymod:special', event => {
+  console.info('按下了 ' + event.id)
+  // 可以在这里用 Network.sendToServer(...) 通知服务端
 })
 
-// 定向监听：只监听指定绑定
-KeyBindEvents.pressed('mymod:special', event => { /* ... */ })
-
-// 松开
 KeyBindEvents.released('mymod:special', event => { /* ... */ })
 
-// 按住期间每 tick（KubeJS 语义：松开时不触发）
-KeyBindEvents.tick('mymod:special', event => { /* event.isDown() 恒为 true */ })
+KeyBindEvents.tick('mymod:special', event => {
+  // 按住期间每 tick 执行
+})
 ```
 
-要点：
+- 事件对象有 `event.id`（完整 id）、`event.keyMapping`（原版按键对象）和 `event.isDown()`（是否按着）。
+- `register` 会返回原版的按键对象，也可以自己轮询它的 `isDown()`、`consumeClick()`。
+- 同一个 id 重复注册不会产生重复的按键，所以 `/nekojs reload client` 是安全的。
+- 按键在设置界面显示的名字用翻译键 `key.<命名空间>.<路径>`，自定义分类用 `key.category.<命名空间>.<路径>`。可以用 `ClientEvents.lang` 或资源包补上翻译。
 
-- `register()` 返回原版 `KeyMapping` 句柄，可自行轮询 `isDown()` / `consumeClick()`；重复注册同一 id 幂等（CLIENT reload 不产生重复条目）。
-- 事件对象：`getId()`（完整 id，也是三个总线的分发键）、`getKeyMapping()`、`isDown()`。
-- **注册时机**：`RegisterKeyMappingsEvent` 在客户端脚本加载前触发——脚本里的 `register()` 先挂起，由该事件统一注入（此时用户改键会持久化到 options.txt）；之后的运行期注册（如 reload 后新增）直接追加进 `options.keyMappings`（与事件本身同一做法）。
-- 绑定名与自定义分类翻译键：`key.<ns>.<path>` / `key.category.<ns>.<path>`，可用 lang 事件补翻译。
+<a id="wiki-section-28"></a>
+## ClientEvents
 
-<a id="wiki-section-22"></a>
-## ProbeEvents（仅 SERVER）
+客户端的 tick、画面绘制和资源生成等事件。写在 `client_scripts` 里，改完用 `/nekojs reload client`。
 
-类型生成钩子：在 `/nekojs probe` 执行期间触发，让脚本修整形声明、登记全局与代码片段。probe 命令在**服务端线程**执行，因此 4 个事件的监听器都须在 `server_scripts` **顶层**注册（不可在回调内再注册）。
-
-| 事件 | 事件对象 | 说明 |
+| 事件 | 平台 | 说明 |
 |---|---|---|
-| `modifyType` | `ProbeModifyTypeEventJS` | 类型渲染**前**：`event.forClass(fqn)` 拿 `ClassEditor` 做参数级编辑（改名/隐藏/改类型/加参数/文档…）。被触及的类由 IR renderer 重新渲染并覆盖声明缓存，未触及的类走旧路径（TS 产物零回归） |
-| `assignType` | `ProbeAssignTypeEventJS` | 全局类型重定向：`event.assign(javaFqn, typeDesc)` 把某 Java 全限定名**处处**改写为自定义类型，TS（重渲染被触及类）与 Python 均生效 |
-| `addGlobal` | `ProbeAddGlobalEventJS` | 登记额外全局声明：`event.add(name, typeDesc)` → TS 写 `@manual/globals.d.ts`（`declare const Name: T;`）、Python 加进 `nekojs/__init__.pyi` |
-| `snippets` | `ProbeSnippetEventJS` | 登记 VSCode 代码片段：`event.add(name, prefix, body[, description])` → 合并进 `nekojs/.vscode/nekojs.code-snippets`（probe 拥有的片段名替换，用户片段保留） |
+| `tickPre` / `tickPost` | 全部 | 客户端每 tick 一次。旧名 `tick` 等于 `tickPost` |
+| `hud` | 全部 | **在屏幕上绘制**，每帧触发，见下文 |
+| `screenRender` | 全部 | **在界面上绘制**，例如箱子界面，见下文 |
+| `playerTickPre` / `playerTickPost` | NeoForge | 本地玩家每 tick 一次。服务端对应的是 `PlayerEvents.tickPre` / `tickPost` |
+| `interactionKey` | NeoForge | 玩家按下攻击、使用、选取方块键时。可取消，取消后原版不处理这次按键 |
+| `loggedIn` / `loggedOut` / `cloned` | NeoForge | 客户端连接服务器 / 断开 / 玩家对象被替换 |
+| `hudRender` | NeoForge | 按 id 注册 HUD 绘制，可以分层排序，见下文 |
+| `worldRender` | NeoForge | 在世界里画线和方框，见下文 |
+| `generateAssets` | NeoForge | **生成资源包文件**（模型、方块状态等），见下文 |
+| `lang` | NeoForge | **添加翻译**，按语言代码过滤，见下文 |
+| `postEffects` | NeoForge | 声明后处理效果，见 [客户端绘制](client-rendering_cn) |
+| `commandRegistry` | NeoForge | 注册客户端命令 |
+| `registerKeyMappings` / `registerMenuScreens` / `registerRenderers` / `registerParticleProviders` | NeoForge | 游戏启动时注册按键、菜单界面、渲染器、粒子。需要原生 Java 对象，一般用不到 |
 
-类型入参（所有编辑/声明方法）：字符串含 `.` → Java 全限定名（SYMBOL）；否则 → 原始类型名（`"string"`/`"number"`/`"boolean"`/`"int"`…）；复杂类型用 `event.type(...)` / `event.array(...)` / `event.union(...)` 构造。
+<a id="wiki-section-29"></a>
+### 在屏幕上绘制：hud 和 screenRender
+
+`hud` 每帧在游戏画面上触发，回调参数就是画笔 `painter`。`screenRender` 在打开界面时每帧触发，画笔是 `event.painter`。
 
 ```javascript
-// server_scripts/probe_patch.js
-ProbeEvents.modifyType(event => {
-  const editor = event.forClass("net.minecraft.world.entity.player.Player")
-  if (editor) {
-    editor
-      .renameMethod("getXxx", "getCustom")                       // 所有同名重载一起改
-      .changeParamType("addItem", 0, "net.minecraft.world.item.ItemStack")  // 按下标改参数类型
-      .markOptional("eat", "level")                               // 参数变 TS 可选
-      .setMethodDoc("getCustom", "自定义文档")
-      .setDoc("玩家扩展")
+// client_scripts/hud.js
+ClientEvents.hud(painter => {
+  // 右上角的状态面板
+  let x = painter.getWidth() - 130
+  painter
+    .color(0xAA000000).rect(x, 10, 120, 60)      // 半透明黑底
+    .outline(x, 10, 120, 60, 0xFFFFFFFF)          // 白色边框
+    .centerText('NekoJS', x + 60, 20)             // 居中文字
+    .text('Hello HUD', x + 10, 32, 0xFFFFFFAA)    // 左对齐文字
+    .resetColor()
+  painter.item(Item.of('minecraft:diamond'), x + 10, 46)   // 物品图标
+})
+
+// client_scripts/screen_overlay.js：在箱子界面顶部加一行字
+ClientEvents.screenRender(event => {
+  if (event.screenTitle === 'Chest') {
+    event.painter.centerText('自定义提示', event.painter.getWidth() / 2, 4, 0xFFFFFFAA)
   }
 })
-
-ProbeEvents.assignType(event => {
-  event.assign("net.minecraft.nbt.CompoundTag", "MyNbt")   // 所有声明里的 CompoundTag → MyNbt
-})
-
-ProbeEvents.addGlobal(event => {
-  event.add("MyFlag", "boolean")                           // → declare const MyFlag: boolean;
-})
-
-ProbeEvents.snippets(event => {
-  event.add("nekojs-listener", "listen", "ServerEvents.started(e => { $1 })",
-            "监听服务端启动")
-})
 ```
 
-> `ClassEditor` 的完整方法清单（`renameMethod`/`hideMethod`/`setMethodDoc`/`changeReturnType`/`changeParamType`/`renameParam`/`removeParam`/`markOptional`/`addParam`/`renameField`/`hideField`/`changeFieldType`/`setFieldDoc`/`hide`/`setDoc`/`changeSuper` 等，按名操作作用于所有同名重载、找不到时静默 no-op）与 probe.toml 配置见 [Probe 类型生成](probe-type-generation_cn)。修改在下一次 `/nekojs probe` 时反映到类型声明里。
+画笔的方法如下。坐标是界面缩放后的像素，颜色是 ARGB 整数，例如 `0x80FF0000` 是半透明红色。
 
----
+| 方法 | 说明 |
+|---|---|
+| `getWidth()` / `getHeight()` | 屏幕宽高 |
+| `getPartialTick()` | 当前帧在两个 tick 之间的位置（0 到 1），做平滑动画用 |
+| `getWorldTime()` | 客户端世界时间（tick），做循环动画用 |
+| `color(argb)` / `resetColor()` | 设置 / 重置默认颜色。不写颜色的方法都用默认颜色 |
+| `rect(x, y, w, h[, color])` | 实心矩形 |
+| `outline(x, y, w, h[, color])` | 1 像素边框 |
+| `gradient(x, y, w, h, 上方颜色, 下方颜色)` | 上下渐变矩形 |
+| `gradientH(x, y, w, h, 左侧颜色, 右侧颜色)` | 左右渐变矩形。宽度太大会影响性能 |
+| `text(文字, x, y[, color])` | 左对齐文字 |
+| `centerText(文字, x, y[, color])` | 以 x 为中心的文字 |
+| `textWidth(文字)` / `wrapText(文字, 最大宽度)` / `lineHeight()` | 文字宽度、按宽度换行、行高 |
+| `texture(贴图 id, x, y, w, h)` | 从贴图左上角截取 w×h 画出来（贴图默认按 256×256） |
+| `texture(贴图 id, x, y, u, v, w, h)` | 从贴图的 (u, v) 位置截取 |
+| `texture(贴图 id, x, y, u, v, w, h, 贴图宽, 贴图高)` | 指定贴图实际尺寸 |
+| `textureFull(贴图 id, x, y, w, h)` | 把整张贴图缩放到 w×h |
+| `item(物品, x, y)` | 物品图标，物品用 `Item.of(...)` |
+| `push()` / `pop()` / `translate(x, y)` | 保存 / 恢复坐标变换，平移坐标 |
+| `scissor(x, y, w, h)` / `resetScissor()` | 只在这个区域内绘制 / 取消限制 |
 
-<a id="wiki-section-23"></a>
-## GoalEvents（仅 STARTUP）
+`screenRender` 的事件对象还有 `event.screen`（界面对象）、`event.screenTitle`（界面标题，如 `'Chest'`）、`event.mouseX` / `event.mouseY`（鼠标位置）。
 
-给已有实体类型追加 AI 目标。详见 [注册新内容 - GoalEvents](registering-new-content_cn)。
+注意：
 
-| 事件 | 事件对象 | 说明 |
-|---|---|---|
-| `register` | `GoalRegisterEventJS` | 给实体类型加 goal |
+- `hud` 每帧都会执行，里面的逻辑要尽量轻。
+- `color()` 会一直生效，画完一块后记得 `resetColor()`。`push()` 和 `pop()`、`scissor()` 和 `resetScissor()` 要成对使用。
+- 画笔只在本次回调里有效。不要把它存进变量留到下一帧用；需要保留的是要画的数据，每帧重新画。
 
----
+<a id="wiki-section-30"></a>
+### 按 id 注册绘制：hudRender 和 worldRender
 
-<a id="wiki-section-24"></a>
-## ClientEvents（仅 CLIENT）
-
-> NeoForge 提供本节的完整事件面。Fabric 26.x 当前提供 `tickPre`、`tickPost`、旧名 `tick`、`hud` 和 `screenRender`；`hud` 经 Fabric HUD layer API 分发，`screenRender` 经 `ScreenEvents.afterExtract` 分发。Fabric 的 `generateAssets`、`lang`、玩家网络状态、渲染器注册、`hudRender` 和 `worldRender` 尚未移植。Fabric 按键请使用 [KeyBindEvents](event-reference_cn)。
-
-| 事件 | 事件对象 | 说明 |
-|---|---|---|
-| `tickPre` / `tickPost`（旧名 `tick` 已弃用） | `ClientTickEvent` | 客户端 tick |
-| **`playerTickPre` / `playerTickPost`** | `PlayerTickEvent.Pre/Post` | **客户端玩家 tick**（本地玩家；已在内部按逻辑侧过滤，服务端实例不会分发到 client 脚本——服务端对应事件是 `PlayerEvents.tickPre/tickPost`） |
-| **`interactionKey`** | `InputEvent.InteractionKeyMappingTriggered` | **客户端交互按键**：攻击/使用物品/选取方块（`isAttack()`/`isUseItem()`/`isPickBlock()`/`getHand()`）；**可取消**——`return true` 拦截原版输入处理 |
-| `loggedIn` / `loggedOut` / `cloned` | `ClientPlayerNetworkEvent` | 客户端玩家网络状态 |
-| `commandRegistry` | `RegisterClientCommandsEvent` | 注册客户端命令 |
-| `registerKeyMappings` | `RegisterKeyMappingsEvent` | 注册按键绑定 |
-| `registerMenuScreens` | `RegisterMenuScreensEvent` | 注册菜单 Screen |
-| `registerRenderers`（旧名 `registerEntityRenderers` / `registerBlockEntityRenderers` 已弃用） | `EntityRenderersEvent.RegisterRenderers` | 注册渲染器 |
-| `registerParticleProviders` | `RegisterParticleProvidersEvent` | 注册粒子提供器 |
-| **`generateAssets`（仅 NeoForge）** | `DataGeneratorJS` | **资产生成**：写 asset JSON（模型/贴图/配方分类等）到 `nekojs/assets` |
-| **`lang`（分发，仅 NeoForge）** | `LangGeneratorJS` | **语言条目**：按语言代码收集翻译，分发键是语言（如 `'zh_cn'`） |
-| `postEffects`（仅 NeoForge） | `PostEffectEventJS` | 用 `register`/`unregister` 收集代持有的后处理声明；运行时选择仍通过 `PostEffects`。见[客户端渲染](client-rendering_cn)。 |
-| **`hud`** | `PainterJS` | **HUD 绘制**：每帧 GUI 渲染后（NeoForge/Fabric 26.x） |
-| **`hudRender`** | 注册式 | **HUD 渲染器注册**（仅 NeoForge，分层×优先级，见下） |
-| **`worldRender`** | 注册式 | **世界空间渲染**（仅 NeoForge，3D 线条/线框，见下） |
-| **`screenRender`** | `ScreenRenderEventJS` | **界面渲染**：Screen 渲染后（NeoForge/Fabric 26.x，`event.painter` 绘制 + `screenTitle`/鼠标位置） |
+仅 NeoForge。`hudRender` 按 id 注册一个 HUD 绘制函数，可以指定图层和顺序；`worldRender` 在世界中画线和方框。同一个 id 再次注册会替换旧的。
 
 ```javascript
-// client_scripts/asset_gen.js
-ClientEvents.generateAssets(event => {
-  event.json('mymod:models/item/cool_gem', { parent: 'minecraft:item/generated', textures: { layer0: 'mymod:item/cool_gem' } })
-})
-
-// client_scripts/hud2.js —— 注册式 HUD 渲染器（id 命名，layer × priority 排序）
-// layer: 'background' | 'normal' | 'foreground'；回调抛错只影响自己（进错误面板）
+// client_scripts/boss_bar.js
+// layer：'background' | 'normal' | 'foreground'；同一层里 priority 小的先画
 ClientEvents.hudRender('boss_bar', { layer: 'normal', priority: 0 }, (ctx, gui) => {
-  const hp = clientData.get('boss_hp')   // 配合服务端 ClientData.sync 通道
+  const hp = clientData.get('boss_hp')   // 服务端用 ClientData 同步过来的数据
   if (!hp) return
-  ctx.text(`${hp.name} ${(hp.hp * 100).toFixed(0)}%`, 8, 8, 0xFFFFFFFF)
+  ctx.text(hp.name + ' ' + (hp.hp * 100).toFixed(0) + '%', 8, 8, 0xFFFFFFFF)
   ctx.fillRect(8, 20, 120, 6, 0xAA000000)
   ctx.fillRect(8, 20, Math.floor(120 * hp.hp), 6, 0xFF5DBB63)
 })
 
-// client_scripts/lines.js —— 世界空间线条/线框（26.2 使用 staged 提交）
+// client_scripts/lines.js
+// layer：'early' | 'normal' | 'late'；坐标是世界坐标
 ClientEvents.worldRender('quest_path', { layer: 'normal', priority: 0 }, ctx => {
   ctx.box(10, 70, 10, 12, 72, 12, 0xFF00FF00)
   ctx.line(0, 64, 0, 10, 70, 10, 0xFFFFFF00, 2)
 })
 ```
 
-<a id="wiki-section-25"></a>
-### 资产生成助手 `Assets`（类型化快捷写入）
+一个绘制函数报错只影响它自己，错误会出现在错误面板里。更多用法见 [客户端绘制](client-rendering_cn)；`clientData` 见 [全局绑定](global-bindings_cn#wiki-client-data)。
 
-`generateAssets` 事件里手写 `event.json('<ns>/models/item/xxx.json', ...)` 容易拼错目录结构；全局绑定 `Assets` 提供 KubeJS 风格的类型化快捷方法，在 **startup/server 脚本**顶层直接调用即可（client 脚本同样可用）。所有文件写入 `nekojs/assets` 资源包（与 `generateAssets` 事件同目录），在**下一次资源 reload** 时生效；路径校验、容量上限与原子写与 `DataGeneratorJS` 完全一致。
+<a id="wiki-section-31"></a>
+### 生成资源和翻译：generateAssets 和 lang
 
-```javascript
-// startup_scripts/assets.js
-// 1) blockState：对象必须只含 variants 或 multipart 之一；第二参也可直接传模型 id 字符串（单 variant 简写）
-Assets.blockState('mymod:my_block', { variants: { '': { model: 'mymod:block/my_block' } } })
-Assets.blockState('mymod:my_block', 'mymod:block/my_block')   // 等价简写
-Assets.blockState('mymod:my_block', { multipart: [{ model: 'mymod:block/my_block' }] })
-
-// 2) blockModel：写 assets/<ns>/models/block/<path>.json
-Assets.blockModel('mymod:my_block', {
-  parent: 'minecraft:block/cube_all',
-  textures: { all: 'my_block' }   // 简写：值不含 ':' 也不含 '/' 时自动补成 'mymod:block/my_block'
-})
-
-// 3) itemModel：写 assets/<ns>/models/item/<path>.json
-Assets.itemModel('mymod:my_item', {
-  parent: 'minecraft:item/generated',
-  textures: { layer0: 'mymod:item/my_item' }   // 已带命名空间/目录的值原样保留
-})
-
-// 4) texture：写 16x16 洋红占位 PNG 到 assets/<ns>/textures/...
-Assets.texture('mymod:block/my_block')   // 路径含 '/' → textures/block/my_block.png
-Assets.texture('mymod:my_item', 'item')  // 路径不含 '/' 时用第二参指定 'block'|'item'（缺省 'block'）
-```
-
-| 方法 | 写入位置 | 说明 |
-|---|---|---|
-| `Assets.blockState(id, state)` | `assets/<ns>/blockstates/<path>.json` | `state` 为含 `variants`（对象）或 `multipart`（数组）之一的对象/JSON 字符串，或模型 id 字符串简写 |
-| `Assets.blockModel(id, model)` | `assets/<ns>/models/block/<path>.json` | id 路径可含子目录（如 `mymod:custom/x` → `models/block/custom/x.json`） |
-| `Assets.itemModel(id, model)` | `assets/<ns>/models/item/<path>.json` | 同上，`textures` 简写补全用 `<ns>:item/` 前缀 |
-| `Assets.texture(id)` / `Assets.texture(id, kind)` | `assets/<ns>/textures/<kind>/<path>.png` | 16x16 洋红占位图；id 不带 `ns:` 时默认 `minecraft:` |
-
-- **贴图简写规则**（仅 `blockModel`/`itemModel` 的 `textures` 映射）：字符串值**既不含 `:` 也不含 `/`** 时才补全为 `<ns>:block/<值>`（itemModel 为 `<ns>:item/<值>`）；其余值（已带命名空间或已带目录，如 `'block/stone'`）以及对象形式贴图引用（26.x 的 `force_translucent` 等）原样保留。
-- **占位贴图**：`texture()` 生成纯洋红的 16x16 PNG（纯 JDK 手工构造的合法 PNG 文件），仅保证模型引用不缺贴图——游戏里会显示为洋红色方块；实际外观请用资源包覆盖或再次 `texture()` 重写同名文件。
-- **id 规则**：与原版 resource location 一致（小写字母/数字/`_`/`.`/`-`，路径额外允许 `/` 子目录）；非法 id（大写、`..` 段、多个 `:` 等）会抛错且不落盘。
+仅 NeoForge。`generateAssets` 把文件写进 `nekojs/assets` 资源包，路径相对于这个目录；`lang` 按语言代码收集翻译。都在客户端加载资源时执行（启动游戏、`/nekojs reload client`）。
 
 ```javascript
-// client_scripts/hud.js —— HUD 绘制
-ClientEvents.hud(painter => {
-  // 右上角状态面板
-  let x = painter.getWidth() - 130
-  painter
-    .color(0xAA000000).rect(x, 10, 120, 60)      // 半透明黑底
-    .outline(x, 10, 120, 60, 0xFFFFFFFF)          // 白色边框
-    .centerText('NekoJS', x + 60, 20)             // 居中文本
-    .text('Hello HUD', x + 10, 32, 0xFFFFFFAA)    // 左对齐文本
-  // 变换与裁剪
-  painter.push().translate(10, 10).scissor(0, 0, 100, 50)
-  painter.text('裁剪区域内的文本', 0, 0, 0xFFFFAA00)
-  painter.resetScissor().pop()
-  // 物品图标
-  painter.item(Item.of('minecraft:diamond'), x, 76)
-})
-```
-
-**PainterJS 方法**（坐标单位为 GUI 缩放后像素；颜色为 ARGB int，如 `0x80FF0000`）：
-
-| 方法 | 说明 |
-|---|---|
-| `getWidth()` / `getHeight()` | 缩放后屏幕尺寸 |
-| `getPartialTick()` | 当前渲染帧插值（0~1），动画平滑用 |
-| `getWorldTime()` | 客户端世界 tick（周期动画：`worldTime % 周期`） |
-| `color(argb)` / `resetColor()` | 设置/重置默认颜色（省略颜色的方法使用） |
-| `rect(x, y, w, h[, color])` | 实心矩形 |
-| `outline(x, y, w, h[, color])` | 1px 边框 |
-| `gradient(x, y, w, h, colorTop, colorBottom)` | 垂直渐变矩形 |
-| `gradientH(x, y, w, h, colorLeft, colorRight)` | 水平渐变矩形（逐列插值，宽度不宜过大） |
-| `text(str, x, y[, color])` | 左对齐文本 |
-| `centerText(str, x, y[, color])` | 水平居中文本 |
-| `texture(texId, x, y, w, h)` | 从默认 256×256 源纹理左上角裁剪 `w×h`，不缩放整张纹理 |
-| `texture(texId, x, y, u, v, w, h)` | 同上，`u/v` 是源纹理像素偏移，位于宽高参数之前 |
-| `texture(texId, x, y, u, v, w, h, textureWidth, textureHeight)` | 显式指定源纹理尺寸；尺寸必须为正数 |
-| `textureFull(texId, x, y, w, h)` | 整张纹理缩放到目标 `w×h` 矩形 |
-| `textWidth(str)` / `wrapText(str, maxWidth)` / `lineHeight()` | 文本宽度、按 GUI 像素宽度换行及行高 |
-| `item(ItemStack, x, y)` | 物品图标（`Item.of(...)`） |
-| `push()` / `pop()` / `translate(x, y)` | 变换栈 |
-| `scissor(x, y, w, h)` / `resetScissor()` | 裁剪区域 |
-
-`screenRender` 事件对象 `ScreenRenderEventJS`：`painter`（同款绘制 API）、`screen`（界面对象）、`screenTitle`（如 `'Chest'`）、`mouseX`/`mouseY`。
-
-HUD/Screen 的 painter 与其原生 graphics 只在当前绘制回调期间使用，不要保存在 `global`、timer 或异步闭包中留到下一帧。持久状态只保存绘制所需的数据，每帧用当次 painter 重绘；变换栈与裁剪也应在回调结束前配对恢复。Fabric 的 `hud` / `screenRender` 不代表 identified `hudRender` / `worldRender` 注册面已移植。
-
-```javascript
-// client_scripts/hud_anim.js —— 渐变 + 动画示例
-ClientEvents.hud(painter => {
-  // 呼吸光晕：透明度随世界时间正弦变化
-  let alpha = Math.floor(80 + 60 * Math.sin(painter.getWorldTime() / 20))
-  painter.rect(10, 10, 200, 20, (alpha << 24) | 0x00FFAA)
-  // 水平渐变血条
-  painter.gradientH(10, 40, 200, 12, 0xFFFF5555, 0xFF55FF55)
+// client_scripts/assets.js
+ClientEvents.generateAssets(event => {
+  event.json('mymod/models/item/cool_gem.json', {
+    parent: 'minecraft:item/generated',
+    textures: { layer0: 'mymod:item/cool_gem' }
+  })
 })
 
-// client_scripts/screen_overlay.js —— 在箱子界面顶部加提示
-ClientEvents.screenRender(event => {
-  if (event.screenTitle === 'Chest') {
-    event.painter.centerText('自定义箱子提示', event.painter.getWidth() / 2, 4, 0xFFFFFFAA)
-  }
-})
-```
-
-> 注意：`hud` 每帧触发，逻辑要轻量；`color()` 是**有状态**的（省略颜色的绘制用当前色），面板之间记得 `resetColor()`。
-
-```javascript
 ClientEvents.lang('zh_cn', event => {
   event.add('item.mymod.cool_gem', '炫酷宝石')
 })
 ```
 
----
+<a id="wiki-section-32"></a>
+### 资源生成助手：Assets
 
-<a id="wiki-section-26"></a>
-## RecipeViewerEvents（仅 CLIENT，JEI）
-
-与 JEI 配方查看器交互（事件在 JEI 运行时重建/资源 reload 时触发）。
-
-| 事件 | 分发? | 事件对象 | 说明 |
-|---|---|---|---|
-| `addEntries` | 按 `'item'` / `'fluid'` | `RecipeViewerEntryListJS` | 向查看器添加条目（`event.add('minecraft:stone')`） |
-| `removeEntries` | 按 `'item'` / `'fluid'` | `RecipeViewerEntryListJS` | 移除条目（非彻底，仍可由其他途径查看） |
-| `removeRecipes` | — | `RecipeViewerRecipeListJS` | 按配方 id 隐藏配方（`event.remove('minecraft:xxx')`） |
-| `removeCategories` | — | `RecipeViewerCategoryListJS` | 按类别 id 隐藏整个查看器类别 |
-| `addInformation` | — | `RecipeViewerInformationJS` | 为条目附加 tooltip 信息（`event.add('minecraft:stone', '说明')`） |
+手写 `event.json(...)` 容易把目录写错。在 NeoForge 26.x 上，可以改用 `Assets` 绑定。它直接在脚本顶层调用，启动、服务端、客户端脚本都能用。文件同样写进 `nekojs/assets`，在下次加载资源时生效（例如按 F3+T）。
 
 ```javascript
-// client_scripts/recipe_viewer.js
+// startup_scripts/assets.js
+// 方块状态：可以写完整对象（variants 或 multipart 二选一），也可以只写模型 id
+Assets.blockState('mymod:my_block', 'mymod:block/my_block')
+Assets.blockState('mymod:my_block', { variants: { '': { model: 'mymod:block/my_block' } } })
+
+// 方块模型
+Assets.blockModel('mymod:my_block', {
+  parent: 'minecraft:block/cube_all',
+  textures: { all: 'my_block' }   // 简写，会变成 'mymod:block/my_block'
+})
+
+// 物品模型
+Assets.itemModel('mymod:my_item', {
+  parent: 'minecraft:item/generated',
+  textures: { layer0: 'mymod:item/my_item' }   // 已经写全的值保持不变
+})
+
+// 洋红色占位贴图
+Assets.texture('mymod:block/my_block')   // → textures/block/my_block.png
+Assets.texture('mymod:my_item', 'item')  // → textures/item/my_item.png
+```
+
+| 方法 | 写到哪里 | 说明 |
+|---|---|---|
+| `Assets.blockState(id, state)` | `assets/<命名空间>/blockstates/<路径>.json` | `state` 是含 `variants` 或 `multipart` 的对象，或者一个模型 id |
+| `Assets.blockModel(id, model)` | `assets/<命名空间>/models/block/<路径>.json` | 路径可以有子目录，如 `mymod:custom/x` |
+| `Assets.itemModel(id, model)` | `assets/<命名空间>/models/item/<路径>.json` | 同上 |
+| `Assets.texture(id[, 类型])` | `assets/<命名空间>/textures/<类型>/<路径>.png` | 16×16 洋红色占位图。类型是 `'block'`（默认）或 `'item'` |
+
+- **贴图简写**：模型 `textures` 里的值既没有 `:` 也没有 `/` 时，会自动补成 `<命名空间>:block/<值>`（物品模型补成 `<命名空间>:item/<值>`）。其他值原样保留。
+- **占位贴图**只是让模型不缺贴图，游戏里显示为洋红色。真正的贴图用资源包覆盖。
+- id 必须是合法的资源 id：小写字母、数字、`_`、`.`、`-`，路径里可以有 `/`。不写命名空间时默认是 `minecraft`。id 不合法会直接报错，不会写文件。
+
+<a id="wiki-section-33"></a>
+## RecipeViewerEvents
+
+修改 JEI 里显示的内容。写在 `client_scripts` 里。只在 NeoForge 上、并且安装了 JEI 时可用。JEI 重新加载时触发（进入世界、重新加载资源）。
+
+| 事件 | 按什么过滤 | 说明 |
+|---|---|---|
+| `addEntries` | `'item'` 或 `'fluid'` | 在 JEI 列表里添加条目：`event.add(id)` |
+| `removeEntries` | `'item'` 或 `'fluid'` | 从 JEI 列表里隐藏条目：`event.add(id)`。只是隐藏，不影响游戏 |
+| `removeRecipes` | — | 按配方 id 隐藏配方：`event.remove(配方 id)` |
+| `removeCategories` | — | 隐藏整个配方分类：`event.remove(分类 id)` |
+| `addInformation` | — | 给条目加说明页：`event.add(id, 文字)` |
+
+```javascript
+// client_scripts/jei.js
 RecipeViewerEvents.addEntries('item', event => {
   event.add('mymod:cool_gem')
+})
+
+RecipeViewerEvents.removeEntries('item', event => {
+  event.add('minecraft:debug_stick')   // 要隐藏的条目也用 add 加进列表
 })
 
 RecipeViewerEvents.addInformation(event => {
@@ -895,79 +892,77 @@ RecipeViewerEvents.addInformation(event => {
 })
 
 RecipeViewerEvents.removeCategories(event => {
-  event.remove('jei:information')   // 隐藏「信息」类别
+  event.remove('jei:information')
 })
 ```
 
----
+<a id="wiki-section-34"></a>
+## ProbeEvents
 
-<a id="wiki-section-27"></a>
+在执行 `/nekojs probe` 生成代码补全时调整生成结果。写在 `server_scripts` 里，仅 NeoForge。修改会在下次执行 `/nekojs probe` 时生效。
+
+| 事件 | 说明 |
+|---|---|
+| `modifyType` | 修改某个 Java 类的声明：`event.forClass(完整类名)` 返回编辑器，可以改方法名、参数类型、文档等 |
+| `assignType` | 把某个 Java 类在所有地方替换成你指定的类型：`event.assign(完整类名, 类型)` |
+| `addGlobal` | 声明额外的全局变量：`event.add(名字, 类型)` |
+| `snippets` | 添加 VS Code 代码片段：`event.add(名字, 前缀, 内容[, 说明])` |
+
+类型参数的写法：含 `.` 的字符串当作 Java 完整类名，否则当作基础类型名（如 `'string'`、`'number'`、`'boolean'`）。复杂类型用 `event.type(...)`、`event.array(...)`、`event.union(...)` 构造。
+
+```javascript
+// server_scripts/probe_patch.js
+ProbeEvents.modifyType(event => {
+  const editor = event.forClass('net.minecraft.world.entity.player.Player')
+  if (editor) {
+    editor
+      .renameMethod('getXxx', 'getCustom')          // 同名的所有重载一起改
+      .changeParamType('addItem', 0, 'net.minecraft.world.item.ItemStack')
+      .markOptional('eat', 'level')                 // 参数变成可选
+      .setMethodDoc('getCustom', '自定义文档')
+      .setDoc('玩家')
+  }
+})
+
+ProbeEvents.assignType(event => {
+  event.assign('net.minecraft.nbt.CompoundTag', 'MyNbt')
+})
+
+ProbeEvents.addGlobal(event => {
+  event.add('MyFlag', 'boolean')
+})
+
+ProbeEvents.snippets(event => {
+  event.add('nekojs-listener', 'listen', 'ServerEvents.started(e => { $1 })', '监听服务端启动')
+})
+```
+
+编辑器的完整方法列表见 [Probe 类型生成](probe-type-generation_cn)。按名字找不到的方法或字段会被直接忽略，不会报错。
+
+<a id="wiki-section-35"></a>
 ## 自定义事件
 
-如果上面没有你要的事件，有两条路（互补的一等 API）：
+上面没有你需要的事件时，有两种办法：
 
-1. **`ScriptEvents`**（STARTUP，NeoForge 与 Fabric 一致）：声明一个自定义事件组，让 server/client 脚本能像内置事件一样监听，并由脚本自己 `post(payload)` 触发；动态声明的事件组与事件会进入 probe 类型生成。见 [事件扩展 - ScriptEvents](event-extensions_cn)。
-2. **`NativeEvents`**（STARTUP，NeoForge 面）：直接监听原始 Forge/NeoForge 事件类，不经过事件组抽象，适合一次性或就地监听。监听器返回 `true` 取消（可取消事件）；priority 和 receiveCancelled 可配置。修改监听器需要重启游戏。见 [全局绑定 - NativeEvents](global-bindings_cn)。
+- **`ScriptEvents`**（启动脚本，NeoForge 和 Fabric 都可用）：声明自己的事件组。服务端或客户端脚本可以像内置事件一样监听它，由脚本自己触发。见 [事件扩展](event-extensions_cn)。
+- **`NativeEvents`**（启动脚本，仅 NeoForge）：直接监听 NeoForge 的原生事件类，适合临时用一下。改了要重启游戏。见 [全局绑定](global-bindings_cn)。
 
----
+<a id="wiki-section-36"></a>
+## 加载时的拼写检查
 
-<a id="wiki-section-28"></a>
-## 事件契约
+加载脚本时，NekoJS 会检查事件回调里用到的事件对象成员。写错名字会直接报错，并给出拼写建议（`Did you mean ...`）。
 
-NekoJS 的事件契约由当前启动时注册的 `EventGroup` 反射构建，而不是由 Wiki 表格决定。下面的表只描述当前仓库中稳定维护的事件面；NeoForge 事件更完整，Fabric 只保证实际注册的子集。Cleanroom 1.12.2 不在当前仓库版本图中，相关兼容性属于独立 legacy 分支，本文不作运行时承诺。
+能检查到的写法包括：`event.player`、`event.getPlayer()`、`event['player']`、链式调用（如 `event.player.getServer()`）、可选链 `event?.player`，以及把 `event` 赋给另一个变量后再用。
 
-<a id="wiki-section-29"></a>
-### 契约事件（按当前平台注册情况）
+在运行时才能确定的成员名（例如从网络数据里取出的名字）不会检查，照常运行，出错时在运行时报告。脚本里有检查器不认识的语法时，这个文件会跳过检查并在日志里给出警告。
 
-| 分组 | 事件 | tier | 分发 | 可取消 | 稳定 payload 属性 |
-|---|---|---|---|---|---|
-| `ScriptEvents` | `server`、`client` | STARTUP | 普通 | — | `register(...)`、`targetType` |
-| `ServerEvents` | `tickPre`、`tickPost`、`aboutToStart`、`starting`、`started`、`stopping`、`stopped` | SERVER | 普通 | — | `server`（原生对象） |
-| `LevelEvents` | `loaded`、`unloaded`、`saved`、`tickPre`、`tickPost` | SERVER | 普通 | — | — |
-| `PlayerEvents` | `loggedIn`、`loggedOut`、`cloned`、`respawned`、`changedDimension`、`advancement`、`tickPre`、`tickPost` | SERVER | 普通 | — | — |
-| `PlayerEvents` | `chat` | SERVER | 普通 | ✅ 返回 `true` 取消 | `message`、`username`（字符串） |
-| `PlayerEvents` | `entityInteract` | SERVER | 普通 | ✅ 返回 `true` 取消 | — |
-| `PlayerEvents` | `containerOpened`、`containerClosed`（旧名 `inventoryOpened`/`inventoryClosed` 已弃用） | SERVER | 普通 | — | — |
-| `PlayerEvents` | `crafted`、`smelted`、`destroyed`、`inventoryChanged` | SERVER | 按物品 id（字符串） | — | — |
-| `CommandEvents` | `register` | SERVER | 普通 | — | — |
-| `CommandEvents` | `command` | SERVER | 普通 | ✅ 返回 `true` 取消 | — |
-| `RegistryEvents` | `register` | STARTUP | 普通 | — | `event.<registry>(id, b => { ... })`；可用糖方法随平台变化，26.x 附魔不属于运行时注册 API |
-| `BlockEvents` | `broken`、`placed`、`entityPlaced`、`entityMultiPlaced`、`neighborNotify`、`fluidPlaced`、`farmlandTrample`、`portalSpawn`、`rightClicked`、`leftClicked` | SERVER | 按方块 id（字符串） | ✅ 全部可取消 | `player`、`state`、`pos`、`itemStack` 等（原生对象，具体随事件） |
-| `EntityEvents` | `joinLevel`、`death`、`damagePre`、`damagePost`、`drops`、`finalizeSpawn` | SERVER | 按实体 id（字符串） | `joinLevel`/`damagePre`/`finalizeSpawn` 依事件而定 | `entity`、`source`、`amount` 等（原生对象） |
-| `ItemEvents` | `rightClicked`、`canPickUp`、`pickedUp`、`dropped`、`entityInteracted`、`foodEaten` | SERVER | 按物品 id（字符串） | `rightClicked`/`canPickUp`/`dropped`/`entityInteracted` ✅；`pickedUp`/`foodEaten` ❌ | `player`、`itemStack`、`target` 等（原生对象） |
-| `ClientEvents` | `tickPre`、`tickPost`（旧名 `tick` 已弃用） | CLIENT | 普通 | — | — |
-
-> 以上表格只列公共契约。`EntityEvents.useItemStarted/useItemStopped/useItemFinished/useItemTick`、`ClientEvents.generateAssets/lang` 以及 26.x 的部分注册糖方法仍可在 NeoForge 使用，但不属于 Fabric 公共契约。
-
-- **可取消**：监听器返回 `true` 即请求取消事件（不是事件对象上的方法）。只有实际注册该事件的平台才提供对应取消语义；Fabric 不支持的事件不会因为出现在 NeoForge 参考表中而可用。
-- **按 id 分发**：注册键是字符串 id（如 `PlayerEvents.crafted('minecraft:stick', ...)`、`BlockEvents.broken('minecraft:stone', ...)`、`EntityEvents.death('minecraft:zombie', ...)`）。
-- **payload 属性**：属性名以当前平台注册的事件对象为准。公共契约中的字符串字段（如 `PlayerEvents.chat` 的 `message` / `username`）保持稳定；原生事件对象的具体类型和成员仍可能随平台变化。
-- **RegistryEvents**：单入口 `register(event => ...)`，每轮启动 post 一次；回调内糖方法（`event.item(id, cb)` 等）来自 `registry_types` 扩展点登记的类型清单。builder 成员（`b.maxStackSize = 16` 等 public field）随版本变化、不进契约；payload 是动态成员对象，preflight 不深入校验糖方法拼写——运行时对未知糖方法/成员报错并附已知名称列表。
-- **交互事件命名统一**：契约采用规范名（以 NeoForge 命名为准）。Cleanroom 1.12.2 的 binding 已统一到规范名——早期版本的旧名（`blockBreak`/`place`/`joinWorld`/`hurt`/`damage`/`checkSpawn`/`toss`）在当前版本**已改名为规范名**（`broken`/`placed`/`joinLevel`/`damagePre`/`damagePost`/`finalizeSpawn`/`dropped`），旧脚本需更新事件名。
-
-> 不在公共契约内的事件仍可能存在于 NeoForge，例如 `ServerEvents.datapackSync`、`lootTables`、`tags`、`generateData`、`BlockEvents.randomTick`、`blockEntityTick`、`modification` 和 ClientEvents 的渲染事件。使用前请看事件表中的平台标记。Cleanroom 1.12.2 的旧事件名、OreDictionary tag 行为和 tooltip 侧别属于独立 legacy 分支，当前仓库不验证。
-
-<a id="wiki-section-30"></a>
-### 事件回调成员检查（preflight）
-
-脚本加载时会做静态成员检查：事件回调里对事件对象的成员访问会与「契约 payload 字段 ∪ 平台事件类反射成员」并集比对，未知成员报错并附拼写建议（`Did you mean ...`）。契约承诺的字段（如 `server`/`message`/`username`）即使平台反射缺该成员也放行——契约即权威，平台实现缺口由契约兜底。
-
-支持的形式：
-- 方法调用与属性访问：`e.getServer()` / `e.server`
-- 引号 bracket：`e['getServer']()` / `e["server"]`
-- **const 字符串动态 key**：`const key = 'getServer'; e[key]()`（const 字符串可静态求值，照常检查）
-- **链式返回值**：`e.getPlayer().getServer()`、`e.player.getServer()`、`e.directField.getServer()`——按上一跳的返回类型逐级推导；重载取保守 union（按参数数量筛选，任一候选支持即放行）
-- 局部别名：`const x = e; x.getServer()`
-- 可选链：`e?.getServer()` / `e?.[key]()`
-
-已知边界：检查基于简化语法解析器（ValParser）。脚本含其无法解析的语法时，该文件跳过检查并记录 warning（不会静默，也不会挂死）；**真正运行时动态的 key**（`e[keyFromNetwork]()`）无法静态证明，跳过检查不误报；generic/原生类型无法确定时标 unknown 不深查——这类写法仍可用，只是没有静态保障，运行时错误照常报告。
-
-<a id="wiki-section-31"></a>
+<a id="wiki-section-37"></a>
 ## 下一步
 
-- [全局绑定](global-bindings_cn) —— `Item`/`Ingredient`/`Fluid` 等参考。
-- [配方系统](recipe-system_cn) —— `ServerEvents.recipes` 详解。
-- [注册新内容](registering-new-content_cn) —— `RegistryEvents`/`GoalEvents` 详解。
+- [全局绑定](global-bindings_cn)：`Item`、`Text`、`Network` 等全局对象。
+- [配方系统](recipe-system_cn)：`ServerEvents.recipes` 详解。
+- [注册新内容](registering-new-content_cn)：`RegistryEvents` 和 `GoalEvents` 详解。
+- [客户端绘制](client-rendering_cn)：HUD、世界绘制和后处理。
 
 <!-- wiki-nav -->
 

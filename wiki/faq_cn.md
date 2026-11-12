@@ -6,227 +6,218 @@
 # 常见问题
 
 <a id="wiki-section-2"></a>
-## 安装与启动
+## 安装
 
 <a id="wiki-section-3"></a>
-### Q: 启动游戏崩溃，提示找不到 GraalJS / polyglot
+### 启动时崩溃，提示找不到 GraalJS 或 polyglot
 
-A: 没装或装错版本的 **Graal** 前置 mod。NekoJS 依赖 Graal 提供 GraalJS 运行时。去 [Graal 的 CurseForge 页面](https://www.curseforge.com/minecraft/mc-mods/graal) 下载与你 MC / 加载器版本**完全匹配**的版本。至少要 Graal 25.1.3.7。
-
-更低的版本还有一个不太明显的坑：它没有注册 TRegex 正则语言，脚本里一用正则（`/…/`、`String.replace(/…/)`、`RegExp`）就会抛 `No language for id regex found`。如果你看到这条报错，先确认 Graal 版本。
+没有装 **Graal** 前置模组，或者装错了版本。到 [Graal 的 CurseForge 页面](https://www.curseforge.com/minecraft/mc-mods/graal) 下载和你的 Minecraft 版本、加载器对应的文件，版本至少是 25.1.3.7。
 
 <a id="wiki-section-4"></a>
-### Q: `nekojs/` 文件夹没生成
+### 脚本一用正则就报 `No language for id regex found`
 
-A: 首次启动后会在游戏根目录生成。如果没生成：
-1. 确认 NekoJS 和 Graal 都正确加载了（看 `mods/` 和启动日志）。
-2. 检查游戏目录权限。
-3. 试试手动运行 `/nekojs probe`，它会触发工作区生成。
+Graal 版本太低。升级到 25.1.3.7 或更高。
 
 <a id="wiki-section-5"></a>
-### Q: 支持哪些 MC 版本？
+### 游戏目录里没有 nekojs 文件夹
 
-A: 见 [平台与兼容性](platform-compatibility_cn)。当前仓库包含 NeoForge 1.21.1、26.1.2、26.2.0，以及 Fabric 26.1.2、26.2.0 的构建节点；Fabric API 是子集，Cleanroom 属于独立 legacy 分支。
+1. 检查 NekoJS 和 Graal 是否都在 `mods/` 里，并且启动日志里没有报错。
+2. 检查游戏目录是否有写入权限。
+3. 进入世界后执行一次 `/nekojs probe`，它也会创建这个文件夹。
 
 <a id="wiki-section-6"></a>
-## 脚本运行
+### 支持哪些版本？
+
+NeoForge 1.21.1、26.1.2、26.2.0，以及 Fabric 26.1.2、26.2。Fabric 版本缺少部分功能，见 [平台与兼容性](platform-compatibility_cn)。
 
 <a id="wiki-section-7"></a>
-### Q: 我的脚本没生效
-
-A: 逐项排查：
-1. 文件放对目录了么？（`startup_scripts` / `server_scripts` / `client_scripts` / `test_scripts`）。见 [脚本基础](script-basics_cn)。
-2. 扩展名对么？（`.js`/`.mjs`/`.cjs`/`.ts`/`.jsx`/`.tsx`/`.py`）。
-3. 脚本被 `// disable:` 禁用了么？见 [脚本属性](script-properties_cn)。
-4. `// modloaded:` 列的 mod 都装了么？
-5. 是否在对应 owner 上重载正确类型（`/nekojs reload server` 或 `/nekojs reload client`）？无参 `/nekojs reload` 默认只重载 SERVER。
-6. 启动脚本注册的内容（新物品/方块）改了**重启游戏**了么？
-7. 跑 `/nekojs error` 看有没有错误。
+## 脚本没有效果
 
 <a id="wiki-section-8"></a>
-### Q: 报错 `事件X is not defined` / `XXX is not a function`
+### 写了脚本但什么都没发生
 
-A: 多半是脚本类型不对或事件名拼错：
-- 服务端事件（如 `ServerEvents.recipes`）必须在 `server_scripts/` 里写。
-- 客户端事件（如 `ClientEvents.tick`）必须在 `client_scripts/`。
-- 事件名查 [事件参考](event-reference_cn)，绑定名查 [全局绑定](global-bindings_cn)。
+按顺序检查：
+
+1. **目录对吗？** 改配方要放在 `server_scripts`，注册物品要放在 `startup_scripts`。见 [脚本基础](script-basics_cn)。
+2. **reload 了吗？** 保存文件不会自动生效。服务端脚本执行 `/nekojs reload`，客户端脚本执行 `/nekojs reload client`。
+3. **是启动脚本吗？** 启动脚本必须重启游戏。
+4. **有报错吗？** 执行 `/nekojs error`。
+5. **被禁用了吗？** 文件开头有 `// disable:` 的脚本不会运行。
+6. **缺模组吗？** 文件开头写了 `// modloaded: xxx`，而 xxx 没装时，脚本不会运行。
 
 <a id="wiki-section-9"></a>
-### Q: reload 后旧代码还在跑 / 行为没变
+### 报错 `xxx is not defined` 或 `xxx is not a function`
 
-A:
-- **共享状态**：`global` 只在当前脚本类型内共享，普通 reload 后仍保留；跨 SERVER/CLIENT 等脚本类型共享请使用 `shared`。两者都只存在于同一 NekoJS runtime 进程内，不是网络同步。
-- **事件监听器**：完整类型 reload 成功会替换代际监听器；候选加载失败时，旧 active generation 会有意保留。先查看 `/nekojs error` 并修复失败源码，不要假设再 reload 一次就会清理。任意 Java/世界/文件副作用不会自动撤销。
-- **配方**：NeoForge 和 Fabric 26.x 都支持 `/nekojs reload server` 处理配方脚本；NeoForge 的 JEI/REI 配方面板可能需要客户端刷新。Cleanroom 的行为属于独立 legacy 分支，当前仓库不验证。详见 [命令](commands_cn)。
-- **注册表（startup）**：启动脚本注册的内容 reload 不会真正加进游戏，需重启。
+通常是以下原因之一：
+
+- **脚本放错了目录**。例如 `ServerEvents.recipes` 只能在 `server_scripts` 里用，`ClientEvents` 只能在 `client_scripts` 里用。
+- **名字拼错了**。去 [事件参考](event-reference_cn) 或 [全局绑定](global-bindings_cn) 核对。开启 [代码补全](#wiki-section-21) 能避免大部分拼写错误。
+- **当前平台没有这个功能**。部分事件和绑定只在 NeoForge 上有，见 [平台与兼容性](platform-compatibility_cn)。
 
 <a id="wiki-section-10"></a>
-### Q: 顶层 await / dynamic import 报错
+### reload 之后行为没有变化
 
-A: 确认你的文件被当 ESM 处理：
-- 用 `.mjs` 扩展名最稳妥。
-- 或确认 `nekojs/config/engine.toml` 里 `enableEsmAuthoring = true`（默认开）。
-- 顶层 await 只能在 ESM 模块里用，不能在 CJS（`.cjs`）里用。
-
-如果加载始终不结束，应检查等待的 Promise 和同步顶层代码。普通脚本已不再提供可配置的求值总超时、语句预算或失控看门狗；保留旧键不能解救不完成的 `await` 或死循环。旧配置迁移与重启要求见[配置参考](configuration_cn)。
+- 先执行 `/nekojs error`。如果新脚本有错误，这次 reload 会整体不生效，游戏继续使用旧脚本。修好错误再 reload。
+- 改的是启动脚本？启动脚本必须重启游戏。
+- 改的是客户端脚本？要用 `/nekojs reload client`，单独的 `/nekojs reload` 只重载服务端脚本。
 
 <a id="wiki-section-11"></a>
-## TypeScript / JSX
+### 游戏在加载脚本时卡住了
+
+脚本里可能有死循环，或者 `await` 了一个永远不会完成的 Promise。NekoJS 不会强行中断这类脚本。检查最近修改的代码，特别是循环和顶层的 `await`。
 
 <a id="wiki-section-12"></a>
-### Q: 我的 `enum` / `namespace` 报错
+### 顶层 await 或 import 报错
 
-A: NekoJS 的 TS 前端**已支持** `enum`/`const enum`（编译为运行时对象）和 `namespace`/`module`（编译为 IIFE）。如果遇到具体语法不支持，请提交 issue。
+`import`、`export` 和顶层 `await` 只能在 ES 模块里用。把文件后缀改成 `.mjs` 最保险。后缀为 `.cjs` 的文件不支持这些语法。详见 [模块系统](module-system_cn)。
 
 <a id="wiki-section-13"></a>
-### Q: `.ts` 文件没有类型检查
-
-A: TS 前端只擦除不检查。检查靠 IDE（VS Code）配合 `.neko_probe` 类型声明。跑 `/nekojs probe` 刷新类型声明。`.js` 文件可在顶部加 `// @ts-check` 开启检查。
+## 配方
 
 <a id="wiki-section-14"></a>
-### Q: 如何使用 automatic JSX runtime？
+### 加了配方，但 JEI 里看不到
 
-A: 在 `nekojs/config/engine.toml` 设置 `jsxAutomaticRuntime = true`。NekoJS 会在生成工作区和运行 probe 时，把各脚本目录的 `jsconfig.json` 更新为 `"jsx": "react-jsx"` 与 `"jsxImportSource": "nekojs"`，并移除 classic factory 配置。runtime `nekojs/jsx-runtime` 已内置，不需要创建 `node_modules/nekojs/jsx-runtime.js`。语法和配置详见 [TypeScript 与 JSX](typescript-and-jsx_cn)；要创建 Minecraft Screen，详见 [JSX 客户端 UI](jsx-client-ui_cn)。
-
-配置由 NekoJS 的 workspace/probe 流程维护。手动修改 JSX 相关键后，下次生成或 probe 可能会恢复为与 `engine.toml` 一致的值；不要同时保留 `jsxFactory` / `jsxFragmentFactory` 和 automatic runtime 配置。
+`/nekojs reload` 之后，配方在服务端已经生效，可以直接去工作台验证。JEI、REI 等配方查看器有时不会自动刷新，重新进入世界即可。
 
 <a id="wiki-section-15"></a>
-## Python
+### 怎么给配方指定 ID？
+
+在配方后面加 `.id('命名空间:名字')`：
+
+```javascript
+event.shaped('4x minecraft:stick', ['C'], { C: 'minecraft:cobblestone' })
+  .id('mypack:cobble_to_sticks')
+```
+
+不指定时会自动生成一个 `nekojs:` 开头的 ID。按 ID 删除配方用 `event.removeById(id)`。
 
 <a id="wiki-section-16"></a>
-### Q: Python 脚本能运行，为什么没有 NekoJS 类型提示？
+### 某个模组的配方类型调用不了，或者补全里显示 `never`
 
-A: 运行时全局绑定与编辑器类型分析是两回事。先执行 `/nekojs probe python`，再在使用 NekoJS API 的文件顶部写：
+NekoJS 会尽量自动识别其他模组的配方类型，但不是所有类型都能识别：
+
+- **补全里找不到这个配方方法**：可以用 `event.custom({...})` 直接写这个配方的完整 JSON，格式参考该模组自己的数据包。
+- **补全里显示为 `never`**：NekoJS 识别出了这个配方类型，但确认无法安全支持它。查看日志里的 `NEKO-52xx` 错误码了解原因，并改用 `event.custom(...)`。
+
+不要手动修改 `.neko_probe` 里生成的文件来“修好”它，下次 probe 会被覆盖，运行时也依然会报错。详见 [配方系统](recipe-system_cn)。
+
+<a id="wiki-section-17"></a>
+## 新物品和方块
+
+<a id="wiki-section-18"></a>
+### 物品显示成紫黑格子
+
+缺少材质或模型。把材质 PNG 放在：
+
+```text
+nekojs/assets/<命名空间>/textures/item/<名字>.png
+```
+
+例如 `mymod:cool_gem` 的材质放在 `nekojs/assets/mymod/textures/item/cool_gem.png`。改完资源按 F3+T 刷新。详见 [注册新内容 - 资源与本地化](registering-new-content_cn#wiki-assets)。
+
+<a id="wiki-section-19"></a>
+### 物品名字显示成 `item.mymod.xxx`
+
+缺少语言文件。在 `nekojs/assets/mymod/lang/zh_cn.json` 里写：
+
+```json
+{ "item.mymod.xxx": "物品的中文名" }
+```
+
+<a id="wiki-section-20"></a>
+### 改了启动脚本，新物品没出现
+
+启动脚本只在游戏启动时运行一次，必须重启游戏。`/nekojs reload startup` 不可用。
+
+<a id="wiki-section-21"></a>
+## 代码补全
+
+<a id="wiki-section-22"></a>
+### VS Code 里没有补全
+
+1. 在游戏里执行 `/nekojs probe`。
+2. 用 VS Code 打开 **`nekojs/server_scripts` 这个文件夹**（或者其他脚本目录），不要打开整个游戏目录。
+3. 确认游戏目录下有 `.neko_probe/` 文件夹（和 `nekojs/` 在同一层）。
+
+<a id="wiki-section-23"></a>
+### 补全的内容和实际不一致
+
+补全内容是执行 `/nekojs probe` 那一刻生成的。加了模组、注册了新内容之后，重新执行一次 `/nekojs probe`。
+
+<a id="wiki-section-24"></a>
+### Python 脚本能运行，但没有补全
+
+1. 执行 `/nekojs probe python`（只执行 `/nekojs probe` 不会生成 Python 的声明）。
+2. 在每个 `.py` 文件顶部写：
 
 ```python
 from nekojs import *
 ```
 
-也可以写具名导入，例如 `from nekojs import Item, ServerEvents`。这些导入由转译器剥离，只用于让编辑器解析 Python stub。无参 `/nekojs probe` 不生成 Python stub。
+也可以只导入用到的名字，比如 `from nekojs import Item, ServerEvents`。这一行只给编辑器看，运行时会被自动去掉。不需要 pip 安装任何东西，也不要写成 `import nekojs`。
 
-如果仍然没有提示，确认 VS Code 已启用 Pylance、以游戏目录或脚本目录为工作区打开，以及配置中的 `extraPaths` 指向 `.neko_probe/python`。不需要 pip 安装 NekoJS，也不要用 `import nekojs` 代替这行特殊导入。详见 [Python 脚本](python-scripts_cn) 与 [Probe 类型生成](probe-type-generation_cn)。
+3. 确认 VS Code 装了 Pylance 扩展。
 
-<a id="wiki-section-17"></a>
-## 配方
-
-<a id="wiki-section-18"></a>
-### Q: 我加了配方但配方面板（JEI/HEI）里没有
-
-A:
-- **NeoForge**：`/nekojs reload` 会重跑配方脚本并从缓存重建配方（服务端合成逻辑即时生效）；JEI/REI 配方面板可能需要客户端刷新（如重进世界或面板刷新）。详见 [命令](commands_cn)。
-- **Fabric 26.x**：使用完整 `/nekojs reload server`，再检查实际合成结果和客户端资源。配方查看器集成不等于服务端配方应用。
-- **Cleanroom 1.12.2**：不在当前版本图内；当前仓库无法确认 HEI/JEI 刷新行为。
-
-<a id="wiki-section-19"></a>
-### Q: 命名空间配方调用失败，或 Probe 声明为 `never`
-
-A: 先看实际加载的模组、当前配方模型和日志，不能仅凭 `create:mixing` 这样的名字就认定它没有 schema。区分以下情况：
-
-- **未发现专用构造器**：检查模组是否加载、原生 serializer 是否可探测，以及对应插件或 schema 是否注册。可以按该模组真实的完整配方格式使用 `event.custom(...)`，但仍需验证 serializer 与实际配方结果；这不是自动补齐任意配方语义。
-- **已识别但明确不支持**：Probe 会生成 `recipeName: never`，运行时对应路径会拒绝调用。查看来源资源、JSON 路径和 `NEKO-52xx` 原因，不要把声明改成 `any` 或手工添加重载来掩盖问题。
-
-旧构建中的 `NEKO-5242 Unsupported inherited schema: minecraft:shaped` / `minecraft:special` 指向父 schema 接入缺口，不表示整个模组都不受支持。当前 NekuJS 已补齐这两个原生父模型的受支持行为，并纠正把 `hidden` 元数据当作调用禁令的问题；升级、重启并重新生成 Probe 后再看结果。其他未知父模型和不支持的工厂语义仍可能产生 `never`，不能通过修改生成文件解决。详见 [配方系统](recipe-system_cn)、[Probe 类型生成](probe-type-generation_cn) 和 [错误码](error-reference_cn)。
-
-<a id="wiki-section-20"></a>
-### Q: 配方 id 是什么？怎么指定？
-
-A: 每个配方有唯一 id（如 `minecraft:stone`）。`.id('yournamespace:name')` 指定；不指定则自动生成 `nekojs:<prefix>_<hash>`。用 `event.ids()` 列所有 id，用 `event.get(id)` 按 id 取，用 `event.removeById(id)` 按 id 删。
-
-<a id="wiki-section-21"></a>
-## 注册内容
-
-<a id="wiki-section-22"></a>
-### Q: 我注册的物品没有材质 / 显示紫黑方块
-
-A: 缺资源文件。注册的物品默认按原版资源路径解析：
-- 材质：`nekojs/assets/<mod>/textures/item/<name>.png`
-- 模型：`nekojs/assets/<mod>/models/item/<name>.json`
-
-在 `nekojs/assets/` 下放对应文件即可。详见 [注册新内容 - 资源与本地化](registering-new-content_cn#wiki-section-14)。
-
-<a id="wiki-section-23"></a>
-### Q: 注册的物品名字显示为 `item.mymod.xxx`
-
-A: 缺语言文件。在 `nekojs/assets/<mod>/lang/zh_cn.json` 加：
-```json
-{ "item.mymod.xxx": "中文名" }
-```
-
-<a id="wiki-section-24"></a>
-### Q: reload startup 后我加的物品没出现
-
-A: 启动脚本在游戏启动阶段执行。`/nekojs reload startup` 当前会拒绝执行；修改物品、方块等注册内容后必须重启游戏。详见 [脚本基础](script-basics_cn)。
+详见 [Python 脚本](python-scripts_cn)。
 
 <a id="wiki-section-25"></a>
-## 模块 / npm
+### .ts 文件写错了类型也能运行
+
+正常。NekoJS 运行 TypeScript 时只是去掉类型标注，不做类型检查。类型错误由 VS Code 提示。在 `.js` 文件顶部加 `// @ts-check` 也能让 VS Code 检查类型。
 
 <a id="wiki-section-26"></a>
-### Q: `require('xxx')` 报错 `module not found`
-
-A:
-1. 包放进 `nekojs/node_modules/<包名>/` 了吗？
-2. 包是**纯 JS** 的吗？原生 bindings（C/C++ 编译）**不支持**。
-3. 路径对吗？`require('./xxx')` 相对当前文件；`require('xxx')` 走 node_modules。
+## npm 和模块
 
 <a id="wiki-section-27"></a>
-### Q: 我想用某个 npm 包但它是原生 bindings
+### `require('xxx')` 报 module not found
 
-A: 不支持。换纯 JS 的替代品，或自己用 `java:` 导入 Java 等价物实现。
+1. 包要放在 `nekojs/node_modules/<包名>/`。
+2. 只支持**纯 JavaScript** 的包。包含 C/C++ 编译代码的包（原生模块）无法使用。
+3. `require('./xxx')` 是相对于当前文件的路径；`require('xxx')` 才会去 `node_modules` 里找。
+
+NekoJS 不是完整的 Node.js，能用的内置模块见 [Node.js 兼容](nodejs-compatibility_cn)。
 
 <a id="wiki-section-28"></a>
-### Q: `java:java/lang/Integer` 这种导入语法对吗？
-
-A: 对。规则：`java:` 前缀 + 斜杠分隔路径。详见 [模块系统 - 导入 Java 类](module-system_cn)。
-
-<a id="wiki-section-29"></a>
-## IDE / 类型提示
-
-<a id="wiki-section-30"></a>
-### Q: VS Code 没有补全
-
-A:
-1. 跑 `/nekojs probe` 生成 `.neko_probe/`。
-2. 用 VS Code **打开 `nekojs/server_scripts/`（或对应目录）作为根**，而不是整个游戏目录。这样 `jsconfig.json` 才能正确关联 `.neko_probe`。
-3. 确认 `.neko_probe/` 在游戏根目录（与 `nekojs/` 同级）。
-
-<a id="wiki-section-31"></a>
-### Q: 补全的类型和实际运行不一致
-
-A: 跑 `/nekojs probe` 重新生成。如果你是新加了 mod 或注册了新内容，类型声明会过期。这是已知限制（probe 是手动触发的）。
-
-<a id="wiki-section-32"></a>
 ## 性能
 
-<a id="wiki-section-33"></a>
-### Q: 我的 tick 事件很卡
+<a id="wiki-section-29"></a>
+### tick 事件里的代码让游戏变卡
 
-A: `ServerEvents.tickPre`/`tickPost` 在服务端 tick 执行（目标为 20 TPS，不保证墙钟每 50ms 一次）。owner thread 回调应保持轻量；可以缓存或把工作拆到多个 tick。timer 不会把阻塞工作自动移到安全的工作线程。
+`ServerEvents.tickPost` 之类的事件每秒触发 20 次，里面的代码要尽量轻。把计算结果缓存起来，或者用计数器每隔几个 tick 才执行一次：
 
-<a id="wiki-section-34"></a>
-### Q: 脚本加载很慢
+```javascript
+let ticks = 0
+ServerEvents.tickPost(event => {
+  if (++ticks % 20 !== 0) return // 每秒只执行一次
+  // ...
+})
+```
 
-A: GraalJS 启动和脚本编译可能有预热成本，后续速度取决于实际工作负载。先检查依赖包数量和顶层 I/O，并测量真正的慢路径。
+<a id="wiki-section-30"></a>
+### 第一次加载脚本比较慢
 
-<a id="wiki-section-35"></a>
+JavaScript 引擎第一次运行需要预热，属于正常现象。如果一直很慢，检查是否引入了很大的 npm 包，或者在脚本顶层读写了大量文件。
+
+<a id="wiki-section-31"></a>
 ## 安全
 
-<a id="wiki-section-36"></a>
-### Q: 我的脚本访问文件被拒
+<a id="wiki-section-32"></a>
+### 脚本读写文件被拒绝
 
-A: 沙盒限制——只能访问游戏目录内。详见 [Node.js 兼容 - 访问范围限制](nodejs-compatibility_cn#wiki-section-9)。如需放宽（仅单人/可信环境），看 `nekojs/config/engine.toml`。
+为了安全，脚本默认只能写入 `nekojs/` 文件夹里的文件。详见 [Node.js 兼容 - 访问范围限制](nodejs-compatibility_cn#wiki-fs-access)。
 
-<a id="wiki-section-37"></a>
-### Q: 多人服务器用 NekoJS 安全吗？
+<a id="wiki-section-33"></a>
+### 在多人服务器上用 NekoJS 安全吗？
 
-A: 脚本应视为**半可信代码**——只运行你信任的脚本。沙盒限制了 Java 类访问和文件范围，但按名黑名单只拦类查找：Java 方法返回值的对象图由 Graal 的 `HostAccess` 控制（当前是 `HostAccess.ALL`），黑名单里的类的实例仍可能通过某个方法的返回值进入脚本。内置编辑器的客户端脚本上传已移除；不要把只读错误 UI 或脚本网络事件当作远程编辑服务。服务器脚本仍须由可信维护者部署。
+脚本拥有很大的权限，能访问大部分游戏内部功能。**只运行你信任的人写的脚本。** NekoJS 的沙盒能挡住一部分危险操作，但不能保证完全阻止恶意脚本。
 
-AI 创作的 HTTP 与 batch 查询是只读的，但独立授权的 live MCP 工具能够执行白名单命令或重载指定运行时。无明确需求就保持控制开关默认关闭，不要暴露或提交 bearer token，也不要重试效果未知的超时动作。见 [AI 创作安全与 live controls](ai-support_cn)。
+如果开启了 [AI 辅助功能](ai-support_cn) 的远程控制，不要把访问令牌提交到代码仓库或分享给别人。
 
-<a id="wiki-section-38"></a>
-## 还没解决？
+<a id="wiki-section-34"></a>
+## 还是没解决？
 
-- 查 [事件参考](event-reference_cn)、[全局绑定](global-bindings_cn)、[配方系统](recipe-system_cn) 确认 API 用法。
-- 提 issue（见仓库 README 链接）。
+- 查看 [错误与日志参考](error-reference_cn)，按错误码查原因。
+- 到 [GitHub Issues](https://github.com/NekoJS-Dev/NekoJS/issues) 提问。请附上 `logs/nekojs/` 里相关的日志、出错的脚本，以及你的 Minecraft、加载器和 NekoJS 版本。
 
 <!-- wiki-nav -->
 

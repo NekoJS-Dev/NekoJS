@@ -5,138 +5,130 @@
 <a id="wiki-section-1"></a>
 # Script properties
 
-Script properties are directives written as comments in script files that control how scripts load.
+Script properties are special comments at the start of a script file. They control how that file loads: its order, whether it loads at all, and which mods it needs.
 
 <a id="wiki-section-2"></a>
 ## Syntax
 
-All properties are single-line comments in the form `// key: value`:
+Each property takes one line in the form `// name: value`:
 
 ```javascript
 // priority: 100
 // modloaded: create, jei
-// after: ./lib/init.js
-// disable:
+// after: lib/init.js
 
 console.info('hello')
 ```
 
-**Placement matters**: the scanner (`ScriptContainer.preload`) reads downward from the first line of the file and stops with `break` at the first line that is neither empty nor starts with `//`. Properties must therefore be in the **opening comment block**. Empty lines and other `//` comments may appear between them, but once an `import`, a `/* */` block comment, or any code appears, later `// priority:` lines are no longer read. Incorrect placement produces **no error or log message**; the property simply uses its default, causing symptoms such as an unexpected load order or an ineffective `disable`.
+Properties must be at the **very start** of the file. NekoJS reads from the first line down and stops at the first line that is neither a `//` comment nor blank. So:
 
-Unknown keys are also silently ignored (property names come from a registry; plugins can add them through `registerScriptProperty`, see [Plugin development](plugin-development_us)). Misspelling `priorty:` therefore fails silently too. A malformed value or a custom reader returning `null` is rejected before storage. One `NEKO-1025` warning records the property, source file, physical line and cause; the last successfully parsed value remains, or the default if no valid value was read. For example, `// priority: 7` followed by `// priority: invalid` keeps priority `7`; an invalid first directive leaves the default `0`, and a later valid directive still wins. This warning does not itself disable the script. The whole trimmed value is parsed: put explanations on a separate comment line, not after an integer directive.
+- Blank lines and ordinary `//` comments may appear between properties.
+- Properties after an `import`, a `/* */` block comment or any code are not read.
+
+A property in the wrong place, or a misspelled name such as `priorty`, **produces no error**. The property just has no effect. If the load order is wrong or `disable` does nothing, check these two things first.
+
+After changing properties, reload that script type (for example `/nekojs reload`). Startup scripts need a game restart.
 
 <a id="wiki-section-3"></a>
-## Property overview
+## All properties
 
-| Property | Type | Default | Purpose |
+| Property | Value | Default | Effect |
 |---|---|---|---|
 | `priority` | Integer | `0` | Higher numbers load first |
-| `modloaded` | Comma-separated list of mod ids | — | Runs only when **all** listed mods are present (AND semantics) |
-| `disable` | Presence disables, including an empty value | Enabled | Disables the script |
-| `after` | Comma-separated list of paths | — | Loads after the listed files |
+| `after` | Comma-separated paths | None | Load after the listed files |
+| `modloaded` | Comma-separated mod IDs | None | Load only when **all** listed mods are present |
+| `disable` | Anything, may be empty | Not disabled | Do not load this file |
 
 <a id="wiki-section-4"></a>
-## priority: control load order
+## priority: load order
 
 ```javascript
-// Runs before lower-priority scripts
 // priority: 1000
 ```
 
-Higher numbers run first. This is often used for library scripts that initialize shared data or register global events, ensuring they execute before application scripts.
+Higher numbers load first. Negative numbers are allowed. Use it on "library" scripts that set up shared data so they run before everything else.
 
-> The priority of STARTUP scripts also affects registration order (higher numbers register first).
+Startup scripts run in the same order, so registrations in a higher-priority startup script also happen first.
+
+The value must be a single integer. Adding a note after it, as in `// priority: 10 load early`, makes the line invalid; put notes on their own line. An invalid value logs a `NEKO-1025` warning with the file and line number, and that line is ignored.
 
 <a id="wiki-section-5"></a>
-## modloaded: conditional loading
-
-```javascript
-// modloaded: create, jei
-```
-
-This script runs only when **both** `create` **and** `jei` are loaded. It is commonly used for mod integration scripts to avoid errors when a mod is missing.
-
-You can also add `graal` (the Graal dependency mod) to ensure the runtime is present.
-
-<a id="wiki-section-6"></a>
-## disable: temporarily disable a script
-
-```javascript
-// disable:
-// disable: true
-// disable: 暂时注释掉，等修好
-```
-
-An opening `// disable:` directive disables the script even when its value is empty. `// disable: false` also disables it; remove the directive to enable loading again.
-
-<a id="wiki-section-7"></a>
-## after: explicitly declare dependencies
-
-Load the current script after specified scripts to establish explicit loading dependencies.
+## after: load after specific files
 
 ```javascript
 // after: lib/init.js, lib/constants.js
 ```
 
-Path formats:
+Path forms:
 
 | Form | Meaning |
 |---|---|
-| `aaa/bbb.js` | Path relative to the current script type's root directory |
-| `./ccc.js` | Relative to the current file's directory |
-| `nekojs/aaa/bbb.js` | Explicit `nekojs/` prefix, relative to the script type's root directory (equivalent to `aaa/bbb.js`) |
-| `nekojs:<type>/bbb.js` | `nekojs:` prefix + script type root directory (for example `nekojs:server/lib.js`) |
-| `<type>/bbb.js` | Starts with the script type directory name (for example `server/lib.js`) |
-| `aaa/*` | All files in the `aaa/` folder |
-| `aaa/bbb.js, ccc.js` | Multiple paths separated by commas |
+| `lib/init.js` | Relative to this script type's root, for example `server_scripts/lib/init.js` |
+| `./helper.js` | Relative to the current file's folder |
+| `lib/*` | Every file in the `lib/` folder |
+| `server/lib/init.js` | Prefixed with the script type name (`startup`, `server`, `client`, `test`); same as `lib/init.js` |
+| `nekojs:server/lib/init.js` | Same again, with a `nekojs:` prefix |
 
-Backslashes `\` in paths are always treated as `/`.
+Separate several paths with commas. Backslashes `\` are treated as `/`.
 
-Dependency edges only apply between scripts **in the same priority group that both execute** (`shouldRun`). This creates two types of ignored dependencies with different symptoms:
+**`after` only works between files with the same priority.** When two files have different priorities, the higher priority always loads first and `after` is ignored silently, with nothing in the log. So if `after` has no effect and the log is clean, the most likely cause is that the two files have different priorities.
 
-| Situation | Handling |
-|---|---|
-| The referenced path does not exist anywhere in this batch | Ignored with a warning (`after 依赖排序存在问题：...`) |
-| The reference matches a script, but it belongs to another priority group / is excluded by `disable` or `modloaded` / is the current script itself | **Silently** ignored, with no log message |
+References to a file skipped by `disable` or `modloaded` are also ignored silently.
 
-The most common reason for an ineffective `after` with no log messages is that the two files have different priorities.
+When a path matches no file, the log shows a `NEKO-1004` warning. When several files `after` each other in a loop, `NEKO-1004` is reported too, and those files fall back to path order.
+
+<a id="wiki-section-6"></a>
+## modloaded: load only when mods are present
+
+```javascript
+// modloaded: create, jei
+```
+
+The file loads only when `create` and `jei` are **both** installed. Use it for integration scripts: without the mod, the script is skipped instead of failing.
+
+Use mod IDs, not display names. You can find a mod's ID in the mod list.
+
+<a id="wiki-section-7"></a>
+## disable: turn a file off
+
+```javascript
+// disable:
+```
+
+If the file starts with a `disable` line, it does not load. The text after the colon does not matter: `// disable: false` **also** disables the file, so you can use it for a reason. To enable the file again, delete the line.
 
 <a id="wiki-section-8"></a>
-## Complete example
+## How load order is decided
+
+Scripts of one type load in this order:
+
+1. By `priority`, highest first.
+2. Among files with the same priority, `after` adjusts the order.
+3. Everything else in alphabetical path order.
+
+A simple approach: use `priority` to split files into batches, and `after` to order files inside a batch.
 
 ```javascript
 // priority: 500
 // modloaded: create
 // after: lib/init.js
 
-// This script:
-// 1. Has priority=500 and runs before default scripts
-// 2. Runs only when Create is installed
-// 3. Runs after lib/init.js only when it is enabled and also has priority=500
-// 4. Logs integration initialization
+// This file:
+// 1. Loads before files with the default priority 0
+// 2. Loads only when Create is installed
+// 3. Loads after lib/init.js if that file also has priority 500
 
 console.info('Create integration initialized')
 ```
 
 <a id="wiki-section-9"></a>
-## Relationship with priority
+## Notes
 
-`priority` and `after` jointly determine load order (`ScriptLoadOrderSorter`; enforced by the engine during loading, not merely advisory):
+- **Python scripts do not support script properties.** `# priority:` in a `.py` file is not read. See [Python scripts](python-scripts_us).
+- **Script packs have their own dependency order.** A pack's declared prerequisites always load first; a higher priority cannot change that. See [Script packs](script-packs_us).
+- Plugins can register new script properties. See [Plugin development](plugin-development_us).
 
-1. First, perform a stable sort by descending `priority`.
-2. Within each priority group, perform a stable topological sort (Kahn) using dependencies declared by `after`.
-3. Where the order remains undecided, preserve discovery order. File discovery uses `Files.walk(...).sorted()`, which gives lexicographic path order.
-4. If a cycle occurs within a group, **the entire group falls back** to the order from steps 1/3, with a warning listing the scripts involved in the cycle.
-
-The recommendation to use `priority` for broad batches and `after` for precise ordering within a batch follows from these rules: `after` cannot cross priority groups.
-
-For versioned packs, manifest/package prerequisites are enforced after these file preferences and cannot be bypassed by raising `priority`. A property is not a filesystem watch subscription: edits take effect when the relevant scripts are rediscovered/reloaded, not merely when the file is saved. Use full type/package reload for changed enablement or ordering; see [Script basics](script-basics_us) and [Script packs](script-packs_us).
-
-<a id="wiki-section-10"></a>
-## Next steps
-
-- [Script basics](script-basics_us): script types and reload.
-- [Module system](module-system_us): split files with `require`/`import`.
+See also: [Script basics](script-basics_us) and [Module system](module-system_us) (splitting code with `require` / `import`).
 
 <!-- wiki-nav -->
 

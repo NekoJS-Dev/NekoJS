@@ -5,120 +5,228 @@
 <a id="wiki-section-1"></a>
 # Build system
 
-> This page covers the NekoJS repository's own build: organizing multiple versions and loaders, compiling each platform, guard discipline, and CI. **Plugin authors do not need to read it** unless interested; contributors and release maintainers do. See [ADR-0007](https://github.com/NekoJS-Dev/NekoJS/blob/master/docs/adr/0007-module-boundaries.md) and [ADR-0008](https://github.com/NekoJS-Dev/NekoJS/blob/master/docs/adr/0008-guard-discipline.md) for module placement and guard rules.
+This page explains how the NekoJS repository builds itself: how several Minecraft versions and loaders share one codebase, and how to compile, check and release. Read it if you contribute to NekoJS or handle releases; plugin authors don't need it.
+
+The design decisions behind it are in [ADR-0007 Module boundaries](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/docs/adr/0007-module-boundaries.md) and [ADR-0008 Guard discipline](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/docs/adr/0008-guard-discipline.md).
 
 <a id="wiki-section-2"></a>
-## Repository layout
+## Quick start
 
-A Stonecutter multi-version, multi-loader **single repository**: one shared version tree, per-node parameters, two loader convention plugins, and a shared source-selection convention. The version graph in `settings.gradle.kts` is:
+```bash
+./gradlew :26.1.2:build                      # Build one node
+./gradlew guardLint                          # Check guard usage and module boundaries; takes seconds
+./gradlew :common:check                      # Engine-layer tests and isolation checks
+./gradlew sandboxCheck                       # Before committing: guardLint + every node's check
+./gradlew switchVersion -Pnode=26.2.0        # Switch the node your IDE compiles directly
+```
+
+Build outputs go to `versions/<node>/build/libs/`.
+
+Requirements:
+
+- Gradle itself needs JDK 17 or newer; 25 is recommended. The repository doesn't pin a local JDK path. Set `org.gradle.java.home` in your user-level `~/.gradle/gradle.properties`, or set `JAVA_HOME`.
+- The JDK used for compiling comes from each node's `deps.java` (21 for 1.21.1, 25 for 26.x) and is fetched automatically through Gradle toolchains.
+
+<a id="wiki-section-3"></a>
+## Nodes
+
+NekoJS uses [Stonecutter](https://stonecutter.kikugie.dev/) to build several versions from one repository. Each combination of Minecraft version and loader is called a **node**. `settings.gradle.kts` defines five:
 
 ```kotlin
 stonecutter {
-    versions("1.21.1", "26.1.2", "26.2.0")                    // NeoForge nodes (root branch, sharing src/)
-    version("26.1.2-fabric", "26.1.2").buildscript = "fabric.gradle.kts"
-    version("26.2.0-fabric", "26.2.0").buildscript = "fabric.gradle.kts"
+    kotlinController = true
+    create(rootProject) {
+        versions("1.21.1", "26.1.2", "26.2.0")                                // NeoForge
+        version("26.1.2-fabric", "26.1.2").buildscript = "fabric.gradle.kts"  // Fabric
+        version("26.2.0-fabric", "26.2.0").buildscript = "fabric.gradle.kts"
+    }
 }
 ```
 
-- **Shared `src/` tree**: all nodes use one copy. Version differences use `//? if >=26` guards / replacements / node-specific paired files. Loader differences use whole-file `//? if neoforge` guards; the Fabric side uses else branches plus the raw loader root `src/fabric`, explicitly mounted by the Fabric convention without Stonecutter preprocessing (moved there in ticket 31).
-- **`versions/<node>/`**: node parameters (`deps.*` in `gradle.properties`) plus node-specific sources for differences too large for convenient guarding, such as GUI / `PostEffectManager` implementations from before the 26.x split.
-- **Build logic stays out of node scripts**: entry scripts only declare conventions; all build logic lives in buildSrc.
-
-Node ids are not always Minecraft dependency versions: `26.2.0-fabric` currently pins `deps.minecraft=26.2` and Fabric API `0.159.0+26.2`; use the node id in Gradle task paths.
-
-<a id="wiki-section-3"></a>
-## Entry scripts and convention plugins
-
-Each of the two entry scripts contains one declaration line:
-
-| Entry | Convention plugin | Responsibilities |
+| Node | Loader | Java |
 |---|---|---|
-| `build.gradle.kts` | `buildSrc/.../nekojs.neoforge-node.gradle.kts` | MDG (`neoForge` block/runs), supplying AT and mods.toml, era-specific resource layers, fat-jar, `verifyDevModSourceSets`, compile/test conventions |
-| `fabric.gradle.kts` | `nekojs.fabric-node.gradle.kts` | loom-back-compat (applied inside the plugin, reading the Loom version from the controller's `apply false` declaration), ICU4J class extraction, bundled night-config, Fabric fat-jar, `verifyFabricRuntimeArtifact` |
-| Applied by both loader conventions | `nekojs.node-sources.gradle.kts` | Node-local same-relative-path Java/resources take precedence over shared, raw Fabric, and generated Stonecutter roots, including the active node |
+| `1.21.1` | NeoForge 21.1 | 21 |
+| `26.1.2` | NeoForge 26.1.2 | 25 |
+| `26.2.0` | NeoForge 26.2.0 | 25 |
+| `26.1.2-fabric` | Fabric | 25 |
+| `26.2.0-fabric` | Fabric | 25 |
 
-Three established rules, based on past build failures, are enforced in the plugin implementation and documented beside the code:
+Gradle task paths use the node ID, such as `:26.2.0-fabric:build`. A node ID isn't always the Minecraft version: `26.2.0-fabric` depends on `deps.minecraft=26.2`.
 
-1. Nodes are registered in settings before `:common`, so entry scripts/plugins must use `evaluationDependsOn`.
-2. Stonecutter preprocessing is the output of `stonecutterGenerate` and the input to MDG, so an explicit `dependsOn` is required; neoforge-node already declares it.
-3. Adding `:common` runtimeClasspath to a fat-jar must use `from(Closure)` for execution-time evaluation. Configuration-time resolution can attempt resolution without the required lock.
-
-**When extending a convention plugin**: the Stonecutter extension is not on buildSrc's compile classpath (`stonecutter.process` uses a reflection bridge); loom/loomx extensions are accessed dynamically with `withGroovyBuilder`. The version catalog imports the root `gradle/libs.versions.toml` through `buildSrc/settings.gradle.kts`, keeping dependency coordinates in one source of truth.
+Besides the five nodes there are two ordinary, unversioned subprojects, `common` and `common-api-processor`, plus the separately shipped `:addons:nekujs`.
 
 <a id="wiki-section-4"></a>
-## Node parameters (versions/&lt;node&gt;/gradle.properties)
+### The active node
 
-Each node has a file using the `deps.*` prefix. Two keys are easy to confuse:
+The node your IDE compiles and runs directly is the active node, set by the `stonecutter active "…"` line in `stonecutter.gradle.kts`. The active node compiles the shared `src/` directly; the other nodes compile copies preprocessed by Stonecutter.
+
+To change it, run `./gradlew switchVersion -Pnode=<node>` and reload the Gradle project in your IDE. Don't edit that line by hand.
+
+<a id="wiki-section-5"></a>
+## Source organization
+
+| Location | Contents |
+|---|---|
+| `src/main/` | One copy of the source shared by every node, written for 26.x |
+| `src/main/resources-modern` / `resources-legacy` | AT, mixin configs and other resources for 26.x and 1.21.1 respectively |
+| `src/fabric/` | Fabric-only code, resources and templates, mounted directly by the Fabric convention without Stonecutter preprocessing |
+| `versions/<node>/gradle.properties` | Node parameters |
+| `versions/<node>/src/` | Node-only sources |
+
+Node-only files override shared ones. If `versions/<node>/src/` has a file at the same relative path as one in the shared tree, that node compiles its own copy instead of the shared one. This also holds for the active node; the `nekojs.node-sources` convention implements it.
+
+Node-only sources serve two purposes:
+
+- Version facade implementations, such as each version's `McPlatformCompat` and `McClientCompat` under `platform/compat/`.
+- "Twin files" whose version differences are too large to be worth guarding. The shared tree holds the 26.x version, and `versions/1.21.1/src/` holds a 1.21.1 file with the same name. Files in a node directory are **not** guard-evaluated, so they must be plain, already-evaluated 1.21.1 code. The cost is keeping both copies in sync.
+
+<a id="wiki-section-6"></a>
+### Node parameters
+
+Keys in `versions/<node>/gradle.properties` all start with `deps.`. For example, the 26.1.2 node:
+
+```properties
+deps.minecraft=26.1.2
+deps.neo=26.1.2.71
+deps.jei=7920926
+deps.platform_tag=nf26
+deps.mc_range=[26.1.2,26.2)
+deps.neo_range=[26,)
+deps.java=25
+deps.platform=neoforge
+```
+
+Two keys are easy to mix up:
 
 | Key | Meaning | Example |
 |---|---|---|
-| `deps.platform` | Guard constant, the source of truth for `constants.match`; either `neoforge` or `fabric` | `neoforge` |
-| `deps.loader_version` | Loader version; used as a dependency coordinate only by Fabric nodes | `0.19.3` |
-| `deps.minecraft` / `deps.neo` / `deps.java` | Version-axis parameters | `26.1.2` / `26.1.2.71` / `25` |
-
-<a id="wiki-section-5"></a>
-## Guards and renaming (required reading for shared-tree changes)
-
-Distinguish enforced task checks from writing recommendations.
-
-**guardLint enforces its checks** (`stonecutter.gradle.kts`, 8 rules, `./gradlew guardLint`, mandatory in CI). Six checks are hard failures: paired guards (`//? if` count must equal closing-guard count), guards outside Java text blocks, no `/*` at the start of a guard branch, **at most 20 `//? if` guards per file**, module boundaries (no MC/Loader imports in `com.tkisor.nekojs.api.*` or the rest of common), and constants that are always false (each guard constant must be true in at least one node). Graal dependencies are allowed in common. Zero loader imports in wrappers is an additional hard failure (rule 7, currently `wrapperLoaderImportHardFail = true`); wrappers guarded as entire loader-specific files are explicit platform surfaces and are only listed informationally.
-
-The **only** way to exceed 20 guards is a normal Java comment such as `// guard-exempt(20): reason`, without the `//?` prefix reserved for Stonecutter directives. A stated reason grants an exemption and lists it on every run; without a reason, the task fails.
-
-Scan scopes differ: guard rules inspect only `src/**/*.java` (the shared tree); module rules inspect `com/tkisor/nekojs/api/**` under `common/src/main/java` (L1, selected by package prefix) and the full tree (L2). Always-false constants are checked against `deps.platform` in `versions/*/gradle.properties`.
-
-**Warning only**: consecutive guard regions longer than 8 lines (rule 5, a proxy for method-level density).
-
-**The following are recommendations, not task checks**:
-- **New code defaults to no guards** (26.x baseline, revised ADR-0008): use version facades (`McClientCompat` / `McPlatformCompat` under `platform/compat/`, with three version implementations, deliberately distinct class names to avoid drift, and `META-INF/services` registration) or node-specific paired files. This is the recommended approach under the density limit, not a gate: a file with exactly 20 guards still passes guardLint.
-- **Whole-file splits** are recommended only when almost no logic is shared. Use a pure 26.x shared-tree file and an evaluated counterpart under `versions/1.21.1/src`.
-
-**Replacements are configuration, not discipline**: `!mc_ids` handles pure renaming such as `ResourceLocation` ↔ `Identifier` and is enabled globally by default. `mc_legacy_api` is disabled by default and enabled locally with file-level `//~ mc_legacy_api`, only when that file does not contain the token on one side.
-
-**sandboxCheck** aggregates guardLint, `check` for Java subprojects (including the nodes), and external-addon fixture isolation; run it locally before submitting. It does not launch the CI Fabric game-server smoke.
-
-<a id="wiki-section-6"></a>
-## Everyday commands
-
-```bash
-./gradlew guardLint                          # Guard and boundary lint (seconds)
-./gradlew :26.1.2:build                      # Single-node build (active node compiles directly in the IDE)
-./gradlew :26.1.2-fabric:verifyFabricRuntimeArtifact # Verify Fabric fat-jar entry points and loader isolation
-./gradlew :26.2.0-fabric:build                # Build the 26.2 Fabric node
-./gradlew sandboxCheck                       # All-node gate before submitting
-./gradlew switchVersion -Pnode=26.2.0        # Change active node, then resync the IDE
-./gradlew :common:check                      # Engine checks
-./gradlew :addons:nekujs:build                # Separate NeoForge 1.21.1 compatibility addon
-```
-
-**NekuJS is delivered separately:** `:addons:nekujs` is an ordinary addon subproject, not embedded into a node JAR by building NekoJS. Its `build` runs ordinary contracts and auditor tests without third-party JARs; `fixtureTest`, `expandedFixtureTest`, `compatProofTest` and `runTestClient` use external local inputs, defaulting to `addons/nekujs/1211nekujs`, with `-PnekujsFixturesDir=/path/to/fixtures` as an override. Expanded fixtures are a separately selected task; ordinary `build` or static audit does not certify every addon in a running game. Third-party fixtures are not distributed in the artifacts.
-
-The active node is the node compiled/run directly in the IDE, selected by `stonecutter active "…"` in `stonecutter.gradle.kts`.
-
-Keep evidence levels separate: node builds compile/package the Minecraft/loader implementation and run their configured checks; JVM tests are not a running game. Both loader conventions attach isolated `platformGateTest` coverage checks to `check`. NeoForge also attaches `nativeRecipeProbeTest` (real registry/recipe checks in an isolated JVM); `nbtSmokeTest` is another JVM `Test` task, not a game-server smoke. The CI Fabric `runServer` smoke exercises only its startup/server-started fixture, not complete API, client rendering, restart, or multiplayer acceptance.
+| `deps.platform` | Loader constant; the source of the `neoforge` / `fabric` values used in guards | `neoforge` |
+| `deps.loader_version` | Loader version; used as a dependency coordinate by Fabric nodes only | `0.19.3` |
 
 <a id="wiki-section-7"></a>
-## Add a Minecraft version (three steps)
+## Build scripts
 
-1. For `versions/<new-version>/gradle.properties`, copy the adjacent node and change `deps.minecraft` / `deps.neo` / `deps.jei` (Curse file id) / `deps.mc_range` / `deps.neo_range` / `deps.java`.
-2. Add the node name to the version graph in `settings.gradle.kts`.
-3. Add one entry to the build matrix in `.github/workflows/ci-build.yml`; the list is handwritten because there are few nodes.
+Both entry scripts are a single line. All build logic lives in convention plugins in `buildSrc`:
+
+| Entry | Convention plugin | Responsible for |
+|---|---|---|
+| `build.gradle.kts` | `nekojs.neoforge-node` | ModDev (MDG) setup and run configs, AT and `neoforge.mods.toml`, era-split resources, fat jar, `verifyDevModSourceSets`, `verifyNeoForgeRuntimeArtifact` |
+| `fabric.gradle.kts` | `nekojs.fabric-node` | Loom, ICU4J handling, bundled night-config, Fabric fat jar, `verifyFabricRuntimeArtifact` |
+| Applied by both conventions | `nekojs.node-sources` | Node-only files take precedence over the shared tree, `src/fabric` and Stonecutter-generated sources |
+
+Each node produces a fat jar that embeds the `common` runtime classes. Graal is excluded; players install the separate Graal mod. NeoForge 1.21.1 also builds a dedicated-server jar with a `-server` classifier that carries the ICU dependency servers need.
+
+When you change a convention plugin, keep in mind:
+
+1. Nodes are registered in settings before `:common`, so the conventions need `evaluationDependsOn(":common")`.
+2. Stonecutter's preprocessed output is MDG's input, so add an explicit `dependsOn("stonecutterGenerate")`.
+3. The fat jar must add `:common`'s runtimeClasspath with `from(Closure)` so it resolves at execution time. Resolving it at configuration time breaks IDE sync and `gradlew tasks`.
+4. The Stonecutter extension isn't on buildSrc's compile classpath, so access it through reflection; access Loom extensions dynamically with `withGroovyBuilder`.
+5. Dependency coordinates live only in the root `gradle/libs.versions.toml`; buildSrc imports it through `buildSrc/settings.gradle.kts`.
 
 <a id="wiki-section-8"></a>
-## CI
+## Guards and renames
 
-`.github/workflows/ci-build.yml` uses a handwritten node matrix: `:common:check` / `:common-api-processor:test` → `guardLint` → NeoForge `nbtSmokeTest` → `npm run test:probe-types` → node `build` tasks, including Fabric 26.1.2/26.2.0 → each Fabric matrix leg verifies the downloaded Fabric jar and then runs a development-server smoke test. A commit title of `update <version>` triggers release publication. GitHub Release and CurseForge tasks depend on both Fabric smoke legs; Fabric files remain explicitly excluded until publication is enabled separately. Runtime smoke uses versioned fixtures and stops after seeing startup/server-started markers. CI obtains JDKs through `actions/setup-java`; the repository no longer fixes `org.gradle.java.home`. Local users configure it in user-level `~/.gradle/gradle.properties` or export `JAVA_HOME`.
+Code in the shared tree is written for 26.x. When you need to tell versions or loaders apart, there are three options, in order of preference:
 
-After the node builds, CI also runs `npm run test:probe-native-jsx`, `python3 -m unittest discover -s tools -p test_active_node_sources.py`, `python3 tools/verify-active-node-sources.py --target build/active-source-matrix`, and the source-root/coverage checks in `tools/nekojs-ci-gates.py`. The regression suite covers restoration, failure/stale-summary detection, and preservation of existing probe paths; the verifier checks actual compile/resource task inputs through `tools/verify-node-source-selection.init.gradle`. A version node must select its own override, not silently compile the shared twin.
+1. **Version facade**: call a facade such as `McPlatformCompat` from the shared tree and put each version's implementation in the node directories. New code uses this by default.
+2. **Node twin file**: only for files with almost no shared logic.
+3. **Stonecutter guard**: `//? if >=26 { … //?}` or `//? if neoforge { … //?}`. Use it only when the first two don't fit.
+
+Plain renames need no guard. The replacements in `stonecutter.gradle.kts` handle them:
+
+- The `!mc_ids` group is on by default. It handles renames such as `ResourceLocation` ↔ `Identifier` and `GuiGraphics` ↔ `GuiGraphicsExtractor`. A name qualifies only if it never appears in one of the versions.
+- The `mc_legacy_api` group is off by default and enabled per verified file with `//~ mc_legacy_api`. It holds renames where the call shape differs, such as `displayClientMessage` ↔ `sendSystemMessage`.
+
+> Replacement rules must be literal `replace(...)` calls. Rules generated in a loop silently stop working, with no compile error.
 
 <a id="wiki-section-9"></a>
-## Known boundaries
+### What guardLint checks
 
-- Fabric has a deliberately smaller loader/API and test surface than NeoForge. Both Fabric nodes mount the raw loader root `src/fabric` without Stonecutter preprocessing; the former `deps.fabric_source_node` bridge has been removed. Version differences use node overrides/facades. CI checks downloaded artifacts and development-server smoke per Fabric leg, and `verifyFabricRuntimeArtifact` remains a `check` gate. These checks are not visual/gameplay acceptance for every API.
-- Forge 1.20.1 is unsupported. Its API differs from the shared tree by an entire era, beyond what guards and replacements can bridge. Supporting it would effectively mean maintaining a second codebase, so its skeleton has been removed; it can be recovered from git history if needed.
-- Cleanroom 1.12.2 is outside this repository's current build graph; its separate-branch behavior is not verified here.
+CI enforces `./gradlew guardLint`. It fails when:
 
-- [Project architecture](project-architecture_us): the design behind the modules.
+- The number of `//? if` markers and closing markers doesn't match.
+- A guard sits inside a Java text block (`"""`).
+- The first line of a guard branch starts with `/*`.
+- A single file has more than 20 `//? if` markers. If you really need more, add a plain Java comment `// guard-exempt(20): reason` to the file; it will appear in the exemption list.
+- `common` (including `com.tkisor.nekojs.api.*`) imports a Minecraft or loader package (`net.minecraft`, `net.neoforged`, `net.fabricmc`, `net.minecraftforge`, `com.mojang`). Graal is allowed.
+- The `wrapper` package has a loader import outside a guard. A wrapper wrapped entirely in a loader guard doesn't count.
+- A guard uses a loader constant that is false on every node, so the branch never compiles.
+
+A run of guarded lines longer than 8 only produces a warning.
+
+Guard rules check only `src/**/*.java`; module boundary rules check `common/src/main/java`.
+
+<a id="wiki-section-10"></a>
+## Checks and tests
+
+| Task | What it does |
+|---|---|
+| `guardLint` | The guard and boundary checks above |
+| `:common:check` | Engine-layer tests plus isolation checks such as `checkCommonIsolation`. Running only `:common:test` is not a substitute |
+| `:<node>:check` | Node tests, `platformGateTest` (spec and event coverage) and artifact verification; NeoForge nodes also run `nativeRecipeProbeTest` |
+| `:<node>:build` | Compiles, packages, and runs the check above |
+| `sandboxCheck` | `guardLint` + every node's `check` + `verifyExternalAddonIsolation` (makes sure the test addon fixture didn't end up in a production jar) |
+| `:<NeoForge node>:nbtSmokeTest` | JVM tests for NBT handling |
+
+All of these are JVM tests and artifact checks; none of them start the game. The Fabric `runServer` smoke test in CI only confirms that the server starts and startup scripts run. It is not full in-game acceptance.
+
+<a id="wiki-section-11"></a>
+## Separate addon: NekuJS
+
+`:addons:nekujs` is a compatibility layer that lets some KubeJS addons run on NekoJS, on NeoForge 1.21.1 only. It is packaged separately as `nekujs-neoforge-1.21.1-<version>.jar` and is never embedded in a NekoJS node jar.
+
+```bash
+./gradlew :addons:nekujs:build
+```
+
+`build` runs only the contract tests that need no third-party jars. `fixtureTest`, `expandedFixtureTest`, `compatProofTest` and `runTestClient` need local third-party jars, by default in `addons/nekujs/1211nekujs`; point elsewhere with `-PnekujsFixturesDir=/path/to/fixtures`. These third-party jars are not shipped.
+
+<a id="wiki-section-12"></a>
+## Adding a Minecraft version
+
+1. Copy the `versions/<node>/` folder of a similar node and update `deps.minecraft`, `deps.neo` (or `deps.fabric_api` for Fabric), `deps.jei`, `deps.mc_range`, `deps.neo_range` and `deps.java` in `gradle.properties`.
+2. Add the node to the `stonecutter` block in `settings.gradle.kts`.
+3. Update the places with hard-coded node lists: the build command in `.github/workflows/ci-build.yml` (plus the smoke matrix for Fabric nodes), and `tools/nekojs-ci-gates.py`.
+4. Run `./gradlew :<new node>:build` and `./gradlew sandboxCheck`.
+
+<a id="wiki-section-13"></a>
+## CI and releases
+
+The main flow in `.github/workflows/ci-build.yml`:
+
+1. `:common:check` and `:common-api-processor:test`
+2. `guardLint`
+3. `nbtSmokeTest` on the three NeoForge nodes
+4. `npm run test:probe-types` (TypeScript type checks on generated declarations)
+5. `build` on all five nodes
+6. Extra checks: native recipe probe, JSX declarations, per-node source override selection, and the build gate report (`tools/nekojs-ci-gates.py`)
+7. For each Fabric node: verify the downloaded jar, then run a development server smoke test
+
+A separate job runs `:common:check` again on JDK 21 to catch hidden dependencies on the Gradle daemon's JDK version.
+
+**Releases** are triggered by the commit title:
+
+| Commit title | Channel |
+|---|---|
+| `update <version>` | release |
+| `update beta <version>` | beta |
+| `update alpha <version>` | alpha |
+
+A release creates a GitHub Release and publishes to CurseForge, once the build and the Fabric smoke tests pass. Fabric jars are currently CI artifacts only and are not attached to releases.
+
+<a id="wiki-section-14"></a>
+## Known limits
+
+- Fabric's loader API coverage and test scope are intentionally smaller than NeoForge's.
+- Forge 1.20.1 is not supported. It is an era apart from the shared tree, beyond what guards and renames can bridge, so its skeleton was removed. It can be recovered from git history if needed.
+- Cleanroom 1.12.2 is outside this repository's build.
+
+<a id="wiki-section-15"></a>
+## Next steps
+
+- [Project architecture](project-architecture_us): how the modules fit together.
+- [Plugin development](plugin-development_us): write a NekoJS plugin mod.
 
 <!-- wiki-nav -->
 

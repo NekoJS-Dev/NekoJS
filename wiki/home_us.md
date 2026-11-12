@@ -5,80 +5,61 @@
 <a id="wiki-section-1"></a>
 # NekoJS Wiki
 
-NekoJS is a Minecraft scripting runtime based on GraalJS. You can write scripts in JavaScript, TypeScript, JSX, or the Python subset supported by NekoJS to modify recipes, listen to events, register content, and get type information from the game.
+NekoJS is a Minecraft scripting mod. Write scripts in JavaScript (or TypeScript, or Python) to change recipes, react to game events, and add new items and blocks — no Java and no recompiling.
 
-This Wiki is organized by use case:
-
-- **Script authors**: start with [Quick start](quick-start_us), then read [Script basics](script-basics_us), [Global bindings](global-bindings_us), and [Event reference](event-reference_us).
-- **Modpack authors**: focus on [Recipe system](recipe-system_us), [Registering new content](registering-new-content_us), [Module system](module-system_us), and [TypeScript and JSX](typescript-and-jsx_us).
-- **Plugin developers**: start with [Plugin development](plugin-development_us), together with [Type adapters](type-adapters_us), [Event extensions](event-extensions_us), and [Annotations](annotations_us).
-- **Project contributors**: read [Project architecture](project-architecture_us), [Probe type generation](probe-type-generation_us), and [Build system](build-system_us).
-
-> **Check platform status first**: if you use Fabric, read [Platforms and compatibility](platform-compatibility_us) first. Fabric already has 26.x build nodes, but its API remains a subset of NeoForge's. Do not assume that every event and binding is available.
+If you have used KubeJS, this will feel familiar: scripts live in your game folder, and one command applies your changes.
 
 <a id="wiki-section-2"></a>
-## What you can do with NekoJS
+## Where should I start?
 
-| Capability | Description |
-|---|---|
-| JavaScript / TypeScript / JSX | Place `.js`, `.mjs`, `.cjs`, `.ts`, `.jsx`, and `.tsx` files directly in script directories; `.py` files are handled by the built-in Python transpiler. |
-| JSX client Screen UI | NeoForge 26.x only; see the [JSX client UI](jsx-client-ui_us) guide. |
-| ESM and CommonJS | Supports `import` / `export`, dynamic `import()`, top-level await, and `require()`. |
-| Recipes and data | Modify recipes with `ServerEvents.recipes`; NeoForge also provides a more complete set of data and asset generation events. |
-| Type information | `/nekojs probe` generates TypeScript declarations by default; `/nekojs probe python` generates Python stubs; `/nekojs probe all` runs every backend. |
-| Transactional reload | The previous environment is usually retained when SERVER, CLIENT, or TEST scripts fail to load; startup script changes still require a game restart. |
-| Node.js core modules | Provides sandbox-restricted shims for `fs`, `path`, `buffer`, `crypto`, `process`, `timers`, `util`, `events`, `assert`, `os`, `test`, and other modules. |
+| You are… | Read first | Then |
+|---|---|---|
+| New to NekoJS | [Quick start](quick-start_us) | [Script basics](script-basics_us) |
+| A modpack author changing recipes or adding items | [Recipe system](recipe-system_us), [Registering new content](registering-new-content_us) | [Event reference](event-reference_us), [Global bindings](global-bindings_us) |
+| Using TypeScript or splitting code into files | [TypeScript and JSX](typescript-and-jsx_us) | [Module system](module-system_us) |
+| Writing scripts in Python | [Python scripts](python-scripts_us) | [Python feature support](python-feature-support_us) |
+| Extending NekoJS with a Java plugin | [Plugin development](plugin-development_us) | [Type adapters](type-adapters_us), [Event extensions](event-extensions_us) |
+| Contributing to NekoJS itself | [Project architecture](project-architecture_us) | [Build system](build-system_us) |
+
+If something goes wrong, check the [FAQ](faq_us). If you see a `NEKO-xxxx` code, look it up in the [Error and log reference](error-reference_us).
 
 <a id="wiki-section-3"></a>
-## Get started in thirty seconds
+## Try it in one minute
 
-1. Install NekoJS and [Graal](https://www.curseforge.com/minecraft/mc-mods/graal) versions that match your Minecraft version and loader. Graal 25.1.3.7 or later is required.
-2. Start the game and wait for the `nekojs/` workspace to be generated in the game root directory.
-3. Write the following in `nekojs/server_scripts/hello.js`:
+1. Put NekoJS and its dependency [Graal](https://www.curseforge.com/minecraft/mc-mods/graal) (25.1.3.7 or newer) in `mods/` and start the game.
+2. A `nekojs/` folder appears in your game folder. Create `nekojs/server_scripts/hello.js`:
 
 ```javascript
-console.info('[NekoJS] Server script loaded')
+console.info('Hello, NekoJS!')
 ```
 
-4. Enter a world or run `/nekojs reload server`. Once you see the log output, continue with [Quick start](quick-start_us).
+3. Enter a world, run `/nekojs reload`, then open `logs/nekojs/server.log`. The line is there.
+
+For the full walkthrough — changing a recipe, adding an item, and turning on code completion — see [Quick start](quick-start_us).
 
 <a id="wiki-section-4"></a>
-## Current platforms
+## What can NekoJS do?
 
-| Platform | Status |
-|---|---|
-| NeoForge 1.21.1 | Currently supported, Java 21 |
-| NeoForge 26.1.2 | Currently supported, Java 25 |
-| NeoForge 26.2.0 | Currently supported, Java 25 |
-| Fabric 26.1.2 | Current repository node, Java 25; loader API subset |
-| Fabric 26.2 (node `26.2.0-fabric`) | Current repository node, Java 25; loader API subset |
-
-
-See [Platforms and compatibility](platform-compatibility_us) for detailed differences. Refer to [Releases](https://github.com/NekoJS-Dev/NekoJS/releases) for publication status.
+| You want to… | Use | Details |
+|---|---|---|
+| Add, remove or change recipes | `ServerEvents.recipes` | [Recipe system](recipe-system_us) |
+| Add new items, blocks or entities | `RegistryEvents.register` (startup scripts) | [Registering new content](registering-new-content_us) |
+| Run code when players act, blocks break, and so on | `PlayerEvents`, `BlockEvents` and other events | [Event reference](event-reference_us) |
+| Add custom commands | `CommandEvents.register` | [Event reference](event-reference_us#wiki-command-events) |
+| Draw a HUD or build screens | `ClientEvents`, JSX screens | [Client rendering](client-rendering_us), [JSX client UI](jsx-client-ui_us) |
+| Get code completion in your editor | `/nekojs probe` generates type declarations | [Probe type generation](probe-type-generation_us) |
+| Use pure-JavaScript libraries from npm | `import` / `require` | [Module system](module-system_us) |
 
 <a id="wiki-section-5"></a>
-## Where to go next
+## Supported versions
 
-- **Writing your first script**: [Quick start](quick-start_us)
-- **Editing engine options, MixinJS or old configuration**: [Configuration](configuration_us)
-- **Understanding when scripts run**: [Script basics](script-basics_us)
-- **Looking up bindings and methods**: [Global bindings](global-bindings_us)
-- **Giving an AI the current instance API**: [AI-assisted authoring](ai-support_us)
-- **Listening to or canceling events**: [Event reference](event-reference_us)
-- **Changing recipes**: [Recipe system](recipe-system_us)
-- **Registering items, blocks, or entities**: [Registering new content](registering-new-content_us)
-- **Writing client Screens with JSX**: [JSX client UI](jsx-client-ui_us)
-- **Drawing HUD/world overlays or post effects**: [Client rendering](client-rendering_us)
-- **Distinguishing event, Binding, builder, and data-object syntax**: [Script API style](script-api-style_us)
-- **Choosing saved, synchronized, or generation-local state**: [Data and state](data-and-state_us)
-- **Splitting modules or using npm packages**: [Module system](module-system_us)
-- **Troubleshooting errors**: [FAQ](faq_us)
-- **Writing Java plugins**: [Plugin development](plugin-development_us)
+| Loader | Minecraft | Java |
+|---|---|---|
+| NeoForge | 1.21.1 | 21 |
+| NeoForge | 26.1.2, 26.2.0 | 25 |
+| Fabric | 26.1.2, 26.2 | 25 |
 
-<a id="wiki-section-6"></a>
-## Maintenance notes
-
-The support matrix here is limited to the five current repository nodes. Cleanroom 1.12.2 behavior and release availability are not established by this codebase. For API availability, use the platform notes and the current instance's generated declarations; release pages determine which artifacts are actually published.
+The Fabric builds run scripts, change recipes and support most common events, but some NeoForge-only features are missing. Read [Platforms and compatibility](platform-compatibility_us) before using Fabric. Downloadable versions are listed on [Releases](https://github.com/NekoJS-Dev/NekoJS/releases).
 
 <!-- wiki-nav -->
 

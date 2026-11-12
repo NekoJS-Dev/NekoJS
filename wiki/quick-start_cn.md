@@ -5,126 +5,73 @@
 <a id="wiki-section-1"></a>
 # 快速开始
 
-本页带你从零跑起第一个 NekoJS 脚本。
+本页带你装好 NekoJS，写出第一个脚本，改一个配方，再加一个新物品。全程大约 15 分钟。
 
 <a id="wiki-section-2"></a>
-## 1. 安装前置
+## 1. 安装
 
-NekoJS 依赖 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal)（提供 GraalJS 运行时），需要 **25.1.3.7 或更高**。更低版本缺少正则语言，脚本使用正则时会出现 `No language for id regex found`。
+你需要两个模组：
 
-1. 从 [CurseForge](https://www.curseforge.com/minecraft/search?search=NekoJS) 或 [GitHub Releases](https://github.com/NekoJS-Dev/NekoJS/releases) 下载与你所用 Minecraft / NeoForge 或 Fabric 版本匹配的 **NekoJS**，以及对应的 **Graal**。
-2. 把两个 jar 都放进 `mods/` 文件夹。
-3. 启动游戏。
+- **NekoJS**：从 [CurseForge](https://www.curseforge.com/minecraft/search?search=NekoJS) 或 [GitHub Releases](https://github.com/NekoJS-Dev/NekoJS/releases) 下载。
+- **[Graal](https://www.curseforge.com/minecraft/mc-mods/graal)**：NekoJS 的前置，负责真正执行 JavaScript。版本必须是 **25.1.3.7 或更高**。
 
-> 当前仓库的 Fabric 26.x 节点仍是实验性 API 子集，具体差异见 [平台与兼容性](platform-compatibility_cn)。Cleanroom 1.12.2 属于独立 legacy 分支，不纳入本页主流程。
+两者都要选和你的 Minecraft 版本、加载器（NeoForge 或 Fabric）对应的文件。把它们放进 `mods/` 文件夹，启动游戏。
 
-> 版本必须匹配。发布页面会标注每个 NekoJS 对应的 Minecraft、加载器和 Java 版本。
+> **NeoForge 1.21.1 的专用服务器**要用文件名带 `-server` 的那个 jar，客户端用普通 jar。两个不要同时放。其他版本只有一个 jar。
 
-仓库构建的 **NeoForge 1.21.1** 制品按运行环境选择：客户端使用普通 `.jar`；独立专服使用同版本的 `-server.jar`，它额外携带专服缺少的 ICU 模块。每个安装目录只放其中一种 NekoJS 制品，仍需安装对应 Graal。客户端使用专服变体会与 Minecraft 自带 ICU 模块冲突；专服使用普通客户端制品会缺少 ICU。`./gradlew :1.21.1:build` 同时生成并检查两种制品。NeoForge26.x 和 Fabric 的制品选择方式保持现状。发布包以发布页实际列出的文件为准。
+> Graal 版本太低时，脚本里一用正则表达式就会报 `No language for id regex found`。看到这条报错就去升级 Graal。
 
 <a id="wiki-section-3"></a>
-## 2. 目录结构
+## 2. 认识 nekojs 文件夹
 
-首次启动后，游戏根目录下会自动生成 `nekojs/` 文件夹：
+第一次启动后，游戏目录下会多出一个 `nekojs/` 文件夹。你最常用的是这四个目录：
 
 ```text
-.neko_probe/                # 类型声明输出根目录（/nekojs probe 生成，与 nekojs 同级）
 nekojs/
-├── startup_scripts/        # 启动脚本：注册物品/方块等（改了要重启游戏）
-│   └── jsconfig.json
-├── server_scripts/         # 服务端脚本：配方、事件监听（支持 /nekojs reload）
-│   └── jsconfig.json
-├── client_scripts/         # 客户端脚本：GUI、粒子、按键（支持 client reload）
-│   └── jsconfig.json
-├── test_scripts/           # 测试脚本：通过 /nekojs test 显式运行
-├── packs/                  # 可选：脚本包（见下节）
-├── node_modules/           # 外部纯 JS npm 依赖
-├── assets/                 # 资源
-├── data/                   # 数据包
-└── config/                 # engine.toml、probe.toml、ai.toml（用途相互独立）
-                              （旧 config/nekojs-engine.toml 仅作只读回退）
+├── startup_scripts/   # 启动脚本：注册新物品、方块。改了要重启游戏
+├── server_scripts/    # 服务端脚本：改配方、监听游戏事件。用 /nekojs reload 生效
+├── client_scripts/    # 客户端脚本：HUD、按键、界面。用 /nekojs reload client 生效
+├── test_scripts/      # 测试脚本：只在执行 /nekojs test 时运行
+├── assets/            # 资源：材质、模型、语言文件
+├── data/              # 数据包内容
+├── packs/             # 可选：把脚本打包分发，见“脚本包”
+└── config/            # 配置文件，见“配置参考”
 ```
 
-独立的 AI 文档根默认为 `.github/neko_ai`，由 `nekojs/config/ai.toml` 的 `[output].directory` 控制，工具直接读取这个配置定位。私有 token 保留在 `nekojs/config/`，不是 `.neko_probe`。见 [AI 创作支持](ai-support_cn)，不要提交 token。
+脚本文件可以是 `.js`、`.ts`、`.jsx`、`.tsx`、`.mjs`、`.cjs` 或 `.py`。新手用 `.js` 就好。
 
-引擎、Probe 与 AI 配置的用途、默认值和重启/迁移步骤见[配置参考](configuration_cn)。不要把 engine.toml、probe.toml 与 ai.toml 当作同一个开关集合。
-
-四个脚本目录都支持 `.js`、`.mjs`、`.cjs`、`.ts`、`.jsx`、`.tsx` 和 `.py`。`.py` 是 NekoJS 的 Python 子集转译脚本，不需要外部 Python 运行时。详见 [脚本基础](script-basics_cn)。
+> 把脚本放错目录是最常见的“脚本没反应”原因。改配方必须放在 `server_scripts`，注册物品必须放在 `startup_scripts`。区别见 [脚本基础](script-basics_cn)。
 
 <a id="wiki-section-4"></a>
-### 脚本包（可选）
-
-除了平铺的四个脚本目录，也可以把脚本组织成「包」：`nekojs/packs/<包id>/` 下放一个
-`manifest.json` 加自己的 `startup_scripts/`、`server_scripts/` 等子目录：
-
-```text
-nekojs/packs/my_pack/
-├── manifest.json           # {"id": "my_pack", "name": "我的包", "version": "1.0.0"}
-├── server_scripts/
-│   └── boss.js
-└── client_scripts/
-    └── hud.js
-```
-
-这个最小清单没有 `formatVersion`，因此使用下面的**旧式目录包**规则。声明 `formatVersion: 1` 的包改用严格清单、显式入口、依赖排序和包专属 Context，见[版本化脚本包](script-packs_cn)；旧清单的宽松解析规则不适用于该格式。
-
-- **加载顺序**：全局包（按 id 字母序）→ 世界包 → 平铺目录。
-- **启用/禁用**：`/nekojs packs` 展示配置启用意图，不代表运行状态。
-  `/nekojs packs disable GLOBAL:my_pack` 保存状态文件（优先级高于清单的 `enabled`）；
-  裸 ID 仅在唯一匹配时可用，保存失败不会报告成功。随后重载对应的 server/client/test 类型应用；STARTUP 变化需要重启。
-- **执行查询**：`/nekojs packs status server` 查看当前代的入口执行结果；
-  `/nekojs packs plan server` 查看当前文件排序与跳过原因，不执行或编译脚本。
-- **世界包（NeoForge / Fabric 26.x）**：放在 `<世界文件夹>/nekojs_packs/<包id>/`，进入世界时挂载，
-  退出时清理监听器与定时器。当前世界的启停或编辑在对应类型重载后应用。
-- **远端缓存包**：已挂载的 SERVER_CACHE 包可查询，由远端授权控制，不能用本地启停命令改写。
-- manifest 字段宽松解析：`id`/`name`/`version`/`description`/`authors`/`enabled`/`clientSync`
-  （`clientSync` 默认 `true`，设为 `false` 可排除该包的多人分发，见下）。每个包的脚本目录同样自动生成 `jsconfig.json`，
-  编辑器补全与平铺目录一致。
-- 两个加载器都支持挂载目录包的 `data/<命名空间>/**`；Fabric 在首次数据加载前发现目录，后续 data 改动使用原版 `/reload`，客户端 assets 改动使用 F3+T。目录挂载不表示数据生成 Script Event 已在各平台全部可用。资源覆盖、远端限制与加载边界见[脚本包](script-packs_cn)。
-
-<a id="wiki-section-5"></a>
-### 多人脚本包分发（服务端 → 客户端）
-
-服务器可以把脚本包自动分发给连入的客户端，客户端在**原版注册表校验之前**验证并执行完包内脚本
-（远端脚本仍走 ClassFilter/Watchdog 沙箱）。在服务端 `nekojs/config/engine.toml` 打开：
-
-```toml
-[packSync]
-mode = "all"           # off（默认）| hashOnly（只对哈希不执行）| all
-allowUnsigned = false   # 是否接受无签名包
-```
-
-- **签名**：manifest 里写 `signature = { algorithm = "Ed25519", keyId = "...", publicKey = "<X.509 base64>", signature = "<base64>" }`
-  （签名覆盖去掉 signature 键的规范化 manifest + 全部文件内容）。
-- **信任**：客户端首次连入未信任的服务器会被**断开**并提示地址；在该客户端的单人世界里执行
-  `/nekojs trust <地址>` 后重连即可收包。信任会同时 pin 该服务器当前签名公钥（密钥静默轮换会被拒绝）。
-- **缓存**：包按服务器地址哈希分桶缓存在 `nekojs/server_packs/`，哈希不变则复用本地缓存。
-- Cleanroom 1.12.2 不在当前五节点版本图内；当前仓库无法确认其同步行为。
-
-<a id="wiki-section-6"></a>
 ## 3. 第一个脚本
 
-在 `nekojs/server_scripts/` 下新建 `hello.js`：
+新建 `nekojs/server_scripts/hello.js`：
 
 ```javascript
-// server_scripts/hello.js
-
-console.info('[NekoJS] Server script loaded')
+console.info('Hello, NekoJS!')
 ```
 
-进入世界，或在已运行的世界执行 `/nekojs reload server`，日志应出现 `[NekoJS] Server script loaded`。试完删除文件并 reload SERVER。`ServerEvents.started` 监听器则不同：普通 reload 不会重放开服阶段。
+进入一个世界。如果世界已经打开，执行：
 
-<a id="wiki-section-7"></a>
+```text
+/nekojs reload
+```
+
+然后打开游戏目录下的 `logs/nekojs/server.log`，可以看到 `Hello, NekoJS!`。每种脚本都有自己的日志文件：`startup.log`、`server.log`、`client.log`、`test.log`。
+
+> 保存文件不会自动生效，每次改完都要执行一次 reload。
+
+<a id="wiki-section-5"></a>
 ## 4. 改一个配方
 
-```javascript
-// server_scripts/recipes.js
+新建 `nekojs/server_scripts/recipes.js`：
 
+```javascript
 ServerEvents.recipes(event => {
-  // 删除所有原版木棍配方
+  // 删除所有产出木棍的配方
   event.remove({ output: 'minecraft:stick' })
 
-  // 添加一项：用 1 个圆石合成 4 个木棍
+  // 新增：1 个圆石合成 4 根木棍
   event.shaped('4x minecraft:stick', [
     'C'
   ], {
@@ -133,49 +80,58 @@ ServerEvents.recipes(event => {
 })
 ```
 
-请在一次性测试世界执行**整类** `/nekojs reload server`；单文件 reload 不执行同样的配方后处理。合成格放入一个圆石应得到四根木棍，其他木棍输出配方被移除。验证实际合成，不只看配方查看器。试完删除该文件并 reload SERVER 恢复基线；查看器可能还需自行刷新。
+执行 `/nekojs reload`，在工作台里放一个圆石，就能合成出 4 根木棍，原来的木棍配方都没了。
 
-详见 [配方系统](recipe-system_cn)。
+如果 JEI 之类的配方查看器还显示旧配方，重新进入世界即可，合成本身已经生效。想恢复原样，删掉这个文件再 reload 一次。
 
-<a id="wiki-section-8"></a>
-## 5. 注册一个新物品
+更多写法见 [配方系统](recipe-system_cn)。
+
+<a id="wiki-section-6"></a>
+## 5. 添加一个新物品
+
+注册新物品必须写在**启动脚本**里。新建 `nekojs/startup_scripts/items.js`：
 
 ```javascript
-// startup_scripts/my_items.js
-
 RegistryEvents.register(event => {
-  event.item('mymod:cool_gem', b => {
-    b.maxStackSize = 16
-    b.rarity = 'rare'
+  event.item('mymod:cool_gem', item => {
+    item.maxStackSize = 16
+    item.rarity = 'rare'
   })
 })
 ```
 
-> 注意：启动脚本由游戏启动阶段执行。修改注册内容后必须重启游戏；当前 `/nekojs reload startup` 不支持从运行中的命令重载 STARTUP 脚本。
+**重启游戏**（启动脚本不能 reload），然后执行 `/give @s mymod:cool_gem`。
 
-请使用一次性世界，并保持客户端/服务端定义一致。重启后用 `/give @s mymod:cool_gem` 检查注册；此例不提供纹理/模型或创造标签页条目。放弃测试世界及物品后再删文件并重启；移除已保存的注册 ID 可能破坏既有数据。
+这时物品还是紫黑格子、名字显示成 `item.mymod.cool_gem`，因为还没有材质和名称：
 
-详见 [注册新内容](registering-new-content_cn)。
+- 材质：放一张 PNG 到 `nekojs/assets/mymod/textures/item/cool_gem.png`
+- 名称：在 `nekojs/assets/mymod/lang/zh_cn.json` 写入 `{ "item.mymod.cool_gem": "酷炫宝石" }`
 
-<a id="wiki-section-9"></a>
-## 6. 开启 IDE 智能提示
+> 物品一旦在存档里用过，就不要随便删掉它的注册脚本，否则存档里的这些物品会丢失。建议先在测试世界里试。
 
-1. 执行 `/nekojs probe`，生成 `.neko_probe/typescript/` 下的 TypeScript `.d.ts`。
-2. 需要 Python 补全时，再执行 `/nekojs probe python`，并在每个使用 NekoJS API 的 `.py` 文件顶部写 `from nekojs import *`（或 `from nekojs import Item, ServerEvents` 等具名导入）。需要运行所有 backend 时执行 `/nekojs probe all`。
-3. 用 VS Code 打开 `nekojs/server_scripts/`（或对应目录），里面的 `jsconfig.json` 会关联 TypeScript 类型库。
-4. 需要开服自动运行默认 TS probe 时，在 `nekojs/config/probe.toml` 设置 `runAtStartup = true`；该选项默认关闭。
+更多写法见 [注册新内容](registering-new-content_cn)。
 
-<a id="wiki-section-10"></a>
-## 7. 下一步
+<a id="wiki-section-7"></a>
+## 6. 开启代码补全
 
-- [脚本基础](script-basics_cn) —— 脚本类型、生命周期、reload 行为。
-- [全局绑定](global-bindings_cn) —— `Item`、`Ingredient`、`Fluid`、`Text`、`JsonIO` 等全部 API。
-- [事件参考](event-reference_cn) —— 所有可用事件。
-- [模块系统](module-system_cn) —— 拆分多文件、引用 npm 依赖、`java:` 导入。
-- [TypeScript 与 JSX](typescript-and-jsx_cn) —— 用 TS 写脚本。
-- [脚本 API 风格](script-api-style_cn)：事件、Binding、builder、Bean 属性与数据对象。
-- [数据与状态](data-and-state_cn)：明确选择持久化与同步边界。
-- [客户端绘制](client-rendering_cn)：HUD、Screen 叠加、世界绘制与后处理。
+NekoJS 能根据你当前的游戏（包括装了哪些模组）生成类型声明，让 VS Code 提示有哪些事件、方法和物品 ID。
+
+1. 在游戏里执行 `/nekojs probe`。
+2. 用 VS Code **打开 `nekojs/server_scripts` 这个文件夹**（不是整个游戏目录）。
+3. 输入 `ServerEvents.` 就能看到提示了。
+
+加了新模组或注册了新内容之后，再执行一次 `/nekojs probe` 刷新。
+
+用 Python 写脚本的话，执行 `/nekojs probe python`，并在每个 `.py` 文件顶部写 `from nekojs import *`。详见 [Python 脚本](python-scripts_cn)。
+
+<a id="wiki-section-8"></a>
+## 7. 接下来
+
+- [脚本基础](script-basics_cn)：四种脚本的区别、加载顺序、出错了怎么查。
+- [命令](commands_cn)：所有 `/nekojs` 命令。
+- [事件参考](event-reference_cn)：可以监听哪些游戏事件。
+- [全局绑定](global-bindings_cn)：`Item`、`Text`、`JsonIO` 等可以直接用的工具。
+- [常见问题](faq_cn)：遇到问题先来这里。
 
 <!-- wiki-nav -->
 

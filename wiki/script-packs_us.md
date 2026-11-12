@@ -5,19 +5,38 @@
 <a id="wiki-section-1"></a>
 # Versioned script packs
 
-Flat scripts and manifests without `formatVersion` retain recursive discovery, the existing type Context and shared `global`. The following behavior is opt-in through `formatVersion: 1`.
+A script pack keeps a set of scripts, data and resources in one folder, so you can enable, disable and share them as a unit. NekoJS has two kinds of pack:
+
+- **Simple directory packs** have a plain `manifest.json` and suit grouping your own scripts. See "Simple directory packs" below.
+- **Versioned packs** have `"formatVersion": 1` in `manifest.json`. They have a version, can declare dependencies, can offer functions to other packs, and can be packaged as a `.nekopack` archive or a mod JAR.
+
+The first half of this page covers versioned packs. If you only want to group scripts, simple directory packs are enough.
 
 <a id="wiki-section-2"></a>
-## Authoring
+## Create a versioned pack
 
-Use `/nekojs packs create server economy` in game, or select several types with the repository tool:
+Run this in game:
 
-```powershell
-./tools/nekojs-pack.ps1 -Action create -InputPath ./build/author/packs -Id economy -Types server,client
-./tools/nekojs-pack.ps1 -Action validate -InputPath ./build/author/packs/economy
+```text
+/nekojs packs create server economy
 ```
 
-Templates contain `manifest.json`, each selected type's `main.js` and `pack-api.d.ts`. Existing targets are rejected. The default example writes one log message. Put the directory in `nekojs/packs/`, or in a world's `nekojs_packs/` when that platform mounts WORLD sources.
+It creates `nekojs/packs/economy/`:
+
+```text
+nekojs/packs/economy/
+├── manifest.json
+└── server_scripts/
+    ├── main.js          # Example entry that writes one log line
+    └── pack-api.d.ts    # Code-completion declarations for the Pack object
+```
+
+You can use `startup`, `client` or `test` instead of `server`. If the folder already exists, the command fails rather than overwriting it.
+
+Then run `/nekojs reload` and check with `/nekojs packs status server` that the pack ran. `logs/nekojs/server.log` should contain the example script's line.
+
+<a id="wiki-section-3"></a>
+## manifest.json
 
 ```json
 {
@@ -31,76 +50,243 @@ Templates contain `manifest.json`, each selected type's `main.js` and `pack-api.
 }
 ```
 
-The machine schema is in the repository at `docs/schema/script-pack-v1.schema.json`. Unknown fields, wrong field types and invalid entries are rejected before activation. Entry keys are `startup/server/client/test`; paths are relative to that type's directory. Entries must be existing, supported scripts; absolute paths, traversal and `node_modules` paths are rejected. Only declared entries run independently. Other supported files remain import-only libraries cached by that pack's module session. Physical imports stay inside the pack root; cross-pack calls use declared capabilities.
+| Field | Required | Description |
+|---|---|---|
+| `formatVersion` | Yes | Always `1` |
+| `id` | Yes | Pack ID: lowercase letters, digits, `_` and `-`, starting with a letter or digit |
+| `version` | Yes | A three-part version such as `1.0.0`, optionally with a prerelease suffix such as `-beta.1` |
+| `entries` | Yes | Entry files per script type; keys are `startup`, `server`, `client`, `test` |
+| `dependencies` | No | Packs this one depends on, with version ranges |
+| `environment` | No | Conditions to run: `loaders`, `minecraft` (a version range), `mods` (required mods with version ranges) |
+| `capabilities` | No | `provides`: functions this pack offers; `requires`: functions it needs from other packs |
+| `name`, `description`, `authors` | No | Display name, description and authors |
+| `enabled` | No | Whether it is enabled by default |
+| `clientSync` | No | `false` keeps it from being sent to multiplayer players |
+| `signature` | No | The signature; see "Sending script packs to multiplayer players" below |
+| `config` | No | Your own configuration object |
 
-Pack versions have three numeric parts, optional SemVer prerelease/build identifiers, no numeric leading zeros and at most nine digits per version part. Ranges accept `*`, exact versions, `>= <= > < =` comparators and space-separated conjunctions. Comparators allow one to three numeric parts. There is no npm/Maven solver, `^`, `~`, OR or dependency download. `environment.mods`, `environment.loaders` and `environment.minecraft` add environment conditions. Pack dependencies precede consumers; existing file `priority/after` rules cannot override them. Missing, incompatible, disabled, duplicate or cyclic dependencies block their consumers while unrelated packs continue.
-
-Bare dependencies prefer the same source. WORLD can fall back to GLOBAL/MOD, GLOBAL to MOD, MOD to GLOBAL; GLOBAL/MOD cannot borrow WORLD. Remote dependencies stay in the authorized bucket. Transmitted `GLOBAL:id/WORLD:id` refer to the corresponding remote origin, never local trust. Remote MOD dependencies cannot resolve.
-
-<a id="wiki-section-3"></a>
-## Capabilities and ownership
-
-Declare `"capabilities":{"provides":["wallet"]}` on the provider and publish during initialization:
-
-```js
-Pack.provide('wallet', request => ({ balance: 42 }));
-```
-
-Declare `requires` on the consumer, then call:
-
-```js
-const wallet = Pack.require('economy', 'wallet');
-console.info(wallet({ player: 'example' }).balance);
-```
-
-Calls synchronously accept one JSON value and return JSON data. Functions and host objects cannot cross Contexts. Limits are depth 32, 10000 nodes and 1 Mi characters across names/strings. These data-shape limits remain, but normal pack execution has no evaluation deadline, statement budget or runaway watchdog; an unbounded capability callback can block its owner. Access/trust checks still apply. `Pack.selector` and `Pack.activation` are read-only properties.
-
-Each versioned pack owns a Context for its type, source and world/connection session. Its private `global` survives ordinary replacement but ends with its source session; `shared` belongs to the runtime root. Handles bind both actual activations and expire after replacement, shutdown, provider failure or session change. Missing providers cause waiting. Failed providers stop consumers and require explicit reload to recover; recovery never overrides administrator disable intent.
+Versioned manifests are checked strictly: an extra field, a wrong field type or an invalid entry stops the pack from running. The full format is `docs/schema/script-pack-v1.schema.json` in the repository.
 
 <a id="wiki-section-4"></a>
-## Operations
+### Entry files
 
-- `packs list` shows discovery and saved intent; `packs status <type>` shows actual activations and entry outcomes.
-- `packs plan <type>` reads current ordering and blocking reasons without executing scripts.
-- `packs enable/disable <selector>` saves local intent and reports persistence failures.
-- `packs reload server GLOBAL:economy` replaces the provider and necessary consumers. Unrelated packs retain their activation.
-- `nekojs reload <type>` replaces the entire type, including its legacy partition.
+Paths in `entries` are relative to the matching script folder. For example, `"server": ["main.js"]` means `server_scripts/main.js`.
 
-Selectors are `GLOBAL:id`, `WORLD:id`, `MOD:id`; versioned remote selectors are `SERVER_CACHE:packs:id` and `SERVER_CACHE:worldpacks:id`. Bare IDs must be unique. MOD and SERVER_CACHE are read-only sources. “Read-only” here means local pack content/enable intent cannot be changed through these pack operations; it does not turn code running from that source into a read-only guest. Do not edit the server cache to bypass signature or trust checks.
-
-Managed state, listeners, timers and domain plans join one preflight/commit. Failed candidates release their resources and preserve healthy active units. Whole-table domains explicitly expand the affected set; client render contributions publish together. Conflicting top-level state writes reject the batch. Nested mutation and arbitrary Java/world/file effects are outside rollback guarantees. Domain publication must not throw after preflight; violations report the responsible domain, whose partial effects remain its responsibility. Post-commit cleanup failures are reported separately from rollback.
-
-World/session teardown and provider failure stop the affected activations, then rebuild whole-table contributions from the surviving domain subscriptions without re-running their entry scripts. Renderers withdraw entries owned by the closing Context directly. If recollection fails, the runtime attempts an empty plan to withdraw that domain and logs `NEKO-1017`; explicit reload is required for recovery. A failed withdrawal logs the outstanding resource recovery separately. Collection callbacks should declare domain content only; arbitrary host effects remain the author's responsibility.
-
-STARTUP changes require restart. Legacy single-file reruns retain their active-Context semantics; versioned files require package reload. Client operations retain existing client/owner-thread restrictions.
-
-Saving pack files does not trigger a filesystem watcher. Script activation, native server data `/reload`, and client resource F3+T are separate operations; a successful script commit does not roll back if a later recipe/data refresh fails. Root `shared` is in-process state, not client/server networking. File and host effects remain subject to the limits in [Node.js compatibility](nodejs-compatibility_us); neither pack signatures nor sandbox settings make untrusted code safe.
-
-A root close requested inside a managed callback immediately blocks new pack callbacks and defers release until the outermost callback returns. Deferred failures log `NEKO-1017`. Closed timer runtimes reject registration and clear their queue, then wait up to 2 seconds for the scheduler to exit. Timeout or interruption reports incomplete cleanup while other owned resources continue to release.
+- Only files listed in `entries` run directly. Other scripts in the pack are libraries that entries `import`.
+- `import` can only reach files inside the same pack. To use another pack, use capabilities (below).
+- Paths cannot be absolute, cannot leave the folder with `..`, and cannot point into `node_modules`.
 
 <a id="wiki-section-5"></a>
-## Distribution
+### Version ranges
+
+Version ranges in `dependencies`, `environment.minecraft` and `environment.mods` look like this:
+
+- `*`: any version
+- `1.2.0` or `=1.2.0`: an exact version
+- `>=1.0.0`, `<2`, `>1.1`, `<=1.5.3`: comparisons
+- Separate with spaces to require all of them, for example `>=1.0.0 <2.0.0`
+
+`^`, `~` and "or" are not supported. Dependencies are never downloaded automatically.
+
+<a id="wiki-section-6"></a>
+### Dependencies
+
+A pack always runs after the packs it depends on. `// priority:` and `// after:` comments cannot change that order.
+
+If a dependency is missing, the wrong version, disabled or part of a cycle, only the packs that depend on it stop; everything else runs normally. `/nekojs packs plan <type>` shows why.
+
+A dependency ID can have a source prefix, such as `GLOBAL:economy`. Without a prefix, a pack from the same source is preferred. World packs can depend on global and mod packs; global and mod packs cannot depend on world packs.
+
+<a id="wiki-section-7"></a>
+## Calling between packs: capabilities
+
+A pack can offer functions to other packs. These are called capabilities.
+
+The provider writes `"capabilities": { "provides": ["wallet"] }` in its `manifest.json` and publishes the function from its entry script:
+
+```javascript
+// server_scripts/main.js in the economy pack
+Pack.provide('wallet', request => ({ balance: 42 }))
+```
+
+The consumer writes `"capabilities": { "requires": { "economy": ["wallet"] } }` in its `manifest.json`, then gets the function and calls it:
+
+```javascript
+// server_scripts/main.js in the shop pack
+const wallet = Pack.require('economy', 'wallet')
+console.info(wallet({ player: 'example' }).balance)
+```
+
+- Calls are synchronous. Arguments and results must be JSON data (objects, arrays, strings, numbers, booleans, `null`). Functions and game objects cannot be passed.
+- Data can nest at most 32 levels and 10000 nodes, with about one million characters across all strings.
+- `Pack.selector` is this pack's selector (such as `GLOBAL:economy`), and `Pack.activation` numbers the current run. Both are read-only.
+- Once the provider reloads or stops, a function you got earlier stops working. Call `Pack.require` again on the next run.
+
+<a id="wiki-section-8"></a>
+## Each pack runs on its own
+
+- Every versioned pack has its own environment. Its top-level variables are invisible to other packs.
+- Every pack has its own `global`, which survives reloads. A world pack's `global` is cleared when you leave the world.
+- `shared` is shared by all packs and ordinary scripts.
+- Simple directory packs without `formatVersion` and the ordinary scripts in `nekojs/` still share one `global` per script type.
+
+<a id="wiki-section-9"></a>
+## Management commands
+
+| Command | What it does |
+|---|---|
+| `/nekojs packs` | Lists all script packs and whether they are enabled |
+| `/nekojs packs enable <pack>` / `disable <pack>` | Enables or disables a pack; reload afterwards |
+| `/nekojs packs plan <type>` | Previews load order and which packs cannot run and why. Runs no scripts |
+| `/nekojs packs status <type>` | Shows how each pack actually ran |
+| `/nekojs packs reload <type> <pack>` | Reloads only this pack and the packs that depend on it |
+| `/nekojs packs create <type> <id>` | Creates a new versioned pack |
+| `/nekojs packs validate <pack>` | Checks a pack's manifest and files |
+| `/nekojs packs archive <pack>` | Packages it as a `.nekopack` archive |
+| `/nekojs packs jar <loader> <version> <pack>` | Packages it as a mod JAR |
+
+Write `<pack>` as "source:ID":
+
+| Selector | Where the pack is |
+|---|---|
+| `GLOBAL:id` | `nekojs/packs/<id>/` |
+| `WORLD:id` | `<save folder>/nekojs_packs/<id>/` |
+| `MOD:id` | A pack installed as a mod JAR |
+| `SERVER_CACHE:packs:id` / `SERVER_CACHE:worldpacks:id` | A pack received from a multiplayer server |
+
+If only one pack has that ID, the ID alone is enough. Packs from `MOD` and `SERVER_CACHE` cannot be enabled, disabled or changed with these commands. Do not edit the server cache by hand to get around signature checks.
+
+<a id="wiki-section-10"></a>
+## Applying changes
+
+| You changed | Do this |
+|---|---|
+| A pack's server or client scripts | `/nekojs packs reload server GLOBAL:economy`, or `/nekojs reload` for the whole type |
+| Startup scripts | Restart the game |
+| The pack's `data/` | Vanilla `/reload` |
+| The pack's `assets/` | F3+T |
+
+- Saving a file does not apply it.
+- Files in a versioned pack cannot be reloaded one at a time with `/nekojs reload server <file>`; use `packs reload`.
+- If a reload fails, none of its changes apply and the last working version stays in use.
+- When a provider fails, the packs that depend on it stop too. After fixing it, reload them yourself; they do not recover on their own. A pack you disabled also stays disabled when its dependency comes back.
+
+<a id="wiki-section-11"></a>
+## Packaging and publishing
+
+<a id="wiki-section-12"></a>
+### As a .nekopack archive
+
+```text
+/nekojs packs validate GLOBAL:economy
+/nekojs packs archive GLOBAL:economy
+```
+
+The archive is written to `nekojs/exports/economy-1.0.0.nekopack`. An existing file with the same name is never overwritten.
+
+The archive holds the manifest, signature, the four script folders and `assets/` and `data/`. Your local enabled/disabled state is not included. The same content always produces an identical file.
+
+<a id="wiki-section-13"></a>
+### As a mod JAR
+
+```text
+/nekojs packs jar neoforge 26.1.2 GLOBAL:economy
+```
+
+The output goes to `nekojs/exports/`. The JAR is an ordinary content mod that depends on NekoJS: drop it in `mods/` and its pack shows up as `MOD:id`.
+
+- Supported targets: NeoForge `1.21.1`, `26.1.2`, `26.2`; Fabric `26.1.2`, `26.2`.
+- The mod ID is the pack ID, with stricter rules: 2–48 characters, only lowercase letters, digits and underscores, starting with a letter.
+- Players still need NekoJS installed.
+- Packs inside a mod JAR are not sent to players by multiplayer sync. If the client needs it too, players must install the JAR themselves.
+
+<a id="wiki-section-14"></a>
+### Batch work with the repository tool
+
+With a NekoJS source checkout, you can also use `tools/nekojs-pack.ps1` from the command line. It can create several script types at once and install archives:
 
 ```powershell
+./tools/nekojs-pack.ps1 -Action create -InputPath ./build/author/packs -Id economy -Types server,client
+./tools/nekojs-pack.ps1 -Action validate -InputPath ./build/author/packs/economy
 ./tools/nekojs-pack.ps1 -Action archive -InputPath ./build/author/packs/economy -OutputPath ./build/economy.nekopack
 ./tools/nekojs-pack.ps1 -Action install -InputPath ./build/economy.nekopack -OutputPath ./build/installed/packs
+# Upgrade or roll back to the selected archive; the local enabled state is kept.
 ./tools/nekojs-pack.ps1 -Action install -InputPath ./build/economy.nekopack -OutputPath ./build/installed/packs -Replace
 ./tools/nekojs-pack.ps1 -Action jar -InputPath ./build/author/packs/economy -OutputPath ./build/economy.jar -Loader neoforge -Minecraft 26.1.2
 ```
 
-Archives preserve original manifest/signature bytes, the four script directories, `assets/data`, a sorted inventory and the existing content hash. Local enabled intent is excluded. Fixed timestamps/STORED ZIP entries make builds reproducible. Install uses staging/restoration, replaces the complete content set and preserves existing local enabled intent. Existing targets require `-Replace`; an older selected archive performs rollback. Unsafe paths, links/reparse points, portable path collisions and quantity/size violations are rejected.
+Installing replaces the whole pack, so files removed in the new version are deleted. If the target exists, `-Replace` is required. There is no in-game command to install an archive.
 
-JARs are content mods depending on NekoJS. The mod ID equals the pack ID and must be 2–48 lowercase letters/digits/underscores, starting with a letter, without a runtime ID collision. Targets are NeoForge 1.21.1/26.1.2/26.2 and Fabric 26.1.2/26.2; use `26.2` as the Minecraft version. Install a NekoJS build containing this feature and its dependencies. There is no Forge target.
+<a id="wiki-section-15"></a>
+## Things to keep in mind
 
-Place the JAR in the required side's `mods/`. Loader-discovered content becomes a MOD source; JS is not compiled into a standalone Java mod. Root `assets/data` uses native loader resource handling. MOD content does not extend the existing GLOBAL/WORLD sync wire and must be deployed on each required side.
+- **Scripts are never stopped automatically.** An infinite loop in a capability callback freezes the game.
+- **A failed reload does not undo side effects.** Files written or world changes made before the failure stay.
+- **A signature is not a safety guarantee.** It only proves who made the pack and that it was not changed; it does not make the code harmless. Install only packs you trust.
+- **Resource order on Fabric**: later layers override earlier ones — `nekojs/assets` and `nekojs/data`, then global packs (by ID), then world packs (by ID), then packs received from a server (assets only). Packs that are disabled, or cannot run because of dependency or environment conditions, contribute no resources.
+- World pack scripts run when the world starts and stop when it closes. Merely previewing a save in the world list does not run them.
 
-On Fabric 26.1.2/26.2, directory resources use one required NekoJS pack (`nekojs:directory`, separate from the native mod pack). Later directories override earlier ones: `nekojs/assets` or `nekojs/data`, then GLOBAL packs by id, WORLD packs by id, and finally authorized SERVER_CACHE packs for client assets only. Disabled packs and packs blocked by descriptor environment/dependency checks contribute no resources. MOD materialized directories are not mounted again. The server repository discovers its own save's WORLD data before initial data loading; previewing a save does not activate its scripts. WORLD scripts activate at server start and are revoked at stop. Local WORLD client assets are visible only while connected to that integrated server.
+<a id="wiki-section-16"></a>
+## Simple directory packs (no formatVersion)
 
-Consumers of resource stacks, including tags and translations, still see every directory layer and merge them using native rules. Use native `/reload` for directory data changes and F3+T for client resource changes. An accepted remote bundle or a local connection change requests a client resource reload on a later tick, after the script sync latch is released. Native resource loading has its own success/failure boundary; accepting a script generation does not assert that native model parsing has succeeded. `parentModel` and `texture` use the same successful-registration and file-ownership rules as NeoForge.
+If you do not need dependencies or capabilities, use a simpler directory pack: put a `manifest.json` in `nekojs/packs/<pack-id>/`, plus the same script folders as the top-level layout.
 
-In-game author commands are `packs validate <selector>`, `packs archive <selector>` and `packs jar <loader> <minecraft> <selector>`. Exports go to `nekojs/exports/` without overwriting existing outputs. Archive install is available through the repository CLI.
+```text
+nekojs/packs/my_pack/
+├── manifest.json           # {"id": "my_pack", "name": "My pack", "version": "1.0.0"}
+├── server_scripts/
+│   └── boss.js
+└── client_scripts/
+    └── hud.js
+```
 
-Signing/key pinning and the existing sync wire remain. Unsigned remote content is rejected by default. Explicit `allowUnsigned=true` still requires server trust and produces a distinct unsigned approval without invented key evidence or local fallback. Failed same-bucket candidates restore old content, credentials and healthy activations. Disconnect, server switch and revocation expire old handles.
+Any pack whose `manifest.json` has no `formatVersion` is a simple directory pack. The versioned-pack rules above do not apply to it.
+
+- **Fields**: `id`, `name`, `version`, `description`, `authors`, `enabled`, `clientSync`. Misspelled or extra fields do not cause errors.
+- **Load order**: global packs (alphabetically by id) → world packs → the top-level script folders in `nekojs/`.
+- **Enabling and disabling**: `/nekojs packs disable GLOBAL:my_pack` overrides `enabled` in `manifest.json`. Reload the affected type to apply it; startup scripts need a restart.
+- **World packs**: put them in `<save folder>/nekojs_packs/<pack-id>/`. They load only while you are in that world.
+- **Data and resources**: the pack's `data/` and `assets/` folders are loaded too. After changing data, use vanilla `/reload`; after changing assets, press F3+T.
+- **Code completion**: each script folder in the pack also gets a `jsconfig.json`.
+
+<a id="wiki-section-17"></a>
+## Sending script packs to multiplayer players
+
+A server can send script packs to players automatically when they join, so they do not have to install anything. This is off by default.
+
+<a id="wiki-section-18"></a>
+### Server setup
+
+Turn it on in the server's `nekojs/config/engine.toml`:
+
+```toml
+[packSync]
+mode = "all"            # off (default, send nothing) | hashOnly (compare only, never run) | all (send and run)
+allowUnsigned = false   # Whether unsigned packs may be sent; keeping this false is recommended
+```
+
+To keep a pack from being sent, write `"clientSync": false` in its `manifest.json`.
+
+Players only accept signed packs (unless `allowUnsigned` is on). Add the signature to `manifest.json`:
+
+```json
+"signature": { "algorithm": "Ed25519", "keyId": "...", "publicKey": "<X.509 base64>", "signature": "<base64>" }
+```
+
+The signature covers the manifest without its `signature` field, plus the contents of every file in the pack.
+
+<a id="wiki-section-19"></a>
+### A player's first join
+
+1. The first time a player connects to the server, they are disconnected and shown the server address.
+2. The player enters any single-player world and runs `/nekojs trust <server address>`.
+3. On reconnecting, they receive and run the server's script packs.
+
+Trusting a server also remembers its current signing public key. If the server later changes its key without notice, the player is refused and must trust it again.
+
+Received packs are cached in the player's `nekojs/server_packs/`. If a pack has not changed, the next connection uses the cache.
+
+> Only trust servers you know. Scripts in these packs run on your client.
 
 <!-- wiki-nav -->
 

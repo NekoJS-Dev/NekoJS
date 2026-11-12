@@ -5,92 +5,14 @@
 <a id="wiki-section-1"></a>
 # 类型适配器
 
-> 适配器让 Java 方法**自动接受多种 JS 输入形态**——比如一个 Java 方法声明参数是 `ItemStack`，脚本可以传字符串 `'minecraft:stone'`、传 `{id, count}` 对象、传 `ItemStack` 实例，适配器负责把它们都转成 `ItemStack`。适配器有两代 SPI：**新 SPI `JsTypeAdapter`（推荐）**与**旧 SPI `JSTypeAdapter`（Graal `Value`，兼容保留）**，见下文「两代 API」。
+类型适配器把脚本传进来的 JS 值转换成 Java 方法需要的参数类型。比如一个 Java 方法的参数是 `ItemStack`，有了适配器，脚本就可以直接传 `'minecraft:stone'`、`'16x minecraft:stone'` 或 `{ id: 'minecraft:stone', count: 2 }`。
+
+如果你的插件公开了 Java 方法，并且希望脚本用更简单的写法传参，就写一个适配器。本页面向写 NekoJS 插件的 Java 开发者。
 
 <a id="wiki-section-2"></a>
-## 为什么需要适配器
+## 最小示例
 
-GraalJS 的 `HostAccess` 提供了 `targetTypeMapping(C, T, predicate, function)` 机制：当 Java API 期望类型 `T` 时，GraalJS 会自动把传入的 JS 值（`Value`）通过 mapping 转成 `T`。NekoJS 的 `JSTypeAdapter` 就是这个 mapping 的载体。
-
-NekoJS 在 bootstrap 时通过 `NekoSharedHostAccess` 为每个已注册适配器安装 `Value.class` → 目标类映射，使用其接受谓词、转换器和优先级。脚本 Context 共用这份 HostAccess 配置。新 SPI 通过 `NewAdapterBridge` 接入同一映射；两代 SPI 注册的都不是参数化 Java `Type`。见[映射注册](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/core/NekoSharedHostAccess.java#L49-L65)、[桥接层](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/core/bridge/NewAdapterBridge.java#L18-L39)和 [Context 配置](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/core/NekoSandboxFactory.java#L138)。
-
-<a id="wiki-section-3"></a>
-### 原生配方参数：guest 容器与 host 对象
-
-反射调用的原生配方 handler 和 builder 方法使用 `RecipeReflectionUtil.convertArgs`，读取方法的泛型参数类型。就集合而言，它显式处理的 guest 容器转换包括：
-
-- 参数化的 `List<T>`、`Collection<T>` 和 `Iterable<T>`：遍历 guest 数组，生成新的 Java list。
-- 参数化的 `Map<K, V>`：遍历 guest 对象成员或 hash entries，生成新的 Java map，同时转换键和值。
-- 嵌套的受支持容器会递归处理；叶值仍通过 `Value.as(rawClass)` 使用当前 Context 中由 runtime root 注册的适配器。`Optional<T>` 会递归转换传入的 guest 值；guest null 转为空值，只有末尾连续的 `Optional` 参数可以省略。
-
-已有的 Java host 集合**不会被重建，也不会逐元素转换**：它走原始 `Value.as` 路径，类型可赋值时保留对象身份。`Set`、具体集合类及其他不受支持的泛型容器同样回退到 Graal 的原始 `Value.as`；上述显式遍历**不代表**它们都支持 guest 输入。任意 `Box<T>` 适配器注册的仍是 `Box.class`；NekoJS 不会推断其内部 `T` 的转换。
-
-来源：[转换与原始回退](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeReflectionUtil.java#L70-L152)、[末尾可选参数](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeReflectionUtil.java#L183-L188)、[handler 分派](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeNamespaceProxy.java#L108-L122)和 [builder 分派](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/SchemaRecipeBuilder.java#L230-L245)。[原生运行时测试](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/test/java/com/tkisor/nekojs/wrapper/NativeRecipeHandlerRuntimeTest.java#L78-L147)覆盖 guest 数组/map 与 host 身份；[原始泛型适配器测试](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/test/java/com/tkisor/nekojs/probe/ir/TypeScriptCollectionInputTest.java#L259-L308)展示了 `Box<T>` 的限制。
-
-<a id="wiki-section-4"></a>
-## 内置适配器
-
-NekoJS 已注册了大量适配器（见 `src/main/java/com/tkisor/nekojs/js/type_adapter/`）：
-
-| 适配器 | 目标类型 | 接受的 JS 输入 |
-|---|---|---|
-| `ItemAdapter` | `Item` | 字符串 id、`Item`、`ItemStack`、`Block`、`NekoId` |
-| `ItemStackAdapter` | `ItemStack` | 字符串 id（`"minecraft:stone"`）、`"1x minecraft:stone"`、带组件的方括号字符串、`{id, count?, components?}` / `{item, count?, components?}`（count 可选）、`ItemStack`、`Item`、`NekoId` |
-| `IngredientAdapter` | `Ingredient` | 字符串、tag（`"#minecraft:planks"`）、数组、`Ingredient` |
-| `SizedIngredientAdapter` | `SizedIngredient` | 同上 + 数量 |
-| `BlockAdapter` | `Block` | 字符串 id |
-| `BlockPosAdapter` | `BlockPos` | `{x, y, z}`、`[x, y, z]`、`BlockPos`、`Vec3`（不接受字符串） |
-| `Vec3Adapter` | `Vec3` | `{x, y, z}`、`[x, y, z]`、`Vec3`、`BlockPos` |
-| `CompoundTagAdapter` | `CompoundTag` | JS 对象（自动转 NBT） |
-| `ComponentAdapter` | `Component` | 字符串、`Component`（含 `MutableComponent`）、managed `TextValue` |
-| `FluidStackAdapter` / `FluidIngredientAdapter` / `SizedFluidIngredientAdapter` | 流体类型 | 字符串、`{fluid, amount}` |
-| `IdentifierAdapter` | `Identifier`/`ResourceLocation` | 字符串 |
-| `TagKeyAdapter` | `TagKey` | `"namespace:path"`、可选 `#`、`"registry\|tag"` 或 `{type, tag}`（默认物品注册表） |
-| `EntityTypeAdapter` | `EntityType` | 字符串 id |
-| `MobEffectAdapter` / `PotionAdapter` / `ParticleTypeAdapter` / `SoundEventAdapter` / `CreativeModeTabAdapter` / `BlockEntityTypeAdapter` | 各注册表类型 | 字符串 id |
-| `CodecAdapter<T>` | 显式注册的目标类 | 字符串或 guest 对象/数组经已注册 codec 解析；匹配的 host 实例 |
-| `DataComponentsAdapter`（静态工具，非注册适配器） | `DataComponentPatch` | JS 对象 → data component patch（NeoForge / Fabric 26.x） |
-| `RecipeFilterAdapter` | `RecipeFilter` | JS 对象（见 [配方系统 - 过滤器](recipe-system_cn#wiki-section-3)） |
-| `RecipeJsonValueAdapter` | `RecipeJsonValue` | 已包装值、字符串、数字、布尔、数组、对象 |
-
-表格概述常见形态，并不枚举转换器的全部检查。尤其是 [ItemAdapter](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/js/type_adapter/ItemAdapter.java#L18-L53) 的目标为 `Item`，不是 `ItemStack`；[BlockPosAdapter](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/js/type_adapter/BlockPosAdapter.java#L25-L73) 没有实现字符串转换。
-
-结构化 `ItemStack` 输入只能使用 `item` **或** `id`，不能同时给出；1.21.1 与 26.x 现在都消费可选 `components`。现有 `DataComponentPatch.CODEC` 使用每次调用即时取得的注册表上下文（优先实时服务器，其次客户端连接，最后内建注册表），先把补丁应用到物品副本，再应用数量；不会缓存上一个世界的注册表。组件移除使用原生 `!namespace:id` 键。内建回退不包含尚未加载的世界/数据包注册表，依赖这些值时仍需正确的运行阶段。真正的 codec 错误以 `NEKO-4054` 保留转换原因；可选字段的宽松回退和补丁归一化遵循 Minecraft 原生 codec，并非另建全字段严格校验。方括号字符串仍走现有独立解析路径。
-
-<a id="wiki-section-5"></a>
-### 配方字段 codec 是独立的转换边界
-
-`CodecAdapter<T>` 是显式注册、优先级为 `LOWEST` 的适配器，其 codec 通过 `JsonOps.INSTANCE` 解析 JSON。它不会自动为所有带 codec 的类型发现适配器。schema 字段的 `RecipeFieldValueCodec` 则编码**整个字段**：`RecipeSchemaHost.convertField` 会先调用该 encoder，再考虑普通标量/数组路径。没有字段 codec 时，默认数组路径还会把单值包装成一个元素；自定义 encoder 自行决定接受哪些形态。
-
-字段 codec 的 `inputShape` 与可选的名义 `inputType` 描述工具侧输入，并不是另一份 HostAccess 注册。例如，原生 Minecraft schema scanner 为原版合成的原料和键提供整个字段的 list/map encoder，通过 `host.encodeField` 处理元素。不要仅凭生成的输入别名推断运行时转换。来源：[CodecAdapter](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/js/type_adapter/CodecAdapter.java#L24-L68)、[字段 codec 契约](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/recipe/definition/RecipeFieldValueCodec.java#L11-L24)、[整个字段的分派](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/recipe/RecipeSchemaHost.java#L42-L62)和[原生合成字段 encoder](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/api/recipe/definition/MinecraftRecipeSchemaScanner.java#L57-L110)。
-
-<a id="wiki-section-6"></a>
-## 两代 API
-
-适配器现在有**两代 SPI**：
-
-- **新 SPI（推荐）**：`JsTypeAdapter<T>`（`common/src/main/java/com/tkisor/nekojs/api/data/JsTypeAdapter.java`，对外契约包 `com.tkisor.nekojs.api.*`）——**无 MC/Graal 依赖**。签名：`targetType()` / `supports(JsValueView, ConversionContext)` / `convert(JsValueView, ConversionContext)` / `precedence()`。推荐基类是 `BaseJsTypeAdapter<T> implements JsTypeAdapter<T>`（模板方法：`fromString`/`fromHostObject`/`acceptOther`/`fromOther`）。已迁移示例：`src/main/java/com/tkisor/nekojs/js/type_adapter/ComponentAdapter.java`。
-- **旧 SPI（兼容保留）**：`common` 的 `JSTypeAdapter<T>`/`AbstractJSTypeAdapter`——依赖 Graal `Value`（`test(Value)`/`apply(Value)`）。
-
-两代适配器都经同一个注册表进场：`JSTypeAdapterRegistry`（`common/src/main/java/com/tkisor/nekojs/api/data/JSTypeAdapterRegistry.java`）同时提供 `register(JSTypeAdapter<T>)` 和 `register(JsTypeAdapter<T>)` 两个重载，插件拿到的就是它。
-
-**新适配器请优先用新 SPI**；旧 SPI 继续可用（下文旧示例照常编译），两代的 `precedence()`/`getPrecedence()` 都返回 `ConversionPrecedence`。
-
-<a id="wiki-section-7"></a>
-### 必须实现什么
-
-| SPI | 没有 default，必须实现 | 有 default，可以不管 |
-|---|---|---|
-| 新 `JsTypeAdapter<T>` | `targetType()`、`supports(JsValueView, ConversionContext)`、`convert(...)`、`precedence()` | `inputShapes()`（默认空表） |
-| 旧 `JSTypeAdapter<T>` | `getTargetClass()`、`test(Value)`、`apply(Value)` | `getPrecedence()`（默认 `LOWEST`）、`inputShapes()`、`syntaxDoc()` |
-| `BaseJsTypeAdapter<T>` | `fromHostObject(Object)`，以及构造器传 `targetType` | 其余全部（`precedence()` 默认 `LOWEST`，`fromString`/`fromOther` 默认抛 `ValueConversionException`，`acceptNull`/`acceptOther` 默认 `false`，`supportsString` 默认 `true`） |
-
-基类只是省事的模板，**不是必经之路**：注册表接的是接口，直接 implements 接口完全等价。连类都不想写的话，`JSTypeAdapterRegistry` 还有个 default 重载 `register(Class<T> target, Predicate<Value> filter, Function<Value, T> converter)`，三个 lambda 就是一个旧 SPI 适配器。
-
-<a id="wiki-section-8"></a>
-## 写一个自定义适配器
-
-下面三种 adapter 是**替代实现**，不要作为同名类一起编译。每个实现都使用同包下单独的 `MyPos.java`：
+假设插件里有一个坐标类，和一个接收它的绑定方法：
 
 ```java
 package com.example.myaddon;
@@ -98,97 +20,7 @@ package com.example.myaddon;
 public record MyPos(int x, int y) {}
 ```
 
-<a id="wiki-section-9"></a>
-### 步骤 1（旧 SPI）：实现 `JSTypeAdapter<T>`
-
-```java
-package com.example.myaddon;
-
-import com.tkisor.nekojs.api.JSTypeAdapter;
-import com.tkisor.nekojs.api.AdapterInputShape;
-import com.tkisor.nekojs.api.data.ConversionPrecedence;
-import graal.graalvm.polyglot.Value;
-import java.util.List;
-
-public class MyPosAdapter implements JSTypeAdapter<MyPos> {
-
-    @Override
-    public Class<MyPos> getTargetClass() {
-        return MyPos.class;
-    }
-
-    @Override
-    public ConversionPrecedence getPrecedence() {
-        return ConversionPrecedence.LOW;   // Higher precedence wins when multiple adapters match a type
-    }
-
-    @Override
-    public boolean test(Value value) {
-        // 判断这个 JS 值能否被本适配器处理
-        return value.hasMembers() && value.hasMember("x") && value.hasMember("y");
-    }
-
-    @Override
-    public MyPos apply(Value value) {
-        int x = value.getMember("x").asInt();
-        int y = value.getMember("y").asInt();
-        return new MyPos(x, y);
-    }
-
-    @Override
-    public List<AdapterInputShape> inputShapes() {
-        // 给 probe 生成 $MyPos_ 输入别名用；object(Slot...) 声明接受的字段
-        return List.of(
-            AdapterInputShape.object(
-                AdapterInputShape.Slot.req("x", AdapterInputShape.number()),
-                AdapterInputShape.Slot.req("y", AdapterInputShape.number()))
-        );
-    }
-}
-```
-
-<a id="wiki-section-10"></a>
-### 步骤 2（旧 SPI）：或继承 `AbstractJSTypeAdapter`（模板方法，更省事）
-
-```java
-package com.example.myaddon;
-
-import com.tkisor.nekojs.api.data.AbstractJSTypeAdapter;
-import graal.graalvm.polyglot.Value;
-
-public class MyPosAdapter extends AbstractJSTypeAdapter<MyPos> {
-    @Override public Class<MyPos> getTargetClass() { return MyPos.class; }
-
-    @Override
-    protected MyPos fromString(String text) {
-        String[] parts = text.split(",");
-        return new MyPos(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
-    }
-
-    @Override
-    protected MyPos fromHostObject(Object host) {
-        return host instanceof MyPos position ? position : null;
-    }
-
-    @Override
-    protected boolean acceptOther(Value value) {
-        return value.hasMembers() && value.hasMember("x") && value.hasMember("y")
-                && value.getMember("x").fitsInInt() && value.getMember("y").fitsInInt();
-    }
-
-    @Override
-    protected MyPos fromOther(Value value) {
-        return new MyPos(value.getMember("x").asInt(), value.getMember("y").asInt());
-    }
-}
-```
-
-`AbstractJSTypeAdapter` 的 `final test`/`apply` 自动分派到 `defaultValue`/`acceptNull`/`fromString`/`fromHostObject`/`acceptOther`/`fromOther`。设计为 MC 无关（`fromHostObject` 收到的是 `Object`，平台代码做 `instanceof`）。它在 `common/`，依赖 Graal `Value`。
-
-<a id="wiki-section-11"></a>
-### 步骤 2b（新 SPI，推荐）：继承 `BaseJsTypeAdapter<T>`
-
-新 SPI 的基类 `BaseJsTypeAdapter<T>`（同在契约包 `api.data`，无 MC/Graal 依赖）提供同一套模板方法，`supports`/`convert` 已按 `JsValueView` + `ConversionContext` 实现好：
+下面的适配器让脚本可以传 `{ x: 1, y: 2 }` 或字符串 `'1,2'`：
 
 ```java
 package com.example.myaddon;
@@ -197,6 +29,7 @@ import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.data.BaseJsTypeAdapter;
 import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import com.tkisor.nekojs.api.data.JsValueView;
+import com.tkisor.nekojs.api.data.ValueConversionException;
 import java.util.List;
 
 public class MyPosAdapter extends BaseJsTypeAdapter<MyPos> {
@@ -205,15 +38,21 @@ public class MyPosAdapter extends BaseJsTypeAdapter<MyPos> {
     }
 
     @Override
-    protected MyPos fromString(String s) {
-        // 将 "1,2" 转为 MyPos(1,2)
-        String[] parts = s.split(",");
-        return new MyPos(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
+    protected MyPos fromString(String text) {
+        String[] parts = text.split(",");
+        if (parts.length != 2) {
+            throw new ValueConversionException(MyPos.class, "'x,y'", text, "expected two numbers");
+        }
+        try {
+            return new MyPos(Integer.parseInt(parts[0].trim()), Integer.parseInt(parts[1].trim()));
+        } catch (NumberFormatException e) {
+            throw new ValueConversionException(MyPos.class, "'x,y'", text, "expected two numbers", e);
+        }
     }
 
     @Override
     protected MyPos fromHostObject(Object host) {
-        // 只有 supports() 判定过 host instanceof MyPos 时才会走到这里
+        // 只有 host 已经是 MyPos 时才会走到这里
         return (MyPos) host;
     }
 
@@ -235,20 +74,16 @@ public class MyPosAdapter extends BaseJsTypeAdapter<MyPos> {
     @Override
     public List<AdapterInputShape> inputShapes() {
         return List.of(
+            AdapterInputShape.self(),
+            AdapterInputShape.string(),
             AdapterInputShape.object(
                 AdapterInputShape.Slot.req("x", AdapterInputShape.number()),
-                AdapterInputShape.Slot.req("y", AdapterInputShape.number()))
-        );
+                AdapterInputShape.Slot.req("y", AdapterInputShape.number())));
     }
 }
 ```
 
-写法与旧 SPI 几乎一一对应（`test`/`apply` → `supports`/`convert`，`getPrecedence()` → `precedence()`）。迁移实例见 `src/main/java/com/tkisor/nekojs/js/type_adapter/ComponentAdapter.java`。
-
-> 基类的 host object 分支比旧基类**收窄**了：`supports` 对 host object 只在 `targetType.isAssignableFrom(host.getClass())` 时放行，所以 `fromHostObject` 收到的一定已经是目标类型，不需要（也不可能）在里面处理 `Map` 之类的其它形态。不匹配的 Java host object 会直接被拒绝；普通非 host 的 JS 对象才走 `acceptOther`/`fromOther`。而且 `fromHostObject` 返回 `null` **不是**「不识别」的合法表达：基类会把它当失败，抛 `ValueConversionException`（`BaseJsTypeAdapter.convert`）。要表达「不接受」就让 `supports` 返回 false。
-
-<a id="wiki-section-12"></a>
-### 步骤 3：注册
+在插件里注册：
 
 ```java
 @Override
@@ -257,123 +92,221 @@ public void registerAdapters(JSTypeAdapterRegistry registry) {
 }
 ```
 
-> `registerAdapters` 的参数是 `JSTypeAdapterRegistry`，它同时有 `register(JSTypeAdapter<T>)` 和 `register(JsTypeAdapter<T>)` 两个重载——上面两代适配器都能直接传进去。
+之后，任何参数类型是 `MyPos` 的 Java 方法都能这样调用：
 
-注册后，声明 `void foo(MyPos pos)` 的 Java 方法可接收 `{x: 1, y: 2}`。两个基类实现还支持 `"1,2"`；第一个直接实现接口的示例仅接收对象。这些是输入数据形状，不是回调 builder 配置。
+```javascript
+MyAddon.teleport({ x: 1, y: 2 })
+MyAddon.teleport('3,4')
+```
 
-<a id="wiki-section-13"></a>
-## AdapterInputShape（probe 别名）
+插件的写法和发现方式见 [插件开发](plugin-development_cn)。
 
-`inputShapes()` 告诉 probe 这个适配器接受什么形态的输入，probe 据此生成 `$MyPos_` 类型别名，让脚本的 `.d.ts` 准确反映「这个参数可以传字符串或对象」。
+<a id="wiki-section-3"></a>
+## 工作原理
 
-它是**纯编辑器面的**，两代 SPI 都有 default 空实现：不写照样能转换，代价只是 `.d.ts` 里该参数退化成目标类型本身，脚本传字符串会被编辑器标红（运行时仍然正常）。
+NekoJS 在启动时为每个已注册的适配器向 GraalJS 安装一条 `HostAccess.targetTypeMapping`：当 Java 方法需要类型 `T` 而脚本传入一个 JS 值时，GraalJS 先问适配器“能不能处理”，能处理就调用它做转换。
 
-`AdapterInputShape` 是 sealed 接口，包含 14 个 record 变体。下面列出真实工厂名称，见[契约](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/AdapterInputShape.java#L30-L68)：
+几点直接影响你写代码的事实：
 
-| Record / 工厂 | 含义 | 渲染成 |
+- 映射按**精确的目标类**登记。适配器注册的是 `MyPos.class`，不会自动作用于它的子类或接口。
+- 映射只看原始类，不看泛型参数。`Box<T>` 的适配器注册的是 `Box.class`，NekoJS 不会替你转换里面的 `T`。
+- 所有脚本 Context 共用同一份映射。适配器在插件加载时注册一次，普通 reload 不会重新注册。
+- 适配器里抛出的 `ClassCastException` 会被包装成 `NEKO-5202`，这样它不会被误当成“重载不匹配”而悄悄跳过。
+
+<a id="wiki-section-4"></a>
+## 选择哪种写法
+
+有两套接口，都通过同一个 `JSTypeAdapterRegistry` 注册：
+
+| 接口 | 依赖 | 适合 |
 |---|---|---|
-| `StringValue` / `string()` | 接受任意字符串（自由文本字段） | `string` |
-| `LiteralValue` / `literal(text)` | 单个字符串字面量 | `"*"` |
-| `NumberValue` / `number()` | 接受数字 | `number` |
-| `BooleanValue` / `bool()` | 接受布尔 | `boolean` |
-| `SelfValue` / `self()` | 接受目标类型本身 | `$Foo` |
-| `HostValue` / `host(cls)` | 接受某个 Java host 类型 | `$Bar` |
-| `ArrayOfValue` / `arrayOf(shape)` | 接受数组 | `T[]` |
-| `ObjectValue` / `object(Slot...)` | 接受对象（指定字段） | `{ a?: ..., b: ... }` |
-| `UnionValue` / `union(shape...)` | 单个字段接受多种写法 | `(A \| B)` |
-| `RegistryValue` / `registry(typeName)` | 接受注册表 id 字符串 | `RegistryTypes.Item` |
-| `RegistryTagValue` / `registryTag(typeName)` | 接受该注册表的标签 id（不含 `#`） | `RegistryTypes.ItemTag` |
-| `NamespaceValue` / `namespace()` | 接受 id 命名空间（mod 表 + 注册表命名空间） | `RegistryTypes.Namespace` |
-| `TemplateValue` / `template(prefix, hole, suffix)` | 固定前后缀 + 可补全的洞 | <code>\`#${RegistryTypes.ItemTag}\`</code> |
-| `RawValue` / `raw(ts)` | 原始 TypeScript 文本 | 原样输出 |
+| `JsTypeAdapter<T>`（新，推荐） | 无 Minecraft、无 Graal 依赖 | 新写的适配器 |
+| `JSTypeAdapter<T>`（旧） | 依赖 Graal `Value` | 已有代码；需要直接读 `Value` 的场景 |
 
-`host(cls)` 会记录 Java 依赖供 import 收集；`raw(ts)` 只输出文本，不解析 Java 类名、不推断名义输入类型，也不发现 import。片段中的名字必须已能在生成模块中解析（见[渲染分支](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/AdapterAliasGenerator.java#L216-L261)）。
+每套接口各有一个模板基类，帮你按输入类型分派：
 
-`AdapterAliasGenerator` 把这些渲染成 `$Foo_` 联合类型。顶层 `Self` 保留 host `$Foo`；嵌套的 `Self` 和 `Host` 形状可以使用输入别名，以描述嵌套位置经过转换的值。这只是元数据，并不是递归转换任意 host 对象的指令（[形状渲染](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/AdapterAliasGenerator.java#L202-L232)）。
+| 类 | 你必须实现 | 可以覆盖 |
+|---|---|---|
+| `BaseJsTypeAdapter<T>`（新） | 构造器传入目标类、`fromHostObject` | `fromString`、`acceptOther`/`fromOther`、`acceptNull`/`defaultValue`、`supportsString`、`precedence`、`inputShapes` |
+| `AbstractJSTypeAdapter<T>`（旧） | `getTargetClass`、`fromHostObject` | `fromString`、`acceptOther`/`fromOther`、`acceptNull`/`defaultValue`、`getPrecedence`、`inputShapes` |
+| `JsTypeAdapter<T>`（直接实现） | `targetType`、`supports`、`convert`、`precedence` | `inputShapes` |
+| `JSTypeAdapter<T>`（直接实现） | `getTargetClass`、`test`、`apply` | `getPrecedence`、`inputShapes`、`syntaxDoc` |
 
-<a id="wiki-section-14"></a>
-### 名义 host 类型与 guest 输入别名
+基类不是必须的，直接实现接口完全等价。内置的 `ComponentAdapter` 是一个用 `BaseJsTypeAdapter` 写的完整例子。
 
-对原生 Java 参数，host `T` 与 guest 输入 `T_` 扮演不同角色。若 `$Payload_` 包含字符串，`List<Payload>` 参数接受 host `$List<$Payload>` 或 guest `$Payload_[]`，**不是**元素仍需转换的 host `$List<$Payload_>`。嵌套的受支持容器遵循同一区分；返回值保留 host 类型。
+<a id="wiki-section-5"></a>
+### BaseJsTypeAdapter 怎样分派
 
-规范的集合输入别名是 `$List_`、`$Collection_`、`$Iterable_`、`$Map_` 和 `$Set_`。当一组类型实参能同时表示 host 与 guest 两个分支时，probe 复用命名集合别名；host 与输入实参不同时，分别渲染两个分支。Map 的对象输入使用可选的 `Record` 键，并将其限制为 TypeScript `PropertyKey`；这种编辑器表示并不承诺覆盖运行时 hash map 的所有键。`$Set_` 仍只接受 host，具体集合类的别名也是如此；名称带下划线本身并不承诺 guest 转换。见[集合形状](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java#L79-L142)、[规范别名选择](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java#L233-L254)和[具体类的 host 别名](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/IndexFileGenerator.java#L382-L439)。
+| 脚本传入 | `supports` 的判断 | `convert` 调用 |
+|---|---|---|
+| `null` | `acceptNull()`，默认 `false` | `defaultValue()` |
+| 字符串 | 先试着调用一次 `fromString`，抛 `ValueConversionException` 就算不接受 | `fromString` |
+| Java 对象 | 对象是目标类型的实例才接受 | `fromHostObject` |
+| 其他 JS 值（对象、数组、数字） | `acceptOther`，默认 `false` | `fromOther` |
 
-泛型适配器别名保留显式的原生 host 实参：声明为 `Box<Payload>` 的参数使用 `$Box_<$Payload>`，不是 `$Box_<$Payload_>`。原始 Java 类型仍使用擦除后的默认值（`T = any`），而仅含类信息的 `host(Box.class)` 形状无法提供特定类型实参。这些擦除形式以及 `$Box_<T>` 一类别名，都不会让运行时适配器推断内部 `T` 的转换方式。由转换器负责的 schema `inputType` 声明是另一份契约，可以有意投影输入实参。来源：[注册别名实参](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java#L265-L284)、[泛型别名默认值](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/AdapterAliasGenerator.java#L137-L155)、[仅类信息的 host 形状擦除](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/AdapterAliasGenerator.java#L216-L228)、[原生参数与声明输入的投影](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer.java#L924-L1008)和[契约测试](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/test/java/com/tkisor/nekojs/probe/ir/TypeScriptDeclaredInputModelTest.java#L17-L41)。
+由此得出三条规则：
 
-> **别在联合里放裸 `string`。** TypeScript 一旦看到联合里有 `string`，就会把其它字符串字面量成员吞掉，编辑器不再给任何 id 补全——这正是早期 `$Ingredient_` 里原料位置没补全、而 `$ItemStack_` 里结果位置有补全的原因。想同时接纳 `@mod`、`*`、`/regex` 这类非 id 语法又保住补全，把它们写成字面量/模板字面量类型：
+- **字符串格式不对时，抛 `ValueConversionException`。** `supports` 只捕获这一种异常。抛别的异常（比如 `NumberFormatException`）会直接传给脚本，而不是让其他适配器有机会处理。
+- **`fromHostObject` 和 `fromOther` 不要返回 `null`。** 返回 `null` 会被当成转换失败并抛出异常。要表示“不接受”，就在 `supports` 阶段返回 `false`。
+- **其他类型的 Java 对象不会进入 `fromHostObject`。** 想接受别的 Java 类型（比如让 `Vec3` 转成你的坐标），直接实现 `JsTypeAdapter`，或者使用旧的 `AbstractJSTypeAdapter`——它把所有 host 对象都交给 `fromHostObject`，返回 `null` 表示不接受。
+
+<a id="wiki-section-6"></a>
+### 不写类的快捷方式
+
+`JSTypeAdapterRegistry` 还提供两个默认方法：
+
+```java
+// 用两个 lambda 注册一个旧接口适配器
+registry.register(MyPos.class,
+    value -> value.hasMember("x") && value.hasMember("y"),
+    value -> new MyPos(value.getMember("x").asInt(), value.getMember("y").asInt()));
+
+// 让 ItemLike 参数复用 Item 适配器的全部输入写法
+registry.registerAlias(ItemLike.class, Item.class, Item::asItem);
+```
+
+`registerAlias` 不指定优先级时，沿用来源类型适配器的优先级。
+
+Minecraft 侧还有 `TypeAdapterDsl`（`com.tkisor.nekojs.js.type_adapter`）：
+
+- `TypeAdapterDsl.registerCodec(registry, Foo.class, Foo.CODEC)`：把 JS 值转成 JSON，再用 Mojang `Codec` 解析。优先级 `LOWEST`。
+- `TypeAdapterDsl.registerRecord(registry, MyRecord.class)`：JS 对象按 record 组件名构造 record。所有字段必填，可以另传一个默认值 `Map`。对象里多出未知字段会报错。
+
+<a id="wiki-section-7"></a>
+## 优先级
+
+多个适配器都能处理同一个目标类型时，按优先级选择。`ConversionPrecedence` 只有四级，从低到高：`LOWEST`、`LOW`、`HIGH`、`HIGHEST`。没有 `NORMAL`。
+
+| 写法 | 默认优先级 |
+|---|---|
+| 旧接口 `JSTypeAdapter` 与 `AbstractJSTypeAdapter` | `LOWEST` |
+| `BaseJsTypeAdapter` | `LOWEST` |
+| 直接实现 `JsTypeAdapter` | 没有默认值，必须自己返回 |
+
+选优先级前先看你要覆盖的内置适配器用的是哪一级：`ItemStackAdapter` 和 `FluidStackAdapter` 是 `LOW`，`RecipeFilterAdapter` 是 `HIGH`，`CodecAdapter`、`RecipeJsonValueAdapter` 和大多数基类适配器是 `LOWEST`。
+
+**同一级别没有确定的先后。** 注册表只是一个列表，不检查重复，也不打日志。同级适配器全部交给 GraalJS，最终谁生效由 GraalJS 决定，NekoJS 不保证。需要确定结果时，请使用不同的级别。
+
+<a id="wiki-section-8"></a>
+## 编辑器补全：inputShapes
+
+`inputShapes()` 告诉 `/nekojs probe` 这个适配器接受哪些写法。probe 会生成一个输入别名，比如 `$MyPos_`，所有参数类型为 `MyPos` 的位置都会用它，编辑器就不会把 `'1,2'` 标成错误。
+
+它只影响编辑器，不影响运行时。不写也能正常转换，只是 `.d.ts` 里参数仍是 `$MyPos`，传字符串会被编辑器标红。
+
+常用的形状工厂（都在 `AdapterInputShape` 上）：
+
+| 工厂 | 含义 | 生成的 TypeScript |
+|---|---|---|
+| `self()` | 目标类型本身 | `$MyPos` |
+| `host(cls)` | 另一个 Java 类型 | `$Bar` |
+| `string()` | 任意字符串 | `string` |
+| `literal(text)` | 一个固定字符串 | `"*"` |
+| `number()` / `bool()` | 数字 / 布尔值 | `number` / `boolean` |
+| `arrayOf(shape)` | 数组 | `T[]` |
+| `object(Slot...)` | 对象，`Slot.req` 必填，`Slot.opt` 可选 | `{ x: number, y?: number }` |
+| `union(shape...)` | 某个位置接受多种写法 | `A \| B` |
+| `registry(type)` | 注册表 ID，带补全 | `RegistryTypes.Item` |
+| `registryTag(type)` | 注册表标签 ID（不含 `#`） | `RegistryTypes.ItemTag` |
+| `namespace()` | 命名空间（模组 ID 和注册表里出现的命名空间） | `RegistryTypes.Namespace` |
+| `template(prefix, hole)` / `template(prefix, hole, suffix)` | 固定前后缀加一个可补全的部分 | 模板字面量类型 |
+| `raw(ts)` | 原样输出的 TypeScript 文本 | 原样 |
+
+另外还有 `named(suffix, shape)`（给形状的一部分起名，便于复用）和 `callable(params, result)`（回调函数）。
+
+> **不要在联合里放裸 `string`。** TypeScript 联合里只要有 `string`，其他字符串字面量就会被吞掉，编辑器不再给出任何 ID 补全。想接受 `#tag`、`@mod` 这类写法又保住补全，用模板形状：
 >
 > ```java
-> registry("Item"),                     // minecraft:stone（有补全）
-> template("#", registryTag("Item")),   // #minecraft:planks（有补全）
-> template("@", namespace()),           // @create（有补全）
-> literal("*"),                          // *
-> template("/", string())               // /wool$/（正则无穷，无法补全）
+> AdapterInputShape.union(
+>     AdapterInputShape.registry("Item"),                                       // minecraft:stone
+>     AdapterInputShape.template("#", AdapterInputShape.registryTag("Item")),  // #minecraft:planks
+>     AdapterInputShape.template("@", AdapterInputShape.namespace()),          // @create
+>     AdapterInputShape.literal("*"))
 > ```
->
-> 这条限制是**按联合**生效的，不是按对象：`{ output: RegistryTypes.Item, id: string }` 里的 `id` 用裸 `string` 不影响 `output` 的补全。
->
-> `RegistryTypes.XTag` 由 probe 从注册表当前已绑定的标签生成；`RegistryTypes.Namespace` 是加载器 mod 列表（`NekoCatalogPlatformProvider.modIds()`）与全部注册表条目 id 的 `:` 前缀的并集——前者覆盖没往该注册表注册东西的 mod，后者覆盖脚本/数据包自造的命名空间。两者为空时都回退成 `string`，模板类型因此退化为「任意字符串」而不是 `never`。
 
-<a id="wiki-section-15"></a>
-## Precedence（优先级）
+`raw(ts)` 只输出文本，不会帮你收集 import，文本里的类型名必须在生成的声明里已经存在。`host(cls)` 会自动记录依赖。
 
-多个适配器匹配同一目标类型时，按 `precedence()`（旧 SPI `getPrecedence()`）决定。`ConversionPrecedence` 枚举只有 **4 个级别**（没有 `NORMAL`），顺序 `LOWEST < LOW < HIGH < HIGHEST`：
+<a id="wiki-section-9"></a>
+## 内置适配器
 
-| 级别 | 相对优先级 |
-|---|---|
-| `HIGHEST` | 最高 |
-| `HIGH` | 高于 `LOW` |
-| `LOW` | 高于 `LOWEST` |
-| `LOWEST` | 最低 / 基类默认值 |
+下表列出常用的内置适配器，描述的是常见写法，不是每个转换器的全部规则。
 
-这些级别**不为核心或 addon 作者预留**：没有任何代码检查你是谁、用了哪一级。缺省值分两种情况——旧 SPI 的 `getPrecedence()` 与 `BaseJsTypeAdapter` 都默认 `LOWEST`；新 SPI 直接 implements `JsTypeAdapter` 时 `precedence()` 没有 default，必须自己写出来。
+| 目标类型 | 接受的写法 | 平台 |
+|---|---|---|
+| `ItemStack` | `'minecraft:stone'`、`'16x minecraft:stone'`、带组件的方括号字符串、`{ id 或 item, count?, components? }`、`ItemStack`、`Item`、ID | 全部 |
+| `Item`（以及 `ItemLike`） | 物品 ID、`Item`、`ItemStack`、`Block`、ID | 全部 |
+| `Ingredient` | ID、`'#标签'`、`'@模组'`、`'*'`、`'/正则/'`、数组、对象、物品栈、配料 | 全部 |
+| `SizedIngredient` | 同上并带数量 | 仅 NeoForge |
+| `FluidStack` / `FluidIngredient` / `SizedFluidIngredient` | 流体 ID、`{ fluid, amount }` | 仅 NeoForge |
+| `Block` / `BlockState` | 方块 ID；`BlockState` 还接受 `Block` | 全部 |
+| `BlockPos` / `Vec3` | `{ x, y, z }`、`[x, y, z]`、`BlockPos`、`Vec3`。`BlockPos` 不接受字符串 | 全部 |
+| `CompoundTag` | 普通 JS 对象 | 全部 |
+| `Component` | 字符串、`Component`、`Text` 生成的文本 | 全部 |
+| `Identifier`（1.21.1 上是 `ResourceLocation`） | 字符串 | 全部 |
+| `TagKey` | `'namespace:path'`、可带 `#`、`'registry\|tag'`、`{ type, tag }`；默认物品注册表 | 全部 |
+| `Holder`、`EntityType`、`MobEffect`、`Potion`、`SoundEvent`、`ParticleType`、`BlockEntityType`、`CreativeModeTab` | 注册表 ID 字符串 | 全部 |
+| 其他原版注册表类型 | 注册表 ID 字符串（自动生成） | 全部 |
+| `RecipeFilter` | 筛选对象，见 [配方系统](recipe-system_cn) | 全部 |
 
-<a id="wiki-section-16"></a>
-### 冲突策略
+最后一类原版注册表类型的适配器是自动生成的：`RegistryAutoAdapterScanner` 扫描 `BuiltInRegistries`（NeoForge 还有 `Registries`），给没有专用适配器的注册表类型补一个按 ID 查找的适配器，优先级 `LOWEST`。你的模组有自己的注册表 holder 类时，可以调用 `RegistryAutoAdapterScanner.installInto(registry, List.of(MyRegistries.class))`。
 
-代码这边能确定的只有一条：`JSTypeAdapterRegistry.Impl` 就是一个 `ArrayList`，同一 `(目标类型, precedence)` 组合注册时**不做任何去重或冲突校验**，不报错、不打日志。注册表按顺序把全部适配器喂给 Graal 的 `HostAccess.targetTypeMapping`，注册顺序跟随插件加载顺序（priority 越高越先加载）。
+结构化 `ItemStack` 输入只能写 `id` 或 `item` 其中一个。`components` 用当前的注册表上下文解析：优先运行中的服务端，其次客户端连接，最后是内置注册表。移除组件用 `!命名空间:ID` 作为键。组件解析失败报 `NEKO-4054`。
 
-同 precedence 层级内**最终哪个胜出由 Graal 决定，不由本仓决定**——这里没有相关代码，也没有测试钉住它。所以别依赖同层级的相对顺序，要确定性就用不同的 precedence。
+<a id="wiki-section-10"></a>
+## 原生配方方法的参数
 
-下面几条是据此得出的建议，没有代码执行它们：
+配方处理器和 builder 方法通过反射调用，参数转换比普通适配器多一层：
 
-- 尽量别让多个 addon 在同一类型上声明相同 precedence（那等于把「谁生效」交给插件加载顺序）。
-- 选择前应检查目标适配器的真实级别：`ItemStackAdapter` 和 `FluidStackAdapter` 使用 `LOW`，`CodecAdapter` 使用 `LOWEST`，许多基类适配器也继承 `LOWEST`。`LOW`/`LOWEST` 不会自动低于所有内置适配器。更高级别可让匹配的适配器优先；相同级别仍有上面的不确定性。参见 [ItemStack 优先级](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/js/type_adapter/ItemStackAdapter.java#L57-L60)及[基类默认值](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/JSTypeAdapter.java#L19-L21)。
+- `List<T>`、`Collection<T>`、`Iterable<T>` 参数接受 JS 数组，每个元素按 `T` 转换。
+- `Map<K, V>` 参数接受 JS 对象，键和值都会转换。
+- 嵌套的以上容器会递归处理，最里层的值仍交给适配器。
+- `Optional<T>` 参数会转换传入的值，`null` 变成空值。只有末尾连续的 `Optional` 参数可以省略。
 
-<a id="wiki-section-17"></a>
-## 测试适配器
+已经是 Java 集合的参数原样传入，不会逐个转换元素。`Set`、具体集合类和其他泛型容器没有这层处理，只走普通的适配器映射。
 
-下面针对步骤 2 的旧 SPI `AbstractJSTypeAdapter` 示例测试对象和字符串转换。
+配方 schema 字段如果定义了自己的 `RecipeFieldValueCodec`，整个字段由它编码，适配器不参与。详见 [配方系统](recipe-system_cn)。
+
+<a id="wiki-section-11"></a>
+## 测试
+
+新接口的适配器不依赖 Graal，可以直接在单元测试里调用 `supports`/`convert`。要用真实的 JS 值，可以借用 NekoJS 内部的 `GraalValueView` 把 Graal `Value` 包装成 `JsValueView`：
 
 ```java
 @Test
-void myPosAdapterConvertsObjectAndString() {
-    MyPosAdapter adapter = new MyPosAdapter();
-    Value obj = Value.asValue(Map.of("x", 1, "y", 2));
-    assertTrue(adapter.test(obj));
-    assertEquals(new MyPos(1, 2), adapter.apply(obj));
+void myPosAdapterAcceptsObjectAndString() {
+    try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
+        MyPosAdapter adapter = new MyPosAdapter();
 
-    Value str = Value.asValue("3,4");
-    assertTrue(adapter.test(str));
-    assertEquals(new MyPos(3, 4), adapter.apply(str));
+        JsValueView obj = GraalValueView.wrap(context.eval("js", "({ x: 1, y: 2 })"));
+        assertTrue(adapter.supports(obj, ConversionContext.empty()));
+        assertEquals(new MyPos(1, 2), adapter.convert(obj, ConversionContext.empty()));
+
+        JsValueView text = GraalValueView.wrap(context.eval("js", "'3,4'"));
+        assertEquals(new MyPos(3, 4), adapter.convert(text, ConversionContext.empty()));
+
+        JsValueView bad = GraalValueView.wrap(context.eval("js", "'oops'"));
+        assertFalse(adapter.supports(bad, ConversionContext.empty()));
+    }
 }
 ```
 
-<a id="wiki-section-18"></a>
-## 平台无关性
+`Context` 和 `Value` 来自 NekoJS 重定位后的 Graal 包 `graal.graalvm.polyglot`。
 
-适配器**能**做到跨平台，但没有机制要求它跨平台——一个只在某个加载器上编译的适配器照样能注册、能工作。下面是内置适配器为了跨平台而采用的分层，你想复用这套排布就照着放：
-- 新 SPI `JsTypeAdapter`/`BaseJsTypeAdapter` 在契约包 `com.tkisor.nekojs.api.data`，无 MC/Graal 依赖；旧 SPI `JSTypeAdapter` 在 `com.tkisor.nekojs.api`，`AbstractJSTypeAdapter` 在 `com.tkisor.nekojs.api.data`（均依赖 Graal `Value`），无 MC 依赖。这两层的「无 XX 依赖」由 guardLint 的边界规则对**本仓**强制，你的 mod 不受它约束。
-- MC 相关逻辑（`instanceof ItemStack` 等）在 `fromHostObject` 里，平台提供 host 对象。
-- 平台专属适配器（如 `ItemAdapter`）放在平台 sourceSet。
+<a id="wiki-section-12"></a>
+## 平台无关的放法
 
-<a id="wiki-section-19"></a>
+适配器不强制跨平台，但内置适配器是这样分层的，你可以照着放：
+
+- 只依赖 `JsTypeAdapter`/`BaseJsTypeAdapter` 的逻辑可以放在与加载器无关的代码里。
+- 用到 Minecraft 类型（`instanceof ItemStack` 等）的部分放在 Minecraft 侧，由平台提供 host 对象。
+- 只在某个加载器上存在的类型（比如 NeoForge 的流体类），适配器只在那个平台注册。
+
+<a id="wiki-section-13"></a>
 ## 下一步
 
-- [插件开发](plugin-development_cn) —— `registerAdapters` 钩子。
-- [Probe 类型生成](probe-type-generation_cn) —— `AdapterInputShape` 如何变成 `.d.ts` 别名。
-- [注解体系](annotations_cn) —— `@Overload` 手写适配器表达不了的签名；适配器声明的 `inputShapes()` 会自动放宽参数类型，见上。
-- 维护者完整 Java/JS 示例与目录边界：`docs/maintenance/adding-events-adapters.md`。
+- [插件开发](plugin-development_cn)：`registerAdapters` 和其他插件钩子。
+- [Probe 类型生成](probe-type-generation_cn)：`inputShapes` 怎样变成 `.d.ts` 别名。
+- [注解体系](annotations_cn)：适配器表达不了的签名可以用 `@Overload` 手写。
 
 <!-- wiki-nav -->
 

@@ -5,325 +5,510 @@
 <a id="wiki-section-1"></a>
 # Global bindings
 
-Global bindings are objects/functions that NekoJS injects into the script's top-level scope. You do not need `require`; use their names directly: `Item.of(...)`, `Ingredient.of(...)`, `Fluid.water()`, and so on.
-
-> This page is a reference manual. Each binding's method signatures are listed, with arguments in parentheses and the return type after the arrow.
-
-Existing globals remain supported. First-party and plugin APIs can also be published through [`nekojs/api/stable` and `nekojs/api/version`](module-system_us#wiki-api-modules); module-only exports do not automatically appear as globals. Check the current Script Type and node's generated declarations before importing a member.
-
----
-
-<a id="wiki-section-2"></a>
-## Items / item stacks
-
-<a id="wiki-section-3"></a>
-### `Item`
-
-An item helper. `of`, `empty`, `id`, and `idOf` use helper functions; other members delegate to Minecraft's `Item` class. Readable/writable Bean accessors use properties according to their access support; see [Script API style](script-api-style_us).
-
-| Method | Description |
-|---|---|
-| `Item.of(id: string) → ItemStack` | Create an item stack from an id; supports count syntax such as `"1x minecraft:stone"` |
-| `Item.of(id: string, count: int) → ItemStack` | Specify a count |
-| `Item.of(stack: ItemStack) → ItemStack` | Pass through the stack |
-| `Item.of(stack: ItemStack, count: int) → ItemStack` | Copy and change the count |
-| `Item.empty() → ItemStack` | `ItemStack.EMPTY` |
-| `Item.id(id: string) → Item \| null` | Look up an item (omitted namespace means `minecraft`); unknown ids return `null` |
-| `Item.idOf(item: Item) → Identifier` | Registered id of the native item, not an ItemStack |
-
-`Block.id(id: string) → Block | null` and `Block.idOf(block: Block) → Identifier` provide the corresponding block lookups; `Blocks` is the separate vanilla constants binding. Both helpers are available on NeoForge and Fabric.
-
-**`ItemStack` extension methods** (NekoJS injects platform extensions through Mixins):
-
-| Method | Description |
-|---|---|
-| `withCount(count) → ItemStack` | Return a copy with the specified count |
-| `copy() → ItemStack` | Vanilla Minecraft deep copy; not injected again |
-| `setCount(count)` | Vanilla Minecraft method (void) |
-| `setCountAndReturn(count) → ItemStack` | NekoJS chainable count setter |
-| `getId() → string` | Item id |
-| `getMod() → string` | Owning mod id |
-| `getBlock() → Block` | Corresponding block, if this is a block item |
-| `enchantById(id, level) → ItemStack` | Enchant by id (vanilla `enchant()` semantics: writes the ENCHANTMENTS component and validates the enchantment's applicable items; for enchanted books, change the `stored_enchantments` component instead. Ordinary enchanting does not affect books, matching vanilla/KubeJS) |
-| `isEnchanted()` | Vanilla Minecraft enchantment state |
-| `hasGlint() / setGlint(bool)` | NekoJS glint semantics |
-| `hasEnchantment(id, level) → boolean` | Check for an enchantment |
-| `matches(other) → boolean` | Match items |
-| `asIngredient() → Ingredient` | Convert to an ingredient |
-| `weakNBT() / strictNBT()` | NBT matching modes |
-| `pdata() → PersistentDataJS` | Read/write custom persistent data on an ItemStack; data is stored in the vanilla `CUSTOM_DATA` component and removed when empty; it does not use the NekoJS entity-PData packet, but stacks in vanilla inventory or other sync paths may carry the component through vanilla synchronization |
-
-<a id="wiki-section-4"></a>
-### Entity/player limits of `PersistentDataJS`
-
-The synchronization lifecycle below applies to the installed entity platform store. Fabric now shares the NeoForge container/payload boundary, with bridge round-trip and synchronization regression coverage; historical double-wrapped Fabric saves remain nested without automatic migration. Fixtures are not real multiplayer/restart acceptance. ItemStack PData owns the entire `CUSTOM_DATA` payload: clearing it removes that component, and inherited `markDirty()`/`sync()` are no-ops, not entity packet hooks. See [Data and state](data-and-state_us).
-
-`entity.pdata()` (players inherit the entity extension) writes to the entity's `NekoJSPersistentData` subkey. Server-side writes automatically enter the synchronization queue for the next server tick. `sync()` immediately sends the current snapshot to clients tracking the entity. Client scripts read a read-only mirror; all write entry points, including `put*`, `remove`, `merge`, `edit`, `clear`, `replaceTag`, `markDirty`, and `sync`, throw rather than pretending to succeed.
-
-Synchronization packets are deduplicated by entity id and a monotonic revision. When an entity leaves the world, an empty snapshot clears its client mirror. Reused ids continue the revision sequence for the current server lifecycle, preventing delayed old packets from restoring old entity data. Disconnects, world changes, and dimension changes clear client mirrors; SERVER/CLIENT reload does not. Server shutdown clears the server-side dirty/revision records without changing the save format or the `NekoJSPersistentData` key.
-
-<a id="wiki-section-5"></a>
-### `Items`
-
-`net.minecraft.world.item.Items`: vanilla item registry constants, such as `Items.STONE` and `Items.DIAMOND_SWORD`.
-
-<a id="wiki-section-6"></a>
-### `Ingredient`
-
-An ingredient helper. **Combined binding** (the same pattern as `Item`): the factory methods listed above use the helper; other members delegate to static members of the vanilla `Ingredient` class (such as `Ingredient.empty()`).
-
-| Method | Description |
-|---|---|
-| `Ingredient.of(...values) → IngredientJS` | Build from any mix of ids/item stacks/ingredients (OR combination) |
-| `Ingredient.item(id: string) → IngredientJS` | A single item |
-| `Ingredient.tag(id: string) → IngredientJS` | A tag (adds `#` automatically); use `Ingredient.ore(name)` on 1.12.2 |
-| `Ingredient.any(...ingredients) → IngredientJS` | OR combination |
-| `Ingredient.all() → IngredientJS` | Wildcard matching all registered items. NeoForge uses a live `AnyHolderSet` (registry changes are reflected immediately); 1.12.2 enumerates a snapshot of the current registry (items added after script registration are not included) |
-| `Ingredient.not(ingredient) → IngredientJS` | Negation (match every item except those in the ingredient). Supported on NeoForge 1.21.1/26.x (`DifferenceIngredient`); **not supported on 1.12.2** (no native negation type), where it throws a clear exception |
-
-**`IngredientJS` instance methods**:
-
-| Method | Description |
-|---|---|
-| `or(id\|NekoId\|Item\|ItemStack\|Ingredient\|IngredientJS) → IngredientJS` | Union |
-| `and(ingredient)` / `intersect(ingredient) → IngredientJS` | Intersection |
-| `except(ingredient)` / `subtract(ingredient) → IngredientJS` | Difference |
-| `asIngredient() → Ingredient` | Convert to Minecraft `Ingredient` |
-| `asStack() → ItemStack` | The first item stack |
-| `withCount(int) → SizedIngredientJS` | Add a count |
-| `matches(ItemStack\|Ingredient)` / `test(...) → boolean` | Match |
-| `first() → ItemStack` | The first item stack |
-| `stacks()` / `displayStacks() → ItemStack[]` | All item stacks |
-| `isEmpty() → boolean` | Check whether empty |
-| `unwrap() → Ingredient` | The underlying Minecraft `Ingredient` |
-
----
-
-<a id="wiki-section-7"></a>
-## Fluids
-
-<a id="wiki-section-8"></a>
-### `Fluid` (NeoForge only)
-
-> Fabric 26.x currently does not register `Fluid`, `FluidStack`, `FluidIngredient`, `Fluids`, or a fluid recipe surface. The following API applies only to NeoForge 1.21.1/26.x; information for 1.12.2 belongs to the legacy branch.
-
-Factory methods use the helper; other members delegate to static members of the vanilla `Fluid` class.
-
-| Method | Description |
-|---|---|
-| `Fluid.of(value) → FluidStack` | Build from an id / `{fluid, amount}` / fluid object |
-| `Fluid.of(value, amount: int) → FluidStack` | Specify an amount (must be > 0) |
-| `Fluid.water() → FluidStack` / `Fluid.water(amount)` | Water fluid stack (one bucket by default) |
-| `Fluid.lava() → FluidStack` / `Fluid.lava(amount)` | Lava fluid stack |
-| `Fluid.empty() → FluidStack` | `FluidStack.EMPTY` |
-| `Fluid.ingredient(...values) → FluidIngredientJS` | Build a fluid ingredient (OR combination) |
-| `Fluid.sizedIngredient(value)` / `Fluid.sizedIngredient(value, amount) → SizedFluidIngredient` | A fluid ingredient with an amount |
-
-<a id="wiki-section-9"></a>
-### `FluidIngredient`
-
-**Combined binding** (NeoForge only; 1.12.2 has no vanilla class of this name, so it is a regular binding with fallback semantics where `of` returns `List<FluidStack>`): factory methods use the helper; other members delegate to static members of NeoForge's `FluidIngredient` class.
-
-| Method | Description |
-|---|---|
-| `FluidIngredient.of(...values) → FluidIngredientJS` | OR combination |
-| `FluidIngredient.fluid(id: string) → FluidIngredientJS` | A single fluid |
-| `FluidIngredient.tag(id: string) → FluidIngredientJS` | A tag |
-| `FluidIngredient.sized(value)` / `FluidIngredient.sized(value, amount) → SizedFluidIngredient` | Specify an amount |
-
-`FluidIngredientJS` instances provide `.or(...)`, `.isEmpty()`, and other methods.
-
-<a id="wiki-section-10"></a>
-### `FluidAmounts`
-
-Fluid amount constants, such as `FluidAmounts.BUCKET` (the amount in one bucket).
-
-<a id="wiki-section-11"></a>
-### `Fluids` / `FluidStack`
-
-Direct access to `net.minecraft.world.level.material.Fluids` (vanilla fluid constants) and the Minecraft `FluidStack` class.
-
----
-
-<a id="wiki-section-12"></a>
-## Text components
-
-<a id="wiki-section-13"></a>
-### `Text`
-
-| Method | Description |
-|---|---|
-| `Text.of(text: string) → $TextValue` | Immutable literal text |
-| `Text.empty() → $TextValue` | Empty text |
-| `Text.translatable(key: string, ...args) → $TextValue` | Immutable translation-key text |
-| `Text.translateWithFallback(key: string, fallback: string, ...args) → $TextValue` | Translation key with fallback: shows the fallback literal when the key is missing. 1.12.2 has no native fallback support and displays the fallback directly |
-| `Text.keybind(keybind: string) → $TextValue` | A key binding (for example `'key.attack'`), resolved to the player's current key name when rendered |
-| `Text.score(name: string, objective: string) → $TextValue` | Scoreboard score (`name` can be `'*'` to use the triggering entity) |
-| `Text.selector(pattern: string) → $TextValue` | Entity selector (for example `'@p'`, `'@a[type=zombie]'`). Falls back to literal text on NeoForge 26.x (API limitation); renders normally on 1.21.1/1.12.2 |
-| `Text.ofValues(...values) → $TextValue` | Concatenate text arguments in order |
-| `Text.join(separator, ...values) → $TextValue` | Join values with a separator (`$TextValue` or string) |
-
-<a id="wiki-section-14"></a>
-### `$TextValue` (including rich text styles)
-
-`$TextValue` supports `.append(...values)`, which returns a new value, and `.isEmpty()`. It can be passed to existing binding entry points that expect native components (`displayClientMessage`, tooltips, books, and so on) and is converted to a Minecraft component automatically.
-
-Rich text methods (styles / clicks / hover) return a new **styled** `$TextValue` through chained calls (immutable and chainable):
-
-| Method | Description |
-|---|---|
-| `.bold([value = true])` / `.italic()` / `.underlined()` / `.strikethrough()` / `.obfuscated()` | Font decorations; an omitted argument means `true` |
-| `.color(color)` | Color: a named color (`'red'`) or hex (`'#FF0000'`). Hex works only on 1.15+; 1.12.2 recognizes only 16 named colors |
-| `.black()` / `.darkBlue()` / `.darkGreen()` / `.darkAqua()` / `.darkRed()` / `.darkPurple()` / `.gold()` / `.gray()` / `.darkGray()` / `.blue()` / `.green()` / `.aqua()` / `.red()` / `.lightPurple()` / `.yellow()` / `.white()` | KubeJS-style shortcuts for 16 colors, with no arguments; equivalent to `.color('<named color>')` (`.red()` ≡ `.color('red')`) |
-| `.insertion(text)` | Insert text into chat on click (effective only in the chat screen) |
-| `.font(id)` | Font id (`'mymod:custom'`). Unsupported and ignored on 1.12.2 |
-| `.click(action, value)` | Click event: `runCommand` / `suggestCommand` / `openUrl` / `openFile` / `copyToClipboard` / `changePage` |
-| `.hover(text: $TextValue)` | Show text on hover |
-| `.append(...values)` | Append child components (each child can have its own style) |
-
-> `copyToClipboard` does not exist on 1.12.2 (it is ignored); the value for `changePage` is a page-number string.
+Bindings are names you can use directly in a script, such as `Item`, `Text` and `JsonIO`. You don't need `require` or `import`. Just write the name:
 
 ```javascript
-// Red and bold, with a command on click and a hint on hover
-const msg = Text.of('Click to run')
-  .bold().color('red')
-  .click('runCommand', '/give @s diamond')
-  .hover(Text.of('Click to get a diamond'))
-
-player.displayClientMessage(msg, false)
-
-// Concatenate text with different styles
-const mixed = Text.ofValues(
-  Text.of('Normal ').color('white'),
-  Text.of('Bold').bold(),
-  Text.of(' Italic').italic()
-)
+const stone = Item.of('minecraft:stone', 16)
+console.info(Text.of('Hello').bold())
 ```
 
-> Style methods do not modify the original `$TextValue` (it is immutable); they return a new styled value. Chained calls merge with the existing style.
+This page lists every built-in binding, grouped by purpose. Signatures are written as `method(args) → result`. For exact parameters and members, run `/nekojs probe` to generate code completion and trust what your editor shows.
 
----
+<a id="wiki-section-2"></a>
+## Check availability first
 
+Some bindings exist only in certain script types, and some only on certain platforms. Using one where it doesn't exist fails with an unknown-name error.
 
-**`I18n` (CLIENT only)**
+| Binding | Script types | Platform |
+|---|---|---|
+| `Item`, `Block`, `Ingredient`, `Items`, `ItemStack` | All | All |
+| `Fluid`, `FluidIngredient`, `FluidAmounts`, `Fluids`, `FluidStack` | All | NeoForge only |
+| `Text`, `NBT`, `JsonIO`, `ID`, `Platform`, `Performance`, `RecipeSchema` | All | All |
+| `Registry` | All | NeoForge; returns empty results on Fabric |
+| `I18n` | Client | All |
+| `global`, `shared`, `once`, `clearOnce` | All | All |
+| `ClientData` / `clientData` | Server pushes / client reads | All |
+| `Network` | Server, client | All |
+| `Capabilities` | All (used in a startup event) | All, implemented differently per platform |
+| `EntitySelectors` | Server, test | All |
+| `VillagerTrades` | Server | NeoForge only |
+| `DataMap` | All | NeoForge only |
+| `PostEffects` | Client | NeoForge only |
+| `ClientUI` | Client | NeoForge 26.x only |
+| `Assets` | All | NeoForge 26.x only |
+| `NativeEvents` | Startup | NeoForge only |
+| `Utils`, `Color`, `Time`, `UUID`, `StringUtils`, `KMath`, `JavaMath`, `TextIcons`, `DamageSource`, `ParticleOptions` | All | All |
+| `Test` | Test | All |
+| `Minecraft`, `Screen`, `Window`, `KeyMapping`, `InputConstants` | Client | All |
+| `TriState` | All | 26.x |
 
-Available on all five supported nodes, `I18n` resolves the current client language to a plain string; it is not a SERVER or STARTUP binding.
+For all platform differences, see [Platforms and compatibility](platform-compatibility_us).
 
-| Member | Description |
+<a id="wiki-section-3"></a>
+## Items and ingredients
+
+<a id="wiki-section-4"></a>
+### Item
+
+Create item stacks and look up items.
+
+| Method | Description |
 |---|---|
-| `I18n.translate(key, ...args)` | Translate a full key using active language/resource packs; missing keys remain visible |
-| `I18n.has(key)` | Check the active translation table, including language fallbacks |
-| `I18n.translateWithFallback(key, fallback, ...args)` | Translate an existing key, otherwise format the literal fallback (not a second key) |
-| `I18n.languageCode` / `I18n.rightToLeft` | Read-only current language code and active text direction |
+| `Item.of(id) → ItemStack` | Creates a stack from an ID. You can include a count: `'16x minecraft:stone'` |
+| `Item.of(id, count) → ItemStack` | With a count |
+| `Item.of(stack) → ItemStack` | Returns the given stack unchanged |
+| `Item.of(stack, count) → ItemStack` | Takes a stack and sets the count |
+| `Item.empty() → ItemStack` | An empty stack |
+| `Item.id(id) → Item \| null` | Looks up an item. The namespace defaults to `minecraft`. Returns `null` if not found |
+| `Item.idOf(item) → Identifier` | The registry ID of an item. Takes an item, not a stack |
 
-Use Minecraft placeholders such as `%s` or `%1$s`; arguments accept strings, numbers, booleans and null, not arbitrary objects. Re-read/rebuild labels after language or resource changes: this binding does not subscribe to changes or update stored strings. For server-authored text that each receiving player localizes, use `Text.translatable(...)` instead.
+`Block.id(id)` and `Block.idOf(block)` do the same for blocks. `Items` and `Blocks` are the vanilla item and block constants, for example `Items.DIAMOND`.
 
 ```javascript
-// client_scripts/labels.js
-const done = I18n.translate('gui.done')
-console.info(done, I18n.languageCode, I18n.rightToLeft)
+const sword = Item.of('minecraft:diamond_sword')
+const apples = Item.of('minecraft:apple', 5)
+if (Item.id('mymod:ruby') === null) console.warn('mymod is not installed')
+```
+
+<a id="wiki-itemstack"></a>
+<a id="wiki-section-5"></a>
+### Item stack methods
+
+On top of the vanilla methods, NekoJS adds these to every item stack:
+
+| Method | Description |
+|---|---|
+| `getId() → string` | The item ID, for example `minecraft:stone` |
+| `getMod() → string` | The ID of the mod that owns the item |
+| `getBlock() → Block \| null` | The block for a block item; `null` otherwise |
+| `withCount(count) → ItemStack` | Returns a copy with the given count; the original is unchanged. A count below 1 gives an empty stack |
+| `setCountAndReturn(count) → ItemStack` | Changes the count and returns the same stack, for chaining |
+| `enchantById(id, level) → ItemStack` | Adds an enchantment. Works only while a server is running. For enchanted books, set the `stored_enchantments` component instead |
+| `hasEnchantment(id, level) → boolean` | Whether the stack has the enchantment at this level or higher |
+| `hasGlint()` / `setGlint(bool)` | Reads or sets the enchantment glint |
+| `isUnbreakable()` / `setUnbreakable(bool)` | Reads or sets "unbreakable" |
+| `getLore()` / `setLore(lines)` | Reads or sets the lore lines |
+| `matches(other) → boolean` | Whether it matches another stack, an item or an ingredient |
+| `asIngredient() → Ingredient` | Converts it to an ingredient |
+| `weakNBT()` / `strictNBT() → Ingredient` | An ingredient that also matches components, loosely or strictly. On Fabric both require an exact component match |
+| `pdata() → PersistentDataJS` | Custom data stored on the stack; see the next section |
+
+<a id="wiki-pdata"></a>
+<a id="wiki-section-6"></a>
+### Custom data with pdata
+
+Item stacks, entities and players can all store your own data with `pdata()`:
+
+```javascript
+// server_scripts/pdata.js
+PlayerEvents.loggedIn(event => {
+  const data = event.entity.pdata()
+  data.putInt('logins', data.getInt('logins') + 1)
+})
+```
+
+- **Item stacks**: data lives in the vanilla `custom_data` component, so it is saved and moved with the item.
+- **Entities and players**: data is saved with the entity. After a server-side write, it syncs to nearby clients automatically.
+- **Client side**: entity and player `pdata()` is read-only. Writing to it from a client script throws an error.
+
+For all read and write methods, sync timing and the save format, see [Data and state](data-and-state_us).
+
+<a id="wiki-section-7"></a>
+### Ingredient
+
+Create ingredients for recipes.
+
+| Method | Description |
+|---|---|
+| `Ingredient.of(...values)` | Matches any of the values. A value can be an item ID, `'#tag'`, `'@modid'`, `'*'` (any item), `'/regex/'`, a stack or another ingredient |
+| `Ingredient.item(id)` | A single item |
+| `Ingredient.tag(id)` | An item tag; the `#` is added for you |
+| `Ingredient.any(...ingredients)` | Matches any of several ingredients |
+| `Ingredient.all()` | Every item. Only includes items registered at the time of the call |
+| `Ingredient.not(ingredient)` | Every item except the given ingredient |
+
+The ingredient objects these return can be combined further:
+
+| Method | Description |
+|---|---|
+| `or(value)` | Union; takes an ID, item, stack or ingredient |
+| `and(x)` / `intersect(x)` | Intersection (NeoForge only) |
+| `except(x)` / `subtract(x)` | Difference (NeoForge only) |
+| `withCount(n)` / `asStack()` | An ingredient with a count; `asStack()` equals `withCount(1)` (NeoForge only) |
+| `matches(stack)` / `test(stack)` | Whether a stack matches |
+| `first() → ItemStack` | The first matching stack, or an empty stack |
+| `stacks()` / `displayStacks()` | All matching stacks |
+| `isEmpty()` | Whether it is empty |
+| `unwrap()` | The underlying vanilla `Ingredient` |
+
+```javascript
+const logs = Ingredient.of('#minecraft:logs', 'minecraft:stick')
+const notDirt = Ingredient.not('minecraft:dirt')
+```
+
+Members not listed here go to the static members of the vanilla `Ingredient` class.
+
+<a id="wiki-section-8"></a>
+## Fluids (NeoForge only)
+
+None of the bindings in this section exist on Fabric.
+
+<a id="wiki-section-9"></a>
+### Fluid
+
+| Method | Description |
+|---|---|
+| `Fluid.of(value) → FluidStack` | Creates a fluid stack from a fluid ID, a fluid object or `{ fluid, amount }`. Defaults to one bucket |
+| `Fluid.of(value, amount) → FluidStack` | With an amount in mB; must be greater than 0 |
+| `Fluid.water()` / `Fluid.water(amount)` | Water, one bucket by default |
+| `Fluid.lava()` / `Fluid.lava(amount)` | Lava, one bucket by default |
+| `Fluid.empty()` | An empty fluid stack |
+| `Fluid.ingredient(...values)` | A fluid ingredient matching any of the values |
+| `Fluid.sizedIngredient(value)` / `Fluid.sizedIngredient(value, amount)` | A fluid ingredient with an amount |
+
+<a id="wiki-section-10"></a>
+### FluidIngredient
+
+| Method | Description |
+|---|---|
+| `FluidIngredient.of(...values)` | Matches any of the values |
+| `FluidIngredient.fluid(id)` | A single fluid |
+| `FluidIngredient.tag(id)` | A fluid tag |
+| `FluidIngredient.sized(value)` / `FluidIngredient.sized(value, amount)` | A fluid ingredient with an amount |
+
+The returned fluid ingredient also has `or(value)`, `isEmpty()`, `withAmount(amount)` and `unwrap()`.
+
+<a id="wiki-section-11"></a>
+### FluidAmounts and fluid constants
+
+`FluidAmounts` holds common amounts, in mB:
+
+| Constant | Value |
+|---|---|
+| `BUCKET` / `B` | 1000 |
+| `MILLIBUCKET` / `MB` | 1 |
+| `BOTTLE` | 250 |
+| `INGOT` | 90 |
+| `NUGGET` | 10 |
+| `METAL_BLOCK` | 810 |
+
+`Fluids` holds the vanilla fluid constants (for example `Fluids.WATER`), and `FluidStack` is the fluid stack class.
+
+<a id="wiki-section-12"></a>
+## Text
+
+<a id="wiki-section-13"></a>
+### Text
+
+Build text for chat messages, tooltips, titles and so on.
+
+| Method | Description |
+|---|---|
+| `Text.of(text)` | Plain text |
+| `Text.empty()` | Empty text |
+| `Text.translatable(key, ...args)` | A translation key, shown in each player's own language |
+| `Text.translateWithFallback(key, fallback, ...args)` | A translation key that shows `fallback` when the key doesn't exist |
+| `Text.keybind(key)` | The key the player has bound, for example `'key.attack'` |
+| `Text.score(name, objective)` | A scoreboard score |
+| `Text.selector(pattern)` | An entity selector such as `'@p'`. On 26.x it shows as plain text |
+| `Text.ofValues(...values)` | Joins several pieces of text in order |
+| `Text.join(separator, ...values)` | Joins with a separator, which can be text or a string |
+
+You can pass text anywhere that expects a text component, such as `displayClientMessage`, tooltips and books.
+
+<a id="wiki-section-14"></a>
+### Styles and click actions
+
+Style methods don't change the original text. They return new text, so you can keep chaining:
+
+| Method | Description |
+|---|---|
+| `bold()` / `italic()` / `underlined()` / `strikethrough()` / `obfuscated()` | Bold, italic, underline, strikethrough, obfuscated. Pass `false` to turn one off |
+| `color(color)` | A color name (`'red'`) or hex (`'#FF0000'`) |
+| `red()`, `gold()`, `aqua()` and so on | Shortcuts for the 16 named colors; `red()` equals `color('red')` |
+| `click(action, value)` | Click action: `runCommand`, `suggestCommand`, `openUrl`, `openFile`, `copyToClipboard`, `changePage` |
+| `hover(text)` | Text shown on mouse hover |
+| `insertion(text)` | Text inserted into the chat box on Shift+click |
+| `font(id)` | A font ID |
+| `append(...values)` | Appends more text |
+| `isEmpty()` | Whether it is empty |
+
+The 16 color shortcuts are `black`, `darkBlue`, `darkGreen`, `darkAqua`, `darkRed`, `darkPurple`, `gold`, `gray`, `darkGray`, `blue`, `green`, `aqua`, `red`, `lightPurple`, `yellow` and `white`.
+
+```javascript
+// server_scripts/welcome.js (event.entity on NeoForge, event.player on Fabric)
+PlayerEvents.loggedIn(event => {
+  const msg = Text.of('Click for a diamond')
+    .bold().red()
+    .click('runCommand', '/give @s diamond')
+    .hover(Text.of('Runs /give'))
+  event.entity.displayClientMessage(msg, false)
+})
 ```
 
 <a id="wiki-section-15"></a>
-## Reading and writing data
+### I18n (client only)
 
-<a id="wiki-section-16"></a>
-### `NbtIO` (removed)
+In client scripts, translates a key into a plain string using the player's current language.
 
-The old NeoForge-only native `NbtIO` binding has been replaced by portable `NBT.read`/`NBT.write`. The new interface does not expose `CompoundTag`/`NBTTagCompound` and provides the same behavior on NeoForge 1.21.1, NeoForge 26.x, and Cleanroom 1.12.2.
+| Member | Description |
+|---|---|
+| `I18n.translate(key, ...args)` | Translates. Returns the key itself if it doesn't exist |
+| `I18n.has(key)` | Whether the current language has the key |
+| `I18n.translateWithFallback(key, fallback, ...args)` | Translates if the key exists, otherwise uses `fallback` as the template |
+| `I18n.languageCode` / `I18n.rightToLeft` | The current language code; whether it is written right to left. Read-only |
 
-The old interface resolved relative paths under `<gameDir>/nekojs/`; the new interface permits only `<gameDir>/nekojs/data/`. When upgrading existing scripts, first move old `NbtIO` files into `nekojs/data/`. This is an intentional tightening of the filesystem security boundary; `NBT.read` does not automatically search for or migrate files from the old directory.
+Use placeholders like `%s` and `%1$s`. Arguments can only be strings, numbers, booleans and `null`. The result is a string and does not update when the player switches language, so call it again.
+
+For text sent to players that each player should see in their own language, use `Text.translatable(...)` on the server.
 
 ```javascript
-// Old interface: NbtIO.write("player.nbt", nativeCompound)
-NBT.write("player.nbt", {name: "neko", level: 12})
-
-const player = NBT.read("player.nbt")
-if (player !== null) console.log(player.toSnbt())
+// client_scripts/labels.js
+console.info(I18n.translate('gui.done'), I18n.languageCode)
 ```
 
+<a id="wiki-section-16"></a>
+## Reading and writing data
+
 <a id="wiki-section-17"></a>
-### `NBT`
+### NBT
 
-A portable immutable NBT value builder. It does not expose `CompoundTag`/`NBTTagCompound`, nor does it automatically convert to native networking, persistent data, or item NBT boundaries.
-
-| Method | Description |
-|---|---|
-| `NBT.of(value: NbtInput) → $NbtValue` | Strictly construct a string, number, homogeneous array, or object compound |
-| `NBT.byte/short/int(number) → $NbtValue` | Explicit integer width |
-| `NBT.long(decimal: string) → $NbtValue` | Exact signed long, avoiding JS number precision loss |
-| `NBT.float/double(number) → $NbtValue` | Explicit floating-point width |
-| `NBT.byteArray/intArray(number[]) → $NbtValue` | Native NBT primitive arrays |
-| `NBT.toSnbt(value) → string` | Deterministic SNBT |
-| `NBT.parse(snbt: string) → $NbtValue` | Parse an SNBT string (inverse of `toSnbt`); syntax errors throw `INVALID_NBT` |
-| `NBT.toObject(value) → object` | Recursively convert `$NbtValue` to plain JS objects (Map→Object / List→Array / scalars extracted directly) |
-| `NBT.fromObject(value) → $NbtValue` | Recursively convert plain JS objects to `$NbtValue` (boolean→byte, integer→int/long, floating-point→double) |
-| `NBT.read(path: string) → $NbtValue \| null` | Read compressed binary NBT; return `null` if the file does not exist |
-| `NBT.write(path: string, value: NbtInput) → void` | Atomically write compressed binary NBT; the root must be a compound |
-| `NBT.compound() → CompoundBuilder` | Create an empty chainable compound builder (`put`/`putByte`/`putCompound`/`putList`/`contains`/`size`/`build`); `build()` returns `$NbtValue` |
-| `$NbtValue.kind()` / `.scalar()` | Query the tag kind and scalar value; long scalars are decimal strings |
-| `$NbtValue.values()` / `.entries()` | Query list elements or compound entries |
-| `$NbtValue.toSnbt()` | Deterministic SNBT |
-
-`NbtInput` accepts only strings, finite numbers, `$NbtValue`, homogeneous nested arrays, and plain objects. `null`, booleans, functions, host objects, cycles, and heterogeneous lists are rejected. Without an explicit builder, integers are normalized to `INT` and other numbers to `DOUBLE`; `LONG_ARRAY` is not currently part of the portable baseline.
-
-`NBT.parse` supports the full Mojang SNBT syntax: compounds (`{k:v}`, including quoted keys), lists (`[...]`), byte arrays (`[B;...]`), int arrays (`[I;...]`), suffixed numbers (`5b`/`5s`/`5l`/`5.0f`/`5.0d`), unsuffixed integers (`INT` within the int range, otherwise `LONG`), floating-point numbers (`DOUBLE`), `true`/`false` (→ byte 1/0), quoted/unquoted strings, and escape sequences. `toSnbt` and `parse` support value round trips, but output is normalized and need not preserve the input's whitespace or quoting.
-
-Binary NBT persistence is confined to `<gameDir>/nekojs/data/`. Paths must be forward-slash relative paths; empty paths, absolute paths, drive letters, backslashes, `.`/`..` segments, symlinks, junctions, and reparse points are rejected. Writes use a temporary file in the same directory, forced flushing, and atomic replacement; they do not fall back to non-atomic overwrites.
-
-Default limits are 3 MiB per compressed file, 8 MiB of decoded binary data, 64 levels of depth, 10,000 nodes, and 10,000 primitive-array elements. Native `LONG_ARRAY`, standalone `END`, non-finite floating-point numbers, and corrupted files fail closed. Stable errors include `INVALID_NBT`, `NBT_LIMIT_EXCEEDED`, `NBT_PATH_FORBIDDEN`, `NBT_FILE_TOO_LARGE`, `NBT_IO_ERROR`, and `NBT_ATOMIC_WRITE_FAILED`. Detect support with `Platform.capabilities().includes("nbt-binary-io")`.
-
-<a id="wiki-section-18"></a>
-### `Registry`
-
-**Backend availability:** NeoForge provides the current registry query service. Fabric currently registers this binding but supplies no registry service; the empty fallback returns `exists() === false`, empty ids/tags/maps and `null` map values. Binding presence is not evidence that a real registry is absent.
-
-Read-only registry queries. `Registry.get(registryId)` returns a `RegistryView`; `exists()` is `false` if the registry does not exist. All methods return only basic types (strings/booleans/arrays), not native Minecraft objects.
-
-The view implements `Iterable<String>`: `for (const id of Registry.get('minecraft:item')) console.info(id)` iterates registered ids.
+Create, read and write NBT data. `NBT` produces NekoJS NBT values; you can't use them directly as a vanilla `CompoundTag`.
 
 | Method | Description |
 |---|---|
-| `Registry.get(registryId) → RegistryView` | Get a read-only registry view, for example `"minecraft:item"` |
-| `view.exists() → boolean` | Check whether the registry exists |
-| `view.all() → string[]` | All entry ids in the registry, including namespaces |
-| `view.has(id) → boolean` | Check whether an id exists in the registry |
-| `view.tag(tagId) → string[]` | All entry ids in a tag |
-| `view.dataMapIds() → string[]` | All data map type ids registered for this registry (for example `neoforge:furnace_fuels`) |
-| `view.dataMapValue(dataMapTypeId, id) → string \| null` | Read the data map value of an entry (JSON string); return `null` when absent |
+| `NBT.of(value)` | Creates a value from a string, number, array or plain object |
+| `NBT.byte/short/int/float/double(n)` | A number of a specific type |
+| `NBT.long(text)` | A long. Pass it as a string so JS numbers don't lose precision |
+| `NBT.byteArray(arr)` / `NBT.intArray(arr)` | Byte array, int array |
+| `NBT.compound()` | A chained builder: `put`, `putInt`, `putString`, `putCompound`, `putList` and more, then `build()` |
+| `NBT.parse(snbt)` / `NBT.toSnbt(value)` | Converts between SNBT text and NBT values |
+| `NBT.toObject(value)` / `NBT.fromObject(obj)` | Converts between NBT values and plain JS objects |
+| `NBT.read(path)` | Reads an NBT file under `nekojs/data/`. Returns `null` if the file doesn't exist |
+| `NBT.write(path, value)` | Writes an NBT file. The top level must be an object |
 
-<a id="wiki-section-19"></a>
-### `JsonIO`
-
-Stable JSON values do not expose Gson, `Map`/`List`, or raw filesystem paths. Persistence permits only constrained JSON files under `nekojs/data/`.
-
-| Method | Description |
-|---|---|
-| `JsonIO.parse(json: string) → $JsonValue` | Strictly parse JSON |
-| `JsonIO.toString(value: JsonInput) → string` | Compact JSON |
-| `JsonIO.toPrettyString(value: JsonInput) → string` | JSON with two-space indentation |
-| `JsonIO.read(path: string) → $JsonValue \| null` | Read a data file; return `null` when absent |
-| `JsonIO.write(path: string, value: JsonInput) → void` | Atomically replace a data file, creating parent directories automatically |
-| `$JsonValue.toString() → string` | Compact JSON |
-| `$JsonValue.toPrettyString() → string` | JSON with two-space indentation |
-
-`JsonInput` can be `null`, a boolean, finite number, string, array, plain object, or `$JsonValue`. Duplicate object keys, non-finite numbers, functions, host objects, cycles, and values exceeding limits are rejected.
-
-`read`/`write` paths must be forward-slash relative paths such as `settings/ui.json`; empty paths, absolute paths, backslashes, `.`/`..` segments, drive letters, and any symlinks are rejected. `write` uses UTF-8 JSON with two-space indentation and an atomic move; it does not fall back to non-atomic overwrites. Raw Gson `parseRaw` is not part of this API.
-
----
-
-<a id="wiki-section-20"></a>
-## Utilities
-
-<a id="wiki-section-21"></a>
-### `VillagerTrades` (NeoForge)
-
-NeoForge supports adding trades in server scripts. Fabric currently has no equivalent trade registry mutation; calls to this capability are rejected as unavailable and should not be used in Fabric scripts.
-
-Declare trades through `ServerEvents.tradeDeclaration` in server scripts. Collection is inert; the platform adapter applies the whole candidate batch after successful preflight and commit. Invalid declarations reject the batch rather than partially applying it. NeoForge 26.x uses reloadable trade registries; 1.21.1 uses static trade pools.
+NBT values have methods such as `kind()`, `scalar()`, `values()`, `entries()` and `toSnbt()`.
 
 ```javascript
+NBT.write('players/neko.nbt', { name: 'neko', level: 12 })
+const saved = NBT.read('players/neko.nbt')
+if (saved !== null) console.info(saved.toSnbt())
+```
+
+`NBT.of` rejects `null`, booleans, functions and arrays with mixed element types. Whole numbers without an explicit type become int; numbers with a fraction become double.
+
+<a id="wiki-jsonio"></a>
+<a id="wiki-section-18"></a>
+### JsonIO
+
+Parse, generate and save JSON.
+
+| Method | Description |
+|---|---|
+| `JsonIO.parse(text)` | Parses a JSON string |
+| `JsonIO.toString(value)` | Produces compact JSON |
+| `JsonIO.toPrettyString(value)` | Produces JSON indented by two spaces |
+| `JsonIO.read(path)` | Reads a JSON file under `nekojs/data/`. Returns `null` if the file doesn't exist |
+| `JsonIO.write(path, value)` | Writes a JSON file, creating parent folders as needed |
+
+```javascript
+JsonIO.write('settings/ui.json', { scale: 2, theme: 'dark' })
+const ui = JsonIO.read('settings/ui.json')
+console.info(ui === null ? 'No settings yet' : ui.toPrettyString())
+```
+
+<a id="wiki-section-19"></a>
+### File path rules
+
+`NBT.read/write` and `JsonIO.read/write` can only access files inside `<game folder>/nekojs/data/`:
+
+- Use a relative path with forward slashes, for example `settings/ui.json`.
+- Absolute paths, drive letters, backslashes and `..` are not allowed.
+- Writes are atomic: the file is either fully written or left unchanged.
+
+NBT files can be at most 3 MiB compressed and 64 levels deep. An invalid path fails with `NBT_PATH_FORBIDDEN`, a file that is too large with `NBT_FILE_TOO_LARGE`, and an SNBT syntax error with `INVALID_NBT`.
+
+<a id="wiki-section-20"></a>
+### Registry
+
+Read-only registry lookups. Results are always strings, booleans and arrays.
+
+| Method | Description |
+|---|---|
+| `Registry.get(registryId)` | Gets a registry view, for example `'minecraft:item'` |
+| `view.exists()` | Whether the registry exists |
+| `view.all()` | All entry IDs |
+| `view.has(id)` | Whether the entry exists |
+| `view.tag(tagId)` | All entry IDs in a tag |
+| `view.dataMapIds()` | The data maps this registry has |
+| `view.dataMapValue(mapId, id)` | An entry's data map value as a JSON string, or `null` |
+
+You can loop over a view with `for...of`:
+
+```javascript
+for (const id of Registry.get('minecraft:enchantment')) console.info(id)
+```
+
+> On Fabric, `Registry` currently returns only empty results: `exists()` is `false` and lists are empty. Don't take that as proof the registry is actually empty.
+
+<a id="wiki-section-21"></a>
+## Sharing data between scripts
+
+<a id="wiki-global-shared"></a>
+<a id="wiki-section-22"></a>
+### global and shared
+
+- `global`: shared between scripts of the same type. For example, all server scripts share one `global`.
+- `shared`: shared between all script types, but only inside the same game process.
+
+Both survive reloads and world changes, and are cleared when the game closes. They are not synced over the network and not saved to the world.
+
+```javascript
+// server_scripts/config.js
+global.config = { version: 2 }
+shared.serverReady = true
+
+// client_scripts/hud.js (readable in singleplayer)
+console.info(shared.serverReady)
+```
+
+<a id="wiki-section-23"></a>
+### once and clearOnce
+
+`once(key, callback)` runs the callback only the first time the key is used. It won't run again after a reload either, until the game closes. Use it for things that should happen once, such as writing an external file.
+
+| Call | Description |
+|---|---|
+| `once('myInit', () => ...)` | Runs the callback the first time and returns its result; does nothing afterwards |
+| `clearOnce('myInit')` | Clears this key so the next `once` runs again. Returns whether it existed |
+| `clearOnce()` | Clears every key |
+
+```javascript
+once('mypack:warmup', () => console.info('Printed only once'))
+```
+
+Keys are global, so scripts that use the same key affect each other. Add your own prefix.
+
+<a id="wiki-client-data"></a>
+<a id="wiki-section-24"></a>
+### ClientData and clientData
+
+Server scripts push data to clients, and client scripts read it. This is the usual way to feed a HUD.
+
+```javascript
+// server_scripts/boss.js
+PlayerEvents.loggedIn(event => {
+  ClientData.sync('boss_hp', { name: 'Example Golem', hp: 0.42 })
+  ClientData.syncTo(event.entity, 'quest', { stage: 3 })
+})
+
+// client_scripts/state.js
+console.info(clientData.get('boss_hp'))
+```
+
+| Method | Description |
+|---|---|
+| `ClientData.sync(key, value)` | Pushes to every online player |
+| `ClientData.syncTo(player, key, value)` | Pushes to one player |
+| `clientData.get(key)` | Reads a value. Returns `null` if the key is missing |
+| `clientData.has(key)` | Whether the key exists. Use it to tell "missing" from "value is null" |
+| `clientData.keys()` / `clientData.size()` | All keys; the number of keys |
+
+- Values must be JSON types: string, number, boolean, object, array or `null`.
+- Keys can't be blank and are at most 256 characters. A value can be at most 32768 characters once converted to JSON (a character count, not 32 KB).
+- Pushing the same key again replaces the old value. The client's data is cleared when the player disconnects or leaves the world.
+
+<a id="wiki-network"></a>
+<a id="wiki-section-25"></a>
+### Network
+
+Send custom messages between client and server. The receiver listens with [NetworkEvents](event-reference_us).
+
+| Method | Call from | Description |
+|---|---|---|
+| `Network.sendToServer(channel, data)` | Client | Sends to the server |
+| `Network.sendToPlayer(player, channel, data)` | Server | Sends to one player |
+| `Network.sendToAll(channel, data)` | Server | Sends to every player |
+
+`data` is an NBT object. A plain JS object such as `{ action: 'open_menu' }` is converted for you. See [Event reference](event-reference_us) for a full example.
+
+<a id="wiki-section-26"></a>
+## Game features
+
+<a id="wiki-capabilities"></a>
+<a id="wiki-section-27"></a>
+### Capabilities
+
+Creates item, energy and fluid storage for `CapabilityEvents.register`. Registration happens once at startup, so changes need a game restart. For how to register, see [Event reference](event-reference_us).
+
+| Method | Description |
+|---|---|
+| `Capabilities.itemHandler(size)` | An inventory with `size` slots |
+| `Capabilities.energyStorage(capacity, maxReceive, maxExtract)` | Energy storage: capacity, max input per transfer, max output per transfer |
+| `Capabilities.fluidTank(capacity)` | A single-slot fluid tank; capacity in mB |
+
+Each method also accepts an `onChange` callback as the last argument. It runs after the contents actually change. Use it to mark data for saving or to schedule a sync.
+
+Keep in mind:
+
+- **Give each block, entity or item its own storage object.** Don't create a new empty one on every lookup, and don't share one between everything of the same kind.
+- **Saving and loading is your job.** Registering storage does not write it to the world save.
+- **Fabric uses a different fluid unit.** `fluidTank(1000)` is one bucket on both platforms, but on Fabric the reported capacity and transfer amounts are in droplets (1 mB = 81 droplets).
+
+Fabric also offers methods to look up other mods' storage. The capability name is `'item'`, `'fluid'` or `'energy'`:
+
+| Method | Description |
+|---|---|
+| `Capabilities.getBlock(level, pos, capability, direction)` | Looks up the block at a position |
+| `Capabilities.getEntity(entity, capability, direction)` | Looks up an entity |
+| `Capabilities.getItem(stack, capability, context)` | Looks up an item stack |
+| `Capabilities.blockLookup(capability)` | Gets the block lookup object |
+| `Capabilities.entityLookup(capability)` | Gets the entity lookup object |
+| `Capabilities.itemLookup(capability)` | Gets the item lookup object |
+
+They return `null` when nothing is found. Fabric has no common energy standard, so `'energy'` only works with storage that uses the NekoJS energy interface.
+
+On NeoForge, members not listed here go to NeoForge's own `Capabilities` class, for example `Capabilities.ItemHandler.BLOCK`.
+
+<a id="wiki-section-28"></a>
+### EntitySelectors
+
+In server scripts, build an entity selector in code (like `@e[...]` in a command) and find entities with it. This example finds up to 5 cows near a player when they log in:
+
+```javascript
+// server_scripts/cows.js (event.entity on NeoForge, event.player on Fabric)
+PlayerEvents.loggedIn(event => {
+  const player = event.entity
+  const selector = EntitySelectors.allEntities()
+    .type('minecraft:cow').isAlive().distance(0, 32)
+    .orderNearest().limit(5).create()
+  const cows = EntitySelectors.find(player.level(), selector, player.x, player.y, player.z)
+  console.info('Nearby cows: ' + cows.size())
+})
+```
+
+**Pick a starting point:**
+
+- For players: `allPlayers()`, `nearestPlayer()`, `randomPlayer()` or `builder()`.
+- For other entities you must start from `allEntities()`, `nearestEntity()` or `randomEntity()`. Adding `type('minecraft:cow')` to a player starting point finds nothing.
+
+**Add conditions:**
+
+- Filters: `type`, `typeTag`, `name`, `gamemode`, `team`, `tag`. Pass `true` as the second argument to invert.
+- Other conditions: `level(min, max)` (player XP level), `isAlive()`, `distance(min, max)`, `distanceBelow(max)`, `distanceAbove(min)`, `x/y/z/dx/dy/dz` (an area) and `limit(n)`.
+- Sorting: `orderArbitrary()`, `orderNearest()`, `orderFurthest()`, `orderRandom()`.
+
+**Run the query:** `EntitySelectors.find(level, selector, x, y, z)`. The coordinates are the center for distance checks; always pass them. Without them, `(0, 0, 0)` is used. The query only finds loaded entities and never loads chunks.
+
+> A misspelled entity tag doesn't raise an error. It just matches nothing.
+
+<a id="wiki-section-29"></a>
+### VillagerTrades (NeoForge only)
+
+Add villager trades with the `ServerEvents.tradeDeclaration` event. `VillagerTrades` is only for looking at the current trades.
+
+```javascript
+// server_scripts/trades.js
 ServerEvents.tradeDeclaration(event => {
   event.add('minecraft:farmer/level_1', {
     cost: '1x minecraft:emerald',
@@ -334,441 +519,298 @@ ServerEvents.tradeDeclaration(event => {
 console.info(VillagerTrades.query().describe())
 ```
 
-Farmer ids use `minecraft:<profession>/level_1..5`. Wandering trader ids differ: 26.x uses trade-set keys such as `minecraft:wandering_trader/buying`; 1.21.1 uses `minecraft:wandering_trader/level_1|level_2` (aliases `buying|common`→1, `uncommon|rare`→2). The adapter validates the target during preflight. Queries are read-only and generation-bound; `statusReason` explicitly reports stale/unavailable results.
-
-Ordinary omission is recorded as unrestored; `ServerEvents.tradeReload(event => event.declareObsolete(id))` explicitly retires a set. NeoForge exposes only `VillagerTrades.query/describe`; declare writes through the events. The old `add/pendingCount` methods and staging manager are removed. Fabric has no `VillagerTrades` global and rejects nonempty trade declarations explicitly.
-
-**`DataMap` (NeoForge only)**
-
-Read-only built-in data-map helpers: `DataMap.furnaceFuel(Item.of('minecraft:coal'))` returns burn ticks (`Integer | null`); `DataMap.compostable(Item.of('minecraft:wheat_seeds'))` returns a probability (`Float | null`). Missing values, including empty stacks, return `null`, so use `??` for a fallback. These queries do not modify recipes or registration. On NeoForge, other maps can use `Registry.get(registryId).dataMapValue(mapTypeId, entryId)`, which returns JSON text. This is not a functional Fabric backend workaround. Fabric does not register `DataMap`.
-
-<a id="wiki-section-22"></a>
-### `EntitySelectors`
-
-Build vanilla selectors in SERVER/TEST scripts (NeoForge 26.x/1.21.1). This complete server script queries up to five loaded cows near a player on future logins:
-
-```javascript
-PlayerEvents.loggedIn(event => {
-  const player = event.entity
-  const selector = EntitySelectors.allEntities()
-    .type('minecraft:cow').isAlive().distance(0, 32)
-    .orderNearest().limit(5).create()
-  const cows = EntitySelectors.find(player.level(), selector, player.x, player.y, player.z)
-  console.info('Nearby loaded cows: ' + cows.size())
-})
-```
-
-`builder()` and `create(build => ...)` start with a **player-only** base; filtering that base with `type('minecraft:cow')` does not switch to entities. Use `allEntities()`, `nearestEntity()`, or `randomEntity()` for non-player entities. Other presets are `allPlayers()`, `nearestPlayer()`, and `randomPlayer()`.
-
-Builder filters are `type/typeTag/name/gamemode/team/tag(value[, inverse])` (the optional second boolean negates that filter), `level(min,max)` for player XP levels, `isAlive()`, `distance(min,max)`, `distanceBelow(max)`, and `distanceAbove(min)`. Volume bounds use `x/y/z/dx/dy/dz`; limits use `limit(n)`. Ordering methods are `orderArbitrary()`, `orderNearest()`, `orderFurthest()`, and `orderRandom()`—there is no `inverse()` or `order({...})` method. Pass explicit anchor coordinates to `find`; the shorter overload anchors at `(0,0,0)`, and builder `x/y/z` overrides those coordinates. Unknown entity-type tags currently match nothing rather than throwing; queries do not load chunks.
-
-<a id="wiki-section-23"></a>
-### `PostEffects` (client, NeoForge 26.x/1.21.1 only)
-
-> Fabric currently does not register `PostEffects` or provide the corresponding custom GLSL runtime surface.
-
-Client post-processing chains: `PostEffects.set('minecraft:invert')` / `clear()` / `toggle(id)` / `current()`.
-Use `ClientEvents.postEffects` for generation-owned declarations, not the removed `PostEffects.register/unregister/has` methods. Runtime actions remain on the binding:
-
-```javascript
-ClientEvents.postEffects(event => {
-  event.register('mymod:blur', { blurRadius: 8, blurRounds: 1 })
-})
-ClientEvents.playerTickPost(() => {
-  if (PostEffects.isAvailable('minecraft:invert') && !PostEffects.active) {
-    PostEffects.set('minecraft:invert')
-  }
-})
-```
-
-`hasDefinition(id)`, `installed()` and `activeGeneration()` read committed declarations; they do not prove an effect is drawable. In the current activation path, `isAvailable(id)` requires a resource-pack effect. A declared id without that resource cannot be activated by `set`. NeoForge 26.x can serve declared chains/shader sources through its ShaderManager hook for resource-backed ids (a declaration overriding `minecraft:invert` is verified); arbitrary new inline ids are not a supported activation promise. **1.21.1 is resources-only** and does not hook runtime declared chains. Failed candidate preflight preserves the old generation; binding teardown itself does not clear the runtime picture. Presets depend on active resource packs, so check availability rather than assume all listed names exist.
-
-Note: camera-entity visuals (enderman/spider/creeper) can override or clear script-selected effects.
-
-On 1.21.1, resource reload rebuilds a chain still selected by NekoJS using the new resources and preserves its disabled state. Explicit clear, declaration retirement or a world change cancels stale restoration; a chain taken over by vanilla is neither overwritten nor cleared by declaration retirement. `current()` returns the NekoJS id only while it identifies the actual chain; `isActive()` returns false when no chain exists.
-
-<a id="wiki-section-24"></a>
-### `once` / `clearOnce`
-
-A process-wide run-once guard: `once(key, callback)` runs the callback only on the first use of a key.
-**Markers intentionally survive script reload** for the process lifetime. This is useful for external side effects
-that should be initialized only once (writing files, registering external systems, and other operations not rolled back by reload).
-
-| Call | Description |
-|---|---|
-| `once('myInit', () => ...)` | On the first call, run the callback and pass through its return value; later calls with the same key are no-ops |
-| `clearOnce('myInit') → boolean` | Rearm one key; return whether the marker previously existed |
-| `clearOnce()` | Clear all markers |
-
-```javascript
-once('warmup', () => console.info('Printed only after the first reload'))
-```
-
-<a id="wiki-section-25"></a>
-### `ClientData` / `clientData`
-
-A lightweight server→client key/value data channel (values are JSON types: strings/numbers/booleans/objects/arrays/null;
-one serialized value is limited to 32768 Java-string characters, not 32KB; later pushes with the same key replace earlier ones; the client clears data on world exit/disconnect).
-Server scripts push with `ClientData`, and client scripts read through read-only `clientData`. It supplies data
-for HUD scripts.
-
-```javascript
-// server_scripts/boss.js
-PlayerEvents.loggedIn(event => {
-  ClientData.sync('boss_hp', { name: 'Example Golem', hp: 0.42 })
-  ClientData.syncTo(event.entity, 'personal_quest', { stage: 3 })
-})
-
-// client_scripts/state.js
-console.info(clientData.get('boss_hp'))
-console.info(clientData.has('boss_hp'))
-console.info(clientData.keys())
-console.info(clientData.size())
-```
-
-Keys must be nonblank and at most 256 characters. `get(key)` returns `null` for a missing key and for a stored JSON `null`; use `has(key)` to distinguish them. `keys()` returns a detached `Set<String>` and `size()` counts stored keys. CLIENT reads cannot write this channel. See [Data and state](data-and-state_us) for persistence and synchronization choices.
-
-<a id="wiki-section-26"></a>
-### `Capabilities`
-
-NeoForge 1.21.1/26.x and Fabric 26.x all register this Binding. It creates storage objects for providers returned from `CapabilityEvents.register`. Provider registration commits once in STARTUP; ordinary SERVER/CLIENT reload does not register them again. See the [event reference](event-reference_us#wiki-section-15) for registration methods and native context differences.
-
-| Method | Description |
-|---|---|
-| `Capabilities.itemHandler(size)` | An inventory with N slots; the slot count must not be negative |
-| `Capabilities.itemHandler(size, onChange)` | Add an owner change notification |
-| `Capabilities.energyStorage(capacity, maxReceive, maxExtract)` | Energy capacity and maximum insertion/extraction per operation; arguments must not be negative; limits are not automatically accumulated per tick |
-| `Capabilities.energyStorage(capacity, maxReceive, maxExtract, onChange)` | Add an owner change notification |
-| `Capabilities.fluidTank(capacity)` | A single-tank fluid store; input capacity is in mB and must not be negative |
-| `Capabilities.fluidTank(capacity, onChange)` | Add an owner change notification |
-
-NeoForge 26.x returns native `ItemStacksResourceHandler`, `SimpleEnergyHandler`, and `FluidStacksResourceHandler` storage, participating in outer transaction commits and rollbacks rather than immediately committing through an old-interface bridge. 1.21.1 returns `ItemStackHandler`, `EnergyStorage`, and `FluidTank`, using native `simulate` semantics without the 26.x outer transaction interface. Fabric returns `FabricItemStorage`, `FabricEnergyStorage`, and `FabricFluidStorage`, using Fabric Transfer transactions; item/fluid storage implement `Storage<ItemVariant>` / `Storage<FluidVariant>`, respectively.
-
-On NeoForge 26.x/Fabric, `onChange` runs after the final transaction commit, not on rollback. On 1.21.1, it notifies only after a real change, not simulated transfer. Owners should use this to mark saves dirty or schedule synchronization. An operation affecting multiple item slots may produce multiple notifications; do not treat the number of notifications as the number of transfers.
-
-`fluidTank(1000)` means one bucket of capacity. NeoForge fluid transfers use mB; Fabric uses droplets (81000 per bucket, or 81 per mB). The returned object's `getCapacity()` (readable as `capacity` in scripts) and transfer arguments use the platform's native units. Do not treat Fabric amounts directly as mB.
-
-Storage must be retained by its concrete owner. Do not create a new empty handler for every provider query, or share one mutable handler among all entities, items, or block entities of the same type. Owners are responsible for saving, restoring, and synchronizing state through the node's native NBT or `ValueInput`/`ValueOutput` interfaces; registration does not provide automatic persistence. Reading corrupted saves must fail strictly and retain the current live values, not replace them with empty storage. Fabric factory `readValue` / `writeValue` methods strictly validate saved fields and capacity; loading/saving within an uncommitted transfer transaction is forbidden, while saving in the final-commit `onChange` callback is allowed. Other native owners should likewise save committed state and implement strict reads through their native persistence interfaces. Provider registration alone does not provide these guarantees.
-
-Fabric additionally provides the following standard query entry points, with capability names `'item'` / `'fluid'` / `'energy'`:
-
-| Method | Description |
-|---|---|
-| `Capabilities.blockLookup(capability)` | Standard block Lookup; context is a nullable `Direction` |
-| `Capabilities.entityLookup(capability)` | NekoJS entity Lookup; context is a nullable `Direction` |
-| `Capabilities.itemLookup(capability)` | Standard item Lookup; context is `ContainerItemContext` |
-| `Capabilities.getBlock(level, position, capability, direction)` | Query a position; return `null` if no provider exists or the provider declines |
-| `Capabilities.getEntity(entity, capability, direction)` | Query a specific entity |
-| `Capabilities.getItem(stack, capability, context)` | Query a specific item stack and its container context |
-
-Block/item item/fluid Lookups use Fabric Transfer's standard `ItemStorage`/`FluidStorage` instances; NekoJS provides entity and energy Lookups. Fabric has no standard cross-mod energy API, and `FabricEnergyHandler` is not equivalent to other mods' energy interfaces. Custom Lookup queries still use that Lookup's native `find(...)`.
-
-Every provider can return `null` to decline the query. Provider exceptions, type mismatches, duplicate registration, invalid contexts, and registration after commit remain failures with `NEKO-` codes.
-
-<a id="wiki-section-27"></a>
-### `Utils`
-
-| Method | Description |
-|---|---|
-| `Utils.randomInt(maxExclusive) → int` / `Utils.randomInt(min, maxExclusive) → int` | Random integer |
-| `Utils.randomDouble() → double` / `Utils.randomDouble(max)` / `Utils.randomDouble(min, max)` | Random floating-point number |
-| `Utils.chance(probability) → boolean` | Return true with the specified probability |
-| `Utils.isArray(value)` / `Utils.isList(value)` / `Utils.isMap(value) → boolean` | Type checks |
-
-<a id="wiki-section-28"></a>
-### `Color`
-
-| Method | Description |
-|---|---|
-| `Color.rgb(r, g, b) → int` | Opaque ARGB |
-| `Color.argb(a, r, g, b) → int` | ARGB |
-| `Color.alpha(color)` / `Color.red(color)` / `Color.green(color)` / `Color.blue(color) → int` | Extract channels |
-| `Color.hex(color) → string` | `#RRGGBB` |
-| `Color.hexArgb(color) → string` | `#AARRGGBB` |
-| `Color.parse(value) → int` | Parse `#RRGGBB` or `#AARRGGBB` |
-
-<a id="wiki-section-29"></a>
-### `Time`
-
-Time constants and conversions (tick-based: 1 second = 20 ticks).
-
-| Member | Description |
-|---|---|
-| `Time.SECOND` = 20 / `Time.MINUTE` = 1200 / `Time.HOUR` = 72000 | Tick constants |
-| `Time.seconds(n)` / `Time.minutes(n)` / `Time.hours(n) → int` | Convert to ticks |
-| `Time.parseTime(str) → long` | Parse time strings into ticks: `"5s"→100`, `"10m"→12000`, `"2h"→144000`, `"100t"→100`, `"250ms"→5` |
-| `Time.parseMs(str) → long` | The same units, returning milliseconds |
+- Profession trade IDs are `minecraft:<profession>/level_1` to `level_5`.
+- Wandering trader: 26.x uses `minecraft:wandering_trader/buying` and similar; 1.21.1 uses `minecraft:wandering_trader/level_1` or `level_2` (`buying` and `common` map to 1, `uncommon` and `rare` to 2).
+- If one trade is invalid, none of the batch applies, and the error shows up in `/nekojs error`.
+- To remove a group of trades you no longer want, call `ServerEvents.tradeReload(event => event.declareObsolete(id))`.
 
 <a id="wiki-section-30"></a>
-### `UUID`
+### DataMap (NeoForge only)
 
-| Method | Description |
-|---|---|
-| `UUID.random() → UUID` | Random UUID |
-| `UUID.fromString(value) → UUID` | Parse |
-| `UUID.fromName(value) → UUID` | Name-based UUID (v3) |
+Looks up built-in item data:
+
+- `DataMap.furnaceFuel(Item.of('minecraft:coal'))`: how many ticks it burns as fuel.
+- `DataMap.compostable(Item.of('minecraft:wheat_seeds'))`: the chance it fills a composter.
+
+Both return `null` when there is no data, so you can use `??` for a default. For other data maps, use `Registry.get(registryId).dataMapValue(mapId, id)`.
 
 <a id="wiki-section-31"></a>
-### `StringUtils`
+### PostEffects (NeoForge client only)
+
+Turn screen post-processing effects on and off:
 
 | Method | Description |
 |---|---|
-| `StringUtils.isBlank(s)` / `StringUtils.isEmpty(s) → boolean` | Blank/empty checks |
-| `StringUtils.capitalize(s)` / `StringUtils.decapitalize(s) → string` | Change capitalization |
-| `StringUtils.snakeCase(s)` / `StringUtils.camelCase(s) → string` | Convert naming styles |
+| `PostEffects.set(id)` / `clear()` / `toggle(id)` | Turns an effect on, off, or toggles it |
+| `PostEffects.current()` / `isActive()` | The current effect; whether an effect is running |
+| `PostEffects.isAvailable(id)` | Whether the effect can be turned on now |
+| `PostEffects.presets()` | Vanilla effect IDs such as `minecraft:invert` |
+
+```javascript
+// client_scripts/invert.js
+if (PostEffects.isAvailable('minecraft:invert')) PostEffects.set('minecraft:invert')
+```
+
+Check `isAvailable` before turning an effect on; the effect needs matching files in a resource pack. When the player views through an enderman, spider or creeper, the vanilla effect replaces the one your script set. To declare your own effects and for version differences, see [Client rendering](client-rendering_us).
 
 <a id="wiki-section-32"></a>
-### `ID`
+### NativeEvents (NeoForge startup scripts only)
 
-Returns `NekoId` (NekoJS's resource identifier abstraction).
+Listens to raw NeoForge events directly, for events NekoJS doesn't wrap.
 
 | Method | Description |
 |---|---|
-| `ID.of(value)` / `ID.of(namespace, path) → NekoId` | Create |
-| `ID.namespace(id)` / `ID.path(id)` / `ID.asString(id) → string` | Accessors |
-| `ID.asString(id) → string` | Convert an ID object to a string |
+| `NativeEvents.onEvent(eventType, handler)` | Listens at normal priority |
+| `NativeEvents.onEvent(priority, receiveCancelled, eventType, handler)` | Sets the priority and whether to receive cancelled events |
+| `NativeEvents.onGenericEvent(genericClass, eventType, handler)` | Listens to a generic event |
+
+Write `eventType` as the full class name, with `$` for nested classes. Returning `true` from the handler cancels the event (only for cancellable events). Changing a listener needs a game restart.
 
 <a id="wiki-section-33"></a>
-### `Performance`
+### ScriptEvents (startup scripts)
 
-An explicitly invoked performance measurement tool providing **high-precision** timing (sub-millisecond, based on a monotonic clock). It fills the gap left by the missing script-side `performance.now()`: previously scripts had only millisecond-resolution `Date.now()`, and `process.hrtime()` also used it for simulated high precision.
-
-| Method | Description |
-|---|---|
-| `Performance.now() → number` | Current monotonic-clock timestamp (milliseconds, `double`, sub-millisecond precision) |
-| `Performance.time(fn) → number` | Execute `fn` once and return elapsed milliseconds |
-| `Performance.bench(fn, runs) → object` | Execute `fn` `runs` times and return statistics `{ runs, total, mean, min, max }` (milliseconds; includes one warmup to avoid cold-start bias) |
-| `Performance.start(label?) → $PerfTimer` | Start a labeled timer and return a `$PerfTimer` handle |
-
-<a id="wiki-section-34"></a>
-#### `$PerfTimer` (chainable labeled timer)
-
-An immutable value type: `mark` returns a new instance with one more mark (chainable); `end` freezes the timing reference.
-
-| Method | Description |
-|---|---|
-| `.mark(label) → $PerfTimer` | Record an intermediate mark, returning a new instance (chainable) |
-| `.end() → $PerfTimer` | Freeze the reference at the current time and return a new instance; `elapsedMillis` stops increasing afterward |
-| `.elapsedMillis() → number` | Elapsed milliseconds from start to now (or to end time after `end`) |
-| `.report() → object` | Structured report: `{ label, total, marks: [{ label, at, sincePrev }] }` (`at` = milliseconds since start; `sincePrev` = milliseconds since the previous mark) |
-
-<a id="wiki-section-35"></a>
-#### Usage examples
+`ScriptEvents` is an event group, not a binding, but it often goes with them: declare your own events in a startup script, then fire and listen to them from server or client scripts.
 
 ```javascript
-// Measure one function call
-const ms = Performance.time(() => {
-  // Your code
-});
-console.log(`Elapsed ${ms} ms`);
-
-// Batch benchmark to locate hotspots
-const stat = Performance.bench(() => {
-  // Code under measurement
-}, 1000);
-console.log(stat);
-// { runs: 1000, total: 12.34, mean: 0.0123, min: 0.010, max: 0.015 }
-
-// Labeled timer with several marks
-let t = Performance.start('reload');
-// ... Phase 1 ...
-t = t.mark('parse');
-// ... Phase 2 ...
-t = t.mark('compile');
-// ... Phase 3 ...
-t = t.mark('run');
-t = t.end();
-console.log(t.report());
-// { label: 'reload', total: 45.2, marks: [
-//   { label: 'parse',   at: 10.1, sincePrev: 10.1 },
-//   { label: 'compile', at: 30.5, sincePrev: 20.4 },
-//   { label: 'run',     at: 45.2, sincePrev: 14.7 } ] }
-```
-
-> Note: for fast operations, each run in `bench` may be shorter than the timer resolution; `min`/`max` can still reflect variation. For more stable results, repeat the measured code in a loop, measure the entire loop once, and divide by the iteration count. `Performance` is an explicit measurement tool, not a monitor of script/listener execution. To locate slow listeners, wrap suspected callbacks in `Performance.time(() => ...)`.
-
----
-
-<a id="wiki-section-36"></a>
-## Networking
-
-<a id="wiki-section-37"></a>
-### `Network`
-
-Script networking between clients and the server. The payload is `(channel: string, data: CompoundTag)`. Use it with [NetworkEvents](event-reference_us).
-
-| Method | Side | Description |
-|---|---|---|
-| `Network.sendToServer(channel, data)` | client | Send from client to server |
-| `Network.sendToPlayer(player, channel, data)` | server | Send from server to one player |
-| `Network.sendToAll(channel, data)` | server | Send from server to all players |
-
-For examples, see [Event reference - NetworkEvents](event-reference_us).
-
----
-
-<a id="wiki-section-38"></a>
-## Querying recipe schemas
-
-<a id="wiki-section-39"></a>
-### `RecipeSchema`
-
-A **read-only** recipe schema query API (runtime introspection).
-
-| Method | Description |
-|---|---|
-| `RecipeSchema.namespaces() → string[]` | All known recipe namespaces |
-| `RecipeSchema.types(ns) → string[]` | Type names in a namespace (handler method names + schema types) |
-| `RecipeSchema.describe(ns, type) → object` | Returns `{exists, hasHandler, type, idPrefix, fields[], constructors[], handlerFields?, handlerConstructors?}` |
-
-```javascript
-ServerEvents.started(event => {
-  console.info(RecipeSchema.namespaces())           // ["minecraft", "create", ...]
-  console.info(RecipeSchema.types('minecraft'))     // ["crafting_shaped", "smelting", ...]
-  console.info(RecipeSchema.describe('minecraft', 'smelting'))
-})
-```
-
-> To **define** a new schema, see [Recipe system - Data-driven schemas](recipe-system_us#wiki-section-13).
-
----
-
-<a id="wiki-section-40"></a>
-## Environment / shared state
-
-<a id="wiki-section-41"></a>
-### `global` and `shared`
-
-- `global`: a state container shared within the current `ScriptType`; it survives ordinary reloads of that type and is not automatically shared across SERVER/CLIENT.
-- `shared`: a state container explicitly shared across script types in the same NekoJS runtime. Both exist only in-process; neither provides network synchronization or save persistence.
-
-```javascript
-// server_scripts/config.js
-global.config = { version: 2 }
-shared.serverReady = true
-
-// client_scripts/hud.js
-const serverReady = shared.serverReady
-```
-
-<a id="wiki-section-42"></a>
-### `Platform`
-
-The script-facing `Platform` facade provides current runtime information without exposing the internal platform implementation. Query capabilities with `Platform.capabilities()`; the existence of the platform object does not make unimplemented Fabric APIs available.
-
-| Method | Description |
-|---|---|
-| `Platform.isClient() → boolean` | Check whether this is the client |
-| `Platform.isDevelopment() → boolean` | Check whether this is a development environment |
-| `Platform.getMcVersion() → string` | Minecraft version string |
-| `Platform.getLoaderId() → string` | Loader id (for example `neoforge`, `cleanroom`) |
-| `Platform.getLoaderVersion() → string` | Loader version |
-| `Platform.isLoaded(modId) → boolean` | Check whether a mod is loaded |
-| `Platform.getInfo(modId) → object` | Information about a mod |
-| `Platform.getList() → array` | List of loaded mods |
-| `Platform.capabilities() → List<string>` | Sorted lowercase, hyphenated capability ids, such as `nbt-binary-io`; not native enum values |
-
----
-
-<a id="wiki-section-43"></a>
-## Client-only bindings (CLIENT scripts only)
-
-| Binding | Description |
-|---|---|
-| `Minecraft` | `net.minecraft.client.Minecraft` class/static binding; obtain the instance through `Minecraft.getInstance()` |
-| `Screen` | `net.minecraft.client.gui.screens.Screen` class |
-| `Window` | `Window` class, not the current window object |
-| `KeyMapping` | Key binding class |
-| `InputConstants` | GLFW input constants |
-
----
-
-<a id="wiki-section-44"></a>
-## Special STARTUP-only bindings
-
-<a id="wiki-section-45"></a>
-### `NativeEvents` (STARTUP only, NeoForge)
-
-Bridges native NeoForge events without NekoJS's event group abstraction. Fabric does not currently register this binding; Cleanroom information belongs to a separate legacy branch.
-
-| Method | Description |
-|---|---|
-| `NativeEvents.onEvent(eventType, handler)` | Listen with NORMAL priority |
-| `NativeEvents.onEvent(priority, receiveCancelled, eventType, handler)` | Full form |
-| `NativeEvents.onGenericEvent(genericClass, eventType, handler)` | Generic events |
-
-`eventType` can be a fully qualified class-name string (use `$` for nested classes), a `Class`, or a Graal `Value`. A listener returning `true` is translated to the platform's cancellation operation (only for cancellable events). STARTUP currently cannot be reloaded with `/nekojs reload startup`; restart the game after changing listeners.
-
-<a id="wiki-section-46"></a>
-### `ScriptEvents` (STARTUP only)
-
-**Declare custom server/client event groups** in startup scripts (consistent across loaders; the caller supplies the payload). See [Event extensions - ScriptEvents](event-extensions_us).
-
-```javascript
-// startup_scripts
+// startup_scripts/events.js
 ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'))
 
-// server_scripts
+// server_scripts/boss.js
 MyEvents.bossKilled(payload => console.info(payload.boss))
 MyEvents.bossKilled.post({ boss: 'ender_dragon' })
 ```
 
----
+See [Event extensions](event-extensions_us) for details.
 
-<a id="wiki-section-47"></a>
-## Bindings for TEST scripts only
+<a id="wiki-section-34"></a>
+### RecipeSchema
 
-<a id="wiki-section-48"></a>
-### `Test`
-
-Test assertion API.
+Shows which recipe types exist and which fields each one has. Read-only.
 
 | Method | Description |
 |---|---|
-| `Test.pass(msg)` / `Test.fail(msg)` | Pass / fail (fail throws) |
-| `Test.assertTrue(cond, msg)` / `Test.assertFalse(cond, msg)` | Boolean assertions |
-| `Test.assertEquals(expected, actual, msg)` | Equality assertion |
-| `Test.assertNotNull(value, msg)` | Non-null assertion |
-| `Test.assertThrows(callback, msg)` | Expect an exception |
-| `Test.section(name)` | Start a section |
-| `Test.summary()` | Print a summary |
-| `Test.passed()` / `Test.failed()` | Passed/failed counts |
+| `RecipeSchema.namespaces()` | All recipe namespaces |
+| `RecipeSchema.types(namespace)` | The recipe types in a namespace |
+| `RecipeSchema.describe(namespace, type)` | The fields and forms of one recipe type |
 
----
+```javascript
+ServerEvents.started(event => {
+  console.info(RecipeSchema.types('minecraft'))
+  console.info(RecipeSchema.describe('minecraft', 'smelting'))
+})
+```
+
+To define your own recipe types, see [Recipe system](recipe-system_us).
+
+<a id="wiki-section-35"></a>
+### ClientUI and Assets
+
+- `ClientUI`: build client screens with JSX. NeoForge 26.x only. See [JSX client UI](jsx-client-ui_us).
+- `Assets`: generate block states, models, textures and other resource files from a script. NeoForge 26.x only. See [Registering new content](registering-new-content_us).
+
+<a id="wiki-section-36"></a>
+## Small helpers
+
+<a id="wiki-section-37"></a>
+### Utils
+
+| Method | Description |
+|---|---|
+| `Utils.randomInt(max)` / `Utils.randomInt(min, max)` | A random integer, excluding `max` |
+| `Utils.randomDouble()` / `Utils.randomDouble(max)` / `Utils.randomDouble(min, max)` | A random decimal |
+| `Utils.chance(probability)` | Returns `true` with the given probability, from `0` to `1` |
+| `Utils.isArray(v)` / `Utils.isList(v)` / `Utils.isMap(v)` | Type checks |
+
+<a id="wiki-section-38"></a>
+### Color
+
+Colors are integers in ARGB format.
+
+| Method | Description |
+|---|---|
+| `Color.rgb(r, g, b)` | An opaque color |
+| `Color.argb(a, r, g, b)` | A color with alpha |
+| `Color.alpha/red/green/blue(color)` | Extracts one channel |
+| `Color.hex(color)` / `Color.hexArgb(color)` | Converts to `#RRGGBB` / `#AARRGGBB` |
+| `Color.parse(text)` | Parses `#RRGGBB` or `#AARRGGBB` |
+
+<a id="wiki-section-39"></a>
+### Time
+
+Game time is counted in ticks; 1 second = 20 ticks.
+
+| Member | Description |
+|---|---|
+| `Time.SECOND` / `Time.MINUTE` / `Time.HOUR` | 20 / 1200 / 72000 ticks |
+| `Time.seconds(n)` / `Time.minutes(n)` / `Time.hours(n)` | Converts to ticks |
+| `Time.parseTime(text)` | Converts `'5s'`, `'10m'`, `'2h'`, `'100t'` or `'250ms'` to ticks. A plain number counts as ticks |
+| `Time.parseMs(text)` | Same formats, converted to milliseconds. A plain number counts as milliseconds |
+
+<a id="wiki-section-40"></a>
+### UUID and StringUtils
+
+| Method | Description |
+|---|---|
+| `UUID.random()` | A random UUID |
+| `UUID.fromString(text)` | Parses a UUID string |
+| `UUID.fromName(text)` | A fixed UUID derived from a name |
+| `StringUtils.isBlank(s)` / `StringUtils.isEmpty(s)` | Whether a string is blank / empty |
+| `StringUtils.capitalize(s)` / `StringUtils.decapitalize(s)` | Uppercases / lowercases the first letter |
+| `StringUtils.snakeCase(s)` / `StringUtils.camelCase(s)` | Converts to `snake_case` / `camelCase` |
+
+<a id="wiki-section-41"></a>
+### ID
+
+Create resource IDs and split them apart.
+
+| Method | Description |
+|---|---|
+| `ID.of(text)` / `ID.of(namespace, path)` | Creates an ID. **Without a namespace it defaults to `nekojs`, not `minecraft`** |
+| `ID.resource(text)` | Same, with strict format checks: only lowercase letters, digits and `_ . -` (paths may also use `/`) |
+| `ID.namespace(id)` / `ID.path(id)` | Gets the namespace / path |
+| `ID.asString(id)` | Converts to a `'namespace:path'` string |
+
+<a id="wiki-section-42"></a>
+### KMath and JavaMath
+
+`JavaMath` is Java's `Math` class. `KMath` adds a few handy game math helpers:
+
+| Member | Description |
+|---|---|
+| `KMath.PI` / `KMath.E` | Constants |
+| `KMath.deg(degrees)` | Converts degrees to radians |
+| `KMath.rad(radians)` | Converts radians to degrees |
+| `KMath.blockPos(x, y, z)` | Creates a block position; decimals are floored |
+| `KMath.vec3(x, y, z)` / `KMath.vec3(pos)` | Creates a 3D vector |
+
+Mind the direction of `deg` and `rad`: `KMath.deg(90)` returns the radian value `π/2`.
+
+<a id="wiki-section-43"></a>
+### TextIcons
+
+Common symbol strings you can put into text: `TextIcons.CHECK` (✔), `CROSS` (✘), `STAR` (★), `HEART` (❤), `WARNING` (⚠), `ARROW_RIGHT` (→) and more. How they look depends on the game font.
+
+<a id="wiki-section-44"></a>
+### DamageSource and ParticleOptions
+
+| Method | Description |
+|---|---|
+| `DamageSource.of(level, typeId)` / `DamageSource.of(level, typeId, entity)` | Creates a damage source from a damage type ID, optionally with the entity that caused it |
+| `DamageSource.generic(level)`, `magic`, `explosion`, `fall`, `lava`, `lightning`, `drowning`, `starvation`, `outOfWorld` | Common damage sources |
+| `ParticleOptions.of(id)` | A particle with no options, such as `'minecraft:cloud'` |
+| `ParticleOptions.of(id, options)` | A particle that needs options. Write `options` in the same format as that particle's vanilla data |
+
+<a id="wiki-section-45"></a>
+### Performance
+
+Measures how long code takes, with sub-millisecond precision.
+
+| Method | Description |
+|---|---|
+| `Performance.now()` | The current timestamp in milliseconds, with decimals |
+| `Performance.time(fn)` | Runs `fn` once and returns the time in milliseconds |
+| `Performance.bench(fn, runs)` | Runs `fn` `runs` times and returns `{ runs, total, mean, min, max }` |
+| `Performance.start(label)` | Starts a timer |
+
+On a timer, `mark(label)` records a stage, `end()` stops timing, and `report()` returns the time for each stage. `mark` and `end` return a new timer, so assign the result back:
+
+```javascript
+const ms = Performance.time(() => {
+  // code to measure
+})
+console.info('Took ' + ms + ' ms')
+
+let t = Performance.start('reload')
+// ... stage 1 ...
+t = t.mark('parse')
+// ... stage 2 ...
+t = t.mark('run').end()
+console.info(t.report())
+// { label: 'reload', total: 45.2, marks: [{ label: 'parse', at: 10.1, sincePrev: 10.1 }, ...] }
+```
+
+`Performance` doesn't watch your scripts by itself. To find a slow event callback, wrap it in `Performance.time`.
+
+<a id="wiki-section-46"></a>
+## Environment
+
+<a id="wiki-section-47"></a>
+### Platform
+
+| Method | Description |
+|---|---|
+| `Platform.isClient()` | Whether this is the client |
+| `Platform.isDevelopment()` | Whether this is a development environment |
+| `Platform.getMcVersion()` | The Minecraft version |
+| `Platform.getLoaderId()` / `Platform.getLoaderVersion()` | The loader ID (`neoforge`, `fabric`) and version |
+| `Platform.isLoaded(modId)` | Whether a mod is loaded |
+| `Platform.getInfo(modId)` | Mod info: `id`, `name`, `version` |
+| `Platform.getList()` | The IDs of all loaded mods |
+| `Platform.capabilities()` | Features this platform supports, such as `'nbt-binary-io'` |
+
+```javascript
+if (Platform.isLoaded('jei')) console.info('JEI is installed')
+```
+
+<a id="wiki-section-48"></a>
+## Test scripts
 
 <a id="wiki-section-49"></a>
-## Direct access to vanilla classes
+### Test
 
-The following bindings provide direct access to vanilla Minecraft classes, as constructors or sources of constants:
+Available only in `test_scripts`; run them with `/nekojs test`. Every method returns `Test` itself, so you can chain calls.
 
-| Binding | Class | Purpose |
-|---|---|---|
-| `Blocks` | `net.minecraft.world.level.block.Blocks` | Vanilla block constants |
-| `BlockPos` | `net.minecraft.core.BlockPos` | Block coordinates |
-| `Direction` | `net.minecraft.core.Direction` | Direction enum |
-| `Vec3` | `net.minecraft.world.phys.Vec3` | 3D vector |
-| `AABB` | `net.minecraft.world.phys.AABB` | Axis-aligned bounding box |
-| `CompoundTag` | `net.minecraft.nbt.CompoundTag` | NBT compound tag |
-| `DyeColor` | `net.minecraft.world.item.DyeColor` | Dye color enum |
-| `SoundEvents` | `net.minecraft.sounds.SoundEvents` | Vanilla sound events |
-| `ParticleTypes` | `net.minecraft.core.particles.ParticleTypes` | Vanilla particle types |
-| `EntityType` | `net.minecraft.world.entity.EntityType` | Entity type constants |
-| `MobEffects` | `net.minecraft.world.effect.MobEffects` (or the node-mapped counterpart) | Potion effect constants |
-| `MobEffectInstance` | Mob effect instance class | Potion effect instance |
-| `DamageTypes` | Damage type constants | — |
-| `Identifier` | `net.minecraft.resources.Identifier` (26.x) / `ResourceLocation` (1.21.1) | Resource identifier |
-| `TriState` | Tri-state enum (NeoForge and Fabric; package name varies by Minecraft version) | TRUE/FALSE/DEFAULT |
-| `Component` | `net.minecraft.network.chat.Component` | Text component |
-| `MutableComponent` | `net.minecraft.network.chat.MutableComponent` | Mutable text component (NeoForge and Fabric) |
+| Method | Description |
+|---|---|
+| `Test.assertTrue(cond, msg)` / `Test.assertFalse(cond, msg)` | The condition is true / false |
+| `Test.assertEquals(expected, actual, msg)` | Two values are equal |
+| `Test.assertNotNull(value, msg)` | The value is not `null` |
+| `Test.assertThrows(fn, msg)` | Running `fn` throws an error |
+| `Test.pass(msg)` / `Test.fail(msg)` | Records a pass / failure directly. `fail` throws |
+| `Test.section(name)` | Groups the log output |
+| `Test.summary()` | Prints a summary |
+| `Test.passed()` / `Test.failed()` | The number of passes / failures |
 
-> These classes can also be imported through `java:` module syntax; see [Module system](module-system_us).
+```javascript
+// test_scripts/basic.js
+Test.section('items')
+  .assertEquals('minecraft:stone', Item.of('minecraft:stone').getId(), 'stone ID')
+  .summary()
+```
 
 <a id="wiki-section-50"></a>
+## Vanilla classes
+
+These names map straight to Minecraft classes. Use them for constants, static methods or creating objects:
+
+| Binding | Use |
+|---|---|
+| `Blocks`, `Items` | Vanilla block and item constants |
+| `BlockPos` | Block position |
+| `Direction` | Direction |
+| `Vec3` | 3D vector |
+| `AABB` | Bounding box |
+| `CompoundTag` | Vanilla NBT object |
+| `DyeColor` | Dye colors |
+| `SoundEvents` | Vanilla sounds |
+| `ParticleTypes` | Vanilla particles |
+| `EntityType` | Entity types |
+| `MobEffects` / `MobEffectInstance` | Status effect constants / a status effect instance |
+| `DamageTypes` | Damage type constants |
+| `Identifier` | Resource ID (`ResourceLocation` on 1.21.1) |
+| `Component` / `MutableComponent` | Vanilla text components |
+| `TriState` | A three-state value TRUE / FALSE / DEFAULT (26.x only) |
+| `Minecraft`, `Screen`, `Window`, `KeyMapping`, `InputConstants` | Client classes, client scripts only. Get the game instance with `Minecraft.getInstance()` |
+
+For other Java classes, use a `java:` import; see [Module system](module-system_us). Some APIs are also published through [modules such as `nekojs/api/stable`](module-system_us#wiki-api-modules); members exported only from a module are not globals.
+
+<a id="wiki-section-51"></a>
 ## Next steps
 
-- [Event reference](event-reference_us) - All available events.
-- [Recipe system](recipe-system_us) - Details of `RecipeSchema` and `event.recipes.*`.
-- [Module system](module-system_us) - `java:` imports and multi-file modules.
+- [Event reference](event-reference_us): every available event.
+- [Data and state](data-and-state_us): how to choose where to save and sync data.
+- [Recipe system](recipe-system_us): `event.recipes` and recipe types.
+- [Module system](module-system_us): `java:` imports and multi-file modules.
 
 <!-- wiki-nav -->
 

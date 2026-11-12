@@ -6,227 +6,218 @@
 # FAQ
 
 <a id="wiki-section-2"></a>
-## Installation and startup
+## Installation
 
 <a id="wiki-section-3"></a>
-### Q: The game crashes on startup with missing GraalJS / polyglot errors
+### The game crashes at startup saying GraalJS or polyglot is missing
 
-A: The **Graal** dependency mod is missing or has the wrong version. NekoJS relies on Graal for the GraalJS runtime. Download a version that **exactly matches** your Minecraft / loader version from [Graal on CurseForge](https://www.curseforge.com/minecraft/mc-mods/graal). Graal 25.1.3.7 or later is required.
-
-Earlier versions have another less obvious problem: they do not register the TRegex regex language, so using regular expressions in scripts (`/…/`, `String.replace(/…/)`, `RegExp`) throws `No language for id regex found`. If you see this error, check your Graal version first.
+The **Graal** dependency is missing or the wrong version. Download the file that matches your Minecraft version and loader from [Graal on CurseForge](https://www.curseforge.com/minecraft/mc-mods/graal). It must be at least 25.1.3.7.
 
 <a id="wiki-section-4"></a>
-### Q: The `nekojs/` folder was not generated
+### Any regular expression fails with `No language for id regex found`
 
-A: It is generated in the game root directory after the first launch. If it is missing:
-1. Confirm that NekoJS and Graal loaded correctly (check `mods/` and the startup log).
-2. Check game directory permissions.
-3. Try running `/nekojs probe` manually; it triggers workspace generation.
+Graal is too old. Update to 25.1.3.7 or newer.
 
 <a id="wiki-section-5"></a>
-### Q: Which Minecraft versions are supported?
+### There is no nekojs folder in the game folder
 
-A: See [Platforms and compatibility](platform-compatibility_us). The current repository contains NeoForge 1.21.1, 26.1.2, and 26.2.0, plus Fabric 26.1.2 and 26.2.0 build nodes. The Fabric API is a subset, and Cleanroom belongs to a separate legacy branch.
+1. Check that both NekoJS and Graal are in `mods/` and the startup log shows no errors.
+2. Check that the game folder is writable.
+3. Enter a world and run `/nekojs probe` once; it also creates the folder.
 
 <a id="wiki-section-6"></a>
-## Script execution
+### Which versions are supported?
+
+NeoForge 1.21.1, 26.1.2 and 26.2.0, plus Fabric 26.1.2 and 26.2. The Fabric builds are missing some features; see [Platforms and compatibility](platform-compatibility_us).
 
 <a id="wiki-section-7"></a>
-### Q: My script has no effect
-
-A: Check the following:
-1. Is the file in the correct directory (`startup_scripts` / `server_scripts` / `client_scripts` / `test_scripts`)? See [Script basics](script-basics_us).
-2. Is the extension correct (`.js`/`.mjs`/`.cjs`/`.ts`/`.jsx`/`.tsx`/`.py`)?
-3. Is the script disabled by `// disable:`? See [Script properties](script-properties_us).
-4. Are all mods listed by `// modloaded:` installed?
-5. Did you reload the matching type (`/nekojs reload server` or `/nekojs reload client`) on its owner? Bare `/nekojs reload` defaults to SERVER.
-6. Did you **restart the game** after changing startup registrations (new items/blocks)?
-7. Run `/nekojs error` to check for errors.
+## Scripts have no effect
 
 <a id="wiki-section-8"></a>
-### Q: I get `事件X is not defined` / `XXX is not a function`
+### I wrote a script but nothing happens
 
-A: This is usually caused by the wrong script type or a misspelled event name:
-- Server events (such as `ServerEvents.recipes`) must be written in `server_scripts/`.
-- Client events (such as `ClientEvents.tick`) must be written in `client_scripts/`.
-- Look up event names in [Event reference](event-reference_us) and binding names in [Global bindings](global-bindings_us).
+Check these in order:
+
+1. **Is it in the right folder?** Recipe changes go in `server_scripts`; item registration goes in `startup_scripts`. See [Script basics](script-basics_us).
+2. **Did you reload?** Saving a file does not apply it. Run `/nekojs reload` for server scripts and `/nekojs reload client` for client scripts.
+3. **Is it a startup script?** Startup scripts need a game restart.
+4. **Is there an error?** Run `/nekojs error`.
+5. **Is it disabled?** A script with `// disable:` at the top does not run.
+6. **Is a mod missing?** If the top of the file says `// modloaded: xxx` and xxx is not installed, the script does not run.
 
 <a id="wiki-section-9"></a>
-### Q: Old code still runs / behavior does not change after reload
+### Error: `xxx is not defined` or `xxx is not a function`
 
-A:
-- **Shared state**: `global` is shared only within the current script type and survives ordinary reload. Use `shared` for sharing across script types such as SERVER/CLIENT. Both exist only in the same NekoJS runtime process; neither provides network synchronization.
-- **Event listeners**: a successful full-type reload replaces generation-owned listeners. If candidate loading fails, the previous active generation intentionally remains. Inspect `/nekojs error` and fix the failing source instead of assuming a second reload will clean it up. External Java/world/file effects are not automatically undone.
-- **Recipes**: NeoForge and Fabric 26.x both support `/nekojs reload server` for recipe scripts. NeoForge's JEI/REI recipe viewer may need a client refresh. Cleanroom behavior belongs to a separate legacy branch and is not verified by the current repository. See [Commands](commands_us).
-- **Registries (startup)**: reloading startup registrations does not actually add new content to the game; a restart is required.
+Usually one of these:
+
+- **The script is in the wrong folder.** For example, `ServerEvents.recipes` only works in `server_scripts`, and `ClientEvents` only works in `client_scripts`.
+- **A name is misspelled.** Check the [Event reference](event-reference_us) or [Global bindings](global-bindings_us). Turning on [code completion](#wiki-section-21) prevents most typos.
+- **The feature is not available on this platform.** Some events and bindings exist only on NeoForge; see [Platforms and compatibility](platform-compatibility_us).
 
 <a id="wiki-section-10"></a>
-### Q: Top-level await / dynamic import fails
+### Nothing changed after a reload
 
-A: Confirm that your file is treated as ESM:
-- Using the `.mjs` extension is the most reliable option.
-- Alternatively, confirm `enableEsmAuthoring = true` in `nekojs/config/engine.toml` (enabled by default).
-- Top-level await is only available in ESM modules, not CJS (`.cjs`).
-
-If loading never finishes, inspect the awaited promise and synchronous top-level work. Normal scripts no longer have configurable evaluation timeouts, statement limits or runaway watchdogs; the retired keys do not rescue a pending `await` or infinite loop. See [Configuration](configuration_us) for migration and restart requirements.
+- Run `/nekojs error` first. If a new script has an error, the whole reload is discarded and the game keeps the old scripts. Fix the error and reload.
+- Did you change a startup script? Those need a game restart.
+- Did you change a client script? Use `/nekojs reload client`; plain `/nekojs reload` only reloads server scripts.
 
 <a id="wiki-section-11"></a>
-## TypeScript / JSX
+### The game freezes while loading scripts
+
+A script may contain an infinite loop or `await` a Promise that never completes. NekoJS does not forcibly stop such scripts. Check your recent changes, especially loops and top-level `await`.
 
 <a id="wiki-section-12"></a>
-### Q: My `enum` / `namespace` fails
+### Top-level await or import fails
 
-A: NekoJS's TS frontend **already supports** `enum`/`const enum` (compiled to runtime objects) and `namespace`/`module` (compiled to IIFEs). Please open an issue if a particular syntax is unsupported.
+`import`, `export` and top-level `await` only work in ES modules. Renaming the file to `.mjs` is the safest fix. Files ending in `.cjs` do not support this syntax. See [Module system](module-system_us).
 
 <a id="wiki-section-13"></a>
-### Q: `.ts` files have no type checking
-
-A: The TS frontend only erases types; it does not check them. Type checking is provided by your IDE (VS Code) using `.neko_probe` declarations. Run `/nekojs probe` to refresh declarations. Add `// @ts-check` at the top of a `.js` file to enable checking.
+## Recipes
 
 <a id="wiki-section-14"></a>
-### Q: How do I use the automatic JSX runtime?
+### I added a recipe but JEI does not show it
 
-A: Set `jsxAutomaticRuntime = true` in `nekojs/config/engine.toml`. During workspace generation and probe, NekoJS updates each script directory's `jsconfig.json` to `"jsx": "react-jsx"` and `"jsxImportSource": "nekojs"`, removing classic factory configuration. The `nekojs/jsx-runtime` runtime is built in; you do not need to create `node_modules/nekojs/jsx-runtime.js`. See [TypeScript and JSX](typescript-and-jsx_us) for syntax and configuration; see [JSX client UI](jsx-client-ui_us) to create Minecraft Screens.
-
-Configuration is maintained by NekoJS's workspace/probe flow. If you manually change JSX-related keys, the next generation or probe may restore values consistent with `engine.toml`. Do not keep `jsxFactory` / `jsxFragmentFactory` alongside automatic runtime configuration.
+After `/nekojs reload`, the recipe already works on the server; try it in a crafting table. Recipe viewers such as JEI or REI sometimes do not refresh on their own; re-enter the world.
 
 <a id="wiki-section-15"></a>
-## Python
+### How do I give a recipe an ID?
+
+Add `.id('namespace:name')` after the recipe:
+
+```javascript
+event.shaped('4x minecraft:stick', ['C'], { C: 'minecraft:cobblestone' })
+  .id('mypack:cobble_to_sticks')
+```
+
+Without it, an ID starting with `nekojs:` is generated. To remove a recipe by ID, use `event.removeById(id)`.
 
 <a id="wiki-section-16"></a>
-### Q: My Python script runs, but why is there no NekoJS type completion?
+### A mod's recipe type cannot be called, or completion shows `never`
 
-A: Runtime global bindings and editor type analysis are different. First run `/nekojs probe python`, then add this at the top of every file using NekoJS APIs:
+NekoJS tries to recognize recipe types from other mods automatically, but it cannot recognize all of them:
+
+- **The recipe method is missing from completion**: use `event.custom({...})` and write the recipe's full JSON, following the format of that mod's own data pack.
+- **Completion shows it as `never`**: NekoJS recognized the recipe type but determined it cannot support it safely. Look up the `NEKO-52xx` code in the log for the reason, and use `event.custom(...)` instead.
+
+Do not edit the generated files in `.neko_probe` to "fix" this. The next probe overwrites them, and the call still fails at runtime. See [Recipe system](recipe-system_us).
+
+<a id="wiki-section-17"></a>
+## New items and blocks
+
+<a id="wiki-section-18"></a>
+### My item shows a purple-and-black texture
+
+The texture or model is missing. Put the texture PNG at:
+
+```text
+nekojs/assets/<namespace>/textures/item/<name>.png
+```
+
+For example, the texture for `mymod:cool_gem` goes in `nekojs/assets/mymod/textures/item/cool_gem.png`. Press F3+T after changing resources. See [Registering new content - Resources and localization](registering-new-content_us#wiki-assets).
+
+<a id="wiki-section-19"></a>
+### The item name shows as `item.mymod.xxx`
+
+The language file is missing. Write this to `nekojs/assets/mymod/lang/en_us.json`:
+
+```json
+{ "item.mymod.xxx": "Item display name" }
+```
+
+<a id="wiki-section-20"></a>
+### I changed a startup script and the new item did not appear
+
+Startup scripts run once while the game starts, so you must restart the game. `/nekojs reload startup` is not available.
+
+<a id="wiki-section-21"></a>
+## Code completion
+
+<a id="wiki-section-22"></a>
+### VS Code shows no completion
+
+1. Run `/nekojs probe` in game.
+2. In VS Code, open **the `nekojs/server_scripts` folder** (or another script folder), not the whole game folder.
+3. Check that the game folder has a `.neko_probe/` folder (next to `nekojs/`).
+
+<a id="wiki-section-23"></a>
+### Completion does not match what actually exists
+
+Completion reflects the moment you ran `/nekojs probe`. Run it again after adding mods or registering new content.
+
+<a id="wiki-section-24"></a>
+### Python scripts run, but there is no completion
+
+1. Run `/nekojs probe python` (plain `/nekojs probe` does not generate Python declarations).
+2. Put this at the top of each `.py` file:
 
 ```python
 from nekojs import *
 ```
 
-Named imports such as `from nekojs import Item, ServerEvents` also work. The transpiler strips these imports; they exist only so the editor can resolve Python stubs. `/nekojs probe` without arguments does not generate Python stubs.
+You can also import only what you use, such as `from nekojs import Item, ServerEvents`. This line is only for the editor and is removed automatically when the script runs. There is nothing to install with pip, and do not write `import nekojs` instead.
 
-If completion is still missing, confirm that Pylance is enabled in VS Code, the game or script directory is opened as the workspace, and `extraPaths` points to `.neko_probe/python`. You do not need to install NekoJS with pip, and you should not replace this special import with `import nekojs`. See [Python scripts](python-scripts_us) and [Probe type generation](probe-type-generation_us).
+3. Make sure the Pylance extension is installed in VS Code.
 
-<a id="wiki-section-17"></a>
-## Recipes
-
-<a id="wiki-section-18"></a>
-### Q: I added a recipe, but it does not appear in the recipe viewer (JEI/HEI)
-
-A:
-- **NeoForge**: `/nekojs reload` reruns recipe scripts and rebuilds recipes from the cache (server crafting behavior takes effect immediately); JEI/REI viewers may need a client refresh, such as rejoining the world or refreshing the viewer. See [Commands](commands_us).
-- **Fabric 26.x**: use the full `/nekojs reload server` path, then inspect real crafting results and current client resources. Recipe-viewer integration is not the same as server recipe application.
-- **Cleanroom 1.12.2**: outside the current version graph; this repository does not establish HEI/JEI refresh behavior.
-
-<a id="wiki-section-19"></a>
-### Q: A namespaced recipe call fails, or Probe declares it as `never`
-
-A: Check the installed mods, current recipe definition and diagnostics first. A name such as `create:mixing` does not by itself mean that no schema exists. Distinguish these cases:
-
-- **No dedicated constructor was discovered**: check mod loading, native serializer discovery and the relevant plugin or schema registration. You can use `event.custom(...)` with the mod's actual complete recipe format, but must still validate the serializer and real recipe result; it does not synthesize arbitrary recipe semantics.
-- **Recognized but explicitly unsupported**: Probe emits `recipeName: never`, and the corresponding runtime path rejects calls. Inspect the source resource, JSON path and `NEKO-52xx` reason. Do not hide the problem by changing the declaration to `any` or manually adding overloads.
-
-In older builds, `NEKO-5242 Unsupported inherited schema: minecraft:shaped` / `minecraft:special` identifies a parent integration gap, not an unsupported entire mod. Current NekuJS supplies the supported native contracts for those two parents and corrects the mistaken use of `hidden` metadata as a runtime call ban. Upgrade, restart and regenerate Probe before checking the result. Other unknown parents or unsupported factory semantics can still yield `never`; editing generated files is not a fix. See [Recipe system](recipe-system_us), [Probe type generation](probe-type-generation_us) and [Error reference](error-reference_us).
-
-<a id="wiki-section-20"></a>
-### Q: What is a recipe id, and how do I set it?
-
-A: Every recipe has a unique id (such as `minecraft:stone`). Set it with `.id('yournamespace:name')`; if omitted, it is generated as `nekojs:<prefix>_<hash>`. Use `event.ids()` to list all ids, `event.get(id)` to retrieve by id, and `event.removeById(id)` to remove by id.
-
-<a id="wiki-section-21"></a>
-## Registering content
-
-<a id="wiki-section-22"></a>
-### Q: My registered item has no texture / appears as a purple-and-black block
-
-A: Resource files are missing. Registered items resolve assets through vanilla resource paths by default:
-- Texture: `nekojs/assets/<mod>/textures/item/<name>.png`
-- Model: `nekojs/assets/<mod>/models/item/<name>.json`
-
-Place the corresponding files in `nekojs/assets/`. See [Registering new content: assets and localization](registering-new-content_us#wiki-section-14).
-
-<a id="wiki-section-23"></a>
-### Q: My registered item's name appears as `item.mymod.xxx`
-
-A: The language file is missing. Add this to `nekojs/assets/<mod>/lang/zh_cn.json`:
-```json
-{ "item.mymod.xxx": "中文名" }
-```
-
-<a id="wiki-section-24"></a>
-### Q: My new item did not appear after reload startup
-
-A: Startup scripts execute during game startup. `/nekojs reload startup` currently rejects execution; changing item, block, or other registrations requires a game restart. See [Script basics](script-basics_us).
+See [Python scripts](python-scripts_us).
 
 <a id="wiki-section-25"></a>
-## Modules / npm
+### A .ts file with type errors still runs
+
+That is expected. NekoJS removes type annotations when running TypeScript and does not check types; VS Code reports type errors. Adding `// @ts-check` at the top of a `.js` file also makes VS Code check its types.
 
 <a id="wiki-section-26"></a>
-### Q: `require('xxx')` reports `module not found`
-
-A:
-1. Did you put the package in `nekojs/node_modules/<package-name>/`?
-2. Is the package **pure JS**? Native bindings (compiled C/C++) are **not supported**.
-3. Is the path correct? `require('./xxx')` is relative to the current file; `require('xxx')` resolves through node_modules.
+## npm and modules
 
 <a id="wiki-section-27"></a>
-### Q: I want to use an npm package with native bindings
+### `require('xxx')` fails with module not found
 
-A: They are not supported. Use a pure-JS alternative or import a Java equivalent with `java:`.
+1. The package must be in `nekojs/node_modules/<package name>/`.
+2. Only **pure JavaScript** packages work. Packages with compiled C/C++ code (native modules) cannot be used.
+3. `require('./xxx')` is relative to the current file; only `require('xxx')` looks in `node_modules`.
+
+NekoJS is not a full Node.js. See [Node.js compatibility](nodejs-compatibility_us) for the built-in modules you can use.
 
 <a id="wiki-section-28"></a>
-### Q: Is an import such as `java:java/lang/Integer` correct?
-
-A: Yes. The rule is the `java:` prefix followed by a slash-separated path. See [Module system: importing Java classes](module-system_us).
-
-<a id="wiki-section-29"></a>
-## IDE / type information
-
-<a id="wiki-section-30"></a>
-### Q: VS Code has no completion
-
-A:
-1. Run `/nekojs probe` to generate `.neko_probe/`.
-2. **Open `nekojs/server_scripts/` (or the relevant directory) as the root** in VS Code, rather than the entire game directory. This allows `jsconfig.json` to associate `.neko_probe` correctly.
-3. Confirm that `.neko_probe/` is in the game root directory (alongside `nekojs/`).
-
-<a id="wiki-section-31"></a>
-### Q: Completion types do not match runtime behavior
-
-A: Run `/nekojs probe` to regenerate them. Adding a mod or registering new content can make declarations outdated. This is a known limitation (probe is triggered manually).
-
-<a id="wiki-section-32"></a>
 ## Performance
 
-<a id="wiki-section-33"></a>
-### Q: My tick event is very slow
+<a id="wiki-section-29"></a>
+### Code in a tick event makes the game lag
 
-A: `ServerEvents.tickPre`/`tickPost` runs on server ticks (nominally 20 TPS, not a guaranteed 50ms wall-clock interval). Keep owner-thread callbacks short. Cache or split work across ticks; timers do not move blocking work onto a safe worker thread.
+Events such as `ServerEvents.tickPost` fire 20 times per second, so keep their code light. Cache results, or use a counter to run only every few ticks:
 
-<a id="wiki-section-34"></a>
-### Q: Script loading is slow
+```javascript
+let ticks = 0
+ServerEvents.tickPost(event => {
+  if (++ticks % 20 !== 0) return // run once per second
+  // ...
+})
+```
 
-A: GraalJS startup and script compilation can have warm-up costs; later speed depends on the workload. Check package count and top-level I/O before drawing conclusions, and measure the actual slow path.
+<a id="wiki-section-30"></a>
+### Scripts are slow to load the first time
 
-<a id="wiki-section-35"></a>
+The JavaScript engine needs to warm up the first time it runs; this is normal. If it stays slow, check for very large npm packages or heavy file reads and writes at the top level of a script.
+
+<a id="wiki-section-31"></a>
 ## Security
 
-<a id="wiki-section-36"></a>
-### Q: My script was denied file access
+<a id="wiki-section-32"></a>
+### A script is denied access to a file
 
-A: This is a sandbox restriction: access is limited to the game directory. See [Node.js compatibility: access restrictions](nodejs-compatibility_us#wiki-section-9). To relax this (single-player/trusted environments only), see `nekojs/config/engine.toml`.
+For safety, scripts can only write files inside the `nekojs/` folder by default. See [Node.js compatibility - Access limits](nodejs-compatibility_us#wiki-fs-access).
 
-<a id="wiki-section-37"></a>
-### Q: Is NekoJS safe on multiplayer servers?
+<a id="wiki-section-33"></a>
+### Is NekoJS safe on a multiplayer server?
 
-A: Treat scripts as **semi-trusted code**: only run scripts you trust. The sandbox restricts Java class access and file scope, but a name-based blacklist only blocks class lookup. Object graphs returned by Java methods are controlled by Graal's `HostAccess` (currently `HostAccess.ALL`), so instances of blacklisted classes may still reach scripts through method return values. Client script uploads through the in-game editor have been removed. The read-only error UI and script network events are not remote editing services; trusted maintainers must still deploy server scripts.
+Scripts are powerful and can reach most of the game's internals. **Only run scripts written by people you trust.** The NekoJS sandbox blocks some dangerous operations, but it cannot guarantee that a malicious script is stopped.
 
-AI authoring HTTP and batch queries are read-only, but separately authorized live MCP tools can execute allowlisted commands or reload a selected runtime. Keep default-off controls off unless deliberately needed, never expose or commit the bearer token, and do not retry a timed-out action whose effects are unknown. See [AI authoring security and live controls](ai-support_us).
+If you enable remote control in the [AI-assisted authoring](ai-support_us) features, never commit the access token to a repository or share it.
 
-<a id="wiki-section-38"></a>
-## Still unresolved?
+<a id="wiki-section-34"></a>
+## Still stuck?
 
-- Check [Event reference](event-reference_us), [Global bindings](global-bindings_us), and [Recipe system](recipe-system_us) to confirm API usage.
-- Open an issue (see the link in the repository README).
+- Look up the error code in the [Error and log reference](error-reference_us).
+- Ask on [GitHub Issues](https://github.com/NekoJS-Dev/NekoJS/issues). Include the relevant log from `logs/nekojs/`, the failing script, and your Minecraft, loader and NekoJS versions.
 
 <!-- wiki-nav -->
 

@@ -5,128 +5,193 @@
 <a id="wiki-section-1"></a>
 # 客户端绘制与后处理
 
-脚本放在 `nekojs/client_scripts/`。客户端回调在客户端 owner thread 执行，不在服务端线程执行；独立服务器不能绘制 HUD 或打开 Screen。需要保留式交互界面时使用 [JSX 客户端 UI](jsx-client-ui_cn)，本文的绘制回调则是立即模式。
+本页讲怎么用客户端脚本在屏幕上画东西：HUD 文字、界面上的提示、世界里的线框，以及反色、模糊这类画面后处理效果。
+
+这些脚本都放在 `nekojs/client_scripts/`，改完执行 `/nekojs reload client` 生效。专用服务器上没有画面，这些功能都不可用。
+
+本页的绘制是“每帧重画”的方式，适合显示信息。需要按钮、输入框这类可交互界面时，请看 [JSX 客户端 UI](jsx-client-ui_cn)。
 
 <a id="wiki-section-2"></a>
-## 先选择实际平台入口
+## 各平台能用什么
 
-| 入口 | NeoForge 1.21.1 | NeoForge 26.1.2 | NeoForge 26.2.0 | Fabric 26.x |
+| 功能 | NeoForge 1.21.1 | NeoForge 26.1.2 | NeoForge 26.2.0 | Fabric 26.x |
 |---|---|---|---|---|
-| `ClientEvents.hud` / `screenRender` Painter | 有 | 有 | 有 | 有 |
-| `ClientEvents.hudRender(id, options, callback)` | 有 | 有 | 有 | 未移植 |
-| `ClientEvents.worldRender(id, options, callback)` | 有 | 有 | 有，使用 staged 提交 | 未移植 |
-| `ClientEvents.postEffects` / `PostEffects` | 有，旧版 chain 格式 | 有，现代 chain 格式 | 有，现代 chain 格式 | 未移植 |
-| `ClientUI` 保留式 JSX Screen | 无 | 有 | 有 | 无 |
+| `ClientEvents.hud` / `screenRender`：在 HUD 和界面上绘制 | 可用 | 可用 | 可用 | 可用 |
+| `ClientEvents.hudRender`：按 id 注册 HUD 绘制 | 可用 | 可用 | 可用 | 不可用 |
+| `ClientEvents.worldRender`：在世界里画线框 | 可用 | 可用 | 可用 | 不可用 |
+| `ClientEvents.postEffects` / `PostEffects`：后处理效果 | 可用（旧版格式） | 可用 | 可用 | 不可用 |
+| `KeyBindEvents`：自定义按键 | 不可用 | 可用 | 可用 | 可用 |
 
-上表描述源码支持面，不代表已完成画面验收。26.2 世界线框使用独立 staged buffer 提交，不再依赖已移除的 immediate buffer source。跨加载器复制示例前请阅读 [平台与兼容性](platform-compatibility_cn)。
+跨加载器复制示例之前，先看 [平台与兼容性](platform-compatibility_cn)。
 
 <a id="wiki-section-3"></a>
-## 在 HUD 或当前 Screen 上绘制
+## 在 HUD 和界面上绘制
 
-以下入口适用于当前 NeoForge 和 Fabric 节点：
+新建 `nekojs/client_scripts/painter.js`：
 
 ```javascript
-// nekojs/client_scripts/painter.js
+// 每帧在 HUD 左上角画一个半透明底框和一行字
 ClientEvents.hud(painter => {
   painter.rect(8, 8, 120, 18, 0xB020252B)
-  painter.text("NekoJS HUD", 14, 14, 0xFFFFFFFF)
+  painter.text('NekoJS HUD', 14, 14, 0xFFFFFFFF)
 })
 
+// 打开任意界面（例如背包）时，在左上角显示鼠标坐标
 ClientEvents.screenRender(event => {
   event.painter.text(`Mouse: ${event.mouseX}, ${event.mouseY}`, 8, 8)
 })
 ```
 
-在客户端执行 `/nekojs reload client`，进入游戏观察 HUD 文字，再打开一个 Screen 观察鼠标坐标。删除文件后再次 reload CLIENT 即可移除监听器。`painter`、`event.painter` 和原生图形对象仅供当前回调使用，不应放入 timer、global 或后续帧复用。
+执行 `/nekojs reload client`。回到游戏能看到 HUD 上的文字；打开背包能看到鼠标坐标。想去掉它们，删除这个文件再 reload 一次。
 
-Painter 提供文字、矩形/边框、渐变、物品图标、纹理、变换和裁剪，但不会创建按钮、焦点、输入框、布局或联网容器菜单。绘制回调应保持轻量，避免阻塞 I/O 和修改服务端/世界状态。
+颜色写成 `0xAARRGGBB`，前两位是透明度。`screenRender` 的事件对象还有 `event.screen` 和 `event.screenTitle`，可以用来判断当前是哪个界面。
 
 <a id="wiki-section-4"></a>
-## 按 id 注册 HUD renderer（NeoForge）
+### Painter 能画什么
+
+| 方法 | 作用 |
+|---|---|
+| `text(text, x, y[, color])` / `centerText(...)` | 画文字 / 以 x 为中心画文字 |
+| `rect(x, y, w, h[, color])` / `outline(...)` | 填充矩形 / 矩形边框 |
+| `gradient(x, y, w, h, top, bottom)` / `gradientH(...)` | 上下渐变 / 左右渐变 |
+| `item(stack, x, y)` | 画物品图标 |
+| `texture(id, x, y, w, h, ...)` / `textureFull(...)` | 画纹理的一部分 / 整张纹理 |
+| `push()` / `translate(x, y)` / `pop()` | 保存、平移、恢复坐标 |
+| `scissor(x, y, w, h)` / `resetScissor()` | 只在指定区域内绘制 / 取消限制 |
+| `textWidth(text)` / `wrapText(text, maxWidth)` / `lineHeight()` | 测量文字、自动换行 |
+
+另外可以读取 `painter.width`、`painter.height`（屏幕尺寸）和 `painter.partialTick`。
+
+> `painter` 只在当前这一次回调里有效。不要把它存进 `global` 或定时器里留到之后用。
+
+<a id="wiki-section-5"></a>
+## 按 id 注册 HUD 绘制（NeoForge）
+
+`ClientEvents.hudRender` 给每块 HUD 起一个 id，并能控制它画在原版 HUD 的前面还是后面：
 
 ```javascript
 // nekojs/client_scripts/named-hud.js
-ClientEvents.hudRender("nekojs:status", {
-  layer: "foreground",
+ClientEvents.hudRender('nekojs:status', {
+  layer: 'foreground',
   priority: 10
 }, ctx => {
   ctx.rect(8, 32, 120, 18, 0xB020252B)
-  ctx.text("Named HUD renderer", 12, 36, 0xFFFFFFFF)
+  ctx.text('Named HUD renderer', 12, 36, 0xFFFFFFFF)
 })
 ```
 
-支持 `(id, callback)` 和 `(id, options, callback)`；options 可为 `{ layer, priority }`、层名字符串或优先级数字。默认为 `normal`、priority `0`。这里的对象是显式调度数据，**不是** builder 回调，也不是事件 payload。对象只接受可选的 `layer` 与 `priority`；未知字段、错误层名/类型会拒绝注册。priority 必须是有限的 32 位有符号整数（`-2147483648` 至 `2147483647`），小数或越界值不再静默截断。Probe 从同一运行时 schema 输出字段和层名字面量；TypeScript 的 `number` 不能单独证明整数与范围合法。
+reload 后，这行字出现在上一个示例的下方。
 
-- HUD 的 `background` 在原版 HUD 前绘制；`normal`、`foreground` 依次在其后绘制。
-- 同层内 priority 越小越先绘制；相同优先级不承诺稳定顺序。
-- 回调参数为 `(ctx, graphics)`。优先使用 `ctx` 的版本无关 helper；原生 graphics 在 1.21.1 与 26.x 不同。只读 Bean 属性包括 `ctx.width`、`ctx.height`、`ctx.partialTick`；绘制仍调用 `ctx.text(...)`、`rect(...)`、`texture(...)`、`item(...)` 等方法。
-- 同代重复注册同一 id 会覆盖它。完整 CLIENT reload 成功后整批替换 renderer，未再声明的 id 退役；候选失败时旧 active 批次继续服务。
+- **写法**：`hudRender(id, callback)` 或 `hudRender(id, options, callback)`。`options` 可以是 `{ layer, priority }`，也可以只写一个层名字符串或一个优先级数字。
+- **层**：`background` 画在原版 HUD 之前（会被原版 HUD 盖住），`normal` 和 `foreground` 依次画在原版 HUD 之后。默认 `normal`。
+- **优先级**：同一层里数字小的先画。默认 `0`，必须是整数。
+- **回调参数**：`ctx` 提供和 Painter 类似的方法（`text`、`rect`、`outline`、`gradient`、`texture`、`item`、`scissor` 等），以及 `ctx.width`、`ctx.height`、`ctx.partialTick`。第二个参数是原生的图形对象，各版本不同，尽量不用。
+- **更新和删除**：同一个 id 再注册一次会替换旧的。reload 之后，这次没有再注册的 id 会自动消失。所以删掉脚本再 reload 就能去掉它。
 
-加载后观察 Painter 示例下方的文字。清理时删除文件并执行 `/nekojs reload client`。当前没有已发布的脚本 renderer builder 或按 id 删除 Binding；请通过完整批次 reload 表达期望集合。
+`options` 里写了不认识的字段、不存在的层名，或者优先级不是整数，注册会直接报错。
 
-<a id="wiki-section-5"></a>
-## 世界空间线框（NeoForge）
+<a id="wiki-section-6"></a>
+## 在世界里画线框（NeoForge）
 
 ```javascript
 // nekojs/client_scripts/world-lines.js
-ClientEvents.worldRender("nekojs:origin-box", {
-  layer: "late",
+// 在世界坐标 (0, 64, 0) 处画一个一格大小的绿色方框
+ClientEvents.worldRender('nekojs:origin-box', {
+  layer: 'normal',
   priority: 0
 }, ctx => {
   ctx.box(0, 64, 0, 1, 65, 1, 0xFF00FF00)
 })
 ```
 
-在测试世界执行 `/nekojs reload client`，到世界坐标 `(0, 64, 0)` 观察一格大小的边框；不会放置方块。1.21.1、26.1.2 和 26.2.0 的 NeoForge 入口均提交线框；26.2 一次 `box` 将 12 条边合并为一次独立 staged 提交。每次 helper 调用拥有独立临时 stage，GPU 分配至少按 262,144 字节取整；应控制每帧调用数，不要用 12 次 `line` 代替一次 `box`。源码/几何回归不等于实际 GPU 画面验收。删除文件并 reload CLIENT 即可退役。
+reload 后走到 `(0, 64, 0)` 附近，能看到一个方框。它只是画出来的线，不会放置方块。
 
-世界层 `early` 在半透明方块后，`normal` 在天气后，`late` 在 level render 收尾时执行。默认 `normal`，同层 priority 升序。26.2 原版可能在 `AfterLevel` 前清空主深度缓冲，因此 `late` 不保证保留原始世界遮挡；依赖遮挡的线框应优先使用较早的 `normal`，并在实际节点做视觉验证。`ctx.cameraPos`、`ctx.partialTick` 描述当前帧。`line(...)`、`box(...)` 接收世界坐标并在内部减去相机位置；不会注册实体、修改世界方块或提供任意 GPU pipeline。
+- `ctx.box(minX, minY, minZ, maxX, maxY, maxZ, color)` 画一个方框的 12 条边。
+- `ctx.line(x1, y1, z1, x2, y2, z2, color[, width])` 画一条线。
+- 坐标都是世界坐标，不需要自己减去相机位置。`ctx.cameraPos` 和 `ctx.partialTick` 可以读取当前帧的信息。
+- 层有三个：`early`（半透明方块之后）、`normal`（天气之后，默认）、`late`（整个世界画完之后）。同一层里优先级小的先画。
+- 写法、优先级和 id 的规则与 `hudRender` 相同。
 
-<a id="wiki-section-6"></a>
-## 声明后处理与激活后处理分开（NeoForge）
+画框时用一次 `box`，不要用 12 次 `line`。每次调用都有固定开销，每帧调用次数越少越好。
 
-声明事件只收集 inert 候选计划。例如以下配置**仅适用于 26.x**：
+> 在 26.2 上，`late` 层画的线可能不会被方块挡住。需要线框被墙遮住时，用 `normal` 层。
 
-```javascript
-// nekojs/client_scripts/effect-declarations.js
-ClientEvents.postEffects(event => {
-  event.register("nekojs:sample_blur", build => {
-    build.blurRadius = 4
-    build.blurRounds = 1
-  })
-})
-```
+<a id="wiki-section-7"></a>
+## 后处理效果（NeoForge）
 
-必要参数在前、配置回调在最后。builder 通过公开属性设置，回调结束后封闭，不能保留后继续修改；不需要额外调用 `build()`。兼容旧对象/Map 重载，但它也遵守节点专属字段和严格校验；拼错字段或写入错误类型会失败，不再忽略。26.x 的 `blurRadius` 必须为有限数值 `[0, 64]`，`blurRounds` 必须为整数 `[1, 8]`，不再钳位非法值。
+后处理效果会改变整个画面，比如反色、模糊、苦力怕视角。
 
-用 `/nekojs reload client` 加载。`register` 返回 true 只表示收集声明，不表示 shader 已显示，也不表示整个候选已提交。非法声明导致整批 preflight 失败，被拒候选保留旧声明。可用 `PostEffects.hasDefinition(id)`、`installed()`、`activeGeneration()` 查询已提交集合。删除文件并 reload CLIENT 可退役声明；`event.unregister(id)` 同样只在 commit 时声明退役。旧的 `PostEffects.register/unregister` 运行时入口已不存在。
+<a id="wiki-section-8"></a>
+### 打开和关闭效果
 
-| 版本 | 接受的声明配置 | 资源支持的激活路径 |
-|---|---|---|
-| NeoForge 1.21.1 | `chainJson` 或 `program` | `assets/<namespace>/shaders/post/<path>.json` |
-| NeoForge 26.x | `chainJson`，或 `fragmentShader` 搭配可选 `fragmentShaderId` / `uniformsJson`，或 `blurRadius` 搭配可选 `blurRounds`；另可提供 `fragmentShaders` / `vertexShaders` 表 | `assets/<namespace>/post_effect/<path>.json` |
-
-不同 Minecraft 版本的 chain JSON 格式不同。声明本身不会挂载对应的可激活资源，只有声明而没有资源的 id 会被 `set` 拒绝。需要提供正确的资源包 chain，或选取已有的原版/资源包效果。`PostEffects.hasDefinition(id)` 与 `PostEffects.isAvailable(id)` 不是同一个判断。
-
-另一个 **NeoForge 26.x 运行时**示例通过 G 切换已有资源（1.21.1 没有 `KeyBindEvents`；Fabric 有自己的按键实现，但没有 `PostEffects`）：
+最简单的用法是切换原版自带的效果。下面的例子按 G 键切换反色（`KeyBindEvents` 在 NeoForge 1.21.1 上没有，需要 26.x）：
 
 ```javascript
 // nekojs/client_scripts/effect-key.js
-KeyBindEvents.register("nekojs:toggle_invert", "key.keyboard.g")
-KeyBindEvents.pressed("nekojs:toggle_invert", event => {
-  if (PostEffects.isAvailable("minecraft:invert")) {
-    PostEffects.toggle("minecraft:invert")
+KeyBindEvents.register('nekojs:toggle_invert', 'key.keyboard.g')
+
+KeyBindEvents.pressed('nekojs:toggle_invert', event => {
+  if (PostEffects.isAvailable('minecraft:invert')) {
+    PostEffects.toggle('minecraft:invert')
   }
 })
 ```
 
-CLIENT reload 后在游戏中按 G（或玩家重绑的按键）；效果是否可用由活动资源决定。再次按键清除同一效果。`PostEffects.clear()` 显式清除当前效果；`current()` 返回所选 id，只读 `active` Bean 属性报告应用状态。`set` / `toggle` 返回 true 表示接受操作，不是 GPU 编译或画面完成证明。运行时 `set`、`clear`、`toggle` 是即时客户端动作，不属于 reload 声明事务；避免在候选顶层求值中调用。移除按键脚本前先清除画面效果，删除监听器不会撤销它之前执行过的运行时动作。
+reload 后按 G，画面反色；再按一次恢复。玩家可以在按键设置里改成别的键。
 
-<a id="wiki-section-7"></a>
-## 客户端 Binding 与当前 API 风格
+`PostEffects` 的常用方法：
 
-CLIENT 提供 `Minecraft`、`Screen`、`Window`、`KeyMapping`、`InputConstants` 类 Binding。这是高级原生访问入口，不是跨版本 wrapper 承诺；`ClientUI` 只覆盖上表的 NeoForge 26.x。NeoForge/Fabric 26.x 的 `KeyBindEvents.register(id, key[, category])` 是位置参数注册入口，`pressed`、`released`、`tick` 是事件订阅，可在回调前提供 id selector。`registerMenuScreens`、`registerKeyMappings` 等原生注册事件有特定生命周期，晚期 reload 不会自动重放加载器启动阶段。详见 [事件参考](event-reference_cn)。
+| 方法 | 作用 |
+|---|---|
+| `set(id)` | 打开一个效果 |
+| `toggle(id)` | 没开就打开，已经开着就关闭 |
+| `clear()` | 关闭当前效果 |
+| `current()` | 当前效果的 id，没有时为 `null` |
+| `isAvailable(id)` | 资源包里有没有这个效果，有才能打开 |
+| `presets()` | 原版自带的效果：`minecraft:invert`、`spider`、`creeper`、`blur`、`entity_outline`、`transparency` |
 
-可配置后处理定义现在使用实际存在的 `event.register(id, build => ...)`；兼容对象重载仍保留并校验。renderer options 则是显式调度数据，继续使用 `{ layer, priority }`，不应凭空改成 builder。JSX props/VNode、Painter 数据和 shader JSON 也保留各自数据契约。动作使用已发布的方法；暴露 getter 的只读数据使用 Bean 属性。
+另外 `PostEffects.active` 表示现在是否有效果在生效。
+
+`set` 和 `toggle` 返回 `true` 只表示请求已接受，画面会在之后的帧里变化。
+
+> 打开的效果在删除脚本、reload 之后**不会**自动关闭。移除这类脚本前，先执行一次 `PostEffects.clear()`。也不要在脚本顶层直接调用 `set`，放在按键或其他事件里调用。
+
+<a id="wiki-section-9"></a>
+### 声明自己的效果
+
+想用自己的着色器参数，在 `ClientEvents.postEffects` 里声明。下面的写法**只适用于 26.x**：
+
+```javascript
+// nekojs/client_scripts/effect-declarations.js
+ClientEvents.postEffects(event => {
+  event.register('nekojs:sample_blur', build => {
+    build.blurRadius = 4   // 0 到 64
+    build.blurRounds = 1   // 1 到 8 的整数
+  })
+})
+```
+
+执行 `/nekojs reload client`。可以用 `PostEffects.hasDefinition('nekojs:sample_blur')` 检查声明是否生效，`PostEffects.installed()` 列出所有已声明的 id。删除声明后再 reload，它就会被移除；也可以在事件里调用 `event.unregister(id)`。
+
+不同版本支持的配置不一样：
+
+| 版本 | 可以设置的属性 | 效果资源文件放在 |
+|---|---|---|
+| NeoForge 1.21.1 | `chainJson` 或 `program` | `assets/<命名空间>/shaders/post/<路径>.json` |
+| NeoForge 26.x | `chainJson`；或 `fragmentShader`（可配 `fragmentShaderId`、`uniformsJson`）；或 `blurRadius`（可配 `blurRounds`）；另外可以提供 `fragmentShaders`、`vertexShaders` | `assets/<命名空间>/post_effect/<路径>.json` |
+
+**声明不等于能打开。** 声明只提供着色器内容。要用 `set` 打开一个效果，资源包里还必须有同 id 的效果文件（路径见上表）。只有声明、没有资源文件时，`set` 返回 `false` 并在日志里警告。所以 `hasDefinition`（有没有声明）和 `isAvailable`（能不能打开）是两回事。
+
+两个版本的 chain JSON 格式不同，不能互相照抄。
+
+属性名写错、类型不对或者数值超出范围，这次 reload 会报错，之前的声明继续有效。
+
+<a id="wiki-section-10"></a>
+## 原生客户端类
+
+客户端脚本还可以直接使用 `Minecraft`、`Screen`、`Window`、`KeyMapping`、`InputConstants` 这几个原生类。它们是 Minecraft 本身的类，不同版本的方法可能不一样，换版本时需要自己检查。
+
+`registerKeyMappings`、`registerMenuScreens` 这类注册事件只在游戏启动时触发一次，之后 reload 不会再触发。改了这类脚本需要重启游戏。详见 [事件参考](event-reference_cn)。
 
 <!-- wiki-nav -->
 
