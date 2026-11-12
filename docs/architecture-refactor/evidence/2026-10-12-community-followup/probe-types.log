@@ -1,3 +1,0 @@
-
-> test:probe-types
-> tsc -p common/src/test/probe-ts/tsconfig.json --noEmit && tsc -p common/src/test/probe-ts/tsconfig.community.json --noEmit

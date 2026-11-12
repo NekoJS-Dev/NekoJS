@@ -225,8 +225,8 @@
       "legacy": "script-packs.md",
       "translationStatus": "draft",
       "humanReview": "pending",
-      "sourceDigest": "4f4fb34a737af7adf92bdf5084ad59c48b97ae2ae78ec617b6c77adbf2036b16",
-      "translationDigest": "a3a8af1d69867f271f3b26e7c7915f0bf889e1dc2699da59d01ad8a1e3f281eb"
+      "sourceDigest": "14fc1966551732dbcff275838db25df7580591260e93c8c57ee37c50acfb8d00",
+      "translationDigest": "bde3a197dfeb69f08da0e9e4e18cb6f548f47e7ae2292ed15c4989a3d3287a02"
     },
     {
       "id": "recipe-system",
@@ -399,8 +399,8 @@
       "us": "Build system",
       "legacy": "构建系统.md",
       "legacyDigest": "53a393be55a9dc6d69f026c619dab10b0d0aa9913fee45e35d160c9b571d91c1",
-      "sourceDigest": "26219ebfe4b13ee6285b67765867dd941ee0290a1ee8af08db83efcfcb300f15",
-      "translationDigest": "c410341b97c901abbda7c7226be7571735ebf5e89d0c393ebf99749a74c6f940",
+      "sourceDigest": "5dc35cef17bef9331d34e61d4f0f74431c22484a243c6037edce21757b32aaa0",
+      "translationDigest": "2e11153c768f27bcbf4f29512cfd3bf3734342aef1d95f4e76cce7cef52437a2",
       "translationStatus": "draft",
       "humanReview": "pending"
     }

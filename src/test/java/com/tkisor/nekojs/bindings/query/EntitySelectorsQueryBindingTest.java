@@ -110,9 +110,8 @@ class EntitySelectorsQueryBindingTest {
      *
      * <p>为什么裸 JUnit 只钉「基座」这一半：{@code type(...)} / {@code allPlayers()} 要走
      * {@code BuiltInRegistries.ENTITY_TYPE}，无 FML Loader 的裸 JVM 不可用
-     * （{@code VanillaRegistryProbe} 事实）。「非玩家类型不切作用域」这一半由 runServer
-     * fixture 钉（{@code bench/query/fixtures/test_scripts/entityselectors-query.js} 的
-     * {@code scope: …} 断言组），两者合起来才是完整的 characterization。
+     * （{@code VanillaRegistryProbe} 事实）。「非玩家类型不切作用域」这一半只能在 runServer
+     * 实机环境中验证。
      */
     @Test
     void scopeBitIsOwnedByBasePresetsOnly() throws Exception {

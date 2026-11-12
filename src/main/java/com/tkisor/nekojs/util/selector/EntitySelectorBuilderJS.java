@@ -57,12 +57,10 @@ public class EntitySelectorBuilderJS {
      * {@code create(b => b.type('minecraft:cow'))} 命中 0（只有 {@code allEntities()}
      * 一类实体基座才看得到 cow）。「显式实体类型过滤是否应切作用域」是<b>公开选择器
      * 作用域语义变更</b>，超出工单 25「建立 fixture」的授权（项目纪律：公开语义变更
-     * 先回决策），故本票<b>钉住现状</b>——缺口与 owner 记入
-     * {@code baseline/2026-09-12-query-tools/REPORT.md} §7。
+     * 先回决策），故本票<b>钉住现状</b>。
      *
      * <p>需要实体作用域时的取证路径：用实体基座预设（{@link #allEntities()}、
-     * {@link #nearestEntity()}、{@link #randomEntity()}）再叠加类型/tag 过滤，
-     * 见 {@code bench/query/fixtures/test_scripts/entityselectors-query.js}。
+     * {@link #nearestEntity()}、{@link #randomEntity()}）再叠加类型/tag 过滤。
      */
     public EntitySelectorBuilderJS type(String entityTypeId, boolean inverse) {
         EntityType<?> resolved = entityType(entityTypeId);

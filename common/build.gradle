@@ -1,7 +1,7 @@
 // 引擎模块：MC / Loader 无关的纯 Java 21 主体，五个节点共用。com.tkisor.nekojs.api.* 是对外
 // 契约包（零 MC/Loader import，由 guardLint 按包前缀强制，ADR-0007）；其余包是引擎实现。
 // Graal 不是禁止项：common（含 api.*）允许直接依赖 GraalJS —— "契约层零 Graal import"
-// 已按票 33（2026-09-19）移除，见 docs/adr/0007-module-boundaries.md 的修订注记。
+// 已按票 33（2026-09-19）移除。
 // 不发布 Maven 制品，产物由各节点内嵌进平台 fat jar。
 
 plugins {
@@ -283,15 +283,6 @@ tasks.register('packTool', JavaExec) {
         }
         args = values
     }
-}
-
-tasks.register('generatePackSchema', JavaExec) {
-    group = 'nekojs'
-    description = 'Generates the versioned author schema from the authoritative parser.'
-    dependsOn classes
-    classpath = sourceSets.main.output + configurations.packToolRuntime
-    mainClass = 'com.tkisor.nekojs.core.pack.tool.PackToolMain'
-    args 'schema', rootProject.file('docs/schema/script-pack-v1.schema.json').absolutePath
 }
 
 

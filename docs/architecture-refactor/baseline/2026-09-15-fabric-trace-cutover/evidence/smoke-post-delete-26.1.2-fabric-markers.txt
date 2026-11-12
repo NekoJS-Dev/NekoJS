@@ -1,3 +1,0 @@
-FABRIC-CI-SMOKE: server started
-FABRIC-CI-SMOKE: spawnLightning ok
-FABRIC-CI-SMOKE: startup bindings ok

@@ -12,7 +12,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * kjs-wrapper-parity（spec docs/kjs-wrapper-parity.md）补的全局：注册进 {@code SERVER}
+ * kjs-wrapper-parity 补的全局：注册进 {@code SERVER}
  * 绑定集后必须出现在已知全局集合里——preflight 的"未定义标识符"检查以该集合为事实源，
  * 漏注册会让脚本作者写对名字也报"未定义"。
  */

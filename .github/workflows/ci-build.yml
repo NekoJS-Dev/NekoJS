@@ -89,10 +89,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Guard historical evidence storage
-        # Bulky evidence is restored from external content-addressed storage when needed.
-        run: python3 tools/evidence_archive.py check
-
       - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
@@ -344,7 +340,7 @@ jobs:
           smoke_dir="versions/$node/run-server/nekojs"
           # 共享 raw loader root（票 31 迁入 src/fabric；两 fabric 节点同一 fixture）。
           # 注意：CI 直接 cp 不等于 Gradle test source set 挂载——该 fixture 目前仅
-          # CI 消费，见 docs/architecture-refactor/baseline/2026-09-15-fabric-raw-root/
+          # CI 消费。
           fixture_dir=src/fabric/test/resources/fabric-runtime-smoke
           rm -rf "versions/$node/run-server"
           mkdir -p "$smoke_dir/startup_scripts" "$smoke_dir/server_scripts"

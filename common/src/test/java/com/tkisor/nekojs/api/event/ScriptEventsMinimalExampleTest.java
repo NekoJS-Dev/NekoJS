@@ -27,9 +27,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * 票 14 AC10：Script 事件的最小可运行示例链路——示例脚本与
- * {@code docs/architecture-refactor/baseline/2026-09-15-event-surface/examples/script-events.js}
- * 保持一致，按生产序列（STARTUP 声明 → {@code ScriptEvents.post} → SERVER 监听 + 触发）
+ * 票 14 AC10：Script 事件的最小可运行示例链路——按生产序列（STARTUP 声明 → {@code ScriptEvents.post} → SERVER 监听 + 触发）
  * 经真实 Graal 求值端到端跑通。
  *
  * <p>链路与 {@code ScriptManager.doLoadScripts} 相同：bindEvents（内置组 + 动态组）

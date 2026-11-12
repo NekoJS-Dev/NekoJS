@@ -1,6 +1,0 @@
-# declaration/probe coverage for PostEffects (ticket 28 review P2.1)
-## api-manifest-core.json
-(0 hits)
-
-## probe declaration goldens (src/test/resources/golden, versions/*/src/test/resources)
-(0 hits)

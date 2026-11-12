@@ -1,5 +1,0 @@
-# Smoke test runtime output
-out/
-run/
-*.log
-*.log.gz

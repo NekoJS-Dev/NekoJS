@@ -7,8 +7,6 @@
 
 This page explains how the NekoJS repository builds itself: how several Minecraft versions and loaders share one codebase, and how to compile, check and release. Read it if you contribute to NekoJS or handle releases; plugin authors don't need it.
 
-The design decisions behind it are in [ADR-0007 Module boundaries](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/docs/adr/0007-module-boundaries.md) and [ADR-0008 Guard discipline](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/docs/adr/0008-guard-discipline.md).
-
 <a id="wiki-section-2"></a>
 ## Quick start
 

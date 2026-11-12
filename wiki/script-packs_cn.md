@@ -65,7 +65,7 @@ nekojs/packs/economy/
 | `signature` | 否 | 签名，见下文“把脚本包发给多人游戏的玩家” |
 | `config` | 否 | 自定义配置对象 |
 
-版本化包的清单检查很严格：多写字段、字段类型不对或入口无效，这个包都不会运行。完整格式见仓库中的 `docs/schema/script-pack-v1.schema.json`。
+版本化包的清单检查很严格：多写字段、字段类型不对或入口无效，这个包都不会运行。
 
 <a id="wiki-section-4"></a>
 ### 入口文件

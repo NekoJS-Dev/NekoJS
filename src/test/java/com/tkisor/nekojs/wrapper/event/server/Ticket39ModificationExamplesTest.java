@@ -21,14 +21,12 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * 票 39 AC12：最小可运行示例链路——示例脚本与
- * {@code docs/architecture-refactor/baseline/2026-09-16-item-block-modification/examples/} 下的
- * {@code item-modification.js} / {@code item-setter-property-parity.js} / {@code block-modification.js} /
- * {@code declaration-removal-recovery.js} 保持一致，按生产序列（初始 generation 收集点 +
+ * 票 39 AC12：最小可运行示例链路——物品修改、setter/property parity、方块修改与
+ * 声明移除恢复四个示例脚本按生产序列（初始 generation 收集点 +
  * SERVER 事务 reload）经真实 Graal 管线 + 真实 Adapter 端到端跑通。
  *
  * <p>示例只使用已通过 gate 的能力（`ItemEvents`/`BlockEvents.modification` 的既有事件面与属性目录）；
- * 不触碰 legacy/raw 面，也不依赖未声明 supported 的同步能力（客户端可见性边界见 MIGRATION.md）。
+ * 不触碰 legacy/raw 面，也不依赖未声明 supported 的同步能力。
  *
  * <p>环境门同 {@code Ticket39ModificationScriptE2ETest}（vanilla 注册表；裸 JVM 跳过）。
  */

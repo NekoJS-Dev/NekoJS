@@ -23,14 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 15 AC6：启动期注册的最小可运行示例链路——示例与
- * {@code docs/architecture-refactor/baseline/2026-09-15-registry-startup/examples/registry-startup.js}
- * 保持一致，按生产序列（STARTUP 脚本挂监听 → 首个注册表 pass 前恰好一次收集 → 逐注册表
+ * 票 15 AC6：启动期注册的最小可运行示例链路——按生产序列（STARTUP 脚本挂监听 → 首个注册表 pass 前恰好一次收集 → 逐注册表
  * 抽干到节点 sink）经真实 GraalJS 求值端到端跑通。
  *
  * <p>五种入口全覆盖：default 类型糖方法、命名类型、{@code custom}、裸 Supplier
  * {@code register(registry, id, supplier)}、setter/property parity；连带注册以
- * supplier 通道的 drain 结果观察（真实 Block→BlockItem 需 vanilla/FML，见 REPORT 遗留项）。
+ * supplier 通道的 drain 结果观察（真实 Block→BlockItem 需 vanilla/FML）。
  * 示例只使用已通过 gate 的启动注册能力，不触碰服务器运行期 Dynamic Registry（独立生命周期）。
  */
 class RegistryStartupMinimalExampleTest {

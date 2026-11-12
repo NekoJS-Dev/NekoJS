@@ -1,3 +1,0 @@
-*.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
-# Unified diff context rows contain their required leading space.
-*.patch -text whitespace=-blank-at-eol

@@ -50,8 +50,7 @@ class ManagedSurfaceEndToEndChainTest {
 
     /**
      * 最小可运行示例（AC7）：只使用已通过 gate 且经契约 invoker 验证的 managed 能力
-     * （ID / Text / NBT 值构造与序列化）。与
-     * docs/architecture-refactor/baseline/2026-09-12-managed-surface/minimal-example.js 保持一致。
+     * （ID / Text / NBT 值构造与序列化）。
      *
      * <p>注意：{@code NBT.compound()}（CompoundBuilder host object）虽然被契约与声明承诺，
      * 但当前经契约 invoker 返回 host object 会触发 NATIVE_TYPE_LEAK（既有不一致，见本票

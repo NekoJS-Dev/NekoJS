@@ -65,7 +65,7 @@ Then run `/nekojs reload` and check with `/nekojs packs status server` that the 
 | `signature` | No | The signature; see "Sending script packs to multiplayer players" below |
 | `config` | No | Your own configuration object |
 
-Versioned manifests are checked strictly: an extra field, a wrong field type or an invalid entry stops the pack from running. The full format is `docs/schema/script-pack-v1.schema.json` in the repository.
+Versioned manifests are checked strictly: an extra field, a wrong field type or an invalid entry stops the pack from running.
 
 <a id="wiki-section-4"></a>
 ### Entry files

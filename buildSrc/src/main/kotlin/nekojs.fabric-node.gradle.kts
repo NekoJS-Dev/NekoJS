@@ -98,8 +98,7 @@ dependencies {
 // bridge（deps.fabric_source_node）已按票 32 的五层 trace 与门禁证据删除。
 //
 // 注意票 01 的教训仍然成立：若把 raw root 文件放回 versions/<node>/src/main，
-// stonecutter 的节点本地挂载会与本注入叠成双 copy root，processResources 冷构建确定性失败
-//（docs/architecture-refactor/baseline/2026-09-12-build-baseline-report.md §7.1）。
+// stonecutter 的节点本地挂载会与本注入叠成双 copy root，processResources 冷构建确定性失败。
 val fabricSourceRoot = rootProject.file("src/fabric")
 sourceSets.main {
     java.srcDir(fabricSourceRoot.resolve("java"))

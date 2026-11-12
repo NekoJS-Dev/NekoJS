@@ -1,8 +1,0 @@
-{
-  "sha256": "f9c03b07f9d8bc05cc7acedc51e2b706a2b681592142908e52340e0d8e2d1f67",
-  "entries": 38,
-  "bytes": 239588,
-  "diagnosticOnly": true,
-  "decision": "Do not introduce a cross-generation syntax cache",
-  "formalVerdict": "NOT_PASS"
-}

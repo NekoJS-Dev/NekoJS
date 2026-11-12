@@ -7,8 +7,6 @@
 
 本页讲 NekoJS 仓库自己怎么构建：多个 Minecraft 版本和加载器怎么共用一份代码，怎么编译、检查和发版。给 NekoJS 贡献代码或负责发版时需要读；写插件不需要。
 
-背后的设计决定见 [ADR-0007 模块边界](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/docs/adr/0007-module-boundaries.md) 和 [ADR-0008 守卫纪律](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/docs/adr/0008-guard-discipline.md)。
-
 <a id="wiki-section-2"></a>
 ## 快速上手
 

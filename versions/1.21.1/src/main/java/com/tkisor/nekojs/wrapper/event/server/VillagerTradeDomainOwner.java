@@ -1,7 +1,6 @@
 // 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对（票 22）。26.x 文件带 //? if >=26 守卫，
 // 本节点的注册表形状是经典静态池（VillagerTrades.TRADES / WANDERING_TRADER_TRADES），
 // 与 26.x 的 VILLAGER_TRADE / TRADE_SET 可重载注册表不同，故本节点成对文件独立实现。
-// 可用 tools/extract_evaluated.py 比对两文件在本节点求值后的差异。
 package com.tkisor.nekojs.wrapper.event.server;
 
 import com.tkisor.nekojs.NekoJS;

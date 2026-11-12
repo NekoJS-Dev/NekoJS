@@ -1,9 +1,0 @@
-{
-  "datafixUserEdit": true,
-  "compilerOptions": {
-    "datafixUserCompilerOption": "keep-me",
-    "moduleResolution": "bundler",
-    "target": "esnext"
-  },
-  "include": ["./**/*.js"]
-}

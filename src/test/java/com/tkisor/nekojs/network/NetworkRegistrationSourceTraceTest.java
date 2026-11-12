@@ -39,9 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code nekojs:dynamic_registry_sync}（双向，Dynamic Registry 批事务同步）——经
  * {@code McPlatformCompat.Impl#registerDynamicSyncPayload} 门面（26.x 实现侧真正注册，
  * 1.21.1 默认空实现＝该节点无动态注册面）。同一 channel、同一注册点、纯增量类型；
- * fabric 显式子集（恰 6 调用/5 类型）不变。旧/新 diff 与影响面见
- * {@code docs/architecture-refactor/evidence/2026-09-29-ticket21-wire-prep/}。该增项的
- * 生效以维护者对本 review pack 的裁决为准。
+ * fabric 显式子集（恰 6 调用/5 类型）不变。
  */
 class NetworkRegistrationSourceTraceTest {
 

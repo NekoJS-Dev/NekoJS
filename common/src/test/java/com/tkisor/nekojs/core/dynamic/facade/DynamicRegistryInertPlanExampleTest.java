@@ -23,14 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 票 16 AC12：隔离测试 harness 可运行的候选计划 fixture——演示类型直达入口、
  * setter/property parity、同 key 冲突与 stale 查询。
  *
- * <p>示例脚本与
- * {@code docs/architecture-refactor/baseline/2026-09-16-registry-dynamic-local/examples/dynamic-registry-inert-plan.js}
- * 保持一致，经真实 GraalJS + 事务式 reload 管线跑通。<b>仅本地 inert 计划、尚未公开激活</b>
+ * <p>示例脚本经真实 GraalJS + 事务式 reload 管线跑通。<b>仅本地 inert 计划、尚未公开激活</b>
  * ——不作为生产脚本使用指南；生产示例与迁移材料归票 21（事务/同步 gate 通过后发布）。
- *
- * <p><b>联动口径</b>：{@link #EXAMPLE_SCRIPT} 与示例文件的脚本段<b>人工保持</b>一致
- * （没有自动读取：docs/ 不在测试 classpath 上，也不宜把文档路径焊进测试）。示例文件是
- * 面向人的说明材料（带注释头），本常量只承载可执行脚本段；改动任一侧时同步另一侧。
  */
 class DynamicRegistryInertPlanExampleTest {
 

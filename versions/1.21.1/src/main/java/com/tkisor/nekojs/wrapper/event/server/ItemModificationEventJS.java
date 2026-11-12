@@ -1,5 +1,5 @@
 // 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态
-//（可用 tools/extract_evaluated.py 重新提取核对；Identifier→ResourceLocation 与
+//（Identifier→ResourceLocation 与
 // bindComponents→反射 components 字段是本节点的真实差异）；26.x 侧行为变更时须同步本文件。
 package com.tkisor.nekojs.wrapper.event.server;
 

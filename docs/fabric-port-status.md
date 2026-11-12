@@ -3,14 +3,12 @@
 > 状态：living document——本文档是 fabric 移植的缺口台账与批次记录。
 > 勘察事实源：2026-09-01/02 两轮只读勘察（笔记存 `D:\mcmodDemo\NekoJS\.agent-notes\fabric-port-audit\`，
 > 含事件矩阵 90+ 总线逐条对照、AW↔AT 对照表、TODO(fabric) 63 处全归类）。
-> 关联 spec：[fabric-node-expansion.md](fabric-node-expansion.md)（版本图扩展，其第 0 步上移
-> 会消化本文"节点孪生"小节的债）。
 
 ## 目录包资源桥（2026-10-19，实现待集中验收）
 
 两个 Fabric 节点新增原版仓库构造期接线与单包目录叠加：根目录、GLOBAL、WORLD、已授权 SERVER_CACHE（仅客户端资源）。服务端资源仓库绑定自身存档，预览发现不激活运行时 WORLD；真正的 WORLD 脚本在 SERVER_STARTING 激活，在 SERVER_STOPPED 撤销。客户端本地登录补载 WORLD CLIENT 脚本，退出时移除 WORLD 资源；远端同步完成后在后续 tick 刷新原版资源。
 
-自动物品模型接入现有成功注册凭据、生成器与所有权索引，在资源 `openFull` 时准备文件；Fabric 不再以 NEKO-4037 拒绝配置。清单环境/依赖门禁继续约束目录资源，MOD 副本不重复挂载，远端 data 不进入服务端仓库。原版资源解析与脚本 generation 保持独立结果。当前只是实现状态，不能将本段当作启动、客户端模型或双世界实机通过证据；验收与剩余项见 [实现记录](research/2026-10-19-fabric-directory-resource-bridge.md)。
+自动物品模型接入现有成功注册凭据、生成器与所有权索引，在资源 `openFull` 时准备文件；Fabric 不再以 NEKO-4037 拒绝配置。清单环境/依赖门禁继续约束目录资源，MOD 副本不重复挂载，远端 data 不进入服务端仓库。原版资源解析与脚本 generation 保持独立结果。当前只是实现状态，不能将本段当作启动、客户端模型或双世界实机通过证据。
 
 ## 本轮已补全（2026-09-02）
 
@@ -199,8 +197,7 @@
     （headless 冒烟覆盖不到），defaultRequire=1 保证失败必崩不静默。Explosion radius
     AW public-f 未做（爆破半径修饰留待后续）。
 
-14. **放置/流体/tick 簇 + inventoryChanged**（2026-09-05 第八批；spec 见
-    `fabric-port-block-player-events-spec.md`，评审后按 javap/补丁源码实证修订）：
+14. **放置/流体/tick 簇 + inventoryChanged**（2026-09-05 第八批；按 javap/补丁源码实证修订）：
     - **placed / entityPlaced**：26.x 重大事实——NF 补丁源码里
       `BlockEvent.EntityPlaceEvent` 的唯一 post 点是末影人放置
       （`EndermanLeaveBlockGoal` 内 `EventHooks.onBlockPlace`），BlockItem/
@@ -234,8 +231,7 @@
     BoundTicking 四 mixin 启动期即织入验证）；五节点编译全绿 + guardLint 320 文件
     0 警告。
 
-15. **ServerEvents 资源/生命周期面收口**（2026-09-05 第九批；spec 见
-    `fabric-port-server-events-spec.md`）：
+15. **ServerEvents 资源/生命周期面收口**（2026-09-05 第九批）：
     - **lootTableLoad**：fabric-loot-api-v3 `LootTableEvents.MODIFY`（ResourceKey,
       LootTable.Builder, LootTableSource, registries）→ 中立载荷
       `LootTableLoadEventJS`。**语义差异**：NF 是整表 get/set + 可取消；fabric 是
@@ -323,8 +319,7 @@ BlockStateExtension（hasTag）；TagLoaderMixin（ServerEvents.tags）；后处
 （ShaderManagerMixin/PostEffectManager）；VillagerTrades（fabric 无 RegisterVillagerTradesEvent
 等价，需 mixin 或重写）；JEI；BlockModelGenerator（fabric 无 datagen 事件，需自建管线）。
 
-内置脚本编辑器同步 8 包 + 工作区 GUI 不再列为 Fabric P2 缺口或待移植项；见
-[专项产品决定](architecture-refactor/editor-removal-and-error-ui.md)。外部
+内置脚本编辑器同步 8 包 + 工作区 GUI 不再列为 Fabric P2 缺口或待移植项（已按产品决定移除）。外部
 WorkspaceGenerator/Probe/类型映射保留；Fabric 错误继续使用现有聊天文本降级，不因此承诺新面板。
 
 ## Issue #4 增量
@@ -332,7 +327,7 @@ WorkspaceGenerator/Probe/类型映射保留；Fabric 错误继续使用现有聊
 - `Capabilities` / `CapabilityEvents.register` 已接入真实 Fabric Lookup/Transfer：方块、方块实体、实体、物品标准存储与自定义 typed lookup；item/fluid 使用 Fabric 原生 API，energy 使用 NekoJS typed interface，不宣称其他模组能量 API 兼容。
 - 物品、流体、能量存储参与 Fabric 事务回滚，最终提交才通知 owner；持久化由 owner 调用严格的 `readValue` / `writeValue`，损坏数据拒绝并保留原值。
 - 脚本实体默认挂载可见人形模型与纹理，支持原生实体类、属性基线和原生 Goal 类。注册抽干逐 pass 刷新待处理表，ITEM 在实体/方块产生者之后，刷怪蛋与 BlockItem 不再遗漏。
-- Painter 与 PData 的构建、行为和真实客户端证据见 [Issue #4 验收记录](issue-4-implementation.md)。
+- Painter 与 PData 已在 Fabric 上完成构建，并通过真实客户端验证（Issue #4）。
 
 ## B 类豁免（NeoForge 专属概念，移植=重新设计）
 

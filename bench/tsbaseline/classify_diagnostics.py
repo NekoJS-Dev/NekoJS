@@ -1,7 +1,7 @@
 # Reproducible root-cause family mapping for strict-TS baseline diagnostics (ticket 37).
 #
 # Parses the ten *-tsc.txt files produced by `run.py check` and assigns diagnostics to
-# families from docs/research/2026-10-25-strict-ts-root-causes.md. The rule chain is
+# families from the ticket 37 strict-TS root-cause analysis. The rule chain is
 # ordered and exclusive: the first matching rule wins, so per-family totals always sum
 # to the parsed diagnostic total with no double counting. Linked mechanisms that share
 # a leaf cause are folded into that leaf's family (for example the HolderLookup$Provider
