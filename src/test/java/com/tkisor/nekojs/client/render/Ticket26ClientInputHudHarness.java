@@ -19,9 +19,11 @@ import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.script.ScriptTypeEnv;
+import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import graal.graalvm.polyglot.Engine;
+import graal.graalvm.polyglot.Context;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -58,7 +60,7 @@ public final class Ticket26ClientInputHudHarness implements AutoCloseable {
         groups.put("ClientEvents", ClientEvents.GROUP);
         groups.put("KeyBindEvents", KeyBindEvents.GROUP);
         NekoJSPaths paths = NekoJSPaths.get();
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 5, 100_000L, 0);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
@@ -203,9 +205,28 @@ public final class Ticket26ClientInputHudHarness implements AutoCloseable {
         }
     }
 
-    /** 插件运行时桩：只广告事件组与空绑定面。 */
+    /** Cancels the owning creator Context, never the restricted view returned to guest callbacks. */
+    public static final class Recorder {
+        public void cancelContext() throws ReflectiveOperationException {
+            Context borrowed = Context.getCurrent();
+            java.lang.reflect.Field field = ScriptManager.class.getDeclaredField("CONTEXT_TO_MANAGER");
+            field.setAccessible(true);
+            if (field.get(null) instanceof Map<?, ?> owners) {
+                for (Object key : owners.keySet()) {
+                    if (key instanceof Context owned && owned.equals(borrowed)) {
+                        owned.close(true);
+                        return;
+                    }
+                }
+            }
+            throw new AssertionError("The evaluating candidate must have a creator-owned Context");
+        }
+    }
+
+    /** Exposes event groups and the test-owned explicit cancellation helper. */
     private static final class StubPluginRuntime implements IPluginRuntime {
         private final Map<String, EventGroup> groups;
+        private final Recorder recorder = new Recorder();
 
         StubPluginRuntime(Map<String, EventGroup> groups) {
             this.groups = groups;
@@ -213,7 +234,7 @@ public final class Ticket26ClientInputHudHarness implements AutoCloseable {
 
         @Override
         public Map<String, Binding> bindings(ScriptType type) {
-            return Map.of();
+            return Map.of("Recorder", Binding.of("Recorder", recorder));
         }
 
         @Override

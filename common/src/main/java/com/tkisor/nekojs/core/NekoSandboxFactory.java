@@ -16,7 +16,6 @@ import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.Context;
-import graal.graalvm.polyglot.ResourceLimits;
 import graal.graalvm.polyglot.io.IOAccess;
 import org.slf4j.Logger;
 
@@ -66,8 +65,6 @@ public final class NekoSandboxFactory {
     private final NekoSharedHostAccess hostAccess;
     /** prepared 缓存（W3 显式注入）：与 runtime root 共享同一实例。 */
     private final NekoModulePipelineCache preparationCache;
-    /** 每 Engine 共享的失控看门狗（Graal 限制：同一 Engine 的所有 Context 必须共用同一个语句谓词实例）。 */
-    private volatile RunawayWatchdog sharedWatchdog;
 
     public NekoSandboxFactory(NekoCoreContext core, NekoJSPaths paths, ScriptCompilerRegistry compilers,
                               IPluginRuntime pluginRuntime, NekoModulePipelineCache preparationCache) {
@@ -76,21 +73,6 @@ public final class NekoSandboxFactory {
         this.compilers = compilers;
         this.hostAccess = new NekoSharedHostAccess(pluginRuntime.adapters());
         this.preparationCache = preparationCache;
-    }
-
-    private RunawayWatchdog sharedWatchdog(SandboxConfig config, Logger logger) {
-        RunawayWatchdog w = sharedWatchdog;
-        if (w == null) {
-            synchronized (this) {
-                w = sharedWatchdog;
-                if (w == null) {
-                    w = new RunawayWatchdog(config.scriptRunawayTimeoutSeconds(), config.scriptStatementLimit(),
-                            (msg, args) -> logger.warn(msg, args), System::nanoTime);
-                    sharedWatchdog = w;
-                }
-            }
-        }
-        return w;
     }
 
     public NekoCoreContext core() {
@@ -151,20 +133,6 @@ public final class NekoSandboxFactory {
                     .option("js.v8-compat", "true")
                     .option("js.unhandled-rejections", "throw");
 
-            long statementLimit = config.scriptStatementLimit();
-            int runawayTimeoutSeconds = config.scriptRunawayTimeoutSeconds();
-            if (statementLimit > 0 || runawayTimeoutSeconds > 0) {
-                // 两种保护共用一个 statementLimit 回调（ResourceLimits.Builder 只允许一个）；
-                // 且 Graal 要求同一 Engine 的所有 Context 共用同一个谓词实例，故工厂级懒缓存共享。
-                RunawayWatchdog watchdog = sharedWatchdog(config, logger);
-                contextBuilder.resourceLimits(ResourceLimits.newBuilder()
-                        .statementLimit(watchdog.checkInterval(), watchdog)
-                        .onLimit(event -> logger.warn(
-                                "[NEKO-2001] 脚本环境 {} 触发 ResourceLimits（失控看门狗 {}s / 语句上限 {}），Graal 已关闭该 Context；"
-                                        + "当前求值被中止，下一次取用时会自动重建（/nekojs reload 亦可手动恢复） — script context hit resource limits",
-                                type.name(), runawayTimeoutSeconds, statementLimit))
-                        .build());
-            }
             ctx = contextBuilder.build();
 
             ctx.eval("js", CONSOLE_PATCH_JS);

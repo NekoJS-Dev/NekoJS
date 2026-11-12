@@ -38,6 +38,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -60,13 +62,8 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 07 fixture：同类型串行（AC1）、回调内拒绝（AC2）、close 优先与抢占（AC3）、
- * 非 owner 显式调度入口（AC4/AC7 guest 面）、候选 watchdog 保留 active（AC5）、
- * active watchdog 隔离失败与显式恢复（AC6）、SERVER/CLIENT owner 独立（AC7）。
- *
- * <p>断言全部走公开 seam：generation、requestReload 判决、结构化失败报告
- * （phase/domain）、isActiveFailed/isClosed/isCloseRequested、回调执行次数与
- * recorder 观察，不把私有 Map/锁字段当契约（反射强关仅用于失败兜底清理）。
+ * Verifies owner serialization, callback rejection, close preemption, and cancellation isolation.
+ * Test-owned cancellation exercises failed-generation cleanup and explicit reload recovery.
  */
 class Ticket07RuntimeThreadsTest {
 
@@ -117,9 +114,15 @@ class Ticket07RuntimeThreadsTest {
             return timerHits.get();
         }
 
-        /** Marks guest loop entry and provides a host-call safepoint for interruption. */
-        public void spin() {
+        private long spinStartedNanos;
+
+        /** Provides interruption safepoints with a finite fallback if cancellation fails. */
+        public boolean keepSpinning() {
+            if (spinStartedNanos == 0L) {
+                spinStartedNanos = System.nanoTime();
+            }
             firstSpin.countDown();
+            return System.nanoTime() - spinStartedNanos < TimeUnit.SECONDS.toNanos(10);
         }
 
         /** 捕获求值所在的真实 Context（kill 上报回归测试需要旧 generation Context 引用）。 */
@@ -269,6 +272,43 @@ class Ticket07RuntimeThreadsTest {
             manager.reloadScripts();
         }
 
+        /** Cancels the captured evaluating context from a test-owned, bounded worker. */
+        void cancelDuring(Runnable operation) throws Exception {
+            ExecutorService canceller = Executors.newSingleThreadExecutor(r -> {
+                Thread thread = new Thread(r, "ticket07-context-canceller");
+                thread.setDaemon(true);
+                return thread;
+            });
+            Future<?> cancellation = canceller.submit(() -> {
+                assertTrue(recorder.firstSpin.await(30, TimeUnit.SECONDS),
+                        "evaluation must enter the bounded loop before cancellation");
+                assertNotNull(recorder.capturedContext);
+                Field candidate = ScriptManager.class.getDeclaredField("candidateContext");
+                candidate.setAccessible(true);
+                Context owned = (Context) candidate.get(manager);
+                if (owned == null) {
+                    Field active = ScriptManager.class.getDeclaredField("runtime");
+                    active.setAccessible(true);
+                    Object environment = active.get(manager);
+                    Method context = environment.getClass().getDeclaredMethod("context");
+                    context.setAccessible(true);
+                    owned = (Context) context.invoke(environment);
+                }
+                assertEquals(recorder.capturedContext, owned, "The captured guest view must match its creator Context");
+                owned.close(true);
+                return null;
+            });
+            try {
+                operation.run();
+            } finally {
+                try {
+                    cancellation.get(30, TimeUnit.SECONDS);
+                } finally {
+                    canceller.shutdownNow();
+                }
+            }
+        }
+
         @Override
         public void close() {
             try {
@@ -298,15 +338,9 @@ class Ticket07RuntimeThreadsTest {
                 : NekoJSPaths.get().serverScripts();
     }
 
-    /** 健康默认配置（watchdog 关闭）：并发/串行/回调/close 抢占用例用。 */
+    /** Default configuration for owner, callback, and close-preemption checks. */
     private static SandboxConfig quietConfig() {
         return SandboxConfig.defaultConfig();
-    }
-
-    /** 时间窗口 watchdog 配置：语句上限关闭，只有 2s 墙钟守卫可终止空循环。 */
-    private static SandboxConfig wallClockWatchdogConfig(int timeoutSeconds) {
-        return new SandboxConfig(false, false, false, false, true, true, false, true,
-                60, 0L, timeoutSeconds);
     }
 
     // ---- AC1：并发 reload 单一序列、每轮恰好一个 candidate ----
@@ -438,8 +472,7 @@ class Ticket07RuntimeThreadsTest {
     @Test
     void guestThreadAdvancedCapabilitiesAreNotTightened() throws Exception {
         // allowThreads 开启：guest 线程能力保持既有语义，本票只约束 managed lifecycle 入口
-        SandboxConfig config = new SandboxConfig(true, false, false, false, true, true, false, true,
-                60, 0L, 0);
+        SandboxConfig config = new SandboxConfig(true, false, false, false, true, true, false, true);
         try (Harness h = new Harness(ScriptType.SERVER, config)) {
             // guest JS 侧真实创建 Java 线程：allowCreateThread 的既有能力面（ClassFilter 的
             // THREAD_GROUP 白名单 + Java.type + start/join/currentThread interop）。平台事实：
@@ -525,15 +558,15 @@ class Ticket07RuntimeThreadsTest {
 
     @Test
     void closePreemptsInFlightCandidateViaInterrupt() throws Exception {
-        // watchdog 关闭：候选死循环只能被 close 的 interrupt 打断（确定性取消点）
+        // Only close interrupts the candidate; the bounded loop is a failure fallback.
         try (Harness h = new Harness(ScriptType.SERVER, quietConfig())) {
             h.writeScript("entry.js", "TestRecorder.record('v1');\n");
             h.loadAndRun();
             assertEquals("v1", h.recorder.value());
             long base = h.manager.generationId();
 
-            // reload 候选含空循环脚本：close 的 interrupt 在安全点打断候选求值
-            h.writeScript("loop.js", "while (true) { TestRecorder.spin(); }\n");
+            // Host-call safepoints let close interrupt the in-flight evaluation.
+            h.writeScript("loop.js", "while (TestRecorder.keepSpinning()) {}\n");
             ExecutorService pool = Executors.newSingleThreadExecutor();
             try {
                 Future<NekoReloadException> reload = pool.submit(() -> {
@@ -595,7 +628,7 @@ class Ticket07RuntimeThreadsTest {
 
             // gate 自旋到 close 请求即退出；second 排在其后（字母序），一旦取消点生效
             // 就不应再启动
-            h.writeScript("gate.js", "while (!TestRecorder.closeRequested()) { TestRecorder.spin(); }\nTestRecorder.record('gate-passed');\n");
+            h.writeScript("gate.js", "while (!TestRecorder.closeRequested() && TestRecorder.keepSpinning()) {}\nTestRecorder.record('gate-passed');\n");
             h.writeScript("second.js", "TestRecorder.record('second-ran');\n");
             ExecutorService pool = Executors.newSingleThreadExecutor();
             try {
@@ -647,7 +680,7 @@ class Ticket07RuntimeThreadsTest {
         }
     }
 
-    // ---- AC5：watchdog 终止 candidate，active 事件/timer/state 不变；显式 reload 可再来 ----
+    // ---- Candidate cancellation retains active events, timers, and explicit recovery. ----
 
     @Test
     void ordinaryCandidateFailureRetainsScriptExecutionDomain() throws Exception {
@@ -667,8 +700,8 @@ class Ticket07RuntimeThreadsTest {
     }
 
     @Test
-    void candidateWatchdogRetainsActiveAndRecoversByExplicitReload() throws Exception {
-        try (Harness h = new Harness(ScriptType.SERVER, wallClockWatchdogConfig(2))) {
+    void cancelledCandidateRetainsActiveAndRecoversByExplicitReload() throws Exception {
+        try (Harness h = new Harness(ScriptType.SERVER, quietConfig())) {
             h.writeScript("entry.js", """
                     Ticket07Events.ping(() => TestRecorder.hit());
                     setTimeout(() => TestRecorder.timerHit(), 0);
@@ -688,21 +721,16 @@ class Ticket07RuntimeThreadsTest {
             assertEquals(1, timerHitsBefore);
             long base = h.manager.generationId();
 
-            // 候选含空循环：语句上限关闭（0），只有墙钟守卫（2s）能终止它
-            h.writeScript("loop.js", "while (true) { /* spin forever */ }\n");
-            NekoReloadException failure = assertTimeoutPreemptively(Duration.ofSeconds(60), () -> {
-                try {
-                    h.manager.reloadScripts();
-                    return null;
-                } catch (NekoReloadException e) {
-                    return e;
-                }
-            }, "wall-clock watchdog (2s) must abort the runaway candidate");
-            assertNotNull(failure, "runaway candidate must fail, never commit");
+            h.writeScript("loop.js", """
+                    TestRecorder.rememberContext({});
+                    while (TestRecorder.keepSpinning()) {}
+                    """);
+            NekoReloadException failure = assertThrows(NekoReloadException.class,
+                    () -> h.cancelDuring(h.manager::reloadScripts));
             assertEquals("candidate-killed", failure.report().domain(),
-                    "watchdog termination without close must retain its resource-failure domain");
+                    "external cancellation without close must retain its termination domain");
             assertEquals(ReloadPhase.EXECUTION, failure.report().phase(),
-                    "watchdog kill surfaces at execution: " + failure.report().describe());
+                    "external cancellation surfaces at execution: " + failure.report().describe());
             assertEquals(base, h.manager.generationId(), "failed candidate must retain the active generation");
             assertFalse(h.manager.isActiveFailed(), "candidate kill must not poison the active");
 
@@ -727,20 +755,22 @@ class Ticket07RuntimeThreadsTest {
         }
     }
 
-    // ---- AC6：watchdog 终止 active → 隔离失败、停止分发、显式 reload 唯一恢复 ----
+    // ---- Active cancellation isolates failure until explicit reload. ----
 
     @Test
-    void activeWatchdogEntersIsolatedFailureAndRecoversByExplicitReload() throws Exception {
-        try (Harness h = new Harness(ScriptType.SERVER, wallClockWatchdogConfig(2))) {
-            // entry 先注册监听器；loop 按字母序在后，watchdog 终止的是 active 求值
+    void cancelledActiveEntersIsolatedFailureAndRecoversByExplicitReload() throws Exception {
+        try (Harness h = new Harness(ScriptType.SERVER, quietConfig())) {
+            // Register the listener before externally cancelling active evaluation.
             h.writeScript("entry.js", """
                     Ticket07Events.ping(() => TestRecorder.hit());
                     TestRecorder.record('v1');
                     """);
-            h.writeScript("loop.js", "while (true) { /* spin forever */ }\n");
+            h.writeScript("loop.js", """
+                    TestRecorder.rememberContext({});
+                    while (TestRecorder.keepSpinning()) {}
+                    """);
             h.manager.discoverScripts();
-            assertTimeoutPreemptively(Duration.ofSeconds(60), h.manager::loadScripts,
-                    "wall-clock watchdog (2s) must abort the runaway active entry");
+            h.cancelDuring(h.manager::loadScripts);
             long failedGeneration = h.manager.generationId();
 
             // 隔离失败可观察：标记置位；timer flush / 事件分发都不重建、不清除

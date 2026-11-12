@@ -72,7 +72,7 @@ class Ticket45InspectorOutputTest {
         Files.createDirectories(paths.serverScripts().resolve("src"));
         // Same sandbox shape as the ui-core proof: the jsx-automatic flags decide the
         // automatic JSX runtime the fixture relies on.
-        boot(new SandboxConfig(false, false, false, false, true, true, true, true, 30, 0, 0,
+        boot(new SandboxConfig(false, false, false, false, true, true, true, true,
                 SandboxConfig.PACK_SYNC_OFF, false, false));
     }
 

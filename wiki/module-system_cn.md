@@ -197,11 +197,11 @@ NekoJS 限制脚本访问范围：
 
 - **Java 类**：高危类被过滤（`java.lang.Runtime`、`Process`、`ClassLoader`、`System`、`java.io.*`、`java.nio.*`、反射、net、lwjgl、polyglot 本身，以及 `java.awt`/`javax.swing`/`javax.imageio`、`javax.naming`、`java.rmi`、`java.sql`/`javax.sql`、`java.lang.Module`、`org.graalvm`/`com.oracle.truffle`、NekoJS 内部实现 `com.tkisor.nekojs.core` 等）。具体黑名单见 `common/.../core/fs/ClassFilter.java`。
 - **文件系统**：访问范围限制在游戏目录内，符号链接逃逸检查。
-- **配置**：`nekojs/config/engine.toml`（与 probe.toml 同目录；旧 `config/nekojs-engine.toml` 仅作只读回退）可调 `allowThreads`、`allowReflection`、`allowAsm`、`enableEsmAuthoring` 等。
-- **失控保护**：`scriptRunawayTimeoutSeconds` 与 `scriptStatementLimit` 是可选执行预算，默认均为 0（禁用）。watchdog 终止可能隔离活动代；恢复需要显式完整重载，不能靠单文件重跑，也不会自动重建。宿主调用与任意外部副作用不会回滚。
+- **配置**：`nekojs/config/engine.toml`（与 probe.toml 同目录；旧 `config/nekojs-engine.toml` 仅作只读回退）可调 `allowThreads`、`allowReflection`、`allowAsm`、`enableEsmAuthoring` 等。 当前可写配置保存时会清理这三个已移除的执行预算键；旧路径兜底仍为只读，不改写旧文件。离线 Mixin 声明专用沙盒保留固定的 100,000 条语句限制，与普通执行无关。
+- **执行时长**：普通脚本执行已不设模块求值截止时间、语句预算或失控 watchdog。`scriptEvaluationTimeoutSeconds`、`scriptStatementLimit`、`scriptRunawayTimeoutSeconds` 已移除，没有替代性的默认超时。有限代码不会被这些预算中断；未完成的顶层 await 可以持续等待，访客/宿主无限循环可能阻塞所属线程或进程。生命周期取消、关闭/抢占与外部请求截止时间是独立机制，不保证能中断任意宿主工作。
 - **HostAccess 边界**：按名黑名单只拦截 `Java.type` 一类的**类查找**；Java 方法返回值的对象图由 Graal `HostAccess` 控制（当前 `HostAccess.ALL`），黑名单类的实例仍可能经方法返回值进入脚本。
 
-> 应将脚本及其依赖视为**受信任代码**。类查找过滤、文件系统检查和 watchdog 预算不能使任意 Java 宿主调用变得安全；不要运行不受信任的第三方脚本，多人脚本分发时尤其如此。
+> 应将脚本及其依赖视为**受信任代码**。类查找过滤和文件系统检查不能使任意 Java 宿主调用变得安全，也没有自动 watchdog 来兜住无限循环。不要运行不受信任的第三方脚本，多人脚本分发时尤其如此。
 
 <a id="wiki-section-14"></a>
 ## 顶层 await 与动态 import

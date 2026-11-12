@@ -49,8 +49,7 @@ class Ticket43ProfileGoldenTest {
         constructor.setAccessible(true);
         NekoJSPaths paths = constructor.newInstance(gameDir);
         Files.createDirectories(paths.serverScripts().resolve("src"));
-        SandboxConfig sandbox = new SandboxConfig(false, false, false, false, true, true, true, true,
-                30, 0, 0, SandboxConfig.PACK_SYNC_OFF, false, false);
+        SandboxConfig sandbox = new SandboxConfig(false, false, false, false, true, true, true, true, SandboxConfig.PACK_SYNC_OFF, false, false);
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
         compilers.register(NekoTypeScriptLanguagePlugin.INSTANCE);
         compilers.register(NekoJsxLanguagePlugin.INSTANCE);

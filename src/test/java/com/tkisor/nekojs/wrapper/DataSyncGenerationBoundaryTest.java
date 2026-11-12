@@ -43,6 +43,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -72,6 +75,13 @@ class DataSyncGenerationBoundaryTest {
 
     public static final class Recorder {
         private final Map<String, AtomicInteger> hits = new ConcurrentHashMap<>();
+        private final CountDownLatch cancellationReady = new CountDownLatch(1);
+        private volatile Context cancellationContext;
+
+        public void readyForCancellation() {
+            cancellationContext = Context.getCurrent();
+            cancellationReady.countDown();
+        }
 
         public void hit(Object tag) {
             hits.computeIfAbsent(String.valueOf(tag), ignored -> new AtomicInteger()).incrementAndGet();
@@ -277,7 +287,7 @@ class DataSyncGenerationBoundaryTest {
         final ScriptType scriptType;
 
         ManagerHarness(ScriptType scriptType) {
-            SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 5, 100_000L, 0);
+            SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
             NekoJSPaths paths = NekoJSPaths.get();
             this.scriptType = scriptType;
             StubPluginRuntime pluginRuntime = new StubPluginRuntime(recorder, pdata);
@@ -309,6 +319,40 @@ class DataSyncGenerationBoundaryTest {
 
         void reload() {
             manager.reloadScripts();
+        }
+
+        void reloadWithCancelledCandidate() {
+            AtomicReference<Throwable> failure = new AtomicReference<>();
+            Thread canceller = new Thread(() -> {
+                try {
+                    assertTrue(recorder.cancellationReady.await(5, TimeUnit.SECONDS),
+                            "Candidate must reach its cancellation checkpoint");
+                    Field candidate = ScriptManager.class.getDeclaredField("candidateContext");
+                    candidate.setAccessible(true);
+                    Context owned = (Context) candidate.get(manager);
+                    assertTrue(owned != null, "Candidate owner must retain its creator Context");
+                    assertEquals(recorder.cancellationContext, owned, "Checkpoint must identify the owned candidate");
+                    owned.close(true);
+                } catch (Throwable cancellationError) {
+                    failure.set(cancellationError);
+                }
+            }, "data-sync-candidate-canceller");
+            canceller.setDaemon(true);
+            canceller.start();
+            try {
+                reload();
+            } finally {
+                try {
+                    canceller.join(5_000L);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError("Interrupted while joining the candidate canceller", interrupted);
+                } finally {
+                    if (canceller.isAlive()) canceller.interrupt();
+                }
+                assertFalse(canceller.isAlive(), "Test-owned cancellation must finish before fixture cleanup");
+                assertNull(failure.get(), "External cancellation must not fail");
+            }
         }
 
         void postServerProbe() {
@@ -386,13 +430,7 @@ class DataSyncGenerationBoundaryTest {
         }
     }
 
-    /**
-     * candidate 失败保留：candidate 被语句上限杀死（票 06/07 的事务失败路径，先例
-     * transactionalReloadRejectsCandidateKilledByStatementLimit）→ reload 抛错、active
-     * generation 原样存活——store 不丢、旧监听器继续可读。「失败只回退 NekoJS 自有脚本
-     * 环境，不连带数据域」。（per-script 容错路径——坏脚本被跳过、其余脚本照常提交——
-     * 是另一条既有语义，由 ScriptReloadRegressionTest.unreadableScript 钉住，不在本域。）
-     */
+    /** External candidate cancellation must preserve stores, active generation identity, and live listeners. */
     @Test
     void failedCandidateKeepsStoresAndActiveReads() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(ScriptType.SERVER)) {
@@ -405,13 +443,17 @@ class DataSyncGenerationBoundaryTest {
                     """);
             harness.loadAndRun();
 
-            // candidate 失控烧尽语句预算：事务 reload 按失败处理，active 保留
+            Context active = currentContext(harness.manager);
             harness.writeScript("entry.js", """
                     NetworkEvents.server('probe', function () { Recorder.hit('candidate-l'); });
-                    while (true) { }
+                    Recorder.readyForCancellation();
+                    const end = Date.now() + 2_000;
+                    for (let spin = 0; spin < 1_000_000_000 && Date.now() < end; spin++) {}
                     """);
-            assertThrows(RuntimeException.class, harness::reload,
-                    "candidate killed by the statement limit must fail the reload");
+            assertThrows(RuntimeException.class, harness::reloadWithCancelledCandidate,
+                    "Externally cancelled candidate must fail the reload");
+            assertEquals(active, currentContext(harness.manager),
+                    "Failed candidate must not replace the active generation");
 
             harness.postServerProbe();
             assertEquals(55, harness.recorder.valueOf("active-read"),

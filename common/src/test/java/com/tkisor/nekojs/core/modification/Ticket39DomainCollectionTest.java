@@ -260,7 +260,7 @@ class Ticket39DomainCollectionTest {
     }
 
     private static SandboxConfig testConfig() {
-        return new SandboxConfig(false, false, false, false, true, true, false, true, 5, 100_000L, 0);
+        return new SandboxConfig(false, false, false, false, true, true, false, true);
     }
 
     @BeforeAll

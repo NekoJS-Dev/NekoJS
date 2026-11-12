@@ -798,7 +798,7 @@ class PackSyncClientTest {
 
     private void config(String packSyncMode, boolean allowUnsigned) {
         ClassFilter.INSTANCE.updateConfig(new SandboxConfig(
-            false, false, false, false, true, true, false, true, 30, 0, 0,
+            false, false, false, false, true, true, false, true,
             packSyncMode, allowUnsigned, false));
     }
 

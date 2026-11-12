@@ -59,8 +59,7 @@ final class FacadeTestHarness implements AutoCloseable {
     FacadeTestHarness(ScriptType scriptType,
             java.util.List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> extraCollectors) {
         // 与 ScriptReloadGenerationTest 相同的测试沙盒形状
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 5,
-                100_000L, 0);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
         NekoJSPaths paths = NekoJSPaths.get();
         this.scriptType = scriptType;
         StubRuntime pluginRuntime = new StubRuntime();

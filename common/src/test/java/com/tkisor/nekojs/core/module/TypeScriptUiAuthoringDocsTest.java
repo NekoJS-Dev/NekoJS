@@ -59,8 +59,7 @@ class TypeScriptUiAuthoringDocsTest {
     }
 
     private void boot() throws Exception {
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, true, true,
-                30, 0, 0, SandboxConfig.PACK_SYNC_OFF, false, false);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, true, true, SandboxConfig.PACK_SYNC_OFF, false, false);
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
         compilers.register(NekoTypeScriptLanguagePlugin.INSTANCE);
         compilers.register(NekoJsxLanguagePlugin.INSTANCE);

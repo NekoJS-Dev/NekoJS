@@ -770,22 +770,12 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         Context context = listener.getContext();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
-        // 【票 07 尾注：Context 私有 monitor 旧路线的删除】本类四个分发点曾以
-        // synchronized(context) 序列化「命令线程 reload / Render-tick 分发」的跨线程
-        // 并发（Graal 单线程约束撞 Multi threaded access）。票 07 起：lifecycle 的
-        // 串行改由 ScriptManager 的实例锁 + ScriptLifecycleGate 承担，CLIENT reload
-        // 命令面已转投 Render 线程（ClientReloadExecutor）、网络 receiver 先 hop 再
-        // 分发——分发与 lifecycle 在 owner thread 上同线程串行，分发点不再取
-        // Context monitor（每次回调省一次 monitor 进入，也不再与 reload 竞争同一把锁）。
-        // 残余角落：非 owner 线程绕过显式调度入口直接执行 lifecycle（违反 AC4 契约）
-        // 且恰逢 owner 分发时，Graal 会拒绝后进入者并以回调错误呈现（探针
-        // SyncEvalWatchdogTest.concurrentEvalOnSameContextIsRejectedByGraal）——
-        // 单线程约束本身仍是同一 Context 并发进入的最终兜底。
+        // Owner-thread dispatch is serialized with lifecycle work. Graal itself rejects
+        // direct concurrent access; ScriptContextCancellationTest covers that constraint.
 
         return this.bus.listen(priority, event -> {
             if (skipDeadContext(context)) {
-                // Context 已被 Graal 关闭（语句上限等）：监听器闭包指向死环境，跳过分发，
-                // 避免每次事件都在死 Context 上抛错刷屏；所属 ScriptManager 会在下次取用时重建并清空监听器
+                // A callback captured this terminated generation; do not enter it again.
                 return;
             }
             try {

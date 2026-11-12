@@ -10,6 +10,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 public final class MixinPlatform {
     private MixinPlatform() {}
     public static void install(NekoRuntimeRoot root) {
+        if (!Platform.instance().isMixinJsEnabled()) return;
         root.mixins().install(MixinCarriers.discover(), MixinCarriers.currentProfile(), thread -> {
             if (thread.equals("SERVER_MAIN")) {
                 var server = ServerLifecycleHooks.getCurrentServer();

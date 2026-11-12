@@ -29,6 +29,7 @@ public class NeoForgePlatform implements IPlatform {
 
     @Override
     public void visitLoadedMixinPlans(java.util.function.BiConsumer<String, java.net.URI> visitor) {
+        if (!isMixinJsEnabled()) return;
         for (var mod : ModList.get().getMods()) {
             Path plan = mod.getOwningFile().getFile().findResource("META-INF", "nekojs", "mixin-plan.json");
             if (java.nio.file.Files.isRegularFile(plan)) visitor.accept(mod.getModId(), plan.toUri());
@@ -38,6 +39,11 @@ public class NeoForgePlatform implements IPlatform {
     @Override
     public boolean isClient() {
         return FMLLoader.getDist().isClient();
+    }
+
+    @Override
+    public boolean isMixinJsEnabled() {
+        return com.tkisor.nekojs.mixinjs.MixinBootstrapGuard.enabled();
     }
 
     @Override

@@ -318,7 +318,7 @@ class NekoTypeScriptJsxRuntimeTest {
 
     @Test
     void automaticRuntimeProducesJsxCallsAndFragmentIdentity() throws Exception {
-        boot(new SandboxConfig(false, false, false, false, true, true, true, true, 30, 0, 0,
+        boot(new SandboxConfig(false, false, false, false, true, true, true, true,
                 SandboxConfig.PACK_SYNC_OFF, false, false));
         write("auto.tsx", "const items: string[] = ['a', 'b'];\n"
                 + "export const single = <div id=\"x\">hi</div>;\n"
@@ -564,7 +564,7 @@ class NekoTypeScriptJsxRuntimeTest {
 
     @Test
     void automaticJsxUiRuntimePassesTheFakeHostContract() throws Exception {
-        boot(new SandboxConfig(false, false, false, false, true, true, true, true, 30, 0, 0,
+        boot(new SandboxConfig(false, false, false, false, true, true, true, true,
                 SandboxConfig.PACK_SYNC_OFF, false, false));
         try (var input = getClass().getResourceAsStream("/nekojs/language-ts-examples/tsx/ui-core.tsx")) {
             assertNotNull(input, "the fake-host example must exist");

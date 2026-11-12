@@ -5,17 +5,32 @@
 <a id="wiki-section-1"></a>
 # MixinJS（实验性）
 
-MixinJS 将原生方法注入分成两部分：**随加载器启动的声明产物**，以及**可随脚本 reload 替换的回调**。NeoForge 26.x 自动准备内部游戏库；旧版 NeoForge 和 Fabric 使用带强制依赖的载体模组。它不是在运行中的游戏里动态添加 Mixin。
+MixinJS 将原生方法注入分成两部分：**随加载器启动的声明产物**，以及**可随脚本 reload 替换的回调**。明确启用后，NeoForge 26.x 自动准备内部游戏库；旧版 NeoForge 和 Fabric 使用带强制依赖的载体模组。它不是在运行中的游戏里动态添加 Mixin。
 
 > **当前仅供开发环境实验。** 非空载体在生产环境中会被拒绝。构建/JVM 检查不等于游戏内验收。NeoForge 26.1.2 开发独立服务端的有限冒烟已覆盖加载器发现、Sponge 变换和一个不可取消的 SERVER 回调；这不代表完整原生 ABI、客户端、跨加载器或生产映射已验收。具体证据边界见下文，不构成正式服部署保证。
+
+**运行时开关（默认关闭）**
+
+MixinJS 原生执行默认关闭。若要明确选择开发环境实验，请在保留其他设置的前提下创建或编辑 `<game>/nekojs/config/engine.toml`：
+
+```toml
+[mixinjs]
+enabled = true
+```
+
+运行时配置缺失或格式损坏时，MixinJS 保持关闭。旧路径 `<game>/config/nekojs-engine.toml` 只在规范文件不存在时作为只读兜底；新增修改请使用规范路径。这是同一个引擎设置，不是单独的 MixinJS 配置文件，也没有系统属性旁路。
+
+请在启动前设置，并在每次修改后**完整重启**，关闭时也一样。脚本 reload 和 Probe 都不会切换此值。关闭时，自动启动准备、加载器接纳、已安装原生回调槽及已安装 Hook 的 Probe 重载均不启用；声明编辑、Probe 编辑器声明与离线校验/构建工具仍可使用。已有载体或缓存文件本身不会启用执行。
+
+`enabled = true` 仅表示明确选择实验功能，**不是生产环境解锁**。仅开发环境接纳，以及既有环境配置、本地信任、线程和 ABI 检查仍然有效。
 
 <a id="wiki-section-2"></a>
 ## 1. 区分声明与回调
 
 | 内容 | 放置位置 | 生效方式 |
 |---|---|---|
-| 注入声明：目标类、方法描述符、注入点、Hook ID | `nekojs/mixins/*.mixin.js` 或 `*.mixin.ts` | NeoForge 26.x 自动准备后重启；旧版/Fabric 离线构建、安装并重启 |
-| 运行时回调：读取参数、修改返回值 | `nekojs/server_scripts/` 或 `nekojs/client_scripts/` | 按对应 Script Type 加载或 reload |
+| 注入声明：目标类、方法描述符、注入点、Hook ID | `nekojs/mixins/*.mixin.js` 或 `*.mixin.ts` | 引擎开关启用后，NeoForge 26.x 自动准备后重启；旧版/Fabric 离线构建、安装并重启 |
+| 运行时回调：读取参数、修改返回值 | `nekojs/server_scripts/` 或 `nekojs/client_scripts/` | 启用后启动并经加载器接纳，再按对应 Script Type 加载或 reload |
 
 声明文件不属于普通脚本入口。只有离线声明导入 `nekojs/mixin`；普通脚本使用事件组 `MixinEvents`。
 
@@ -89,7 +104,7 @@ Mixin.target("net.minecraft.world.entity.LivingEntity", target => {
 <a id="wiki-section-5"></a>
 ## 4. 激活并完整重启
 
-NeoForge 26.x 自动准备完成后，按提示重启。下一次启动必须由加载器真正接纳受管游戏库，不能只凭磁盘上有文件就加载回调。不要编辑自有缓存或额外安装手动副本。
+先在启动前设置引擎开关；修改开关必须完整重启。NeoForge 26.x 自动准备完成后，按提示重启。下一次启动必须由加载器真正接纳受管游戏库，不能只凭磁盘上有文件就加载回调。不要编辑自有缓存或额外安装手动副本。
 
 旧版 NeoForge / Fabric：
 
@@ -98,7 +113,7 @@ NeoForge 26.x 自动准备完成后，按提示重启。下一次启动必须由
 3. 完整停止并重启实例，让原生加载器在正常启动阶段发现载体。
 4. 确认载体的 Minecraft、加载器及版本、物理侧别和 ABI 与当前环境匹配。
 
-旧版 NeoForge 和 Fabric 载体都声明 **NekoJS 为加载器强制依赖**；缺少 NekoJS 时加载器会拒绝该载体。所有新生成产物另带早期插件保护：NekoJS 缺失、环境配置不匹配或处于生产环境时，在链接运行时桥之前禁用注入。因此高版本残留的游戏库不会在缺少 NekoJS 时注入。这道保护尚不等于真实加载器验收。
+旧版 NeoForge 和 Fabric 载体都声明 **NekoJS 为加载器强制依赖**；缺少 NekoJS 时加载器会拒绝该载体。所有新生成产物另带早期插件保护：NekoJS 缺失、引擎开关关闭或运行时配置无法读取、环境配置不匹配或处于生产环境时，在链接运行时桥之前禁用注入。因此高版本残留的游戏库不会在缺少 NekoJS 时注入。这道保护尚不等于真实加载器验收。
 
 修改声明后，仍需完成准备/构建并完整重启才能生效。普通 reload 也不能添加、删除或重织原生注入结构。
 
@@ -146,7 +161,7 @@ MixinEvents.inject("demo:max_health", event => {
 
 当前不支持 long/BigInt、构造器、类初始化器、abstract/native/synthetic/bridge 方法、HEAD/RETURN 以外的注入点，以及运行时注入类路径或动态重织。
 
-运行 [Probe](probe-type-generation_cn) 后，TypeScript 仅为**加载器已接纳的计划**生成 Hook ID 字面量重载及 self、参数、返回值类型。待构建声明文件不会提前获得“已安装”类型。没有提示时，先检查载体是否实际加载及配置是否匹配。
+MixinJS 关闭时仍可使用声明编辑器补全及离线工具；`MixinEvents` 辅助对象也可能存在，但没有已安装的回调槽。运行 [Probe](probe-type-generation_cn) 后，仅在执行已启用时，TypeScript 才为**加载器已接纳的计划**生成 Hook ID 字面量重载及 self、参数、返回值类型。待构建声明文件不会提前获得“已安装”类型。没有提示时，先检查引擎开关，再检查载体是否实际加载及环境配置是否匹配。
 
 <a id="wiki-section-9"></a>
 ## 8. 故障排查与验收边界

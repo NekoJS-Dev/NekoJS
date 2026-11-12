@@ -66,7 +66,7 @@ public record ScriptDiagnosticRecord(
         String message,
         String cause
 ) {
-    /** Owner name for watchdog/resource-limit terminations. */
+    /** Stable diagnostic owner label for cancelled or resource-exhausted evaluations. */
     public static final String OWNER_WATCHDOG = "Runaway Watchdog";
     /** Owner name for transactional reload failures and candidate cancellation. */
     public static final String OWNER_RUNTIME_RELOAD = "Runtime Reload";

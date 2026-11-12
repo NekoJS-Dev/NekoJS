@@ -269,7 +269,7 @@ class Ticket10GlobalStateTest {
 
     private static SandboxConfig testConfig() {
         // 5s 墙钟 + 100k 语句上限：失败注入靠语句上限烧尽（票 06 实证档位）
-        return new SandboxConfig(false, false, false, false, true, true, false, true, 5, 100_000L, 0);
+        return new SandboxConfig(false, false, false, false, true, true, false, true);
     }
 
     private static ScriptPropertyRegistry newPropertyRegistry() {
@@ -353,11 +353,11 @@ class Ticket10GlobalStateTest {
                     global.clear()
                     global.c = 3
                     Marker.hit('cand-sees-clear:' + (typeof global.a) + ':' + (typeof global.keep))
-                    while (true) { }
+                    throw Error('candidate rejected after state mutations')
                     """);
             NekoReloadException failure = assertThrows(NekoReloadException.class,
                     () -> harness.reload(ScriptType.SERVER),
-                    "candidate killed by the statement limit must fail the reload");
+                    "a candidate rejected after state mutations must fail the reload");
             assertEquals(ReloadPhase.EXECUTION, failure.report().phase(), failure.report().describe());
 
             // 失败丢弃：set / delete / clear 全部不污染旧 active
@@ -694,10 +694,10 @@ class Ticket10GlobalStateTest {
             harness.load(ScriptType.SERVER);
             assertEquals("nested-mutated:99", harness.marker.first("nested-mutated").orElseThrow());
 
-            // 失败候选（只写顶层 key + 烧尽语句上限）：嵌套修改不被回滚
+            // A failed candidate discards top-level writes without rolling back nested state.
             harness.writeScript(ScriptType.SERVER, "one.js", """
                     global.doomed = 'cand'
-                    while (true) { }
+                    throw Error('candidate rejected after state mutations')
                     """);
             Files.delete(ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve("two.js"));
             assertThrows(NekoReloadException.class, () -> harness.reload(ScriptType.SERVER));

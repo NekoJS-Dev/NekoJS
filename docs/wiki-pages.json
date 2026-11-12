@@ -202,8 +202,8 @@
       "legacy": "en_us/Error-Reference.md",
       "sourceLocale": "us",
       "legacyDigest": "d655593a3910daa974f0cc8410ad608cb0fb8c8850922ee4fc61314b1ee57e3c",
-      "sourceDigest": "bbfe3f762e8287c791cd2f1140a9e532c4fb00ed06b16d19c872c52a2b4e4d5c",
-      "translationDigest": "ddabca0016d25b46d77dc0e93971820d308be1e2246fd19d494866c7c278157d",
+      "sourceDigest": "a811de10d20b0b7d6a94b5cbdc8c4436fadec34f596128fa19c0616fe2e96483",
+      "translationDigest": "fa497cca7f358d8d8f33cb6d4fc50b1c6de30a4f41d33c5e98fb6f2f53b584f5",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -249,8 +249,8 @@
       "us": "Module system",
       "legacy": "模块系统.md",
       "legacyDigest": "73cefc50be0c9117fa9d11cbf225810eac2ea3bae2fe9bcdc8762b257647ced0",
-      "sourceDigest": "db9088af332d086365c96a49d28e824ce94052edd132cb327985dea9fa16d5c2",
-      "translationDigest": "547c37fbeaa4f2194eb82fa52b66752c48830d950ffeef4eb8951cd780454f4e",
+      "sourceDigest": "59de0152319f545e19ddadc3bf0b99a9f2d008042b31eb7cc393d4aeb0040f07",
+      "translationDigest": "246480ddb233ed88638c1cf5a8e70c88239d0fb2ecb4252375d3b124b07f5d72",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -295,8 +295,8 @@
       "us": "MixinJS (experimental)",
       "translationStatus": "draft",
       "humanReview": "pending",
-      "sourceDigest": "47633435e79ce316ac236a7d7e2fd72ce75571eb907ab0aea8557f4a48e85dae",
-      "translationDigest": "a95250d03b58b9dca71c86426557d07f1c1e1498cb43838f96c1ff3a1458eb21"
+      "sourceDigest": "7ae80e29a713cd8f91c586944fcbd42f0e7be329ac5cc208bef40a11136d0018",
+      "translationDigest": "d55551fdac10b016035e36290d1fc74937bde8f588b6f8e4601572f01ce0119c"
     },
     {
       "id": "nodejs-compatibility",
@@ -305,8 +305,8 @@
       "us": "Node.js compatibility",
       "legacy": "Node-js-兼容.md",
       "legacyDigest": "3600cb30306ef3eba41286f0565a7f2cb43deafcbb122d082137967fa02f6574",
-      "sourceDigest": "cb88333597a99b4b7656c3afd9074a59398cde1bfbb605c67f0a518d6286f02b",
-      "translationDigest": "8d7793f512773e134d9d7f8002613b4549ee6e305d374e6d4efe9a7f62777b05",
+      "sourceDigest": "772f100d5a786e44ed1e6ef291f07d70fe3b61b48dd0bc33dd369df8d699fc7c",
+      "translationDigest": "c58c7695c8a3b708ecf3969800c0c9d84e496ca3daba30879ad9db2e66186510",
       "translationStatus": "draft",
       "humanReview": "pending"
     },

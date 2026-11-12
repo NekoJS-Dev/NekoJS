@@ -55,7 +55,7 @@ final class Ticket39ModificationScriptHarness implements AutoCloseable {
         groups.put("ItemEvents", ItemEvents.GROUP);
         groups.putAll(extraGroups);
         NekoJSPaths paths = NekoJSPaths.get();
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 5, 100_000L, 0);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();

@@ -59,6 +59,8 @@ Inspect MCP `isError` and `structuredContent`, not just HTTP/JSON-RPC success. A
 - Commands and all reload targets share one active-operation slot. Within the claimed operation's owner epoch, its slot remains occupied until its actual completion stage finishes, even after the client times out; target stop/epoch change may retire the old slot without making already-started effects known or safe to retry. New work receives `CONTROL_BUSY`; a returned timeout is not a release signal.
 - Disabled policy reports `CONTROL_DISABLED`; a disallowed root reports `COMMAND_NOT_ALLOWED`; commands or SERVER/TEST reload without an active server report `LIVE_RUNTIME_REQUIRED`; CLIENT reload without a client runtime reports `RELOAD_UNAVAILABLE`. Target stop/root close prevents stale queued work and late handoffs from being redirected into a replacement runtime.
 
+Normal script execution no longer has evaluation deadlines, statement budgets or an automatic runaway watchdog. A pending top-level await or synchronous loop can therefore keep the owner/operation busy after the request wait expires. Request timeouts do not terminate script execution; lifecycle cancellation and shutdown remain separate mechanisms.
+
 The in-memory audit is bounded metadata, not a persistent log or a public operation-status polling API. A timeout response is not rewritten when work eventually completes. Request output and operation IDs are not credentials, but can disclose world details; keep them private.
 
 ## Verification and acceptance

@@ -12,7 +12,7 @@ The code is the lookup key and does not change when the wording does.
 This page indexes NekoJS developer diagnostics, not every Java, mod or network exception. Structured HTTP/MCP machine codes such as `CONTROL_DISABLED` and `INDEX_UNAVAILABLE`, and operation states, are documented under [AI support](ai-support_us#wiki-live-controls); they are distinct from logged `NEKO-xxxx` identifiers. Include Script Type, source/line, phase and actual commit outcome in reports. A queueing message alone does not establish reload success.
 
 ```
-[NEKO-2002] 脚本语句累计数达到 scriptStatementLimit（50000000），… — script statement limit exceeded
+[NEKO-2004] 脚本输出行数超过 … 行上限，后续输出将被丢弃（防止日志无限增长） — script output line limit reached
 ```
 
 Where a message ends with a value, the summary comes before it:
@@ -51,16 +51,18 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-1023` | authoring live control requires server owner thread | 实时 AI 控制未在服务器所有者线程执行，操作被拒绝 |
 | `NEKO-1024` | authoring live server runtime is no longer current | 实时服务器已停止或更换，旧操作不得在新世界继续执行 |
 
+`NEKO-2001`, `NEKO-2002`, `NEKO-2003` and `NEKO-2005` are retired normal-execution budget diagnostics. Their former resource/statement-limit, runaway-watchdog and evaluation-timeout call sites were removed; old logs may still contain them. These identifiers remain historical references, not settings to enable or codes to reuse. `NEKO-2004` remains active: it caps emitted log lines, not script execution.
+
+Normal execution has no replacement automatic deadline or watchdog. Unresolved top-level await may remain pending, and infinite loops can block the owner thread/process. HTTP/authoring request waits, lifecycle cancellation/shutdown and the private offline Mixin declaration sandbox's fixed 100,000-statement limit are separate and remain applicable.
+
+Structured diagnostic `phase: WATCHDOG` and owner `Runaway Watchdog` retain their historical wire labels for generic cancelled, interrupted or resource-exhausted Polyglot contexts. Seeing those values does **not** establish that an automatic watchdog was installed or that a script hit an execution budget; inspect the actual cause and lifecycle.
+
 <a id="wiki-section-3"></a>
 ## Sandbox and resource limits
 
 | Code | English summary | Chinese message |
 |---|---|---|
-| `NEKO-2001` | script context hit resource limits | 脚本环境触发 ResourceLimits |
-| `NEKO-2002` | script statement limit exceeded | 脚本语句累计数达到 scriptStatementLimit |
-| `NEKO-2003` | runaway script loop detected | 脚本同步执行持续超过 scriptRunawayTimeoutSeconds |
 | `NEKO-2004` | script output line limit reached | 脚本输出行数超过行上限 |
-| `NEKO-2005` | script evaluation timed out | 脚本求值超时 |
 
 <a id="wiki-section-4"></a>
 ## Data synchronization

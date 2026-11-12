@@ -37,6 +37,7 @@ public final class FabricPlatform implements IPlatform {
 
     @Override
     public void visitLoadedMixinPlans(java.util.function.BiConsumer<String, java.net.URI> visitor) {
+        if (!isMixinJsEnabled()) return;
         for (var mod : FabricLoader.getInstance().getAllMods()) {
             mod.findPath("META-INF/nekojs/mixin-plan.json")
                     .ifPresent(path -> visitor.accept(mod.getMetadata().getId(), path.toUri()));
@@ -48,6 +49,11 @@ public final class FabricPlatform implements IPlatform {
     @Override
     public boolean isClient() {
         return FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT;
+    }
+
+    @Override
+    public boolean isMixinJsEnabled() {
+        return com.tkisor.nekojs.mixinjs.MixinBootstrapGuard.enabled();
     }
 
     @Override

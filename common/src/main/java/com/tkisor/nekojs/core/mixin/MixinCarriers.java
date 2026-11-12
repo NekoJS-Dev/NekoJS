@@ -19,6 +19,7 @@ public final class MixinCarriers {
     /** Loader-admitted plans before profile validation, so preparation can replace a stale cache. */
     public static List<MixinPlan> readAdmitted() { return readAdmitted(Platform.instance()); }
     private static List<MixinPlan> readAdmitted(com.tkisor.nekojs.platform.IPlatform platform) {
+        if (!platform.isMixinJsEnabled()) return List.of();
         var result = new LinkedHashMap<URI, MixinPlan>();
         platform.visitLoadedMixinPlans((mod, uri) -> {
             if (result.containsKey(uri)) return;

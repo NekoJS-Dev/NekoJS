@@ -179,9 +179,8 @@ class FileEditorConfigContributorTest {
             ClassFilter.INSTANCE.updateConfig(new SandboxConfig(
                     prev.allowThreads(), prev.allowReflection(), prev.allowAsm(),
                     prev.allowFsWriteOutsideNekojs(), prev.enableEsmAuthoring(),
-                    prev.conciseScriptErrorLogs(), automatic, prev.scriptMemberValidation(),
-                    prev.scriptEvaluationTimeoutSeconds(), prev.scriptStatementLimit(),
-                    prev.scriptRunawayTimeoutSeconds()));
+                    prev.conciseScriptErrorLogs(), automatic, prev.scriptMemberValidation(), prev.packSyncMode(), prev.packSyncAllowUnsigned(),
+                prev.dynamicRegistryEnabled(), prev.mixinJsEnabled()));
             body.run();
         } finally {
             ClassFilter.INSTANCE.updateConfig(prev);

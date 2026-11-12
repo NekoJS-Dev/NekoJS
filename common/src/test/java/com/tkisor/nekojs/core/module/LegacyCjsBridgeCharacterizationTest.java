@@ -88,7 +88,7 @@ class LegacyCjsBridgeCharacterizationTest {
         });
         // ESM 编排关闭时 legacy 后缀走直接 CJS 分支（compileDetailed → CJS 分析）。
         SandboxConfig cjsOnly = new SandboxConfig(false, false, false, false, false, true, false,
-                false, 30, 0, 0);
+                false);
         NekoModulePipeline pipeline = new NekoModulePipeline(
                 new NekoCompilationPipeline(), compilers, cjsOnly);
 
@@ -120,7 +120,7 @@ class LegacyCjsBridgeCharacterizationTest {
             }
         });
         SandboxConfig cjsOnly = new SandboxConfig(false, false, false, false, false, true, false,
-                false, 30, 0, 0);
+                false);
         NekoModulePipeline pipeline = new NekoModulePipeline(
                 new NekoCompilationPipeline(), compilers, cjsOnly);
 

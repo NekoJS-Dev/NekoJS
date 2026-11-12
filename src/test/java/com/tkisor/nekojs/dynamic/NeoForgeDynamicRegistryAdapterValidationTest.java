@@ -29,7 +29,7 @@ class NeoForgeDynamicRegistryAdapterValidationTest {
     void enableOnlyTheIsolatedTestGate() {
         original = ClassFilter.INSTANCE.config();
         ClassFilter.INSTANCE.updateConfig(new SandboxConfig(false, false, false, false, true, true,
-                false, true, 0, 0, 0, SandboxConfig.PACK_SYNC_OFF, false, true));
+                false, true, SandboxConfig.PACK_SYNC_OFF, false, true));
     }
 
     @AfterEach

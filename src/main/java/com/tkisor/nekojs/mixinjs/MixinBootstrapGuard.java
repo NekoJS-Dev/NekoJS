@@ -5,9 +5,16 @@ import net.neoforged.fml.loading.FMLLoader;
 
 /** Early metadata-only gate; never touches Minecraft classes or the runtime root. */
 public final class MixinBootstrapGuard {
+    private static final boolean ENABLED = com.tkisor.nekojs.core.config.SandboxConfigLoader
+            .readMixinJsEnabled(net.neoforged.fml.loading.FMLPaths.GAMEDIR.get());
+
     private MixinBootstrapGuard() {}
 
+    /** Startup snapshot shared by transformation guards and normal runtime admission. */
+    public static boolean enabled() { return ENABLED; }
+
     public static boolean active(String loader, String minecraft, String version, String side, String hash, boolean managed) {
+        if (!enabled()) return false;
         if (managed) {
             try {
                 if (!hash.equals(com.tkisor.nekojs.core.mixin.MixinLibrarySelection.selected(net.neoforged.fml.loading.FMLPaths.GAMEDIR.get()))) return false;

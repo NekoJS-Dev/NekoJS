@@ -18,19 +18,26 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
 import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.network.ErrorSummaryDTO;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
-import com.tkisor.nekojs.core.SyncEvalWatchdog;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Source;
+import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -206,25 +213,49 @@ class ScriptDiagnosticRecordTest {
     }
 
     @Test
-    void cancelledEvaluationClassifiesAsWatchdog() {
-        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
-            SyncEvalWatchdog.Guard guard = SyncEvalWatchdog.arm(context, 1);
+    void externallyCancelledEvaluationKeepsTerminationDiagnostic() throws Exception {
+        Context context = Context.newBuilder("js").allowAllAccess(true).build();
+        try {
+            CountDownLatch entered = new CountDownLatch(1);
+            long started = System.nanoTime();
+            context.getBindings("js").putMember("TestLoop", (ProxyExecutable) arguments -> {
+                entered.countDown();
+                return System.nanoTime() - started < TimeUnit.SECONDS.toNanos(10);
+            });
+            ExecutorService canceller = Executors.newSingleThreadExecutor(r -> {
+                Thread thread = new Thread(r, "diagnostic-context-canceller");
+                thread.setDaemon(true);
+                return thread;
+            });
+            Future<?> cancellation = canceller.submit(() -> {
+                assertTrue(entered.await(30, TimeUnit.SECONDS),
+                        "evaluation must begin before external cancellation");
+                context.close(true);
+                return null;
+            });
             PolyglotException cancelled;
             try {
-                context.eval("js", "while (true) { /* spin */ }");
-                throw new AssertionError("expected the watchdog to cancel the evaluation");
-            } catch (PolyglotException e) {
-                cancelled = e;
+                cancelled = assertThrows(PolyglotException.class,
+                        () -> context.eval("js", "while (TestLoop()) {}"));
             } finally {
-                guard.disarm();
+                try {
+                    cancellation.get(30, TimeUnit.SECONDS);
+                } finally {
+                    canceller.shutdownNow();
+                }
             }
-            assertTrue(cancelled.isCancelled() || cancelled.isInterrupted(),
-                    "the runaway watchdog must cancel the guest evaluation");
+            assertTrue(cancelled.isCancelled(), "external close must cancel the guest evaluation");
 
             tracker.recordCallbackError(ScriptType.SERVER, "event", cancelled);
             ScriptDiagnosticRecord record = onlyError().diagnostic();
             assertEquals(DiagnosticPhase.WATCHDOG, record.phase());
             assertEquals(ScriptDiagnosticRecord.OWNER_WATCHDOG, record.owner());
+        } finally {
+            try {
+                context.close(true);
+            } catch (PolyglotException terminal) {
+                if (!terminal.isCancelled()) throw terminal;
+            }
         }
     }
 

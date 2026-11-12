@@ -86,7 +86,7 @@ console.info('等了 1 秒')
 
 > Global `setTimeout`/`setInterval`/`clearTimeout`/`clearInterval` are available at script top level (patched onto `globalThis`).
 
-The positive-delay example is for SERVER/CLIENT/TEST scripts. STARTUP rejects every interval and any timeout with a positive delay; zero-delay/immediate callbacks are allowed. The scheduler only queues ready work: callbacks execute when the owning script environment flushes its queue (including module-await pumping, lifecycle/tick dispatch, or the TEST flow), not on the scheduler thread and not at an exact wall-clock instant. Failed candidates and retired generations cancel their timers; old callbacks must not be treated as persistent state.
+The positive-delay example is for SERVER/CLIENT/TEST scripts. STARTUP rejects every interval and any timeout with a positive delay; zero-delay/immediate callbacks are allowed. The scheduler only queues ready work: callbacks execute when the owning script environment flushes its queue (including module-await pumping, lifecycle/tick dispatch, or the TEST flow), not on the scheduler thread and not at an exact wall-clock instant. Failed candidates and retired generations cancel their timers; old callbacks must not be treated as persistent state. A timer delay schedules a callback; it is not an execution deadline and does not interrupt a synchronous loop.
 
 <a id="wiki-section-7"></a>
 ### `node:test` + `node:assert`
@@ -128,7 +128,7 @@ console.info(buf.toString('hex')) // '68656c6c6f'
 | Protected configuration | `nekojs/config/` and legacy `config/nekojs-engine.toml` remain unwritable even with the flag enabled |
 | Create symbolic links | Not allowed |
 
-The flag is in `nekojs/config/engine.toml`. Filesystem checks and optional watchdog budgets do not make arbitrary Java host calls or untrusted scripts safe. `scriptRunawayTimeoutSeconds` and `scriptStatementLimit` default to 0 (disabled); watchdog isolation requires explicit full reload to recover.
+The flag is in `nekojs/config/engine.toml`. Filesystem checks do not make arbitrary Java host calls or untrusted scripts safe. Normal execution no longer has evaluation timeouts, statement budgets or a runaway watchdog: `scriptEvaluationTimeoutSeconds`, `scriptStatementLimit` and `scriptRunawayTimeoutSeconds` were removed, not replaced by another default. Infinite loops may block the owner thread/process. HTTP/authoring request waits and lifecycle cancellation/shutdown remain separate; a request timeout does not prove the script stopped.
 
 ```javascript
 import fs from 'node:fs'

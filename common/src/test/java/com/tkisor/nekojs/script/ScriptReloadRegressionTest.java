@@ -36,12 +36,12 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -63,6 +63,8 @@ class ScriptReloadRegressionTest {
     public static final class TestRecorder {
         private volatile String value;
         private volatile Context recordedContext;
+        private volatile Context cancellationContext;
+        private volatile CountDownLatch cancellationStarted = new CountDownLatch(1);
         private volatile boolean contextDead;
         private volatile Context deadContext;
         private volatile ScriptManager manager;
@@ -85,6 +87,11 @@ class ScriptReloadRegressionTest {
         /** 记录「调用此方法的 JS 函数」所属的 Graal Context，用于断言脚本实际执行在哪个环境。 */
         public void recordContext(Value fn) {
             this.recordedContext = fn.getContext();
+        }
+
+        public void recordCancellationContext(Value fn) {
+            cancellationContext = fn.getContext();
+            cancellationStarted.countDown();
         }
 
         public Context recordedContext() {
@@ -142,6 +149,14 @@ class ScriptReloadRegressionTest {
             this.manager = manager;
         }
     }
+
+    // Both limits belong to the fixture, not the production evaluator.
+    private static final String CANCELLABLE_ENTRY = """
+            TestRecorder.recordCancellationContext(() => {});
+            const deadline = Date.now() + 10_000;
+            for (let spin = 0; spin < 1_000_000_000 && Date.now() < deadline; spin++) {}
+            TestRecorder.record('cancellation-missed');
+            """;
 
     private static final class StubPluginRuntime implements IPluginRuntime {
         private final TestRecorder recorder;
@@ -380,7 +395,7 @@ class ScriptReloadRegressionTest {
 
         TestRecorder recorder = new TestRecorder();
         Engine engine = Engine.newBuilder().build();
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L, 0);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         ScriptManager manager = null;
         try {
@@ -405,13 +420,9 @@ class ScriptReloadRegressionTest {
         }
     }
 
-    /**
-     * C1/I1 回归：候选加载期间语句上限杀死候选 Context 时，事务式 reload 必须按失败
-     * 处理——关闭候选、保留旧 Context，并把 {@code contextKilled} 恢复为 reload 前的值。
-     * 即使 reload 前 {@code contextKilled} 已经是 true，也不能把死掉的候选提交为 live。
-     */
+    /** A cancelled candidate must roll back even when the previous active was already marked failed. */
     @Test
-    void transactionalReloadRejectsCandidateKilledByStatementLimitWhenPreviousKilledIsTrue() throws Exception {
+    void transactionalReloadRejectsCancelledCandidateWhenPreviousKilledIsTrue() throws Exception {
         NekoJSPaths paths = NekoJSPaths.get();
         Path serverDir = paths.serverScripts();
         Files.createDirectories(serverDir);
@@ -420,7 +431,7 @@ class ScriptReloadRegressionTest {
 
         TestRecorder recorder = new TestRecorder();
         Engine engine = Engine.newBuilder().build();
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L, 0);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         ScriptManager manager = null;
         try {
@@ -432,13 +443,23 @@ class ScriptReloadRegressionTest {
             Context oldContext = currentContext(manager);
             setContextKilled(manager, true);
 
-            Files.writeString(entry, "while (true) { /* spin forever */ }\n");
-            assertThrows(RuntimeException.class, manager::reloadScripts,
-                    "reload must fail when the candidate context is killed by the statement limit");
+            Files.writeString(entry, CANCELLABLE_ENTRY);
+            ScriptManager reloadManager = manager;
+            assertThrows(RuntimeException.class,
+                    () -> runWithCancelledContext(recorder, reloadManager, reloadManager::reloadScripts),
+                    "reload must fail when the candidate context is externally cancelled");
             assertTrue(isContextKilled(manager),
                     "failure path must restore previousKilled=true instead of committing the dead candidate");
             assertEquals(oldContext, currentContext(manager),
                     "failed transactional reload must keep the old context as current");
+            assertNotEquals(oldContext, recorder.cancellationContext,
+                    "the cancellation probe must capture the candidate, not the old active context");
+            assertThrows(IllegalStateException.class, () -> ScriptManager.from(recorder.cancellationContext),
+                    "Discarded candidate must be unregistered from callback routing");
+            assertThrows(Exception.class, () -> recorder.cancellationContext.eval("js", "1 + 1"),
+                    "Discarded candidate must be closed, not merely detached");
+            assertEquals(1, contextCountFor(manager),
+                    "failed candidate cleanup must retain only the previous active context");
         } finally {
             forceCloseLiveContexts();
             if (manager != null) {
@@ -463,8 +484,7 @@ class ScriptReloadRegressionTest {
 
         TestRecorder recorder = new TestRecorder();
         Engine engine = Engine.newBuilder().build();
-        // 短超时让修复前的 RED 在 5 秒内失败，而不是等满生产默认的 30 秒。
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 5, 0, 0);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         ScriptManager manager = null;
         try {
@@ -483,8 +503,7 @@ class ScriptReloadRegressionTest {
                     }, 0));
                     TestRecorder.record('v2-end');
                     """);
-            assertTimeoutPreemptively(Duration.ofSeconds(10), manager::reloadScripts,
-                    "candidate timer callback must not be skipped as dead");
+            runBounded(manager::reloadScripts, () -> {});
             assertEquals(currentContext(manager), recorder.deadContext(),
                     "isContextDead probe must run in the candidate context");
             // ticket 06：候选不再提前发布为 live 环境（generation 隔离）。诊断断言随之更新为
@@ -630,78 +649,37 @@ class ScriptReloadRegressionTest {
         field.set(manager, value);
     }
 
-    /**
-     * 回归测试：顶层死循环（CJS 入口体在服务器线程同步执行）不得无限冻结服务器线程。
-     * 修复契约：超过 scriptEvaluationTimeoutSeconds 后通过 Context.interrupt 注入中断，
-     * 脚本按失败处理，loadScripts 正常返回。
-     */
+    /** External cancellation must release the lifecycle owner and require explicit recovery. */
     @Test
-    void infiniteLoopInScriptEntryDoesNotFreezeServerThread() throws Exception {
+    void cancelledScriptEntryReleasesOwnerAndAllowsExplicitRecovery() throws Exception {
         NekoJSPaths paths = NekoJSPaths.get();
         Path serverDir = paths.serverScripts();
         Files.createDirectories(serverDir);
-        Files.writeString(serverDir.resolve("loop.js"), "while (true) { /* spin forever */ }\n");
+        Path entry = serverDir.resolve("loop.js");
+        Files.writeString(entry, CANCELLABLE_ENTRY);
 
         TestRecorder recorder = new TestRecorder();
         Engine engine = Engine.newBuilder().build();
-        // 语句上限 100_000（测试用）：死循环迅速烧尽 → Graal 关闭 Context 并中断当前求值，
-        // 服务器线程恢复；生产默认 0（禁用），整合包服务器可按需在 nekojs/config/engine.toml 开启
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L, 0);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
-        ScriptManager manager = null;
-        try {
-            manager = newManager(paths, recorder, engine, config, tracker);
-            manager.discoverScripts();
-
-            assertTimeoutPreemptively(Duration.ofSeconds(30), manager::loadScripts,
-                    "infinite loop must be aborted by the statement limit");
-            assertTrue(tracker.hasErrors(), "statement-limit failure must be recorded");
-
-            // Context 已被 Graal 关闭：下一次取用必须自动重建，脚本环境保持可用
-            assertTimeoutPreemptively(Duration.ofSeconds(30), manager::loadScripts,
-                    "context must be rebuilt automatically after the statement limit closed it");
-        } finally {
-            // 修复前（RED）阶段：被 assertTimeoutPreemptively 放弃的求值线程仍卡在死循环里，
-            // 强制关闭存活 Context 防止测试 JVM 无法退出。
-            forceCloseLiveContexts();
-            if (manager != null) {
-                manager.close();
-            }
-            engine.close();
-        }
-    }
-
-    /**
-     * 回归测试：语句上限 kill 后的自动 Context 重建（getOrCreateContext 的重建分支）
-     * 必须先清空本 scriptType 的事件监听器（与事务式 reload / fullReloadCleanup 顺序一致）。
-     * 修复前重建分支只关闭旧环境而不清 listener，残留监听器闭包指向已死 Context，
-     * 之后每次事件分发都会在死环境上报错，直到手动 /nekojs reload。
-     */
-    @Test
-    void rebuildAfterStatementLimitKillClearsEventListeners() throws Exception {
-        NekoJSPaths paths = NekoJSPaths.get();
-        Path serverDir = paths.serverScripts();
-        Files.createDirectories(serverDir);
-        Files.writeString(serverDir.resolve("loop.js"), "while (true) { /* spin forever */ }\n");
-
-        TestRecorder recorder = new TestRecorder();
-        Engine engine = Engine.newBuilder().build();
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L, 0);
-        DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
-        RecordingEventBridge bridge = new RecordingEventBridge();
-        // 直接在声明处构造：lambda 捕获要求 manager 为实际上的 final 变量
-        ScriptManager manager = newManager(paths, recorder, engine, config, tracker, bridge);
+        ScriptManager manager = newManager(paths, recorder, engine, config, tracker);
         try {
             manager.discoverScripts();
-            assertTimeoutPreemptively(Duration.ofSeconds(30), manager::loadScripts,
-                    "initial load must abort via the statement limit");
-            assertTrue(bridge.typeOnlyCleared.isEmpty(),
-                    "first (fresh) environment creation must not clear listeners");
+            runWithCancelledContext(recorder, manager, manager::loadScripts);
+            assertTrue(tracker.hasErrors(), "external cancellation must be recorded");
+            assertTrue(isContextKilled(manager), "cancelled active must remain marked failed");
+            Context cancelled = currentContext(manager);
+            manager.flushReadyNodeTimers();
+            assertEquals(cancelled, currentContext(manager),
+                    "timer dispatch must not silently replace the failed active context");
+            assertTrue(isContextKilled(manager), "timer dispatch must not clear the recovery gate");
 
-            // 下一次取用 Context 触发自动重建：重建分支必须清空本 scriptType 的全部监听器
-            assertTimeoutPreemptively(Duration.ofSeconds(30), () -> manager.reloadScriptFile("loop.js"));
-            assertTrue(bridge.typeOnlyCleared.contains(ScriptType.SERVER),
-                    "context rebuild after statement-limit kill must clear this scriptType's listeners");
+            Files.writeString(entry, "TestRecorder.record('recovered');\n");
+            manager.discoverScripts();
+            runBounded(manager::loadScripts, () -> {});
+            assertEquals("recovered", recorder.value(), "explicit load must execute healthy replacement code");
+            assertNotEquals(cancelled, currentContext(manager), "explicit recovery must create a fresh context");
+            assertFalse(isContextKilled(manager), "successful explicit recovery must clear the failure gate");
         } finally {
             forceCloseLiveContexts();
             manager.close();
@@ -709,39 +687,73 @@ class ScriptReloadRegressionTest {
         }
     }
 
-    /**
-     * 回归：语句上限 kill 后的自动重建路径必须与 resetEnvironment / close 的
-     * teardown 等价——除清监听器外还要跑 fullReloadCleanup（errorTracker 按类型清空）
-     * 与 binding.close(scriptType)。旧实现只做「清监听器 + 关旧环境」，kill 重建后
-     * errorTracker 残留旧条目、binding 缓存的旧 Context 状态静默携带进新环境。
-     */
+    /** Explicit recovery must remove listener closures belonging to the cancelled active context. */
     @Test
-    void rebuildAfterStatementLimitKillMatchesFullTeardown() throws Exception {
+    void rebuildAfterExternalCancellationClearsEventListeners() throws Exception {
         NekoJSPaths paths = NekoJSPaths.get();
         Path serverDir = paths.serverScripts();
         Files.createDirectories(serverDir);
-        Files.writeString(serverDir.resolve("loop.js"), "while (true) { /* spin forever */ }\n");
-        // broken.js：必然产生一条 errorTracker 记录（语法错误），用于验证重建时 fullReloadCleanup 清空
-        Files.writeString(serverDir.resolve("broken.js"), "this is ! not valid javascript\n");
+        Path entry = serverDir.resolve("loop.js");
+        Files.writeString(entry, CANCELLABLE_ENTRY);
 
         TestRecorder recorder = new TestRecorder();
         Engine engine = Engine.newBuilder().build();
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L, 0);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         RecordingEventBridge bridge = new RecordingEventBridge();
         ScriptManager manager = newManager(paths, recorder, engine, config, tracker, bridge);
         try {
             manager.discoverScripts();
-            assertTimeoutPreemptively(Duration.ofSeconds(30), manager::loadScripts,
-                    "initial load must abort via the statement limit (loop.js)");
+            runWithCancelledContext(recorder, manager, manager::loadScripts);
+            assertTrue(isContextKilled(manager), "initial load must mark the cancelled active failed");
+            assertTrue(bridge.typeOnlyCleared.isEmpty(),
+                    "first (fresh) environment creation must not clear listeners");
+
+            Files.writeString(entry, "TestRecorder.record('recovered');\n");
+            runBounded(() -> manager.reloadScriptFile("loop.js"), () -> {});
+            assertTrue(bridge.typeOnlyCleared.contains(ScriptType.SERVER),
+                    "context rebuild after cancellation must clear this scriptType's listeners");
+            assertEquals("recovered", recorder.value(), "single-file recovery must execute the replacement code");
+            assertFalse(isContextKilled(manager), "single-file recovery must clear the failure gate");
+        } finally {
+            forceCloseLiveContexts();
+            manager.close();
+            engine.close();
+        }
+    }
+
+    /** Cancelled-context recovery must match normal teardown for errors, bindings, and listeners. */
+    @Test
+    void rebuildAfterExternalCancellationMatchesFullTeardown() throws Exception {
+        NekoJSPaths paths = NekoJSPaths.get();
+        Path serverDir = paths.serverScripts();
+        Files.createDirectories(serverDir);
+        Path entry = serverDir.resolve("loop.js");
+        Files.writeString(entry, "TestRecorder.record('initial');\n");
+        Files.writeString(serverDir.resolve("broken.js"), "this is ! not valid javascript\n");
+
+        TestRecorder recorder = new TestRecorder();
+        Engine engine = Engine.newBuilder().build();
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
+        DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
+        RecordingEventBridge bridge = new RecordingEventBridge();
+        ScriptManager manager = newManager(paths, recorder, engine, config, tracker, bridge);
+        try {
+            manager.discoverScripts();
+            manager.loadScripts();
             assertTrue(tracker.getAllErrors().stream()
                             .anyMatch(error -> String.valueOf(error.getErrorId()).contains("broken")),
-                    "broken.js must be tracked before the rebuild; errors="
-                            + tracker.getAllErrors().stream().map(e -> e.getErrorId()).toList());
+                    "broken.js must be tracked before cancellation");
 
-            // 触发自动重建：reloadScriptFile 内部第一次取 Context 即走 kill 重建分支
-            assertTimeoutPreemptively(Duration.ofSeconds(30), () -> manager.reloadScriptFile("loop.js"));
+            Files.writeString(entry, CANCELLABLE_ENTRY);
+            runWithCancelledContext(recorder, manager, () -> manager.reloadScriptFile("loop.js"));
+            assertTrue(isContextKilled(manager), "single-file execution must mark the cancelled active failed");
+            assertTrue(tracker.getAllErrors().stream()
+                            .anyMatch(error -> String.valueOf(error.getErrorId()).contains("broken")),
+                    "the unrelated error must still exist immediately before recovery");
 
+            Files.writeString(entry, "TestRecorder.record('recovered');\n");
+            runBounded(() -> manager.reloadScriptFile("loop.js"), () -> {});
             assertTrue(bridge.typeOnlyCleared.contains(ScriptType.SERVER),
                     "rebuild must clear this scriptType's listeners");
             assertTrue(recorder.closedBindings.contains(ScriptType.SERVER.name()),
@@ -751,12 +763,67 @@ class ScriptReloadRegressionTest {
             assertFalse(brokenStillTracked,
                     "rebuild must clear this scriptType's error tracker entries via fullReloadCleanup; errors="
                             + tracker.getAllErrors().stream().map(e -> e.getErrorId()).toList());
+            assertEquals("recovered", recorder.value(), "recovery must execute healthy code");
+            assertFalse(isContextKilled(manager), "full teardown recovery must clear the failure gate");
         } finally {
             forceCloseLiveContexts();
             manager.close();
             engine.close();
             Files.deleteIfExists(serverDir.resolve("broken.js"));
-            Files.deleteIfExists(serverDir.resolve("loop.js"));
+            Files.deleteIfExists(entry);
+        }
+    }
+
+    @FunctionalInterface
+    private interface TestOperation {
+        void run() throws Exception;
+    }
+
+    private static void runWithCancelledContext(TestRecorder recorder, ScriptManager manager, TestOperation operation) throws Exception {
+        recorder.cancellationContext = null;
+        recorder.cancellationStarted = new CountDownLatch(1);
+        runBounded(operation, () -> {
+            assertTrue(recorder.cancellationStarted.await(10, TimeUnit.SECONDS),
+                    "guest execution must reach the cancellation probe");
+            Field candidate = ScriptManager.class.getDeclaredField("candidateContext");
+            candidate.setAccessible(true);
+            Context owned = (Context) candidate.get(manager);
+            if (owned == null) owned = currentContext(manager);
+            assertEquals(recorder.cancellationContext, owned, "The checkpoint must identify the owned evaluating Context");
+            recorder.cancellationContext = owned;
+            owned.close(true);
+        });
+    }
+
+    /** Interrupt pending module waits on timeout and always join the test-owned lifecycle worker. */
+    private static void runBounded(TestOperation operation, TestOperation whileRunning) throws Exception {
+        ExecutorService worker = Executors.newSingleThreadExecutor(task -> {
+            Thread thread = new Thread(task, "nekojs-reload-regression");
+            thread.setDaemon(true);
+            return thread;
+        });
+        Future<?> execution = worker.submit(() -> {
+            operation.run();
+            return null;
+        });
+        try {
+            whileRunning.run();
+            try {
+                execution.get(20, TimeUnit.SECONDS);
+            } catch (ExecutionException failure) {
+                if (failure.getCause() instanceof Exception cause) {
+                    throw cause;
+                }
+                if (failure.getCause() instanceof Error cause) {
+                    throw cause;
+                }
+                throw new AssertionError(failure.getCause());
+            }
+        } finally {
+            execution.cancel(true);
+            worker.shutdownNow();
+            assertTrue(worker.awaitTermination(20, TimeUnit.SECONDS),
+                    "test-owned lifecycle worker must terminate before context cleanup");
         }
     }
 

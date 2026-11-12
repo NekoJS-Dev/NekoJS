@@ -185,10 +185,7 @@ public final class ScriptLifecycleGate {
         return closed;
     }
 
-    /**
-     * watchdog 终止 active 后的隔离失败标记：停止向被杀 Context 分发，不自动
-     * 创建第二个 active；只由显式 reload/load 成功或 close 清除。
-     */
+    /** Stops dispatch to a terminated active generation until explicit recovery or close. */
     public void markActiveFailed() {
         activeFailed = true;
     }

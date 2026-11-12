@@ -76,13 +76,11 @@ public final class ScriptManager implements AutoCloseable {
     }
 
     /**
-     * JS 回调（事件监听器 / timer）catch 路径共享的 kill 上报：异常链表明 Graal 已因
-     * 资源上限（语句上限）关闭该 Context 时，按求值所属 generation 记账——候选 Context
-     * 记 {@code candidateKilled}（候选按失败处理），active Context 记 {@code contextKilled}
-     * （下次取用时重建）。未注册的 Context（测试等场景）安全忽略。
+     * Attributes a cancelled or resource-exhausted Context to its active or candidate generation.
+     * Event and timer failures share this path; unregistered Contexts are ignored.
      */
     public static void reportContextKilled(Context context, Throwable t) {
-        if (context == null || !ScriptExecutor.isContextKilledByResourceLimits(t)) return;
+        if (context == null || !ScriptExecutor.isContextTerminated(t)) return;
         ScriptManager manager = CONTEXT_TO_MANAGER.get(context);
         if (manager != null) {
             manager.markContextKilled(context);
@@ -95,7 +93,7 @@ public final class ScriptManager implements AutoCloseable {
      * <p>本仓库使用的 relocated Graal polyglot API 没有 {@code Context.isOpen()}，
      * 这里以 ScriptManager 侧的状态等价判定。ticket 06 generation 语义：
      * <ul>
-     *   <li>active Context：死 = {@code contextKilled}（语句上限 kill，待重建）；</li>
+     *   <li>active Context: dead when {@code contextKilled} is set, pending explicit recovery；</li>
      *   <li>候选 Context（构建中）：死 = {@code candidateKilled}——候选 timer 在候选执行
      *       路径（waitForEvaluation flush）中可运行；候选监听器在 commit 前根本不挂总线，
      *       因此不存在「候选监听器提前接收生产事件」的路径；</li>
@@ -247,14 +245,10 @@ public final class ScriptManager implements AutoCloseable {
      */
     private volatile RuntimeEnvironment candidateEnvironment;
 
-    /** 候选环境被语句上限杀死（与 active 的 {@link #contextKilled} 分开记账）。 */
+    /** Candidate termination is tracked separately from the active {@link #contextKilled} state. */
     private volatile boolean candidateKilled;
 
-    /**
-     * 候选加载中首个触发语句上限 kill 的<strong>脚本</strong>（不是 source 文本）：
-     * 仅用于候选失败结果的 source location 归因（见 {@link #sourceOf}）。
-     * 命名刻意避开 "Source"，以免被误读为 source 字符串。
-     */
+    /** First candidate script whose execution terminated its Context, used for failure attribution. */
     private ScriptContainer candidateKillScript;
 
     /** Active error state saved while candidate execution is allowed to reuse script ids. */
@@ -270,15 +264,10 @@ public final class ScriptManager implements AutoCloseable {
     /** 一次性标记：STARTUP reload 的非事务语义只警告一次（每个 ScriptType 一个实例）。 */
     private boolean warnedStartupReloadNonTransactional;
 
-    /** Graal 因语句上限（scriptStatementLimit）关闭了当前 Context；下次取用时重建。 */
+    /** The active Context has terminated; callback dispatch stops until explicit lifecycle recovery. */
     private volatile boolean contextKilled;
 
-    /**
-     * 同一 ScriptType 的 owner-thread 生命周期调度门（票 07）：reload 不重入、
-     * 回调内请求拒绝、close 优先与关闭后拒绝、active watchdog 隔离失败标记。
-     * 跨线程串行仍由实例锁（monitor 队列）承担，本门只做实例锁表达不了的判决；
-     * 除 volatile 标志外所有方法必须在持有实例锁的前提下调用。
-     */
+    /** Owner-thread lifecycle policy for reentrancy, close priority and failed-active isolation. */
     private final ScriptLifecycleGate lifecycleGate = new ScriptLifecycleGate();
 
     // ---- 构造函数 ----
@@ -630,11 +619,7 @@ public final class ScriptManager implements AutoCloseable {
         ScriptLifecycleGate.exitCallback();
     }
 
-    /**
-     * watchdog 终止 active 后的隔离失败是否生效：true 表示 active 已死、已停止
-     * 向被杀 Context 分发（isContextDead）、等待显式 reload/load 恢复，期间不会
-     * 自动创建第二个 active。公开可观察点（命令面/测试断言用），不是内部锁状态。
-     */
+    /** Whether a terminated active generation is isolated pending explicit reload/load or close. */
     public boolean isActiveFailed() {
         return lifecycleGate.isActiveFailed();
     }
@@ -697,10 +682,7 @@ public final class ScriptManager implements AutoCloseable {
 
     // ---- Context 访问（懒初始化） ----
 
-    /**
-     * ScriptExecutor 回调：Graal 因语句上限/watchdog 关闭了求值所属的 Context（active 或候选）。
-     * 包可见：同包回归测试直接注入旧 generation Context 的 kill 上报（commit 边界竞态窗口）。
-     */
+    /** Marks termination only for the active or candidate Context, never an obsolete generation. */
     void markContextKilled(Context context) {
         Context candidate = this.candidateContext;
         if (candidate != null && candidate.equals(context)) {
@@ -715,10 +697,7 @@ public final class ScriptManager implements AutoCloseable {
                 return;
             }
             this.contextKilled = true;
-            // 票 07 隔离失败（AC6）：active 被 watchdog/资源上限终止后停止向其分发
-            // （isContextDead 判 contextKilled）、不自动创建第二个 active，只由显式
-            // reload/load 成功或 close 清除。timer/event 分发路径从不重建（它们不调
-            // getOrCreateEnvironment），恢复入口只有显式 lifecycle。
+            // Dead callbacks remain isolated; only explicit lifecycle work may recover the active generation.
             this.lifecycleGate.markActiveFailed();
         }
     }
@@ -726,7 +705,7 @@ public final class ScriptManager implements AutoCloseable {
     private synchronized RuntimeEnvironment getOrCreateEnvironment() {
         if (runtime.isEmpty() || contextKilled) {
             if (!runtime.isEmpty()) {
-                // 旧 Context 已被 Graal 关闭（语句上限触发）；清理注册与残留资源。
+                // Release registrations and resources belonging to the terminated Context.
                 // 必须与 resetEnvironment / close 的 teardown 等价：监听器闭包
                 // 持有指向已死 Context 的 Value，errorTracker/模块/ESM 缓存与 binding 状态
                 // 同属旧环境。缺一步就是「kill 重建后静默携带脏状态」——例如残留 errorTracker
@@ -877,15 +856,7 @@ public final class ScriptManager implements AutoCloseable {
         }
     }
 
-    /**
-     * 在 active 环境中执行给定脚本列表：preload、按 priority 与 after 依赖排序、逐个执行入口。
-     *
-     * <p>只被首次 {@link #loadScripts()}（平台 init / STARTUP reset+load / kill 重建）使用：
-     * 每个脚本单独取一次 {@link #getOrCreateEnvironment()}，因此某脚本被语句上限杀死后，
-     * 后续脚本仍能在自动重建的环境里继续跑。事务式 reload 的候选执行走
-     * {@link #loadCandidateScripts}（固定候选 Context + 候选 kill 归因），不复用本方法。
-     * 空列表只记录日志，不创建副作用。
-     */
+    /** Executes initial-load entries with the current environment and retains per-entry error attribution. */
     private void loadScriptsInto(List<ScriptContainer> scriptsToLoad) {
         executionEntries.clear();
         if (!prepareScriptsForLoad(scriptsToLoad)) {
@@ -893,9 +864,7 @@ public final class ScriptManager implements AutoCloseable {
         }
         for (ScriptContainer script : scriptsToLoad) {
             if (script.shouldRun()) {
-                // 逐个脚本取最新环境：某脚本触发语句上限导致 Context 被 Graal 关闭时，
-                // 下一个脚本能在自动重建的环境中继续执行，而不是全军覆没。context 与
-                // nodeRuntime 从同一次快照取出，避免读到错配对。
+                // Each entry observes the current owner-managed environment.
                 RuntimeEnvironment env = getOrCreateEnvironment();
                 scriptExecutor.executeEntry(env.context(), script, env.nodeRuntime(), env.moduleSession());
             }
@@ -1009,7 +978,7 @@ public final class ScriptManager implements AutoCloseable {
          * 不会出现「旧监听器已清扫 + 候选 runtime 已发布 + 激活中途抛」的半激活 generation。
          *
          * <p>线程约定：候选构建/执行在当前调用线程（owner thread）同步完成，reload 由
-         * 实例锁串行；owner-thread 队列、重入与 watchdog 调度归工单 07。候选阶段不调用
+         * Instance locking serializes work; the lifecycle gate owns reentrancy and close priority. Candidate work does not call
          * {@link com.tkisor.nekojs.api.data.Binding#close(ScriptType)}：该回调可能清理
          * 进程级 dynamic registry、post-effect 或平台 listener 状态，失败候选无法把这些
          * live mutation 恢复。域 adapter 的可逆 candidate plan 属于候选收集器，旧代资源
@@ -1062,10 +1031,7 @@ public final class ScriptManager implements AutoCloseable {
                         ReloadProgressTracker.step(scriptType.name, "candidate scripts executed");
 
                         if (this.candidateKilled) {
-                            // 候选加载期间被脚本资源上限/watchdog 终止（scriptStatementLimit 总量、
-                            // 墙钟守卫或 close 抢占的中断），Graal 已按终止语义处置候选 Context：
-                            // 按失败处理，不把死掉的候选提交为 live（票 07 watchdog 面）。
-                            // close 抢占的中断以 close-preempted domain 归因（AC3）。
+                            // Never commit a terminated candidate; preserve close-preemption attribution.
                             boolean preempted = lifecycleGate.isCloseRequested() || lifecycleGate.isClosed();
                             throw reloadFailure(candidateGeneration, ReloadPhase.EXECUTION,
                                     sourceOf(this.candidateKillScript),
@@ -1073,8 +1039,7 @@ public final class ScriptManager implements AutoCloseable {
                                     new RuntimeException(scriptType.name()
                                             + (preempted
                                                     ? " reload preempted by close during candidate execution"
-                                                    : " candidate context was terminated by script resource limits"
-                                                            + " (runaway watchdog / statement limit) during reload")));
+                                                    : " candidate context was terminated during reload")));
                         }
                     } catch (NekoReloadException f) {
                         throw f;
@@ -1773,7 +1738,7 @@ public final class ScriptManager implements AutoCloseable {
                 catch (PolyglotException failure) {
                     // Graal rethrows the cancellation cause when closing an already terminated
                     // Context. This terminal notification is not an unperformed resource release.
-                    if (!failure.isCancelled() && !ScriptExecutor.isContextKilledByResourceLimits(failure)) throw failure;
+                    if (!failure.isCancelled() && !ScriptExecutor.isContextTerminated(failure)) throw failure;
                 }
             }
         }

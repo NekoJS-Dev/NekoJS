@@ -1,11 +1,32 @@
 package com.tkisor.nekojs.core.config;
 
+import com.electronwill.nightconfig.core.UnmodifiableConfig;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
+import com.electronwill.nightconfig.toml.TomlParser;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 
 public final class SandboxConfigLoader {
+    /** Reads the startup opt-in without creating files, writing defaults, or acquiring runtime/logging owners. */
+    public static boolean readMixinJsEnabled(Path gameDir) {
+        try {
+            NekoJSPaths paths = NekoJSPaths.fromGameDir(gameDir);
+            Path canonical = paths.engineConfig();
+            Path selected = Files.notExists(canonical, LinkOption.NOFOLLOW_LINKS)
+                    ? paths.legacyEngineConfig() : canonical;
+            if (!Files.isRegularFile(selected)) return false;
+            var config = new TomlParser().parse(Files.readString(selected, StandardCharsets.UTF_8));
+            return booleanValue(config, "mixinjs.enabled", false);
+        } catch (Exception unreadableOrMalformed) {
+            return false;
+        }
+    }
+
     public SandboxConfig load(Path engineConfig) {
         return load(engineConfig, true);
     }
@@ -54,14 +75,9 @@ public final class SandboxConfigLoader {
             setupConfigEntry(config, "scriptMemberValidation", true,
                     " Enables compile-time validation of global-binding and event-callback member accesses. Reports typos and missing members to the in-game error panel. Disable to skip all AST parsing overhead in production modpacks.");
 
-            setupConfigEntry(config, "scriptEvaluationTimeoutSeconds", 0,
-                    " Maximum seconds to wait for a script entry to finish evaluating (top-level await / native ESM). On timeout the script is marked as failed and the server thread stops waiting instead of hanging forever. Set 0 or a negative value to disable the timeout.");
-
-            setupConfigEntry(config, "scriptStatementLimit", 0L,
-                    " Optional absolute cumulative statement budget per Context (0 = disabled, the default). Context-lifetime total; when reached the Context is closed and the current evaluation is aborted, then the environment is rebuilt on next use (registered listeners/timers are lost). Long-lived busy environments eventually hit any non-zero budget - the recommended runaway protection is scriptRunawayTimeoutSeconds; keep this only if you need a hard lifetime cap.");
-
-            setupConfigEntry(config, "scriptRunawayTimeoutSeconds", SandboxConfig.DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS,
-                    " Runaway watchdog for synchronous script execution, in seconds (0 = disabled, the default). Implemented as a sliding window over statement checkpoints: as long as guest code keeps executing without yielding back to Java (checkpoint gaps <= 250ms), the window accumulates; exceeding this many seconds closes the Context and aborts the evaluation - the only reliable way to stop a while(true){} freezing the server thread. The window resets on every yield, so long-lived environments are never killed regardless of total statements executed. Blockage inside host calls that executes no statements is invisible to this watchdog.");
+            removeConfigEntry(config, "scriptEvaluationTimeoutSeconds");
+            removeConfigEntry(config, "scriptStatementLimit");
+            removeConfigEntry(config, "scriptRunawayTimeoutSeconds");
 
             setupConfigEntry(config, "packSync.mode", SandboxConfig.PACK_SYNC_OFF,
                     " Multiplayer script pack distribution (server -> client). off (default) = disabled; hashOnly = server sends pack hashes only, clients never execute remote packs; all = server pushes packs (manifest + files) during the configuration phase, verified and executed on the client BEFORE vanilla registry validation. Only packs with clientSync != false in their manifest are synced.");
@@ -72,6 +88,9 @@ public final class SandboxConfigLoader {
             setupConfigEntry(config, "dynamicRegistry.enabled", false,
                     " Allow scripts to register NEW game content (items, etc.) AFTER the server has started, via the DynamicRegistry binding (WORLD/RELOADABLE modes with snapshot-stale tracking). Experimental; keep disabled unless you need it.");
 
+            setupConfigEntry(config, "mixinjs.enabled", false,
+                    " Enables native MixinJS startup integration. Disabled by default; changes require a full process restart. Does not enable script reflection or ASM access.");
+
             return new SandboxConfig(
                     config.get("allowThreads"),
                     config.get("allowReflection"),
@@ -81,12 +100,10 @@ public final class SandboxConfigLoader {
                     config.get("conciseScriptErrorLogs"),
                     config.get("jsxAutomaticRuntime"),
                     config.get("scriptMemberValidation"),
-                    (int) numberValue(config, "scriptEvaluationTimeoutSeconds", 0),
-                    numberValue(config, "scriptStatementLimit", 0L),
-                    (int) numberValue(config, "scriptRunawayTimeoutSeconds", SandboxConfig.DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS),
                     stringValue(config, "packSync.mode", SandboxConfig.PACK_SYNC_OFF),
                     booleanValue(config, "packSync.allowUnsigned", false),
-                    booleanValue(config, "dynamicRegistry.enabled", false)
+                    booleanValue(config, "dynamicRegistry.enabled", false),
+                    booleanValue(config, "mixinjs.enabled", false)
             );
         } catch (Throwable e) {
             NekoJS.LOGGER.warn("Failed to load nekojs/config/engine.toml, using default sandbox config", e);
@@ -94,23 +111,12 @@ public final class SandboxConfigLoader {
         }
     }
 
-    /**
-     * 按数值类型安全读取整型配置项。NightConfig 的 TOML 解析器会把整数存成
-     * Integer/Long 等不同装箱类型，直接以 {@code long} 目标类型调用 {@code get} 会触发
-     * 拆箱 ClassCastException，导致整个文件被误判为损坏而回退默认配置（用户显式写的
-     * {@code scriptStatementLimit = 0} 会被吞掉）。统一走 {@link Number#longValue()}。
-     */
-    private static long numberValue(CommentedFileConfig config, String path, long fallback) {
-        Object value = config.get(path);
-        return value instanceof Number number ? number.longValue() : fallback;
-    }
-
     private static String stringValue(CommentedFileConfig config, String path, String fallback) {
         Object value = config.get(path);
         return value instanceof String s ? s : fallback;
     }
 
-    private static boolean booleanValue(CommentedFileConfig config, String path, boolean fallback) {
+    private static boolean booleanValue(UnmodifiableConfig config, String path, boolean fallback) {
         Object value = config.get(path);
         return value instanceof Boolean b ? b : fallback;
     }

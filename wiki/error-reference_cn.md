@@ -12,7 +12,7 @@
 本页查询的是 NekoJS 开发诊断编号，不是所有 Java、模组或网络异常的完整清单。AI HTTP/MCP 的 `CONTROL_DISABLED`、`INDEX_UNAVAILABLE` 等结构化机器码及操作状态见[AI 支持](ai-support_cn#wiki-live-controls)；它们与日志中的 `NEKO-xxxx` 不是同一套编号。报告问题时同时提供 Script Type、源文件/行号、阶段与实际是否提交，不要仅凭一条“已排队”消息判断 reload 成功。
 
 ```
-[NEKO-2002] 脚本语句累计数达到 scriptStatementLimit（50000000），… — script statement limit exceeded
+[NEKO-2004] 脚本输出行数超过 … 行上限，后续输出将被丢弃（防止日志无限增长） — script output line limit reached
 ```
 
 消息末尾包含具体值时，摘要放在该值之前：
@@ -51,16 +51,18 @@
 | `NEKO-1023` | authoring live control requires server owner thread | 实时 AI 控制未在服务器所有者线程执行，操作被拒绝 |
 | `NEKO-1024` | authoring live server runtime is no longer current | 实时服务器已停止或更换，旧操作不得在新世界继续执行 |
 
+`NEKO-2001`、`NEKO-2002`、`NEKO-2003`、`NEKO-2005` 已作为普通执行预算诊断退役。原有资源/语句上限、失控 watchdog、求值超时调用点已移除；旧日志仍可能包含这些码。它们保留为历史引用，不是可重新启用的设置，也不应复用给其他含义。`NEKO-2004` 仍有效：它限制输出日志行数，不限制脚本执行。
+
+普通执行没有替代性的自动截止时间或 watchdog。未完成的顶层 await 可以持续等待，无限循环可能阻塞所属线程/进程。HTTP/authoring 请求等待上限、生命周期取消/关闭，以及离线 Mixin 声明专用沙盒固定的 100,000 条语句限制，都是独立且继续有效的机制。
+
+结构化诊断的 `phase: WATCHDOG` 与 owner `Runaway Watchdog` 为兼容保留历史线上标签，用于一般的 Polyglot 取消、中断或资源耗尽上下文。看到这些值**不能**证明安装了自动 watchdog，也不能证明脚本触及执行预算；应检查实际原因与生命周期。
+
 <a id="wiki-section-3"></a>
 ## 沙盒与资源限制
 
 | 错误码 | 英文摘要 | 中文消息 |
 |---|---|---|
-| `NEKO-2001` | script context hit resource limits | 脚本环境触发 ResourceLimits |
-| `NEKO-2002` | script statement limit exceeded | 脚本语句累计数达到 scriptStatementLimit |
-| `NEKO-2003` | runaway script loop detected | 脚本同步执行持续超过 scriptRunawayTimeoutSeconds |
 | `NEKO-2004` | script output line limit reached | 脚本输出行数超过行上限 |
-| `NEKO-2005` | script evaluation timed out | 脚本求值超时 |
 
 <a id="wiki-section-4"></a>
 ## 数据同步

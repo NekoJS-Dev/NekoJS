@@ -25,6 +25,7 @@ class MixinCarriersTest {
     private static IPlatform platform(boolean development, String minecraft, Map<String, URI> admitted) {
         return (IPlatform) Proxy.newProxyInstance(IPlatform.class.getClassLoader(), new Class<?>[]{IPlatform.class}, (proxy, method, args) -> switch (method.getName()) {
             case "isDevelopment" -> development;
+            case "isMixinJsEnabled" -> true;
             case "isClient" -> true;
             case "getMcVersion" -> minecraft;
             case "getLoaderId" -> "neoforge";
@@ -36,6 +37,15 @@ class MixinCarriersTest {
             default -> throw new AssertionError("Unexpected platform access: " + method.getName());
         });
     }
+    @Test void disabledFeatureDoesNotInspectInstalledCarriersOrProfile() {
+        IPlatform disabled = (IPlatform) Proxy.newProxyInstance(IPlatform.class.getClassLoader(),
+                new Class<?>[]{IPlatform.class}, (proxy, method, args) -> {
+                    if (method.getName().equals("isMixinJsEnabled")) return false;
+                    throw new AssertionError("Disabled MixinJS must not inspect platform metadata: " + method.getName());
+                });
+        assertTrue(MixinCarriers.discover(disabled).isEmpty());
+    }
+
     @Test void onlyAdmittedExactDevelopmentPlansBecomeVisible() throws Exception {
         var plan = plan("a"); URI uri = write(plan, "admitted.json"); var admitted = Map.of(owner(plan), uri);
         assertEquals(List.of(plan), MixinCarriers.discover(platform(true, "26.1.2", admitted)));

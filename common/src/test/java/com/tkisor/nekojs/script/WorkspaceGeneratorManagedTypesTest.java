@@ -119,9 +119,7 @@ class WorkspaceGeneratorManagedTypesTest {
             ClassFilter.INSTANCE.updateConfig(new SandboxConfig(
                     prev.allowThreads(), prev.allowReflection(), prev.allowAsm(),
                     prev.allowFsWriteOutsideNekojs(), prev.enableEsmAuthoring(),
-                    prev.conciseScriptErrorLogs(), true, prev.scriptMemberValidation(),
-                    prev.scriptEvaluationTimeoutSeconds(), prev.scriptStatementLimit(),
-                    prev.scriptRunawayTimeoutSeconds()));
+                    prev.conciseScriptErrorLogs(), true, prev.scriptMemberValidation()));
             JSConfigModel automatic = WorkspaceGenerator.buildConfigForEnv(ScriptType.SERVER, scriptDir, probeDir);
             assertEquals("react-jsx", automatic.compilerOptions.jsx);
             assertEquals("nekojs", automatic.compilerOptions.jsxImportSource);

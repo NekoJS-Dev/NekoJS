@@ -209,14 +209,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
         return scriptError;
     }
 
-    /**
-     * 脚本路径 → 相对 root 的展示路径。WORLD 包脚本位于存档侧
-     * （{@code <world>/nekojs_packs/...}），不在 {@code <gamedir>/nekojs} root 下，
-     * {@code relativize} 会抛 IAE（票 03 基线发现，Windows 相对 world 路径必现）。
-     * 该失败点位于 executeEntry 的 catch 体内——异常从 catch 里二次抛出会掩掉原始
-     * kill/执行错误并让错误面板丢失该脚本条目（票 07 watchdog 终止的失败可观察性
-     * 依赖本方法不抛），因此回退为原样路径文本而不是失败。
-     */
+    /** Maps display paths without allowing world-pack locations outside root to hide the original failure. */
     private String relativeScriptPath(Path scriptPath) {
         try {
             return paths.root().relativize(scriptPath).toString().replace('\\', '/');

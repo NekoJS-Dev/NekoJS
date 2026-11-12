@@ -428,7 +428,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             return ReloadResult.failure(type, 0, ReloadPhase.PREPARATION, file.toString(),
                     new IllegalStateException("No ScriptManager registered for " + type));
         }
-        // Only a full candidate reload may recover a watchdog-isolated active runtime.
+        // Only a full candidate reload may recover an isolated, terminated active runtime.
         if (manager.isActiveFailed()) {
             return ReloadResult.failure(type, manager.generationId(), ReloadPhase.PREPARATION, file.toString(),
                     null);
@@ -446,7 +446,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             if (manager.isActiveFailed()) {
                 return ReloadResult.failure(type, manager.generationId(), ReloadPhase.FILE, file.toString(),
                         new IllegalStateException(
-                                "script evaluation was terminated by the watchdog and the active generation is isolated"));
+                                "script evaluation was terminated and the active generation is isolated"));
             }
             if (type == ScriptType.STARTUP) {
                 return new ReloadResult(type, true, null, manager.generationId(), ReloadPhase.STARTUP, file.toString());

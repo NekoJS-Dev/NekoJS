@@ -11,6 +11,7 @@ public final class MixinWorkspace {
 
     public static void prepare() {
         var platform = Platform.instance();
+        if (!platform.isMixinJsEnabled()) return;
         try {
             boolean restart = MixinPreparation.prepare(platform.getGameDir(), MixinCarriers.currentProfile(),
                     platform.isDevelopment(), MixinCarriers.readAdmitted(), name -> {

@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 票 17 网络自定义通道的 owner 队列路由与 generation/stale 边界 fixture：
  * 平台 enqueue/main-thread 入口之后的中立投递核心（{@link NetworkMessageHandler}）把
  * {@link NekoScriptPayload} 路由进对应 ScriptType 的 {@link NetworkEvents} 总线，
- * 再由票 06/07 的 candidate/commit/close/watchdog 机制约束接收面。
+ * 再由票 06/07 的 candidate/commit/close/cancellation 机制约束接收面。
  *
  * <p>本测试在真实 {@link ScriptManager}（含 Graal Context、pendingListeners、commit 点、
  * close 优先、activeFailed 隔离）上经脚本回调观察，不读私有字段作契约断言（除测试探针
@@ -65,6 +65,20 @@ class NetworkGenerationRoutingTest {
 
         public void hit(Object tag) {
             hits.computeIfAbsent(String.valueOf(tag), ignored -> new AtomicInteger()).incrementAndGet();
+        }
+
+        public void cancelContext() throws ReflectiveOperationException {
+            var borrowed = Context.getCurrent();
+            var field = com.tkisor.nekojs.script.ScriptManager.class.getDeclaredField("CONTEXT_TO_MANAGER");
+            field.setAccessible(true);
+            // Only the registered creator wrapper owns the right to cancel its Context.
+            for (Object key : ((Map<?, ?>) field.get(null)).keySet()) {
+                if (key instanceof Context owner && owner.equals(borrowed)) {
+                    owner.close(true);
+                    return;
+                }
+            }
+            throw new AssertionError("Current Context has no registered creator wrapper");
         }
 
         public int hitsOf(String tag) {
@@ -211,9 +225,9 @@ class NetworkGenerationRoutingTest {
         return impl;
     }
 
-    private static SandboxConfig withStatementLimit() {
-        // 与 common ScriptReloadRegressionTest 相同的测试沙盒：5s 求值超时 + 100k 语句上限
-        return new SandboxConfig(false, false, false, false, true, true, false, true, 5, 100_000L, 0);
+    private static SandboxConfig defaultSandboxConfig() {
+        // Ordinary lifecycle fixtures use no production resource-control policy.
+        return new SandboxConfig(false, false, false, false, true, true, false, true);
     }
 
     private static final class ManagerHarness implements AutoCloseable {
@@ -293,7 +307,7 @@ class NetworkGenerationRoutingTest {
     /** 平台主线程入口后的中立投递：SERVER 包进 SERVER 总线、按 channel 定向、带 sender。 */
     @Test
     void serverPacketRoutesToActiveListenerByChannel() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
             harness.writeScript("entry.js", """
                     Recorder.hit('v1-entry');
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v1-l:' + event.channel); });
@@ -316,13 +330,13 @@ class NetworkGenerationRoutingTest {
     /** CLIENT 包只进 CLIENT 总线；SERVER 监听器不受 S2C 包影响（跨总线隔离）。 */
     @Test
     void clientPacketRoutesOnlyToClientBus() throws Exception {
-        try (ManagerHarness serverHarness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness serverHarness = new ManagerHarness(defaultSandboxConfig())) {
             serverHarness.writeScript("entry.js", """
                     NetworkEvents.server('ch', function (event) { Recorder.hit('server-l'); });
                     """);
             serverHarness.loadAndRun();
 
-            try (ManagerHarness clientHarness = new ManagerHarness(withStatementLimit(), ScriptType.CLIENT)) {
+            try (ManagerHarness clientHarness = new ManagerHarness(defaultSandboxConfig(), ScriptType.CLIENT)) {
                 clientHarness.writeScript("entry.js", """
                         NetworkEvents.client('ch', function (event) { Recorder.hit('client-l:' + event.channel); });
                         """);
@@ -344,7 +358,7 @@ class NetworkGenerationRoutingTest {
      */
     @Test
     void candidatePhasePacketIsServedByActiveAndNeverEntersCandidate() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
             harness.writeScript("entry.js", """
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v1-l'); });
                     """);
@@ -384,7 +398,7 @@ class NetworkGenerationRoutingTest {
     /** 连续两次 commit 后只有最新 generation 接收（generation 单调推进，无旧代复活）。 */
     @Test
     void consecutiveReloadsKeepOnlyLatestGenerationReceiving() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
             harness.writeScript("entry.js", """
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v1'); });
                     """);
@@ -418,7 +432,7 @@ class NetworkGenerationRoutingTest {
      */
     @Test
     void closeDropsInFlightPacketsAndNeverTouchesClosedContext() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
             harness.writeScript("entry.js", """
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v1-l'); });
                     """);
@@ -440,24 +454,19 @@ class NetworkGenerationRoutingTest {
         }
     }
 
-    /**
-     * AC5 watchdog 隔离侧：active 被语句上限终止进入隔离失败（票 07 markActiveFailed）后，
-     * 到达的 packet 被监听器闭包的 isContextDead 短路丢弃——不调用已关闭 Context、不抛异常、
-     * 不自动重建第二个 active。
-     */
+    /** Explicit cancellation isolates the active generation and drops packets until an explicit reload. */
     @Test
     void isolatedActiveFailureDropsInFlightPackets() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
-            // 监听器先注册成功，随后脚本失控烧尽语句预算：active Context 被终止、进入隔离失败，
-            // 但监听器闭包仍在总线上（清扫只发生在 reload/close）
+        try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
+            // Register first, then cancel explicitly; the listener remains installed until reload/close.
             harness.writeScript("entry.js", """
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v1-l'); });
-                    while (true) { }
+                    Recorder.cancelContext();
                     """);
             harness.loadAndRun();
 
             assertTrue(harness.manager.isActiveFailed(),
-                    "statement-limit kill of the active context must enter isolated failure");
+                    "explicit cancellation of the active context must enter isolated failure");
 
             assertDoesNotThrow(harness::postServerPacket);
             assertEquals(0, harness.recorder.hitsOf("v1-l"),
@@ -485,7 +494,7 @@ class NetworkGenerationRoutingTest {
      */
     @Test
     void listenerExceptionIsContainedAndDoesNotAbortDispatch() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
             harness.writeScript("entry.js", """
                     NetworkEvents.server('ch', function (event) { throw new Error('listener boom'); });
                     NetworkEvents.server('ch', function (event) { Recorder.hit('healthy-l'); });
@@ -502,7 +511,7 @@ class NetworkGenerationRoutingTest {
     /** close 幂等 + close 后 packet 仍安全（与票 07 close 语义交叉的网络面观察）。 */
     @Test
     void repeatedCloseAndLatePacketsAreSafe() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
             harness.writeScript("entry.js", """
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v1-l'); });
                     """);

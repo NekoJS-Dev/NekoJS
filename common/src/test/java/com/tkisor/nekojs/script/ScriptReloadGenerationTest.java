@@ -44,6 +44,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -80,6 +82,24 @@ class ScriptReloadGenerationTest {
             return value == null ? 0 : value.get();
         }
     }
+
+    /** Captures the executing candidate for cancellation from a test-owned thread. */
+    public static final class CancellationGate {
+        private final CountDownLatch ready = new CountDownLatch(1);
+        private volatile Context context;
+
+        public void ready() {
+            context = Context.getCurrent();
+            ready.countDown();
+        }
+    }
+
+    // Both bounds let guest execution finish even if the external canceller fails.
+    private static final String CANCELLED_CANDIDATE = """
+            Cancellation.ready();
+            const cancellationDeadline = Date.now() + 2_000;
+            for (let i = 0; i < 1_000_000_000 && Date.now() < cancellationDeadline; i++) {}
+            """;
 
     /** 注入脚本的 Java 侧事件触发器：脚本执行中途同步 post 生产事件（AC1 观察点）。 */
     public static final class Trigger implements AutoCloseable {
@@ -147,19 +167,22 @@ class ScriptReloadGenerationTest {
         private final Counter counter;
         private final EventGroup sharedGroup;
         private final Trigger trigger;
+        private final CancellationGate cancellation;
         final List<ScriptType> closedBindings = new CopyOnWriteArrayList<>();
 
-        StubPluginRuntime(Counter counter, EventGroup sharedGroup, Trigger trigger) {
+        StubPluginRuntime(Counter counter, EventGroup sharedGroup, Trigger trigger, CancellationGate cancellation) {
             this.counter = counter;
             this.sharedGroup = sharedGroup;
             this.trigger = trigger;
+            this.cancellation = cancellation;
         }
 
         @Override
         public Map<String, Binding> bindings(ScriptType type) {
             return Map.of(
                     "Counter", binding("Counter", counter),
-                    "Trigger", binding("Trigger", trigger));
+                    "Trigger", binding("Trigger", trigger),
+                    "Cancellation", binding("Cancellation", cancellation));
         }
 
         private Binding binding(String name, Object value) {
@@ -228,6 +251,7 @@ class ScriptReloadGenerationTest {
         final TestEventBridge bridge = new TestEventBridge();
         final Counter counter = new Counter();
         final Trigger trigger = new Trigger();
+        final CancellationGate cancellation = new CancellationGate();
         final StubPluginRuntime pluginRuntime;
         final DefaultErrorTracker tracker;
         final NekoModulePipelineCache cache;
@@ -241,7 +265,7 @@ class ScriptReloadGenerationTest {
         ManagerHarness(SandboxConfig config, ScriptType scriptType) {
             NekoJSPaths paths = NekoJSPaths.get();
             this.scriptType = scriptType;
-            this.pluginRuntime = new StubPluginRuntime(counter, bridge.group, trigger);
+            this.pluginRuntime = new StubPluginRuntime(counter, bridge.group, trigger, cancellation);
             trigger.bind(bridge::postTestEvent);
             this.tracker = new DefaultErrorTracker(paths, config);
             ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
@@ -274,6 +298,47 @@ class ScriptReloadGenerationTest {
             manager.runTestScripts();
         }
 
+        void reloadWithCancelledCandidate() {
+            cancelCandidateDuring(this::reload);
+        }
+
+        void runTestsWithCancelledCandidate() {
+            cancelCandidateDuring(this::runTests);
+        }
+
+        private void cancelCandidateDuring(Runnable operation) {
+            AtomicReference<Throwable> cancellationFailure = new AtomicReference<>();
+            Thread canceller = new Thread(() -> {
+                try {
+                    assertTrue(cancellation.ready.await(5, TimeUnit.SECONDS),
+                            "candidate must reach the cancellation checkpoint");
+                    Context owned = candidateContextOf(manager);
+                    assertTrue(owned != null, "The candidate owner must retain its creator Context");
+                    assertEquals(cancellation.context, owned, "The checkpoint must belong to this candidate");
+                    owned.close(true);
+                } catch (Throwable failure) {
+                    cancellationFailure.set(failure);
+                }
+            }, "generation-test-candidate-canceller");
+            canceller.setDaemon(true);
+            canceller.start();
+            try {
+                operation.run();
+            } finally {
+                try {
+                    canceller.join(5_000L);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError("Interrupted while joining the test canceller", interrupted);
+                } finally {
+                    if (canceller.isAlive()) canceller.interrupt();
+                }
+                assertTrue(!canceller.isAlive(), "test canceller must finish within its bounded join");
+                assertTrue(cancellationFailure.get() == null,
+                        () -> "External candidate cancellation failed: " + cancellationFailure.get());
+            }
+        }
+
         @Override
         public void close() {
             manager.close();
@@ -281,9 +346,8 @@ class ScriptReloadGenerationTest {
         }
     }
 
-    private static SandboxConfig withStatementLimit() {
-        // 与 ScriptReloadRegressionTest 相同的测试沙盒：5s 求值超时 + 100k 语句上限
-        return new SandboxConfig(false, false, false, false, true, true, false, true, 5, 100_000L, 0);
+    private static SandboxConfig testConfig() {
+        return new SandboxConfig(false, false, false, false, true, true, false, true);
     }
 
     /**
@@ -292,7 +356,7 @@ class ScriptReloadGenerationTest {
      */
     @Test
     void successfulReloadRunsScriptsOnceAndSingleExecutionAfterCommit() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js", """
                     Counter.hit('v1-entry');
                     TestEvents.ping(function (event) { Counter.hit('v1-listener'); });
@@ -321,12 +385,12 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * 失败 reload（候选被语句上限杀死）：旧 Context 保留、旧脚本状态可读、
-     * <strong>active 监听器继续接收事件</strong>（ticket 06 generation 隔离契约 AC2/AC3）。
+     * External candidate cancellation preserves the active Context, script state, and listeners
+     * (ticket 06 generation isolation, AC2/AC3).
      */
     @Test
     void failedReloadKeepsOldContextAndScriptState() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js", """
                     Counter.hit('v1-entry');
                     TestEvents.ping(function (event) { Counter.hit('v1-listener'); });
@@ -337,9 +401,9 @@ class ScriptReloadGenerationTest {
             assertEquals(1, harness.counter.hitsOf("v1-listener"));
 
             Context oldContext = currentContext(harness.manager);
-            harness.writeScript("entry.js", "while (true) { /* spin forever */ }\n");
-            RuntimeException failure = assertThrows(RuntimeException.class, harness::reload,
-                    "candidate killed by statement limit must fail the reload");
+            harness.writeScript("entry.js", CANCELLED_CANDIDATE);
+            RuntimeException failure = assertThrows(RuntimeException.class, harness::reloadWithCancelledCandidate,
+                    "externally cancelled candidate must fail the reload");
 
             assertTrue(harness.pluginRuntime.closedBindings.isEmpty(),
                     "a failed candidate must not close live binding state");
@@ -365,7 +429,7 @@ class ScriptReloadGenerationTest {
     @Test
     void ordinaryCandidateExecutionFailuresKeepActiveContextAndListeners() throws Exception {
         for (String candidate : List.of("throw new Error('candidate failed');", "const invalid = ;")) {
-            try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+            try (ManagerHarness harness = new ManagerHarness(testConfig())) {
                 harness.writeScript("entry.js", """
                         globalThis.keptState = 'active';
                         Counter.hit('active-entry');
@@ -394,7 +458,7 @@ class ScriptReloadGenerationTest {
 
     @Test
     void unreadableCandidateEntryKeepsActiveContext() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js", "globalThis.keptState = 'active';");
             harness.loadAndRun();
             Context active = currentContext(harness.manager);
@@ -414,7 +478,7 @@ class ScriptReloadGenerationTest {
 
     @Test
     void ordinaryClientCandidateFailureKeepsActiveScriptState() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit(), ScriptType.CLIENT)) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig(), ScriptType.CLIENT)) {
             harness.writeScript("client-retention.js", "globalThis.keptState = 'typed input';");
             harness.loadAndRun();
             Context active = currentContext(harness.manager);
@@ -433,7 +497,7 @@ class ScriptReloadGenerationTest {
     /** Candidate preparation/virtual registration must not replace the active source-map session. */
     @Test
     void failedEsmReloadKeepsActiveSourceMapAndSuccessfulCommitPublishesNewSession() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             String oldSource = "throw new Error('old');\n";
             harness.writeScript("session-entry.mjs", oldSource);
             harness.loadAndRun();
@@ -445,9 +509,9 @@ class ScriptReloadGenerationTest {
             assertEquals(oldSource, activeModuleSession(harness.manager).sourceMapView()
                     .getMappedPosition("server_scripts/session-entry.mjs", 1, 1).sourceContent);
 
-            String candidateSource = "export const version = 'new';\nwhile (true) {}\n";
+            String candidateSource = "export const version = 'new';\n" + CANCELLED_CANDIDATE;
             harness.writeScript("session-entry.mjs", candidateSource);
-            assertThrows(RuntimeException.class, harness::reload);
+            assertThrows(RuntimeException.class, harness::reloadWithCancelledCandidate);
 
             assertEquals(oldSource, activeModuleSession(harness.manager).sourceMapView()
                     .getMappedPosition("server_scripts/session-entry.mjs", 1, 1).sourceContent,
@@ -472,13 +536,13 @@ class ScriptReloadGenerationTest {
      */
     @Test
     void failedReloadKeepsActiveListenersOnBus() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v1'); });\n");
             harness.loadAndRun();
             assertTrue(harness.bridge.busHasListeners(), "listener registered on load");
 
-            harness.writeScript("entry.js", "while (true) { /* spin forever */ }\n");
-            assertThrows(RuntimeException.class, harness::reload);
+            harness.writeScript("entry.js", CANCELLED_CANDIDATE);
+            assertThrows(RuntimeException.class, harness::reloadWithCancelledCandidate);
             assertTrue(harness.bridge.busHasListeners(),
                     "candidate failure must not touch the active generation's listeners");
         }
@@ -490,16 +554,15 @@ class ScriptReloadGenerationTest {
      */
     @Test
     void failedReloadDiscardsCandidateListenersOnly() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v1'); });\n");
             harness.loadAndRun();
 
-            // 候选脚本先注册 v2 监听器（进入候选收集器），随后的死循环杀死候选
+            // Collect the candidate listener before external cancellation discards the candidate.
             harness.writeScript("entry.js", """
                     TestEvents.ping(function (event) { Counter.hit('v2'); });
-                    while (true) { /* spin forever */ }
-                    """);
-            assertThrows(RuntimeException.class, harness::reload);
+                    """ + CANCELLED_CANDIDATE);
+            assertThrows(RuntimeException.class, harness::reloadWithCancelledCandidate);
 
             harness.bridge.postTestEvent();
             assertEquals(0, harness.counter.hitsOf("v2"),
@@ -515,7 +578,7 @@ class ScriptReloadGenerationTest {
      */
     @Test
     void afterCommitProductionTimerDispatchBelongsToNewGenerationOnly() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js", "setInterval(function () { Counter.hit('v1-timer'); }, 40);\n");
             harness.loadAndRun();
             Thread.sleep(120);
@@ -548,14 +611,14 @@ class ScriptReloadGenerationTest {
      */
     @Test
     void bridgeLifecycleCallCounts() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v1'); });\n");
             harness.loadAndRun();
             assertEquals(List.of(ScriptType.SERVER), harness.bridge.bindEventsCalls,
                     "initial load binds event groups exactly once");
 
-            harness.writeScript("entry.js", "while (true) { /* spin forever */ }\n");
-            assertThrows(RuntimeException.class, harness::reload);
+            harness.writeScript("entry.js", CANCELLED_CANDIDATE);
+            assertThrows(RuntimeException.class, harness::reloadWithCancelledCandidate);
             assertTrue(harness.bridge.clearListenersCalls.isEmpty(),
                     "failed reload must not clear any listeners (ticket 06: sweep happens only at commit)");
 
@@ -577,18 +640,17 @@ class ScriptReloadGenerationTest {
      */
     @Test
     void candidatePhaseEventsServedByActiveGeneration() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v1'); });\n");
             harness.loadAndRun();
 
-            // 候选脚本：先注册候选监听器（进入候选收集器），再从脚本执行中途同步 post 生产事件，
-            // 最后死循环杀死候选。post 发生在 candidate phase 内（生产路由仍属 active）。
+            // Post a production event after collecting the candidate listener but before external
+            // cancellation. Production routing must still belong to the active generation.
             harness.writeScript("entry.js", """
                     TestEvents.ping(function (event) { Counter.hit('v2'); });
                     Trigger.now();
-                    while (true) { /* spin forever */ }
-                    """);
-            assertThrows(RuntimeException.class, harness::reload);
+                    """ + CANCELLED_CANDIDATE);
+            assertThrows(RuntimeException.class, harness::reloadWithCancelledCandidate);
 
             assertTrue(harness.counter.hitsOf("v1") >= 1,
                     "production event during candidate phase must be served by the active listener (AC1)");
@@ -602,7 +664,7 @@ class ScriptReloadGenerationTest {
      */
     @Test
     void consecutiveCommitsKeepSingleExecutionAndCloseOldContext() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v1'); });\n");
             harness.loadAndRun();
             long generationAfterLoad = harness.manager.generationId();
@@ -641,7 +703,7 @@ class ScriptReloadGenerationTest {
      */
     @Test
     void pendingCandidateTimerCommittedWithGeneration() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js", "Counter.hit('v1-entry');\n");
             harness.loadAndRun();
 
@@ -669,7 +731,7 @@ class ScriptReloadGenerationTest {
     /** AC5（丢弃面）：失败候选的 pending timer 随候选关闭，永不进入生产分发。 */
     @Test
     void pendingCandidateTimerDiscardedWithFailedCandidate() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js", "setInterval(function () { Counter.hit('v1-timer'); }, 40);\n");
             harness.loadAndRun();
             Thread.sleep(120);
@@ -679,9 +741,8 @@ class ScriptReloadGenerationTest {
 
             harness.writeScript("entry.js", """
                     setTimeout(function () { Counter.hit('v2-timer'); }, 200);
-                    while (true) { /* spin forever after registering the timer */ }
-                    """);
-            assertThrows(RuntimeException.class, harness::reload);
+                    """ + CANCELLED_CANDIDATE);
+            assertThrows(RuntimeException.class, harness::reloadWithCancelledCandidate);
 
             Thread.sleep(300);
             harness.manager.flushReadyNodeTimers();
@@ -699,7 +760,7 @@ class ScriptReloadGenerationTest {
      */
     @Test
     void testTypeCandidateCallbacksRunInHarness() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit(), ScriptType.TEST)) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig(), ScriptType.TEST)) {
             harness.writeScript("entry.js", """
                     Counter.hit('t1-entry');
                     TestEvents.ping(function (event) { Counter.hit('t1-listener'); });
@@ -714,9 +775,9 @@ class ScriptReloadGenerationTest {
             assertEquals(1, harness.counter.hitsOf("t1-listener"),
                     "candidate listener must run in the test harness after commit");
 
-            harness.writeScript("entry.js", "while (true) { /* spin forever */ }\n");
-            assertThrows(RuntimeException.class, harness::runTests,
-                    "candidate killed by statement limit must fail the TEST run");
+            harness.writeScript("entry.js", CANCELLED_CANDIDATE);
+            assertThrows(RuntimeException.class, harness::runTestsWithCancelledCandidate,
+                    "externally cancelled candidate must fail the TEST run");
             harness.bridge.postTestEvent();
             assertEquals(2, harness.counter.hitsOf("t1-listener"),
                     "failed TEST candidate keeps the old TEST listeners alive");
@@ -739,7 +800,7 @@ class ScriptReloadGenerationTest {
      */
     @Test
     void illegalDispatchKeyFailsCandidatePlanAndPreservesActive() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js",
                     "TestEvents.ping(function (event) { Counter.hit('v1-listener'); });\n");
             harness.loadAndRun();
@@ -810,13 +871,12 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * AC2 补证（审查：候选 Context 真关闭缺显式断言）：被语句上限终止的候选，其 Context
-     * 必须真的关闭并从 {@code CONTEXT_TO_MANAGER} 解除登记——只断言「active 不变」不足
-     * 以排除候选资源泄漏。
+     * AC2: an externally cancelled candidate must close its Context and unregister it from
+     * {@code CONTEXT_TO_MANAGER}; active retention alone would not rule out candidate leaks.
      */
     @Test
     void killedCandidateContextIsClosedAndUnregistered() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js", "Counter.hit('v1-entry');\n");
             harness.loadAndRun();
 
@@ -824,10 +884,9 @@ class ScriptReloadGenerationTest {
             harness.trigger.bind(() -> candidateRef.set(candidateContextOf(harness.manager)));
             harness.writeScript("entry.js", """
                     Trigger.now();
-                    while (true) { /* spin forever after capturing the candidate context */ }
-                    """);
-            assertThrows(RuntimeException.class, harness::reload,
-                    "candidate killed by the statement limit must fail the reload");
+                    """ + CANCELLED_CANDIDATE);
+            assertThrows(RuntimeException.class, harness::reloadWithCancelledCandidate,
+                    "externally cancelled candidate must fail the reload");
 
             Context candidate = candidateRef.get();
             assertTrue(candidate != null, "candidate context must be observable during candidate execution");
@@ -850,7 +909,7 @@ class ScriptReloadGenerationTest {
      */
     @Test
     void commitSweepsOldListenersBeforePublishingNewRuntime() throws Exception {
-        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+        try (ManagerHarness harness = new ManagerHarness(testConfig())) {
             harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v1'); });\n");
             harness.loadAndRun();
             Object v1Runtime = runtimeOf(harness.manager);

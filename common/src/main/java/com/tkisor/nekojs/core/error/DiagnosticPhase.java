@@ -20,8 +20,8 @@ package com.tkisor.nekojs.core.error;
  *   <li>{@link #TRUST} — pack trust authorization denials (Pack Trust);</li>
  *   <li>{@link #RELOAD_CANCEL} — transactional reload failures and candidate cancellation
  *       (Runtime Reload);</li>
- *   <li>{@link #WATCHDOG} — runaway/cancelled evaluations closed by the watchdog or engine
- *       resource limits (Runaway Watchdog).</li>
+ *   <li>{@link #WATCHDOG} — cancelled or resource-exhausted evaluations; the phase identity
+ *       is retained for diagnostic consumers and does not imply an automatic execution budget.</li>
  * </ul>
  */
 public enum DiagnosticPhase {

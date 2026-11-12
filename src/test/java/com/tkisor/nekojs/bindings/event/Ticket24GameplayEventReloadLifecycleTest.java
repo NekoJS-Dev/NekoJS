@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>Thread/timing semantics: this harness runs load/reload/post serially on the test
  * thread (matching the production owner-thread model — SERVER dispatch and reload both
  * happen on the server thread); cross-thread re-entrancy is backstopped by Graal's
- * single-thread constraint (already frozen by ticket 07's {@code SyncEvalWatchdogTest}),
+ * single-thread constraint (already frozen by ticket 07's {@code ScriptContextCancellationTest}),
  * not repeated here.
  */
 class Ticket24GameplayEventReloadLifecycleTest {

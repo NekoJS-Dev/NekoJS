@@ -68,9 +68,8 @@ class SandboxPolicyTest {
         SandboxConfig loose = new SandboxConfig(
                 def.allowThreads(), def.allowReflection(), def.allowAsm(), true,
                 def.enableEsmAuthoring(), def.conciseScriptErrorLogs(), def.jsxAutomaticRuntime(),
-                def.scriptMemberValidation(), def.scriptEvaluationTimeoutSeconds(),
-                def.scriptStatementLimit(), def.scriptRunawayTimeoutSeconds(),
-                def.packSyncMode(), def.packSyncAllowUnsigned(), def.dynamicRegistryEnabled());
+                def.scriptMemberValidation(),
+                def.packSyncMode(), def.packSyncAllowUnsigned(), def.dynamicRegistryEnabled(), def.mixinJsEnabled());
         SandboxPolicy policy = new SandboxPolicy(loose, paths);
 
         assertDoesNotThrow(() -> policy.resolveWrite(gameDir.resolve("somewhere/output.txt")));

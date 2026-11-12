@@ -5,17 +5,32 @@
 <a id="wiki-section-1"></a>
 # MixinJS (experimental)
 
-MixinJS separates native method injection into **startup-loaded declarations** and **callbacks replaced by script reload**. NeoForge 26.x prepares an internal game library automatically; legacy NeoForge and Fabric use dependency-bearing carrier mods. It does not dynamically add Mixins to a running game.
+MixinJS separates native method injection into **startup-loaded declarations** and **callbacks replaced by script reload**. When explicitly enabled, NeoForge 26.x prepares an internal game library automatically; legacy NeoForge and Fabric use dependency-bearing carrier mods. It does not dynamically add Mixins to a running game.
 
 > **Development experiments only.** Nonempty carriers are rejected in production. Build/JVM checks are not gameplay acceptance. A bounded NeoForge 26.1.2 development dedicated-server smoke exercised loader discovery, Sponge transformation and one non-cancellable SERVER callback; that does not establish full native ABI, client, cross-loader or production-mapping acceptance. See the evidence boundary below. This is not a production deployment guarantee.
+
+**Runtime opt-in (default off)**
+
+Native MixinJS execution is disabled by default. To opt into the experimental development path, create or edit `<game>/nekojs/config/engine.toml`, preserving its other settings:
+
+```toml
+[mixinjs]
+enabled = true
+```
+
+Missing or malformed runtime configuration leaves MixinJS disabled. The old `<game>/config/nekojs-engine.toml` is only a read-only fallback when the canonical file is absent; use the canonical file for new edits. This is one engine setting, not a separate MixinJS configuration file or a system-property bypass.
+
+Set the value before launching and **fully restart** after changing it, including when turning it off. Script reload and Probe do not toggle it. While disabled, automatic startup preparation, loader admission, installed native callback slots and installed-hook Probe overloads remain inactive; declaration editing, Probe editor declarations and offline validation/build tooling stay usable. Existing generated carriers or cache files do not enable execution by themselves.
+
+`enabled = true` is an opt-in, **not a production unlock**. Development-only admission and the existing profile, local-trust, thread and ABI checks still apply.
 
 <a id="wiki-section-2"></a>
 ## 1. Separate declarations from callbacks
 
 | Content | Location | Activation |
 |---|---|---|
-| Injection declarations: target class, method descriptor, injection point, Hook ID | `nekojs/mixins/*.mixin.js` or `*.mixin.ts` | NeoForge 26.x: automatic preparation and restart; legacy/Fabric: offline build, install and restart |
-| Runtime callbacks: read arguments and replace results | `nekojs/server_scripts/` or `nekojs/client_scripts/` | Load or reload the matching Script Type |
+| Injection declarations: target class, method descriptor, injection point, Hook ID | `nekojs/mixins/*.mixin.js` or `*.mixin.ts` | With the engine opt-in enabled, NeoForge 26.x: automatic preparation and restart; legacy/Fabric: offline build, install and restart |
+| Runtime callbacks: read arguments and replace results | `nekojs/server_scripts/` or `nekojs/client_scripts/` | After enabled startup and loader admission, load or reload the matching Script Type |
 
 Declarations are not ordinary script entries. Only offline declarations import `nekojs/mixin`; ordinary scripts use the `MixinEvents` Event Group.
 
@@ -89,7 +104,7 @@ The current tool uses the `runtime` namespace and explicitly disables remapping 
 <a id="wiki-section-5"></a>
 ## 4. Activate and fully restart
 
-For automatic NeoForge 26.x preparation, restart after the preparation notice. The next launch must actually admit the managed library before callbacks can load; merely finding the file on disk is insufficient. Do not edit the owned cache or install extra manual copies.
+First set the engine opt-in before launch; changing it requires a full restart. For automatic NeoForge 26.x preparation, restart after the preparation notice. The next launch must actually admit the managed library before callbacks can load; merely finding the file on disk is insufficient. Do not edit the owned cache or install extra manual copies.
 
 For legacy NeoForge / Fabric:
 
@@ -98,7 +113,7 @@ For legacy NeoForge / Fabric:
 3. Fully stop and restart the instance so its native loader discovers the carrier during normal startup.
 4. Confirm that Minecraft, loader/version, physical side and ABI match the current environment.
 
-Legacy NeoForge and Fabric carriers declare **NekoJS as a mandatory loader dependency**; without it the loader rejects the carrier. All newly generated artifacts also have an early plugin gate: missing NekoJS, a mismatched profile or a production environment disables their injections before linking the runtime bridge. Thus an orphaned modern game library does not inject without NekoJS. This gate does not establish live-loader acceptance.
+Legacy NeoForge and Fabric carriers declare **NekoJS as a mandatory loader dependency**; without it the loader rejects the carrier. All newly generated artifacts also have an early plugin gate: missing NekoJS, a disabled or unreadable engine opt-in, a mismatched profile or a production environment disables their injections before linking the runtime bridge. Thus an orphaned modern game library does not inject without NekoJS. This gate does not establish live-loader acceptance.
 
 A declaration change takes effect only after preparation/build and a full restart. Ordinary reload cannot add, remove or reweave native injection structure.
 
@@ -146,7 +161,7 @@ Supported values are boolean, one UTF-16 code-unit char, range-checked byte/shor
 
 Currently unsupported: long/BigInt, constructors, class initializers, abstract/native/synthetic/bridge methods, injection points other than HEAD/RETURN, runtime classpath injection and dynamic reweaving.
 
-After running [Probe](probe-type-generation_us), TypeScript receives literal Hook ID overloads and self/argument/result types only from **loader-admitted plans**. Pending declarations do not acquire installed-Hook types. If completion is missing, check whether the carrier loaded and its profile matches.
+Declaration-editor completion and offline tooling remain available while MixinJS is disabled; the `MixinEvents` helper may still exist without installed callback slots. After running [Probe](probe-type-generation_us), TypeScript receives literal Hook ID overloads and self/argument/result types only when execution is enabled, from **loader-admitted plans**. Pending declarations do not acquire installed-Hook types. If completion is missing, first check the engine opt-in, then whether the carrier loaded and its profile matches.
 
 <a id="wiki-section-9"></a>
 ## 8. Troubleshooting and acceptance boundary

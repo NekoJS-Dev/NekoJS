@@ -13,6 +13,9 @@ public interface IPlatform {
 
     boolean isDevelopment();
 
+    /** Immutable startup opt-in from the engine config; platform adapters share their early loader snapshot. */
+    default boolean isMixinJsEnabled() { return false; }
+
     default String getCurrentThreadName() {
         return Thread.currentThread().getName();
     }

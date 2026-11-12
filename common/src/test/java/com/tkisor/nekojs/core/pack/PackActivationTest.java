@@ -171,10 +171,10 @@ class PackActivationTest {
         }
     }
 
-    @Test void providerResourceFailureStopsConsumersAndExplicitRecoveryKeepsDisabledIntent() throws Exception {
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 0, 10000, 2);
+    @Test void providerCancellationStopsConsumersAndExplicitRecoveryKeepsDisabledIntent() throws Exception {
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
         try (Fixture fixture = new Fixture(temporary, config)) {
-            fixture.pack("economy", "", "\"provides\":[\"wallet\"]", "Pack.provide('wallet', data=>{let count=0; while(true) {count++;}});");
+            fixture.pack("economy", "", "\"provides\":[\"wallet\"]", "Pack.provide('wallet', data=>{Recorder.cancelContext();});");
             fixture.pack("shop", "\"economy\":\"*\"", "\"requires\":{\"economy\":[\"wallet\"]}",
                     "Recorder.keep('wallet',Pack.require('economy','wallet')); Recorder.record('shop');");
             fixture.pack("chat", "", "", "Recorder.record('chat');");
@@ -225,7 +225,7 @@ class PackActivationTest {
         try (Fixture fixture = new Fixture(temporary)) {
             fixture.pack("economy", "", "", "global.balance=7;"); fixture.root.reload(ScriptType.SERVER);
             fixture.recorder.entered = new java.util.concurrent.CountDownLatch(1);
-            fixture.script("economy", "Recorder.signal(); while(true) { global.balance=8; }");
+            fixture.script("economy", "Recorder.signal(); const deadline = Date.now() + 10000; let remaining = 10000000; while(Date.now() < deadline && remaining-- > 0) { global.balance=8; }");
             var executor = java.util.concurrent.Executors.newFixedThreadPool(2);
             try {
                 var reload = executor.submit(() -> fixture.root.reloadPack(ScriptType.SERVER, "economy"));
@@ -268,7 +268,7 @@ class PackActivationTest {
             ScriptPackRegistry.get().activateWorldPacks(world); fixture.root.reload(ScriptType.SERVER);
             long chat = fixture.activations().get("GLOBAL:chat");
             fixture.recorder.entered = new java.util.concurrent.CountDownLatch(1);
-            Files.writeString(world.resolve("nekojs_packs/economy/server_scripts/main.js"), "Recorder.signal(); while(true) { global.balance=8; }");
+            Files.writeString(world.resolve("nekojs_packs/economy/server_scripts/main.js"), "Recorder.signal(); const deadline = Date.now() + 10000; let remaining = 10000000; while(Date.now() < deadline && remaining-- > 0) { global.balance=8; }");
             var executor = java.util.concurrent.Executors.newFixedThreadPool(2);
             try {
                 var reload = executor.submit(() -> fixture.root.reloadPack(ScriptType.SERVER, "WORLD:economy"));
@@ -350,6 +350,19 @@ class PackActivationTest {
         public void record(String value) { counts.merge(value, 1, Integer::sum); }
         public void keep(String name, graal.graalvm.polyglot.Value handle) { handles.put(name, handle); }
         public void closeRoot() { closeAction.run(); }
+        public void cancelContext() throws ReflectiveOperationException {
+            var borrowed = graal.graalvm.polyglot.Context.getCurrent();
+            var field = com.tkisor.nekojs.script.ScriptManager.class.getDeclaredField("CONTEXT_TO_MANAGER");
+            field.setAccessible(true);
+            // Only the registered creator wrapper owns the right to cancel its Context.
+            for (Object key : ((Map<?, ?>) field.get(null)).keySet()) {
+                if (key instanceof graal.graalvm.polyglot.Context owner && owner.equals(borrowed)) {
+                    owner.close(true);
+                    return;
+                }
+            }
+            throw new AssertionError("Current Context has no registered creator wrapper");
+        }
         public void signal() { entered.countDown(); }
         int calls(String key) { return counts.getOrDefault(key, 0); }
     }

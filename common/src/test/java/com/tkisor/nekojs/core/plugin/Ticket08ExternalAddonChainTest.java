@@ -318,7 +318,7 @@ class Ticket08ExternalAddonChainTest {
             // ScriptReloadRegressionTest harness, but with the real bootstrap result)
             ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
             SandboxConfig config = new SandboxConfig(false, false, false, false, true, true,
-                    false, true, 30, 100_000L, 0);
+                    false, true);
             DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
             NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
             NekoModulePipelineCache cache = NekoModuleTestFixtures.newCache(paths, compilers, config);

@@ -52,7 +52,7 @@ final class PostEffectDeclarationHarness implements AutoCloseable {
     PostEffectDeclarationHarness() {
         groups.put("ClientEvents", ClientEvents.GROUP);
         NekoJSPaths paths = NekoJSPaths.get();
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 5, 100_000L, 0);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();

@@ -33,6 +33,7 @@ import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Value;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -81,6 +82,20 @@ class NekoRuntimeRootReloadResultTest {
     static void initPlatform() {
         Path gameDir = Path.of(System.getProperty("java.io.tmpdir"), "nekojs-test-gamedir");
         TestPlatformInit.ensureInitialized(gameDir);
+    }
+
+    @BeforeEach
+    void clearTestScriptDirectories() throws java.io.IOException {
+        for (ScriptType type : ScriptType.values()) {
+            Path scripts = ScriptTypeEnv.scriptsDir(type);
+            Files.createDirectories(scripts);
+            try (var files = Files.walk(scripts)) {
+                for (Path path : files.filter(path -> !path.equals(scripts))
+                        .sorted(java.util.Comparator.reverseOrder()).toList()) {
+                    Files.deleteIfExists(path);
+                }
+            }
+        }
     }
 
     private static ScriptPropertyRegistry newPropertyRegistry() {
@@ -314,66 +329,63 @@ class NekoRuntimeRootReloadResultTest {
         }
     }
 
-    /**
-     * W1（ticket 20 watchdog smoke，P4 腿）：单文件 reload 在 active 上下文上求值失控脚本，
-     * watchdog 终止的是 active——kill 被 {@code ScriptExecutor.executeEntry} 吞进错误面板
-     * （无异常冒泡），但 active 已进入隔离失败。结果必须是携带隔离词汇的失败输出，
-     * 而不是 "script reload completed"：命令面措辞与实际后果一致。
-     */
+    public static final class CancellationFixture {
+        public void cancelCurrentContext() throws ReflectiveOperationException {
+            var borrowed = graal.graalvm.polyglot.Context.getCurrent();
+            var field = com.tkisor.nekojs.script.ScriptManager.class.getDeclaredField("CONTEXT_TO_MANAGER");
+            field.setAccessible(true);
+            // Only the registered creator wrapper owns the right to cancel its Context.
+            for (Object key : ((Map<?, ?>) field.get(null)).keySet()) {
+                if (key instanceof graal.graalvm.polyglot.Context owner && owner.equals(borrowed)) {
+                    owner.close(true);
+                    return;
+                }
+            }
+            throw new AssertionError("Current Context has no registered creator wrapper");
+        }
+    }
+
     @Test
-    void fileReloadThatWatchdogKillsTheActiveReportsIsolationFailure() throws Exception {
-        // 与 live smoke 同配置口径：语句预算关闭（0），只有 2s 墙钟守卫可终止空循环，
-        // kill 归因唯一落在失控 watchdog。
-        SandboxConfig watchdogConfig = new SandboxConfig(false, false, false, false, true, true, false, true,
-                60, 0L, 2);
+    void fileReloadThatCancelsTheActiveReportsIsolationFailure() throws Exception {
         Path dir = ScriptTypeEnv.scriptsDir(ScriptType.SERVER);
         Files.createDirectories(dir);
         try (var stream = Files.list(dir)) {
-            for (Path path : stream.toList()) {
-                Files.deleteIfExists(path);
-            }
+            for (Path path : stream.toList()) Files.deleteIfExists(path);
         }
-        writeScript(ScriptType.SERVER, "t20w1-good.js", "console.info('t20w1 good');\n");
-        NekoRuntimeRoot root = newRoot(ScriptEventBridge.EMPTY, watchdogConfig);
+        writeScript(ScriptType.SERVER, "cancel-good.js", "console.info('good');\n");
+        var runtime = new StubPluginRuntime() {
+            @Override public Map<String, Binding> bindings(ScriptType type) {
+                return Map.of("Cancellation", Binding.of("Cancellation", new CancellationFixture()));
+            }
+        };
+        NekoRuntimeRoot root = newRoot(ScriptEventBridge.EMPTY, SandboxConfig.defaultConfig(), runtime);
         try {
             root.createScriptManager(ScriptType.SERVER).discoverScripts();
             root.scriptManagerOf(ScriptType.SERVER).loadScripts();
             assertFalse(root.isActiveFailed(ScriptType.SERVER), "baseline active must be healthy");
-
-            writeScript(ScriptType.SERVER, "t20w1-runaway.js", "while (true) { /* spin forever */ }\n");
-            NekoRuntimeRoot.ReloadResult killed = assertTimeoutPreemptively(java.time.Duration.ofSeconds(60),
-                    () -> root.reloadFile(ScriptType.SERVER, Path.of("t20w1-runaway.js")),
-                    "wall-clock watchdog (2s) must terminate the runaway active evaluation");
-
-            assertTrue(root.isActiveFailed(ScriptType.SERVER),
-                    "the watchdog kill must leave the active generation isolated");
-            assertFalse(killed.success(),
-                    "a reload whose evaluation killed the active must not report success (W1)");
-            assertEquals(ReloadPhase.FILE, killed.phase(),
-                    "the failure surfaces at the FILE phase of this reload");
-            assertTrue(killed.sourceLocation() != null && killed.sourceLocation().endsWith("t20w1-runaway.js"),
-                    "failure result carries the reload source: " + killed.sourceLocation());
-
-            String wording = RuntimeCommandResultFormatter.reloadResult(
-                    killed, root.isActiveFailed(ScriptType.SERVER));
-            assertFalse(wording.contains("completed"),
-                    "user-facing wording must not claim completion while the active is isolated: " + wording);
+            writeScript(ScriptType.SERVER, "cancel-active.js", "Cancellation.cancelCurrentContext();\n");
+            NekoRuntimeRoot.ReloadResult cancelled = assertTimeoutPreemptively(java.time.Duration.ofSeconds(60),
+                    () -> root.reloadFile(ScriptType.SERVER, Path.of("cancel-active.js")));
+            assertTrue(root.isActiveFailed(ScriptType.SERVER), "explicit cancellation isolates the active generation");
+            assertFalse(cancelled.success(), "a cancelled active reload must not report success");
+            assertEquals(ReloadPhase.FILE, cancelled.phase());
+            assertTrue(cancelled.error() != null);
+            assertEquals("script evaluation was terminated and the active generation is isolated", cancelled.error().getMessage());
+            assertTrue(cancelled.sourceLocation() != null && cancelled.sourceLocation().endsWith("cancel-active.js"));
+            String wording = RuntimeCommandResultFormatter.reloadResult(cancelled, root.isActiveFailed(ScriptType.SERVER));
+            assertFalse(wording.contains("completed"), wording);
             assertTrue(wording.contains("reload failed"), wording);
-            assertTrue(wording.contains("phase=FILE source=t20w1-runaway.js"), wording);
-            assertTrue(wording.contains("active generation remains isolated; explicit full reload is required."),
-                    "failure wording must carry the isolation vocabulary: " + wording);
-
-            // P5（既有隔离拒绝）不受影响：杀过之后的下一次 FILE reload 在入口即被拒绝。
-            NekoRuntimeRoot.ReloadResult refused = root.reloadFile(ScriptType.SERVER, Path.of("t20w1-good.js"));
-            assertFalse(refused.success(), "post-isolation FILE reload stays refused");
+            assertTrue(wording.contains("phase=FILE source=cancel-active.js"), wording);
+            assertTrue(wording.contains("active generation remains isolated; explicit full reload is required."), wording);
+            NekoRuntimeRoot.ReloadResult refused = root.reloadFile(ScriptType.SERVER, Path.of("cancel-good.js"));
+            assertFalse(refused.success(), "post-cancellation FILE reload stays refused");
             assertEquals(ReloadPhase.PREPARATION, refused.phase());
-            assertTrue(RuntimeCommandResultFormatter.reloadResult(
-                            refused, root.isActiveFailed(ScriptType.SERVER))
-                            .contains("active generation remains isolated; explicit full reload is required."),
-                    "the pre-existing isolation refusal keeps its wording");
+            assertTrue(RuntimeCommandResultFormatter.reloadResult(refused, root.isActiveFailed(ScriptType.SERVER))
+                    .contains("active generation remains isolated; explicit full reload is required."));
         } finally {
-            Files.deleteIfExists(dir.resolve("t20w1-runaway.js"));
             root.closeSilently();
+            Files.deleteIfExists(dir.resolve("cancel-active.js"));
+            Files.deleteIfExists(dir.resolve("cancel-good.js"));
         }
     }
 }

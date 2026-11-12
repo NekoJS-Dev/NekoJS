@@ -182,10 +182,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         harness.loadClientScripts();
         assertEquals(List.of("first"), Ticket26ClientInputHudHarness.dispatchHud("normal"));
 
-        // The candidate script registers the renderer first (the batch/plan has already joined
-        // the joint candidate boundary), then trips the statement limit kill: the batch must be
-        // released at failure time, not linger keyed by the dead candidate Context.
-        harness.writeClientScript("hud.js", hudScript("second") + "while(true) {}\n");
+        // Register first so cancellation must discard a real pending renderer batch. The helper
+        // closes the creator-owned Context; no production execution budget or infinite loop is needed.
+        harness.writeClientScript("hud.js", hudScript("second") + "Recorder.cancelContext();\n");
         assertThrows(NekoReloadException.class, harness::reloadClientScripts);
 
         assertEquals(List.of("first"), Ticket26ClientInputHudHarness.dispatchHud("normal"),

@@ -16,14 +16,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
- * {@link NekoNodeTimers} 注册数上限（MAX_SCHEDULED_TIMERS）回归测试：
- * {@code while(true){setInterval(()=>{},1000)}} 会在语句上限触发前向 tasks 无限
- * 塞入条目（每个持有 JS 回调与调度句柄）导致 OOM，注册路径必须在超限时抛
- * {@link IllegalStateException}（与 STARTUP 拒绝延迟 timer 同款机制）。
+ * Verifies the pending-timer capacity independently of script execution budgets.
+ * Each registration retains a callback and scheduling handle, so overflow must fail
+ * with {@link IllegalStateException} and clearing timers must release the capacity.
  *
- * <p>无需 Graal Context：上限检查先于回调使用，callback 传 null 即可
- * （{@code recordScriptId} 对 null 直接返回，60s 延迟保证测试期内不触发）。
- * 不硬编码上限数值——注册到首个异常即得上限，clear 后名额释放即可续注。
+ * <p>No Graal Context is needed: capacity is checked before a null callback is used,
+ * and the delayed timers cannot fire during this test. The fixture discovers the cap
+ * from registration failure rather than hard-coding its value.
  */
 class NekoNodeTimersTest {
 

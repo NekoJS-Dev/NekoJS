@@ -14,9 +14,9 @@ import java.util.TreeMap;
  * 经 {@link CandidateStatePlan} 挂入同一 candidate 的联合预检/联合发布边界
  * （票 10 AC5）——修改计划与 global/shared 顶层写集联合成功或失败，不半提交。
  *
- * <p>生命周期：候选构建期由收集事件产出并注册；候选失败/被抢占/被 watchdog 终止时
- * 随 {@code GenerationGlobals.discard()} 丢弃（从不 publish）；commit 点由
- * {@link ModificationApplier} 恢复基线并应用一次。
+ * <p>Candidate collection creates this plan. Failure, preemption or Context termination
+ * discards it with {@code GenerationGlobals.discard()} without publication;
+ * {@link ModificationApplier} restores the baseline and applies the plan once at commit.
  *
  * <p>收集失败标记：收集事件内的声明错误（未知目标、非法值、回调抛出）记录在计划上
  * 而不是当场失败——与旧路径「监听器错误不中断 post」的可观察顺序一致；但标记了失败的

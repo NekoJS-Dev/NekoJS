@@ -126,10 +126,10 @@ class GlobalStateExamplesTest {
             harness.load(ScriptType.SERVER);
             assertEquals(1, harness.stores.storeFor(ScriptType.SERVER).get("retained"));
 
-            // 注入示例注释里描述的坏脚本（写 top-level key + 烧尽语句上限）→ reload 失败
+            // Reject the candidate after its top-level write; retained active values must remain unchanged.
             harness.writeScript(ScriptType.SERVER, "boom.js", """
                     global.bad = 1
-                    while (true) { }
+                    throw Error('candidate rejected after state mutation')
                     """);
             assertThrows(NekoReloadException.class, () -> harness.reload(ScriptType.SERVER));
             assertNull(harness.stores.storeFor(ScriptType.SERVER).get("bad"),

@@ -107,7 +107,7 @@ class PackSyncServerTest {
 
     private static void config(String packSyncMode) {
         ClassFilter.INSTANCE.updateConfig(new SandboxConfig(
-            false, false, false, false, true, true, false, true, 30, 0, 0, packSyncMode, false, false));
+            false, false, false, false, true, true, false, true, packSyncMode, false, false));
     }
 
     private static void pack(Path root, String name, String manifestJson) throws Exception {

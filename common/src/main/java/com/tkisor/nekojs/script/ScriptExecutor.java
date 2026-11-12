@@ -2,7 +2,6 @@ package com.tkisor.nekojs.script;
 
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
-import com.tkisor.nekojs.core.SyncEvalWatchdog;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.error.ScriptError;
@@ -45,11 +44,6 @@ public final class ScriptExecutor {
 
     public void executeEntry(Context ctx, ScriptContainer script, NekoNodeRuntime nodeRuntime,
                              NekoModulePipelineCache moduleSession) {
-        // 票 07 墙钟守卫：语句钩子看不见的空循环（while(true){}）只能靠宿主墙钟 +
-        // Context.interrupt 打断。只覆盖本次同步求值段，结束即 disarm，长驻空闲
-        // 环境不受影响；触发后走 onContextKilled 的 generation 记账（candidate 丢弃 /
-        // active 隔离），清理仍在 owner 线程完成。
-        SyncEvalWatchdog.Guard watchdog = SyncEvalWatchdog.arm(ctx, sandboxConfig.scriptRunawayTimeoutSeconds());
         try {
             synchronized (ctx) {
                 // Pack scripts may carry platform-relative paths (WORLD packs before the
@@ -77,12 +71,9 @@ public final class ScriptExecutor {
                 script.lastError = null;
             }
         } catch (Throwable t) {
-            if (watchdog.wasTriggered() || isContextKilledByResourceLimits(t)) {
-                // Graal 因语句上限关闭了 Context，或墙钟守卫/close 抢占触发了 interrupt：
-                // 通知 ScriptManager 按求值所属环境（active / candidate generation）
-                // 标记重建/隔离或候选失败。wasTriggered 覆盖中断异常类型与既有 kill
-                // 判定不一致的情况（interrupt 的 "Execution got interrupted" 不一定被
-                // isCancelled 识别），不依赖异常文本。
+            if (isContextTerminated(t)) {
+                // Host cancellation still invalidates the owning active or candidate generation.
+                // Cleanup remains on the owner thread; termination does not request a new runtime.
                 onContextKilled.accept(ctx);
             }
             script.disabled = true;
@@ -94,19 +85,11 @@ public final class ScriptExecutor {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(script.type).error("[NEKO-1003] 脚本执行失败: {}\n{}\n{} — script execution failed",
                     script.id.toString(), scriptError.getLogDetailText(sandboxConfig.conciseScriptErrorLogs()),
                     scriptError.diagnostic().describe());
-        } finally {
-            watchdog.disarm();
         }
     }
 
-    /**
-     * 沿异常链识别「Context 已被 Graal 资源上限关闭」：eval 抛 cancelled / resourceExhausted。
-     *
-     * <p>公共静态：入口执行路径（{@link #executeEntry}）与 JS 回调 catch 路径
-     * （{@code EventBusJS} 监听器 / {@code NekoNodeTimers.execute}，经
-     * {@link ScriptManager#reportContextKilled}）共享同一判定逻辑，避免复制。
-     */
-    public static boolean isContextKilledByResourceLimits(Throwable t) {
+    /** Identifies host/Graal termination through wrapped causes without configuring execution limits. */
+    public static boolean isContextTerminated(Throwable t) {
         for (Throwable current = t; current != null; current = current.getCause()) {
             if (current instanceof PolyglotException pe && (pe.isCancelled() || pe.isResourceExhausted())) {
                 return true;
@@ -150,13 +133,7 @@ public final class ScriptExecutor {
     }
 
     private void waitForEvaluation(CompletableFuture<?> evaluation, NekoNodeRuntime nodeRuntime) throws Exception {
-        long timeoutSeconds = sandboxConfig.scriptEvaluationTimeoutSeconds();
-        // 有界等待：顶层 await / native ESM 求值永不完成时，超过总时限即抛出超时错误，
-        // 走 executeEntry 的既有失败路径（errorTracker 记录 + 日志），不再无限忙等挂死服务器线程。
-        // 注意：不在此线程 close Graal Context（可能中断其它脚本的执行）—— 只停止等待并上报失败。
-        long deadlineNanos = timeoutSeconds > 0
-                ? System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds)
-                : Long.MAX_VALUE;
+        // Short future polls let ready timers advance top-level await; they impose no evaluation deadline.
         while (!evaluation.isDone()) {
             if (nodeRuntime != null) {
                 nodeRuntime.flushReadyTimers();
@@ -169,10 +146,6 @@ public final class ScriptExecutor {
                 throw e;
             } catch (ExecutionException e) {
                 throw unwrapExecutionException(e);
-            }
-            if (timeoutSeconds > 0 && System.nanoTime() - deadlineNanos >= 0) {
-                throw new TimeoutException("[NEKO-2005] 脚本求值超时（超过 " + timeoutSeconds
-                        + " 秒，可在 nekojs/config/engine.toml 中调整 scriptEvaluationTimeoutSeconds）：入口脚本的顶层 await 或模块加载可能永不完成 — script evaluation timed out");
             }
         }
         try {
