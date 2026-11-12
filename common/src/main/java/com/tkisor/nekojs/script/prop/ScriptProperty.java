@@ -68,12 +68,8 @@ public final class ScriptProperty<T> {
         this.reader = reader;
     }
 
-    public T read(String raw) {
-        try {
-            return reader.apply(raw);
-        } catch (Exception e) {
-            return null;
-        }
+    public @Nullable T read(String raw) {
+        return reader.apply(raw);
     }
 
     @Override

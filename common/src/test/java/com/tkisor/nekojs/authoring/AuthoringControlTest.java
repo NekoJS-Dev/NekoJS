@@ -452,6 +452,113 @@ class AuthoringControlTest {
         }
     }
 
+    @Test void readOnlyStatusRetainsTheFirstTimeoutAndReturnsDetachedLateCompletionMetadata() {
+        Host host = new Host();
+        AtomicLong clock = new AtomicLong();
+        CompletableFuture<AuthoringControlHost.CommandResult> stage = new CompletableFuture<>();
+        host.commands = (command, output) -> { output.accept("private command feedback"); clock.set(EXPIRED); return stage; };
+        try (AuthoringControl control = new AuthoringControl(ENABLED, host, clock::get)) {
+            JsonObject reply = control.execute(AuthoringControl.EXECUTE_COMMAND, command("say private arguments"));
+            JsonObject request = AuthoringJson.obj("operationId", string(reply, "operationId"));
+            JsonObject pending = control.execute("operation_status", request);
+            assertEquals("timed_out_pending", string(pending, "state"));
+            assertFalse(pending.get("terminal").getAsBoolean());
+            assertFalse(pending.get("retryable").getAsBoolean());
+            assertFalse(pending.toString().contains("private"));
+            stage.complete(new AuthoringControlHost.CommandResult(1, true));
+            JsonObject finished = control.execute("operation_status", request);
+            assertTrue(finished.get("terminal").getAsBoolean());
+            assertEquals("timed_out", string(finished.getAsJsonObject("initialResult"), "status"));
+            assertEquals("succeeded", string(finished.getAsJsonObject("latestResult"), "status"));
+            finished.getAsJsonObject("latestResult").addProperty("status", "caller mutation");
+            assertEquals("succeeded", string(control.execute("operation_status", request).getAsJsonObject("latestResult"), "status"));
+            assertEquals("timed_out", string(reply, "status"));
+            assertEquals(1, host.commandCalls);
+        }
+    }
+
+    @Test void lookupDistinguishesQueuedCancellationRunningCloseAndRetiredEpochWithoutRetrying() {
+        Host queuedHost = new Host();
+        AtomicLong queuedClock = new AtomicLong();
+        ArrayDeque<Runnable> queue = new ArrayDeque<>();
+        queuedHost.dispatch = callback -> { queue.add(callback); queuedClock.addAndGet(EXPIRED); };
+        try (AuthoringControl control = new AuthoringControl(ENABLED, queuedHost, queuedClock::get)) {
+            JsonObject reply = control.execute(AuthoringControl.EXECUTE_COMMAND, command("say queued"));
+            JsonObject lookup = AuthoringJson.obj("operationId", string(reply, "operationId"));
+            JsonObject cancelled = control.execute("operation_status", lookup);
+            assertTrue(cancelled.get("terminal").getAsBoolean());
+            assertFalse(cancelled.get("claimed").getAsBoolean());
+            queue.remove().run();
+            assertEquals(0, queuedHost.commandCalls);
+            assertEquals("timed_out", string(control.execute("operation_status", lookup).getAsJsonObject("latestResult"), "status"));
+        }
+        for (boolean close : new boolean[]{false, true}) {
+            Host host = new Host();
+            AtomicLong clock = new AtomicLong();
+            CompletableFuture<AuthoringControlHost.CommandResult> stage = new CompletableFuture<>();
+            host.commands = (command, output) -> { clock.set(EXPIRED); return stage; };
+            try (AuthoringControl control = new AuthoringControl(ENABLED, host, clock::get)) {
+                JsonObject reply = control.execute(AuthoringControl.EXECUTE_COMMAND, command("say running"));
+                JsonObject lookup = AuthoringJson.obj("operationId", string(reply, "operationId"));
+                if (close) control.close(); else host.epoch++;
+                JsonObject state = control.execute("operation_status", lookup);
+                assertFalse(state.get("retryable").getAsBoolean());
+                if (!close) assertEquals("STALE_RUNTIME", string(state.getAsJsonObject("latestResult"), "code"));
+                stage.complete(new AuthoringControlHost.CommandResult(1, true));
+                assertTrue(control.execute("operation_status", lookup).get("terminal").getAsBoolean());
+                assertEquals(1, host.commandCalls);
+            }
+        }
+    }
+
+    @Test void lookupValidatesIdsAndHonestlyCombinesUnknownAndEvictedHistory() {
+        Host host = new Host();
+        try (AuthoringControl control = new AuthoringControl(ENABLED, host)) {
+            for (String invalid : List.of("", "not-an-id", "1-1-1-1-1")) {
+                assertEquals(400, assertThrows(AuthoringException.class, () -> control.execute("operation_status", AuthoringJson.obj("operationId", invalid))).status());
+            }
+            JsonObject unknown = control.execute("operation_status", AuthoringJson.obj("operationId", "00000000-0000-0000-0000-000000000001"));
+            assertFalse(unknown.get("found").getAsBoolean());
+            assertEquals("unknown_or_expired", string(unknown, "state"));
+            assertTrue(unknown.get("terminal").isJsonNull());
+            String first = string(control.execute(AuthoringControl.EXECUTE_COMMAND, command("say first")), "operationId");
+            JsonObject latest = null;
+            for (int i = 0; i < AuthoringControl.MAX_AUDIT; i++) latest = control.execute(AuthoringControl.EXECUTE_COMMAND, command("say bounded"));
+            assertEquals(AuthoringControl.MAX_AUDIT, control.audit().size());
+            assertEquals("unknown_or_expired", string(control.execute("operation_status", AuthoringJson.obj("operationId", first)), "state"));
+            assertTrue(control.execute("operation_status", AuthoringJson.obj("operationId", string(latest, "operationId"))).get("found").getAsBoolean());
+            assertEquals(AuthoringControl.MAX_AUDIT + 1, host.commandCalls);
+        }
+    }
+
+    @Test void testReportsDoNotConfuseCommitExecutionAssertionsOrNoAssertions() {
+        List<com.tkisor.nekojs.api.testing.TestRunReport> reports = List.of(
+                new com.tkisor.nekojs.api.testing.TestRunReport(false, false, 0, 0),
+                new com.tkisor.nekojs.api.testing.TestRunReport(true, false, 0, 0),
+                new com.tkisor.nekojs.api.testing.TestRunReport(true, true, 0, 1),
+                new com.tkisor.nekojs.api.testing.TestRunReport(true, true, 0, 0),
+                new com.tkisor.nekojs.api.testing.TestRunReport(true, true, 1, 0));
+        List<String> codes = List.of("TEST_EXECUTION_INCOMPLETE", "TEST_EXECUTION_FAILED", "TEST_ASSERTIONS_FAILED", "OK", "OK");
+        TypedHost host = new TypedHost();
+        try (AuthoringControl control = new AuthoringControl(ENABLED, host)) {
+            for (int i = 0; i < reports.size(); i++) {
+                var report = reports.get(i);
+                host.reloads = (type, output) -> CompletableFuture.completedFuture(new AuthoringControlHost.ReloadResult(true, true, report));
+                JsonObject result = control.execute(AuthoringControl.RELOAD_SCRIPTS, AuthoringJson.obj("type", "test"));
+                assertEquals(codes.get(i), string(result, "code"));
+                assertEquals(i < 3 ? "failed" : "succeeded", string(result, "status"));
+                assertEquals("committed", string(result, "effects"));
+                assertTrue(result.get("committed").getAsBoolean());
+                assertTrue(result.get("postprocessingSucceeded").getAsBoolean());
+                JsonObject projected = result.getAsJsonObject("testRunReport");
+                assertEquals(report.overallPassed(), projected.get("overallPassed").getAsBoolean());
+                if (i == 3) assertTrue(projected.get("assertionsPassed").isJsonNull());
+                assertEquals(projected, control.execute("operation_status", AuthoringJson.obj("operationId", string(result, "operationId")))
+                        .getAsJsonObject("latestResult").getAsJsonObject("testRunReport"));
+            }
+        }
+    }
+
     @Test void runningTimeoutReportsUnknownWithoutCancellingAndLateCompletionOnlyUpdatesAudit() {
         Host host = new Host();
         AtomicLong clock = new AtomicLong();

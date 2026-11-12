@@ -15,4 +15,8 @@ For complete scenarios using these directories, CommonJS modules, state, timers 
 
 A failed transactional candidate preserves the active script generation. Arbitrary game, Java, network, or file effects are outside the managed rollback guarantee. Startup scripts cannot be rerun with `/nekojs reload startup`.
 
+Opening `//` header directives (`priority`, `modloaded`, `after`, `disable`) are read only before the first code or non-`//` comment line. An invalid known value emits one `NEKO-1025` warning with its file, physical line and cause, retaining the last valid value or the default; a later valid directive can still replace it. Unknown property names are ignored. Put integer-priority explanations on separate comment lines. `disable` is presence-based, even when its text says `false`.
+
+TEST reports separate `executionCompleted`, `executionSucceeded`, `passed`, `failed`, nullable `assertionsPassed`, and `overallPassed`. Counts belong to one attempt, not the shared binding’s lifetime. A caught failed assertion still makes `assertionsPassed: false`; zero observed assertions give `null`, not a vacuous pass. Completion covers the existing run/drain window, not future timers/events. Query the latest finished report through live `context.testRunReport`; see [runtime results](query-api.md#live-runtime-results-in-mod-only).
+
 Script reload commands report results through chat and logs. NekoJS does not draw an on-screen script reload progress bar.

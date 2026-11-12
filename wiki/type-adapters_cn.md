@@ -34,14 +34,15 @@ NekoJS 已注册了大量适配器（见 `src/main/java/com/tkisor/nekojs/js/typ
 
 | 适配器 | 目标类型 | 接受的 JS 输入 |
 |---|---|---|
-| `ItemAdapter` / `ItemStackAdapter` | `ItemStack` | 字符串 id（`"minecraft:stone"`）、`"1x minecraft:stone"`、`{id, count}`、`ItemStack` |
+| `ItemAdapter` | `Item` | 字符串 id、`Item`、`ItemStack`、`Block`、`NekoId` |
+| `ItemStackAdapter` | `ItemStack` | 字符串 id（`"minecraft:stone"`）、`"1x minecraft:stone"`、带组件的方括号字符串、`{id, count?, components?}` / `{item, count?, components?}`（count 可选）、`ItemStack`、`Item`、`NekoId` |
 | `IngredientAdapter` | `Ingredient` | 字符串、tag（`"#minecraft:planks"`）、数组、`Ingredient` |
 | `SizedIngredientAdapter` | `SizedIngredient` | 同上 + 数量 |
 | `BlockAdapter` | `Block` | 字符串 id |
-| `BlockPosAdapter` | `BlockPos` | `{x, y, z}`、`[x, y, z]`、字符串 |
-| `Vec3Adapter` | `Vec3` | `{x, y, z}`、`[x, y, z]` |
+| `BlockPosAdapter` | `BlockPos` | `{x, y, z}`、`[x, y, z]`、`BlockPos`、`Vec3`（不接受字符串） |
+| `Vec3Adapter` | `Vec3` | `{x, y, z}`、`[x, y, z]`、`Vec3`、`BlockPos` |
 | `CompoundTagAdapter` | `CompoundTag` | JS 对象（自动转 NBT） |
-| `ComponentAdapter` | `Component` | 字符串、`MutableComponent` |
+| `ComponentAdapter` | `Component` | 字符串、`Component`（含 `MutableComponent`）、managed `TextValue` |
 | `FluidStackAdapter` / `FluidIngredientAdapter` / `SizedFluidIngredientAdapter` | 流体类型 | 字符串、`{fluid, amount}` |
 | `IdentifierAdapter` | `Identifier`/`ResourceLocation` | 字符串 |
 | `TagKeyAdapter` | `TagKey` | `"namespace:path"`、可选 `#`、`"registry\|tag"` 或 `{type, tag}`（默认物品注册表） |
@@ -50,7 +51,11 @@ NekoJS 已注册了大量适配器（见 `src/main/java/com/tkisor/nekojs/js/typ
 | `CodecAdapter<T>` | 显式注册的目标类 | 字符串或 guest 对象/数组经已注册 codec 解析；匹配的 host 实例 |
 | `DataComponentsAdapter`（静态工具，非注册适配器） | `DataComponentPatch` | JS 对象 → data component patch（NeoForge / Fabric 26.x） |
 | `RecipeFilterAdapter` | `RecipeFilter` | JS 对象（见 [配方系统 - 过滤器](recipe-system_cn#wiki-section-3)） |
-| `RecipeJsonValueAdapter` | `RecipeJsonValue` | — |
+| `RecipeJsonValueAdapter` | `RecipeJsonValue` | 已包装值、字符串、数字、布尔、数组、对象 |
+
+表格概述常见形态，并不枚举转换器的全部检查。尤其是 [ItemAdapter](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/js/type_adapter/ItemAdapter.java#L18-L53) 的目标为 `Item`，不是 `ItemStack`；[BlockPosAdapter](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/js/type_adapter/BlockPosAdapter.java#L25-L73) 没有实现字符串转换。
+
+结构化 `ItemStack` 输入只能使用 `item` **或** `id`，不能同时给出；1.21.1 与 26.x 现在都消费可选 `components`。现有 `DataComponentPatch.CODEC` 使用每次调用即时取得的注册表上下文（优先实时服务器，其次客户端连接，最后内建注册表），先把补丁应用到物品副本，再应用数量；不会缓存上一个世界的注册表。组件移除使用原生 `!namespace:id` 键。内建回退不包含尚未加载的世界/数据包注册表，依赖这些值时仍需正确的运行阶段。真正的 codec 错误以 `NEKO-4054` 保留转换原因；可选字段的宽松回退和补丁归一化遵循 Minecraft 原生 codec，并非另建全字段严格校验。方括号字符串仍走现有独立解析路径。
 
 <a id="wiki-section-5"></a>
 ### 配方字段 codec 是独立的转换边界
@@ -114,7 +119,7 @@ public class MyPosAdapter implements JSTypeAdapter<MyPos> {
 
     @Override
     public ConversionPrecedence getPrecedence() {
-        return ConversionPrecedence.LOW;   // 低于内置；多个适配器匹配同一类型时高优先级赢
+        return ConversionPrecedence.LOW;   // Higher precedence wins when multiple adapters match a type
     }
 
     @Override
@@ -263,24 +268,26 @@ public void registerAdapters(JSTypeAdapterRegistry registry) {
 
 它是**纯编辑器面的**，两代 SPI 都有 default 空实现：不写照样能转换，代价只是 `.d.ts` 里该参数退化成目标类型本身，脚本传字符串会被编辑器标红（运行时仍然正常）。
 
-`AdapterInputShape` 是 sealed 接口，14 个变体（见 `api/AdapterInputShape.java`）：
+`AdapterInputShape` 是 sealed 接口，包含 14 个 record 变体。下面列出真实工厂名称，见[契约](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/AdapterInputShape.java#L30-L68)：
 
-| 变体 | 含义 | 渲染成 |
+| Record / 工厂 | 含义 | 渲染成 |
 |---|---|---|
-| `String` | 接受任意字符串（自由文本字段） | `string` |
-| `Literal(text)` | 单个字符串字面量 | `"*"` |
-| `Number` | 接受数字 | `number` |
-| `Boolean` | 接受布尔 | `boolean` |
-| `Self` | 接受目标类型本身 | `$Foo` |
-| `Host` | 接受某个 Java host 类型 | `$Bar` |
-| `ArrayOf(shape)` | 接受数组 | `T[]` |
-| `Object(field...)` | 接受对象（指定字段） | `{ a?: ..., b: ... }` |
-| `Union(shape...)` | 单个字段接受多种写法 | `(A \| B)` |
-| `Registry(typeName)` | 接受注册表 id 字符串 | `RegistryTypes.Item` |
-| `RegistryTag(typeName)` | 接受该注册表的标签 id（不含 `#`） | `RegistryTypes.ItemTag` |
-| `Namespace` | 接受 id 命名空间（mod 表 + 注册表命名空间） | `RegistryTypes.Namespace` |
-| `Template(prefix, hole, suffix)` | 固定前后缀 + 可补全的洞 | <code>\`#${RegistryTypes.ItemTag}\`</code> |
-| `Raw` | 其它原始形态 | 原样输出 |
+| `StringValue` / `string()` | 接受任意字符串（自由文本字段） | `string` |
+| `LiteralValue` / `literal(text)` | 单个字符串字面量 | `"*"` |
+| `NumberValue` / `number()` | 接受数字 | `number` |
+| `BooleanValue` / `bool()` | 接受布尔 | `boolean` |
+| `SelfValue` / `self()` | 接受目标类型本身 | `$Foo` |
+| `HostValue` / `host(cls)` | 接受某个 Java host 类型 | `$Bar` |
+| `ArrayOfValue` / `arrayOf(shape)` | 接受数组 | `T[]` |
+| `ObjectValue` / `object(Slot...)` | 接受对象（指定字段） | `{ a?: ..., b: ... }` |
+| `UnionValue` / `union(shape...)` | 单个字段接受多种写法 | `(A \| B)` |
+| `RegistryValue` / `registry(typeName)` | 接受注册表 id 字符串 | `RegistryTypes.Item` |
+| `RegistryTagValue` / `registryTag(typeName)` | 接受该注册表的标签 id（不含 `#`） | `RegistryTypes.ItemTag` |
+| `NamespaceValue` / `namespace()` | 接受 id 命名空间（mod 表 + 注册表命名空间） | `RegistryTypes.Namespace` |
+| `TemplateValue` / `template(prefix, hole, suffix)` | 固定前后缀 + 可补全的洞 | <code>\`#${RegistryTypes.ItemTag}\`</code> |
+| `RawValue` / `raw(ts)` | 原始 TypeScript 文本 | 原样输出 |
+
+`host(cls)` 会记录 Java 依赖供 import 收集；`raw(ts)` 只输出文本，不解析 Java 类名、不推断名义输入类型，也不发现 import。片段中的名字必须已能在生成模块中解析（见[渲染分支](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/AdapterAliasGenerator.java#L216-L261)）。
 
 `AdapterAliasGenerator` 把这些渲染成 `$Foo_` 联合类型。顶层 `Self` 保留 host `$Foo`；嵌套的 `Self` 和 `Host` 形状可以使用输入别名，以描述嵌套位置经过转换的值。这只是元数据，并不是递归转换任意 host 对象的指令（[形状渲染](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/AdapterAliasGenerator.java#L202-L232)）。
 
@@ -312,14 +319,14 @@ public void registerAdapters(JSTypeAdapterRegistry registry) {
 
 多个适配器匹配同一目标类型时，按 `precedence()`（旧 SPI `getPrecedence()`）决定。`ConversionPrecedence` 枚举只有 **4 个级别**（没有 `NORMAL`），顺序 `LOWEST < LOW < HIGH < HIGHEST`：
 
-| 级别 | 用途 |
+| 级别 | 相对优先级 |
 |---|---|
-| `HIGHEST` | 平台/核心适配器 |
-| `HIGH` | 内置通用适配器 |
-| `LOW` | 兜底 |
-| `LOWEST` | 最后手段 |
+| `HIGHEST` | 最高 |
+| `HIGH` | 高于 `LOW` |
+| `LOW` | 高于 `LOWEST` |
+| `LOWEST` | 最低 / 基类默认值 |
 
-「用途」这一列是内置适配器的自我分层，**不是校验规则**：没有任何代码检查你是谁、用了哪一级。缺省值分两种情况——旧 SPI 的 `getPrecedence()` 与 `BaseJsTypeAdapter` 都默认 `LOWEST`；新 SPI 直接 implements `JsTypeAdapter` 时 `precedence()` 没有 default，必须自己写出来。
+这些级别**不为核心或 addon 作者预留**：没有任何代码检查你是谁、用了哪一级。缺省值分两种情况——旧 SPI 的 `getPrecedence()` 与 `BaseJsTypeAdapter` 都默认 `LOWEST`；新 SPI 直接 implements `JsTypeAdapter` 时 `precedence()` 没有 default，必须自己写出来。
 
 <a id="wiki-section-16"></a>
 ### 冲突策略
@@ -331,7 +338,7 @@ public void registerAdapters(JSTypeAdapterRegistry registry) {
 下面几条是据此得出的建议，没有代码执行它们：
 
 - 尽量别让多个 addon 在同一类型上声明相同 precedence（那等于把「谁生效」交给插件加载顺序）。
-- addon 适配器用 `LOW`/`LOWEST` 比较安全——内置通用适配器在 `HIGH`，平台核心在 `HIGHEST`，你选低一级就是明确让内置优先；反过来想**盖掉**内置行为就得选比它高的级别，这是可行的、没人拦你。
+- 选择前应检查目标适配器的真实级别：`ItemStackAdapter` 和 `FluidStackAdapter` 使用 `LOW`，`CodecAdapter` 使用 `LOWEST`，许多基类适配器也继承 `LOWEST`。`LOW`/`LOWEST` 不会自动低于所有内置适配器。更高级别可让匹配的适配器优先；相同级别仍有上面的不确定性。参见 [ItemStack 优先级](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/js/type_adapter/ItemStackAdapter.java#L57-L60)及[基类默认值](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/JSTypeAdapter.java#L19-L21)。
 
 <a id="wiki-section-17"></a>
 ## 测试适配器

@@ -8,6 +8,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import com.tkisor.nekojs.js.type_adapter.RecipeFilterAdapter;
+import graal.graalvm.polyglot.Context;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -87,6 +89,58 @@ class RecipeFilterApplicationTest {
         RecipeHolder<?> chest = holder("minecraft:chest");
         assertTrue(new RecipeFilter.ById("chest").test(chest, null));
         assertFalse(new RecipeFilter.ById("chest").test(holder("nekojs:chest"), null));
+    }
+
+    @Test
+    void parsedAndArraySelectsOnlyRecipesMatchingEveryCondition() {
+        try (Context context = Context.newBuilder("js").build()) {
+            RecipeFilter filter = new RecipeFilterAdapter().apply(context.eval("js",
+                    "({and: [{mod: 'minecraft'}, {idContains: 'chest'}]})"));
+            assertTrue(filter.test(holder("minecraft:chest"), null), "Both conditions match");
+            assertFalse(filter.test(holder("minecraft:stone"), null), "Only the mod condition matches");
+            assertFalse(filter.test(holder("create:chest"), null), "Only the id condition matches");
+            assertFalse(filter.test(holder("create:stone"), null), "Neither condition matches");
+        }
+    }
+
+    @Test
+    void parsedOrArraysAndFlatObjectsKeepTheirExistingSelectionRules() {
+        try (Context context = Context.newBuilder("js").build()) {
+            var adapter = new RecipeFilterAdapter();
+            for (String expression : java.util.List.of(
+                    "[{mod:'minecraft'},{idContains:'chest'}]",
+                    "({or:[{mod:'minecraft'},{idContains:'chest'}]})")) {
+                RecipeFilter filter = adapter.apply(context.eval("js", expression));
+                assertTrue(filter.test(holder("minecraft:chest"), null));
+                assertTrue(filter.test(holder("minecraft:stone"), null));
+                assertTrue(filter.test(holder("create:chest"), null));
+                assertFalse(filter.test(holder("create:stone"), null));
+            }
+            RecipeFilter flat = adapter.apply(context.eval("js", "({mod:'minecraft',idContains:'chest'})"));
+            assertTrue(flat.test(holder("minecraft:chest"), null));
+            assertFalse(flat.test(holder("minecraft:stone"), null));
+            assertFalse(flat.test(holder("create:chest"), null));
+        }
+    }
+
+    @Test
+    void parsedEmptyAndNegatedGroupsKeepBooleanIdentities() {
+        try (Context context = Context.newBuilder("js").build()) {
+            var adapter = new RecipeFilterAdapter();
+            for (String expression : java.util.List.of("({and:[]})", "({not:{or:[]}})",
+                    "({and:[{not:{or:[]}}, {and:[]}]})")) {
+                assertTrue(adapter.apply(context.eval("js", expression)).test(holder("minecraft:chest"), null), expression);
+            }
+            for (String expression : java.util.List.of("[]", "({or:[]})", "({not:{and:[]}})",
+                    "({or:[{not:{and:[]}}, {or:[]}]})")) {
+                assertFalse(adapter.apply(context.eval("js", expression)).test(holder("minecraft:chest"), null), expression);
+            }
+            RecipeFilter mixed = adapter.apply(context.eval("js",
+                    "({and:[{or:[{mod:'minecraft'},{mod:'nekojs'}]},{not:{idContains:'blocked'}}]})"));
+            assertTrue(mixed.test(holder("minecraft:chest"), null));
+            assertFalse(mixed.test(holder("minecraft:blocked_chest"), null));
+            assertFalse(mixed.test(holder("create:chest"), null));
+        }
     }
 
     @Test

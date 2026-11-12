@@ -4,8 +4,8 @@ import lombok.Getter;
 import net.minecraft.world.entity.player.Player;
 
 /**
- * 玩家进出服事件的中立 payload（loggedIn / loggedOut 共用；成员 {@code event.player}，
- * 与 NeoForge 原生 PlayerEvent 的 getPlayer() 同形——脚本写法跨加载器一致）。
+ * Neutral Fabric login/logout payload exposing the read-only {@code event.player} Bean property.
+ * NeoForge uses its native PlayerEvent payload instead, whose getter is getEntity() and property is {@code event.entity}.
  */
 public class PlayerLifecycleEventJS {
 

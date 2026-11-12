@@ -34,14 +34,15 @@ NekoJS registers many adapters; see `src/main/java/com/tkisor/nekojs/js/type_ada
 
 | Adapter | Target type | Accepted JS input |
 |---|---|---|
-| `ItemAdapter` / `ItemStackAdapter` | `ItemStack` | String id (`"minecraft:stone"`), `"1x minecraft:stone"`, `{id, count}`, `ItemStack` |
+| `ItemAdapter` | `Item` | String id, `Item`, `ItemStack`, `Block`, `NekoId` |
+| `ItemStackAdapter` | `ItemStack` | String id (`"minecraft:stone"`), `"1x minecraft:stone"`, component-bearing bracket strings, `{id, count?, components?}` / `{item, count?, components?}` (count optional), `ItemStack`, `Item`, `NekoId` |
 | `IngredientAdapter` | `Ingredient` | String, tag (`"#minecraft:planks"`), array, `Ingredient` |
 | `SizedIngredientAdapter` | `SizedIngredient` | The same forms, with a count |
 | `BlockAdapter` | `Block` | String id |
-| `BlockPosAdapter` | `BlockPos` | `{x, y, z}`, `[x, y, z]`, string |
-| `Vec3Adapter` | `Vec3` | `{x, y, z}`, `[x, y, z]` |
+| `BlockPosAdapter` | `BlockPos` | `{x, y, z}`, `[x, y, z]`, `BlockPos`, `Vec3` (not strings) |
+| `Vec3Adapter` | `Vec3` | `{x, y, z}`, `[x, y, z]`, `Vec3`, `BlockPos` |
 | `CompoundTagAdapter` | `CompoundTag` | JS object, converted to NBT automatically |
-| `ComponentAdapter` | `Component` | String, `MutableComponent` |
+| `ComponentAdapter` | `Component` | String, `Component` (including `MutableComponent`), managed `TextValue` |
 | `FluidStackAdapter` / `FluidIngredientAdapter` / `SizedFluidIngredientAdapter` | Fluid types | String, `{fluid, amount}` |
 | `IdentifierAdapter` | `Identifier`/`ResourceLocation` | String |
 | `TagKeyAdapter` | `TagKey` | `"namespace:path"`, optional `#`, `"registry\|tag"`, or `{type, tag}` (default registry: item) |
@@ -50,7 +51,11 @@ NekoJS registers many adapters; see `src/main/java/com/tkisor/nekojs/js/type_ada
 | `CodecAdapter<T>` | The explicitly registered target class | String or guest object/array parsed through its registered codec; matching host instance |
 | `DataComponentsAdapter` (static utility, not a registered adapter) | `DataComponentPatch` | JS object to data component patch (NeoForge / Fabric 26.x) |
 | `RecipeFilterAdapter` | `RecipeFilter` | JS object; see [Recipe system: filters](recipe-system_us#wiki-section-3) |
-| `RecipeJsonValueAdapter` | `RecipeJsonValue` | — |
+| `RecipeJsonValueAdapter` | `RecipeJsonValue` | Wrapped values, strings, numbers, booleans, arrays, objects |
+
+The table summarizes common forms, not every converter check. In particular, [ItemAdapter](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/js/type_adapter/ItemAdapter.java#L18-L53) targets `Item`, not `ItemStack`; [BlockPosAdapter](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/js/type_adapter/BlockPosAdapter.java#L25-L73) does not implement string conversion.
+
+For structured `ItemStack` input, use **either** `item` **or** `id`, never both. Both 1.21.1 and 26.x now consume optional `components`. The existing `DataComponentPatch.CODEC` receives registries resolved for each call (live server, connected client, then built-in fallback); the patch applies to a copy before count, without caching another world’s registries. Removals use native `!namespace:id` keys. Built-in fallback does not contain unloaded world/datapack registries, so those values still require the appropriate live lifecycle. Genuine codec errors retain their conversion cause (`NEKO-4054`); native optional-field fallback and patch normalization remain Minecraft semantics, not a newly invented all-fields strict validator. Bracket strings retain their separate existing parser.
 
 <a id="wiki-section-5"></a>
 ### Recipe field codecs are a separate conversion boundary
@@ -114,7 +119,7 @@ public class MyPosAdapter implements JSTypeAdapter<MyPos> {
 
     @Override
     public ConversionPrecedence getPrecedence() {
-        return ConversionPrecedence.LOW;   // Below built-ins; higher precedence wins when multiple adapters match a type
+        return ConversionPrecedence.LOW;   // Higher precedence wins when multiple adapters match a type
     }
 
     @Override
@@ -263,24 +268,26 @@ A Java method declaring `void foo(MyPos pos)` can receive `{x: 1, y: 2}` after r
 
 This is **editor-only information**, with an empty default implementation in both SPI generations. Conversion works without it; the consequence is that `.d.ts` uses only the target type itself, so the editor flags string arguments even though they work at runtime.
 
-`AdapterInputShape` is a sealed interface with 14 variants; see `api/AdapterInputShape.java`:
+`AdapterInputShape` is a sealed interface with 14 record variants. Use the actual factory names below; see [the contract](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/AdapterInputShape.java#L30-L68):
 
-| Variant | Meaning | Rendered as |
+| Record / factory | Meaning | Rendered as |
 |---|---|---|
-| `String` | Any string, for free-text fields | `string` |
-| `Literal(text)` | A single string literal | `"*"` |
-| `Number` | A number | `number` |
-| `Boolean` | A boolean | `boolean` |
-| `Self` | The target type itself | `$Foo` |
-| `Host` | A Java host type | `$Bar` |
-| `ArrayOf(shape)` | An array | `T[]` |
-| `Object(field...)` | An object with specified fields | `{ a?: ..., b: ... }` |
-| `Union(shape...)` | Multiple forms for one field | `(A \| B)` |
-| `Registry(typeName)` | A registry id string | `RegistryTypes.Item` |
-| `RegistryTag(typeName)` | A tag id from that registry, without `#` | `RegistryTypes.ItemTag` |
-| `Namespace` | An id namespace from mod lists and registry namespaces | `RegistryTypes.Namespace` |
-| `Template(prefix, hole, suffix)` | Fixed prefix/suffix around a completable placeholder | <code>\`#${RegistryTypes.ItemTag}\`</code> |
-| `Raw` | Another raw form | Output unchanged |
+| `StringValue` / `string()` | Any string, for free-text fields | `string` |
+| `LiteralValue` / `literal(text)` | A single string literal | `"*"` |
+| `NumberValue` / `number()` | A number | `number` |
+| `BooleanValue` / `bool()` | A boolean | `boolean` |
+| `SelfValue` / `self()` | The target type itself | `$Foo` |
+| `HostValue` / `host(cls)` | A Java host type | `$Bar` |
+| `ArrayOfValue` / `arrayOf(shape)` | An array | `T[]` |
+| `ObjectValue` / `object(Slot...)` | An object with specified fields | `{ a?: ..., b: ... }` |
+| `UnionValue` / `union(shape...)` | Multiple forms for one field | `(A \| B)` |
+| `RegistryValue` / `registry(typeName)` | A registry id string | `RegistryTypes.Item` |
+| `RegistryTagValue` / `registryTag(typeName)` | A tag id from that registry, without `#` | `RegistryTypes.ItemTag` |
+| `NamespaceValue` / `namespace()` | An id namespace from mod lists and registry namespaces | `RegistryTypes.Namespace` |
+| `TemplateValue` / `template(prefix, hole, suffix)` | Fixed prefix/suffix around a completable placeholder | <code>\`#${RegistryTypes.ItemTag}\`</code> |
+| `RawValue` / `raw(ts)` | Raw TypeScript text | Output unchanged |
+
+`host(cls)` records a Java dependency for import collection. `raw(ts)` only emits its text: it does not resolve Java class names, infer nominal input types, or discover imports. Any names in that fragment must already resolve in the generated module ([rendering branches](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/AdapterAliasGenerator.java#L216-L261)).
 
 `AdapterAliasGenerator` renders these as `$Foo_` union types. At the top level, `Self` retains the host `$Foo`; nested `Self` and `Host` shapes may use their input aliases so nested converted values can be described. This is metadata, not an instruction to recursively convert an arbitrary host object ([shape rendering](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/AdapterAliasGenerator.java#L202-L232)).
 
@@ -312,14 +319,14 @@ Generic adapter aliases preserve explicit native host arguments: a parameter dec
 
 When multiple adapters match the same target type, `precedence()` (legacy `getPrecedence()`) decides their precedence. `ConversionPrecedence` has exactly **4 levels**, with no `NORMAL`: `LOWEST < LOW < HIGH < HIGHEST`.
 
-| Level | Purpose |
+| Level | Relative precedence |
 |---|---|
-| `HIGHEST` | Platform/core adapters |
-| `HIGH` | Built-in general adapters |
-| `LOW` | Fallback |
-| `LOWEST` | Last resort |
+| `HIGHEST` | Highest |
+| `HIGH` | Above `LOW` |
+| `LOW` | Above `LOWEST` |
+| `LOWEST` | Lowest / default for the base classes |
 
-The “Purpose” column describes how built-in adapters divide their responsibilities; it is **not validation**. No code checks who you are or which level you choose. There are two default cases: legacy `getPrecedence()` and `BaseJsTypeAdapter` default to `LOWEST`; when implementing the new `JsTypeAdapter` interface directly, `precedence()` has no default and must be supplied.
+Levels are **not reserved** for core or addon authors. No code checks who you are or which level you choose. There are two default cases: legacy `getPrecedence()` and `BaseJsTypeAdapter` default to `LOWEST`; when implementing the new `JsTypeAdapter` interface directly, `precedence()` has no default and must be supplied.
 
 <a id="wiki-section-16"></a>
 ### Conflict policy
@@ -331,7 +338,7 @@ The repository code establishes only this: `JSTypeAdapterRegistry.Impl` is an `A
 The following are recommendations derived from that behavior; no code enforces them:
 
 - Avoid having multiple addons declare the same precedence for the same type, which effectively leaves selection to plugin loading order.
-- `LOW` / `LOWEST` are safer for addon adapters: built-in general adapters use `HIGH`, and platform/core adapters use `HIGHEST`. Choosing a lower level explicitly gives built-ins priority. To **override** built-in behavior, choose a higher level; this is allowed and is not blocked.
+- Check the actual adapter for the target before choosing a level: `ItemStackAdapter` and `FluidStackAdapter` use `LOW`, while `CodecAdapter` uses `LOWEST` and many base-class adapters inherit `LOWEST`. `LOW` / `LOWEST` do not automatically sit below all built-ins. A higher level gives a matching adapter priority; equal levels retain the uncertainty above. See [ItemStack priority](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/js/type_adapter/ItemStackAdapter.java#L57-L60) and [base-class default](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/JSTypeAdapter.java#L19-L21).
 
 <a id="wiki-section-17"></a>
 ## Test adapters

@@ -49,6 +49,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     private final ResourceTracker resources;
     private boolean authoringInitialized;
     private volatile boolean authoringStopping;
+    private volatile com.tkisor.nekojs.api.testing.TestRunReport latestTestRunReport;
     private volatile com.tkisor.nekojs.authoring.AuthoringRuntime authoringRuntime;
     private com.tkisor.nekojs.core.ui.BuiltinUiRuntime builtinUi;
     /**
@@ -141,6 +142,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         try {
             var runtime = com.tkisor.nekojs.authoring.AuthoringRuntime.open(
                     com.tkisor.nekojs.core.fs.NekoJSPaths.get(), com.tkisor.nekojs.probe.ProbeCoordinator.config());
+            runtime.installDiagnostics(() -> errors().records(), this::latestTestRunReport);
             authoringRuntime = runtime;
             resources.track("authoring", runtime);
         } catch (java.io.IOException | RuntimeException | LinkageError failure) {
@@ -458,19 +460,42 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         }
     }
 
-    public TestRunResult runTests() {
-        if (packs.handles(ScriptType.TEST)) {
-            scriptManagerOf(ScriptType.TEST);
-            reload(ScriptType.TEST);
-            flushReadyNodeTimers(ScriptType.TEST);
-            return TestRunResult.completed();
-        }
+    /** Latest finished TEST attempt, including a failed candidate; never reads a guest Context. */
+    public com.tkisor.nekojs.api.testing.TestRunReport latestTestRunReport() {
+        return latestTestRunReport;
+    }
+
+    public synchronized TestRunResult runTests() {
+        boolean packageRun = packs.handles(ScriptType.TEST);
         ScriptManager testManager = scriptManagers.get(ScriptType.TEST);
-        if (testManager == null) {
-            return TestRunResult.notConfigured();
+        if (!packageRun && testManager == null) return TestRunResult.notConfigured();
+        // The plugin binding is a host object shared across generations. Hold it before
+        // execution so failed candidate cleanup cannot invalidate counter observation.
+        com.tkisor.nekojs.bindings.static_access.TestJS assertions = testAssertions();
+        int passedBefore = assertions == null ? 0 : assertions.passed();
+        int failedBefore = assertions == null ? 0 : assertions.failed();
+        boolean executionSucceeded = false;
+        try {
+            if (packageRun) {
+                scriptManagerOf(ScriptType.TEST);
+                reload(ScriptType.TEST);
+                flushReadyNodeTimers(ScriptType.TEST);
+            } else {
+                testManager.runTestScripts();
+            }
+            executionSucceeded = true;
+        } finally {
+            latestTestRunReport = new com.tkisor.nekojs.api.testing.TestRunReport(true, executionSucceeded,
+                    assertions == null ? 0 : assertions.passed() - passedBefore,
+                    assertions == null ? 0 : assertions.failed() - failedBefore);
         }
-        testManager.runTestScripts();
-        return TestRunResult.completed();
+        return new TestRunResult(true, true, latestTestRunReport);
+    }
+
+    private com.tkisor.nekojs.bindings.static_access.TestJS testAssertions() {
+        var binding = pluginRuntime.bindings(ScriptType.TEST).get("Test");
+        Object value = binding == null ? null : binding.value();
+        return value instanceof com.tkisor.nekojs.bindings.static_access.TestJS assertions ? assertions : null;
     }
 
     public ErrorSnapshot errors() {
@@ -637,7 +662,12 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         }
     }
 
-    public record TestRunResult(boolean isConfigured, boolean isCompleted) {
+    public record TestRunResult(boolean isConfigured, boolean isCompleted,
+                                com.tkisor.nekojs.api.testing.TestRunReport testRunReport) {
+        public TestRunResult(boolean isConfigured, boolean isCompleted) {
+            this(isConfigured, isCompleted, null);
+        }
+
         public static TestRunResult completed() {
             return new TestRunResult(true, true);
         }

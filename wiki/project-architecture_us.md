@@ -37,7 +37,7 @@ NekoJS is a multi-platform Minecraft scripting engine based on **GraalVM/GraalJS
 <a id="wiki-section-3"></a>
 ## Module structure
 
-The engine consists of two ordinary Gradle subprojects. Public contract types and engine implementations share `common`, separated by packages and lint boundaries. Minecraft-specific code lives in a Stonecutter-managed shared version tree.
+The engine consists of two ordinary Gradle subprojects, `common` and `common-api-processor`. Public contract types and engine implementations share `common`, separated by packages and lint boundaries. Minecraft-specific code lives in a Stonecutter-managed version tree. `addons/nekujs` is an additional, independently packaged compatibility addon for NeoForge 1.21.1, not a sixth Minecraft node or a second script runtime.
 
 ```text
 NekoJS/
@@ -52,6 +52,7 @@ NekoJS/
 │       ├── eventbus/        # Event bus implementations
 │       ├── bindings/        # Minecraft-independent binding classes
 │       └── platform/        # Platform abstraction SPI
+├── addons/nekujs/            # Separate NeoForge 1.21.1 compatibility addon; not embedded in NekoJS
 ├── buildSrc/                # Node build conventions: nekojs.neoforge-node / nekojs.fabric-node
 ├── src/                     # One shared version tree for all five nodes
 │   ├── main/java/           # Version differences: //? if >=26 guards and replacements
@@ -63,7 +64,7 @@ NekoJS/
 │   ├── 1.21.1/  26.1.2/  26.2.0/     # NeoForge nodes
 │   ├── 26.1.2-fabric/                # Fabric 26.1.2 node
 │   └── 26.2.0-fabric/                # Fabric 26.2 node (node id: 26.2.0-fabric)
-└── settings.gradle.kts      # Stonecutter version graph and the two engine subprojects
+└── settings.gradle.kts      # Five-node graph, two engine subprojects and the separate addon
 ```
 
 Node-specific sources serve two purposes: version-specific compat implementations (facades under `platform/compat/`) and paired files for differences between eras that are too large to express conveniently with guards. The shared tree holds the 26.x implementation; `versions/1.21.1/src/` holds the same-named 1.21.1 implementation, and `nekojs.node-sources` enforces node-local same-relative-path precedence over shared, raw Fabric, and generated sources, including the active node. Fabric nodes explicitly mount the common raw loader root `src/fabric`; the former cross-node source bridge is gone.
@@ -88,7 +89,7 @@ Assembly and lifecycle of GraalJS Polyglot `Context`:
 ### 2. Language frontends and module system (`core/compiler/`, `core/module/`)
 
 - **TypeScript**: `NekoTypeScriptCompiler` is a handwritten lexer-based **erasable TS** frontend. It removes type annotations, `type` / `interface`, generics, `as` / `satisfies`, and lowers `enum` / `namespace` to IIFEs.
-- **JSX**: `NekoJsxCompiler` lowers JSX to `__nekoJsxFactory` calls using the classic runtime.
+- **JSX**: `NekoJsxCompiler` supports classic factory lowering and the automatic `nekojs/jsx-runtime` import mode selected by `jsxAutomaticRuntime`; it does not provide React DOM. See [Configuration](configuration_us) and [TypeScript and JSX](typescript-and-jsx_us).
 - **Python**: `core/compiler/python/PythonToJsCompiler` transpiles a Python subset through lexer → parser → JavaScript emitter, then executes through GraalJS; this is not CPython or GraalPy.
 - **ESM**: `core/module/esm/` supplies the native lexer/parser/linker/evaluator. `ModuleReloadCoordinator` invalidates generation-owned CJS/ESM identities, links and dependency records for affected modules. This cache operation is not a transactional runtime swap or a filesystem watcher; saving a file alone does not activate changes. See [Commands](commands_us) for full generation reload, legacy file rerun and separate data/resource reload.
 - **Node shims**: `core/node/` supplies Java+JS implementations of fs/path/buffer/crypto/process/timers/util/events/assert/os/test.
@@ -99,7 +100,7 @@ Assembly and lifecycle of GraalJS Polyglot `Context`:
 
 NekoJS follows a **plugins-as-API** extension model:
 
-- **`NekoJSPlugin`** (`api/NekoJSPlugin.java`): an interface with approximately 20 default hooks. Built-in features (`NekoJSCorePlugin`) and third-party plugins implement the same interface.
+- **`NekoJSPlugin`** (`api/NekoJSPlugin.java`): the common plugin interface for built-in features and third-party plugins. Collection hooks project existing Extension Points, while lifecycle callbacks keep their own contracts; see the current channel index in [Plugin development](plugin-development_us).
 - **`@RegisterNekoJSPlugin`**: marks plugin classes for annotation scanning by each loader (`NeoForgePluginLoader` / `FabricPluginLoader`).
 - **`NekoJSBasePluginManager`**: discovery, filtering (`clientOnly` / `requiredMods`), instantiation, and priority sorting.
 - **`NekoPluginBootstrap`**: coordinates extension points such as `nekojs:bindings`, `nekojs:adapters`, `nekojs:events`, and `nekojs:recipe_schemas`; freezes registries after collection and publishes `NekoPluginRuntime`.

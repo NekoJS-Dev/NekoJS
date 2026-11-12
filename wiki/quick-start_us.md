@@ -41,11 +41,13 @@ nekojs/
 ├── node_modules/           # External pure-JS npm dependencies
 ├── assets/                 # Assets
 ├── data/                   # Data packs
-└── config/                 # probe.toml and engine.toml (engine/sandbox configuration)
+└── config/                 # engine.toml, probe.toml and ai.toml (separate settings)
                               (legacy config/nekojs-engine.toml is a read-only fallback)
 ```
 
 The separate AI documentation root defaults to `.github/neko_ai` and is selected by `[output].directory` in `nekojs/config/ai.toml`; tools read that setting directly. The private token stays under `nekojs/config/`, not `.neko_probe`. See [AI-assisted authoring](ai-support_us); do not commit the token.
+
+See [Configuration](configuration_us) for engine, Probe and AI defaults, restart requirements and legacy-file migration. The three files do not control the same features.
 
 All four script directories support `.js`, `.mjs`, `.cjs`, `.ts`, `.jsx`, `.tsx`, and `.py`. `.py` files are transpiled from NekoJS's Python subset and do not require an external Python runtime. See [Script basics](script-basics_us).
 
@@ -179,4 +181,4 @@ See [Registering new content](registering-new-content_us).
 
 ---
 
-[Previous: Platforms and compatibility](platform-compatibility_us) · [Contents](Home) · [Next: FAQ](faq_us)
+[Previous: Platforms and compatibility](platform-compatibility_us) · [Contents](Home) · [Next: Configuration](configuration_us)

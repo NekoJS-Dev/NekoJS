@@ -16,6 +16,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.component.DataComponentPatch;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -42,12 +43,13 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
                 object(
                         Slot.opt("item", union(registry("Item"), raw("`${string}[${string}]`"))),
                         Slot.opt("id", union(registry("Item"), raw("`${string}[${string}]`"))),
-                        Slot.opt("count", number())));
+                        Slot.opt("count", number()),
+                        Slot.opt("components", raw("{ [key: string]: any }"))));
     }
 
     @Override
     public Optional<String> syntaxDoc() {
-        return Optional.of("item:id[component=value,!removed] | Nx item:id[components] | item:id | RegistryTypes.Item | $Item | $NekoId | { item?|id?, count? }");
+        return Optional.of("item:id[component=value,!removed] | Nx item:id[components] | item:id | RegistryTypes.Item | $Item | $NekoId | { item?|id?, count?, components? }");
     }
 
     @Override
@@ -129,6 +131,14 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 
         // B10: 复用当前实例，不再每次 new
         ItemStack stack = this.apply(itemValue);
+        if (value.hasMember("components")) {
+            DataComponentPatch patch = DataComponentsAdapter.toPatch(value.getMember("components"));
+            if (!patch.isEmpty() && !stack.isEmpty()) {
+                ItemStack copy = stack.copy();
+                copy.applyComponents(patch);
+                stack = copy;
+            }
+        }
         if (value.hasMember("count")) {
             return withCount(stack, parsePositiveInt(value.getMember("count"), "count"));
         }

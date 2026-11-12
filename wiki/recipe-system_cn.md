@@ -20,10 +20,13 @@ ServerEvents.recipes(event => {
     .id('nekojs:cobble_to_sticks')
 
   // 加（任意类型，schema 驱动）
-  event.recipes.minecraft.smelting('minecraft:iron_ingot', 'minecraft:iron_ore')
+  event.recipes.minecraft.smelting({
+    ingredient: Ingredient.of('minecraft:iron_ore'),
+    result: Item.of('minecraft:iron_ingot')
+  })
 
   // 改输入
-  event.replaceInput({ type: 'minecraft:crafting_shaped' }, 'minecraft:planks', 'minecraft:oak_planks')
+  event.replaceInput({ type: 'minecraft:crafting_shaped' }, '#minecraft:planks', 'minecraft:oak_planks')
 })
 ```
 
@@ -34,7 +37,7 @@ ServerEvents.recipes(event => {
 <a id="wiki-section-3"></a>
 ## 过滤器（RecipeFilter）
 
-很多方法接受一个「过滤器」对象来选中一批配方。
+很多方法接受一个「过滤器」对象来选中一批配方。同一对象的成员按“与”组合，数组按“或”组合，字符串表示精确配方 id。`{}` 有意匹配全部；未知对象键会被拒绝（`NEKO-5003`），不会静默扩大匹配范围。显式 `{ and: [a, b] }` 要求每个子过滤器都匹配；`{ or: [a, b] }` 与普通数组满足任意一个即可。空 `and` 匹配全部，空 `or` 和普通空数组不匹配任何配方。`and`/`or` 的非数组值保留所传过滤器本身的含义。 参见[当前解析器](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/js/type_adapter/RecipeFilterAdapter.java#L65-L110)。
 
 | 键 | 值 | 含义 |
 |---|---|---|
@@ -45,13 +48,13 @@ ServerEvents.recipes(event => {
 | `group` | 字符串 | 配方组 |
 | `id` | 配方 id | 精确 id（命名空间可省，默认 `minecraft:`） |
 | `idStartsWith` / `idEndsWith` / `idContains` | 字符串 | id 子串匹配 |
-| `and` | 过滤器数组 | 与 |
+| `and` | 过滤器或过滤器数组 | 数组内每一项都必须匹配；单个过滤器保留原意 |
 | `or` | 过滤器数组 | 或 |
 | `not` | 过滤器 | 非 |
 
 ```javascript
 event.remove({ mod: 'minecraft', output: 'minecraft:stick' })   // 来自 minecraft 的木棍配方
-event.remove({ and: [{ type: 'minecraft:crafting_shaped' }, { output: '#minecraft:planks' }] })
+event.remove({ type: 'minecraft:crafting_shaped', output: '#minecraft:planks' })
 event.remove({ not: { mod: 'create' } })                          // 除 create 外全部
 ```
 
@@ -95,9 +98,7 @@ event.remove({ output: 'minecraft:diamond_sword' })
 
 补全来自 probe 生成的 `$Ingredient_` 别名：物品 id 走 `RegistryTypes.Item` 字面量联合，标签走 <code>\`#${RegistryTypes.ItemTag}\`</code>、命名空间走 <code>\`@${RegistryTypes.Namespace}\`</code> 这样的模板字面量类型。`RegistryTypes.ItemTag` 是 probe 运行时从注册表已绑定的标签导出的，`RegistryTypes.Namespace` 是加载器 mod 列表与注册表条目命名空间的并集（所以脚本自己注册的 `mymod:cool_gem` 带来的 `@mymod` 也有补全），所以**加了新 mod、脚本注册了新内容或改了数据包标签后要重新跑 `/nekojs probe`**，否则新 id / 标签会被标红。
 
-> 平台没有标签系统时（Cleanroom 1.12.2 用矿辞而非标签），`RegistryTypes.ItemTag` 回退成 `string`，`#xxx` 接受任意矿辞名。
->
-> 流体原料（`FluidIngredient` / `SizedFluidIngredient`）同理，只是把 `Item` 换成 `Fluid`。
+> 当前版本树使用物品标签，不提供已验证的 Cleanroom／矿辞合同。NeoForge 流体原料补全使用对应的 `Fluid` 元数据；不能据此推断 Fabric 也具有这些流体 API。
 
 ---
 
@@ -124,7 +125,7 @@ event.shaped('minecraft:diamond_sword', [
   'S'
 ], {
   D: 'minecraft:diamond',
-  S: '#minecraft:sticks'
+  S: 'minecraft:stick'
 }).id('nekojs:diamond_sword_alt')
 
 event.shapeless('minecraft:dirt', ['minecraft:sand', 'minecraft:gravel'])
@@ -167,14 +168,14 @@ ServerEvents.recipes(event => {
 <a id="wiki-section-10"></a>
 ### 方式三：`event.custom(...)` / `event.builder(...)` —— 原始 JSON
 
-对于已安装的 serializer，可以直接提供符合当前节点/mod 实际配方格式的完整 JSON 对象；这不会推导缺失字段、安装 serializer，也不代表任意 addon 都已受支持：
+对于已安装的 serializer，应提供其完整配方数据。`RecipeJsonValue` 会使用当前事件的 codec 转换下面这样的嵌套原生 Ingredient／ItemStack 值；纯 JSON 则必须已经符合当前节点/mod 格式。这不会推导缺失字段、安装 serializer，也不代表任意 addon 都已受支持：
 
 ```javascript
 // custom：必须包含 type
 event.custom({
   type: 'minecraft:smelting',
-  ingredient: 'minecraft:cobblestone',
-  result: 'minecraft:stone',
+  ingredient: Ingredient.of('minecraft:cobblestone'),
+  result: Item.of('minecraft:stone'),
   experience: 0.1,
   cookingtime: 200
 }).id('nekojs:cobble_to_stone')
@@ -193,18 +194,18 @@ event.builder('minecraft:crafting_shapeless')
 <a id="wiki-section-11"></a>
 ## RecipeJsonBuilder（链式）
 
-`event.builder(type)`、`event.recipes.<ns>.<type>(...)`、`event.custom(...)` 都返回链式 builder。
+`event.builder(type)`、直接原版 helper 以及合法的 `event.custom(...)` 调用返回 `RecipeJsonBuilder`；custom 对象缺少 `type` 时返回 `null`。Schema 调用返回感知字段的链式包装，而 namespace handler 保留声明的 Java 返回类型；只应链接实际返回类型提供的方法。
 
 | 方法 | 说明 |
 |---|---|
 | `.id(newId)` | 设置配方 id（会重新索引） |
 | `.group(group)` | 设置配方组 |
-| `.validate()` | 校验必填字段 |
+| `.validate()` | 立即通过原生配方 codec 解码，报告不合法的 serializer 数据 |
 | `.json() → object` | 返回底层 JSON |
 | `.merge(jsonObject\|value)` | 合并 JSON |
 | `.property(key, value)` | 设任意属性 |
 | `.jsonProperty(key, JsonElement\|Number\|String\|Boolean)` | 设 JSON 属性 |
-| `.input(key, Ingredient)` | 设输入字段（schema 感知角色） |
+| `.input(key, Ingredient)` | 将 Ingredient 编码到指定的顶层 JSON 键 |
 | `.output(key, ItemStack)` | 设输出字段 |
 | `.fluid(key, FluidStack)` | 设流体字段 |
 | `.fluidIngredient(key, FluidIngredient)` | 设流体配料字段 |
@@ -250,7 +251,7 @@ event.forEach({ output: 'minecraft:iron_ingot' }, recipe => {
 > （不写进配方 JSON），`/reload` 或 `/nekojs reload server` 重跑脚本时自动重建——删掉
 > 脚本里的动作，下次 reload 即失效。
 
-三种动作，都挂在 `RecipeJsonBuilder` 链上（`event.shaped(...)` / `event.recipes...` 的返回值）：
+`RecipeJsonBuilder` 提供三个动作方法（例如直接调用 `event.shaped(...)`／`event.shapeless(...)` 的结果），不要推断所有 namespace handler 返回值都有这些方法。下面的 `mymod:` 输出只是占位，请改成当前实例中已安装的物品。损耗量必须显式传入，没有单参数重载：
 
 ```js
 ServerEvents.recipes(event => {
@@ -278,7 +279,7 @@ ServerEvents.recipes(event => {
 
 | 动作 | 语义 | 边界 |
 |---|---|---|
-| `damageIngredient(filter, amount = 1)` | 余量 = 原料副本，耐久 +amount | 超过最大耐久 → 消失；不可破坏 → 原样保留 |
+| `damageIngredient(filter, amount)` | 余量 = 原料副本，耐久 +amount | 显式传入 `amount`（损耗一点就传 `1`）；达到最大损伤 → 消失；不可损耗 → 保留 |
 | `keepIngredient(filter)` | 余量 = 原料副本，不损耗 | 等价于"催化剂" |
 | `replaceIngredient(filter, with)` | 余量 = `with` 的副本 | `with` 支持物品 id 或 ItemStack |
 
@@ -290,6 +291,17 @@ ServerEvents.recipes(event => {
 自动发现会扫描已注册的 serializer，结合当前节点已知的原版合同与 codec 检查、启发式规则提取 schema。存在 serializer **不代表**已经具备完整字段 schema、正确的位置构造器，或支持某个 addon 的所有组件。复杂或不透明 codec 的发现结果可能有限，应检查最终 catalog 与生成声明，不能据此推断整个 mod 都兼容。参见[原生扫描器](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/api/recipe/definition/MinecraftRecipeSchemaScanner.java#L33-L74)及 [codec 检查与兜底](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/src/main/java/com/tkisor/nekojs/api/recipe/definition/MinecraftRecipeSchemaScanner.java#L117-L159)。
 
 可选的 NekuJS addon 会把受支持的兼容资源与程序化 schema 编译进**同一套原生 NekoJS schema 注册表**，复用原生转换和 Probe 声明；这不是运行上游 Rhino/KubeJS，也不是第二套配方引擎。兼容范围仍受实际导入的插件、组件 codec、schema 继承及已实现的 factory 操作限制。参见[桥接发布](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/addons/nekujs/src/main/java/com/tkisor/nekujs/bridge/LegacyRuntimeBridge.java#L75-L107)与[原生参数转换](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/wrapper/RecipeReflectionUtil.java#L70-L143)。
+
+**安装可选兼容 addon。** NekuJS 是单独的 JAR，不随 NekoJS 捆绑；当前目标是 **Minecraft 1.21.1 + NeoForge 21.1 + Java 21**。在兼容的 NekoJS JAR 之外，另行安装 NekuJS、受支持的原始扩展 mod 及其各自依赖。**不要**同时安装上游 KubeJS 或 Rhino：NekuJS 已提供它们的受限 provider 身份及包名。这些身份用于满足加载器版本范围，不代表完整上游运行时。更换这些 mod 或其所属 schema 资源后应重启实例，再重新生成 Probe；仅重载脚本不会重建 Plugin Runtime。参见[addon 安装合同](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/addons/nekujs/README.md#runtime-contract)。
+
+仓库 fixture 合同记录以下**特定 catalog**，不是整个 mod 的全部配方，也不代表所有 serializer 都已经过实际游玩验收：
+
+| 原始扩展 fixture | 声明的原生 profile 范围 |
+|---|---|
+| KubeJS Create 2101.3.1-build.18 + KubeJS Mekanism 2101.1.7-build.18 | 62 个所属 schema 文档：48 个可调用 profile、13 个不可调用基类，以及明确拒绝的 `create:sequenced_assembly` |
+| 上述两个扩展 + KubeJS EnderIO 1.21.1-0.13.0 | 新增 9 个程序化 schema；共 71 个定义，其中 57 个可调用 |
+
+来源合同：[资源图 fixture](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/addons/nekujs/src/test/java/com/tkisor/nekujs/recipe/schema/FixtureRecipeSchemaGraphCompilerTest.java#L26-L50)及[组合声明 fixture](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/addons/nekujs/src/test/java/com/tkisor/nekujs/recipe/FixtureReadableRecipeDeclarationTest.java#L43-L80)。嵌套配方构造、强制程序化构造器覆盖及未实现的 factory／processor／mapping 能力仍明确失败；这些数量和 Probe 生成成功都不能证明世界中的配方解码成功。NekuJS 内容 builder 定义当前只是收集的元数据，不会安装原生注册表对象。
 
 NekuJS 为 `minecraft:shaped` 和 `minecraft:special` 提供共享原生父 schema 依赖；它们不会作为合成出来的额外方法覆盖原版 handler，子定义仍保留自己的 serializer ID。`special` 保留 `category` 的原生 codec、`misc` 默认值和零位置参数构造；上游 `hidden` 是描述元数据，不再被误当作运行时禁止调用。`shaped` 提供结果、图案、单字符原料映射、分类及通知字段，在原生编码生命周期中处理空原料和图案一致性。
 
@@ -326,6 +338,7 @@ NekuJS 为 `minecraft:shaped` 和 `minecraft:special` 提供共享原生父 sche
 | `id_prefix` | 可选 | `<namespace>_<name>` | 自动生成 id 的前缀 |
 | `constructors` | 可选 | 所有字段按声明顺序 | 位置构造器：字段名数组的数组 |
 | `fields` | **必填** | 无 | 字段名与字段定义的映射 |
+| `unique` | 可选 | `[]` | 保留的字段名元数据，不替代原生自动 id 策略或 `.id(...)` |
 
 <a id="wiki-section-16"></a>
 ### 字段定义
@@ -335,7 +348,7 @@ NekuJS 为 `minecraft:shaped` 和 `minecraft:special` 提供共享原生父 sche
 | `path` | 字段名 | 值写入的 JSON 路径 |
 | `kind` | `json` | 类型（见下表） |
 | `array` | `false` | 是否包成 JSON 数组 |
-| `optional` | `false` | false 且缺失时报错 |
+| `optional` | `false` | false **且没有默认值**时，字段缺失才按必填处理 |
 | `default` | — | 默认 JSON 值 |
 | `role` | 按名字推断 | `INPUT` / `OUTPUT` / `OTHER`（控制 `replaceInput`/`replaceOutput` 的键识别） |
 

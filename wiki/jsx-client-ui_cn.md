@@ -319,7 +319,7 @@ const root = UI.createRoot(() => (
 ), adapter)
 ```
 
-当前 lowering 有一个需要记住的限制：`{items.map(item => <ItemCard ... />)}` 这种“表达式内的大写组件标签”当前不能通过编译。列表表达式中使用 `UI.element(ItemCard, props, key)`；小写 primitive 在表达式中没有这个限制。
+表达式中的大写组件标签也会被降级，例如 `{items.map(item => <ItemCard key={item.id} item={item} />)}`。`UI.element(ItemCard, props, key)` 仍可作为显式工厂，但不再是必须采用的绕过方式。列表元素仍需稳定的 key。
 
 `UI.element` 同样可以创建 primitive：
 
@@ -388,7 +388,7 @@ Probe 从 runtime 的具体签名生成回调声明：root／workspace render �
 
 从 `nekojs/jsx-runtime` 导入 `{ UI, Toggle, Slider, Select }`。`Toggle` 需要 `id`、`checked: boolean`、`onChange(boolean)`，可选 `label` / `text`；`Slider` 需要 `id`、`value: number`、`onChange(number)`；`Select` 需要 `id`、`value: string`、`options: readonly { value, label, disabled? }[]`、`expanded: boolean`、`onExpandedChange(boolean)`、`onChange(string)`。组件没有隐藏信号；每次 render 都应传入当前状态。选项 value 必须唯一且包含当前值；空选项只允许 `value=""`。Select 是最多六行、每行 20 像素的可滚动**内联列表**，不是悬浮原生下拉框。
 
-ID 必须在 root 内唯一。Toggle/Slider 使用基础 ID；Select 触发按钮使用基础 ID，并保留 `id:root`、`id:options`、`id:option:` 加 `encodeURIComponent(value)` 的派生 ID。禁用控件也会拒绝手动 `root.dispatch`，不能以 dispatch 绕过禁用状态。
+展开后的 ID 必须在 root 内唯一；workspace 窗口的后代会在组件展开后按窗口加作用域，因此不同窗口可以复用局部 ID（见 workspace 节）。Toggle/Slider 使用基础 ID；Select 触发按钮使用基础 ID，并保留 `id:root`、`id:options`、`id:option:` 加 `encodeURIComponent(value)` 的派生 ID。禁用控件也会拒绝手动 `root.dispatch`，不能以 dispatch 绕过禁用状态。
 
 原生 `input` 的 `maxLength` 按 Unicode 码点计数；Control/Super+A 全选，Shift+左/右/Home/End 扩展选区；Control 或 Super + C/X/V 可复制/剪切/粘贴。剪切先写剪贴板再删除，剪贴板失败不丢失输入。粘贴过滤 ISO 控制字符（包括 CR/LF、制表符和 DEL）及孤立代理项，保留合法补充字符。输入保持单行，长文本采用同一像素偏移完成光标跟随、鼠标命中、选择和裁剪；值或宽度缩小时会重新限制偏移。没有多行/IME composition 契约。
 
@@ -396,7 +396,7 @@ ID 必须在 root 内唯一。Toggle/Slider 使用基础 ID；Select 触发按�
 
 **Tabs、校验、真正 Dialog 与只读 item 契约**
 
-- 使用具名导出 `{ Tabs, Dialog, validateForm, Validators }`，没有 `UI.Tabs`/`UI.Dialog` 别名。Tabs 接收 `id`、受控 `value`、value 唯一的 `tabs: [{ value, label, disabled?, render: () => ... }]` 和 `onChange(string)`；tabs 必须非空且包含当前 value。选中标题使用 `[Label]` 文字标记，不会强制覆盖传入的 appearance，也没有 roving-focus API；只执行/挂载选中页的 renderer，外部信号在切页后保留。默认宽高 fill，嵌入其它内容时应像示例那样明确高度。root 内唯一 ID 还需预留 `id:tabs`、`id:tab:` + `encodeURIComponent(value)`、`id:content`。方向键/Home/End 导航跳过禁用页签。
+- 使用具名导出 `{ Tabs, Dialog, validateForm, Validators }`，没有 `UI.Tabs`/`UI.Dialog` 别名。Tabs 接收 `id`、受控 `value`、value 唯一的 `tabs: [{ value, label, disabled?, render: () => ... }]` 和 `onChange(string)`；tabs 必须非空且包含当前 value。选中标题使用 `[Label]` 文字标记，不会强制覆盖传入的 appearance，也没有 roving-focus API；只执行/挂载选中页的 renderer，外部信号在切页后保留。默认宽高 fill，嵌入其它内容时应像示例那样明确高度。应用 workspace/window 作用域后的 root 内唯一 ID 还需预留 `id:tabs`、`id:tab:` + `encodeURIComponent(value)`、`id:content`。方向键/Home/End 导航跳过禁用页签。
 - 显式调用 `validateForm(values, rules)` 得到深冻结的 `{ valid, errors }`；仅失败字段出现在 errors，其只读消息数组按字段/规则顺序排列。它不渲染错误、不提交、不归一化、不联系服务器。values 必须是普通 record，值为扁平 string/boolean/null/有限 number；显式 undefined 非法，但规则对应的缺失字段会以 undefined 传给规则。所有规则都会执行，一个字段可有多条消息；返回空字符串也算错误。内置规则为 `Validators.required(message?)`、`minLength(n, message?)`、`maxLength(n, message?)`、`numberRange(min, max, message?)`。required 拒绝缺失/null/空白字符串，但接受 `0`/`false`；长度规则要求字符串，按 JavaScript UTF-16 code unit 计数，与原生 input 的 maxLength 码点计数不同。numberRange 接受有限数值或经 `Number` 转换的非空白字符串，不保证整数。自定义 `(value, frozenValues) => message | null | undefined` 负责整数规则；Promise 或其它返回类型非法。不支持嵌套/异步校验。
 - Dialog 接收 `id`、受控 `open`、`onOpenChange(boolean)`，可选 `title`、`children`、`width`、`height`、`closeOnEscape`、`closeOnBackdrop`。关闭时不返回节点；打开时创建覆盖安全视口的 portal 和默认 80% × 80% 居中面板，不是普通流内 panel。宽高调整的是面板；溢出内容需显式放入 scroll。预留 `id:panel`、`id:content`。两个关闭开关默认 true；关闭请求只回调 `false`，仍由调用方更新信号才能关闭。
 - 按深度优先树顺序最后一个可见 dialog 为顶层模态。公共 dispatch 阻止背景 ID，包括打开后才分发的排队事件；原生指针/捕获/滚轮/键盘/文本/Tab/朗读留在其子树内。Escape 在 Screen 关闭前被消费，关闭开关为 false 时也不穿透；仅主键点击面板外才请求背景关闭。模态变化取消旧捕获并聚焦可用后代；关闭仅在原焦点仍保留、可见、启用时恢复。父滚动/裁剪不限制 portal。必须执行原生待验清单，不能用一张 panel 截图代替模态证明。
@@ -446,6 +446,8 @@ I18n 直接走普通 Java Binding 互操作和 Bean 属性机制，输入检查�
   {/* ... */}
 </column>
 ```
+
+profile 取安全内容区宽/高所对应档位的较小值，再按已提供的 `capabilities.maxProfile` 限制上限。2–6 档的最低宽度为 `320/480/640/854/1280`、最低高度为 `180/240/360/480/720`（GUI 单位）；`guiScale` 不是额外倍率。响应式值依次选择当前档、最近的已提供低档、`base`、调用方默认值，不向更高档取值。因此示例在 1–6 档的 padding 为 `4/4/4/4/16/24`，gap 为 `3/3/3/3/3/12`。resize 只重新布局保留内容，不重新执行 render；应通过响应式属性适配尺寸变化。
 
 文本尺寸、换行和裁剪由 Minecraft 字体 adapter 测量，不应在脚本中猜测字符宽度。
 
@@ -604,7 +606,7 @@ UI.batch(() => {
 
 事件对象只包含稳定的脚本字段，例如 `type`、`target`、`x`、`y`、`button`、`key`、`value` 和 `delta`。脚本不需要直接处理 `GuiGraphics`、原生 `Screen` 或 Minecraft 版本特有的输入事件。
 
-事件没有 DOM 的冒泡、捕获、`preventDefault()` 或 `stopPropagation()`。所有需要接收回调的节点都必须有 root 内唯一的 `id`：真实鼠标、键盘输入和手动 `root.dispatch(id, eventName, event)` 都通过这个 id 查找处理器。只写 `onClick` 或 `onChange` 而不写 id，不会收到脚本事件。事件对象由 runtime 冻结，处理器异常会进入 `event` 阶段诊断，不会让同一 Screen 的其它事件失效。
+事件没有 DOM 的冒泡、捕获、`preventDefault()` 或 `stopPropagation()`。所有需要接收回调的节点都必须有展开后在 root 内唯一的 `id`（workspace 不同窗口的后代可复用编写时的局部 ID）：真实鼠标、键盘输入和手动 `root.dispatch(id, eventName, event)` 都通过这个 id 查找处理器。只写 `onClick` 或 `onChange` 而不写 id，不会收到脚本事件。事件对象由 runtime 冻结，处理器异常会进入 `event` 阶段诊断，不会让同一 Screen 的其它事件失效。
 
 `button`、`input`、`scroll` 等元素会自行维护命中、焦点、禁用、滚动和文本编辑状态。旧节点被删除或 root 被关闭后，其事件回调不会继续接收输入。
 

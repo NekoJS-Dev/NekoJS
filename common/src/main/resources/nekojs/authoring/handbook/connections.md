@@ -1,6 +1,6 @@
 # MCP connections: in-mod or standalone
 
-NekoJS supports two MCP modes with the same read-only authoring tools: use the **in-mod MCP service while the game runs**, or the independent [stdio helper](stdio.md) for the last exported snapshot, including while the game is stopped. Only in-mod MCP can expose separately opted-in [live controls](live-controls.md). Neither mode automatically configures or connects your AI client.
+NekoJS supports two MCP modes sharing seven snapshot/documentation tools: use the **in-mod MCP service while the game runs**, or the independent [stdio helper](stdio.md) for the last exported snapshot, including while the game is stopped. In-mod MCP also exposes [live result queries](query-api.md#live-runtime-results-in-mod-only), plus separately opted-in [live controls](live-controls.md). Neither mode automatically configures or connects your AI client.
 
 ## In-mod MCP: connect while the game runs
 
@@ -97,7 +97,7 @@ curl --fail-with-body -H "Authorization: Bearer $TOKEN" \
 unset TOKEN
 ```
 
-GET operations: `context`, `capabilities`, `schema`. POST JSON operations: `resolve`, `members`, `query`, `batch`, all below `/api/v1/authoring/`. Every route requires bearer authentication. Query-string parameters are rejected; put scope and filters in the JSON body. See [query requests](query-api.md) before interpreting results.
+GET operations: `context`, `capabilities`, `schema`. POST JSON operations: `resolve`, `members`, `query`, `batch`, plus in-mod `errors` and `operation_status`, all below `/api/v1/authoring/`. Every route requires bearer authentication. Query-string parameters are rejected; put scope and filters in the JSON body. See [query requests](query-api.md) before interpreting results.
 
 ## Advanced reference: manual MCP over HTTP
 

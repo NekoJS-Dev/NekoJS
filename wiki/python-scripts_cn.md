@@ -25,6 +25,8 @@ print('[NekoJS] Python script loaded')
 
 进入世界或执行 `/nekojs reload`，加载脚本时会打印这条消息。`ServerEvents.started(...)` 则是在服务端启动完成时触发，不是每次脚本 reload 都会触发。
 
+**文件属性限制：**`# priority:`、`# after:`、`# modloaded:`、`# disable:` 注释不会作为脚本属性读取。当前预读器只识别开头的 `//` 头部，而 `//` 不是 Python 注释；不要把 JavaScript 属性头部直接复制到需要执行的 `.py` 源码。见[脚本属性](script-properties_cn)。
+
 <a id="wiki-section-3"></a>
 ### 开启 Python 类型提示
 
@@ -241,7 +243,7 @@ unique = {1, 2, 2, 3}     # 集合 → new Set([1, 2, 2, 3])
 <a id="wiki-section-14"></a>
 ### 关键字参数（**kwargs）
 
-声明了 `**kwargs` 的函数会把关键字实参收集进一个 dict。调用点把关键字实参打包成一个带标记的尾随对象 `{name: value, __nekoKw: true}`；函数开头会生成一段 prologue，按 Python 规则重建绑定：**位置参数优先于关键字参数优先于默认值**，`*args` 收集多余位置参数，`**kwargs` 收集剩余关键字（已绑定到具名参数的不再进 kwargs）。
+声明了 `**kwargs` 的函数会把关键字实参收集进一个 dict。调用点把关键字实参打包成带标记的尾随对象 `{name: value, __nekoKw: true}`；函数开头按 **NekoJS 的绑定约定：位置参数优先于关键字参数优先于默认值** 重建绑定。`*args` 收集多余位置参数，`**kwargs` 收集剩余关键字。与 Python 不同，位置/关键字重复绑定不会被拒绝；缺失的必需实参可能得到 `undefined`。
 
 ```python
 def g(x, y=10, *rest, **kw):
@@ -294,8 +296,8 @@ print(Cat.default())      # Animal(cat)
 - 类方法装饰器支持 `@staticmethod`/`@classmethod`/`@property`（其它会清晰报错）；顶层函数和类的装饰器见「装饰器」节。
 - `@classmethod` 降级为 `static` 方法，开头绑定 `var cls = this`（按 `Class.method()` 调用时 `cls` 即该类）。
 - `@property` 降级为 JS getter（`get name() { ... }`，只读，无 setter）。
-- 实例化自己定义的类时 `Cat('Tom')` 会自动降级为 `new Cat('Tom')`。
-- 类体里的普通赋值（`class C: x = 5`）降级为 ES2022 **静态类字段** `static x = 5;`（通过 `C.x` 访问，对应 Python 类属性语义）；类体内的**多重赋值 / 元组解包**会编译期报错。
+- 实例化编译器识别的类名时，`Cat('Tom')` 会降级为 `new Cat('Tom')`；不能推广到任意导入或别名构造值。仅支持单继承，不支持多个基类或 metaclass 等类关键字实参。
+- 类体里的简单赋值（`class C: x = 5`）降级为 ES2022 **实例字段** `x = 5;`，通过 `self.x` / `C().x` 读取，不是静态 `C.x`。初始化表达式随实例创建而求值，不等同于 Python 的共享类属性。类体内多重赋值/元组解包仍不支持。
 - 类 docstring（类体中的裸字符串语句）降级为 `// docstring:` 注释，不产生运行时效果。
 
 <a id="wiki-section-16"></a>
@@ -380,7 +382,7 @@ def describe(point):
 
 支持的 pattern：字面量（`1`/`'x'`/`True`/`None`/`-1`）、通配符 `_`、名字捕获、`\|` 或模式（`1 | 2 | 3`）、序列模式（`[a, *r, b]`，`*` 可在任意位置）、映射模式（`{'k': v, **rest}`）、类模式（`Cls()` 或 `Cls(x=p)` 关键字形式），以及 `case ... if guard`。
 
-> 限制：类模式只支持**关键字**子模式 `Cls(attr=pat)`（位置子模式需要 `__match_args__`，未支持）；`match` 是软关键字——只有当本行能扫成 `<subject> :` 时才视作 match 语句，所以把 `match` 当普通变量名（`match = 5`、裸 `match`、`match(x)` 调用）仍可用。
+> 限制：这是模式子集，不是完整 PEP 634。映射模式只支持字符串/数字字面量键和值位置的捕获名字；不要依赖 OR 分支内的捕获绑定。类模式只支持**关键字**子模式 `Cls(attr=pat)`（位置子模式需要 `__match_args__`，未支持）；`match` 是软关键字——只有当本行能扫成 `<subject> :` 时才视作 match 语句，所以把 `match` 当普通变量名（`match = 5`、裸 `match`、`match(x)` 调用）仍可用。
 
 <a id="wiki-section-20"></a>
 ### 模块与 import
@@ -410,6 +412,7 @@ print(circle_area(2))                    # 12.56
 - 每个 `.py` 文件会自动 **export 它所有顶层定义**（`def`/`class`/顶层赋值的名字），所以兄弟文件能直接 `from <它> import <名字>`——无需任何额外声明。
 - `from X import *` **不支持**（ESM 无法把命名空间展开进当前作用域）——唯一例外：`from nekojs import *`（及具名 `from nekojs import name`）会被**静默剥离**（nekojs 是给 IDE/pyright 看的类型桩入口，运行时无意义）。
 - import 必须在**模块顶层**（不能写在函数/类体里）。
+- 模块名使用点分名字，具名导入不加括号；不支持 Python 以点开头的相对导入语法（`from .foo ...`）或括号导入列表。`import a.b.c` 绑定的是末段名字 `c`，不是 Python 的包根 `a`；建议显式写别名。
 
 > NekoJS 注入的全局绑定（`ServerEvents`、`Item`、`Utils` …）仍在全局作用域里，直接用名字即可（`ServerEvents.started(...)`），无需 import。
 
@@ -455,6 +458,8 @@ print(circle_area(2))                    # 12.56
 | `frozenset(x)` | `new Set(x)` | JS 无不可变集合，返回普通 Set |
 
 内置 `isinstance` 检查基于 JS 存储：`float` 接受所有 JS number（包括整数值），list/tuple 都是数组，set/frozenset 都是 `Set`，dict 检查普通对象 constructor。这些不是不同的 CPython 对象类型。
+
+可迭代内置函数基于 JS iterable，不实现完整 Python 迭代协议。普通 dict 在 `for`/推导式中转换为键序列，但 `list(d)` / `iter(d)` 不会自动这样转换；请显式使用受支持的 `keys()` / `items()` 形式。
 
 > 常用 **str/list/dict/set 方法**已映射到 JS 等价写法（见下节「方法映射」）；未映射的方法原样透传 `obj.method(args)`（若 JS 侧恰好有同名方法仍可用）。
 
@@ -531,6 +536,7 @@ finally:
 | **`**` 幂** | `a ** b` 直接透传给 JS `**`，语义一致。 |
 | **`in` / `not in`** | `x in coll` → `__nekoIn(x, coll)` 助手：数组/字符串 `.includes`、dict（JS 对象）自有键、`Map`/`Set` `.has`——dict 键判断**无需绕开**（链式成员 `a in b in c` 同样走助手）。 |
 | **`is` / `is not`** | 透传成 JS `===` / `!==`（严格相等）。`None` 映射为 `null`，所以 `x is None` 等价于 `x === null`。 |
+| **链式比较** | 会短路，但中间操作数可能重复求值；有副作用的调用请先存入临时变量再比较。 |
 | **`==` / `!=`** | JS 严格相等 `===` / `!==`；数组/字典比较引用身份，不是 Python 的结构相等。 |
 | **`and` / `or`** | `__nekoAnd` / `__nekoOr` 助手：短路求值 + 返回操作数值 + **Python 真值语义**（`[] or 'y'` 得 `'y'`）。 |
 | **整数精度** | Python 的 `int` 是任意精度，JS 只有双精度浮点 Number。`> 2^53` 的整数会丢精度，`int(x)` 也受此限制。常规整数运算无差异。 |

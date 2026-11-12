@@ -18,10 +18,10 @@ NekoJS 的扩展模型是**插件即 API**：内置功能（`NekoJSCorePlugin`�
 - **Fabric：** 在 addon 的 `fabric.mod.json` 中声明 `nekojs` entrypoint；只有注解不会发现第三方 addon。管理器允许没有注解元数据，默认优先级为 1000。
 
 ```json
-{"entrypoints":{"nekojs":["com.example.myaddon.MyPlugin"]}}
+{"entrypoints":{"nekojs":["com.example.myaddon.MyAddonPlugin"]}}
 ```
 
-上述 JSON 仅是合并到完整 Fabric mod manifest 的片段，不是完整替代文件。管理器检查接口/具体类并在 bootstrap 时实例化；缺失或不可用的无参构造器会记录错误并跳过插件。有注解时仍使用其 priority、requiredMods 和 clientOnly 元数据。
+上述 JSON 仅是合并到完整 Fabric mod manifest 的片段，不是完整替代文件。共享管理器检查接口/具体类，并在 bootstrap 时通过反射实例化；该反射路径的失败会记录错误并跳过插件。Fabric 在交给共享管理器之前已获取 entrypoint 实例，因此实例创建也可能先在 Fabric 自己的加载路径失败。有注解时仍使用其 priority、requiredMods 和 clientOnly 元数据。
 
 包名、类名、源码目录、一个 mod 放几个插件类都**没有任何约束**：类名不必以 `Plugin` 结尾，也不必集中放在某个包下。本页示例里 `com.example.myaddon` 这种排布只是可读性习惯。
 
@@ -75,7 +75,7 @@ public class MyHelperJS {
 
 | 元素 | 默认 | 作用 |
 |---|---|---|
-| `priority` | `1000` | 加载优先级（降序）。`CORE_PRIORITY` 保证内置插件最先。 |
+| `priority` | `1000` | 加载优先级（降序）。`CORE_PRIORITY` 是最大优先级；相同数值仍按下方规则排序。 |
 | `clientOnly` | `false` | 仅客户端进程加载（专用服务器跳过）。 |
 | `requiredMods` | `{}` | 所有列出的 mod 都存在才加载。 |
 
@@ -91,7 +91,7 @@ public class MyHelperJS {
 违反的后果分两种，取决于是哪个注册表：
 
 - **抛 `IllegalStateException`**：走 `Sealable` 的那些扩展点（TypeDocs / Lifecycle / NodeModules / RecipeNamespaces / RecipeLifecycle / RecipeSchemas），以及 `ScriptPropertyRegistry`、`ProbeBackendRegistry`、`ScriptCompilerRegistry`。这类你会立刻知道自己写错了。
-- **静默丢弃**：`BindingRegistry`、`JSTypeAdapterRegistry`、`EventGroupRegistry` 目前没有封口检查，晚到的注册会被收进集合但永远不会被读。这类最难查——没有任何报错，只是你的绑定不存在。
+- **没有注册表级封口检查**：`BindingRegistry`、`JSTypeAdapterRegistry` 的晚到唯一条目会进入不再被消费的集合。`EventGroupRegistry` 也没有注册表级封口检查，但合并到已有冻结组会抛 `IllegalStateException`；新增组无法更新已经发布的快照。不要依赖其中任一种失败形式。
 
 只需覆盖用到的钩子。多数便捷回调默认是空实现；生命周期注册钩子已把这些回调接入注册表，`generatedLangs()` 默认返回 `en_us`。覆写注册钩子而不调用默认实现，会替换这部分默认接线。
 
@@ -100,11 +100,11 @@ public class MyHelperJS {
 
 | 钩子 | 时机 |
 |---|---|
-| `init()` | 插件初始化 |
-| `initStartup()` | 启动阶段初始化 |
-| `afterInit()` | 所有插件 init 后 |
-| `beforeScriptsLoaded(ScriptType)` | 每种脚本加载前 |
-| `afterScriptsLoaded(ScriptType)` | 每种脚本加载后 |
+| `init()` | Plugin Runtime bootstrap 完成后、startup 脚本加载前 |
+| `initStartup()` | startup 脚本加载完成后 |
+| `afterInit()` | 所有 mod 初始化完成后（NeoForge：`FMLLoadCompleteEvent`） |
+| `beforeScriptsLoaded(ScriptType)` | 首次加载或完整 reload 前，不含单文件热重载 |
+| `afterScriptsLoaded(ScriptType)` | 首次加载或完整 reload 后，不含单文件热重载 |
 | `registerLifecycleHooks(PluginLifecycleRegister)` | 编程式注册以上五个生命周期回调（default 实现即 `this::init` 等五连，通常直接覆写便捷回调即可） |
 | `beforeRecipeLoading(...)` | 配方加载前（可改原始 JSON map） |
 | `afterRecipes(...)` | 配方数据提交到 RecipeManager 之后 |
@@ -155,7 +155,7 @@ registry.register(com.tkisor.nekojs.api.data.Binding.of("MyHelper", new MyHelper
 
 | 钩子 | 作用 |
 |---|---|
-| `registerProbeBackends(ProbeBackendRegistry)` | 注册 probe backend（按 `(languageId, name)` 二维登记）。内置的两个 backend（TS 的 `.d.ts` 与 Python 的 `.pyi`，均命名 `builtin`）由 common 的 `NekoProbeBuiltinPlugin` 经**同一个钩子**注册——第三方加新语言 backend 或用不同 `name` 提供替代实现；同 `(语言, 名字)` 冲突在 bootstrap 结束时 `lock()` 抛异常崩溃。接口上只有 `languageId()` / `name()` / `render(ctx)` 三个方法没有 default（`priority()`、`requiresIr()`、`outputDir(...)`、`contributeEditorConfig(...)` 都有 default，原子提交由 `generate(ctx)` 的 default 实现负责），完整示例见 [Probe 类型生成 · 新增自定义 backend](probe-type-generation_cn) |
+| `registerProbeBackends(ProbeBackendRegistry)` | 注册 probe backend（按 `(languageId, name)` 二维登记）。内置的两个 backend（TS 的 `.d.ts` 与 Python 的 `.pyi`，均命名 `builtin`）由 common 的 `NekoProbeBuiltinPlugin` 经**同一个钩子**注册——第三方加新语言 backend 或用不同 `name` 提供替代实现；同 `(语言, 名字)` 冲突在 bootstrap 结束时 `lock()` 抛异常崩溃。接口上只有 `languageId()` / `name()` / `render(ctx)` 三个方法没有 default（`priority()`、`requiresIr()`、`outputDir(...)`、`contributeEditorConfig(...)` 都有 default，`generate(ctx)` 默认先在内存渲染、校验路径，再原地同步输出；渲染失败保留旧输出，写入失败可能留下部分更新），完整示例见 [Probe 类型生成 · 新增自定义 backend](probe-type-generation_cn) |
 | `modifyWorkspaceConfig(JSConfigModel, env)` | 修改自动生成的 jsconfig.json |
 | `registerScriptCompilers(ScriptCompilerRegistry)` | 注册自定义脚本编译器（新语言前端） |
 | `registerScriptProperty(ScriptPropertyRegistry)` | 注册自定义脚本属性（`// key:`） |
@@ -194,9 +194,9 @@ public final class MyChannelPoint {
 // registry.register(MyChannelPoint.POINT) 注册，返回的 handle 在 bootstrap 完成后取产物。
 ```
 
-这段里哪些是必须的：`builder(id, pluginType)` 的 id 不能为空（否则 `IllegalArgumentException`），`initializer` / `collector` / `merge` / `finish` **四个都必须调用**，缺一个 `build()` 就抛 `IllegalStateException`——`merge` 刻意不给默认值，因为冲突策略是扩展点的语义核心，得由你明确选（`append` / `firstWin` / `overrideWarn` / `failFast`）。另外 bootstrap 冻结后再 `register` 扩展点抛 `IllegalStateException`，同 id 重复注册抛 `IllegalArgumentException`。
+这段里哪些是必须的：扩展点 id 不能为 null、空串或纯空白（在 `build()` 构造扩展点时校验，否则抛 `IllegalArgumentException`），`initializer` / `collector` / `merge` / `finish` **四个都必须调用**，缺一个 `build()` 就抛 `IllegalStateException`——`merge` 刻意不给默认值，因为冲突策略是扩展点的语义核心，得由你明确选（`append` / `firstWin` / `overrideWarn` / `failFast`）。另外 bootstrap 冻结后再 `register` 扩展点抛 `IllegalStateException`，同 id 重复注册抛 `IllegalArgumentException`。
 
-其余全是约定：`ID` 用 `<你的 modid>:<通道名>` 只是为了冲突时一眼看出是谁的（id 唯一性是硬要求，格式不是）；把 `Contributor` 嵌在同一个 `XxxPoint` 类里、`POINT` 叫这个名字、`Contributor` 继承 `NekoJSPlugin`，都只是让别人按内置的样子读得懂。
+`ID` 用 `<你的 modid>:<通道名>`、把 `Contributor` 嵌在 `XxxPoint` 中、字段叫 `POINT`，都是约定（id 唯一性是硬要求，格式不是）。**Contributor 类型必须直接或间接继承 `NekoJSPlugin`**，扩展点和 builder 的泛型边界会强制这一点。片段中的 `MyCollector`、`MyProduct` 是 addon 自己定义的类型，不是额外的 NekoJS API。
 
 <a id="wiki-section-13"></a>
 ## 注册绑定（registerBinding）
@@ -219,7 +219,7 @@ public void registerBinding(BindingRegistry registry) {
 }
 ```
 
-> **同名绑定是首胜的**：`register(...)` 返回 `boolean`，名字已被占用时返回 `false`、只在 `nekojs.bootstrap` logger 打一条 warn（`BindingRegistry.BindingRegistryImpl`），不抛异常也不覆盖。内置绑定由 `CORE_PRIORITY` 插件最先注册，所以第三方无法用普通 `register` 抢 `Item`、`Ingredient` 这类名字——想确认自己的绑定真的进去了就检查返回值。绑定名本身没有格式校验（不要求命名空间前缀），但它是脚本里的全局标识符，取个带自己 mod 特征的名字纯粹是为了不撞车。
+> **同名绑定是首胜的**：`register(...)` 返回 `boolean`，名字已被占用时返回 `false`、只在 `nekojs.bootstrap` logger 打一条 warn（`BindingRegistry.BindingRegistryImpl`），不抛异常也不覆盖。内置绑定通常以 `CORE_PRIORITY` 先注册，所以较低优先级插件无法用普通 `register` 替换 `Item`、`Ingredient` 这类名字；同为最大优先级时仍按类名/owner 排序，这不是替换 API——想确认自己的绑定真的进去了就检查返回值。旧式全局绑定名没有格式校验（不要求命名空间前缀，模块导出名则会校验），但它是脚本里的全局标识符，取个带自己 mod 特征的名字纯粹是为了不撞车。
 
 <a id="wiki-section-15"></a>
 ### 组合绑定：`DelegatingBinding`（helper + 原版类）
@@ -236,7 +236,7 @@ public void registerBinding(BindingRegistry registry) {
         new MyBlockHelperJS(),                            // helper 方法
         net.minecraft.world.level.block.Block.class,      // 委托目标 MC 类静态成员
         Set.of("of", "empty")                             // helper 提供的扩展方法名
-    )));
+    ), MyBlockHelperJS.class));
 }
 ```
 
@@ -251,17 +251,20 @@ public void registerBinding(BindingRegistry registry) {
 public interface Binding {
     String name();
     Object value();
-    Class<?> valueType();          // 默认 value.getClass()；代理类要显式声明
-    default void close(ScriptType) {}  // reload/close 时的清理钩子
+    default Class<?> valueType() {
+        Object value = value();
+        return value == null ? Void.class : value instanceof Class<?> type ? type : value.getClass();
+    }
+    default void close(ScriptType type) {}  // Teardown/reset hook
 }
 ```
 
-`valueType()` 对 `ProxyObject`/动态成员绑定的很关键——preflight 校验器和 probe 都靠它知道绑定有哪些成员，避免反射不到动态成员时误报。
+`valueType()` 对 `ProxyObject`/动态成员绑定的很关键——preflight 校验器和 probe 都靠它知道绑定有哪些成员，避免反射不到动态成员时误报。上面的代理示例提供 `MyBlockHelperJS.class`，让 helper 方法可被反射，但这不会把代理变成 Java 类。**清理不是逐 generation 执行**：`Binding.close(type)` 走 ScriptManager 的 teardown/reset 路径，不会在每次 SERVER/CLIENT/TEST 事务式 reload 时触发；不要把它当作普通 generation 的释放回调。
 
 <a id="wiki-section-17"></a>
 ## 类型文档
 
-给绑定的方法/字段加文档（probe 会生成进 `.d.ts` 的 JSDoc）有两条路：**注解式**（`@Doc`/`@Param`/`@Return` 直接标注在 wrapper 类的方法/参数上，`TypeReflector` 消费后进 IR）与**编程式** `registerTypeDocs`：
+给绑定的方法/字段加文档（probe 会生成进 `.d.ts` 的 JSDoc）有两条路：**注解式**（`@Doc`/`@Param`/`@Return` 标在各自支持的声明上，`TypeReflector` 消费后进 IR；`@Param` 应标在方法/构造器上，不能直接标在参数上）与**编程式** `registerTypeDocs`：
 
 ```java
 @Override

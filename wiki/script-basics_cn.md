@@ -126,7 +126,9 @@ const message = shared.message
 - 错误报告带定位：文件、行号、列号，并附上出错位置的代码片段（`>` 标记错误行、`^` 指向错误列）。语法错误（SyntaxError）同样会定位到出错行/列。
 - 用 `/nekojs error` 查看当前是否有脚本错误。
 - 用 `/nekojs view_all_errors` 把完整错误列表发到聊天栏。
-- 入口求值失败会把该入口标为 disabled。事件或定时器回调异常另行记录，不代表整份脚本一定被禁用。watchdog 或资源上限终止可能隔离活动环境，直至显式完整重载。
+- 入口求值失败会把该入口标为 disabled。事件或定时器回调异常另行记录，不代表整份脚本一定被禁用。宿主/Graal 取消或资源耗尽仍可能隔离活动环境，直至显式完整重载。
+
+普通脚本执行已不再配置求值超时、累计语句上限或失控看门狗。已移除的引擎键 `scriptEvaluationTimeoutSeconds`、`scriptStatementLimit`、`scriptRunawayTimeoutSeconds` 不能恢复这些控制。死循环或始终不完成的入口 Promise 因此可能阻塞加载/重载；应限制每次工作量，并有意让出执行。JSON/NBT/文件的结构与大小限制，以及独立编写工具的等待限制仍然存在。
 
 <a id="wiki-section-12"></a>
 ### 加载前静态检查（preflight）

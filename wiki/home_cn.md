@@ -51,7 +51,7 @@ console.info('[NekoJS] Server script loaded')
 | NeoForge 26.1.2 | 当前支持，Java 25 |
 | NeoForge 26.2.0 | 当前支持，Java 25 |
 | Fabric 26.1.2 | 当前仓库节点，Java 25；加载器 API 为子集 |
-| Fabric 26.2.0 | 当前仓库节点，Java 25；加载器 API 为子集 |
+| Fabric 26.2（节点 `26.2.0-fabric`） | 当前仓库节点，Java 25；加载器 API 为子集 |
 
 详细差异见 [平台与兼容性](platform-compatibility_cn)。发布状态以 [Releases](https://github.com/NekoJS-Dev/NekoJS/releases) 为准。
 
@@ -59,6 +59,7 @@ console.info('[NekoJS] Server script loaded')
 ## 从哪里继续
 
 - **第一次写脚本**： [快速开始](quick-start_cn)
+- **修改引擎选项、MixinJS 或迁移旧配置**：[配置参考](configuration_cn)
 - **想知道脚本何时运行**： [脚本基础](script-basics_cn)
 - **想查绑定和方法**： [全局绑定](global-bindings_cn)
 - **想让 AI 读取当前实例 API**： [AI 辅助脚本编写](ai-support_cn)

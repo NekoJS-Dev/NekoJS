@@ -236,7 +236,7 @@ PlayerEvents.inventoryChanged('minecraft:diamond', event => {
 
 ```javascript
 PlayerEvents.loggedIn(event => {
-  const player = event.getEntity()
+  const player = event.entity
   player.displayClientMessage(Text.of(`欢迎，${player.getName().getString()}！`), false)
 })
 
@@ -307,8 +307,7 @@ BlockEvents.blockEntityTick('minecraft:furnace', event => {
 <a id="wiki-section-10"></a>
 ### BlockEvents.modification —— 运行时修改方块属性
 
-每次服务器启动与 `/nekojs reload server` 时触发；reload 前自动整体恢复上一轮修改（先恢复快照再重放），
-因此删掉某条 `modify` 后该修改在下次 reload 自动回退。可修改属性（不设置的保持原值；getter 未设置时读当前值，可先读后写）：
+首次启动收集并验证修改计划；完整 SERVER 重载在候选环境中收集声明，不提前修改活动属性。成功提交时，owner 先恢复其基线，再应用完整的新计划。因此移除某条 `modify` 后，该修改在下次**成功**重载时回退；候选失败仍保留活动计划。这不保证任意 Java、世界或文件副作用回滚。可修改属性如下；未设置的 getter 读取当前值，可先读后写：
 
 | 属性 | 类型 | 说明 |
 |---|---|---|
@@ -338,9 +337,7 @@ BlockEvents.modification(event => {
 })
 ```
 
-> **可见性说明**：修改会同步写进方块属性与**所有已有方块状态**，服务端立即生效（挖掘、爆炸、掉落判定等）。
-> 但**不会主动同步客户端**——光照等视觉变化需要玩家重新进入世界（或区块重同步）才可见；挖掘速度
-> 由服务端计算，不受影响。仅 NeoForge 26.x 支持（1.12.2 与 1.21.1 暂无）。
+> **可见性说明**：成功提交的计划会更新服务端方块属性与**所有已有方块状态**。当前 NeoForge 26.x owner 还会向已连接客户端发送已提交的 Item/Block 声明，并在玩家登录时补发；客户端验证后应用。这是声明同步，不保证区块立即重新计算光照，也不能据此宣称多人网络必定送达。方块修改仍仅支持 NeoForge 26.x；1.21.1 支持物品修改，但没有这里的方块接口。
 
 
 ```javascript
@@ -367,8 +364,7 @@ BlockEvents.broken('minecraft:diamond_ore', event => {
 
 > **Cleanroom 1.12.2 差异**：`dropped` 已统一到规范名（`ItemTossEvent`）；另有 `expire`（`ItemExpireEvent`）；无独立 Pre 变体，`pickedUp`/`canPickUp` 绑定同一事件（`pickedUpPre` 已弃用且从未在 1.12.2 存在）。`tooltip` 在 1.12.2 上是 server 类型。`modification` 在 1.12.2 上不支持（那个版本物品属性是字段模型，需要另做一套适配）。
 
-**修改物品默认属性示例**（`ItemEvents.modification`，每次服务器启动与 `/nekojs reload server` 时触发；
-reload 前自动恢复上次的修改，因此删掉某条 `modify` 后该修改在下次 reload 自动消失）：
+**修改物品默认属性示例**（`ItemEvents.modification`，在服务器启动及完整 SERVER 候选重载中收集；成功提交才替换 owner 持有的计划，候选失败保留活动计划。移除 `modify` 声明在下次成功重载时生效）：
 
 ```javascript
 // server_scripts/item_mods.js
@@ -411,8 +407,8 @@ ItemEvents.modification(event => {
 ```javascript
 // client_scripts/tooltips.js
 ItemEvents.tooltip('minecraft:diamond', event => {
-  event.add(Text.of('闪耀夺目').setStyle(/* ... */))
-  event.add('第二行普通文本')
+  event.toolTip.add(Component.literal('闪耀夺目'))
+  event.toolTip.add(Component.literal('第二行普通文本'))
 })
 ```
 
@@ -577,10 +573,12 @@ item/fluid provider 返回原生 Fabric Transfer `Storage<ItemVariant>` / `Stora
 `event` 是 Brigadier 的 `RegisterCommandsEvent`，用 `event.getDispatcher()` 注册命令：
 
 ```javascript
+const Commands = Java.type('net.minecraft.commands.Commands')
+
 CommandEvents.register(event => {
   const dispatcher = event.getDispatcher()
   dispatcher.register(
-    dispatcher.literal('hello')                //brigadier builder 链式
+    Commands.literal('hello')                // Native Brigadier builder
       .executes(ctx => {
         ctx.getSource().sendSuccess(() => Text.of('你好！'), false)
         return 1
@@ -730,6 +728,7 @@ ProbeEvents.snippets(event => {
 | `registerParticleProviders` | `RegisterParticleProvidersEvent` | 注册粒子提供器 |
 | **`generateAssets`（仅 NeoForge）** | `DataGeneratorJS` | **资产生成**：写 asset JSON（模型/贴图/配方分类等）到 `nekojs/assets` |
 | **`lang`（分发，仅 NeoForge）** | `LangGeneratorJS` | **语言条目**：按语言代码收集翻译，分发键是语言（如 `'zh_cn'`） |
+| `postEffects`（仅 NeoForge） | `PostEffectEventJS` | 用 `register`/`unregister` 收集代持有的后处理声明；运行时选择仍通过 `PostEffects`。见[客户端渲染](client-rendering_cn)。 |
 | **`hud`** | `PainterJS` | **HUD 绘制**：每帧 GUI 渲染后（NeoForge/Fabric 26.x） |
 | **`hudRender`** | 注册式 | **HUD 渲染器注册**（仅 NeoForge，分层×优先级，见下） |
 | **`worldRender`** | 注册式 | **世界空间渲染**（仅 NeoForge，3D 线条/线框，见下） |

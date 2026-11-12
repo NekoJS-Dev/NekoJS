@@ -18,7 +18,7 @@ MixinJS 原生执行默认关闭。若要明确选择开发环境实验，请在
 enabled = true
 ```
 
-运行时配置缺失或格式损坏时，MixinJS 保持关闭。旧路径 `<game>/config/nekojs-engine.toml` 只在规范文件不存在时作为只读兜底；新增修改请使用规范路径。这是同一个引擎设置，不是单独的 MixinJS 配置文件，也没有系统属性旁路。
+运行时配置缺失或格式损坏时，MixinJS 保持关闭。旧路径 `<game>/config/nekojs-engine.toml` 只在规范文件不存在时作为只读兜底；新增修改请使用规范路径。这是同一个引擎设置（内部字段为 `SandboxConfig.mixinJsEnabled`），不是单独的 MixinJS 配置文件，也没有系统属性旁路。启用它不会同时开放脚本反射或 ASM 权限。 三类引擎、Probe 与 AI 配置的分工见[配置指南](configuration_cn)。
 
 请在启动前设置，并在每次修改后**完整重启**，关闭时也一样。脚本 reload 和 Probe 都不会切换此值。关闭时，自动启动准备、加载器接纳、已安装原生回调槽及已安装 Hook 的 Probe 重载均不启用；声明编辑、Probe 编辑器声明与离线校验/构建工具仍可使用。已有载体或缓存文件本身不会启用执行。
 
@@ -53,7 +53,7 @@ Mixin.target("net.minecraft.world.entity.LivingEntity", target => {
 });
 ```
 
-此例的类名和方法名必须与传给工具的**精确运行时命名空间**一致。不能将示例名称或开发映射中的名称直接视为适用于所有版本和加载器。
+此例的类名和方法名必须与传给工具的**精确运行时命名空间**一致。不能将示例名称或开发映射中的名称直接视为适用于所有版本和加载器。注入只针对该方法的精确实现，不覆盖所有重写：子类重写若不调用被注入的父类方法，就会绕过注入。请检查实际接收者和重写链；`require = 1` 与 Probe 补全都不能证明每次虚调用会到达目标。
 
 | 字段 | 当前支持值 | 默认值 |
 |---|---|---|
@@ -66,7 +66,7 @@ Mixin.target("net.minecraft.world.entity.LivingEntity", target => {
 
 方法选择器必须含完整 JVM 描述符：`getMaxHealth()F` 表示无参数、返回 float；`tick()V` 表示无参数、返回 void。Hook ID 使用 `namespace:path`，已加载的多个载体之间不能重名。
 
-离线求值器没有 Java 类查找、文件、网络或进程 API。除 `nekojs/mixin` 外，仅允许受源目录约束、带明确扩展名的相对静态导入；当前相对模块仅适用于副作用导入，不支持导出。动态导入、顶层 await、异步 builder、未知字段和超出语句预算的执行均会失败。声明回调必须同步返回 `undefined`。
+离线求值器没有 Java 类查找、文件、网络或进程 API。除 `nekojs/mixin` 外，仅允许受源目录约束、带明确扩展名的相对静态导入；当前相对模块仅适用于副作用导入，不支持导出。动态导入、顶层 await、异步 builder、未知字段和超出语句预算的执行均会失败。声明回调必须同步返回 `undefined`。隔离的声明 Context 仍有私有的 **100,000 条语句预算**，并非普通脚本执行限制；已移除的引擎设置 `scriptEvaluationTimeoutSeconds`、`scriptStatementLimit`、`scriptRunawayTimeoutSeconds` 不控制此求值器。
 
 <a id="wiki-section-4"></a>
 ## 3. 准备声明产物
@@ -146,7 +146,7 @@ MixinEvents.inject("demo:max_health", event => {
 | 成员 | 契约 |
 |---|---|
 | `self` | 原生接收者；静态方法为 null。属性只读，不表示原生对象不可变。 |
-| `args` | 只读的原生参数元组；不能替换元组元素。 |
+| `args` | 只读的原生参数元组；不能替换属性或元组元素，不表示其引用的原生对象/数组被深度冻结。 |
 | `returnValue` | RETURN 时为原始结果；HEAD 时尚无结果。仅 cancellable 的非 void Hook 可写。 |
 | `cancel()` | 仅 cancellable、void、HEAD Hook 可用；非 void HEAD 必须设置返回值。 |
 
@@ -159,7 +159,7 @@ MixinEvents.inject("demo:max_health", event => {
 
 支持 boolean、单个 UTF-16 code unit 的 char、范围检查后的 byte/short/int、有限 float/double，以及类型可赋值的原生引用和原生数组。引用允许 null，String 返回值接受 JavaScript 字符串；普通 JS 对象和数组不能冒充任意原生引用。
 
-当前不支持 long/BigInt、构造器、类初始化器、abstract/native/synthetic/bridge 方法、HEAD/RETURN 以外的注入点，以及运行时注入类路径或动态重织。
+当前不支持含 long（包括 long 数组）的签名、BigInt 返回值替换、构造器、类初始化器、abstract/native/synthetic/bridge 方法、HEAD/RETURN 以外的注入点，以及运行时注入类路径或动态重织。
 
 MixinJS 关闭时仍可使用声明编辑器补全及离线工具；`MixinEvents` 辅助对象也可能存在，但没有已安装的回调槽。运行 [Probe](probe-type-generation_cn) 后，仅在执行已启用时，TypeScript 才为**加载器已接纳的计划**生成 Hook ID 字面量重载及 self、参数、返回值类型。待构建声明文件不会提前获得“已安装”类型。没有提示时，先检查引擎开关，再检查载体是否实际加载及环境配置是否匹配。
 
@@ -174,7 +174,7 @@ MixinJS 关闭时仍可使用声明编辑器补全及离线工具；`MixinEvents
 
 详细说明见 [错误与日志参考](error-reference_cn)。普通加载器/Mixin 变换失败也可能由加载器自身报告，而不是上述诊断码。
 
-公共运行时、载体字节码、TypeScript 和五节点构建检查已通过。NeoForge 26.1.2 开发环境的无界面服务端也已验证自动准备、重启、真实游戏库发现、Sponge 变换和一个不可取消的 SERVER 回调；26.2.0 节点通过了原生启动。这仍不等于完整的客户端/服务端、ABI、旧版/Fabric 或映射验收；正式发布前仍需补齐，目前生产接纳保持关闭。
+既有开发记录包括 NeoForge 26.1.2 无界面服务端的自动准备、重启、真实游戏库发现、Sponge 变换及一个不可取消的 SERVER 回调；26.2.0 的记录覆盖原生启动，并未包含受管 Hook 测试样例。后续也记录过一次本地集成服务端控制场景运行，但不代表完整 ABI 或 reload 矩阵验收。离线校验、公共/JVM 测试、TypeScript 检查及节点构建与原生验收不同，历史结果不能证明其他环境配置已验收。完整客户端/服务端、静态方法/ABI、旧版/Fabric 及生产映射验收仍未完成，生产接纳保持关闭。
 
 <!-- wiki-nav -->
 

@@ -29,6 +29,8 @@ NekoJS 内置一组 Node.js 核心模块 shim，让你能 `require`/`import` 常
 
 `process.versions.node` 是 shim 提供的元数据，不表示当前运行的是 Node.js，也不能据此认定面向该 Node 版本的 npm 包兼容。
 
+`process.exit()` 只记录请求的退出码并告警，不会停止游戏或脚本。`process.nextTick()` 使用 Promise 微任务近似，不保证与其他微任务之间完全相同的 Node 调度顺序。两者都不是进程控制或中断循环的 API。
+
 <a id="wiki-section-3"></a>
 ## 常用 API 速查
 
@@ -86,6 +88,8 @@ console.info('等了 1 秒')
 
 > 全局 `setTimeout`/`setInterval`/`clearTimeout`/`clearInterval` 在脚本顶层即可用（已 patch 到 `globalThis`）。
 
+定时器句柄是数字 ID，不是 Node.js 的 `Timeout` 对象；`.ref()` / `.unref()` 等方法不属于此 shim。使用对应的 `clearTimeout` / `clearInterval` / `clearImmediate` 清理。计时器运行时仍限制最多 1024 个注册任务、4096 个就绪队列回调及每次冲刷最多 256 个回调。这些是调度/资源边界，不是语句预算，也不能抢占已经运行的回调。
+
 上面的正延时示例适用于 SERVER/CLIENT/TEST。STARTUP 拒绝所有 interval 与正延时 timeout，允许零延时或 immediate 回调。调度器只把就绪任务入队：回调在脚本环境归属方冲刷队列时执行（包括等待模块求值期间、生命周期或 tick 分发，或 TEST 流程），不在调度器线程运行，也不保证精确的墙钟触发时刻。失败候选与被替换的代会取消各自的定时器，不应把旧回调当作持久状态。 定时器延时只是调度回调，不是执行截止时间，也不会中断同步循环。
 
 <a id="wiki-section-7"></a>
@@ -100,7 +104,7 @@ test('简单的加法', () => {
 })
 
 test('异步测试', async () => {
-  const result = await someAsyncOp()
+  const result = await Promise.resolve({ success: true })
   assert.ok(result.success)
 })
 ```
@@ -128,7 +132,7 @@ console.info(buf.toString('hex')) // '68656c6c6f'
 | 受保护配置 | 即使开启该选项，`nekojs/config/` 与旧 `config/nekojs-engine.toml` 仍不可写 |
 | 创建符号链接 | 不允许 |
 
-该选项位于 `nekojs/config/engine.toml`。文件系统检查不能保证任意 Java 宿主调用或不可信脚本安全。普通执行已没有求值超时、语句预算或失控 watchdog：`scriptEvaluationTimeoutSeconds`、`scriptStatementLimit`、`scriptRunawayTimeoutSeconds` 已移除，没有换成另一套默认限制。无限循环可能阻塞所属线程/进程。HTTP/authoring 请求等待上限与生命周期取消/关闭仍是独立机制；请求超时不能证明脚本已停止。
+该选项位于 `nekojs/config/engine.toml`。文件系统检查不能保证任意 Java 宿主调用或不可信脚本安全。普通执行已没有求值超时、语句预算或失控 watchdog：`scriptEvaluationTimeoutSeconds`、`scriptStatementLimit`、`scriptRunawayTimeoutSeconds` 已移除，没有换成另一套默认限制。无限循环可能阻塞所属线程/进程。HTTP/authoring 请求等待上限与生命周期取消/关闭仍是独立机制；请求超时不能证明脚本已停止。 完整引擎默认值与迁移规则见[配置](configuration_cn)。
 
 ```javascript
 import fs from 'node:fs'

@@ -48,6 +48,20 @@ class AuthoringStdioTest {
     }
     private static int code(JsonObject message) { return message.getAsJsonObject("error").get("code").getAsInt(); }
 
+    @Test void offlineLiveQueriesAreExplicitlyUnavailableAndNeverReachTheSnapshotAdapter() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        Transcript result = run(lines(initialize(), initialized(), request(2, "tools/list"),
+                call(3, "errors", new JsonObject()), call(4, "operation_status", AuthoringJson.obj("operationId", "00000000-0000-0000-0000-000000000001"))),
+                (operation, arguments) -> { calls.incrementAndGet(); throw new AssertionError("Offline live queries must not dispatch"); });
+        assertEquals(7, result.messages().get(1).getAsJsonObject("result").getAsJsonArray("tools").size());
+        for (int i = 2; i < 4; i++) {
+            JsonObject tool = result.messages().get(i).getAsJsonObject("result");
+            assertTrue(tool.get("isError").getAsBoolean());
+            assertTrue(tool.getAsJsonArray("content").get(0).getAsJsonObject().get("text").getAsString().contains("LIVE_STATE_UNAVAILABLE"));
+        }
+        assertEquals(0, calls.get());
+    }
+
     @Test void initializedConnectionSharesQueriesAndAdvertisesTheSameToolsAndResources() throws Exception {
         try (AuthoringQuery query = AuthoringQueryTest.engine(AuthoringQueryTest.member("a", "of", "ItemStack", "string"))) {
             JsonObject arguments = AuthoringQueryTest.request("members", AuthoringQueryTest.comparison("name", "eq", "of"));

@@ -53,7 +53,7 @@ const wallet = Pack.require('economy', 'wallet');
 console.info(wallet({ player: 'example' }).balance);
 ```
 
-每次调用接收一个 JSON 值，返回 JSON 值；禁止函数和宿主对象跨 Context 传递。数据有深度 32、节点 10000、名称和字符串合计 1 Mi 字符的限制。能力函数为同步调用，遵循脚本沙箱及资源预算。`Pack.selector` 和 `Pack.activation` 是只读属性。
+每次调用接收一个 JSON 值，返回 JSON 值；禁止函数和宿主对象跨 Context 传递。数据有深度 32、节点 10000、名称和字符串合计 1 Mi 字符的限制。这些数据形状限制仍保留，但普通包执行没有求值截止时间、语句预算或失控 watchdog；没有边界的能力回调可能阻塞所属线程。访问与信任检查仍有效。`Pack.selector` 和 `Pack.activation` 是只读属性。
 
 新包按类型、实际来源及世界/连接会话拥有独立 Context；`global` 属于该包来源实例，跨普通重载保留，世界/连接结束释放；`shared` 属于 runtime root。句柄绑定取得时的消费者和提供者激活，提供者替换、停用、失效或会话结束后旧句柄拒绝调用。依赖缺失时消费者等待；运行中的提供者失效后消费者停止，恢复需要显式重载；管理员禁用的消费者不会因提供者恢复而复活。
 
@@ -67,7 +67,7 @@ console.info(wallet({ player: 'example' }).balance);
 - `/nekojs packs reload server GLOBAL:economy` 替换提供者及必要消费者；无关包保留原激活。
 - `/nekojs reload server` 联合替换完整类型，包括旧脚本分区。
 
-选择器为 `GLOBAL:id`、`WORLD:id`、`MOD:id`；版本化远端包为 `SERVER_CACHE:packs:id` 或 `SERVER_CACHE:worldpacks:id`。裸 ID 仅在唯一匹配时可用。同名歧义不会默认修改第一个包。MOD 和 SERVER_CACHE 是只读来源。
+选择器为 `GLOBAL:id`、`WORLD:id`、`MOD:id`；版本化远端包为 `SERVER_CACHE:packs:id` 或 `SERVER_CACHE:worldpacks:id`。裸 ID 仅在唯一匹配时可用。同名歧义不会默认修改第一个包。MOD 和 SERVER_CACHE 是只读来源。 此处“只读”表示不能通过这些包操作修改其本地内容/启用意图，并不表示来自该来源的脚本只能执行只读行为。不要编辑服务器缓存来绕过签名或信任检查。
 
 受管状态、监听器、timer 和领域计划在联合预检后交接；候选失败保留健康旧集合并清理候选资源。使用整类型贡献表的领域会报告扩大集合，CLIENT 渲染贡献在一次发布中合并。顶层 `global/shared` 写冲突拒绝整批；嵌套对象、任意 Java/世界/文件副作用不属于回滚承诺。领域计划必须在预检后非抛异常发布；违反契约时会报告领域失败，其部分效果由领域承担。提交后的清理失败另行报告，不冒充回滚。
 

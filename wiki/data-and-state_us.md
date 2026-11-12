@@ -70,9 +70,9 @@ JsonIO.write('example/visits.json', { visits: visits + 1 })
 Use the method `pdata()`, then typed methods such as `contains`, `getInt`, `putInt`, `putString`, `getCompound`, and `putCompound`. There is no generic `put(key, object)` or `save()` API. Missing typed reads return defaults; use `contains(key)` when absence differs from zero/false/empty.
 
 ```javascript
-// NeoForge server_scripts: the event exposes a player property.
+// NeoForge server_scripts: PlayerLoggedInEvent exposes the player as entity.
 PlayerEvents.loggedIn(event => {
-  const data = event.player.pdata()
+  const data = event.entity.pdata()
   data.putInt('example:visits', data.getInt('example:visits') + 1)
 })
 ```
@@ -110,7 +110,7 @@ On the server, `ClientData.sync(key, value)` broadcasts to connected players; `s
 ```javascript
 // server_scripts: a targeted UI snapshot, not a durable save.
 PlayerEvents.loggedIn(event => {
-  ClientData.syncTo(event.player, 'example:status', { ready: true })
+  ClientData.syncTo(event.entity, 'example:status', { ready: true })
 })
 ```
 

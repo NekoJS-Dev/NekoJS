@@ -70,9 +70,9 @@ JsonIO.write('example/visits.json', { visits: visits + 1 })
 先调用方法 `pdata()`，再使用 `contains`、`getInt`、`putInt`、`putString`、`getCompound`、`putCompound` 等类型化方法。没有通用的 `put(key, object)` 或 `save()`。类型化读取在缺失时返回默认值；若“缺失”不同于零、假或空值，先用 `contains(key)`。
 
 ```javascript
-// NeoForge server_scripts: the event exposes a player property.
+// NeoForge server_scripts: PlayerLoggedInEvent exposes the player as entity.
 PlayerEvents.loggedIn(event => {
-  const data = event.player.pdata()
+  const data = event.entity.pdata()
   data.putInt('example:visits', data.getInt('example:visits') + 1)
 })
 ```
@@ -110,7 +110,7 @@ stack.pdata().putString('example:owner', 'guide')
 ```javascript
 // server_scripts: a targeted UI snapshot, not a durable save.
 PlayerEvents.loggedIn(event => {
-  ClientData.syncTo(event.player, 'example:status', { ready: true })
+  ClientData.syncTo(event.entity, 'example:status', { ready: true })
 })
 ```
 

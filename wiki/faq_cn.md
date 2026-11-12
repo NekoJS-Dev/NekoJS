@@ -68,6 +68,8 @@ A: 确认你的文件被当 ESM 处理：
 - 或确认 `nekojs/config/engine.toml` 里 `enableEsmAuthoring = true`（默认开）。
 - 顶层 await 只能在 ESM 模块里用，不能在 CJS（`.cjs`）里用。
 
+如果加载始终不结束，应检查等待的 Promise 和同步顶层代码。普通脚本已不再提供可配置的求值总超时、语句预算或失控看门狗；保留旧键不能解救不完成的 `await` 或死循环。旧配置迁移与重启要求见[配置参考](configuration_cn)。
+
 <a id="wiki-section-11"></a>
 ## TypeScript / JSX
 
@@ -230,4 +232,4 @@ AI 创作的 HTTP 与 batch 查询是只读的，但独立授权的 live MCP 工
 
 ---
 
-[上一篇: 快速开始](quick-start_cn) · [目录](Home) · [下一篇: 脚本基础](script-basics_cn)
+[上一篇: 配置参考](configuration_cn) · [目录](Home) · [下一篇: 脚本基础](script-basics_cn)

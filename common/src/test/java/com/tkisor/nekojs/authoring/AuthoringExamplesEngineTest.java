@@ -3,6 +3,7 @@ package com.tkisor.nekojs.authoring;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.bindings.static_access.TestJS;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
+import com.tkisor.nekojs.core.NekoSharedHostAccess;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoJsxLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoTsxLanguagePlugin;
@@ -87,6 +88,50 @@ class AuthoringExamplesEngineTest {
                 "repeated require must return the same cached helper exports");
         assertEquals("Hello, Reader!", helper.getMember("formatGreeting").execute("Reader").asString());
         assertEquals(1, helper.getMemberKeys().size(), "the discovered helper only exports its pure function");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"entity", "player"})
+    void bundledLoginWelcomesCanonicalNeoForgeAndDocumentedFabricVariant(String property) throws Exception {
+        boot(ScriptType.SERVER, true);
+        context.eval("js", "globalThis.loginCallbacks = []; globalThis.PlayerEvents = {loggedIn: callback => loginCallbacks.push(callback)};");
+        RecordingLoginPlayer player = new RecordingLoginPlayer();
+        LoginPayload payload = property.equals("entity") ? new EntityLoginPayload(player) : new PlayerLoginPayload(player);
+        Path entry = copyExample("server/player-login.js", paths.serverScripts().resolve("examples/player-login.js"));
+        if (property.equals("player")) {
+            // Apply only the documented Fabric edit to the installed copy, never the canonical resource.
+            Files.writeString(entry, AuthoringScriptExamplesTest.documentedFabricLoginVariant(Files.readString(entry)));
+        }
+
+        loader.loadEntry(entry.toString());
+
+        assertEquals(1, context.eval("js", "loginCallbacks.length").asInt());
+        assertEquals(0, payload.reads);
+        assertTrue(player.messages.isEmpty(), "Loading the example must not greet players already online");
+        context.getBindings("js").getMember("loginCallbacks").getArrayElement(0).executeVoid(payload);
+        assertEquals(1, payload.reads, "The callback must read only the supported native Bean property");
+        assertEquals(List.of("Welcome to NekoJS!"), player.messages);
+    }
+
+    public abstract static class LoginPayload {
+        final RecordingLoginPlayer player;
+        int reads;
+        LoginPayload(RecordingLoginPlayer player) { this.player = player; }
+    }
+
+    public static final class EntityLoginPayload extends LoginPayload {
+        EntityLoginPayload(RecordingLoginPlayer player) { super(player); }
+        public RecordingLoginPlayer getEntity() { reads++; return player; }
+    }
+
+    public static final class PlayerLoginPayload extends LoginPayload {
+        PlayerLoginPayload(RecordingLoginPlayer player) { super(player); }
+        public RecordingLoginPlayer getPlayer() { reads++; return player; }
+    }
+
+    public static final class RecordingLoginPlayer {
+        final List<String> messages = new ArrayList<>();
+        public void sendMessage(String message) { messages.add(message); }
     }
 
     @Test
@@ -535,6 +580,10 @@ class AuthoringExamplesEngineTest {
     }
 
     private void boot(ScriptType type) throws Exception {
+        boot(type, false);
+    }
+
+    private void boot(ScriptType type, boolean nativeBeanInterop) throws Exception {
         // Keep process-global paths on the shared fixture; module sources remain isolated below.
         TestPlatformInit.ensureInitialized();
         paths = NekoJSPaths.fromGameDir(gameDir);
@@ -551,7 +600,16 @@ class AuthoringExamplesEngineTest {
         IOAccess ioAccess = IOAccess.newBuilder()
                 .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(config, paths), paths, cache))
                 .build();
-        context = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess).build();
+        Context.Builder contextBuilder = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess);
+        if (nativeBeanInterop) {
+            // Match the production host policy and Bean access, without changing unrelated example fixtures.
+            contextBuilder.allowExperimentalOptions(true)
+                    .allowHostAccess(new NekoSharedHostAccess(List.of()).get())
+                    .option("js.foreign-object-prototype", "true")
+                    .option("js.nashorn-compat", "true")
+                    .option("js.ecmascript-version", "latest");
+        }
+        context = contextBuilder.build();
         runtime = NekoNodeModuleInstaller.install(context, type,
                 new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(), new ScriptFilePolicy(compilers)),
                 paths, new DefaultErrorTracker(paths, config), config, cache);

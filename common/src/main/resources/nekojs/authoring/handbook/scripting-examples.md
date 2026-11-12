@@ -42,14 +42,15 @@ Verification labels are evidence boundaries, not platform support promises: `iso
 
 ```js
 // Place in server_scripts. The callback runs for future logins, not existing players.
+// NeoForge default. On Fabric, replace the entity property below with player.
 PlayerEvents.loggedIn(event => {
-    event.player.sendMessage("Welcome to NekoJS!");
+    event.entity.sendMessage("Welcome to NekoJS!");
 });
 ```
 
-**Copy:** `nekojs/server_scripts/authoring-examples/player-login.js` (SERVER).
+**Copy:** `nekojs/server_scripts/authoring-examples/player-login.js` (SERVER). The shipped source targets NeoForge 1.21.1/26.x. For Fabric, make exactly the documented `event.entity` → `event.player` property replacement in your installed copy; do not run the NeoForge default unchanged on Fabric.
 
-**Run:** `/nekojs reload server`, then disconnect and log in again. **Expect:** the joining player receives `Welcome to NekoJS!`. Existing connected players are not retroactively sent the message. The callback reads the Bean property `event.player` and calls its message operation; keep the player handle inside the callback rather than storing it across reloads.
+**Run:** `/nekojs reload server`, then disconnect and log in again. **Expect:** the joining player receives `Welcome to NekoJS!`. Existing connected players are not retroactively sent the message. The callback reads NeoForge's `event.entity` Bean property (`event.player` in the documented Fabric variant) and calls its message operation; keep the player handle inside the callback rather than storing it across reloads.
 
 **Cleanup:** remove the copied file and reload SERVER; future logins no longer trigger this handler.
 
@@ -434,7 +435,7 @@ Test.summary();
 
 **Copy:** `nekojs/test_scripts/authoring-examples/assertions.js`.
 
-**Run:** `/nekojs test`; ordinary server reload does not execute TEST files. **Expect:** three passing assertions and a summary. `Test.assertThrows` passes because it observes the deliberately thrown error; that error is not a failing test. Other installed test files may add to the total. These are script-level assertions, not world or player integration tests.
+**Run:** `/nekojs test`; ordinary server reload does not execute TEST files. **Expect:** three passing assertions and a summary. Confirm the command’s execution outcome separately from its assertion counts; live `context.testRunReport` exposes the last finished attempt. Zero observed assertions are null/unproven, not a pass. `Test.assertThrows` passes because it observes the deliberately thrown error; that error is not a failing test. Other installed test files may add to the total. These are script-level assertions, not world or player integration tests.
 
 **Cleanup:** remove the copied test file; subsequent `/nekojs test` runs no longer include it.
 

@@ -37,12 +37,14 @@ RegistryEvents.register(event => {
 <a id="wiki-section-2"></a>
 ## Entry-point forms
 
-- `event.<registry>(id, cb)` - Convenience methods for registries registered on the current platform, such as `item` / `block` / `entityType` / `creativeModeTab` / `mobEffect` / `potion` / `soundEvent` / `particleType` / `paintingVariant` / `villagerType`. The available entries vary by platform.
+- `event.<registry>(id, cb)` - Convenience methods for registries registered on the current platform, such as `item` / `block` / `entityType` / `creativeModeTab` / `mobEffect` / `potion` / `soundEvent` / `particleType` / `villagerType`. The available entries vary by platform. A registry key or a builder class existing in Java does not by itself supply a default builder or a native registration pass.
 - `event.<registry>(id, typeName, cb)` - The same, but explicitly selects a named type registered by a third-party plugin.
 - `event.custom(id, typeName, cb)` - Register by a globally unique type name.
 - `event.register(registry, id, supplier)` - A direct supplier entry point; `registry` is a convenience name or a full key.
 
 > Entries such as `fluid` and `enchantment` are not cross-platform capabilities: FluidBuilder is currently available only on NeoForge; the enchantment builder applies only to NeoForge 1.21.1. Use datapacks on 26.x; Fabric currently does not provide the corresponding registration surface.
+
+The core factories select existing native builder implementations; the generic entries are not a promise of arbitrary new Java behavior or cross-version registry support. `event.register(...)` defers its supplier until the native registration pass; a supplier does not bypass platform availability or restart requirements.
 
 **Builders expose Bean properties**: assign data properties directly (`b.maxStackSize = 16`). Only actions and compound configuration retain methods (`b.noItem()`, `b.food(cb)`, `b.tag(...)`).
 
@@ -129,7 +131,7 @@ Automatic files have a persisted ownership index at `nekojs/.nekojs-item-assets/
 
 A BlockItem with the same name is created automatically by default. **Co-registration has three parts**: the child builder is pre-created during construction, `noItem()` sets it to null to suppress it, and lazy references link the objects. The configuration of `b.item` takes effect only when the BlockItem is actually registered.
 
-> **renderType platform differences**: it takes effect on 1.21.1 (the render layer is applied through `ItemBlockRenderTypes.setRenderLayer`). On 26.x (1.21.5+), rendering is **model-driven**: the model JSON texture reference needs `"force_translucent": true` (or a texture with alpha). For blocks declaring `renderType = 'translucent'`, NekoJS automatically generates a default model containing this flag when you have not supplied a model.
+> **renderType platform differences**: it takes effect on 1.21.1 (the render layer is applied through `ItemBlockRenderTypes.setRenderLayer`). On 26.x (1.21.5+), rendering is **model-driven**: the model JSON texture reference needs `"force_translucent": true` (or a texture with alpha). For blocks declaring `renderType = 'translucent'`, NeoForge 26.x automatically generates a default model containing this flag when you have not supplied a model. This automatic block-model generator is not connected on Fabric; supply the native model resources there.
 
 <a id="wiki-section-6"></a>
 ## FluidBuilder - fluids (NeoForge only)
@@ -141,8 +143,8 @@ On NeoForge, you can register a complete custom fluid that can be placed, flow, 
 | Member | Description |
 |---|---|
 | `displayName` | Translation key (for example `fluid.mymod.molten_iron`) |
-| `density` | Density (>1000 sinks below water, <1000 rises; default 1000) |
-| `temperature` / `viscosity` / `lightLevel` | Temperature / viscosity (higher means slower flow) / light emission (defaults 300 / 1000 / 0) |
+| `density` | Native `FluidType` density (default 1000); not a promise of fluid layering or displacement |
+| `temperature` / `viscosity` / `lightLevel` | Native `FluidType` temperature / viscosity / light emission (defaults 300 / 1000 / 0); flow scheduling uses `tickRate` |
 | `canConvertToSource` | Whether sources can be generated infinitely (default false; comparable to vanilla water in 1.21) |
 | `slopeFindDistance` / `levelDecreasePerBlock` | Flow pathfinding distance (default 4) / level decrease per block (default 1) |
 | `explosionResistance` / `tickRate` | Explosion resistance (default 100) / flow tick interval (default 5) |
@@ -240,7 +242,7 @@ A native Java factory must be independent of the guest Context and usable on bot
 | `slots` | `'any'`/`'armor'`/`'chest'`/`'feet'`/`'head'`/`'legs'`/`'hand'`/`'mainhand'`/`'offhand'` (default mainhand) |
 | `tag(tags...)` | Add enchantment tags (for example `'minecraft:treasure'`) |
 
-> No enchantment effect components are attached by default (registration, enchanting/books, and exclusivity work, but there is no actual effect). Enchantment effects in 1.21+ require `EnchantmentEffectComponents`, which is not exposed yet.
+> This builder attaches no enchantment effect components and exposes no `EnchantmentEffectComponents` configuration. Its definition fields are not a guarantee of working gameplay effects or native registration on another version.
 
 <a id="wiki-section-9"></a>
 ## CreativeTabBuilder - creative tabs
@@ -267,6 +269,8 @@ After registration, refer to this tab from the `groupTab` field on `ItemBuilder`
 <a id="wiki-section-10"></a>
 ## Simple registries
 
+Choose only entries supported by your platform; the enchantment portion below is NeoForge 1.21.1-only. `PotionBuilder.effect(...)` resolves the effect immediately during configuration and silently omits unresolved ids. A custom effect merely declared in the same collection callback is not yet registered, so the potion example uses existing vanilla effects.
+
 ```javascript
 RegistryEvents.register(event => {
   // Status effect
@@ -274,7 +278,7 @@ RegistryEvents.register(event => {
 
   // Potion (can contain multiple effect instances; effect appends an instance)
   event.potion('mymod:shock_potion', b => {
-    b.effect('mymod:shock', 600, 0)                      // (effect, duration in ticks, level)
+    b.effect('minecraft:poison', 600, 0)                      // (effect, duration in ticks, level)
     b.effect('minecraft:speed', 3600, 1, false, true)    // (+ambient, show particles/icon)
   })
 
@@ -284,10 +288,11 @@ RegistryEvents.register(event => {
   // Particle type
   event.particleType('mymod:sparkle', b => { b.overrideLimiter = true })
 
-  // Painting variant (width/height in pixels, multiples of 16; assetId defaults to the registration id)
-  event.paintingVariant('mymod:epic_painting', b => {
-    b.width = 32; b.height = 16; b.title = 'The sea'
-  })
+  // No default paintingVariant factory is registered by core.
+  // This form requires a plugin-provided builder and a supported native registry pass:
+  // event.paintingVariant('mymod:epic_painting', b => {
+  //   b.width = 32; b.height = 16; b.title = 'The sea'
+  // })
 
   // Villager type (identifier only; no configuration)
   event.villagerType('mymod:miner', b => {})
@@ -306,7 +311,7 @@ RegistryEvents.register(event => {
 <a id="wiki-section-11"></a>
 ## tag - tagging registered content
 
-You can declare tags during registration: builders for **items, blocks, entity types, fluids, enchantments, and painting variants** all provide `tag(...)`. This addresses cases where a block does not drop or an item is missing from a tag, without requiring handwritten datapack JSON or waiting for `ServerEvents.tags`.
+You can declare tags during registration: the 26.x builder implementations for **items, blocks, entity types, fluids, enchantments, and painting variants** provide `tag(...)`. A method on a builder implementation does not establish that its registry is available: enchantments and painting variants retain the registration limitations above. This addresses cases where a block does not drop or an item is missing from a tag, without requiring handwritten datapack JSON or waiting for `ServerEvents.tags`.
 
 ```javascript
 RegistryEvents.register(event => {
@@ -334,10 +339,10 @@ Rules and semantics:
 - **Combining with `ServerEvents.tags`**: pending entries are inserted **before** that event; script listeners can still override them with `add`/`remove`.
 - **Fluids**: the tag is applied to both the source (`<id>`) and flowing (`flowing_<id>`) fluid.
 - **BlockItem for a block**: `tag(...)` on a `block` builder adds **block tags**; use `b.item.tag(...)` for item tags on the automatically created BlockItem.
-- **Supported registries**: `item` / `block` / `entityType` / `fluid` / `enchantment` / `paintingVariant`; the other registries have no tag system.
+- **Supported registries**: `item` / `block` / `entityType` / `fluid` / `enchantment` / `paintingVariant`; the other builders on this page do not expose `tag(...)`.
 - On 26.x, tag directories use the registry name (`data/<ns>/tags/item/...`, singular).
 
-> Builder `tag(...)` is currently provided only on **NeoForge 26.x**. The 1.21.1 builders do not have this method; use `ServerEvents.tags` from the [event reference](event-reference_us), or datapack JSON. Fabric's corresponding registration surface is still a subset.
+> Builder tag application through `ServerEvents.tags` is currently connected only on **NeoForge 26.x**. The 1.21.1 builders do not have this method; use `ServerEvents.tags` from the [event reference](event-reference_us), or datapack JSON. Fabric's corresponding registration surface is still a subset.
 
 <a id="wiki-section-12"></a>
 ## GoalBuilder - AI goals
@@ -417,7 +422,7 @@ Only `item`, `soundEvent`, and `mobEffect` exist on this runtime event; there is
 <a id="wiki-section-16"></a>
 ## Migrating from older syntax
 
-`RegistryEvents` now has only the `register` entry point, and builder data uses exposed properties (including Bean/proxy-backed setters), not necessarily public Java fields:
+`RegistryEvents` now has only the `register` entry point, and builder data uses exposed properties (including Bean/proxy-backed setters), not necessarily public Java fields. The table describes syntax only where that builder is actually exposed; it does not add a factory or unlock a registry:
 
 | Old syntax | New syntax |
 |---|---|

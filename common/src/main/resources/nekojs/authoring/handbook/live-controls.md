@@ -41,13 +41,13 @@ Choose exactly one lowercase `type`: `server`, `client` or `test`. Replace the e
 |---|---|---|
 | `server` | Running dedicated/integrated server; full transactional SERVER candidate on its server thread | Recipe replay plus required script-datapack activation/resource reload followups |
 | `client` | Active client runtime in the client process; full CLIENT candidate completes on the client owner thread | No server required and no server recipe/resource followups; dedicated servers reject it with `RELOAD_UNAVAILABLE` |
-| `test` | Running dedicated/integrated server; full TEST candidate on its server thread | Only loads/reloads TEST scripts; no server recipe/resource followups and no certification that test assertions passed |
+| `test` | Running dedicated/integrated server; existing TEST reload-and-run flow on its server thread | Returns the observed assertion report after its existing ready-timer drain; no SERVER recipe/resource followups or certification of future callbacks |
 
-For CLIENT or TEST, use `{"type":"client","timeoutMs":5000}` or `{"type":"test","timeoutMs":5000}`. Successful admission or queueing is not completion: wait for the actual candidate result. Then use the normal client/UI or test-report workflow to verify behavior. A TEST reload is not a request to run and certify the assertion suite.
+For CLIENT or TEST, use `{"type":"client","timeoutMs":5000}` or `{"type":"test","timeoutMs":5000}`. Successful admission or queueing is not completion: wait for the actual candidate result. Then inspect the client/UI separately, or read TEST `testRunReport`: execution completion, execution success and assertion outcomes are independent.
 
 This tool does not provide single-file/partial reload, `all`, vanilla `/reload`, Probe regeneration or a game restart. STARTUP requires a full process restart (`RESTART_REQUIRED`); other unsupported types report `UNSUPPORTED_RELOAD`. Tag workflows may still require the separate vanilla reload described in [scripting examples](scripting-examples.md).
 
-Read `committed` and `postprocessingSucceeded` independently. A candidate failure leaves the previous active generation, but arbitrary script/world/file side effects are not universally transactional. A committed candidate followed by failed recipe/datapack work reports `committed: true`, `postprocessingSucceeded: false` and `RELOAD_POSTPROCESSING_FAILED`: do not claim rollback or full success. For CLIENT and TEST, `postprocessingSucceeded: true` means the full candidate completed without server followups, not that UI behavior or assertions passed. These booleans are available only when actual completion supplies a reload result; a running timeout does not establish either.
+Read `committed` and `postprocessingSucceeded` independently. A candidate failure leaves the previous active generation, but arbitrary script/world/file side effects are not universally transactional. A committed candidate followed by failed recipe/datapack work reports `committed: true`, `postprocessingSucceeded: false` and `RELOAD_POSTPROCESSING_FAILED`: do not claim rollback or full success. For CLIENT and TEST, `postprocessingSucceeded: true` means the full candidate completed without server followups, not that UI behavior or assertions passed. These booleans are available only when actual completion supplies a reload result; a running timeout does not establish either. TEST additionally carries `testRunReport`; observed failed assertions make the action fail with `TEST_ASSERTIONS_FAILED` even when its candidate committed. Zero observed assertions give null assertion status, not an overall pass.
 
 ## Results, deadlines and lifecycle
 
@@ -61,7 +61,7 @@ Inspect MCP `isError` and `structuredContent`, not just HTTP/JSON-RPC success. A
 
 Normal script execution no longer has evaluation deadlines, statement budgets or an automatic runaway watchdog. A pending top-level await or synchronous loop can therefore keep the owner/operation busy after the request wait expires. Request timeouts do not terminate script execution; lifecycle cancellation and shutdown remain separate mechanisms.
 
-The in-memory audit is bounded metadata, not a persistent log or a public operation-status polling API. A timeout response is not rewritten when work eventually completes. Request output and operation IDs are not credentials, but can disclose world details; keep them private.
+Use the read-only `nekojs_operation_status` tool (or authenticated HTTP POST `operation_status`) with the admitted `operationId` to observe later metadata; it never repeats the action. The initial timeout response remains unchanged. Retention is the existing bounded 64-transition in-memory audit plus pending operations, not persistent history. Unknown and evicted IDs are indistinguishable. See [live runtime results](query-api.md#live-runtime-results-in-mod-only) for error queries, late completion, retired-owner uncertainty and the latest TEST report. Request output and operation IDs are not credentials, but can disclose world details; keep them private.
 
 ## Verification and acceptance
 

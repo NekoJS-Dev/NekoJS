@@ -37,12 +37,14 @@ RegistryEvents.register(event => {
 <a id="wiki-section-2"></a>
 ## 入口形态
 
-- `event.<registry>(id, cb)` —— 当前平台已登记的注册表糖方法，例如 `item` / `block` / `entityType` / `creativeModeTab` / `mobEffect` / `potion` / `soundEvent` / `particleType` / `paintingVariant` / `villagerType`。具体入口随平台变化。
+- `event.<registry>(id, cb)` —— 当前平台已登记的注册表糖方法，例如 `item` / `block` / `entityType` / `creativeModeTab` / `mobEffect` / `potion` / `soundEvent` / `particleType` / `villagerType`。具体入口随平台变化。Java 中存在注册表键或 builder 类，不等于已经提供默认 builder 或原生注册阶段。
 - `event.<registry>(id, typeName, cb)` —— 同上，但显式指定第三方插件登记的命名类型。
 - `event.custom(id, typeName, cb)` —— 按全局唯一类型名登记。
 - `event.register(registry, id, supplier)` —— 裸 supplier 入口，`registry` 为糖名或完整键。
 
 > `fluid`、`enchantment` 等入口不是跨平台能力：FluidBuilder 当前仅 NeoForge 可用；附魔 builder 仅适用于 NeoForge 1.21.1，26.x 应使用数据包，Fabric 当前不提供对应注册面。
+
+核心工厂选择已有的原生 builder 实现；通用入口不保证能随意新增 Java 行为，也不保证跨版本注册表支持。`event.register(...)` 的 supplier 会推迟到原生注册阶段调用，不能绕过平台可用范围或重启要求。
 
 **builder 暴露 Bean 属性**：数据属性直接赋值（`b.maxStackSize = 16`），只有"动作"和复合配置保留方法（`b.noItem()`、`b.food(cb)`、`b.tag(...)`）。
 
@@ -130,7 +132,7 @@ NeoForge 1.21.1 写入 `assets/<命名空间>/models/item/<路径>.json`；26.x 
 
 默认会自动生成一个同名 BlockItem。**连带注册三件套**：子 builder 构造期预创建、`noItem()` 置 null 抑制、对象间经懒引用连接——`b.item` 的配置只在 BlockItem 真正注册时生效。
 
-> **renderType 平台差异**：1.21.1 上会实际生效（经 `ItemBlockRenderTypes.setRenderLayer` 应用渲染层）。26.x（1.21.5+）渲染为**模型驱动**——需要模型 JSON 贴图引用加 `"force_translucent": true`（或贴图带 alpha）；声明了 `renderType = 'translucent'` 的方块 NekoJS 会自动生成带该标记的默认模型（没自写模型时）。
+> **renderType 平台差异**：1.21.1 上会实际生效（经 `ItemBlockRenderTypes.setRenderLayer` 应用渲染层）。26.x（1.21.5+）渲染为**模型驱动**——需要模型 JSON 贴图引用加 `"force_translucent": true`（或贴图带 alpha）；声明了 `renderType = 'translucent'` 的方块在 NeoForge 26.x 会自动生成带该标记的默认模型（没自写模型时）。Fabric 未接入该自动方块模型生成器，需要自行提供原生模型资源。
 
 <a id="wiki-section-6"></a>
 ## FluidBuilder —— 流体（仅 NeoForge）
@@ -142,8 +144,8 @@ NeoForge 上可注册完整的自定义流体：可放置、流动并用桶舀�
 | 成员 | 说明 |
 |---|---|
 | `displayName` | 翻译 key（如 `fluid.mymod.molten_iron`） |
-| `density` | 密度（>1000 比水重下沉，<1000 上浮；默认 1000） |
-| `temperature` / `viscosity` / `lightLevel` | 温度 / 粘度（越大流得越慢）/ 发光（默认 300 / 1000 / 0） |
+| `density` | 原生 `FluidType` 密度（默认 1000）；不保证流体分层或置换行为 |
+| `temperature` / `viscosity` / `lightLevel` | 原生 `FluidType` 温度 / 黏度 / 发光（默认 300 / 1000 / 0）；流动调度另由 `tickRate` 控制 |
 | `canConvertToSource` | 是否可无限生成源（默认 false，对标 1.21 原版水） |
 | `slopeFindDistance` / `levelDecreasePerBlock` | 流动寻路距离（默认 4）/ 每格下降等级（默认 1） |
 | `explosionResistance` / `tickRate` | 抗爆（默认 100）/ 流动 tick 间隔（默认 5） |
@@ -241,7 +243,7 @@ RegistryEvents.register(event => {
 | `slots` | `'any'`/`'armor'`/`'chest'`/`'feet'`/`'head'`/`'legs'`/`'hand'`/`'mainhand'`/`'offhand'`（默认 mainhand） |
 | `tag(tags...)` | 给附魔打 tag（如 `'minecraft:treasure'`） |
 
-> 默认不挂附魔效果组件（可注册、可附魔/书本/互斥，但无实际效果）；1.21+ 的附魔效果需经 `EnchantmentEffectComponents`，暂不开放。
+> 此 builder 不挂附魔效果组件，也未暴露 `EnchantmentEffectComponents` 配置。定义字段不保证已有可用的游戏效果，也不保证其他版本的原生注册可用。
 
 <a id="wiki-section-9"></a>
 ## CreativeTabBuilder —— 创造标签页
@@ -268,6 +270,8 @@ RegistryEvents.register(event => {
 <a id="wiki-section-10"></a>
 ## 简单注册表
 
+只运行当前平台支持的入口；下方附魔部分仅适用于 NeoForge 1.21.1。`PotionBuilder.effect(...)` 在配置时立即解析效果，找不到的 id 会被静默忽略。同一次收集回调中刚声明的自定义效果尚未注册，因此药水示例使用已有原版效果。
+
 ```javascript
 RegistryEvents.register(event => {
   // 状态效果
@@ -275,7 +279,7 @@ RegistryEvents.register(event => {
 
   // 药水（可含多个效果实例，effect 为追加方法）
   event.potion('mymod:shock_potion', b => {
-    b.effect('mymod:shock', 600, 0)                      // (效果, 时长tick, 等级)
+    b.effect('minecraft:poison', 600, 0)                      // (效果, 时长tick, 等级)
     b.effect('minecraft:speed', 3600, 1, false, true)    // (+环境效果, 显示粒子/图标)
   })
 
@@ -285,10 +289,11 @@ RegistryEvents.register(event => {
   // 粒子类型
   event.particleType('mymod:sparkle', b => { b.overrideLimiter = true })
 
-  // 画作变体（宽高单位像素、16 的倍数；assetId 默认与注册 id 相同）
-  event.paintingVariant('mymod:epic_painting', b => {
-    b.width = 32; b.height = 16; b.title = '大海'
-  })
+  // 核心未登记默认 paintingVariant 工厂。
+  // 此形态需要插件提供 builder，并且平台有相应的原生注册阶段：
+  // event.paintingVariant('mymod:epic_painting', b => {
+  //   b.width = 32; b.height = 16; b.title = '大海'
+  // })
 
   // 村民类型（纯标识，无配置）
   event.villagerType('mymod:miner', b => {})
@@ -307,7 +312,7 @@ RegistryEvents.register(event => {
 <a id="wiki-section-11"></a>
 ## tag —— 给注册内容打标签
 
-注册时就能预埋 tag：**物品、方块、实体类型、流体、附魔、画作变体**的 builder 都有 `tag(...)` 方法。这是「方块不掉落 / 物品进不了 tag」问题的正解——不用再手写 datapack JSON 或等 `ServerEvents.tags`。
+注册时就能预埋 tag：26.x 的**物品、方块、实体类型、流体、附魔、画作变体** builder 实现有 `tag(...)` 方法。实现类上有方法不等于注册表可用；附魔与画作仍受上面的注册限制约束。这是「方块不掉落 / 物品进不了 tag」问题的正解——不用再手写 datapack JSON 或等 `ServerEvents.tags`。
 
 ```javascript
 RegistryEvents.register(event => {
@@ -335,10 +340,10 @@ RegistryEvents.register(event => {
 - **与 `ServerEvents.tags` 组合**：待写条目在该事件**之前**注入，脚本监听器里仍可 `add`/`remove` 覆盖。
 - **流体的特殊性**：tag 同时打在 source（`<id>`）与 flowing（`flowing_<id>`）两个流体上。
 - **方块的 BlockItem**：`block` builder 的 `tag(...)` 打**方块 tag**；给自动 BlockItem 打物品 tag 用 `b.item.tag(...)`。
-- **支持范围**：`item` / `block` / `entityType` / `fluid` / `enchantment` / `paintingVariant`；其余注册表无 tag 体系。
+- **支持范围**：`item` / `block` / `entityType` / `fluid` / `enchantment` / `paintingVariant`；本页其他 builder 未暴露 `tag(...)`。
 - 26.x 的 tag 目录与注册表同名（`data/<ns>/tags/item/...`，单数形式）。
 
-> builder 的 `tag(...)` 目前仅 **NeoForge 26.x** 提供；1.21.1 的 builder 无此方法，用 [事件参考](event-reference_cn) 中的 `ServerEvents.tags` 或 datapack JSON。Fabric 对应注册面仍是子集。
+> builder tag 经 `ServerEvents.tags` 生效的路径目前仅接入 **NeoForge 26.x**；1.21.1 的 builder 无此方法，用 [事件参考](event-reference_cn) 中的 `ServerEvents.tags` 或 datapack JSON。Fabric 对应注册面仍是子集。
 
 <a id="wiki-section-12"></a>
 ## GoalBuilder —— AI 目标
@@ -418,7 +423,7 @@ Builder 使用 Bean 属性或显式 setter（`build.mode = 'world'` / `build.set
 <a id="wiki-section-16"></a>
 ## 从旧写法迁移
 
-现在 `RegistryEvents` 只有 `register` 一个入口，builder 的数据通过公开属性赋值（包括 Bean/proxy setter），不代表都是 Java public field：
+现在 `RegistryEvents` 只有 `register` 一个入口，builder 的数据通过公开属性赋值（包括 Bean/proxy setter），不代表都是 Java public field。下表仅说明实际已暴露 builder 的语法，不会新增工厂或解锁注册表：
 
 | 旧写法 | 新写法 |
 |---|---|

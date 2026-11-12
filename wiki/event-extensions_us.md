@@ -16,7 +16,7 @@ NekoJS's event system, described in [Project architecture: event system](project
 - **`EventBus` / `CancellableEventBus` / `DispatchEventBus`**: three bus forms. The dispatch form routes by key, for example an item/block id.
 - **`EventBusJS`**: a GraalJS-facing `ProxyExecutable` allowing scripts to call `EventGroup.eventName(cb)`.
 - **`EventBusForgeBridge`**: bridges NeoForge native events into NekoJS buses.
-- **`FabricEventBusBridge`**: connects Fabric callback registrars to `EventBusJS` through `bind` / `bindTransformed`; `bindCancellable` forwards script cancellation through the callback adapter. Ordinary buses skip conversion/dispatch without listeners; dispatch buses preserve keyed delivery and support Java keyed listeners.
+- **`FabricEventBusBridge`**: connects Fabric callback registrars to `EventBusJS` through `bind` / `bindTransformed`; `bindCancellable` forwards script cancellation through the callback adapter. `bindTransformed` skips payload conversion when there are no listeners; `bind` and `bindCancellable` post directly. Use `bindDispatched`, `bindTransformedDispatched`, or `bindCancellableDispatched` when the callback supplies a dispatch key.
 
 **Cross-loader consistency:** keep the script contract aligned where capability permits: `EventGroup`, event name, payload meaning, Script Type, and cancellation/dispatch semantics. NeoForge binds native events on `IEventBus`; Fabric binds Fabric callbacks. The bus and payload contract can stay consistent, while the registration lambda adapts each real callback signature. Use a mixin or explicitly record unavailable capability where no equivalent callback exists; do not imply unsupported behavior.
 
@@ -61,7 +61,7 @@ public class PlayerGreetEvent {
 }
 ```
 
-The event class is inspected in only two ways: script-visible members are determined by reflection and `@Remap` / `@HideFromJS` (see [Annotations](annotations_us)), and cancellation support is determined by whether it implements the platform's cancellable-event interface (see below). Getter naming only affects how convenient it is to use from scripts.
+Script-visible members are determined by reflection and `@Remap` / `@HideFromJS` (see [Annotations](annotations_us) for probe limitations). Convenience factories detect cancellation support through the platform predicate, while an explicitly constructed bus can override it (see below). The getters above expose read-only Bean properties `event.player` and `event.greeting`; they do not add setters.
 
 > To add JSDoc to the event object, annotate its methods/parameters with `@Doc` / `@Param` / `@Return`, which probe includes in JSDoc, or use programmatic `registerTypeDocs` (`TypeDocsRegister.register(...)`; see [Plugin development](plugin-development_us)).
 
@@ -71,6 +71,7 @@ The event class is inspected in only two ways: script-visible members are determ
 ```java
 package com.example.myaddon;
 
+import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import net.minecraft.resources.Identifier;
@@ -83,8 +84,8 @@ public interface MyEvents {
         GROUP.server("playerGreet", PlayerGreetEvent.class);
 
     // Dispatch event keyed by Identifier
-    EventBusJS<MyCustomEvent, Identifier> CUSTOM =
-        GROUP.server("custom", MyCustomEvent.class, MY_DISPATCH_KEY);
+    EventBusJS<PlayerGreetEvent, Identifier> CUSTOM =
+        GROUP.server("custom", PlayerGreetEvent.class, DispatchKey.of(Identifier.class));
 }
 ```
 
@@ -109,6 +110,8 @@ public void registerEvents(EventGroupRegistry registry) {
     registry.register(MyEvents.GROUP);
 }
 ```
+
+**Client/server dispatch:** use `registerClientEvents(EventGroupRegistry)` for client-only event groups. The `.server(...)` / `.client(...)` declaration controls script access, not the logical side or thread of a native callback. For native events fired on both logical sides, filter the bridge before posting (NeoForge provides `bind(bus, predicate)`); adapt Fabric registrars to the matching side. This is not client/server network forwarding.
 
 **Publish the same source event through an API module**
 
@@ -137,7 +140,7 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 MyEvents.PLAYER_GREET.post(new PlayerGreetEvent(player, "Hello"));
 
 // Dispatch event, with a key
-MyEvents.CUSTOM.post(new MyCustomEvent(...), someIdentifier);
+MyEvents.CUSTOM.post(new PlayerGreetEvent(player, "Hello"), someIdentifier);
 ```
 
 > `post(...)` returns a boolean indicating cancellation. **A non-cancellable bus always returns false**, even if a script returns true. `GROUP.server(name, eventClass)` uses `EventBusJS.of(type)`, whose `eventCancellability(type)` check on NeoForge asks whether the event class `implements ICancellableEvent` (`NeoForgeRuntimeBootstrap`). A POJO such as the `PlayerGreetEvent` above is therefore non-cancellable.
@@ -149,7 +152,7 @@ MyEvents.CUSTOM.post(new MyCustomEvent(...), someIdentifier);
 >     MyEvents.GROUP.add("playerGreet", ScriptType.SERVER, EventBusJS.of(PlayerGreetEvent.class, true));
 > ```
 >
-> Only then is `boolean cancelled = PLAYER_GREET.post(...)` meaningful.
+> Replace the original declaration with this form; adding `playerGreet` a second time would fail the duplicate-name check. Only then is `boolean cancelled = PLAYER_GREET.post(...)` meaningful.
 
 <a id="wiki-section-8"></a>
 ### Script-side usage
@@ -158,7 +161,7 @@ Once registered, your events work like built-in events:
 
 ```javascript
 MyEvents.playerGreet(event => {
-  console.info(`${event.getPlayer().getName().getString()} was greeted: ${event.getGreeting()}`)
+  console.info(`${event.player.getName().getString()} was greeted: ${event.greeting}`)
 })
 
 MyEvents.custom('mymod:some_key', event => {
@@ -170,7 +173,7 @@ MyEvents.custom('mymod:some_key', event => {
 ## ScriptEvents: define events from scripts
 
 NekoJS also provides a mechanism **for script authors**: declare a custom event group in `startup_scripts/`, then listen to it and trigger it from `server_scripts` / `client_scripts` just like a built-in event.
-The payload is the value supplied by the caller; NekoJS does not wrap it.
+The payload is the value supplied by the caller; NekoJS does not wrap it. These script-only examples are an alternative to the plugin-defined `MyEvents` above: choose another group name if that plugin group is registered.
 
 <a id="wiki-section-10"></a>
 ### Declaration
@@ -262,7 +265,7 @@ EventBusForgeBridge.create(NeoForge.EVENT_BUS)
 <a id="wiki-section-16"></a>
 ## Design considerations
 
-The first two items are recommendations without code enforcement; the last three describe mechanisms:
+The following items distinguish recommendations from mechanisms:
 
 1. **Keep event objects simple** (recommendation): POJOs and records produce the clearest reflected script interface. Complex objects also work, but expose a correspondingly more complex member set.
 2. **Keep dispatch keys stable** (recommendation): changing a dispatch key type (`Identifier` / `String` / `Class`) breaks the first argument of existing scripts. This is an API stability commitment you choose to make.

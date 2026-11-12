@@ -68,6 +68,8 @@ A: Confirm that your file is treated as ESM:
 - Alternatively, confirm `enableEsmAuthoring = true` in `nekojs/config/engine.toml` (enabled by default).
 - Top-level await is only available in ESM modules, not CJS (`.cjs`).
 
+If loading never finishes, inspect the awaited promise and synchronous top-level work. Normal scripts no longer have configurable evaluation timeouts, statement limits or runaway watchdogs; the retired keys do not rescue a pending `await` or infinite loop. See [Configuration](configuration_us) for migration and restart requirements.
+
 <a id="wiki-section-11"></a>
 ## TypeScript / JSX
 
@@ -230,4 +232,4 @@ AI authoring HTTP and batch queries are read-only, but separately authorized liv
 
 ---
 
-[Previous: Quick start](quick-start_us) · [Contents](Home) · [Next: Script basics](script-basics_us)
+[Previous: Configuration](configuration_us) · [Contents](Home) · [Next: Script basics](script-basics_us)

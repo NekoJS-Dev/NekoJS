@@ -51,7 +51,7 @@ console.info('[NekoJS] Server script loaded')
 | NeoForge 26.1.2 | Currently supported, Java 25 |
 | NeoForge 26.2.0 | Currently supported, Java 25 |
 | Fabric 26.1.2 | Current repository node, Java 25; loader API subset |
-| Fabric 26.2.0 | Current repository node, Java 25; loader API subset |
+| Fabric 26.2 (node `26.2.0-fabric`) | Current repository node, Java 25; loader API subset |
 
 
 See [Platforms and compatibility](platform-compatibility_us) for detailed differences. Refer to [Releases](https://github.com/NekoJS-Dev/NekoJS/releases) for publication status.
@@ -60,6 +60,7 @@ See [Platforms and compatibility](platform-compatibility_us) for detailed differ
 ## Where to go next
 
 - **Writing your first script**: [Quick start](quick-start_us)
+- **Editing engine options, MixinJS or old configuration**: [Configuration](configuration_us)
 - **Understanding when scripts run**: [Script basics](script-basics_us)
 - **Looking up bindings and methods**: [Global bindings](global-bindings_us)
 - **Giving an AI the current instance API**: [AI-assisted authoring](ai-support_us)

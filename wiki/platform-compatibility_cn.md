@@ -48,6 +48,8 @@ Fabric 节点已经覆盖脚本加载、配方、网络、probe、注册表的�
 
 26.x 的附魔是数据驱动注册表，不能沿用 1.21.1 的运行时注册 builder；请使用数据包方案。源码中保留的 builder 不代表 26.x 注册通道可用。
 
+**额外 addon 不等于跨平台能力：** NekuJS 是独立安装的 NeoForge 1.21.1 兼容 addon，不包含在核心 JAR 中，也不表示 Fabric/26.x 支持 KubeJS addon。MixinJS 当前默认关闭，即使显式开启也仍受开发环境和精确 profile 等限制，不应与 NekoJS 自身用于实现功能的 Mixin 混为一谈。见[配方系统](recipe-system_cn)与 [MixinJS](mixinjs_cn)。
+
 **客户端绘制不是单一功能开关。** Fabric 也有 Painter `hud` / `screenRender`；命名 `hudRender` / `worldRender` 和后处理仅 NeoForge。NeoForge 26.2 的 `ctx.line` / `ctx.box` 已使用独立 staged buffer 提交；1.21.1/26.1.2 使用各自实现路径。绘制提交回归不代表 GPU 画面验收。JSX `ClientUI` 仅 NeoForge 26.x。启用方式、生命周期和限制见 [客户端绘制与后处理](client-rendering_cn)、[JSX 客户端 UI](jsx-client-ui_cn)。
 
 <a id="wiki-section-3-issue4"></a>

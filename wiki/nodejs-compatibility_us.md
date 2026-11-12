@@ -29,6 +29,8 @@ Both forms work, with or without the `node:` prefix (bare names work too).
 
 `process.versions.node` is shim-provided metadata, not evidence that Node.js itself is running or that a package targeting that Node version is compatible.
 
+`process.exit()` only records the requested exit code and warns; it does not stop the game or script. `process.nextTick()` uses a Promise-microtask approximation, not Node's exact ordering relative to every other microtask. Do not use either as a process-control or loop-interruption API.
+
 <a id="wiki-section-3"></a>
 ## Common API reference
 
@@ -86,6 +88,8 @@ console.info('等了 1 秒')
 
 > Global `setTimeout`/`setInterval`/`clearTimeout`/`clearInterval` are available at script top level (patched onto `globalThis`).
 
+Timer handles are numeric IDs, not Node.js `Timeout` objects; methods such as `.ref()` / `.unref()` are not part of this shim. Clear them with the matching `clearTimeout` / `clearInterval` / `clearImmediate`. The timer runtime still caps registrations at 1024, queued ready callbacks at 4096 and one flush at 256 callbacks. These are scheduler/resource bounds, not a statement budget or a way to preempt a running callback.
+
 The positive-delay example is for SERVER/CLIENT/TEST scripts. STARTUP rejects every interval and any timeout with a positive delay; zero-delay/immediate callbacks are allowed. The scheduler only queues ready work: callbacks execute when the owning script environment flushes its queue (including module-await pumping, lifecycle/tick dispatch, or the TEST flow), not on the scheduler thread and not at an exact wall-clock instant. Failed candidates and retired generations cancel their timers; old callbacks must not be treated as persistent state. A timer delay schedules a callback; it is not an execution deadline and does not interrupt a synchronous loop.
 
 <a id="wiki-section-7"></a>
@@ -100,7 +104,7 @@ test('简单的加法', () => {
 })
 
 test('异步测试', async () => {
-  const result = await someAsyncOp()
+  const result = await Promise.resolve({ success: true })
   assert.ok(result.success)
 })
 ```
@@ -128,7 +132,7 @@ console.info(buf.toString('hex')) // '68656c6c6f'
 | Protected configuration | `nekojs/config/` and legacy `config/nekojs-engine.toml` remain unwritable even with the flag enabled |
 | Create symbolic links | Not allowed |
 
-The flag is in `nekojs/config/engine.toml`. Filesystem checks do not make arbitrary Java host calls or untrusted scripts safe. Normal execution no longer has evaluation timeouts, statement budgets or a runaway watchdog: `scriptEvaluationTimeoutSeconds`, `scriptStatementLimit` and `scriptRunawayTimeoutSeconds` were removed, not replaced by another default. Infinite loops may block the owner thread/process. HTTP/authoring request waits and lifecycle cancellation/shutdown remain separate; a request timeout does not prove the script stopped.
+The flag is in `nekojs/config/engine.toml`. Filesystem checks do not make arbitrary Java host calls or untrusted scripts safe. Normal execution no longer has evaluation timeouts, statement budgets or a runaway watchdog: `scriptEvaluationTimeoutSeconds`, `scriptStatementLimit` and `scriptRunawayTimeoutSeconds` were removed, not replaced by another default. Infinite loops may block the owner thread/process. HTTP/authoring request waits and lifecycle cancellation/shutdown remain separate; a request timeout does not prove the script stopped. The complete engine defaults and migration rules are in [Configuration](configuration_us).
 
 ```javascript
 import fs from 'node:fs'

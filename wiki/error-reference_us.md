@@ -11,6 +11,8 @@ The code is the lookup key and does not change when the wording does.
 
 This page indexes NekoJS developer diagnostics, not every Java, mod or network exception. Structured HTTP/MCP machine codes such as `CONTROL_DISABLED` and `INDEX_UNAVAILABLE`, and operation states, are documented under [AI support](ai-support_us#wiki-live-controls); they are distinct from logged `NEKO-xxxx` identifiers. Include Script Type, source/line, phase and actual commit outcome in reports. A queueing message alone does not establish reload success.
 
+An entry-evaluation failure marks that entry disabled and records its cause; do not generalize it into “every callback exception disables the whole runtime.” Event/timer callback reports have their own attribution. A context terminated by host cancellation or resource exhaustion invalidates its generation; an explicit full reload is required to recover, not a single-file rerun.
+
 ```
 [NEKO-2004] 脚本输出行数超过 … 行上限，后续输出将被丢弃（防止日志无限增长） — script output line limit reached
 ```
@@ -50,6 +52,7 @@ Codes from #58 that have no call site on this branch are not used:
 | `NEKO-1022` | authoring SERVER committed but postprocessing failed | SERVER 脚本已提交，但配方、脚本包或资源后处理失败 |
 | `NEKO-1023` | authoring live control requires server owner thread | 实时 AI 控制未在服务器所有者线程执行，操作被拒绝 |
 | `NEKO-1024` | authoring live server runtime is no longer current | 实时服务器已停止或更换，旧操作不得在新世界继续执行 |
+| `NEKO-1025` | script property rejected; previous value or default retained | 脚本属性解析失败；保留最近有效值或默认值，警告包含文件、实际行号和原因 |
 
 `NEKO-2001`, `NEKO-2002`, `NEKO-2003` and `NEKO-2005` are retired normal-execution budget diagnostics. Their former resource/statement-limit, runaway-watchdog and evaluation-timeout call sites were removed; old logs may still contain them. These identifiers remain historical references, not settings to enable or codes to reuse. `NEKO-2004` remains active: it caps emitted log lines, not script execution.
 
@@ -139,13 +142,15 @@ Structured diagnostic `phase: WATCHDOG` and owner `Runaway Watchdog` retain thei
 | `NEKO-4064` | Script output declaration rejected | A method's explicit TypeScript output expression is blank |
 | `NEKO-4065` | Script output view rejected | The view must be an implemented public non-generic interface; native input contracts are unchanged. |
 | `NEKO-4066` | Probe declaration retained with incomplete public members | A missing optional public signature prevents native method-set reflection. Independent members remain; inspect `incompleteMembers` and do not treat the closure as complete. |
-| `NEKO-4090` | Mixin preparation/restart required or declaration/library rejected | Restart after successful preparation; otherwise check cache selection/ownership, actual loader admission, exact profile, descriptor and supported options. See [MixinJS troubleshooting](mixinjs_us#wiki-section-9). |
+| `NEKO-4090` | Mixin preparation/restart required or declaration/library rejected | First check `[mixinjs] enabled` in the default-off engine configuration and fully restart after changing it; restart after successful preparation; otherwise check cache selection/ownership, actual loader admission, exact profile, descriptor and supported options. See [MixinJS troubleshooting](mixinjs_us#wiki-section-9). |
 | `NEKO-4091` | Mixin callback authority or bridge ownership rejected | Use a locally trusted candidate and callback file; another live root cannot replace the bridge lease. |
 | `NEKO-4092` | Native hook bypassed or callback decision discarded | Check thread, synchronous return, control lifetime and strict ABI conversion. |
 
 
 <a id="wiki-section-6"></a>
 ## Recipes and data
+
+`NEKO-5190`–`NEKO-5192` belong to the explicitly profiled crushing-schema import helper. A mismatch there does not mean every schema from the same addon or the general native schema compiler is unsupported.
 
 The entries below in the `NEKO-5240`–`NEKO-5279` range belong to NekuJS recipe-schema import, not a promise of compatibility with every KubeJS addon. A recognized definition whose semantics cannot be honored is declared as `never` by Probe and rejected by the corresponding runtime constructor. Fix or implement the diagnosed semantics rather than bypassing the declaration.
 
@@ -154,6 +159,9 @@ The entries below in the `NEKO-5240`–`NEKO-5279` range belong to NekuJS recipe
 | `NEKO-5001` | could not convert value to JSON | 无法转换为 JSON |
 | `NEKO-5002` | JSON must be an object | JSON 必须是对象 |
 | `NEKO-5003` | unknown recipe filter key | RecipeFilterAdapter: unknown key |
+| `NEKO-5190` | recipe schema source lacks an expected resource | 配方 schema 来源缺少预期资源 |
+| `NEKO-5191` | imported crushing schema profile differs from the explicitly supported resource shape | 导入的粉碎配方 schema 与明确支持的资源形状不同 |
+| `NEKO-5192` | recipe schema source parsing or validation failed | 配方 schema 来源解析或校验失败 |
 | `NEKO-5200` | selected recipe method threw a checked exception; no overload or schema fallback | 已选配方方法抛出受检异常，保留原因，不再尝试重载或 schema 回退 |
 | `NEKO-5201` | selected recipe method is inaccessible; invocation rejected | 已选配方方法不可访问，调用被拒绝 |
 | `NEKO-5202` | native type adapter acceptance or conversion failed; original cause preserved, not an overload mismatch | 原生类型适配器判定或转换失败，保留原始原因，不作为重载不匹配处理 |

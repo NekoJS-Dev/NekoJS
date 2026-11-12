@@ -126,7 +126,9 @@ See the `global` and `shared` entries in [Global bindings](global-bindings_us).
 - Error reports include the file, line, and column, along with a source excerpt (`>` marks the error line and `^` points to the error column). Syntax errors (SyntaxError) also identify the relevant line/column.
 - Use `/nekojs error` to check whether there are any script errors.
 - Use `/nekojs view_all_errors` to send the full error list to chat.
-- Entry-evaluation failures mark that entry disabled. Event/timer callback errors are recorded separately; they do not guarantee that the whole script is disabled. Watchdog/resource-limit termination can isolate the active environment until explicit full reload.
+- Entry-evaluation failures mark that entry disabled. Event/timer callback errors are recorded separately; they do not guarantee that the whole script is disabled. Host/Graal cancellation or resource exhaustion can isolate the active environment until explicit full reload.
+
+Normal script execution no longer configures an evaluation timeout, cumulative statement limit, or runaway watchdog. The retired `scriptEvaluationTimeoutSeconds`, `scriptStatementLimit`, and `scriptRunawayTimeoutSeconds` engine keys do not restore those controls. An infinite loop or a never-settling entry promise can therefore block loading/reloading; keep work bounded and yield deliberately. Structured JSON/NBT/file bounds and separate authoring-tool waits still apply.
 
 <a id="wiki-section-12"></a>
 ### Static checks before loading (preflight)

@@ -34,11 +34,15 @@ public final class AuthoringHttpServer implements AutoCloseable {
     }
     public AuthoringHttpServer(int port, String token, boolean http, boolean enableMcp, AuthoringBundle bundle,
                                 BiFunction<String, JsonObject, JsonObject> query, Predicate<String> availability) throws IOException {
+        this(port, token, http, enableMcp, bundle, query, availability, operation -> false);
+    }
+    public AuthoringHttpServer(int port, String token, boolean http, boolean enableMcp, AuthoringBundle bundle,
+                                BiFunction<String, JsonObject, JsonObject> query, Predicate<String> availability, Predicate<String> liveQueryAvailability) throws IOException {
         this.authorization = ("Bearer " + token).getBytes(StandardCharsets.US_ASCII);
         this.httpEnabled = http;
         this.mcpEnabled = enableMcp;
         this.query = query;
-        this.mcp = new AuthoringMcp(bundle, query, (message, error) -> com.tkisor.nekojs.NekoJS.LOGGER.warn(message, error), availability);
+        this.mcp = new AuthoringMcp(bundle, query, java.time.Clock.systemUTC(), (message, error) -> com.tkisor.nekojs.NekoJS.LOGGER.warn(message, error), availability, liveQueryAvailability);
         this.workers = new ThreadPoolExecutor(4, 4, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<>(16),
                 runnable -> { Thread thread = new Thread(runnable, "NekoJS authoring HTTP"); thread.setDaemon(true); return thread; });
         this.deadlines = new ScheduledThreadPoolExecutor(1, runnable -> {
@@ -81,7 +85,7 @@ public final class AuthoringHttpServer implements AutoCloseable {
             if (!httpEnabled || !path.startsWith(prefix)) throw new AuthoringException(404, "NOT_FOUND", "/", "Unknown authoring endpoint.");
             String operation = path.substring(prefix.length());
             boolean get = List.of("context", "capabilities", "schema").contains(operation);
-            if (!List.of("context", "capabilities", "schema", "resolve", "members", "query", "batch").contains(operation)) throw new AuthoringException(404, "NOT_FOUND", "/", "Unknown authoring endpoint.");
+            if (!List.of("context", "capabilities", "schema", "resolve", "members", "query", "batch", "errors", "operation_status").contains(operation)) throw new AuthoringException(404, "NOT_FOUND", "/", "Unknown authoring endpoint.");
             if (!exchange.getRequestMethod().equals(get ? "GET" : "POST")) {
                 exchange.getResponseHeaders().set("Allow", get ? "GET" : "POST");
                 throw new AuthoringException(405, "METHOD_NOT_ALLOWED", "/", "Unsupported HTTP method.");

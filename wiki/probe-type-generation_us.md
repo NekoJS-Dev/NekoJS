@@ -43,25 +43,28 @@ When a user runs `/nekojs probe`, `ProbeCoordinator` coordinates a shared collec
 
 ```text
 1. Shared collection (collectClasses)
-   ├─ Seeds: event types, dispatch key types, binding Java types (including proxy extraDocTypes)
+   ├─ Seeds include event/dispatch key types and binding Java types (including module publications
+   │  and proxy extraDocTypes), recipe input host shapes, and authored declaration dependencies
    └─ BFS reachable closure; depth = probe.toml scan.maxDepth (default 5), filtered by scan settings
      (SMART uses include allowlists + forceScanMods; FULL allows everything except exclusions; NONE fails)
 
 2. Shared IR (built on demand)
-   ├─ Trigger: probe.modifyType / probe.assignType has listeners, or a selected backend requiresIr
+   ├─ Trigger: ProbeEvents.modifyType / ProbeEvents.assignType has listeners, or a selected backend requiresIr
    │  (both built-in TS and Python backends use requiresIr=true; IR is the only rendering source)
    ├─ TypeReflector reflects collected classes in parallel → List<TypeDecl> (reflection failures are skipped)
-   ├─ Apply probe.assignType first (global type redirection, marking affected classes mutated)
-   └─ Then fire probe.modifyType (parameter-level edits; explicit edits are not overwritten by assign)
+   ├─ Apply ProbeEvents.assignType first (global type redirection, marking affected classes mutated)
+   └─ Then fire ProbeEvents.modifyType (parameter-level edits; explicit edits are not overwritten by assign)
 
-3. Collect probe.addGlobal / probe.snippets only when each has listeners
+3. Collect ProbeEvents.addGlobal / ProbeEvents.snippets only when each has listeners
 
+   Before backend rendering, the coordinator already generates external workspace/editor artifacts.
 4. Render each selected backend sequentially: render output to memory (no disk writes) → default generate
    synchronizes files in place under <baseDir>/<language output subdirectory>:
    skip identical content, overwrite changed content, remove files no longer generated
-   ├─ Render failure → no disk changes, old output retained; escaping paths (absolute paths/..) rejected
+   ├─ Render failure → no declaration-file changes for that backend; earlier workspace writes are not rolled back
    └─ File locked by another process → retry with backoff; report the filename if retries fail
       (failure to remove a stale file only warns)
+      Output paths are validated before commit; escaping paths (absolute paths/..) are rejected.
       In-place writes are not directory-atomic: an I/O failure can leave partially refreshed output.
 
 5. Editor configuration contributions (each backend supplies fragments, merged idempotently)
@@ -76,6 +79,8 @@ When a user runs `/nekojs probe`, `ProbeCoordinator` coordinates a shared collec
 **Probe output is not the AI documentation root**
 
 `.neko_probe` holds declarations and editor files. It does not choose the AI root: `nekojs/config/ai.toml` `[output].directory` independently defaults to `.github/neko_ai`. After successful built-in TS declaration generation, the API snapshot is published to that selected root's `snapshots/`; failed declaration generation keeps the previous snapshot pointer, and publication failure is a warning, not a successful fresh snapshot. Changing probe `baseDir` or a language `outputDir` does not move the AI bundle.
+
+A Probe run is not one atomic transaction across workspace files, backend output trees and API snapshots. Workspace files can change before a backend fails, and a write failure can partially refresh that backend's output. Render-failure retention applies to that backend's declaration files before its commit, not every earlier side effect. See [workspace ordering](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ProbeCoordinator.java#L273-L279) and [per-backend output handling](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ProbeBackend.java#L95-L125).
 
 Selected-root `agents/` roles are not automatically discovered by editors. The optional standard `.github/agents` bridge requires `[output].editor_agents=true` (default false) and documentation generation enabled. It preserves user-edited roles and does not change global AI-client settings. See [AI authoring support](ai-support_us) for root discovery, connections, and security.
 
@@ -103,7 +108,7 @@ The following layouts are **actual output from the built-in backends**, not form
 │   └── types/index.d.ts            # Registry literals, such as a union of all item ids
 ├── @manual/
 │   ├── index.d.ts                  # Manual .d.ts declarations
-│   └── globals.d.ts                # declare const output from probe.addGlobal, when listeners exist
+│   └── globals.d.ts                # declare const output from ProbeEvents.addGlobal, when listeners exist
 ├── @nekojs/managed/<side>/index.d.ts  # Managed API declarations
 ├── @registry-builders/index.d.ts
 ├── @event-builders/index.d.ts
@@ -117,7 +122,7 @@ Editor configuration is separate: `.neko_probe/jsconfig.json` is at the **probe 
 
 ```text
 .neko_probe/python/nekojs/
-├── __init__.pyi    # Global bindings + event group entries + probe.addGlobal globals
+├── __init__.pyi    # Global bindings + event group entries + ProbeEvents.addGlobal globals
 │                  # (target of `from nekojs import *`, bounded by __all__)
 ├── py.typed        # PEP 561 marker (empty file)
 ├── README.md       # Usage instructions
@@ -169,11 +174,13 @@ Java `char` and boxed `Character` values are represented as TypeScript `string`,
 | `baseDir` | `".neko_probe"` | Output base directory, relative to the game directory. Each language backend owns `<baseDir>/<language>`, such as `.neko_probe/typescript`. |
 | `scan.includePackages` | `[]` | Allowlist of class-scanning package rules. An entry is a **literal package prefix** (`fqn` starts with `prefix.`) or a **`re:` regex** such as `re:com\.example\..*\.api\..*`, matched against the complete fully qualified name. **Replacement semantics**: a non-empty list **fully replaces** the default allowlist (`java`, `com.tkisor.nekojs`, and platform-default Minecraft/loader packages). To **append**, use `extraIncludePackages`, not a copy of the defaults here. |
 | `scan.extraIncludePackages` | `[]` | Append to the effective allowlist; **append semantics**, also supporting literal prefixes and `re:` regexes. Useful for adding `com.mojang` or a mod package. |
-| `scan.excludePackages` | `[]` | Denylist rules supporting literal prefixes and `re:` regexes. **Always applied**, including in FULL mode; matching classes are skipped. |
+| `scan.excludePackages` | Built-in package denylist (below) | Denylist rules supporting literal prefixes and `re:` regexes. **Always applied**, including in FULL mode; matching classes are skipped. An explicit list replaces the defaults; `[]` disables these scan exclusions, not runtime access restrictions. |
 | `scan.forceScanMods` | `["minecraft"]` | Mod ids or package rules **forced into** scanning outside the allowlist. Built-in mappings: `minecraft` → `net.minecraft`, `neoforge` → `net.neoforged`, `forge` → `net.minecraftforge`, `java` → `java`. An entry containing `.` is a literal prefix; one starting with `re:` is a regex. Unknown mod ids are logged at debug and ignored. excludePackages still takes precedence over forced inclusion. |
 | `scan.maxDepth` | `5` | Maximum primary-scan BFS depth from event/binding seeds; values ≤0 fall back to 5. TS declaration dependencies are completed separately. |
 | `scan.mode` | `"SMART"` | `SMART`: allowlist + forceScanMods filtering. `FULL`: skip the include allowlist; the primary scan is constrained only by excludes and maxDepth. `NONE`: no scanning, and probe returns failure. Unknown values fall back to `SMART`. |
 | `languages.<lang>.outputDir` | Language id itself | The language output's **subdirectory** under `baseDir`, such as default `typescript` → `.neko_probe/typescript`. Missing/null falls back to the language id. The default `ProbeBackend.outputDir` checks this key first. |
+
+The default exclusions are `com.tkisor.nekojs.core`, `java.awt`, `javax.swing`, `javax.imageio`, `javax.naming`, `java.rmi`, `java.sql`, `javax.sql`, `org.graalvm`, and `com.oracle.truffle`. Missing configuration keys receive these defaults; an existing explicit empty list stays empty. See [default scan configuration](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ProbeConfig.java#L62-L78) and [configuration loading](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ProbeConfigLoader.java#L40-L45).
 
 > **Regex package rules**: entries in `includePackages` / `extraIncludePackages` / `excludePackages` / `forceScanMods` can be literal package prefixes (the old behavior, `fqn.startsWith("prefix.")`) or `re:<pattern>` regexes matching the **entire** class FQN. For example, `re:com\.example\.(mod1|mod2)\..*` includes several mod packages at once. Compiled regexes are cached, avoiding extra work on the scanning hot path. An invalid regex warns once and never matches.
 
@@ -236,7 +243,7 @@ ProbeEvents.modifyType(event => {
   // Type construction helpers:
   const arr = event.array("string")                 // string[]
   const u   = event.union("string", "number")       // string | number
-  editor.changeReturnType("getCustom", u)
+  if (editor) editor.changeReturnType("getCustom", u)
 })
 ```
 
@@ -307,13 +314,15 @@ ProbeEvents.snippets(event => {
    - `python.analysis.extraPaths`: the same paths, appended with string deduplication.
    - `python.languageServer`: set to `"Pylance"` only if the user has not explicitly chosen one. VSCode's `"Default"` may fall back to Jedi in some environments, and Jedi does not read pyrightconfig/extraPaths, resulting in no completion.
 
+   The nested-directory scan has a depth limit of 8 and skips dependency, build, cache and VCS subtrees; it is not an unbounded scan of every directory ([editor contribution](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/python/PythonEditorConfig.java#L97-L145)).
+
    **Pylance reads configuration only at the workspace root**, whereas pyright CLI discovers configuration upward from source files. Open the game directory, `nekojs/`, a script directory, or a nested directory containing `.py` files directly in your editor, not their parent directory. NekoJS generates configuration for each of these possible workspace roots.
 3. Completion contents:
-   - `nekojs/__init__.pyi`: global bindings, event group entries, and globals from `probe.addGlobal`; `__all__` defines exports for `from nekojs import *`.
+   - `nekojs/__init__.pyi`: global bindings, event group entries, and globals from `ProbeEvents.addGlobal`; `__all__` defines exports for `from nekojs import *`.
    - `nekojs/_java/<java.包>/__init__.pyi`: Java type stubs. Generics flatten to `Any`, while member names, parameter counts, and field types are retained for everyday completion.
    - `nekojs/_events/<side>/__init__.pyi`: event declarations by script side.
    - `nekojs/py.typed`: PEP 561 marker; `nekojs/README.md`: usage instructions.
-4. Adapter input aliases: `<Simple>_ = <Simple> | <input types>`, such as `ItemStack_ = ItemStack | str | ...`, corresponding to TS `$Foo_`. Only target classes present in the IR receive aliases; unmappable shapes such as registry/raw TS fragments are skipped.
+4. Adapter input aliases: `<Simple>_ = <Simple> | <input types>`, such as `ItemStack_ = ItemStack | str | ...`, corresponding to TS `$Foo_`. Only target classes present in the IR receive aliases. Available registry ids, tags and namespaces become `Literal[...]` for fewer than 512 entries; empty or larger sets fall back to `str` (large sets receive a note). Templates become `str`, and object shapes become `dict[str, Any]`, not field-precise objects. Raw TS fragments, unavailable host types and registries missing from the snapshot are skipped. See [Python shape rendering](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/python/PythonProbeBackend.java#L599-L718).
 
 > Python backend `requiresIr()` always returns true. Selecting Python, including through `/nekojs probe all`, makes the coordinator build shared IR. `modifyType` / `assignType` edits therefore affect Python output too.
 
@@ -343,10 +352,14 @@ The table below describes directory and naming conventions used by the built-in 
 | `$Foo_` | Adapter input alias, where `Foo` is the target type name |
 | `java:` / `@side-only` / `@special` | Module specifier prefixes |
 
+Ordinary `nekojs/api/stable` and `nekojs/api/version` module exports (including `/<modid>` publications) use the registered public Java view type, not an invented structural DTO or a raw string inferred into a nominal type. Probe emits their ambient declarations in `@side-only/<side>/bindings/api-modules.d.ts`, loaded by the bindings index. Named ESM imports and literal `require("nekojs/api/stable")` refer to the same declared exports; unknown string `require` routes return `unknown`. A module-only export does not create a global. Use the current Script Type's output; “stable” does not imply availability everywhere. See [module rendering](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/BindingDeclarationGenerator.java#L77-L106), [side-specific output](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/TypeScriptProbeBackend.java#L572-L604), and [bundled API module handbook](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/resources/nekojs/authoring/handbook/api-modules.md).
+
 <a id="wiki-section-17"></a>
 ### Reading native inputs and recipe signatures
 
 `$Foo_` denotes an input contract only when a registered adapter or built-in collection actually defines it; it is not an alias automatically invented for every host class. Collection declarations keep **host values and guest inputs separate**: a native `$List<$Payload>` is not the same as a list whose elements have already been converted to `$Payload_`. Where the real adapter supplies `$Payload_`, a contract may therefore retain `($List<$Payload> | $Payload_[])`. The shorter `$List_<T>` / `$Collection_<T>` / `$Iterable_<T>` aliases are reused only when the host and guest type arguments agree. `Set` remains host-only; map object alternatives keep `Partial<Record<...>>` and property-key restrictions instead of turning arbitrary host keys into strings. See [canonical aliases and collection rules](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java#L79-L142), [alias reuse](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java#L233-L254), and [type-adapter boundaries](type-adapters_us).
+
+The same collection input renderer is used by ordinary methods, callbacks, events, managed APIs and recipes. Canonical aliases are imported from their actual Java package modules (`$List_`, `$Collection_`, `$Map_` from `java:java/util`; `$Iterable_` from `java:java/lang`), with module-local names respected. A narrowed wildcard-capture view can retain an explicit host carrier such as `$NekoCaptureCollectionInput<B>` alongside `B[]`; replacing that carrier with the ordinary `$Collection_<B>` would lose its constraint. This is declaration projection, not a new conversion or a promise that arbitrary JS objects are Java collections. See [alias selection](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java#L233-L254), [carrier projection](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptCaptureViews.java#L159-L170), and [import contract test](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/test/java/com/tkisor/nekojs/probe/ProbeGlobalCollectionAliasImportsTest.java#L31-L53).
 
 Native recipe handlers expose their visible Java overloads and actual generic return types; they are not all presented as a schema-specific builder. Unbound Java variables are projected to upper bounds. Converter-owned schema fields can recursively declare their accepted input types, while ordinary native generic adapters retain the host-side arguments they really accept. A schema with fields retains its **full named-options object overload**, with constructor-derived positional overloads, required/defaulted fields and exclusive canonical-or-alias keys. Named `...Options` declarations share the complete object contract; they do not remove less common fields. See [handler catalog](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/catalog/RecipeNamespaceCatalogEntry.java#L66-L94), [schema overloads](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/RecipeEventDeclarationGenerator.java#L238-L255), and [recipe contracts](recipe-system_us#wiki-section-8).
 
@@ -391,6 +404,7 @@ The snapshot contains:
 - `bindings`: all global bindings (name + Java type)
 - `events`: all groups/events (group + name + event type + cancellation + dispatch information)
 - `adapters`: all adapters (target type + input forms)
+- `moduleBindings` / `moduleEvents`: side-specific public API module publications
 - `recipeNamespaces`: recipe namespaces and handler method signatures
 - `registryTypes`: registry literals used by `@special/types`
 - `hostExtensions`: extension methods injected into vanilla classes
@@ -405,6 +419,10 @@ The snapshot contains:
 ### Bindings carry their types
 
 `registry.register("Foo", new FooJS())` makes probe reflect public methods of `FooJS`. For JSDoc, annotate the class/methods/parameters with `@Doc` / `@Param` / `@Return` (`TypeReflector` consumes them), or use programmatic `registerTypeDocs` (`TypeDocsRegister.register(...)` / `registerManualDeclaration(...)`; see [Plugin development](plugin-development_us)).
+
+**Explicit input and output declarations**
+
+For a reflected parameter, `@ScriptInput(Provider.class)` replaces the broad TypeScript input with the provider's `AdapterInputShape`; it does not retain a broad `Map` alternative that bypasses the specified fields. The provider implements `ScriptInputShapeProvider` with a public no-argument constructor. This metadata does not register a converter or change Java parameter types. `@ScriptOutput("TypeScript expression")` instead replaces a method's TS output, including Bean getters and inherited members, without widening ordinary unannotated Maps. Use inline `import("module").Type` references for external output types; those dependencies must already be supplied by the catalog or reflection closure. The output annotation does not discover dependencies. Include the Java type in an intersection when its members remain available. Explicit Probe slot edits take precedence; neither annotation is runtime validation, and Python retains its reflected Java contract. See [input reflection](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ir/TypeReflector.java#L673-L685), [TS slot rendering](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer.java#L782-L804), and [output contract](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/annotation/ScriptOutput.java#L9-L24).
 
 <a id="wiki-section-22"></a>
 ### Registry literals
@@ -496,7 +514,7 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 
 | Method | Default | When to override |
 |---|---|---|
-| `requiresIr()` | `false` | Return `true` when shared type IR is needed (`ctx.ir()`, language-neutral `TypeDecl` list including `probe.modifyType` / `assignType` edits). Both built-in TS/Python use this. |
+| `requiresIr()` | `false` | Return `true` when shared type IR is needed (`ctx.ir()`, the language-neutral `TypeDecl` list including `ProbeEvents.modifyType` / `ProbeEvents.assignType` edits). Both built-in TS and Python backends return `true`; only custom backends default to `false`. |
 | `priority()` | `0` | With multiple backends for a language, the highest becomes the default for `/nekojs probe <语言>` |
 | `outputDir(paths, config)` | `<baseDir>/<语言id>`, overridable by `probe.toml [languages.<id>].outputDir` | Special directory layout |
 | `contributeEditorConfig(...)` | Empty | Configure the IDE to recognize output, merging into jsconfig/pyrightconfig and similar files idempotently |
@@ -550,7 +568,7 @@ Only these three zero-argument instance method declarations are omitted in TS. I
 1. **JSDoc coverage depends on annotations**: `@Doc` / `@Param` / `@Return` documentation and `@Remap` / `@RemapByPrefix` / `@HideFromJS` naming/visibility are implemented, consumed directly by `TypeReflector` with the same rules as the runtime Graal remapper. For unannotated classes, add JSDoc through programmatic `registerTypeDocs` or the `setDoc` family in `ProbeEvents.modifyType`.
 2. **Declaration dependencies respect the current configuration**: the event generator collects types directly referenced by signatures (array component types), then the TypeScript declaration closure resolves dependencies under the current exclusion and hide policies. This does not unconditionally export every Java class. Regenerate after configuration changes and check the target project’s type diagnostics.
 3. **Third-party parameter names degrade**: NekoJS modules compile with `-parameters`, configured centrally in root build.gradle, so their declarations use real names. Third-party jars compiled without `-parameters` and JDK classes (standard `java.*` class files lack MethodParameters attributes) still lack names. `TypeReflector`'s `isNamePresent` fallback emits `arg0` / `arg1` and so on.
-4. **Version drift**: probe is manually triggered, so adding mods/registered content makes declarations stale. Run `/nekojs probe` again.
+4. **Version drift**: declarations are snapshots, not continuously refreshed. Manual runs and optional `runAtStartup` generation do not keep later mod/registered-content changes synchronized; run `/nekojs probe` again.
 5. **Python stub generics flattening**: type variables render as `Any`, without generic parameter relationships. This is sufficient for everyday completion, not full typing.
 
 <a id="wiki-section-31"></a>

@@ -167,11 +167,13 @@ public final class FabricNekoJSCommands {
         }
         try {
             NekoRuntimeRoot.TestRunResult result = root.runTests();
-            if (!result.isConfigured() || !result.isCompleted()) {
-                source.sendFailure(Component.literal(RuntimeCommandResultFormatter.testResult(result)));
+            Component message = Component.translatable(RuntimeCommandResultFormatter.testResultKey(result),
+                    RuntimeCommandResultFormatter.testResultArguments(result));
+            if (!RuntimeCommandResultFormatter.testExecutionSucceeded(result)) {
+                source.sendFailure(message);
                 return 0;
             }
-            sendReloadResult(source, root, RuntimeCommandResultFormatter.testResult(result));
+            sendReloadResult(source, root, message);
             return 1;
         } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException e) {
             NekoJS.LOGGER.error("Running test scripts failed", e);
@@ -334,16 +336,20 @@ public final class FabricNekoJSCommands {
     }
 
     private static void sendReloadResult(CommandSourceStack source, NekoRuntimeRoot root, String successMessage) {
+        sendReloadResult(source, root, Component.literal(successMessage));
+    }
+
+    private static void sendReloadResult(CommandSourceStack source, NekoRuntimeRoot root, Component successMessage) {
         NekoRuntimeRoot.ErrorSnapshot errors = root.errors();
         int count = errors.count();
         if (count > 0) {
-            MutableComponent message = Component.literal(successMessage + " (" + count + " error(s) remain)")
+            MutableComponent message = successMessage.copy().append(" (" + count + " error(s) remain)")
                     .withStyle(style -> style
                             .withHoverEvent(new HoverEvent.ShowText(Component.translatable("nekojs.error.tracker.hover_hint")))
                             .withClickEvent(new ClickEvent.RunCommand("/nekojs view_all_errors")));
             source.sendSuccess(() -> message, false);
         } else {
-            source.sendSuccess(() -> Component.literal(successMessage + " - no errors."), false);
+            source.sendSuccess(() -> successMessage.copy().append(" - no errors."), false);
         }
     }
 

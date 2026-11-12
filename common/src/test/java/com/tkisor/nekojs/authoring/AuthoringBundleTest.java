@@ -150,10 +150,10 @@ class AuthoringBundleTest {
         assertEquals("/absolute/game/directory", args.get(3).getAsString());
     }
 
-    @Test void documentedQueryRequestsExecuteAgainstTheEmittedFixture() throws Exception {
+    @Test void documentedQueryRequestsExecuteAgainstMatchingSnapshotAndLiveFixtures() throws Exception {
         AuthoringBundle bundle = AuthoringBundle.load();
         var requests = jsonExamples(bundle.read("handbook/query-api.md"));
-        assertEquals(4, requests.size());
+        assertEquals(6, requests.size(), "Four snapshot requests and two live result requests must all execute");
         try (AuthoringQuery query = AuthoringQueryTest.engine(AuthoringQueryTest.member("example", "of", "ItemStack", "string"))) {
             assertEquals(1, query.execute("resolve", requests.get(0)).getAsJsonArray("items").size());
             assertEquals(1, query.execute("members", requests.get(1)).getAsJsonArray("items").size());
@@ -161,6 +161,43 @@ class AuthoringBundleTest {
             var batch = query.execute("batch", requests.get(3)).getAsJsonArray("results");
             assertEquals(2, batch.size());
             for (var result : batch) assertEquals("ok", result.getAsJsonObject().get("status").getAsString());
+        }
+        com.tkisor.nekojs.testfixture.TestPlatformInit.ensureInitialized();
+        var paths = NekoJSPaths.fromGameDir(directory.resolve("documented-live"));
+        paths.initFolders();
+        Files.writeString(paths.config().resolve("ai.toml"),
+                "[documentation]\nenabled = false\n[api]\nenabled = false\n[control]\ncommands = true\ncommand_allowlist = [\"list\"]\n");
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        try (var runtime = AuthoringRuntime.open(paths, com.tkisor.nekojs.probe.ProbeConfig.defaultConfig())) {
+            var diagnostic = new com.tkisor.nekojs.core.error.ScriptDiagnosticRecord("documented-error",
+                    com.tkisor.nekojs.api.ScriptType.SERVER, com.tkisor.nekojs.core.error.DiagnosticPhase.EXECUTION,
+                    "Script Execution Environment", 1, false, "server_scripts/example.js", 2, 3, null, null,
+                    "Example failure", "Example cause");
+            runtime.installDiagnostics(() -> java.util.List.of(diagnostic));
+            JsonObject errors = runtime.execute("errors", requests.get(4));
+            assertTrue(errors.get("available").getAsBoolean());
+            assertEquals("documented-error", errors.getAsJsonArray("errors").get(0).getAsJsonObject().get("errorId").getAsString());
+            runtime.installHost(new com.tkisor.nekojs.api.authoring.AuthoringControlHost() {
+                @Override public long epoch() { return 1; }
+                @Override public void enqueue(Runnable operation) { operation.run(); }
+                @Override public java.util.concurrent.CompletionStage<CommandResult> executeCommand(
+                        String command, java.util.function.Consumer<String> output) {
+                    calls.incrementAndGet();
+                    return java.util.concurrent.CompletableFuture.completedFuture(new CommandResult(1, true));
+                }
+                @Override public java.util.concurrent.CompletionStage<ReloadResult> reloadServer(java.util.function.Consumer<String> output) {
+                    return java.util.concurrent.CompletableFuture.completedFuture(new ReloadResult(true, true));
+                }
+            });
+            JsonObject admitted = runtime.execute(AuthoringControl.EXECUTE_COMMAND, AuthoringJson.obj("command", "list"));
+            JsonObject statusRequest = requests.get(5).deepCopy();
+            assertTrue(statusRequest.get("operationId").getAsString().startsWith("<operationId"));
+            statusRequest.add("operationId", admitted.get("operationId").deepCopy());
+            JsonObject status = runtime.execute("operation_status", statusRequest);
+            assertTrue(status.get("found").getAsBoolean());
+            assertTrue(status.get("terminal").getAsBoolean());
+            assertEquals("succeeded", status.getAsJsonObject("latestResult").get("status").getAsString());
+            assertEquals(1, calls.get(), "Reading the documented status request must not dispatch again");
         }
     }
 

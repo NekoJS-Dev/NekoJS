@@ -14,7 +14,7 @@ NekoJS 的服务端根命令 `/nekojs` 需要游戏管理员权限（op 2 及以
 |---|---|---|
 | `/nekojs reload` | 重载**服务端**脚本（默认）。NeoForge 和 Fabric 26.x 会继续处理配方脚本。 | NeoForge / Fabric 26.x |
 | `/nekojs reload <type>` | 重载指定类型脚本。`<type>` ∈ `server` / `client` / `test`；`startup` 当前会拒绝执行，启动脚本改动需要重启游戏。 | NeoForge / Fabric 26.x |
-| `/nekojs reload <type> <file>` | 重载单个脚本文件（路径相对该脚本类型根目录；文件名支持 TAB 补全） | NeoForge / Fabric 26.x |
+| `/nekojs reload <type> <file>` | 在活动 Context 中重跑旧式文件；依赖关系可能使受影响入口一同重跑。路径相对脚本类型根目录，文件名支持 TAB 补全。 | NeoForge / Fabric 26.x |
 | `/nekojs test` | 运行 `nekojs/test_scripts/` 下所有脚本（TEST 脚本上下文） | NeoForge / Fabric 26.x |
 | `/nekojs error` | 报告当前是否有脚本错误 | NeoForge / Fabric 26.x |
 | `/nekojs view_all_errors` | 列出完整错误；NeoForge 可打开错误 UI，Fabric 输出聊天文本 | NeoForge / Fabric 26.x |
@@ -46,6 +46,8 @@ NekoJS 的服务端根命令 `/nekojs` 需要游戏管理员权限（op 2 及以
 
 这不代表能回滚脚本任意 Java 调用、世界修改、文件写入或共享对象的嵌套修改。SERVER 脚本重载成功后，命令另行应用配方并在支持的平台刷新包数据资源；后续资源刷新失败不会撤销脚本提交。版本化脚本包还遵循依赖与领域贡献的影响集规则，见[脚本包](script-packs_cn)。
 
+CLIENT 命令已排队不等于重载已经完成，应等待后续结果。SERVER／CLIENT／TEST generation 已提交，也不等于所有脚本行为或断言都正确，仍须检查输出与错误。单独授权的[实时 Authoring 控制](ai-support_cn#wiki-live-controls)只在对应运行时可用时提供完整的 `server`／`client`／`test` 重载，不提供 STARTUP 或文件重载。其等待超时并非普通斜杠命令的新超时设置：执行开始后超时或被中断，可能报告 unknown effects，而操作仍继续并在稍后提交。**不要自动重试效果未知的操作**，应先检查运行时状态与诊断。
+
 <a id="wiki-section-5"></a>
 ### `/nekojs reload <type>`
 
@@ -55,6 +57,8 @@ NekoJS 的服务端根命令 `/nekojs` 需要游戏管理员权限（op 2 及以
 | `client` | 重载客户端脚本（仅 integrated client 上可用）。命令立即返回，实际 reload **转投客户端主线程**执行——客户端脚本环境（事件/timers）的归属线程就是它，这样 reload 与渲染期事件不会交叉线程 |
 | `test` | 与 `/nekojs test` 一样重载并运行 TEST 脚本，然后冲刷定时器。流程完成不等于所有 `Test` 断言通过，仍须查看测试输出与脚本错误。 |
 | `startup` | 当前命令会拒绝执行。启动脚本在游戏启动阶段运行，注册内容改动必须重启游戏。 |
+
+TEST 命令分别报告执行结果与本次断言计数：捕获了失败断言也仍按断言失败报告；零断言明确显示为未观察到，而不是通过。实时 `context.testRunReport` 可查询最近结束的一次尝试（包括 legacy 与脚本包），不是当前进度或所有未来回调的保证；见[可查询运行结果](ai-support_cn#wiki-live-results)。
 
 <a id="wiki-section-6"></a>
 ### `/nekojs reload <type> <file>`
@@ -66,7 +70,7 @@ NekoJS 的服务端根命令 `/nekojs` 需要游戏管理员权限（op 2 及以
 /nekojs reload client tooltips.js
 ```
 
-文件路径相对该脚本类型根目录（如 `recipes.js` 相对 `nekojs/server_scripts/`）。文件名支持 TAB 补全。版本化包内文件必须使用包或类型重载。依赖无法匹配，或活动代已被 watchdog 隔离时，应执行完整重载；单文件重跑无法恢复被隔离的代。
+文件路径相对该脚本类型根目录（如 `recipes.js` 相对 `nekojs/server_scripts/`）。文件名支持 TAB 补全。版本化包内文件必须使用包或类型重载。依赖无法匹配，或活动代已因宿主取消或资源耗尽而失效时，应执行完整重载；单文件重跑无法恢复被隔离的代。
 
 **这些触发方式彼此独立：**保存文件不会自动重载；当前没有已文档化的文件监视器或自动重载开关。模块依赖失效（内部有时称为 HMR）属于显式重载或加载路径，不是保存监听。原版 `/reload` 刷新服务端数据包，F3+T 刷新客户端资源，两者都不能代替脚本 generation 重载。包的选择与启用配置、包数据或资源刷新，也不同于脚本代的激活。
 
@@ -153,8 +157,8 @@ NekoJS 的服务端根命令 `/nekojs` 需要游戏管理员权限（op 2 及以
 
 1. 收集当前所有绑定、事件、适配器、配方 schema、注册表内容。
 2. 从种子类 BFS 收集相关 Java 类（深度与包过滤由 `probe.toml` 控制）。
-3. 若 `probe.modifyType`/`probe.assignType` 有监听器（或选中 Python backend），构建共享 IR 并触发这些 SERVER 事件。
-4. 各 backend 渲染产物：先全部渲染进内存，再**逐文件就地同步**输出目录（相同的跳过、变化的覆盖、不再产出的删除）；渲染失败则完全不触盘，旧产物保留。
+3. backend 需要 IR 时（内置 TypeScript 与 Python 均需要），或 `ProbeEvents.modifyType`/`ProbeEvents.assignType` 有监听器时，构建共享 IR。已注册监听器作为 SERVER 事件运行，应在 SERVER 脚本中订阅。
+4. 默认 backend 生成流程先在内存中渲染声明文件，再**逐文件就地同步该 backend 的输出目录**（跳过未变化文件、覆盖变化文件、清理旧文件）。渲染失败会保留该声明目录原有输出；写入失败可能留下部分更新，旧文件删除失败会产生警告。运行前面已生成的工作区或编辑器文件不会因此回滚。
 5. 合并编辑器配置（TS → jsconfig 的 paths/include/typeRoots；Python → 各目录 pyrightconfig 的 extraPaths + 各目录 `.vscode/settings.json` 的 `python.analysis.extraPaths`/`python.languageServer`，通用注入、只改 probe 拥有的键）。
 
 > 加了新 mod、新事件、或脚本注册了新内容后，建议跑一次 `/nekojs probe` 刷新类型声明。详见 [Probe 类型生成](probe-type-generation_cn)。
@@ -170,22 +174,26 @@ NekoJS 的服务端根命令 `/nekojs` 需要游戏管理员权限（op 2 及以
 - `/nekojs error`：快速报告当前是否有错误（yes/no + 简短摘要）。
 - `/nekojs view_all_errors`：列出完整错误。NeoForge 会把错误列表交给错误 UI，Fabric 在聊天中输出文本列表。
 
+NeoForge 存在错误时需要玩家才能打开错误 UI；非玩家来源不能接收该数据包，可使用 `/nekojs error` 查看控制台概览。Fabric 的文本错误列表也可从非玩家来源查询。
+
 NeoForge 26.1.2／26.2.0 使用内置 JSX 仪表盘，接入真实错误快照、搜索、详情独立滚动、经确认的复制与经检查的异步 VS Code 定位。玩家执行 `/nekojs view_all_errors` 总会打开面板，零错误时显示空状态；`/nekojs error` 仍只在聊天中报告概览，被动快照更新不会打开已关闭的面板。它独立于用户 CLIENT 脚本 generation；内置 UI 失败时回退现有原生面板。NeoForge 1.21.1 保留原生 UI。命令权限、网络包字段和聊天链接打开流程均不变。
 
-脚本出错不会崩溃游戏——错误会被捕获、记录到 `logs/nekojs/<type>.log`，出错脚本被标记 disabled 直到 reload 成功清除标记。
+入口求值失败会被捕获、记录到 `logs/nekojs/<type>.log`，并将该入口标记为 disabled；入口成功执行后清除此标记。回调/事件错误另行记录，因此并非每条错误都代表入口被禁用。Context 被终止时会隔离所属 generation，需要显式完整 reload 恢复；普通失败也不表示会自动恢复。
 
 <a id="wiki-section-16"></a>
 ## 权限
 
-服务端 `/nekojs` 子命令需要 **op 2 及以上**（`LEVEL_GAMEMASTERS`）。在单人世界里，开启作弊的玩家自动满足。客户端本地 `/nekojs browse` 不需要管理员权限。
+服务端 `/nekojs` 子命令需要 **op 2 及以上**（26.x 使用 `LEVEL_GAMEMASTERS`，NeoForge 1.21.1 使用 `hasPermission(2)`）。单人世界开启作弊的玩家满足此要求。生命周期命令需要服务端命令来源，不要求一定是玩家：满足权限的服务端控制台可请求 SERVER 或 TEST 重载，CLIENT 重载则需要 integrated client runtime。`hand`、`hotbar`、`inventory` 等玩家专用命令不能从非玩家来源执行。Authoring 命令执行使用固定的非玩家“NekoJS Authoring”来源，权限为 gamemaster／2 级、无实体、位置与朝向为零、维度为主世界；它不模拟玩家，也不提供不受限的控制台权限。客户端本地 `/nekojs browse` 不需要管理员权限。
 
 <a id="wiki-section-17"></a>
 ## 注册自定义命令
 
-脚本可以在 `CommandEvents.register` 里注册自己的命令（在每次服务端启动时触发）。API 因平台而异：
+脚本可在服务端命令树构建时通过 `CommandEvents.register` 注册命令。各平台 payload 不同；dispatcher 用来注册 `Commands.literal(...)` 创建的 builder，并不提供 `dispatcher.literal(...)` 方法：
 
-- **NeoForge（26.x / 1.21.1）**：`event` 是 Brigadier `RegisterCommandsEvent`，用 `event.getDispatcher()` 走 `.literal(...).executes(...)` 链。
-- **Cleanroom 1.12.2**：`event` 是 `FMLServerStartingEvent`，1.12.2 没有 Brigadier；脚本须实现 `ICommand`（通常继承 `CommandBase`）再 `event.registerServerCommand(cmd)`。
+- **NeoForge（26.x / 1.21.1）**：`event` 是原生 `RegisterCommandsEvent`；通过 `event.dispatcher` Bean 属性取得 dispatcher 并注册 Brigadier builder。
+- **Fabric 26.x**：`event` 是 `CommandRegistryEventJS`，提供 `event.dispatcher` 与 `event.registryAccess` Bean 属性。通过 dispatcher 注册 builder；`registryAccess` 为参数类型提供命令构建上下文。
+
+当前仓库不验证 Cleanroom 的自定义命令 API。
 
 完整示例与字段差异见 [事件参考 - CommandEvents](event-reference_cn#wiki-section-18)。
 

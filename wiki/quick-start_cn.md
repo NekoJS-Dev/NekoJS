@@ -41,11 +41,13 @@ nekojs/
 ├── node_modules/           # 外部纯 JS npm 依赖
 ├── assets/                 # 资源
 ├── data/                   # 数据包
-└── config/                 # probe.toml 与 engine.toml（引擎/沙盒配置）
+└── config/                 # engine.toml、probe.toml、ai.toml（用途相互独立）
                               （旧 config/nekojs-engine.toml 仅作只读回退）
 ```
 
 独立的 AI 文档根默认为 `.github/neko_ai`，由 `nekojs/config/ai.toml` 的 `[output].directory` 控制，工具直接读取这个配置定位。私有 token 保留在 `nekojs/config/`，不是 `.neko_probe`。见 [AI 创作支持](ai-support_cn)，不要提交 token。
+
+引擎、Probe 与 AI 配置的用途、默认值和重启/迁移步骤见[配置参考](configuration_cn)。不要把 engine.toml、probe.toml 与 ai.toml 当作同一个开关集合。
 
 四个脚本目录都支持 `.js`、`.mjs`、`.cjs`、`.ts`、`.jsx`、`.tsx` 和 `.py`。`.py` 是 NekoJS 的 Python 子集转译脚本，不需要外部 Python 运行时。详见 [脚本基础](script-basics_cn)。
 
@@ -179,4 +181,4 @@ RegistryEvents.register(event => {
 
 ---
 
-[上一篇: 平台与兼容性](platform-compatibility_cn) · [目录](Home) · [下一篇: 常见问题](faq_cn)
+[上一篇: 平台与兼容性](platform-compatibility_cn) · [目录](Home) · [下一篇: 配置参考](configuration_cn)

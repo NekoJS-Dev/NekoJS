@@ -16,7 +16,7 @@ NekoJS 的事件系统（见 [项目架构 - 事件系统](project-architecture_
 - **`EventBus`/`CancellableEventBus`/`DispatchEventBus`**：三种总线。dispatch 版按 key 分发（如按物品/方块 id）。
 - **`EventBusJS`**：GraalJS 面向的 `ProxyExecutable`，让脚本 `事件组.事件名(cb)` 这样调。
 - **`EventBusForgeBridge`**：把 NeoForge 原生事件接到 NekoJS 总线。
-- **`FabricEventBusBridge`**：通过 `bind` / `bindTransformed` 把 Fabric callback registrar 接到 `EventBusJS`；`bindCancellable` 将脚本取消结果交回 callback adapter。普通总线无监听器时跳过转换/派发，dispatch 总线保留 key 投递并兼容 Java keyed listener。
+- **`FabricEventBusBridge`**：通过 `bind` / `bindTransformed` 把 Fabric callback registrar 接到 `EventBusJS`；`bindCancellable` 将脚本取消结果交回 callback adapter。`bindTransformed` 在没有监听器时跳过载荷转换；`bind` 与 `bindCancellable` 直接 post。回调提供 dispatch key 时，使用 `bindDispatched`、`bindTransformedDispatched` 或 `bindCancellableDispatched`。
 
 **双端一致性边界**：脚本侧尽量保持同一个 `EventGroup`、事件名、payload 语义、Script Type 和取消/dispatch 契约。NeoForge 绑定原生 `IEventBus`；Fabric 绑定 Fabric callback。两边 bus/payload 契约可保持一致，但注册 lambda 仍需适配真实 callback 签名；无等价 API 时用 mixin 或明确记录 unavailable，不能伪装能力。
 
@@ -61,7 +61,7 @@ public class PlayerGreetEvent {
 }
 ```
 
-事件类只在两处被检查：脚本看到的成员由反射 + `@Remap`/`@HideFromJS` 决定（见 [注解体系](annotations_cn)），可取消性由「是否实现平台的可取消事件接口」决定（见下）。getter 命名之类的只影响脚本里写起来顺不顺手。
+脚本可见成员由反射 + `@Remap`/`@HideFromJS` 决定（probe 的限制见[注解体系](annotations_cn)）。便捷工厂通过平台谓词判定可取消性，显式构造的总线可以覆盖它（见下）。上述 getter 暴露只读 Bean 属性 `event.player` 和 `event.greeting`，不会自动添加 setter。
 
 > 要给事件对象加 JSDoc，直接在事件类的方法/参数上标注 `@Doc`/`@Param`/`@Return`（probe 生成进 JSDoc），或用编程式 `registerTypeDocs`（`TypeDocsRegister.register(...)`，见 [插件开发](plugin-development_cn)）。
 
@@ -71,6 +71,7 @@ public class PlayerGreetEvent {
 ```java
 package com.example.myaddon;
 
+import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import net.minecraft.resources.Identifier;
@@ -83,8 +84,8 @@ public interface MyEvents {
         GROUP.server("playerGreet", PlayerGreetEvent.class);
 
     // dispatch 事件（按 Identifier 分发）
-    EventBusJS<MyCustomEvent, Identifier> CUSTOM =
-        GROUP.server("custom", MyCustomEvent.class, MY_DISPATCH_KEY);
+    EventBusJS<PlayerGreetEvent, Identifier> CUSTOM =
+        GROUP.server("custom", PlayerGreetEvent.class, DispatchKey.of(Identifier.class));
 }
 ```
 
@@ -109,6 +110,8 @@ public void registerEvents(EventGroupRegistry registry) {
     registry.register(MyEvents.GROUP);
 }
 ```
+
+**客户端/服务端派发**：仅客户端的事件组使用 `registerClientEvents(EventGroupRegistry)`。`.server(...)` / `.client(...)` 控制脚本访问范围，不会过滤原生回调的逻辑侧或切换线程。双逻辑侧都会触发的原生事件须在 post 前过滤（NeoForge 提供 `bind(bus, predicate)`）；Fabric registrar 也须接到对应逻辑侧。这不是客户端/服务端网络转发。
 
 **将同一个源事件发布到 API 模块**
 
@@ -137,7 +140,7 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 MyEvents.PLAYER_GREET.post(new PlayerGreetEvent(player, "你好"));
 
 // dispatch 事件（带 key）
-MyEvents.CUSTOM.post(new MyCustomEvent(...), someIdentifier);
+MyEvents.CUSTOM.post(new PlayerGreetEvent(player, "Hello"), someIdentifier);
 ```
 
 > `post(...)` 返回 boolean（是否被取消）。**不可取消的总线永远返回 false**，脚本 `return true` 也不会让它变 true——`GROUP.server(name, eventClass)` 走 `EventBusJS.of(type)`，可取消性由 `eventCancellability(type)` 判定，而该判定在 NeoForge 上是「事件类 `implements ICancellableEvent`」（`NeoForgeRuntimeBootstrap`）。上面 `PlayerGreetEvent` 那样的 POJO 因此是不可取消的。
@@ -149,7 +152,7 @@ MyEvents.CUSTOM.post(new MyCustomEvent(...), someIdentifier);
 >     MyEvents.GROUP.add("playerGreet", ScriptType.SERVER, EventBusJS.of(PlayerGreetEvent.class, true));
 > ```
 >
-> 然后 `boolean cancelled = PLAYER_GREET.post(...)` 才有意义。
+> 用此写法替换原来的声明，不要再次添加同名 `playerGreet`，否则会触发重名检查。然后 `boolean cancelled = PLAYER_GREET.post(...)` 才有意义。
 
 <a id="wiki-section-8"></a>
 ### 脚本侧用法
@@ -158,7 +161,7 @@ MyEvents.CUSTOM.post(new MyCustomEvent(...), someIdentifier);
 
 ```javascript
 MyEvents.playerGreet(event => {
-  console.info(`${event.getPlayer().getName().getString()} 被问候：${event.getGreeting()}`)
+  console.info(`${event.player.getName().getString()} 被问候：${event.greeting}`)
 })
 
 MyEvents.custom('mymod:some_key', event => {
@@ -171,7 +174,7 @@ MyEvents.custom('mymod:some_key', event => {
 
 NekoJS 还提供一个**面向脚本作者**的机制：在 `startup_scripts/` 里声明一个自定义事件组，
 之后在 `server_scripts`/`client_scripts` 里既能像内置事件一样监听，也能自己触发。
-事件载荷（payload）就是触发方传进去的值，NekoJS 不做包装。
+事件载荷（payload）就是触发方传进去的值，NekoJS 不做包装。下列纯脚本示例与前面的插件版 `MyEvents` 是替代方案；如果插件事件组已注册，请另选组名。
 
 <a id="wiki-section-10"></a>
 ### 声明
@@ -263,7 +266,7 @@ EventBusForgeBridge.create(NeoForge.EVENT_BUS)
 <a id="wiki-section-16"></a>
 ## 设计要点
 
-前两条是建议，没有代码检查；后三条是机制：
+下面分别标明建议与机制：
 
 1. **事件对象尽量简单**（建议）：POJO 或 record 反射出来的脚本表面最好看；复杂对象也能用，只是脚本侧成员会跟着变杂。
 2. **dispatch key 要稳定**（建议）：dispatch 事件的 key 类型（`Identifier`/`String`/`Class`）改了会让所有已有脚本的第一个参数失配，属于自愿承担的 API 冻结线。

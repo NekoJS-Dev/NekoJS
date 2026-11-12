@@ -101,8 +101,19 @@ public final class RecipeFilterAdapter implements JSTypeAdapter<RecipeFilter> {
         }
 
         if (value.hasMember("and")) {
-            RecipeFilter sub = apply(value.getMember("and"));
-            if (sub != null) andFilters.add(sub);
+            Value group = value.getMember("and");
+            if (group != null && group.hasArrayElements()) {
+                // Explicit conjunction arrays must not inherit the top-level array OR rule.
+                List<RecipeFilter> children = new ArrayList<>();
+                for (long i = 0; i < group.getArraySize(); i++) {
+                    RecipeFilter child = apply(group.getArrayElement(i));
+                    if (child != null) children.add(child);
+                }
+                andFilters.add(new RecipeFilter.And(children));
+            } else {
+                RecipeFilter sub = apply(group);
+                if (sub != null) andFilters.add(sub);
+            }
         }
 
         if (value.hasMember("or")) {

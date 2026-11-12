@@ -14,7 +14,7 @@ The server command root `/nekojs` requires game master permissions (op level 2 o
 |---|---|---|
 | `/nekojs reload` | Reload **server** scripts by default. NeoForge and Fabric 26.x also process recipe scripts afterward. | NeoForge / Fabric 26.x |
 | `/nekojs reload <type>` | Reload the specified script type. `<type>` is `server` / `client` / `test`; `startup` is currently rejected, and startup script changes require a game restart. | NeoForge / Fabric 26.x |
-| `/nekojs reload <type> <file>` | Reload one script file (path relative to that script type's root directory; filenames support TAB completion). | NeoForge / Fabric 26.x |
+| `/nekojs reload <type> <file>` | Rerun a legacy file in the active Context; dependencies may rerun affected entries. Paths are relative to the script-type root; filenames support TAB completion. | NeoForge / Fabric 26.x |
 | `/nekojs test` | Run all scripts under `nekojs/test_scripts/` in the TEST script context. | NeoForge / Fabric 26.x |
 | `/nekojs error` | Report whether there are currently any script errors. | NeoForge / Fabric 26.x |
 | `/nekojs view_all_errors` | List full errors; NeoForge can open the error UI, while Fabric outputs chat text. | NeoForge / Fabric 26.x |
@@ -31,7 +31,7 @@ The server command root `/nekojs` requires game master permissions (op level 2 o
 | `/nekojs list-tag <registry> [<tag>]` | List registry tags or their members, with completion | NeoForge 1.21.1/26.x / Fabric 26.x |
 | `/nekojs browse` | Open the local `nekojs` folder; client only, no administrator permission | NeoForge 1.21.1/26.x / Fabric 26.x |
 | `/nekojs probe` | Regenerate TypeScript declarations (`.d.ts`). | NeoForge / Fabric 26.x |
-| `/nekojs probe <语言> [<名字>]` | Generate for a specified language, optionally selecting an exact backend name. | NeoForge / Fabric 26.x |
+| `/nekojs probe <language> [<name>]` | Generate for a specified language, optionally selecting an exact backend name. | NeoForge / Fabric 26.x |
 | `/nekojs probe all` / `list` / `reload` / `enable` / `disable` / `reset_config` | Run all backends / list registered backends / reread probe.toml / persist the enabled switch / restore factory editor configuration. | NeoForge / Fabric 26.x |
 
 > Cleanroom 1.12.2 is not in the current repository's version graph. Command differences for that branch are legacy information; this page makes no verification commitment about its runtime behavior.
@@ -46,6 +46,8 @@ This explicitly requests a full SERVER generation reload. For ordinary SERVER/CL
 
 This is not rollback of arbitrary Java calls, world changes, filesystem writes or nested mutations of shared objects made by script code. After a successful SERVER script reload, the command separately applies recipe changes and refreshes pack data resources where supported; a later resource failure does not undo the script commit. Versioned packs also follow their dependency/domain affected-set rules; see [Script packs](script-packs_us).
 
+A scheduled CLIENT command is not a completed reload: wait for its later result. A committed SERVER/CLIENT/TEST generation is not certification that every script behavior or assertion is correct; inspect output and errors. The separately authorized [live authoring controls](ai-support_us#wiki-live-controls) expose full `server`/`client`/`test` reloads only when the corresponding live runtime is available, not STARTUP or file reloads. Their wait timeout is not a new timeout on ordinary slash commands: after execution starts, timeout/interruption may report unknown effects while the operation continues and commits later. **Do not automatically retry an action with unknown effects**; inspect runtime state and diagnostics first.
+
 <a id="wiki-section-5"></a>
 ### `/nekojs reload <type>`
 
@@ -55,6 +57,8 @@ This is not rollback of arbitrary Java calls, world changes, filesystem writes o
 | `client` | Reload client scripts (available only on an integrated client). The command returns immediately; the actual reload is **dispatched to the client main thread**, which owns the client script environment (events/timers). This avoids cross-thread overlap between reload and render-time events. |
 | `test` | Run the TEST reload-and-run flow, as `/nekojs test` does, including the timer flush. Completion is not a promise that every `Test` assertion passed; inspect the test output and script errors. |
 | `startup` | Currently rejected by the command. Startup scripts run during game startup, and changes to registered content require a game restart. |
+
+The TEST command reports execution and assertion outcomes separately, with per-attempt counts: a caught failed assertion remains failed, and zero assertions is reported as unobserved rather than passed. Live `context.testRunReport` exposes the last finished attempt (including legacy and package scripts), not progress or all future callbacks; see [queryable runtime results](ai-support_us#wiki-live-results).
 
 <a id="wiki-section-6"></a>
 ### `/nekojs reload <type> <file>`
@@ -66,7 +70,7 @@ Rerun a legacy file in the **existing active Context**. Dependency tracking may 
 /nekojs reload client tooltips.js
 ```
 
-The file path is relative to the corresponding script type's root directory (for example, `recipes.js` is relative to `nekojs/server_scripts/`). Filenames support TAB completion. Versioned pack files must use package/type reload instead. Use a full reload when the dependency cannot be matched or an active generation has been watchdog-isolated; a file rerun cannot recover that generation.
+The file path is relative to the corresponding script type's root directory (for example, `recipes.js` is relative to `nekojs/server_scripts/`). Filenames support TAB completion. Versioned pack files must use package/type reload instead. Use a full reload when the dependency cannot be matched or an active generation was invalidated by host cancellation or resource exhaustion; a file rerun cannot recover that generation.
 
 **Reload triggers are separate:** saving a file does not automatically reload it; there is no documented filesystem watcher or auto-reload switch. Module dependency invalidation (sometimes called HMR internally) is part of the explicit reload/load path, not a save watcher. Native `/reload` refreshes server data packs, and F3+T refreshes client resources; neither is a replacement for script generation reload. Pack selection/enablement and pack data/resource refresh are distinct from activating script generations.
 
@@ -136,15 +140,15 @@ A client command that opens the **local game directory's `nekojs` folder** in th
 | Command | Behavior |
 |---|---|
 | `/nekojs probe` | With no arguments, run only the built-in TS backend (`typescript:builtin`) and generate `.d.ts` files under `.neko_probe/typescript/`. |
-| `/nekojs probe <语言>` | Run that language's default backend: `languages.<lang>.backend` in `probe.toml` takes precedence; otherwise choose the backend with the highest priority for that language. For example, `/nekojs probe python` generates the `.pyi` stub package under `.neko_probe/python/nekojs/`. |
-| `/nekojs probe <语言> <名字>` | Select an exact backend, for example `/nekojs probe typescript builtin`. |
+| `/nekojs probe <language>` | Run that language's default backend: `languages.<lang>.backend` in `probe.toml` takes precedence; otherwise choose the backend with the highest priority for that language. For example, `/nekojs probe python` generates the `.pyi` stub package under `.neko_probe/python/nekojs/`. |
+| `/nekojs probe <language> <name>` | Select an exact backend, for example `/nekojs probe typescript builtin`. |
 | `/nekojs probe all` | Run every registered backend across languages. |
-| `/nekojs probe list` | List registered backends (`语言:名字 (来源)`). |
+| `/nekojs probe list` | List registered backends (`language:name (source)`). |
 | `/nekojs probe reload` | Discard the probe.toml configuration cache and reread from disk next time (configuration changes do not require a game restart). |
 | `/nekojs probe enable` / `disable` | Persist `enabled` in probe.toml and reload the cache. |
 | `/nekojs probe reset_config` | Delete editor configuration managed by each backend (jsconfig/pyrightconfig/snippets), preserve user-defined entries, and then regenerate default TS declarations; supported on both NeoForge and Fabric 26.x. |
 
-`<语言>` and `<名字>` support TAB completion.
+`<language>` and `<name>` support TAB completion.
 
 > Successful generation shows the output directory, for example `Output: .neko_probe/typescript`. Another invocation during a run returns `probe already running` without queuing. `runAtStartup = true` in `probe.toml` runs the default probe on server startup; it is disabled by default. See [Probe type generation](probe-type-generation_us).
 
@@ -153,8 +157,8 @@ A client command that opens the **local game directory's `nekojs` folder** in th
 
 1. Collect all current bindings, events, adapters, recipe schemas, and registry contents.
 2. Use BFS from seed classes to collect related Java classes (depth and package filters are controlled by `probe.toml`).
-3. If `probe.modifyType`/`probe.assignType` have listeners, or the Python backend is selected, build the shared IR and trigger these SERVER events.
-4. Render each backend's output: first render everything in memory, then **synchronize the output directory in place, file by file** (skip unchanged files, overwrite changed files, and delete files no longer produced). If rendering fails, do not touch the disk; preserve the old output.
+3. Build the shared IR when a backend requires it (both built-in TypeScript and Python do), or when `ProbeEvents.modifyType`/`ProbeEvents.assignType` have listeners. Registered listeners run as SERVER events; register them in SERVER scripts.
+4. With the default backend generation flow, render declaration files in memory, then **synchronize that backend's output directory in place, file by file** (skip unchanged files, overwrite changed files, remove stale files). Rendering failure preserves that declaration output; a write failure can leave a partially updated directory, and stale-file deletion failures produce warnings. This does not roll back workspace/editor artifacts already generated earlier in the run.
 5. Merge editor configuration (TS → jsconfig paths/include/typeRoots; Python → extraPaths in each directory's pyrightconfig and `python.analysis.extraPaths`/`python.languageServer` in each directory's `.vscode/settings.json`, through generic injection that changes only probe-owned keys).
 
 > After adding a mod or event, or registering new content in scripts, run `/nekojs probe` to refresh declarations. See [Probe type generation](probe-type-generation_us).
@@ -170,22 +174,26 @@ The in-game workspace editor and `/nekojs editor` have been removed. Edit script
 - `/nekojs error`: quickly report whether errors exist (yes/no and a short summary).
 - `/nekojs view_all_errors`: list full errors. NeoForge passes the error list to its error UI; Fabric outputs a text list in chat.
 
+On NeoForge, opening the error UI requires a player when errors exist; a non-player source cannot receive that packet. Use `/nekojs error` for a console summary. Fabric's text list also works without a player.
+
 NeoForge 26.1.2/26.2.0 use a bundled JSX dashboard with real error snapshots, search, independent detail scrolling, verified copy actions and checked asynchronous VS Code opening. Players running `/nekojs view_all_errors` always open the dashboard, showing an empty state when there are no errors; `/nekojs error` remains a chat summary, and passive snapshot updates do not open a closed dashboard. It is independent of user CLIENT script generations; a bundled UI failure falls back to the existing native dashboard. NeoForge 1.21.1 retains its native UI. Command permissions, packet fields and the chat-link opening flow remain unchanged.
 
-Script errors do not crash the game. They are caught and recorded in `logs/nekojs/<type>.log`, and the failing script is marked disabled until a successful reload clears that mark.
+Entry evaluation failures are caught, recorded in `logs/nekojs/<type>.log` and mark that entry disabled; successful entry execution clears its mark. Callback/event errors are recorded separately, so not every error means a disabled entry. A terminated Context isolates its generation and requires explicit full reload recovery; an ordinary failure is not a promise of automatic recovery.
 
 <a id="wiki-section-16"></a>
 ## Permissions
 
-Server `/nekojs` subcommands require **op level 2 or higher** (`LEVEL_GAMEMASTERS`). In single-player, a player with cheats enabled satisfies this requirement automatically. The local client `/nekojs browse` command requires no administrator permission.
+Server `/nekojs` subcommands require **op level 2 or higher** (26.x: `LEVEL_GAMEMASTERS`; NeoForge 1.21.1: `hasPermission(2)`). In single-player, a player with cheats enabled satisfies this requirement. Lifecycle commands require a server command source, not necessarily a player: a suitably permitted server console can request SERVER or TEST reloads, while CLIENT reload requires an integrated client runtime. Player-only commands such as `hand`, `hotbar` and `inventory` cannot run from a non-player source. Authoring command execution uses a fixed non-player “NekoJS Authoring” source with gamemaster/level-2 permissions, no entity, zero position/rotation and the overworld; it does not impersonate a player or grant unrestricted console permissions. The local client `/nekojs browse` command requires no administrator permission.
 
 <a id="wiki-section-17"></a>
 ## Registering custom commands
 
-Scripts can register their own commands in `CommandEvents.register`, which fires on each server startup. The API differs by platform:
+Scripts can register commands in `CommandEvents.register` during server command-tree construction. The payload differs by platform; the dispatcher registers a builder created with `Commands.literal(...)`, rather than providing a `dispatcher.literal(...)` method:
 
-- **NeoForge (26.x / 1.21.1)**: `event` is the Brigadier `RegisterCommandsEvent`; use `event.getDispatcher()` with a `.literal(...).executes(...)` chain.
-- **Cleanroom 1.12.2**: `event` is `FMLServerStartingEvent`. There is no Brigadier in 1.12.2; scripts must implement `ICommand` (usually by extending `CommandBase`) and call `event.registerServerCommand(cmd)`.
+- **NeoForge (26.x / 1.21.1)**: `event` is the native `RegisterCommandsEvent`; access its dispatcher as `event.dispatcher` and register the Brigadier builder.
+- **Fabric 26.x**: `event` is `CommandRegistryEventJS`, exposing `event.dispatcher` and `event.registryAccess` Bean properties. Register the builder with the dispatcher; `registryAccess` supplies the command build context for argument types.
+
+Cleanroom custom-command APIs are not verified by the current repository.
 
 For full examples and field differences, see [Event reference - CommandEvents](event-reference_us#wiki-section-18).
 

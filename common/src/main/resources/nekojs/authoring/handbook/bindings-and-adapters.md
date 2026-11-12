@@ -24,6 +24,8 @@ Use `Text.translatable(key, ...args)` when sending text from SERVER scripts so t
 
 Use `Item.of("minecraft:iron_sword[damage=2]")` for a component-bearing item string on the supported current nodes. Keep the exact bracket suffix when copying `/nekojs hand` output. The older `{...}` NBT syntax is a different format. Resolving a concrete component value requires the running instance's registries and codecs.
 
+Object item inputs also accept `{ id: "minecraft:stone", count: 2, components: { "minecraft:max_stack_size": 16 } }` on NeoForge 1.21.1/26.x and supported Fabric nodes. Use either `item` or `id`, never both. Components are a native `DataComponentPatch`: the existing codec decodes them with registries resolved per call (live server, connected client, then built-in fallback), applies the patch to a copy, then applies count. Component removals use native `!namespace:id` keys. A built-in-only fallback cannot supply world/datapack registries that are not loaded; use the appropriate running-world lifecycle for those values. Genuine codec errors retain their conversion cause (`NEKO-4054`); native optional-field/fallback leniency and patch normalization remain Minecraft behavior, not extra strict validation supplied by NekoJS.
+
 For a complete component-bearing item scenario with its run command and expected log output, see [scripting examples](scripting-examples.md).
 
 Adapters allow specific Java inputs to accept extra script shapes. Check the parameter's emitted input alias and adapter documentation. A string-accepting ItemStack adapter does not make every String parameter an item input, and not every string is a valid item value.

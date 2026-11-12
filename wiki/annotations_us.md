@@ -6,7 +6,7 @@
 # Annotations
 
 > NekoJS annotations control JS visibility and naming, consumed at runtime by the `MemberVisibilityQuery` / `NekoJSMemberRemapper` reflection layer. All annotations live in the engine contract package `com.tkisor.nekojs.api.annotation`, except `@PlatformAvailability`, which lives in `api.spec`.
-> All annotation Javadoc is written in English; this page explains their usage.
+> Write authored annotation Javadoc in English; this page explains their usage.
 
 <a id="wiki-section-2"></a>
 ## Annotation overview
@@ -14,10 +14,10 @@
 | Annotation | Target | Purpose |
 |---|---|---|
 | `@RegisterNekoJSPlugin` | TYPE | Mark a plugin class |
-| `@Remap("jsName")` | METHOD/FIELD/PARAMETER | Rename a Java name to a JS name |
+| `@Remap("jsName")` | METHOD/FIELD/PARAMETER | Rename a runtime method/field; the legal PARAMETER target has no naming consumer |
 | `@RemapByPrefix({"get", "is"})` | TYPE/METHOD/FIELD | Rename members in bulk by prefix |
 | `@HideFromJS` | TYPE/METHOD/FIELD | Hide from JS |
-| `@CalledByDynamicCode` | TYPE/METHOD/CONSTRUCTOR | Mark calls from generated JS (`RetentionPolicy.SOURCE`, suppressing IDE unused warnings) |
+| `@CalledByDynamicCode` | TYPE/METHOD/CONSTRUCTOR | Document dynamic calls for maintainers/IDE tooling (`RetentionPolicy.SOURCE`) |
 | `@PlatformAvailability(Scope.ALL\|NF_ONLY\|NF26_ONLY\|CR_ONLY)` | TYPE/METHOD | Declare platform availability on Spec interfaces |
 | `@Doc("...")` | TYPE/METHOD/CONSTRUCTOR/FIELD | English documentation rendered as probe `.d.ts` JSDoc; repeatable |
 | `@Param(name, value)` | METHOD/CONSTRUCTOR | Parameter documentation rendered as `@param` lines; repeatable |
@@ -32,14 +32,14 @@ Retention is `RUNTIME` except `@CalledByDynamicCode` (`SOURCE`). `@Documented` i
 <a id="wiki-section-3"></a>
 ## Which annotations are enforced?
 
-They fall into three categories according to what happens when omitted:
+They fall into four categories according to what happens when omitted:
 
 | Category | Annotation | Consequence of omission or incorrect use |
 |---|---|---|
-| Changes runtime behavior | `@Remap`, `@RemapByPrefix`, `@HideFromJS` | Without them, original Java names are exposed and everything is visible. They act during member lookup through Graal's `MemberRemapper.CHAIN` (`NekoJSMemberRemapper`). Scripts cannot call `@HideFromJS` members, and probe does not emit them. |
+| Changes runtime behavior | `@Remap`, `@RemapByPrefix`, `@HideFromJS` | They affect runtime method/field lookup through Graal's `MemberRemapper.CHAIN` (`NekoJSMemberRemapper`); without a match, lookup falls through to the remaining remappers and host-access policy. Probe shares method naming/hiding, but has field/class limitations described below. |
 | Compile-time enforcement | `@PlatformAvailability` + Spec interfaces | See below: missing `neko$` overrides produce a compile ERROR, but **only in builds with the annotation processor configured**. |
 | Generated documentation only | `@Doc`, `@Param`, `@Return`, `@Overload`, `@DeprecatedNekojs` | Without them, JSDoc is empty and there are no extra signatures. They do not affect runtime callability. `@Overload` affects type checking by adding available signatures. |
-| Not consumed at runtime | `@CalledByDynamicCode` | `RetentionPolicy.SOURCE`; only prevents IDE unused warnings. Omitting it changes no behavior. |
+| Not consumed at runtime | `@CalledByDynamicCode` | `RetentionPolicy.SOURCE`; documents dynamic use without a runtime consumer. IDE warning behavior depends on the IDE/tooling. |
 
 `@RegisterNekoJSPlugin` enables NeoForge annotation discovery. Fabric addons instead need the `nekojs` manifest entrypoint; the shared manager accepts absent annotation metadata. See [Plugin development](plugin-development_us).
 
@@ -48,12 +48,12 @@ They fall into three categories according to what happens when omitted:
 <a id="wiki-section-4"></a>
 ## `@RegisterNekoJSPlugin`
 
-Marks a plugin class; see [Plugin development](plugin-development_us). Properties: `clientOnly()` (default `false`), `requiredMods()` (default `{}`, AND semantics), and `priority()` (default `1000`, larger values load first; built-in `NekoJSPlugin.CORE_PRIORITY = Integer.MAX_VALUE` guarantees first place).
+Marks a plugin class; see [Plugin development](plugin-development_us). Properties: `clientOnly()` (default `false`), `requiredMods()` (default `{}`, AND semantics), and `priority()` (default `1000`, larger values load first; built-in `NekoJSPlugin.CORE_PRIORITY = Integer.MAX_VALUE` uses the maximum priority; equal priorities still use the class-name/owner tie-breaker).
 
 <a id="wiki-section-5"></a>
 ## `@Remap("jsName")`
 
-Renames Java members/parameters to their JS-visible names.
+Renames Java methods/fields to their JS-visible names. `PARAMETER` is a legal annotation target, but the runtime remapper does not rename parameters, and probe still uses reflected parameter names or `argN`.
 
 ```java
 public class FooJS {
@@ -67,7 +67,9 @@ public class FooJS {
 <a id="wiki-section-6"></a>
 ## `@RemapByPrefix({"get", "is"})`
 
-Strips the prefixes in `value()` while **preserving the remaining casing**: `getX` becomes `X`, not `x`. This is member renaming, not Bean-property alias generation. Use a per-member `@Remap("x")` for that exact spelling. The `neko$` prefix on Spec interfaces is another use; see [Script API style](script-api-style_us).
+Strips the prefixes in `value()` while **preserving the remaining casing**: `getX` becomes `X`, not `x`. Only the first matching prefix is stripped, and only if a nonempty remainder remains. This is member renaming, not Bean-property alias generation. Use a per-member `@Remap("x")` for that exact spelling. The `neko$` prefix on Spec interfaces is another use; see [Script API style](script-api-style_us).
+
+**Resolution and Bean properties:** hiding wins over member `@Remap`, then member-prefix rules, then declaring-type/interface prefix rules, then fallback. Bean aliases are derived separately from the resulting visible accessor names: `neko$getX` → `getX` can expose `x`, while stripping `get` to `X` alone does not. A getter-only alias is read-only; a matching visible setter is required for writing.
 
 ```java
 @RemapByPrefix({"get", "is"})   // Strip getX to X and isX to X; casing is preserved
@@ -81,7 +83,7 @@ public interface ItemStackExtension extends ItemStackSpec { ... }
 <a id="wiki-section-7"></a>
 ## `@HideFromJS`
 
-Makes a member completely invisible to JS: scripts cannot call it, and probe does not emit it.
+Hides an annotated method/field during runtime member lookup. Probe also omits hidden methods; public-field declarations have the limitation below.
 
 ```java
 public class FooJS {
@@ -90,17 +92,17 @@ public class FooJS {
 }
 ```
 
-It can also annotate a class, hiding the whole class from JS.
+On a type, it hides methods/fields whose **declaring class** carries the annotation; this does not promise to hide inherited members, class loading, the class object, or constructors. **Probe limitation:** public fields currently retain their original Java name and are not automatically removed by `@HideFromJS`/remapping; a type annotation does not automatically exclude the whole class declaration or its constructors. Explicit Probe edits can hide/rename output, but declarations are not a runtime security boundary.
 
 <a id="wiki-section-8"></a>
 ## `@CalledByDynamicCode`
 
-Marks types/methods/constructors called by generated JS code. It uses `RetentionPolicy.SOURCE`: it is purely an IDE hint, with no runtime consumer. Typical uses are methods in `NekoScriptModuleLoaderHost` called by `internal/script-loader.js`.
+Marks types/methods/constructors called by generated JS code. It uses `RetentionPolicy.SOURCE`: it documents dynamic use, with no runtime consumer or guaranteed IDE warning suppression. Typical uses are methods in `NekoScriptModuleLoaderHost` called by `internal/script-loader.js`.
 
 <a id="wiki-section-9"></a>
 ## `@PlatformAvailability` and the Spec interface pattern
 
-`@PlatformAvailability(Scope.ALL | NF_ONLY | CR_ONLY)` declares cross-platform availability for a Spec interface or method. It lives in `com.tkisor.nekojs.api.spec`.
+`@PlatformAvailability(Scope.ALL | NF_ONLY | NF26_ONLY | CR_ONLY)` declares cross-platform availability for a Spec interface or method. It lives in `com.tkisor.nekojs.api.spec`.
 
 **Spec interface pattern** for cross-platform method bindings:
 
@@ -124,8 +126,8 @@ public interface EntityExtension extends EntitySpec {
 ```
 
 - `Scope.ALL`: every target covered by the Spec; `NF_ONLY`: NeoForge 1.21.1/26.x; `NF26_ONLY`: NeoForge 26.x only. `CR_ONLY` is a retained legacy Cleanroom marker, not a supported build node. Fabric availability must be checked separately; this annotation does not implement a missing bridge.
-- `SpecCoverageProcessor`, an annotation processor, checks coverage at compile time. Each platform `Extension` must override every `neko$` method in the Spec interface; one missing method produces a compile ERROR. **Configuring `annotationProcessor(project(":common-api-processor"))` enables this**, with no extra option required.
-- **Platform-scope checks need an additional option**: `Scope` semantics, determining which platform should implement which members, are checked only when compilation passes `-Anekojs.platform=<platform>`. Accepted processor tags are `nf121`, `nf26` and the legacy `cr`; the old `nf` value is rejected because it cannot distinguish Minecraft versions. Without the option, only override coverage is checked. This repository passes the option only for NeoForge nodes (`buildSrc/.../nekojs.neoforge-node.gradle.kts`); Fabric nodes deliberately omit it. In an addon without the processor, `@RemapByPrefix("neko$")` + Spec interfaces are **only a convention**. The advantages remain, including avoiding native method collisions and stripping prefixes in one place, but nothing verifies complete override coverage for you.
+- `SpecCoverageProcessor`, an annotation processor, checks coverage at compile time. For directly extended annotated Spec interfaces, required `neko$` methods must have implementations outside the Spec; implementations inherited from non-Spec parent interfaces can count. A missing implementation produces a compile ERROR. **Configuring `annotationProcessor(project(":common-api-processor"))` enables this**, with no extra option required.
+- **Platform-scope checks need an additional option**: Spec-interface `Scope` semantics are checked only when compilation passes `-Anekojs.platform=<platform>`. Accepted processor tags are `nf121`, `nf26` and the legacy `cr`; the old `nf` value is rejected because it cannot distinguish Minecraft versions. The processor reads the Spec type's scope, not method-level scope filters. Without the option, only override coverage is checked. This repository passes the option only for NeoForge nodes (`buildSrc/.../nekojs.neoforge-node.gradle.kts`); Fabric nodes deliberately omit it. In an addon without the processor, `@RemapByPrefix("neko$")` + Spec interfaces are **only a convention**. The advantages remain, including avoiding native method collisions and stripping prefixes in one place, but nothing verifies complete override coverage for you.
 
 ---
 
@@ -152,7 +154,7 @@ public static ItemStack of(Object id) { ... }
 ```
 
 - Unannotated members have empty docs and emit no documentation, remaining byte-for-byte identical to the old unannotated output (`TypeScriptNoopIrGoldenTest` protects this).
-- Programmatic documentation remains available through `registerTypeDocs` (`TypeDocsRegister.register(...)`) for binding-level docs. Generation-time edits through probe's `modify_type` event take precedence over annotations.
+- Programmatic documentation remains available through `registerTypeDocs` (`TypeDocsRegister.register(...)`) for binding-level docs. Generation-time edits through `ProbeEvents.modifyType` take precedence over annotations.
 
 <a id="wiki-section-11"></a>
 ## `@Overload`: handwritten additional signatures (implemented)
@@ -164,15 +166,14 @@ Overload signatures in `.d.ts` have two sources for different cases:
 
 ```java
 @Doc("Creates a stack from an id.")
-@Overload({"id: string"})
-@Overload(value = {"item: $ItemStack", "count?: number"}, returns = "string", doc = "Copy with a count.")
+@Overload({"id: string", "flags: number"})
 public static ItemStack of(Object input, int flags) { ... }
 ```
 
 - Each `value()` entry is a parameter. `name: Type` or `name?: Type` is emitted unchanged; an empty `returns()` uses the reflected return type.
 - Parameter and return types are TypeScript fragments. They do not go through reflection or automatic import collection. The annotation author must use names visible in the generated module, such as `$Foo`.
-- Getter/setter property accessors do not emit overloads. Use an ordinary method if you need additional signatures.
-- Only the TS backend consumes these; Python `.pyi` does not (TS-first).
+- Bean property aliases do not emit overloads. Retained callable setter methods, or accessors emitted as ordinary methods after a naming conflict, can still emit them.
+- Only the TS backend consumes these; Python `.pyi` does not (TS-first). These snippets are annotation sketches, not complete implementations: `@Overload` adds no Java overload, argument conversion, defaults, or dispatch. Every advertised call form must already work in the runtime implementation.
 
 <a id="wiki-section-12"></a>
 ## `@DeprecatedNekojs`: script-facing deprecation (implemented)
@@ -202,10 +203,10 @@ The following four items are **conventions**, with no checks enforcing them. The
 <a id="wiki-section-14"></a>
 ## Relationship to probe (important)
 
-- Implemented: `@Remap` / `@RemapByPrefix` / `@HideFromJS` are consumed by runtime `MemberVisibilityQuery` / `MemberRemapper` and affect script execution. Generated `.d.ts` names and visibility match runtime behavior.
+- Implemented: `@Remap` / `@RemapByPrefix` / `@HideFromJS` are consumed by runtime `MemberVisibilityQuery` / `MemberRemapper` and affect script execution. Method declarations share runtime naming/hiding rules; public fields and whole-class hiding have the limitations described above.
 - Implemented: documentation annotations (`@Doc` / `@Param` / `@Return`) flow through `TypeReflector` to IR docs and `.d.ts` JSDoc, as described above.
 - Implemented: `@ScriptInput(Provider.class)` replaces only the annotated method/constructor parameter's TypeScript input with `Provider.inputShape()`. The provider must implement `ScriptInputShapeProvider` and have a public no-argument constructor. It does not convert or validate runtime values, change the Java parameter type, broaden output types, or change Python output. Ordinary parameters keep their normal input projection; keep the declared shape consistent with the actual converter.
-- Implemented: `@ScriptOutput` replaces a method's TypeScript return type, including Bean getters and inherited declarations. It does not convert runtime values or change Python output. Explicit Probe type edits take precedence. Use inline `import('module').Type` references for external types; the referenced module must already be supplied by the catalog or reflection closure. Include the Java type in an intersection when its methods remain available, as the JSX host does for its dimension Maps. Blank expressions reject generation with `NEKO-4064`; consumers should type-check the generated declarations to validate the expression.
+- Implemented: `@ScriptOutput` replaces a method's TypeScript return type, including Bean getters and inherited declarations. It does not convert runtime values or change Python output. Explicit Probe type edits take precedence. Use inline `import('module').Type` references for external types; the referenced module must already be supplied by the catalog or reflection closure. Include the Java type in an intersection when its methods remain available, as the JSX host does for its dimension Maps. Blank expressions fail reflection with `NEKO-4064`; the normal shared-IR path can log `NEKO-4029` and omit that class rather than abort every output. Consumers should type-check generated declarations to validate the expression.
 
 <a id="wiki-section-15"></a>
 ## Next steps

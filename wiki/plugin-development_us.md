@@ -18,10 +18,10 @@ A plugin is a concrete `NekoJSPlugin` class with a no-argument constructor and t
 - **Fabric:** declare the class in the `nekojs` entrypoint of your addon's `fabric.mod.json`; an annotation alone does not discover a third-party addon. The manager accepts missing annotation metadata and defaults priority to 1000.
 
 ```json
-{"entrypoints":{"nekojs":["com.example.myaddon.MyPlugin"]}}
+{"entrypoints":{"nekojs":["com.example.myaddon.MyAddonPlugin"]}}
 ```
 
-This JSON is a fragment to merge into a complete Fabric mod manifest, not a replacement manifest. The manager validates the interface/concrete class and instantiates it during bootstrap; a missing/unusable no-argument constructor logs an error and skips the plugin. Annotation metadata still controls priority, required mods and client-only filtering when present.
+This JSON is a fragment to merge into a complete Fabric mod manifest, not a replacement manifest. The shared manager validates the interface/concrete class and reflectively instantiates accepted classes during bootstrap; failures in that reflection path log an error and skip the plugin. Fabric obtains the entrypoint instance before passing its class to this manager, so entrypoint creation can fail earlier through Fabric's own loading path. Annotation metadata still controls priority, required mods and client-only filtering when present.
 
 There are **no constraints** on package names, class names, source directories, or the number of plugin classes in one mod. A class name does not need to end in `Plugin`, and plugins do not have to share a particular package. Layouts such as `com.example.myaddon` in this page's examples are simply conventions for readability.
 
@@ -75,7 +75,7 @@ Scripts can now call `MyHelper.add(1, 2)` and receive `3`.
 
 | Element | Default | Purpose |
 |---|---|---|
-| `priority` | `1000` | Load priority, in descending order. `CORE_PRIORITY` ensures built-in plugins load first. |
+| `priority` | `1000` | Load priority, in descending order. `CORE_PRIORITY` is the maximum priority; equal values still use the tie-breaker below. |
 | `clientOnly` | `false` | Load in client processes only; skip on dedicated servers. |
 | `requiredMods` | `{}` | Load only when every listed mod is present. |
 
@@ -91,7 +91,7 @@ Scripts can now call `MyHelper.add(1, 2)` and receive `3`.
 The consequence of registering too late depends on the registry:
 
 - **`IllegalStateException`**: extension points that use `Sealable` (TypeDocs / Lifecycle / NodeModules / RecipeNamespaces / RecipeLifecycle / RecipeSchemas), plus `ScriptPropertyRegistry`, `ProbeBackendRegistry`, and `ScriptCompilerRegistry`. These fail immediately.
-- **Silently ignored**: `BindingRegistry`, `JSTypeAdapterRegistry`, and `EventGroupRegistry` currently do not check whether registration has closed. Late registrations enter their collections but are never read. These failures are harder to diagnose: no error is reported, but your binding is missing.
+- **No registry-wide close check**: late unique entries in `BindingRegistry` and `JSTypeAdapterRegistry` enter collections that are no longer consumed. `EventGroupRegistry` also lacks a registry-wide close check, but merging into an existing frozen group throws `IllegalStateException`; a newly added group cannot update the published snapshot. Do not rely on either failure mode.
 
 Override only the hooks you need. Most convenience callbacks are empty by default; lifecycle registration hooks already delegate to those callbacks, and `generatedLangs()` defaults to `en_us`. Replacing a registration hook without calling its default implementation replaces that default wiring.
 
@@ -100,11 +100,11 @@ Override only the hooks you need. Most convenience callbacks are empty by defaul
 
 | Hook | Timing |
 |---|---|
-| `init()` | Plugin initialization |
-| `initStartup()` | Startup-phase initialization |
-| `afterInit()` | After all plugins have run init |
-| `beforeScriptsLoaded(ScriptType)` | Before scripts of each type load |
-| `afterScriptsLoaded(ScriptType)` | After scripts of each type load |
+| `init()` | After Plugin Runtime bootstrap, before startup scripts load |
+| `initStartup()` | After startup scripts finish loading |
+| `afterInit()` | After all mods initialize (NeoForge: `FMLLoadCompleteEvent`) |
+| `beforeScriptsLoaded(ScriptType)` | Before an initial load or full reload; not per-file hot reload |
+| `afterScriptsLoaded(ScriptType)` | After an initial load or full reload; not per-file hot reload |
 | `registerLifecycleHooks(PluginLifecycleRegister)` | Register the five lifecycle callbacks above programmatically. The default implementation registers `this::init` and the other four; normally, override the convenience callbacks directly. |
 | `beforeRecipeLoading(...)` | Before recipes load; can modify the raw JSON map |
 | `afterRecipes(...)` | After recipe data is committed to RecipeManager |
@@ -155,7 +155,7 @@ For an addon resolved to owner id `myaddon`, scripts import this as `import { My
 
 | Hook | Purpose |
 |---|---|
-| `registerProbeBackends(ProbeBackendRegistry)` | Register probe backends by the `(languageId, name)` pair. The two built-in backends (TS `.d.ts` and Python `.pyi`, both named `builtin`) are registered through **this same hook** by common's `NekoProbeBuiltinPlugin`. Third parties can add a language or provide an alternative implementation under a different `name`. A duplicate `(language, name)` causes `lock()` to throw at the end of bootstrap, aborting startup. Only `languageId()` / `name()` / `render(ctx)` lack defaults; `priority()` / `requiresIr()` / `outputDir(...)` / `contributeEditorConfig(...)` all have defaults, and the default `generate(ctx)` implementation handles atomic commitment. See [Probe type generation: adding a custom backend](probe-type-generation_us) for a complete example. |
+| `registerProbeBackends(ProbeBackendRegistry)` | Register probe backends by the `(languageId, name)` pair. The two built-in backends (TS `.d.ts` and Python `.pyi`, both named `builtin`) are registered through **this same hook** by common's `NekoProbeBuiltinPlugin`. Third parties can add a language or provide an alternative implementation under a different `name`. A duplicate `(language, name)` causes `lock()` to throw at the end of bootstrap, aborting startup. Only `languageId()` / `name()` / `render(ctx)` lack defaults; `priority()` / `requiresIr()` / `outputDir(...)` / `contributeEditorConfig(...)` all have defaults, and the default `generate(ctx)` renders in memory, validates paths, then synchronizes output in place. Render failure preserves old output; a write failure may leave output partially updated. See [Probe type generation: adding a custom backend](probe-type-generation_us) for a complete example. |
 | `modifyWorkspaceConfig(JSConfigModel, env)` | Modify automatically generated jsconfig.json |
 | `registerScriptCompilers(ScriptCompilerRegistry)` | Register custom script compilers for new language frontends |
 | `registerScriptProperty(ScriptPropertyRegistry)` | Register custom script properties (`// key:`) |
@@ -195,9 +195,9 @@ public final class MyChannelPoint {
 // use the returned handle to obtain the product after bootstrap finishes.
 ```
 
-The required parts are: `builder(id, pluginType)` must receive a non-empty id or it throws `IllegalArgumentException`; **all four** of `initializer` / `collector` / `merge` / `finish` must be called or `build()` throws `IllegalStateException`. `merge` deliberately has no default because conflict policy is central to the extension point's semantics, so you must choose explicitly (`append` / `firstWin` / `overrideWarn` / `failFast`). Registering an extension point after bootstrap freezes throws `IllegalStateException`, and registering the same id twice throws `IllegalArgumentException`.
+The required parts are: the point id must be nonblank (validated when `build()` constructs the point, otherwise `IllegalArgumentException`); **all four** of `initializer` / `collector` / `merge` / `finish` must be called or `build()` throws `IllegalStateException`. `merge` deliberately has no default because conflict policy is central to the extension point's semantics, so you must choose explicitly (`append` / `firstWin` / `overrideWarn` / `failFast`). Registering an extension point after bootstrap freezes throws `IllegalStateException`, and registering the same id twice throws `IllegalArgumentException`.
 
-Everything else is a convention: using `<your modid>:<channel name>` for `ID` makes ownership clear when a conflict occurs (uniqueness is required, that format is not). Nesting `Contributor` inside `XxxPoint`, calling the field `POINT`, and making `Contributor` extend `NekoJSPlugin` simply make your code familiar to readers of the built-in implementation.
+Using `<your modid>:<channel name>` for `ID`, nesting `Contributor` inside `XxxPoint`, and naming the field `POINT` are conventions (id uniqueness is required, the format is not). **The contributor type must extend `NekoJSPlugin`, directly or indirectly**: the extension point and builder enforce that generic bound. `MyCollector` and `MyProduct` in this sketch are addon-defined types, not additional NekoJS APIs.
 
 <a id="wiki-section-13"></a>
 ## Register bindings (registerBinding)
@@ -220,7 +220,7 @@ public void registerBinding(BindingRegistry registry) {
 }
 ```
 
-> **The first binding with a given name wins**: `register(...)` returns `boolean`. When a name is already taken, it returns `false` and writes a warn message to the `nekojs.bootstrap` logger (`BindingRegistry.BindingRegistryImpl`); it neither throws nor replaces the binding. Built-in bindings are registered first by the `CORE_PRIORITY` plugin, so third parties cannot claim names such as `Item` or `Ingredient` through ordinary `register`. Check the return value to confirm registration succeeded. Binding names are not format-validated and do not need a namespace prefix, but they are global identifiers in scripts; including something specific to your mod helps avoid collisions.
+> **The first binding with a given name wins**: `register(...)` returns `boolean`. When a name is already taken, it returns `false` and writes a warn message to the `nekojs.bootstrap` logger (`BindingRegistry.BindingRegistryImpl`); it neither throws nor replaces the binding. Built-in bindings normally register first at `CORE_PRIORITY`, so lower-priority plugins cannot replace names such as `Item` or `Ingredient` through ordinary `register`. An equal maximum priority still follows the class/owner tie-breaker and is not a replacement API. Check the return value to confirm registration succeeded. Legacy global binding names are not format-validated and do not need a namespace prefix (module export names are validated), but they are global identifiers in scripts; including something specific to your mod helps avoid collisions.
 
 <a id="wiki-section-15"></a>
 ### Delegating bindings: `DelegatingBinding` (helper + vanilla class)
@@ -237,7 +237,7 @@ public void registerBinding(BindingRegistry registry) {
         new MyBlockHelperJS(),                            // Helper methods
         net.minecraft.world.level.block.Block.class,      // Minecraft class whose static members are delegated
         Set.of("of", "empty")                             // Extension method names supplied by the helper
-    )));
+    ), MyBlockHelperJS.class));
 }
 ```
 
@@ -252,17 +252,20 @@ To customize binding behavior completely, implement `Binding`; `SimpleBinding` a
 public interface Binding {
     String name();
     Object value();
-    Class<?> valueType();          // Defaults to value.getClass(); proxies must declare this explicitly
-    default void close(ScriptType) {}  // Cleanup hook on reload/close
+    default Class<?> valueType() {
+        Object value = value();
+        return value == null ? Void.class : value instanceof Class<?> type ? type : value.getClass();
+    }
+    default void close(ScriptType type) {}  // Teardown/reset hook
 }
 ```
 
-`valueType()` is important for `ProxyObject` and bindings with dynamic members: preflight validation and probe use it to discover members and avoid false errors when reflection cannot see dynamic members.
+`valueType()` is important for `ProxyObject` and bindings with dynamic members: preflight validation and probe use it to discover members and avoid false errors when reflection cannot see dynamic members. The proxy example supplies `MyBlockHelperJS.class` so its helper methods can be reflected; this does not turn the proxy into a Java class. **Cleanup is not per-generation**: `Binding.close(type)` runs on ScriptManager teardown/reset paths, not every transactional SERVER/CLIENT/TEST reload. Do not use it as an ordinary-generation disposal callback.
 
 <a id="wiki-section-17"></a>
 ## Type documentation
 
-There are two ways to document binding methods and fields, which probe emits as `.d.ts` JSDoc: **annotations** (`@Doc` / `@Param` / `@Return` on wrapper methods and parameters, consumed by `TypeReflector` into the IR) and the **programmatic** `registerTypeDocs` hook:
+There are two ways to document binding methods and fields, which probe emits as `.d.ts` JSDoc: **annotations** (`@Doc` / `@Param` / `@Return` on their supported declarations, consumed by `TypeReflector` into the IR; `@Param` belongs on a method/constructor, not directly on a parameter) and the **programmatic** `registerTypeDocs` hook:
 
 ```java
 @Override

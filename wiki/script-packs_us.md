@@ -53,7 +53,7 @@ const wallet = Pack.require('economy', 'wallet');
 console.info(wallet({ player: 'example' }).balance);
 ```
 
-Calls synchronously accept one JSON value and return JSON data. Functions and host objects cannot cross Contexts. Limits are depth 32, 10000 nodes and 1 Mi characters across names/strings. Sandbox/resource budgets remain in force. `Pack.selector` and `Pack.activation` are read-only properties.
+Calls synchronously accept one JSON value and return JSON data. Functions and host objects cannot cross Contexts. Limits are depth 32, 10000 nodes and 1 Mi characters across names/strings. These data-shape limits remain, but normal pack execution has no evaluation deadline, statement budget or runaway watchdog; an unbounded capability callback can block its owner. Access/trust checks still apply. `Pack.selector` and `Pack.activation` are read-only properties.
 
 Each versioned pack owns a Context for its type, source and world/connection session. Its private `global` survives ordinary replacement but ends with its source session; `shared` belongs to the runtime root. Handles bind both actual activations and expire after replacement, shutdown, provider failure or session change. Missing providers cause waiting. Failed providers stop consumers and require explicit reload to recover; recovery never overrides administrator disable intent.
 
@@ -66,7 +66,7 @@ Each versioned pack owns a Context for its type, source and world/connection ses
 - `packs reload server GLOBAL:economy` replaces the provider and necessary consumers. Unrelated packs retain their activation.
 - `nekojs reload <type>` replaces the entire type, including its legacy partition.
 
-Selectors are `GLOBAL:id`, `WORLD:id`, `MOD:id`; versioned remote selectors are `SERVER_CACHE:packs:id` and `SERVER_CACHE:worldpacks:id`. Bare IDs must be unique. MOD and SERVER_CACHE are read-only sources.
+Selectors are `GLOBAL:id`, `WORLD:id`, `MOD:id`; versioned remote selectors are `SERVER_CACHE:packs:id` and `SERVER_CACHE:worldpacks:id`. Bare IDs must be unique. MOD and SERVER_CACHE are read-only sources. “Read-only” here means local pack content/enable intent cannot be changed through these pack operations; it does not turn code running from that source into a read-only guest. Do not edit the server cache to bypass signature or trust checks.
 
 Managed state, listeners, timers and domain plans join one preflight/commit. Failed candidates release their resources and preserve healthy active units. Whole-table domains explicitly expand the affected set; client render contributions publish together. Conflicting top-level state writes reject the batch. Nested mutation and arbitrary Java/world/file effects are outside rollback guarantees. Domain publication must not throw after preflight; violations report the responsible domain, whose partial effects remain its responsibility. Post-commit cleanup failures are reported separately from rollback.
 

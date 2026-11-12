@@ -1,6 +1,13 @@
 {
   "nekojs.dynamic_registry.configuration_failed": "Dynamic registry synchronization failed. Check both client and server logs, enable dynamicRegistry on both sides, and reconnect.",
   "nekojs.command.reloading": "§e[NekoJS] Reloading scripts...",
+  "nekojs.command.test.not_configured": "NekoJS TEST scripts are not configured.",
+  "nekojs.command.test.incomplete": "NekoJS TEST execution did not complete.",
+  "nekojs.command.test.unavailable": "NekoJS TEST execution completed; assertion results are unavailable.",
+  "nekojs.command.test.execution_failed": "NekoJS TEST execution failed. Assertions: %s passed, %s failed.",
+  "nekojs.command.test.assertions_failed": "NekoJS TEST execution completed, but assertions failed: %s passed, %s failed.",
+  "nekojs.command.test.no_assertions": "NekoJS TEST execution completed; no assertions were observed (not an assertion pass).",
+  "nekojs.command.test.passed": "NekoJS TEST execution completed and assertions passed: %s passed, %s failed.",
   "nekojs.command.reload.fatal": "§c[NekoJS] ✖ A fatal error occurred during reload! Check the console logs.",
   "nekojs.command.usage": "Usage: /nekojs <%s>. Run /help nekojs for the full command list.",
   "nekojs.command.error.healthy": "§a[NekoJS] ✔ The runtime environment is healthy. No script errors found!",

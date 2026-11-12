@@ -125,7 +125,7 @@ java -jar /absolute/path/nekojs-1.1.0-preview3-authoring-stdio.jar --game-dir /a
 
 替换两个路径。`--game-dir` 是**包含 nekojs/ 的游戏目录**，不是 nekojs 本身、存档、JAR 目录或本仓库。推荐绝对路径和独立参数数组；含空格的路径保持为一个数组元素。Windows 可写成 `D:/Games/Instance`，避免 JSON 反斜杠转义。客户端 PATH 找不到 Java 时，改为 Java 21+ 可执行文件的绝对路径。NekoJS 不会自动安装或修改客户端设置。
 
-无需监听器、token 或修改 `ai.toml` 的连接设置。客户端完成 **2025-11-25** 初始化并发送 `notifications/initialized` 后，先调用 `nekojs_context`、`nekojs_capabilities` 和 `nekojs_schema`。stdio 提供相同七个工具及列出的文档资源；先 `resources/list` 再 `resources/read`，检查 `structuredContent`、`isError` 和 coverage。没有 HTTP 会话头或 DELETE；结束时停止客户端持有的辅助进程（EOF 退出码为 0）。
+无需监听器、token 或修改 `ai.toml` 的连接设置。客户端完成 **2025-11-25** 初始化并发送 `notifications/initialized` 后，先调用 `nekojs_context`、`nekojs_capabilities` 和 `nekojs_schema`。stdio 提供七个快照/文档工具及列出的文档资源；先 `resources/list` 再 `resources/read`，检查 `structuredContent`、`isError` 和 coverage。没有 HTTP 会话头或 DELETE；结束时停止客户端持有的辅助进程（EOF 退出码为 0）。
 
 辅助进程要求 `--game-dir` 恰好一次，可选 `--ai-dir <游戏相对目录>` 一次，顺序不限。发现优先级：显式覆盖 → 只读 `nekojs/config/ai.toml` 的 `[output].directory`（配置文件最多 64 KiB；缺少配置项则使用默认值）→ 配置文件缺失时使用默认 `.github/neko_ai/environment.json` → 仅在配置文件与默认描述都不存在时使用旧 `nekojs/ai/environment.json`。无效配置会拒绝启动。旧 ai-location.json 不再读取或生成。选中的导出无效、缺失或越界时拒绝，不静默回退。新版 `apiSnapshotDirectory` 必须是所选根目录的 `snapshots/`。读取导出的 `apiEnabled`，仅使用 ai.toml 选择目录；不读取 token，不创建配置或监听器，不写游戏数据。修改输出目录后需重启辅助进程。API 配置变化后须重启游戏重新导出；每次 context/API 请求验证变化的环境、指针与快照，环境标识变化须重启辅助进程。文档来自辅助 JAR 自带的已验证英文包（`context.documentation.bundleId`）。离线结果只描述**最后导出**，不代表实时模组或世界状态。
 
@@ -194,6 +194,8 @@ stdio 由上面的独立辅助进程提供，不是游戏监听器的传输。**
 
 <a id="wiki-section-11"></a>
 ### 先 resolve，再 members
+
+**已实现的查询面：**七个快照/文档 MCP 工具为 `nekojs_context`、`nekojs_capabilities`、`nekojs_schema`、`nekojs_resolve`、`nekojs_members`、`nekojs_query` 和 `nekojs_batch`。`query.from` 仅接受 `symbols`、`members`、`events`、`inputAdapters`、`declarations`；`some` 仅关联成员的 `parameters`。应读取返回的字段目录，不要自行假定过滤器、世界查询或求值工具。
 
 POST resolve，或将相同对象传给 nekojs_resolve：
 
@@ -278,9 +280,9 @@ POST batch：子项是 query 对象，不是任意操作，共用外层 scope/�
 <a id="wiki-section-15"></a>
 ## 实用脚本：选择一个完整场景
 
-不要只停留在连接示例。先从 `.github/neko_ai/current.json` 找到当前包，再读包内 `handbook/scripting-examples.md`：其中有 12 个场景、全部 14 个源文件的完整代码、目标路径、触发方式、预期观察、清理步骤与平台条件。`examples/metadata.json` 记录安装文件组和验证级别。下表路径均相对于包内 `examples/`。
+不要只停留在连接示例。先从 `.github/neko_ai/current.json` 找到当前包，再读包内 `handbook/scripting-examples.md`：其中有 15 个场景、全部 17 个源文件的完整代码、目标路径、触发方式、预期观察、清理步骤与平台条件。`examples/metadata.json` 记录安装文件组和验证级别。下表路径均相对于包内 `examples/`。
 
-使用可丢弃实例/世界，备份现有脚本，每次只安装所选场景的一份。普通 SERVER 文件放入 `nekojs/server_scripts/authoring-examples/`；STARTUP、CLIENT、TEST 分别放入对应的 `startup_scripts`、`client_scripts`、`test_scripts` 下同名子目录。CommonJS 两文件放入 SERVER 的 `authoring-examples/modules/`，保留 `lib/` 子目录；状态场景两文件分属 STARTUP 与 SERVER。两种 MCP 模式都不会安装文件或执行游戏命令。
+使用可丢弃实例/世界，备份现有脚本，每次只安装所选场景的一份。普通 SERVER 文件放入 `nekojs/server_scripts/authoring-examples/`；STARTUP、CLIENT、TEST 分别放入对应的 `startup_scripts`、`client_scripts`、`test_scripts` 下同名子目录。CommonJS 两文件放入 SERVER 的 `authoring-examples/modules/`，保留 `lib/` 子目录；状态场景两文件分属 STARTUP 与 SERVER。两种 MCP 模式都不安装脚本文件。查询工具与独立 stdio 仍只读；下文单独启用的游戏内操作可执行 allowlist 命令或 reload 脚本。
 
 | 场景 | 包内文件 | 触发方式 / 条件 | 预期观察 |
 |---|---|---|---|
@@ -292,6 +294,9 @@ POST batch：子项是 query 对象，不是任意操作，共用外层 scope/�
 | 物品组件 | `server/item-components.js` | SERVER reload，检查日志 | 修改内存中的物品堆，不发放到背包 |
 | 状态与定时器 | `startup/shared-config.js` + `server/state-and-timer.js` | 先重启一次，再 SERVER reload | 共享问候语、类型内递增计数、延迟日志 |
 | 客户端 UI | `client/counter.tsx` | 仅 NeoForge 26.x，CLIENT reload | 计数界面打开，按钮递增文本 |
+| 控件 | `client/controls.tsx` | 仅 NeoForge 26.x，CLIENT reload；单独安装 | 开关、步进滑块、选择器与单行输入 |
+| 表单与对话框 | `client/forms-and-dialogs.tsx` | 仅 NeoForge 26.x，CLIENT reload；单独安装 | 本地校验、确认 Alex x3、查看只读预览 |
+| 工作区 | `client/workspace.tsx` | 仅 NeoForge 26.x，CLIENT reload；单独安装 | 独立的 Notes/Tools/Preview 窗口；最小化并恢复 Notes |
 | CommonJS | `modules/hello.cjs` + `modules/lib/message.cjs` | SERVER reload，保留相对路径 | 输出 `Hello, NekoJS!` |
 | 断言 | `test/assertions.js` | `/nekojs test` | 三个断言通过 |
 | 日志热身 | `greeting.js` | SERVER reload | 一条示例加载日志 |
@@ -300,16 +305,16 @@ POST batch：子项是 query 对象，不是任意操作，共用外层 scope/�
 <a id="wiki-section-16"></a>
 ### 第一个游戏脚本：登录欢迎
 
-将完整代码放入 `nekojs/server_scripts/authoring-examples/player-login.js`，执行 `/nekojs reload server` 后重新连接：
+**NeoForge 1.21.1/26.x：**将下面完整代码放入 `nekojs/server_scripts/authoring-examples/player-login.js`，执行 `/nekojs reload server` 后重新连接。**Fabric 26.x** 应将文件中的 `event.entity` 换为 `event.player`；加载器 payload 不同：
 
 ```js
 // Place in server_scripts. The callback runs for future logins, not existing players.
 PlayerEvents.loggedIn(event => {
-    event.player.sendMessage("Welcome to NekoJS!");
+    event.entity.sendMessage("Welcome to NekoJS!");
 });
 ```
 
-之后登录的玩家收到 `Welcome to NekoJS!`；已经在线的玩家不会补发。删除复制的文件后 reload SERVER，即可取消后续欢迎。事件组订阅与 `event.player` Bean 属性是实际写法；玩家句柄只在回调内使用。
+之后登录的玩家收到 `Welcome to NekoJS!`；已经在线的玩家不会补发。删除复制的文件后 reload SERVER，即可取消后续欢迎。事件组订阅使用加载器特有的 Bean 属性：NeoForge 原生玩家事件暴露 `event.entity`，Fabric 包装事件暴露 `event.player`。玩家句柄只在回调内使用。随包 `player-login.js` 现已使用 NeoForge 属性；其中注释说明了 Fabric 所需的单个属性替换。
 
 <a id="wiki-section-17"></a>
 ### 配方示例与验收
@@ -338,6 +343,13 @@ ServerEvents.recipes(event => {
 
 验证标签区分隔离契约检查、真实引擎执行、带平台夹具的真实引擎执行；这些都不是 Minecraft 世界内验收。配方、标签、注册、玩家回调与 UI 的实机结果必须单独记录。复制陌生调用前，检查当前实例声明与 profile。
 
+<a id="wiki-live-results"></a>
+**可查询的实时运行结果：**游戏内 MCP 在七个快照/文档工具之外增加只读 `nekojs_errors`、`nekojs_operation_status`；带相同认证的 HTTP 增加 POST `errors`、`operation_status`。无需 Probe 快照或 mutation 开关。离线 stdio 仍为七个工具，不宣称实时结果；伪造调用以 `LIVE_STATE_UNAVAILABLE` 拒绝，不派发任务。
+
+- 错误：`{"scriptType":"SERVER","limit":25}`（均可省略，类型大写，最多 100 条）。检查 `available`、`errors`、`returned`、`totalIsExact`、`truncated`。行数据复用冻结诊断：错误 ID、类型、phase/owner、代次、相对源码位置和有界不可信消息；不输出原始异常、宿主堆栈或源码片段。这是当前公开错误集，不是持久历史或全局日志。约 20 KiB 投影最多扫描 10,000 条；总数不精确时为 null。没有供应器时明确不可用，不伪造空的实时快照。
+- 操作：`{"operationId":"<已接纳回包中的完整 UUID>"}`。检查 `found`、`state`（queued/running/timed_out_pending/terminal）、`terminal`、`claimed`、`initialResult`、`latestResult`。查询不派发、不重放。已领取的超时操作可随后完成，原响应保持不变。复用 64 条审计迁移与待处理集合，不新建操作日志；未知与已淘汰 ID 均为 `unknown_or_expired`。退役追踪可成为终态，但副作用仍未知。此查询不保留命令正文、参数或反馈。
+- TEST：`context.testRunReport` 为最近结束的一次尝试，不是当前操作进度；尚无报告时为 null，离线不可用。字段为 `executionCompleted`、`executionSucceeded`、`passed`、`failed`、可空 `assertionsPassed` 与 `overallPassed`。捕获了失败断言也仍为失败；零断言为 null/未证实。计数是本次 legacy 与脚本包的增量，范围是原有执行/drain 窗口。TEST 控制回包/审计也包含该报告：`TEST_ASSERTIONS_FAILED` 可同时出现 `committed:true` / `effects:committed`。执行结束或零断言事务成功不等于整体断言通过。
+
 <a id="wiki-live-controls"></a>
 <a id="wiki-section-18"></a>
 ## 按需启用的实时 MCP 操作
@@ -355,9 +367,9 @@ ServerEvents.recipes(event => {
 
 命令源固定为非玩家、权限等级 2（gamemaster）、无实体冒充，位置为主世界原点。要求玩家或更高权限的命令可能失败。allowlist 精确匹配根标记，不匹配前缀或过滤参数；`list` 与 `minecraft:list` 不同。最多 128 个根、每个最多 128 字符，仅小写字母、数字、`_`、`.`、`-` 与可选 `namespace:`。**allowlist 不是沙箱**：`execute` 或插件分派根可能允许强大嵌套操作。反馈仅属于本次请求，是最多 64 条/8192 字符的净化纯文本，不是全局日志或管理员广播。完成取实际命令结果；同步分派返回但没有结果回调时按失败处理，不视为成功。
 
-reload 使用小写 `server`、`client` 或 `test`；例如将参数替换为 `{"type":"client","timeoutMs":5000}` 或 `{"type":"test","timeoutMs":5000}`。CLIENT 等待客户端 owner 的真实候选完成，不将排队视为成功；它没有服务端配方/资源后处理，专用服务器会以 `RELOAD_UNAVAILABLE` 拒绝。TEST 需要实时服务器 owner，只加载/reload TEST 脚本，不负责执行并认证断言套件通过。SERVER 保留配方/脚本数据包后处理。STARTUP 必须重启进程（`RESTART_REQUIRED`），单文件/局部、`all` 等其他不支持的类型返回 `UNSUPPORTED_RELOAD`。分别检查 `committed` 和 `postprocessingSucceeded`；`committed: true` 加 `RELOAD_POSTPROCESSING_FAILED` 表示候选已提交而后处理失败，不是回滚。CLIENT/TEST 的 `postprocessingSucceeded: true` 表示候选完成且没有服务端后处理，不证明 UI 行为或测试断言通过。即使候选回滚，也不能撤销任意外部副作用。tag 流程仍按示例指南执行额外原版 reload。
+reload 使用小写 `server`、`client` 或 `test`；例如将参数替换为 `{"type":"client","timeoutMs":5000}` 或 `{"type":"test","timeoutMs":5000}`。CLIENT 等待客户端 owner 的真实候选完成，不将排队视为成功；它没有服务端配方/资源后处理，专用服务器会以 `RELOAD_UNAVAILABLE` 拒绝。TEST 需要实时服务器 owner，使用现有 TEST reload-and-run 流程，并在原有 timer-drain 窗口后返回观察到的断言报告；不认证未来回调。SERVER 保留配方/脚本数据包后处理。STARTUP 必须重启进程（`RESTART_REQUIRED`），单文件/局部、`all` 等其他不支持的类型返回 `UNSUPPORTED_RELOAD`。分别检查 `committed` 和 `postprocessingSucceeded`；`committed: true` 加 `RELOAD_POSTPROCESSING_FAILED` 表示候选已提交而后处理失败，不是回滚。CLIENT/TEST 的 `postprocessingSucceeded: true` 表示候选完成且没有服务端后处理，不证明 UI 行为或测试断言通过。即使候选回滚，也不能撤销任意外部副作用。tag 流程仍按示例指南执行额外原版 reload。
 
-检查 MCP 的 `isError` 与 `structuredContent`。已接纳结果含 `operationId`、`operation`、`status`、`code`、`effects`、`retryable`、`output`、`outputTruncated` 和操作完成字段；reload 结果与审计元数据包含选定的小写 `type`。接纳前拒绝是错误对象。`timeoutMs` 为 1–8000 整数，默认 5000。排队中过期的任务不会随后执行（`effects: "none"`）；已开始后超时/中断可能是 `effects: "unknown"`，不等于回滚、保证取消或可以盲目重试。命令和所有 reload 目标共用一个活动操作槽位。在该操作的 owner 代次内，已领取操作占用槽位直到实际完成，即使客户端已超时；目标停止/代次变化可退役旧槽位，但不会使已开始的副作用变得已知或可安全重试。后续请求得到 `CONTROL_BUSY`。`retryable` 只表示任务未被领取，不自动授权重复操作。`CONTROL_DISABLED`、`COMMAND_NOT_ALLOWED`、`STALE_RUNTIME` 区分策略、allowlist 和代次拒绝。CLIENT 没有活动客户端运行时时返回 `RELOAD_UNAVAILABLE`；命令或 SERVER/TEST 没有实时服务器时返回 `LIVE_RUNTIME_REQUIRED`。没有公开状态轮询接口，超时响应也不会事后改写。
+检查 MCP 的 `isError` 与 `structuredContent`。已接纳结果含 `operationId`、`operation`、`status`、`code`、`effects`、`retryable`、`output`、`outputTruncated` 和操作完成字段；reload 结果与审计元数据包含选定的小写 `type`。接纳前拒绝是错误对象。`timeoutMs` 为 1–8000 整数，默认 5000。排队中过期的任务不会随后执行（`effects: "none"`）；已开始后超时/中断可能是 `effects: "unknown"`，不等于回滚、保证取消或可以盲目重试。命令和所有 reload 目标共用一个活动操作槽位。在该操作的 owner 代次内，已领取操作占用槽位直到实际完成，即使客户端已超时；目标停止/代次变化可退役旧槽位，但不会使已开始的副作用变得已知或可安全重试。后续请求得到 `CONTROL_BUSY`。`retryable` 只表示任务未被领取，不自动授权重复操作。`CONTROL_DISABLED`、`COMMAND_NOT_ALLOWED`、`STALE_RUNTIME` 区分策略、allowlist 和代次拒绝。CLIENT 没有活动客户端运行时时返回 `RELOAD_UNAVAILABLE`；命令或 SERVER/TEST 没有实时服务器时返回 `LIVE_RUNTIME_REQUIRED`。可以用只读 `operation_status` 按已接纳的 `operationId` 查询后续元数据；最初的超时响应不会事后改写。**HTTP/MCP 响应丢失不证明操作未执行**；重新尝试前应先检查本机诊断与实际状态，并另行获得明确授权。传输超时后不得自动重试有副作用的操作。
 
 记录真实平台/配置、操作、观察结果与清理。源码/夹具测试不证明真实世界效果；**人工验收仍待维护者给出实际结论**。测试后关闭不用的控制并重启。
 

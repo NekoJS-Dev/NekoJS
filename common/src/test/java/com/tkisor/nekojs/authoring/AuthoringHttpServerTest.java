@@ -31,6 +31,88 @@ class AuthoringHttpServerTest {
         return CLIENT.send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }
 
+    @Test void httpContextExposesLatestTestReportWithoutAnOperationIdAndNeverRetainsCallerMutations(@TempDir Path directory) throws Exception {
+        TestPlatformInit.ensureInitialized();
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(directory);
+        paths.initFolders();
+        Files.writeString(paths.config().resolve("ai.toml"), "[documentation]\nenabled = false\n");
+        var latest = new java.util.concurrent.atomic.AtomicReference<com.tkisor.nekojs.api.testing.TestRunReport>();
+        try (AuthoringRuntime runtime = AuthoringRuntime.open(paths, ProbeConfig.defaultConfig());
+             AuthoringHttpServer server = new AuthoringHttpServer(0, TOKEN, true, true, AuthoringBundle.load(), runtime::execute)) {
+            runtime.installDiagnostics(List::of, latest::get);
+            String endpoint = "/api/v1/authoring/context";
+            JsonObject before = AuthoringJson.parse(send(server.port(), endpoint, "GET", null, true, null).body());
+            assertTrue(before.get("testRunReport").isJsonNull());
+            latest.set(new com.tkisor.nekojs.api.testing.TestRunReport(true, true, 0, 1));
+            JsonObject report = AuthoringJson.parse(send(server.port(), endpoint, "GET", null, true, null).body()).getAsJsonObject("testRunReport");
+            assertFalse(report.get("assertionsPassed").getAsBoolean());
+            assertFalse(report.get("overallPassed").getAsBoolean());
+            report.addProperty("failed", 0);
+            assertEquals(1, AuthoringJson.parse(send(server.port(), endpoint, "GET", null, true, null).body())
+                    .getAsJsonObject("testRunReport").get("failed").getAsInt());
+        }
+    }
+
+    @Test void authenticatedErrorsQueryReportsMissingDiagnosticsInsteadOfInventingAnEmptyLiveSnapshot(@TempDir Path directory) throws Exception {
+        TestPlatformInit.ensureInitialized();
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(directory);
+        paths.initFolders();
+        Files.writeString(paths.config().resolve("ai.toml"), "[documentation]\nenabled = false\n");
+        try (AuthoringRuntime runtime = AuthoringRuntime.open(paths, ProbeConfig.defaultConfig());
+             AuthoringHttpServer server = new AuthoringHttpServer(0, TOKEN, true, true, AuthoringBundle.load(), runtime::execute)) {
+            String endpoint = "/api/v1/authoring/errors";
+            JsonObject request = AuthoringJson.obj("scriptType", "SERVER", "limit", 5);
+            assertEquals(401, send(server.port(), endpoint, "POST", request, false, null).statusCode());
+            HttpResponse<String> response = send(server.port(), endpoint, "POST", request, true, null);
+            assertEquals(200, response.statusCode(), response.body());
+            JsonObject result = AuthoringJson.parse(response.body());
+            assertFalse(result.get("available").getAsBoolean());
+            assertEquals("DIAGNOSTICS_UNAVAILABLE", result.get("reason").getAsString());
+            assertFalse(response.body().contains(TOKEN));
+        }
+    }
+
+    @Test void authenticatedOperationLookupObservesLateCompletionWithoutRedispatch() throws Exception {
+        AtomicLong clock = new AtomicLong();
+        AtomicLong calls = new AtomicLong();
+        CompletableFuture<com.tkisor.nekojs.api.authoring.AuthoringControlHost.ReloadResult> completion = new CompletableFuture<>();
+        var host = new com.tkisor.nekojs.api.authoring.AuthoringControlHost() {
+            @Override public long epoch() { return 7; }
+            @Override public void enqueue(Runnable operation) { operation.run(); }
+            @Override public CompletionStage<CommandResult> executeCommand(String command, java.util.function.Consumer<String> output) {
+                throw new AssertionError("A status query must never execute a command");
+            }
+            @Override public CompletionStage<ReloadResult> reloadServer(java.util.function.Consumer<String> output) {
+                calls.incrementAndGet();
+                clock.addAndGet(TimeUnit.MILLISECONDS.toNanos(AuthoringControl.MAX_TIMEOUT_MS + 1L));
+                return completion;
+            }
+        };
+        try (AuthoringControl controls = new AuthoringControl(new AuthoringControl.Policy(false, true, java.util.Set.of()), host, clock::get);
+             AuthoringHttpServer server = new AuthoringHttpServer(0, TOKEN, true, true, AuthoringBundle.load(), controls::execute)) {
+            JsonObject first = controls.execute("reload_scripts", AuthoringJson.obj("type", "server"));
+            assertEquals("timed_out", first.get("status").getAsString());
+            assertEquals(1, calls.get());
+            JsonObject lookup = AuthoringJson.obj("operationId", first.get("operationId").getAsString());
+            String endpoint = "/api/v1/authoring/operation_status";
+            assertEquals(401, send(server.port(), endpoint, "POST", lookup, false, null).statusCode());
+            HttpResponse<String> pendingResponse = send(server.port(), endpoint, "POST", lookup, true, null);
+            assertEquals(200, pendingResponse.statusCode(), pendingResponse.body());
+            JsonObject pending = AuthoringJson.parse(pendingResponse.body());
+            assertFalse(pending.get("terminal").getAsBoolean());
+            assertFalse(pending.get("retryable").getAsBoolean());
+            assertEquals("timed_out_pending", pending.get("state").getAsString());
+            completion.complete(new com.tkisor.nekojs.api.authoring.AuthoringControlHost.ReloadResult(true, true));
+            HttpResponse<String> finalResponse = send(server.port(), endpoint, "POST", lookup, true, null);
+            assertEquals(200, finalResponse.statusCode(), finalResponse.body());
+            JsonObject finished = AuthoringJson.parse(finalResponse.body());
+            assertTrue(finished.get("terminal").getAsBoolean());
+            assertEquals("succeeded", finished.getAsJsonObject("latestResult").get("status").getAsString());
+            assertEquals("timed_out", first.get("status").getAsString(), "A later query must not rewrite the original response");
+            assertEquals(1, calls.get(), "Read-only lookup must never enqueue or retry the mutation");
+        }
+    }
+
     @Test void authenticatedHttpAndMcpShareQueriesAndShutdownReleasesThePort() throws Exception {
         int port;
         try (AuthoringQuery query = AuthoringQueryTest.engine(AuthoringQueryTest.member("a", "of", "ItemStack", "string"));

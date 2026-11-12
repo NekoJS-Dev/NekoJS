@@ -73,7 +73,9 @@ public final class ScriptContainer {
 
         try (var reader = Files.newBufferedReader(path)) {
             String line;
+            int lineNumber = 0;
             while ((line = reader.readLine()) != null) {
+                lineNumber++;
                 line = line.trim();
                 if (line.isEmpty()) {
                     continue;
@@ -93,9 +95,15 @@ public final class ScriptContainer {
                 var prop = (ScriptProperty<Object>) propertyMap.get(parts[0].trim());
                 if (prop != null) {
                     try {
-                        properties.put(prop, prop.read(parts[1].trim()));
+                        Object parsed = prop.read(parts[1].trim());
+                        if (parsed == null) {
+                            throw new IllegalArgumentException("Script property reader returned no parsed value");
+                        }
+                        properties.put(prop, parsed);
                     } catch (Exception e) {
-                        com.tkisor.nekojs.script.ScriptTypeEnv.logger(type).warn("Failed to parse script property '{}' in {}: {}", parts[0].trim(), path, e.getMessage());
+                        ScriptTypeEnv.logger(type).warn(
+                                "[NEKO-1025] Script property '{}' rejected at {}:{}; previous value or default retained",
+                                prop.name, path, lineNumber, e);
                     }
                 }
             }

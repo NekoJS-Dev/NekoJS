@@ -18,7 +18,7 @@ Native MixinJS execution is disabled by default. To opt into the experimental de
 enabled = true
 ```
 
-Missing or malformed runtime configuration leaves MixinJS disabled. The old `<game>/config/nekojs-engine.toml` is only a read-only fallback when the canonical file is absent; use the canonical file for new edits. This is one engine setting, not a separate MixinJS configuration file or a system-property bypass.
+Missing or malformed runtime configuration leaves MixinJS disabled. The old `<game>/config/nekojs-engine.toml` is only a read-only fallback when the canonical file is absent; use the canonical file for new edits. This is one engine setting (`SandboxConfig.mixinJsEnabled` internally), not a separate MixinJS configuration file or a system-property bypass. Enabling it does not enable script reflection or ASM access. See [Configuration](configuration_us) for the separate engine, Probe, and AI settings.
 
 Set the value before launching and **fully restart** after changing it, including when turning it off. Script reload and Probe do not toggle it. While disabled, automatic startup preparation, loader admission, installed native callback slots and installed-hook Probe overloads remain inactive; declaration editing, Probe editor declarations and offline validation/build tooling stay usable. Existing generated carriers or cache files do not enable execution by themselves.
 
@@ -53,7 +53,7 @@ Mixin.target("net.minecraft.world.entity.LivingEntity", target => {
 });
 ```
 
-The class and method names must match the **exact runtime namespace** of the class bytes supplied to the tool. Do not assume these example names, or development mapping names, apply to every version and loader.
+The class and method names must match the **exact runtime namespace** of the class bytes supplied to the tool. Do not assume these example names, or development mapping names, apply to every version and loader. An injection targets that exact method implementation, not every override: a subclass override that never calls the targeted superclass method bypasses it. Check the actual receiver and override chain; `require = 1` and Probe completion do not prove that every virtual call reaches the target.
 
 | Field | Supported values | Default |
 |---|---|---|
@@ -66,7 +66,7 @@ The class and method names must match the **exact runtime namespace** of the cla
 
 A selector needs a complete JVM descriptor: `getMaxHealth()F` takes no arguments and returns float; `tick()V` takes no arguments and returns void. Hook IDs use `namespace:path` and must be unique across loaded carriers.
 
-The offline evaluator has no Java lookup, filesystem, network or process API. Apart from `nekojs/mixin`, only confined relative static imports with explicit extensions are allowed; relative modules currently support side effects, not exports. Dynamic imports, top-level await, asynchronous builders, unknown fields and execution beyond the statement budget fail. Declaration callbacks must synchronously return `undefined`.
+The offline evaluator has no Java lookup, filesystem, network or process API. Apart from `nekojs/mixin`, only confined relative static imports with explicit extensions are allowed; relative modules currently support side effects, not exports. Dynamic imports, top-level await, asynchronous builders, unknown fields and execution beyond the statement budget fail. Declaration callbacks must synchronously return `undefined`. The isolated declaration Context retains a private **100,000-statement budget**; this is not an ordinary script execution limit. The removed `scriptEvaluationTimeoutSeconds`, `scriptStatementLimit`, and `scriptRunawayTimeoutSeconds` engine settings do not configure this evaluator.
 
 <a id="wiki-section-4"></a>
 ## 3. Prepare declarations
@@ -146,7 +146,7 @@ See [Script basics](script-basics_us) and [Commands](commands_us) for script dir
 | Member | Contract |
 |---|---|
 | `self` | Native receiver, or null for a static method. The property is read-only; the native object is not necessarily immutable. |
-| `args` | Read-only native argument tuple; tuple elements cannot be replaced. |
+| `args` | Read-only native argument tuple; neither the property nor tuple elements can be replaced. Referenced native objects/arrays are not deep-frozen. |
 | `returnValue` | Original result at RETURN; no result yet at HEAD. Writable only for cancellable non-void Hooks. |
 | `cancel()` | Available only for cancellable void HEAD Hooks. Non-void HEAD Hooks must supply a return value. |
 
@@ -159,7 +159,7 @@ The control object is valid only during its synchronous callback and expires imm
 
 Supported values are boolean, one UTF-16 code-unit char, range-checked byte/short/int, finite float/double, assignable native references and native arrays. References accept null, and String results accept JavaScript strings. Ordinary JavaScript objects and arrays cannot impersonate arbitrary native references.
 
-Currently unsupported: long/BigInt, constructors, class initializers, abstract/native/synthetic/bridge methods, injection points other than HEAD/RETURN, runtime classpath injection and dynamic reweaving.
+Currently unsupported: signatures containing long (including long arrays), BigInt return replacement, constructors, class initializers, abstract/native/synthetic/bridge methods, injection points other than HEAD/RETURN, runtime classpath injection and dynamic reweaving.
 
 Declaration-editor completion and offline tooling remain available while MixinJS is disabled; the `MixinEvents` helper may still exist without installed callback slots. After running [Probe](probe-type-generation_us), TypeScript receives literal Hook ID overloads and self/argument/result types only when execution is enabled, from **loader-admitted plans**. Pending declarations do not acquire installed-Hook types. If completion is missing, first check the engine opt-in, then whether the carrier loaded and its profile matches.
 
@@ -174,7 +174,7 @@ Declaration-editor completion and offline tooling remain available while MixinJS
 
 See [Error and log reference](error-reference_us) for details. Loader/Mixin transformation failures may be reported by the loader itself rather than these diagnostics.
 
-Common runtime, carrier bytecode, TypeScript and five-node build checks pass. A NeoForge 26.1.2 development headless server also demonstrated automatic preparation, restart, real library discovery, Sponge transformation and one non-cancellable SERVER callback; the 26.2.0 node passed native startup. This is not full client/server, ABI, legacy/Fabric or mapping acceptance. Those checks remain release prerequisites; production admission stays disabled.
+Recorded development evidence includes NeoForge 26.1.2 headless-server automatic preparation, restart, real library discovery, Sponge transformation and one non-cancellable SERVER callback; the 26.2.0 record covers native startup, not a managed-hook fixture. A later local integrated-server control run is also recorded, but does not establish the complete ABI or reload matrix. Offline validation, common/JVM tests, TypeScript checks and node builds are separate from native acceptance; historical results do not establish acceptance for other profiles. Full client/server, static/ABI, legacy/Fabric and production-mapping acceptance remain incomplete; production admission stays disabled.
 
 <!-- wiki-nav -->
 

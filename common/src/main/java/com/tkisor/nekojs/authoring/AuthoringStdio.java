@@ -26,7 +26,7 @@ final class AuthoringStdio {
     void run(InputStream input, OutputStream output, PrintStream diagnostics) throws IOException {
         Objects.requireNonNull(input); Objects.requireNonNull(output); Objects.requireNonNull(diagnostics);
         BufferedInputStream buffered = new BufferedInputStream(input);
-        try (AuthoringMcp mcp = new AuthoringMcp(bundle, query, (message, error) ->
+        try (AuthoringMcp mcp = new AuthoringMcp(bundle, this::offlineQuery, (message, error) ->
                 diagnostics.println(message + " (" + error.getClass().getName() + ")"))) {
             while (true) {
                 byte[] frame;
@@ -53,6 +53,20 @@ final class AuthoringStdio {
                 if (response != null) send(output, response);
             }
         }
+    }
+
+    private JsonObject offlineQuery(String operation, JsonObject request) {
+        if (List.of("errors", "operation_status").contains(operation)) {
+            throw new AuthoringException(503, "LIVE_STATE_UNAVAILABLE", "/", "Offline stdio has no live diagnostics or operation history.");
+        }
+        JsonObject result = query.apply(operation, request);
+        if (List.of("context", "capabilities").contains(operation)) {
+            result = result.deepCopy();
+            result.remove("testRunReport");
+            JsonObject unavailable = AuthoringJson.obj("available", false, "readOnly", true, "reason", "LIVE_STATE_UNAVAILABLE");
+            result.add("liveQueries", AuthoringJson.obj("errors", unavailable, "operation_status", unavailable.deepCopy(), "testRunReport", unavailable.deepCopy()));
+        }
+        return result;
     }
 
     private static byte[] frame(InputStream input) throws IOException {

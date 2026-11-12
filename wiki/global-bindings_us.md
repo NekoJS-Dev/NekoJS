@@ -205,6 +205,25 @@ const mixed = Text.ofValues(
 ---
 
 
+**`I18n` (CLIENT only)**
+
+Available on all five supported nodes, `I18n` resolves the current client language to a plain string; it is not a SERVER or STARTUP binding.
+
+| Member | Description |
+|---|---|
+| `I18n.translate(key, ...args)` | Translate a full key using active language/resource packs; missing keys remain visible |
+| `I18n.has(key)` | Check the active translation table, including language fallbacks |
+| `I18n.translateWithFallback(key, fallback, ...args)` | Translate an existing key, otherwise format the literal fallback (not a second key) |
+| `I18n.languageCode` / `I18n.rightToLeft` | Read-only current language code and active text direction |
+
+Use Minecraft placeholders such as `%s` or `%1$s`; arguments accept strings, numbers, booleans and null, not arbitrary objects. Re-read/rebuild labels after language or resource changes: this binding does not subscribe to changes or update stored strings. For server-authored text that each receiving player localizes, use `Text.translatable(...)` instead.
+
+```javascript
+// client_scripts/labels.js
+const done = I18n.translate('gui.done')
+console.info(done, I18n.languageCode, I18n.rightToLeft)
+```
+
 <a id="wiki-section-15"></a>
 ## Reading and writing data
 
@@ -330,7 +349,7 @@ Build vanilla selectors in SERVER/TEST scripts (NeoForge 26.x/1.21.1). This comp
 
 ```javascript
 PlayerEvents.loggedIn(event => {
-  const player = event.player
+  const player = event.entity
   const selector = EntitySelectors.allEntities()
     .type('minecraft:cow').isAlive().distance(0, 32)
     .orderNearest().limit(5).create()
@@ -397,7 +416,7 @@ for HUD scripts.
 // server_scripts/boss.js
 PlayerEvents.loggedIn(event => {
   ClientData.sync('boss_hp', { name: 'Example Golem', hp: 0.42 })
-  ClientData.syncTo(event.player, 'personal_quest', { stage: 3 })
+  ClientData.syncTo(event.entity, 'personal_quest', { stage: 3 })
 })
 
 // client_scripts/state.js
@@ -635,7 +654,7 @@ const serverReady = shared.serverReady
 <a id="wiki-section-42"></a>
 ### `Platform`
 
-Bound to the `Platform` class, providing information about the current runtime environment. Query capabilities with `Platform.capabilities()`; the existence of the platform object does not make unimplemented Fabric APIs available.
+The script-facing `Platform` facade provides current runtime information without exposing the internal platform implementation. Query capabilities with `Platform.capabilities()`; the existence of the platform object does not make unimplemented Fabric APIs available.
 
 | Method | Description |
 |---|---|
@@ -647,7 +666,7 @@ Bound to the `Platform` class, providing information about the current runtime e
 | `Platform.isLoaded(modId) → boolean` | Check whether a mod is loaded |
 | `Platform.getInfo(modId) → object` | Information about a mod |
 | `Platform.getList() → array` | List of loaded mods |
-| `Platform.capabilities() → Set<PlatformCapability>` | Platform capabilities (feature flags) |
+| `Platform.capabilities() → List<string>` | Sorted lowercase, hyphenated capability ids, such as `nbt-binary-io`; not native enum values |
 
 ---
 

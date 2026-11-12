@@ -88,7 +88,10 @@ Scan scopes differ: guard rules inspect only `src/**/*.java` (the shared tree); 
 ./gradlew sandboxCheck                       # All-node gate before submitting
 ./gradlew switchVersion -Pnode=26.2.0        # Change active node, then resync the IDE
 ./gradlew :common:check                      # Engine checks
+./gradlew :addons:nekujs:build                # Separate NeoForge 1.21.1 compatibility addon
 ```
+
+**NekuJS is delivered separately:** `:addons:nekujs` is an ordinary addon subproject, not embedded into a node JAR by building NekoJS. Its `build` runs ordinary contracts and auditor tests without third-party JARs; `fixtureTest`, `expandedFixtureTest`, `compatProofTest` and `runTestClient` use external local inputs, defaulting to `addons/nekujs/1211nekujs`, with `-PnekujsFixturesDir=/path/to/fixtures` as an override. Expanded fixtures are a separately selected task; ordinary `build` or static audit does not certify every addon in a running game. Third-party fixtures are not distributed in the artifacts.
 
 The active node is the node compiled/run directly in the IDE, selected by `stonecutter active "…"` in `stonecutter.gradle.kts`.
 

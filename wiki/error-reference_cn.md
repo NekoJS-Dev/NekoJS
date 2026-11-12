@@ -11,6 +11,8 @@
 
 本页查询的是 NekoJS 开发诊断编号，不是所有 Java、模组或网络异常的完整清单。AI HTTP/MCP 的 `CONTROL_DISABLED`、`INDEX_UNAVAILABLE` 等结构化机器码及操作状态见[AI 支持](ai-support_cn#wiki-live-controls)；它们与日志中的 `NEKO-xxxx` 不是同一套编号。报告问题时同时提供 Script Type、源文件/行号、阶段与实际是否提交，不要仅凭一条“已排队”消息判断 reload 成功。
 
+入口求值失败会把该入口标为禁用并记录原因，不能泛化成“任意回调异常都会禁用整个运行时”。事件/定时器回调报告有各自的归属。被宿主取消或资源耗尽终止的 Context 会使所属代失效；恢复需要显式完整 reload，不能靠单文件重跑。
+
 ```
 [NEKO-2004] 脚本输出行数超过 … 行上限，后续输出将被丢弃（防止日志无限增长） — script output line limit reached
 ```
@@ -50,6 +52,7 @@
 | `NEKO-1022` | authoring SERVER committed but postprocessing failed | SERVER 脚本已提交，但配方、脚本包或资源后处理失败 |
 | `NEKO-1023` | authoring live control requires server owner thread | 实时 AI 控制未在服务器所有者线程执行，操作被拒绝 |
 | `NEKO-1024` | authoring live server runtime is no longer current | 实时服务器已停止或更换，旧操作不得在新世界继续执行 |
+| `NEKO-1025` | script property rejected; previous value or default retained | 脚本属性解析失败；保留最近有效值或默认值，警告包含文件、实际行号和原因 |
 
 `NEKO-2001`、`NEKO-2002`、`NEKO-2003`、`NEKO-2005` 已作为普通执行预算诊断退役。原有资源/语句上限、失控 watchdog、求值超时调用点已移除；旧日志仍可能包含这些码。它们保留为历史引用，不是可重新启用的设置，也不应复用给其他含义。`NEKO-2004` 仍有效：它限制输出日志行数，不限制脚本执行。
 
@@ -139,13 +142,15 @@
 | `NEKO-4064` | Script output declaration rejected | 方法显式声明的 TypeScript 返回类型表达式为空 |
 | `NEKO-4065` | Script output view rejected | 输出视图必须是实际实现的公开非泛型接口；原生输入契约不变。 |
 | `NEKO-4066` | Probe declaration retained with incomplete public members | 可选公共签名缺失导致原生方法集无法反射。保留独立成员；详见 `incompleteMembers`，依赖闭包仍不完整。 |
-| `NEKO-4090` | Mixin 准备后需重启，或声明/库被拒绝 | 准备成功后完整重启；其他情况检查缓存选择和归属、加载器实际接纳、精确环境、方法描述符和支持的选项。 参见 [MixinJS 排查指南](mixinjs_cn#wiki-section-9)。 |
+| `NEKO-4090` | Mixin 准备后需重启，或声明/库被拒绝 | 先检查默认关闭的引擎配置 `[mixinjs] enabled`，修改后完整重启；准备成功后也需完整重启。其他情况检查缓存选择和归属、加载器实际接纳、精确环境、方法描述符和支持的选项。参见 [MixinJS 排查指南](mixinjs_cn#wiki-section-9)。 |
 | `NEKO-4091` | Mixin 回调授权或桥接所有权被拒绝 | 使用本地可信候选及回调文件；其他活动根不能替换桥接租约。 |
 | `NEKO-4092` | 原生钩子跳过或回调决策被丢弃 | 检查线程、同步返回、控制对象有效期和严格 ABI 转换。 |
 
 
 <a id="wiki-section-6"></a>
 ## 配方与数据
+
+`NEKO-5190`–`NEKO-5192` 属于明确限定资源形状的粉碎配方导入辅助器；此处不匹配，不能推断同一 addon 的所有 schema 或通用原生 schema 编译器都不受支持。
 
 `NEKO-5240`–`NEKO-5279` 下列条目来自 NekuJS 的配方 schema 导入链路，而不是对所有 KubeJS 附属的兼容承诺。已识别但无法兑现的定义会在 Probe 中显示为 `never`，对应运行时构造被拒绝；先修复或补齐诊断指向的语义，不要修改生成声明来绕过它。
 
@@ -154,6 +159,9 @@
 | `NEKO-5001` | could not convert value to JSON | 无法转换为 JSON |
 | `NEKO-5002` | JSON must be an object | JSON 必须是对象 |
 | `NEKO-5003` | unknown recipe filter key | RecipeFilterAdapter: unknown key |
+| `NEKO-5190` | recipe schema source lacks an expected resource | 配方 schema 来源缺少预期资源 |
+| `NEKO-5191` | imported crushing schema profile differs from the explicitly supported resource shape | 导入的粉碎配方 schema 与明确支持的资源形状不同 |
+| `NEKO-5192` | recipe schema source parsing or validation failed | 配方 schema 来源解析或校验失败 |
 | `NEKO-5200` | selected recipe method threw a checked exception; no overload or schema fallback | 已选配方方法抛出受检异常，保留原因，不再尝试重载或 schema 回退 |
 | `NEKO-5201` | selected recipe method is inaccessible; invocation rejected | 已选配方方法不可访问，调用被拒绝 |
 | `NEKO-5202` | native type adapter acceptance or conversion failed; original cause preserved, not an overload mismatch | 原生类型适配器判定或转换失败，保留原始原因，不作为重载不匹配处理 |

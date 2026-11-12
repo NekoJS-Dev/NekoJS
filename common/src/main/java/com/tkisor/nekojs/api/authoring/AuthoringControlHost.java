@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.api.authoring;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.testing.TestRunReport;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
@@ -65,5 +67,9 @@ public interface AuthoringControlHost {
 
     record CommandResult(int returnValue, boolean success) {}
 
-    record ReloadResult(boolean committed, boolean postprocessingSucceeded) {}
+    record ReloadResult(boolean committed, boolean postprocessingSucceeded, @Nullable TestRunReport testRunReport) {
+        public ReloadResult(boolean committed, boolean postprocessingSucceeded) {
+            this(committed, postprocessingSucceeded, null);
+        }
+    }
 }

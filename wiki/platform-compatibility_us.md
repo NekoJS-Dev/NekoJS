@@ -48,6 +48,8 @@ The node graph is source/build evidence, not release or live-game acceptance evi
 
 Enchantments in 26.x use data-driven registries. The runtime registration builder from 1.21.1 cannot be reused; use a data pack instead. A builder retained in the source code does not mean that a 26.x registration path is available.
 
+**Optional addons are not cross-platform features:** NekuJS is a separately installed NeoForge 1.21.1 compatibility addon, not part of the core JAR or evidence that KubeJS addons work on Fabric/26.x. MixinJS is default-off and retains development-only/exact-profile restrictions even after opt-in; it is distinct from NekoJS’s own implementation Mixins. See [Recipe system](recipe-system_us) and [MixinJS](mixinjs_us).
+
 **Client rendering is not one feature flag.** Painter `hud` / `screenRender` exists on Fabric too; named `hudRender` / `worldRender` and post effects are NeoForge-only. NeoForge 26.2 `ctx.line` / `ctx.box` now submit through an independently owned staged buffer; 1.21.1/26.1.2 use their corresponding paths. Submission regressions do not establish GPU visual acceptance. JSX `ClientUI` is NeoForge 26.x only. See [Client rendering and post effects](client-rendering_us) and [JSX client UI](jsx-client-ui_us) for activation, lifecycle, and limits.
 
 <a id="wiki-section-3-issue4"></a>

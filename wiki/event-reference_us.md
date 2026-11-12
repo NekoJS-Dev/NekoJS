@@ -237,7 +237,7 @@ PlayerEvents.inventoryChanged('minecraft:diamond', event => {
 
 ```javascript
 PlayerEvents.loggedIn(event => {
-  const player = event.getEntity()
+  const player = event.entity
   player.displayClientMessage(Text.of(`欢迎，${player.getName().getString()}！`), false)
 })
 
@@ -308,8 +308,7 @@ BlockEvents.blockEntityTick('minecraft:furnace', event => {
 <a id="wiki-section-10"></a>
 ### BlockEvents.modification - runtime block property modification
 
-Fires on every server startup and `/nekojs reload server`. Before reload, all previous modifications are automatically restored (restore the snapshot, then replay),
-so removing a `modify` declaration automatically reverts that change on the next reload. Modifiable properties follow below; unset properties retain their original values. An unset getter reads the current value, so it can be read before being changed:
+Initial startup collects a validated plan; full SERVER reload collects declarations in the candidate without changing active properties. At successful commit, the owner restores its baselines and applies the complete replacement plan. Removing a `modify` declaration therefore reverts it on the next **successful** reload; a failed candidate keeps the active plan. This does not roll back arbitrary Java/world/file effects. Modifiable properties follow below; an unset getter reads the current value, so it can be read before being changed:
 
 | Property | Type | Description |
 |---|---|---|
@@ -339,9 +338,7 @@ BlockEvents.modification(event => {
 })
 ```
 
-> **Visibility**: changes are written to block properties and **all existing block states**, taking effect immediately on the server for mining, explosions, drop decisions, etc.
-> They are **not actively synchronized to clients**. Visual changes such as light levels become visible after reentering the world or resynchronizing chunks. Mining speed
-> is calculated by the server and is unaffected. Supported only on NeoForge 26.x, not currently on 1.12.2 or 1.21.1.
+> **Visibility**: a committed plan updates block properties and **all existing block states** on the server. The current NeoForge 26.x owner also sends its committed Item/Block declarations to connected clients and catches up newly logged-in players; the client validates and applies them. This is declaration synchronization, not a guarantee of immediate chunk relighting or of multiplayer delivery. Block modification remains NeoForge 26.x-only; 1.21.1 supports item modification, not this block surface.
 
 
 ```javascript
@@ -368,8 +365,7 @@ BlockEvents.broken('minecraft:diamond_ore', event => {
 
 > **Cleanroom 1.12.2 differences**: `dropped` now uses the canonical name (`ItemTossEvent`); `expire` (`ItemExpireEvent`) is also available. There is no separate Pre variant: `pickedUp`/`canPickUp` bind to the same event (`pickedUpPre` is deprecated and never existed on 1.12.2). `tooltip` is a server event on 1.12.2. `modification` is unsupported on 1.12.2, where item properties use a field model and need a separate adapter.
 
-**Default item property modification example** (`ItemEvents.modification`, fired on each server startup and `/nekojs reload server`;
-previous changes are restored before reload, so removing a `modify` declaration automatically removes that change on the next reload):
+**Default item property modification example** (`ItemEvents.modification`, collected at server startup and during full SERVER candidate reload; a successful commit replaces the owned plan, while a failed candidate preserves the active plan. Removing a `modify` declaration takes effect on the next successful reload):
 
 ```javascript
 // server_scripts/item_mods.js
@@ -410,13 +406,13 @@ ItemEvents.modification(event => {
 })
 ```
 
-**Tooltip modification example** (place in `client_scripts`):
+**Tooltip modification example** (NeoForge `client_scripts`; mutate the native event's `toolTip` list, not an invented `event.add` helper):
 
 ```javascript
 // client_scripts/tooltips.js
 ItemEvents.tooltip('minecraft:diamond', event => {
-  event.add(Text.of('闪耀夺目').setStyle(/* ... */))
-  event.add('第二行普通文本')
+  event.toolTip.add(Component.literal('闪耀夺目'))
+  event.toolTip.add(Component.literal('第二行普通文本'))
 })
 ```
 
@@ -581,10 +577,12 @@ Each owner must hold its storage and manage its lifecycle, saving, and synchroni
 `event` is Brigadier's `RegisterCommandsEvent`. Use `event.getDispatcher()` to register commands:
 
 ```javascript
+const Commands = Java.type('net.minecraft.commands.Commands')
+
 CommandEvents.register(event => {
   const dispatcher = event.getDispatcher()
   dispatcher.register(
-    dispatcher.literal('hello')                // Brigadier builder chain
+    Commands.literal('hello')                // Native Brigadier builder
       .executes(ctx => {
         ctx.getSource().sendSuccess(() => Text.of('你好！'), false)
         return 1
@@ -735,6 +733,7 @@ Append AI goals to existing entity types. See [Registering new content - GoalEve
 | `registerParticleProviders` | `RegisterParticleProvidersEvent` | Register particle providers. |
 | **`generateAssets` (NeoForge only)** | `DataGeneratorJS` | **Asset generation**: write asset JSON (models/textures/recipe categories, etc.) to `nekojs/assets`. |
 | **`lang` (dispatched, NeoForge only)** | `LangGeneratorJS` | **Language entries**: collect translations by language code, such as `'zh_cn'`, which is the dispatch key. |
+| `postEffects` (NeoForge only) | `PostEffectEventJS` | Collect generation-owned post-processing declarations through `register`/`unregister`; runtime selection stays on `PostEffects`. See [Client rendering](client-rendering_us). |
 | **`hud`** | `PainterJS` | **HUD drawing** after GUI rendering on each frame (NeoForge/Fabric 26.x). |
 | **`hudRender`** | Registration-based | **HUD renderer registration** (NeoForge only, layer × priority; see below). |
 | **`worldRender`** | Registration-based | **World-space rendering** (NeoForge only, 3D lines/wireframes; see below). |

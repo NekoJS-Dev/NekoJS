@@ -22,6 +22,8 @@ public final class AuthoringRuntime implements AutoCloseable {
     private final AuthoringQuery query;
     private final AuthoringControl controls;
     private volatile com.tkisor.nekojs.api.authoring.AuthoringControlHost liveHost;
+    private volatile java.util.function.Supplier<List<com.tkisor.nekojs.core.error.ScriptDiagnosticRecord>> diagnostics;
+    private volatile java.util.function.Supplier<com.tkisor.nekojs.api.testing.TestRunReport> latestTest;
     private final Path snapshotDirectory;
     private final String instanceId = UUID.randomUUID().toString();
     private final Thread shutdownHook;
@@ -57,7 +59,7 @@ public final class AuthoringRuntime implements AutoCloseable {
             if (runtime.config.http() || runtime.config.mcp()) {
                 Path tokenFile = paths.verifyInsideNekoRootForCreate(paths.config().resolve("ai.token"));
                 String token = token(tokenFile);
-                runtime.listener = new AuthoringHttpServer(runtime.config.port(), token, runtime.config.http(), runtime.config.mcp(), runtime.bundle, runtime::execute, runtime.controls::available);
+                runtime.listener = new AuthoringHttpServer(runtime.config.port(), token, runtime.config.http(), runtime.config.mcp(), runtime.bundle, runtime::execute, runtime.controls::available, runtime::liveQueryAvailable);
             }
             runtime.writeConnection(runtime.listener != null);
             Runtime.getRuntime().addShutdownHook(runtime.shutdownHook);
@@ -71,7 +73,8 @@ public final class AuthoringRuntime implements AutoCloseable {
 
     public JsonObject execute(String operation, JsonObject request) {
         if (closed) throw new AuthoringException(503, "SERVICE_CLOSED", "/", "Authoring service is closed.");
-        if (operation.equals(AuthoringControl.EXECUTE_COMMAND) || operation.equals(AuthoringControl.RELOAD_SCRIPTS)) {
+        if (operation.equals("errors")) return errors(request);
+        if (operation.equals("operation_status") || operation.equals(AuthoringControl.EXECUTE_COMMAND) || operation.equals(AuthoringControl.RELOAD_SCRIPTS)) {
             return controls.execute(operation, request);
         }
         if (operation.equals("context")) AuthoringJson.keys(request, "");
@@ -88,7 +91,16 @@ public final class AuthoringRuntime implements AutoCloseable {
         }
         if (operation.equals("context")) return context();
         JsonObject result = query.execute(operation, request);
-        if (operation.equals("capabilities")) result.add("liveControls", controlCapabilities());
+        if (operation.equals("capabilities")) {
+            result.add("liveControls", controlCapabilities());
+            result.add("liveQueries", liveQueryCapabilities());
+            for (String name : List.of("errors", "operation_status")) {
+                if (liveQueryAvailable(name)) result.getAsJsonArray("operations").add(name);
+            }
+        }
+        if (operation.equals("schema")) {
+            for (String name : List.of("errors", "operation_status")) result.getAsJsonObject("operations").add(name, AuthoringSchema.input(name));
+        }
         return result;
     }
 
@@ -99,6 +111,9 @@ public final class AuthoringRuntime implements AutoCloseable {
         state.add("documentation", AuthoringJson.obj("bundleId", bundle.id(), "version", bundle.manifest().get("version"), "language", "en"));
         if (!config.api()) state.addProperty("indexState", "disabled");
         state.add("liveControls", controlCapabilities());
+        state.add("liveQueries", liveQueryCapabilities());
+        var supplier = latestTest;
+        state.add("testRunReport", AuthoringControl.testRunReport(supplier == null ? null : supplier.get()));
         return state;
     }
 
@@ -163,6 +178,95 @@ public final class AuthoringRuntime implements AutoCloseable {
         liveHost = Objects.requireNonNull(host);
     }
 
+    /** Installs the root-owned frozen diagnostic view once; no owner-thread work is dispatched by queries. */
+    public void installDiagnostics(java.util.function.Supplier<List<com.tkisor.nekojs.core.error.ScriptDiagnosticRecord>> supplier) {
+        installDiagnostics(supplier, null);
+    }
+
+    public synchronized void installDiagnostics(java.util.function.Supplier<List<com.tkisor.nekojs.core.error.ScriptDiagnosticRecord>> supplier,
+                                                java.util.function.Supplier<com.tkisor.nekojs.api.testing.TestRunReport> latestTestSupplier) {
+        if (closed || diagnostics != null) throw new IllegalStateException("[NEKO-1019] Authoring diagnostics are closed or already installed.");
+        diagnostics = Objects.requireNonNull(supplier);
+        latestTest = latestTestSupplier;
+    }
+
+    private boolean liveQueryAvailable(String operation) {
+        return !closed && (operation.equals("operation_status") || operation.equals("errors") && diagnostics != null);
+    }
+
+    private JsonObject liveQueryCapabilities() {
+        return AuthoringJson.obj("errors", AuthoringJson.obj("available", !closed && diagnostics != null,
+                        "readOnly", true, "maxLimit", 100, "defaultLimit", 25, "maxResponseBytes", 20 * 1024),
+                "operation_status", AuthoringJson.obj("available", !closed, "readOnly", true),
+                "testRunReport", AuthoringJson.obj("available", !closed && latestTest != null, "readOnly", true, "query", "context"));
+    }
+
+    private JsonObject errors(JsonObject request) {
+        AuthoringJson.keys(request, "", "scriptType", "limit");
+        com.tkisor.nekojs.api.ScriptType type = null;
+        if (request.has("scriptType")) {
+            try { type = com.tkisor.nekojs.api.ScriptType.valueOf(AuthoringJson.string(request, "scriptType", "")); }
+            catch (IllegalArgumentException invalid) { throw AuthoringJson.invalid("/scriptType", "Expected STARTUP, SERVER, CLIENT or TEST."); }
+        }
+        int limit = request.has("limit") ? AuthoringJson.integer(request.get("limit"), "/limit", 1, 100) : 25;
+        var supplier = diagnostics;
+        if (supplier == null) return AuthoringJson.obj("available", false, "reason", "DIAGNOSTICS_UNAVAILABLE");
+        List<com.tkisor.nekojs.core.error.ScriptDiagnosticRecord> records;
+        int sourceSize;
+        try {
+            var supplied = Objects.requireNonNull(supplier.get());
+            sourceSize = supplied.size();
+            records = List.copyOf(supplied.subList(0, Math.min(sourceSize, 10000)));
+        } catch (RuntimeException unavailable) {
+            NekoJS.LOGGER.warn("[NEKO-1019] Authoring diagnostics unavailable; frozen records could not be read (failureType={})", unavailable.getClass().getSimpleName());
+            return AuthoringJson.obj("available", false, "reason", "DIAGNOSTICS_UNAVAILABLE");
+        }
+        if (closed) throw new AuthoringException(503, "SERVICE_CLOSED", "/", "Authoring service is closed.");
+        com.google.gson.JsonArray rows = new com.google.gson.JsonArray();
+        int matches = 0;
+        int bytes = 2;
+        for (var record : records) {
+            if (type != null && record.scriptType() != type) continue;
+            matches++;
+            if (rows.size() >= limit) continue;
+            String message = bounded(record.message(), 1024);
+            JsonObject row = AuthoringJson.obj("errorId", bounded(record.errorId(), 512), "scriptType", record.scriptType().name(),
+                    "phase", record.phase().name(), "owner", bounded(record.owner(), 128), "generation", record.generation(),
+                    "recordedDuringCandidate", record.recordedDuringCandidate(), "sourcePath", relativeDiagnosticPath(record.sourcePath()),
+                    "line", record.line(), "column", record.column(), "message", message,
+                    "messageTruncated", !message.equals(record.message()));
+            int size = row.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length + 1;
+            if (bytes + size > 19 * 1024) continue;
+            rows.add(row);
+            bytes += size;
+        }
+        boolean complete = sourceSize == records.size();
+        return AuthoringJson.obj("available", true, "errors", rows, "returned", rows.size(),
+                "total", complete ? matches : null, "totalIsExact", complete, "scanned", records.size(),
+                "truncated", !complete || matches > rows.size(), "messagesAreUntrusted", true);
+    }
+
+    private static String bounded(String value, int limit) {
+        return value.length() <= limit ? value : value.substring(0, limit);
+    }
+
+    private String relativeDiagnosticPath(String source) {
+        if (source == null || source.length() > 2048) return null;
+        try {
+            Path path = source.startsWith("file:") ? Path.of(java.net.URI.create(source)) : Path.of(source);
+            Path game = paths.gameDir().toAbsolutePath().normalize();
+            if (!path.isAbsolute()) {
+                path = path.startsWith(paths.root().getFileName()) ? game.resolve(path) : paths.root().resolve(path);
+            }
+            path = path.toAbsolutePath().normalize();
+            if (!path.startsWith(game)) return null;
+            String relative = game.relativize(path).toString().replace('\\', '/');
+            return relative.length() <= 1024 ? relative : null;
+        } catch (IllegalArgumentException invalid) {
+            return null;
+        }
+    }
+
     /** Stops mutations before script managers are torn down, without waiting for owner-thread work. */
     public void stopControls() { controls.close(); }
 
@@ -211,6 +315,8 @@ public final class AuthoringRuntime implements AutoCloseable {
         synchronized (this) {
             if (closed) return;
             closed = true;
+            diagnostics = null;
+            latestTest = null;
         }
         controls.close();
         if (probeBinding != null) {

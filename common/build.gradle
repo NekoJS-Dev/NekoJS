@@ -85,6 +85,8 @@ dependencies {
     testRuntimeOnly libs.slf4j.api
     testRuntimeOnly libs.log4j.api
     testRuntimeOnly libs.log4j.core
+    // Exercise production SLF4J diagnostics in standalone tests instead of a NOP logger.
+    testRuntimeOnly libs.log4j.slf4j2.impl
     testRuntimeOnly libs.icu4j
     // night-config：ProbeConfigLoader（probe.toml 读写）依赖；游戏内由平台提供，独立测试需注入
     testRuntimeOnly libs.night.config.core

@@ -51,9 +51,35 @@ public final class RuntimeCommandResultFormatter {
         if (!result.isConfigured()) {
             return "NekoJS TEST scripts are not configured.";
         }
-        return result.isCompleted()
-                ? "NekoJS TEST scripts completed."
-                : "NekoJS TEST scripts did not complete.";
+        if (!result.isCompleted()) return "NekoJS TEST scripts did not complete.";
+        var report = result.testRunReport();
+        if (report == null) return "NekoJS TEST scripts completed; assertion results are unavailable.";
+        String assertions = report.assertionsPassed() == null ? "not observed"
+                : report.assertionsPassed() ? "passed" : "failed";
+        return "NekoJS TEST execution completed=" + report.executionCompleted()
+                + " executionSucceeded=" + report.executionSucceeded()
+                + "; assertions " + assertions + ": passed=" + report.passed() + " failed=" + report.failed() + ".";
+    }
+
+    public static boolean testExecutionSucceeded(NekoRuntimeRoot.TestRunResult result) {
+        var report = result.testRunReport();
+        return result.isConfigured() && result.isCompleted() && (report == null
+                || (report.executionSucceeded() && !Boolean.FALSE.equals(report.assertionsPassed())));
+    }
+
+    public static String testResultKey(NekoRuntimeRoot.TestRunResult result) {
+        if (!result.isConfigured()) return "nekojs.command.test.not_configured";
+        if (!result.isCompleted()) return "nekojs.command.test.incomplete";
+        var report = result.testRunReport();
+        if (report == null) return "nekojs.command.test.unavailable";
+        if (!report.executionSucceeded()) return "nekojs.command.test.execution_failed";
+        if (Boolean.FALSE.equals(report.assertionsPassed())) return "nekojs.command.test.assertions_failed";
+        return report.assertionsPassed() == null ? "nekojs.command.test.no_assertions" : "nekojs.command.test.passed";
+    }
+
+    public static Object[] testResultArguments(NekoRuntimeRoot.TestRunResult result) {
+        var report = result.testRunReport();
+        return report == null ? new Object[] {0, 0} : new Object[] {report.passed(), report.failed()};
     }
 
     private static String source(String sourceLocation) {

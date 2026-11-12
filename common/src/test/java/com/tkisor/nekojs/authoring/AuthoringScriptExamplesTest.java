@@ -92,7 +92,7 @@ class AuthoringScriptExamplesTest {
     }
 
     @Test
-    void loginExampleUsesThePlayerPropertyOnlyWhenTheEventFires() throws Exception {
+    void loginExampleUsesTheDocumentedFabricPlayerVariantOnlyWhenTheEventFires() throws Exception {
         try (Context context = context("""
                 globalThis.callbacks = [];
                 globalThis.PlayerEvents = {loggedIn: callback => callbacks.push(callback)};
@@ -100,11 +100,31 @@ class AuthoringScriptExamplesTest {
                 globalThis.playerReads = 0;
                 globalThis.login = {get player() {playerReads++; return {sendMessage: text => sent.push(text)};}};
                 """)) {
-            run(context, "server/player-login.js");
+            context.eval("js", documentedFabricLoginVariant(AuthoringBundle.load().read("examples/server/player-login.js")));
             assertEquals(1, context.eval("js", "callbacks.length").asInt());
             assertEquals(0, context.eval("js", "playerReads").asInt());
             context.eval("js", "callbacks[0](login)");
             assertEquals(1, context.eval("js", "playerReads").asInt());
+            assertEquals("Welcome to NekoJS!", context.eval("js", "sent[0]").asString());
+            assertEquals(1, context.eval("js", "sent.length").asInt());
+        }
+    }
+
+    @Test
+    void loginExampleUsesTheEntityPropertyForTheNativeNeoForgePayload() throws Exception {
+        try (Context context = context("""
+                globalThis.callbacks = [];
+                globalThis.PlayerEvents = {loggedIn: callback => callbacks.push(callback)};
+                globalThis.sent = [];
+                globalThis.entityReads = 0;
+                globalThis.login = {get entity() {entityReads++; return {sendMessage: text => sent.push(text)};}};
+                """)) {
+            run(context, "server/player-login.js");
+            assertEquals(1, context.eval("js", "callbacks.length").asInt());
+            assertEquals(0, context.eval("js", "entityReads").asInt());
+            assertEquals(0, context.eval("js", "sent.length").asInt());
+            context.eval("js", "callbacks[0](login)");
+            assertEquals(1, context.eval("js", "entityReads").asInt());
             assertEquals("Welcome to NekoJS!", context.eval("js", "sent[0]").asString());
             assertEquals(1, context.eval("js", "sent.length").asInt());
         }
@@ -222,6 +242,16 @@ class AuthoringScriptExamplesTest {
         Context context = Context.newBuilder("js").build();
         context.eval("js", "globalThis.messages = []; globalThis.console = {info: text => messages.push(String(text))}; " + fixtures);
         return context;
+    }
+
+    static String documentedFabricLoginVariant(String canonicalSource) {
+        assertTrue(canonicalSource.contains("// NeoForge default. On Fabric, replace the entity property below with player."),
+                "The installed-copy adaptation must be documented by the actual shipped resource");
+        int occurrence = canonicalSource.indexOf("event.entity");
+        assertTrue(occurrence >= 0, "The NeoForge source must contain its native payload property");
+        assertEquals(occurrence, canonicalSource.lastIndexOf("event.entity"),
+                "The documented Fabric adaptation must replace exactly one property occurrence");
+        return canonicalSource.replace("event.entity", "event.player");
     }
 
     private static void run(Context context, String file) throws Exception {

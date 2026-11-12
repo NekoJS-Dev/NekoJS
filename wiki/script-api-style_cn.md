@@ -14,11 +14,13 @@ NekoJS 的脚本入口以**事件组、命名 Binding、事件对象上的操作
 
 
 ```js
-// server_scripts/welcome.js
+// server_scripts/welcome.js (NeoForge)
 PlayerEvents.loggedIn(event => {
-    event.player.sendMessage("Welcome to NekoJS!");
+    event.entity.sendMessage("Welcome to NekoJS!");
 });
 ```
+
+这个登录示例面向 NeoForge：原生 PlayerEvent 的 `getEntity()` 对应 `event.entity`。Fabric 的中立登录对象使用 `event.player`；同名 Script Event 不表示回调对象成员完全一致。
 
 回调内的数据和事件操作从 event 取得，一般用途的帮助方法从 Binding 取得。事件触发时机、可取消性、Script Type 与平台支持必须分别查看[事件参考](event-reference_cn)，不能从名称猜测。
 

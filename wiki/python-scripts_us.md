@@ -25,6 +25,8 @@ print('[NekoJS] Python script loaded')
 
 Enter a world or run `/nekojs reload`; this message is printed when the script loads. `ServerEvents.started(...)`, by contrast, fires when the server finishes starting, not on every script reload.
 
+**File-property limitation:** `# priority:`, `# after:`, `# modloaded:` and `# disable:` comments are not read as script properties. The preloader recognizes only leading `//` headers, which are not Python comments; do not copy JavaScript property headers into runnable `.py` source. See [Script properties](script-properties_us).
+
 <a id="wiki-section-3"></a>
 ### Enabling Python type hints
 
@@ -241,7 +243,7 @@ unique = {1, 2, 2, 3}     # Set → new Set([1, 2, 2, 3])
 <a id="wiki-section-14"></a>
 ### Keyword arguments (**kwargs)
 
-Functions declaring `**kwargs` collect keyword arguments into a dict. At the call site, keyword arguments become a trailing marked object `{name: value, __nekoKw: true}`; the function starts with a prologue that rebuilds bindings according to Python rules: **positional arguments take precedence over keyword arguments, which take precedence over defaults**. `*args` collects extra positional arguments, and `**kwargs` collects remaining keyword arguments (those already assigned to named parameters are not added to kwargs).
+Functions declaring `**kwargs` collect keyword arguments into a dict. At the call site, keyword arguments become a trailing marked object `{name: value, __nekoKw: true}`; the function prologue uses **NekoJS's binding convention: positional arguments take precedence over keyword arguments, which take precedence over defaults**. `*args` collects extra positional arguments, and `**kwargs` collects remaining keywords. Unlike Python, duplicate positional/keyword bindings are not rejected; missing required arguments may become `undefined`.
 
 ```python
 def g(x, y=10, *rest, **kw):
@@ -294,8 +296,8 @@ Key points:
 - Class method decorators support `@staticmethod`/`@classmethod`/`@property` (others report explicit errors); see "Decorators" for top-level function and class decorators.
 - `@classmethod` lowers to a `static` method with `var cls = this` at the beginning (`cls` is the class when called as `Class.method()`).
 - `@property` lowers to a JS getter (`get name() { ... }`, read-only, no setter).
-- Instantiating a user-defined class with `Cat('Tom')` automatically lowers to `new Cat('Tom')`.
-- Ordinary assignments in a class body (`class C: x = 5`) lower to ES2022 **static class fields** `static x = 5;` (accessed as `C.x`, matching Python class attribute semantics); **multiple assignment / tuple unpacking** in class bodies fails at compile time.
+- Instantiating a compiler-known class with `Cat('Tom')` lowers to `new Cat('Tom')`; this does not generalize to arbitrary imported or aliased constructor values. Only single inheritance is supported; multiple bases and metaclass-style class arguments are unsupported.
+- Simple class-body assignments (`class C: x = 5`) lower to ES2022 **instance fields** `x = 5;`, accessed through `self.x` / `C().x`, not static `C.x`. Initializers run per instance, not as Python shared class attributes. Multiple assignment / tuple unpacking in class bodies is unsupported.
 - Class docstrings (bare string statements in the class body) lower to `// docstring:` comments with no runtime effect.
 
 <a id="wiki-section-16"></a>
@@ -380,7 +382,7 @@ def describe(point):
 
 Supported patterns: literals (`1`/`'x'`/`True`/`None`/`-1`), wildcard `_`, name captures, `\|` OR patterns (`1 | 2 | 3`), sequence patterns (`[a, *r, b]`, with `*` in any position), mapping patterns (`{'k': v, **rest}`), class patterns (`Cls()` or keyword forms such as `Cls(x=p)`), and `case ... if guard`.
 
-> Limits: class patterns support only **keyword** subpatterns `Cls(attr=pat)` (positional subpatterns require `__match_args__`, which is unsupported). `match` is a soft keyword: it is treated as a match statement only if the line can be scanned as `<subject> :`, so `match` can still be an ordinary variable name (`match = 5`, bare `match`, or a `match(x)` call).
+> Limits: this is a pattern subset, not full PEP 634. Mapping patterns require literal string/number keys and capture-name values; do not rely on capture bindings inside OR alternatives. Class patterns support only **keyword** subpatterns `Cls(attr=pat)` (positional subpatterns require `__match_args__`, which is unsupported). `match` is a soft keyword: it is treated as a match statement only if the line can be scanned as `<subject> :`, so `match` can still be an ordinary variable name (`match = 5`, bare `match`, or a `match(x)` call).
 
 <a id="wiki-section-20"></a>
 ### Modules and import
@@ -410,6 +412,7 @@ Key points:
 - Each `.py` file automatically **exports all its top-level definitions** (`def`/`class`/top-level assignment names), so sibling files can directly use `from <file> import <name>` without any additional declaration.
 - `from X import *` is **unsupported** (ESM cannot expand a namespace into the current scope). The sole exception is `from nekojs import *` (and named `from nekojs import name`), which is **silently stripped** (nekojs is the type stub entry for IDE/pyright, with no runtime meaning).
 - Imports must be at **module top level**, not inside function/class bodies.
+- Use dotted module names and unparenthesized named imports. Leading-dot Python syntax (`from .foo ...`) and parenthesized import lists are unsupported. `import a.b.c` binds the leaf name `c`, not the Python package root `a`; use an explicit alias for clarity.
 
 > Globals injected by NekoJS (`ServerEvents`, `Item`, `Utils`, …) remain in global scope and can be used directly by name (`ServerEvents.started(...)`), with no import required.
 
@@ -455,6 +458,8 @@ Key points:
 | `frozenset(x)` | `new Set(x)` | JS has no immutable set; returns an ordinary Set |
 
 Built-in `isinstance` probes use JS storage: `float` accepts all JS numbers (including integer-valued ones), list/tuple share arrays, set/frozenset share `Set`, and dict checks a plain object constructor. These are not separate CPython object types.
+
+Iterable builtins use JS iterables, not the full Python iteration protocol. Plain dicts become key sequences in `for`/comprehensions, but not automatically in `list(d)` or `iter(d)`; use explicit supported `keys()` / `items()` forms.
 
 > Common **str/list/dict/set methods** are mapped to JS equivalents (see "Method mappings" below). Unmapped methods pass through unchanged as `obj.method(args)` (and still work if JS has a method with the same name).
 
@@ -531,6 +536,7 @@ The transpiler tries to follow Python semantics, but the underlying runtime is J
 | **`**` exponentiation** | `a ** b` passes directly through to JS `**`, with the same semantics. |
 | **`in` / `not in`** | `x in coll` → `__nekoIn(x, coll)`: array/string `.includes`, own keys of dict (JS objects), `Map`/`Set` `.has`. **No workaround is needed** for dictionary key membership (chained membership `a in b in c` also uses the helper). |
 | **`is` / `is not`** | Passes through as JS `===` / `!==` (strict equality). `None` maps to `null`, so `x is None` is equivalent to `x === null`. |
+| **Chained comparisons** | Short-circuit, but a middle operand can be evaluated more than once. Store side-effecting calls in a temporary before comparing. |
 | **`==` / `!=`** | JS strict equality `===` / `!==`; arrays/dictionaries compare by identity, not Python structural equality. |
 | **`and` / `or`** | `__nekoAnd` / `__nekoOr` helpers: short-circuit evaluation + operand values returned + **Python truthiness** (`[] or 'y'` yields `'y'`). |
 | **Integer precision** | Python `int` has arbitrary precision; JS only has double-precision floating-point Number. Integers `> 2^53` lose precision, and `int(x)` has this limit too. Ordinary integer arithmetic is unaffected. |

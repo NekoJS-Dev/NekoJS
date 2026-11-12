@@ -28,6 +28,8 @@ public final class AuthoringSchema {
                 object(AuthoringJson.obj("some", object(AuthoringJson.obj("path", string(), "where", ref), "path", "where")), "some"), comparison));
     }
     public static JsonObject input(String operation) {
+        if (operation.equals("errors")) return object(AuthoringJson.obj("scriptType", enumeration("STARTUP", "SERVER", "CLIENT", "TEST"), "limit", integer(1, 100)));
+        if (operation.equals("operation_status")) return object(AuthoringJson.obj("operationId", AuthoringJson.obj("type", "string", "format", "uuid", "minLength", 36, "maxLength", 36)), "operationId");
         if (List.of("context", "capabilities", "schema").contains(operation)) return object(new JsonObject());
         JsonObject scope = object(AuthoringJson.obj("environmentId", string(), "snapshotId", string(),
                 "scriptType", enumeration("STARTUP", "SERVER", "CLIENT", "TEST"), "language", enumeration("typescript"),

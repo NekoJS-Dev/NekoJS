@@ -47,10 +47,11 @@
       "file": "server/player-login.js",
       "scriptType": "SERVER",
       "language": "javascript",
-      "verification": "isolated-contract",
+      "verification": "real-engine-with-platform-fixture",
       "requires": [
+        "NeoForge 1.21.1/26.x for the unchanged source; Fabric requires the documented entity-to-player property adaptation",
         "PlayerEvents.loggedIn",
-        "event.player",
+        "event.entity (NeoForge) or event.player (adapted Fabric variant)",
         "player.sendMessage"
       ],
       "install": [
@@ -61,7 +62,7 @@
       ],
       "trigger": "/nekojs reload server, then log in or reconnect.",
       "expected": "Each future login receives Welcome to NekoJS! once.",
-      "assertion": "The callback reads the player Bean property and sends the exact greeting once.",
+      "assertion": "The real module pipeline executes the unchanged NeoForge source and the documented single-property Fabric adaptation with Java Bean event fixtures. Each future callback sends the exact greeting once; loading does not read the payload or send a message. This does not certify native loader dispatch or gameplay.",
       "cleanup": "Remove this script and reload SERVER; existing players are not retrospectively greeted."
     },
     {

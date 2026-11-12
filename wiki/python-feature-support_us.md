@@ -25,8 +25,8 @@
 
 | Feature | PEP | Syntax example | JS transpilation | NekoJS status |
 |---|---|---|---|---|
-| Structural pattern matching `match`/`case` | PEP 634 | `match x:\n  case 1: ...` | Moderate (can lower to an if/else chain) | ✅ (PEP 634, literal/wildcard/capture/`\|`/sequence/mapping/class patterns + guard) |
-| Parenthesized multiple context managers | — | `with (a as x, b as y):` | Easy (multiple `with` items already supported) | ✅ (equivalent to `with a as x, b as y:`) |
+| Structural pattern matching `match`/`case` | PEP 634 subset | `match x:\n  case 1: ...` | Moderate (if/else lowering) | ⚠️ Documented pattern subset; mapping, OR captures and class patterns have limits |
+| Parenthesized multiple context managers | — | `with (a as x, b as y):` | Multiple unparenthesized items are supported | ❌ Parenthesized item lists are not parsed; use `with a as x, b as y:` |
 | `X \| Y` union type annotations | PEP 604 | `def f(x: int \| str)` | Easy (annotations are discarded) | ✅ (annotations discarded) |
 | More precise error locations (with `^` indicators) | — | — | Unrelated to transpilation | — |
 
@@ -90,7 +90,7 @@ The following table lists capabilities commonly wanted in a practical Python scr
 | Feature | Syntax example | Expected JS mapping | NekoJS status |
 |---|---|---|---|
 | Functions `def` (default parameters / `*args` / `**kwargs`) | `def f(a, b=1, *args, **kw):` | `function` (`**kwargs` triggers a prologue) | ✅ |
-| Classes and inheritance | `class C(B):` | JS `class` / `extends` | ✅ |
+| Classes and inheritance | `class C(B):` | JS `class` / `extends` | ⚠️ Single inheritance; class-body assignments are per-instance fields, not shared Python class attributes |
 | `super()` | `super().__init__(x)` | `super(x)` / `super.m()` | ✅ |
 | `@staticmethod` / `@classmethod` | `@staticmethod` / `@classmethod` | `static` methods; classmethod binds `cls=this` | ✅ |
 | Properties `@property` | `@property\ndef x(self):` | JS getter (read-only) | ✅ |
@@ -107,7 +107,7 @@ The following table lists capabilities commonly wanted in a practical Python scr
 | `return` / `break` / `continue` / `pass` | — | Same names | ✅ |
 | `import` / `from ... import` | — | ESM `import` | ✅ |
 | Type annotations (parameters / return / variables) | `x: int = 5` | Parsed then discarded | ✅ (discarded) |
-| `match` / `case` pattern matching | `match x:` | Lowered to an if/else chain | ✅ (literal/wildcard/capture/`\|`/sequence/mapping/class patterns + guard) |
+| `match` / `case` pattern matching | `match x:` | Lowered to an if/else chain | ⚠️ Documented subset, not full PEP 634; see [Python scripts](python-scripts_us) |
 | `async def` / `await` / `async for` / `async with` | — | JS async/await | ❌ (GraalJS supports it, but the value is low) |
 
 <a id="wiki-section-10"></a>
@@ -120,10 +120,10 @@ The following table lists capabilities commonly wanted in a practical Python scr
 | t-strings (3.14) | `t"{x}"` | Template object | ❌ |
 | Attribute / index / call | `a.b` / `a[i]` / `f()` | Same forms | ✅ |
 | Keyword calls | `f(a=1, b=2)` | Trailing marked object + prologue | ✅ (target requires `**kwargs` or the print/sorted/min/max keyword special cases) |
-| Arithmetic / comparison / boolean / bitwise operations | `+ - * / // % **`, `and/or/not`, `& \| ^ ~ << >>` | Corresponding JS (`//`→`Math.floor`) | ✅ |
-| Conditional `a if c else b` | — | `(c ? a : b)` | ✅ |
+| Arithmetic / comparison / boolean / bitwise operations | `+ - * / // % **`, `and/or/not`, `& \| ^ ~ << >>` | Helper-backed arithmetic/truthiness where implemented, otherwise JS operators | ⚠️ Zero division, floor/modulo and sequence repetition have helpers; container bitwise operations are not Python set/dict operations |
+| Conditional `a if c else b` | — | `(__nekoTruthy(c) ? a : b)` | ✅ Uses the subset truthiness helper |
 | `in` / `not in` / `is` / `is not` | — | `__nekoIn` / `===` | ✅ (arrays, strings, dict own keys, and Map/Set) |
-| Chained comparisons | `a < b < c` | `(a<b) && (b<c)` | ✅ |
+| Chained comparisons | `a < b < c` | `(a<b) && (b<c)` | ⚠️ Short-circuits, but middle operands may be evaluated twice; store side-effecting calls first |
 | Slices (arbitrary steps, negative indices) | `xs[::2]`, `xs[::-1]`, `xs[-1]` | Helper / `slice` | ✅ |
 | List / tuple / dictionary / set literals | `[1,2]`, `(1,2)`, `{k:v}`, `{1,2}` | Array / array / object / `Set` | ✅ |
 | `lambda` | `lambda x: x*2` | Arrow function | ✅ (no `**kwargs`) |
@@ -155,7 +155,7 @@ Still unmapped: `id / vars / globals / locals / eval / exec / input / open / com
 | t-strings (3.14) | 🔴 Low | Too new; requires a `Template` type | Skip |
 | Type annotation evaluation | 🔴 Low | Unrelated to the transpilation target (static types) | Always discard |
 
-> High-value extensions **completed** in this round: generators/yield, `with`, nested comprehensions, arbitrary slice steps, f-string format specifiers, `**kwargs` + keyword calls, `assert`/`del`/walrus, `try/else`, bare `raise`, type annotation discarding, extended built-ins, `match`/`case` (all patterns), `@property`/`@classmethod`, and `getattr`/`hasattr`/`setattr`/`delattr`/`iter`/`next`/`frozenset`.
+> High-value extensions **completed** in this round: generators/yield, `with`, nested comprehensions, arbitrary slice steps, f-string format specifiers, `**kwargs` + keyword calls, `assert`/`del`/walrus, `try/else`, bare `raise`, type annotation discarding, extended built-ins, `match`/`case` (the documented pattern subset), `@property`/`@classmethod`, and `getattr`/`hasattr`/`setattr`/`delattr`/`iter`/`next`/`frozenset`.
 
 ---
 
@@ -164,7 +164,7 @@ Still unmapped: `id / vars / globals / locals / eval / exec / input / open / com
 
 | Python construct | ES equivalent | Description |
 |---|---|---|
-| `class` + inheritance | `class` + `extends` | One-to-one mapping |
+| `class` + inheritance | `class` + `extends` | Single inheritance; instance-field/class-construction restrictions differ from Python |
 | Generators / `yield` / `yield from` | `function*` / `yield` / `yield*` | Native GraalJS |
 | `async`/`await` | `async`/`await` | Native GraalJS (script-side event loop required) |
 | `with` (context manager) | No native equivalent → try/finally + `__enter__`/`__exit__` | NekoJS inline lowering |

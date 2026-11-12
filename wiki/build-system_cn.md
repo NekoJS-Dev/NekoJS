@@ -88,7 +88,10 @@ stonecutter {
 ./gradlew sandboxCheck                       # 全节点门禁（提交前）
 ./gradlew switchVersion -Pnode=26.2.0        # 切 active 节点（后需 IDE 重新 sync）
 ./gradlew :common:check                      # 引擎层测试
+./gradlew :addons:nekujs:build                # 独立的 NeoForge 1.21.1 兼容 addon
 ```
+
+**NekuJS 单独交付：** `:addons:nekujs` 是普通 addon 子项目，不会因某个 NekoJS 节点构建就自动嵌入该节点 JAR。其 `build` 运行不需要第三方 JAR 的普通契约和 auditor 测试；`fixtureTest`、`expandedFixtureTest`、`compatProofTest` 和 `runTestClient` 使用本地外部输入，默认目录为 `addons/nekujs/1211nekujs`，可用 `-PnekujsFixturesDir=/path/to/fixtures` 指定。扩展夹具检查是单独选择的任务，不应把普通 `build` 或静态审计当作全部 addon 的实际游戏兼容验收。第三方夹具不随产物分发。
 
 active 节点 = IDE 里直接编译/运行的节点（`stonecutter.gradle.kts` 的 `stonecutter active "…"` 行）。
 

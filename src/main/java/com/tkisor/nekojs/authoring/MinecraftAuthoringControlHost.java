@@ -71,12 +71,28 @@ public final class MinecraftAuthoringControlHost implements AuthoringControlHost
             MinecraftServer server = requireOwnerServer(true);
             long expectedEpoch = epoch();
             requireCurrent(server, expectedEpoch);
-            result = reloadCandidate(ScriptType.TEST, output);
+            result = runTestCandidate(output);
             requireCurrent(server, expectedEpoch);
         } else {
             throw new UnsupportedOperationException("[NEKO-1019] The selected Script Type does not support live reload.");
         }
         return CompletableFuture.completedFuture(result);
+    }
+
+    private ReloadResult runTestCandidate(Consumer<String> output) {
+        var previous = root.latestTestRunReport();
+        try {
+            root.scriptManagerOf(ScriptType.TEST);
+            var result = root.runTests();
+            output.accept(com.tkisor.nekojs.core.lifecycle.RuntimeCommandResultFormatter.testResult(result));
+            boolean completed = result.isConfigured() && result.isCompleted();
+            return new ReloadResult(completed, completed, result.testRunReport());
+        } catch (RuntimeException failure) {
+            NekoJS.LOGGER.warn("[NEKO-1008] TEST candidate did not commit", failure);
+            output.accept("[NEKO-1008] TEST candidate did not commit; inspect structured diagnostics.");
+            var report = root.latestTestRunReport();
+            return new ReloadResult(false, false, report == previous ? null : report);
+        }
     }
 
     private ReloadResult reloadCandidate(ScriptType type, Consumer<String> output) {
@@ -93,7 +109,7 @@ public final class MinecraftAuthoringControlHost implements AuthoringControlHost
         } else {
             output.accept("[NEKO-1008] " + type + " candidate did not commit; inspect local diagnostics.");
         }
-        // TEST reports candidate commitment, not assertion success; neither target has SERVER follow-ups.
+        // CLIENT has no SERVER follow-ups; TEST execution and assertion outcomes use runTestCandidate.
         return new ReloadResult(candidate.success(), candidate.success());
     }
 

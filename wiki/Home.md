@@ -7,6 +7,7 @@
 - [首页](home_cn)
 - [平台与兼容性](platform-compatibility_cn)
 - [快速开始](quick-start_cn)
+- [配置参考](configuration_cn)
 - [常见问题](faq_cn)
 
 ## 脚本作者
@@ -55,6 +56,7 @@
 - [Home](home_us)
 - [Platforms and compatibility](platform-compatibility_us)
 - [Quick start](quick-start_us)
+- [Configuration](configuration_us)
 - [FAQ](faq_us)
 
 ## Script authors

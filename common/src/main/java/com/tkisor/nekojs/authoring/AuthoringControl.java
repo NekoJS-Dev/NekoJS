@@ -110,6 +110,7 @@ public final class AuthoringControl implements AutoCloseable {
      * dispatch; admitted results report effects explicitly and never include host Throwable details.
      */
     public JsonObject execute(String operation, JsonObject request) {
+        if (operation.equals("operation_status")) return operationStatus(request);
         Request validated = validate(operation, request);
         Operation admitted;
         synchronized (lock) {
@@ -301,10 +302,19 @@ public final class AuthoringControl implements AutoCloseable {
                     && (reload.committed() || !reload.postprocessingSucceeded())) {
                 details.addProperty("committed", reload.committed());
                 details.addProperty("postprocessingSucceeded", reload.postprocessingSucceeded());
+                if (reload.testRunReport() != null) {
+                    details.add("testRunReport", testRunReport(reload.testRunReport()));
+                }
                 status = reload.committed() && reload.postprocessingSucceeded() ? "succeeded" : "failed";
                 code = !reload.committed() ? "RELOAD_NOT_COMMITTED"
                         : reload.postprocessingSucceeded() ? "OK" : "RELOAD_POSTPROCESSING_FAILED";
                 effects = reload.committed() ? "committed" : "unknown";
+                if (operation.type == ScriptType.TEST && reload.testRunReport() != null) {
+                    var report = reload.testRunReport();
+                    if (!report.executionCompleted()) { status = "failed"; code = "TEST_EXECUTION_INCOMPLETE"; }
+                    else if (!report.executionSucceeded()) { status = "failed"; code = "TEST_EXECUTION_FAILED"; }
+                    else if (Boolean.FALSE.equals(report.assertionsPassed())) { status = "failed"; code = "TEST_ASSERTIONS_FAILED"; }
+                }
             }
             if (operation.reply.isDone()) {
                 // A timeout/close response cannot be rewritten; retain a bounded final audit transition.
@@ -354,7 +364,62 @@ public final class AuthoringControl implements AutoCloseable {
                 "status", status, "code", code, "effects", effects, "retryable", !operation.claimed);
         if (RELOAD_SCRIPTS.equals(operation.kind)) entry.addProperty("type", operation.type.name);
         if (details != null) details.entrySet().forEach(detail -> entry.add(detail.getKey(), detail.getValue().deepCopy()));
+        if (operation.reply.isDone()) entry.add("initialResult", operationMetadata(operation.reply.getNow(null)));
         audit.addLast(entry);
+    }
+
+    /** Reads existing admission/audit state only; never dispatches or retries a mutation. */
+    private JsonObject operationStatus(JsonObject request) {
+        AuthoringJson.keys(request, "", "operationId");
+        String supplied = AuthoringJson.string(request, "operationId", "");
+        String id;
+        try {
+            id = UUID.fromString(supplied).toString();
+            if (!id.equalsIgnoreCase(supplied)) throw new IllegalArgumentException();
+        } catch (IllegalArgumentException invalid) {
+            throw AuthoringJson.invalid("/operationId", "Expected a complete operation UUID.");
+        }
+        synchronized (lock) {
+            if (!closed) retireStale(liveEpochs());
+            Operation operation = pending.get(id);
+            JsonObject first = null;
+            JsonObject latest = null;
+            for (JsonObject entry : audit) {
+                if (!id.equals(entry.get("operationId").getAsString())) continue;
+                if (first == null) first = operationMetadata(entry);
+                latest = entry;
+            }
+            if (operation == null && latest == null) {
+                return AuthoringJson.obj("operationId", id, "found", false, "state", "unknown_or_expired",
+                        "terminal", null, "retryable", false);
+            }
+            if (latest != null && latest.has("initialResult")) first = latest.getAsJsonObject("initialResult").deepCopy();
+            if (operation != null && operation.reply.isDone()) first = operationMetadata(operation.reply.getNow(null));
+            boolean claimed = operation != null ? operation.claimed : !latest.get("retryable").getAsBoolean();
+            boolean terminal = operation == null || operation.finished || (!claimed && operation.reply.isDone());
+            String state = terminal ? "terminal" : claimed ? "running" : "queued";
+            if (!terminal && first != null && "timed_out".equals(first.get("status").getAsString())) state = "timed_out_pending";
+            JsonObject result = AuthoringJson.obj("operationId", id, "found", true, "state", state,
+                    "terminal", terminal, "claimed", claimed, "retryable", terminal && !claimed);
+            if (first != null) result.add("initialResult", first);
+            if (latest != null) result.add("latestResult", operationMetadata(latest));
+            return result;
+        }
+    }
+
+    static JsonObject testRunReport(com.tkisor.nekojs.api.testing.TestRunReport report) {
+        if (report == null) return null;
+        return AuthoringJson.obj("executionCompleted", report.executionCompleted(), "executionSucceeded", report.executionSucceeded(),
+                "passed", report.passed(), "failed", report.failed(), "assertionsPassed", report.assertionsPassed(), "overallPassed", report.overallPassed());
+    }
+
+    private static JsonObject operationMetadata(JsonObject result) {
+        JsonObject copy = new JsonObject();
+        for (String key : List.of("operationId", "operation", "status", "code", "effects", "retryable",
+                "type", "commandReturnValue", "committed", "postprocessingSucceeded", "testRunReport")) {
+            if (result.has(key)) copy.add(key, result.get(key).deepCopy());
+        }
+        return copy;
     }
 
     /** Bounded metadata only: commands, arguments, feedback and exception details are never retained here. */

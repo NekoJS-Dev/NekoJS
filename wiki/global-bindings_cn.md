@@ -205,6 +205,25 @@ const mixed = Text.ofValues(
 ---
 
 
+**`I18n`（仅 CLIENT）**
+
+五个受支持节点均提供 `I18n`，按当前客户端语言解析并返回普通字符串；它不是 SERVER 或 STARTUP 绑定。
+
+| 成员 | 说明 |
+|---|---|
+| `I18n.translate(key, ...args)` | 用活动语言/资源包翻译完整键；缺失键仍可见 |
+| `I18n.has(key)` | 检查活动翻译表，包含语言后备值 |
+| `I18n.translateWithFallback(key, fallback, ...args)` | 键存在时翻译，否则格式化字面后备模板（不是另一个翻译键） |
+| `I18n.languageCode` / `I18n.rightToLeft` | 只读的当前语言代码与活动文本方向 |
+
+使用 `%s`、`%1$s` 等 Minecraft 占位符；参数接受字符串、数字、布尔值与 null，不接受任意对象。语言或资源变化后应重新读取并重建标签：绑定不订阅变化，也不会更新已保存的字符串。服务端发送、由各接收玩家本地化的文本应使用 `Text.translatable(...)`。
+
+```javascript
+// client_scripts/labels.js
+const done = I18n.translate('gui.done')
+console.info(done, I18n.languageCode, I18n.rightToLeft)
+```
+
 <a id="wiki-section-15"></a>
 ## 数据读写
 
@@ -330,7 +349,7 @@ console.info(VillagerTrades.query().describe())
 
 ```javascript
 PlayerEvents.loggedIn(event => {
-  const player = event.player
+  const player = event.entity
   const selector = EntitySelectors.allEntities()
     .type('minecraft:cow').isAlive().distance(0, 32)
     .orderNearest().limit(5).create()
@@ -397,7 +416,7 @@ once('warmup', () => console.info('只在第一次 reload 后打印'))
 // server_scripts/boss.js
 PlayerEvents.loggedIn(event => {
   ClientData.sync('boss_hp', { name: 'Example Golem', hp: 0.42 })
-  ClientData.syncTo(event.player, 'personal_quest', { stage: 3 })
+  ClientData.syncTo(event.entity, 'personal_quest', { stage: 3 })
 })
 
 // client_scripts/state.js
@@ -635,7 +654,7 @@ const serverReady = shared.serverReady
 <a id="wiki-section-42"></a>
 ### `Platform`
 
-绑定到 `Platform` 类，提供当前运行环境信息。具体能力可用 `Platform.capabilities()` 查询；Fabric 未实现的 API 不会因为平台对象存在而自动可用。
+面向脚本的 `Platform` 门面提供当前运行环境信息，不暴露内部平台实现。具体能力可用 `Platform.capabilities()` 查询；Fabric 未实现的 API 不会因为平台对象存在而自动可用。
 
 | 方法 | 说明 |
 |---|---|
@@ -647,7 +666,7 @@ const serverReady = shared.serverReady
 | `Platform.isLoaded(modId) → boolean` | 指定 mod 是否已加载 |
 | `Platform.getInfo(modId) → object` | 指定 mod 信息 |
 | `Platform.getList() → array` | 已加载 mod 列表 |
-| `Platform.capabilities() → Set<PlatformCapability>` | 平台能力（特性标志） |
+| `Platform.capabilities() → List<string>` | 已排序的小写、连字符能力 id（如 `nbt-binary-io`），不是原生枚举值 |
 
 ---
 

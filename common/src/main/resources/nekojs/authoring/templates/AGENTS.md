@@ -7,6 +7,7 @@
 - Use Event Groups for subscriptions, named Bindings for helpers, configuration-last callbacks for Builders, and readable/writable Bean properties as declared.
 - For runnable starting points, read handbook/scripting-examples.md; copy only the chosen scenario to its documented Script Type directory and follow its trigger and expected-result checks in a disposable instance.
 - Use the relevant branch handbook for events, adapters, recipes, startup registration, packs or client UI. Match the current environment rather than borrowing unverified APIs from another engine.
+- For structured errors, TEST outcomes or a timed-out action, read handbook/query-api.md#live-runtime-results-in-mod-only. Query the admitted operation ID before considering another action; completion is not an assertion pass.
 - Follow handbook/validation.md after changes. Report the changed behavior, verification results and remaining gaps. Startup registration requires a process restart; runtime effects need actual game evidence.
 - Preserve unrelated scripts and author-owned files. Maintain signed packs through their source and normal packaging/signing workflow.
 

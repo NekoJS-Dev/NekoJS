@@ -434,11 +434,13 @@ public final class NekoJSCommands {
         }
         try {
             NekoRuntimeRoot.TestRunResult result = root.runTests();
-            if (!result.isConfigured() || !result.isCompleted()) {
-                source.sendFailure(Component.literal(RuntimeCommandResultFormatter.testResult(result)));
+            Component message = Component.translatable(RuntimeCommandResultFormatter.testResultKey(result),
+                    RuntimeCommandResultFormatter.testResultArguments(result));
+            if (!RuntimeCommandResultFormatter.testExecutionSucceeded(result)) {
+                source.sendFailure(message);
                 return 0;
             }
-            sendReloadResult(source, root, RuntimeCommandResultFormatter.testResult(result));
+            sendReloadResult(source, root, message);
             return 1;
         } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException e) {
             NekoJS.LOGGER.error("Running test scripts failed", e);
@@ -569,6 +571,10 @@ public final class NekoJSCommands {
     }
 
     private static void sendReloadResult(CommandSourceStack source, NekoRuntimeRoot root, String successMessage) {
+        sendReloadResult(source, root, Component.literal(successMessage));
+    }
+
+    private static void sendReloadResult(CommandSourceStack source, NekoRuntimeRoot root, Component successMessage) {
         NekoRuntimeRoot.ErrorSnapshot errors = root.errors();
         refreshOpenErrorDashboard(source, errors);
         int count = errors.count();
@@ -576,13 +582,13 @@ public final class NekoJSCommands {
             // 错误数并进同一条消息且可点击打开错误列表，不再追加独立的警告组件：
             // 此分支只覆盖无配方广播的路径（test/单文件 reload/CLIENT/STARTUP/控制台），
             // 玩家执行的 SERVER reload 由 RecipeManagerMixin 的广播单独反馈（见 reloadType）。
-            MutableComponent message = Component.literal(successMessage + " (" + count + " error(s) remain)")
+            MutableComponent message = successMessage.copy().append(" (" + count + " error(s) remain)")
                     .withStyle(style -> style
                             .withHoverEvent(new HoverEvent.ShowText(Component.translatable("nekojs.error.tracker.hover_hint")))
                             .withClickEvent(new ClickEvent.RunCommand("/nekojs view_all_errors")));
             source.sendSuccess(() -> message, false);
         } else {
-            source.sendSuccess(() -> Component.literal(successMessage + " - no errors."), false);
+            source.sendSuccess(() -> successMessage.copy().append(" - no errors."), false);
         }
     }
 

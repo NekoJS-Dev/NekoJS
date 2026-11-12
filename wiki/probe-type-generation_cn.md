@@ -41,23 +41,26 @@
 
 ```text
 1. 共享收集（collectClasses）
-   ├─ 种子：事件类型、dispatch key 类型、绑定的 Java 类型（含代理绑定的 extraDocTypes）
+   ├─ 种子包括事件/dispatch key 类型、绑定 Java 类型（含模块发布与代理绑定的 extraDocTypes）、
+   │  配方输入 host 形状和显式声明依赖
    └─ BFS 可达闭包，深度 = probe.toml scan.maxDepth（默认 5），按 scan 配置过滤
      （SMART 走 include 白名单 + forceScanMods；FULL 直通仅排除；NONE 直接失败）
 
 2. 共享 IR（按需构建）
-   ├─ 触发条件：probe.modifyType / probe.assignType 有监听器，或选中 backend requiresIr
+   ├─ 触发条件：ProbeEvents.modifyType / ProbeEvents.assignType 有监听器，或选中 backend requiresIr
    │  （TS 与 Python 内置 backend 均 requiresIr=true，IR 是唯一渲染源）
    ├─ TypeReflector 并行反射每个收集到的类 → List<TypeDecl>（反射失败的类跳过）
-   ├─ 先应用 probe.assignType（全局类型重定向，标记受影响类 mutated）
-   └─ 再触发 probe.modifyType（参数级编辑，显式编辑不被 assign 二次覆盖）
+   ├─ 先应用 ProbeEvents.assignType（全局类型重定向，标记受影响类 mutated）
+   └─ 再触发 ProbeEvents.modifyType（参数级编辑，显式编辑不被 assign 二次覆盖）
 
-3. probe.addGlobal / probe.snippets 收集（各有监听器才触发）
+3. ProbeEvents.addGlobal / ProbeEvents.snippets 收集（各有监听器才触发）
 
+   backend 渲染前，协调器已经生成外部 workspace／编辑器产物。
 4. 每个选中 backend 串行渲染：render 产物进内存（不触盘）→ 默认 generate 逐文件就地同步进
    <baseDir>/<该语言输出子目录>：内容相同的跳过、变化的覆盖写、本次不再产出的删除
-   ├─ render 失败 → 完全不触盘，旧产物原样保留；路径越界（绝对路径/..）直接拒绝
+   ├─ render 失败 → 该 backend 的声明文件不变；先前 workspace 写入不会回滚
    └─ 某个文件被外部进程锁住 → 带退避重试，仍失败则报错点名该文件（陈旧文件删不掉只告警）
+       提交前会校验输出路径，绝对路径或 .. 越界会被拒绝。
        就地写入不是目录原子替换，I/O 失败可能留下部分已更新的产物。
 
 5. 编辑器配置贡献（各 backend 自报片段，幂等合并）
@@ -69,6 +72,8 @@
 **Probe 产物不是 AI 文档根目录**
 
 `.neko_probe` 保存声明和编辑器文件，不决定 AI 根目录：`nekojs/config/ai.toml` 的 `[output].directory` 独立控制 AI 根，默认为 `.github/neko_ai`。内置 TS 声明成功生成后才向所选根的 `snapshots/` 发布 API 快照；声明失败会保留旧快照指针，发布失败只告警，不能视为已产生新快照。修改 probe 的 `baseDir` 或语言 `outputDir` 不会移动 AI bundle。
+
+一次 Probe 不是跨 workspace 文件、backend 输出树和 API 快照的原子事务。backend 失败前 workspace 文件可能已经变化，写入失败也可能使该 backend 的输出只更新一部分。“render 失败保留旧产物”仅指该 backend 提交前的声明文件，不涵盖所有先前副作用。参见[workspace 生成顺序](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ProbeCoordinator.java#L273-L279)及[单 backend 输出处理](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ProbeBackend.java#L95-L125)。
 
 所选根下的 `agents/` 角色不会被编辑器自动发现。可选的标准 `.github/agents` 桥需要 `[output].editor_agents=true`（默认 false）并开启文档生成；用户修改过的角色文件会保留，也不会更改全局 AI 客户端配置。根目录发现、连接和安全边界见 [AI 创作支持](ai-support_cn)。
 
@@ -96,7 +101,7 @@
 │   └── types/index.d.ts            # 注册表字面量（如所有 item id 的 union）
 ├── @manual/
 │   ├── index.d.ts                  # 手动 .d.ts 声明
-│   └── globals.d.ts                # probe.addGlobal 产出的 declare const（有监听器时）
+│   └── globals.d.ts                # ProbeEvents.addGlobal 产出的 declare const（有监听器时）
 ├── @nekojs/managed/<side>/index.d.ts  # managed API 声明
 ├── @registry-builders/index.d.ts
 ├── @event-builders/index.d.ts
@@ -110,7 +115,7 @@
 
 ```text
 .neko_probe/python/nekojs/
-├── __init__.pyi    # 全局绑定 + 事件组入口 + probe.addGlobal 全局（`from nekojs import *` 的目标），__all__ 框定
+├── __init__.pyi    # 全局绑定 + 事件组入口 + ProbeEvents.addGlobal 全局（`from nekojs import *` 的目标），__all__ 框定
 ├── py.typed        # PEP 561 marker（空文件）
 ├── README.md       # 用法说明
 ├── _java/          # Java 类型 stub（按 Java 包组织，祖先包均有 namespace marker）
@@ -161,11 +166,13 @@ Java 的 `char` 与装箱 `Character` 值在 TS 中表示为 `string`，涵盖�
 | `baseDir` | `".neko_probe"` | 输出基目录（相对游戏目录）。每个语言 backend 拥有其下 `<baseDir>/<语言>` 子目录（如 `.neko_probe/typescript`） |
 | `scan.includePackages` | `[]` | 类扫描的包规则白名单。条目为**字面包前缀**（`fqn` 以 `前缀.` 开头）或 **`re:` 正则**（如 `re:com\.example\..*\.api\..*`，对全限定名整体匹配）。**覆盖语义**：非空时**完全取代**默认白名单（`java`、`com.tkisor.nekojs`、平台默认 MC/loader 包）。要**追加**请用 `extraIncludePackages`，不要在此重抄默认值 |
 | `scan.extraIncludePackages` | `[]` | 追加到生效白名单（**追加语义**，同样支持字面前缀与 `re:` 正则）。适合加 `com.mojang` 或某 mod 的包 |
-| `scan.excludePackages` | `[]` | 排除规则（deny-list，支持字面前缀与 `re:` 正则）。**始终生效**（FULL 模式也保留），命中即跳过 |
+| `scan.excludePackages` | 内置包排除表（见下文） | 排除规则（deny-list，支持字面前缀与 `re:` 正则）。**始终生效**（FULL 模式也保留），命中即跳过。显式列表覆盖默认值；`[]` 关闭这些扫描排除，但不关闭运行时访问限制 |
 | `scan.forceScanMods` | `["minecraft"]` | 在白名单之外**强制纳入**扫描的 mod id 或包规则。内置 modId 映射表：`minecraft`→`net.minecraft`、`neoforge`→`net.neoforged`、`forge`→`net.minecraftforge`、`java`→`java`。条目含 `.` 视为字面包前缀、`re:` 开头为正则；未知 mod id 记 debug 日志并忽略。excludePackages 仍优先于强制包含 |
 | `scan.maxDepth` | `5` | 主扫描从事件/绑定种子出发的 BFS 最大深度（≤0 时兜底为 5）；TS 声明依赖另行补齐 |
 | `scan.mode` | `"SMART"` | 扫描模式：`SMART`=白名单 + forceScanMods 过滤；`FULL`=跳过 include 白名单，主扫描只受 exclude 与 maxDepth 约束；`NONE`=完全不扫描，probe 返回失败结果。未知取值兜底为 `SMART` |
 | `languages.<lang>.outputDir` | 语言 id 本身 | 该语言产物在 `baseDir` 下的**子目录**（如默认 `typescript` → `.neko_probe/typescript`）。缺省/null 回退语言 id。`ProbeBackend.outputDir` 默认实现优先取此键 |
+
+默认排除 `com.tkisor.nekojs.core`、`java.awt`、`javax.swing`、`javax.imageio`、`javax.naming`、`java.rmi`、`java.sql`、`javax.sql`、`org.graalvm` 和 `com.oracle.truffle`。缺失配置键才补入这些默认值；已有的显式空列表会保持为空。参见[默认扫描配置](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ProbeConfig.java#L62-L78)及[配置加载](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ProbeConfigLoader.java#L40-L45)。
 
 > **包规则的正则支持**：`includePackages` / `extraIncludePackages` / `excludePackages` / `forceScanMods` 的条目既可以是字面包前缀（旧行为，`fqn.startsWith("前缀.")`），也可以写成 `re:<pattern>` 形式的正则（对类全限定名做**全匹配**，如 `re:com\.example\.(mod1|mod2)\..*` 一次纳入多个 mod 包）。正则编译结果有缓存，扫描热路径无额外开销；非法正则会 warn 一次并视为永不命中。
 
@@ -228,7 +235,7 @@ ProbeEvents.modifyType(event => {
   // 类型构造辅助：
   const arr = event.array("string")                 // string[]
   const u   = event.union("string", "number")       // string | number
-  editor.changeReturnType("getCustom", u)
+  if (editor) editor.changeReturnType("getCustom", u)
 })
 ```
 
@@ -299,13 +306,15 @@ ProbeEvents.snippets(event => {
    - `python.analysis.extraPaths`：同上，按字符串去重追加；
    - `python.languageServer`：仅在用户未显式设置时固定为 `"Pylance"`（VSCode 默认的 "Default" 在部分环境会退回 Jedi，而 Jedi 不读 pyrightconfig/extraPaths，导致无补全）。
 
+   嵌套目录扫描深度上限为 8，并跳过依赖、构建、缓存和版本控制子树，并非无界遍历每个目录（见[编辑器贡献](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/python/PythonEditorConfig.java#L97-L145)）。
+
    **注意 Pylance 只读取「工作区根」的配置**（pyright CLI 才会从源文件就近向上发现）——请在编辑器中直接打开游戏目录（或 `nekojs/`、某个脚本目录、某个含 `.py` 的子目录），而不是它们的上层文件夹；NekoJS 已为上述每个可打开层级各生成一份配置，任一目录作为工作区根都能解析。
 3. 补全内容：
-   - `nekojs/__init__.pyi`：全局绑定 + 事件组入口 + `probe.addGlobal` 的全局声明（`__all__` 框定，`from nekojs import *` 的目标）；
+   - `nekojs/__init__.pyi`：全局绑定 + 事件组入口 + `ProbeEvents.addGlobal` 的全局声明（`__all__` 框定，`from nekojs import *` 的目标）；
    - `nekojs/_java/<java.包>/__init__.pyi`：Java 类型 stub（泛型展平为 `Any`；成员名、参数数量、字段类型保留，够日常补全）；
    - `nekojs/_events/<side>/__init__.pyi`：事件声明（按 script side）；
    - `nekojs/py.typed`：PEP 561 标记；`nekojs/README.md`：用法说明。
-4. 适配器输入别名：`<Simple>_ = <Simple> | <输入类型们>`（如 `ItemStack_ = ItemStack | str | ...`），与 TS 的 `$Foo_` 对应；仅对 IR 中存在的目标类生成，无法映射的形状（注册表/原始 TS 片段）跳过。
+4. 适配器输入别名：`<Simple>_ = <Simple> | <输入类型们>`（如 `ItemStack_ = ItemStack | str | ...`），与 TS 的 `$Foo_` 对应；仅对 IR 中存在的目标类生成。已有目录的注册表 id、标签及命名空间在少于 512 条时渲染为 `Literal[...]`，为空或更多条目时回退为 `str`（大集合附说明）。模板退化为 `str`，对象形状退化为 `dict[str, Any]`，不保留精确字段。原始 TS 片段、未收集的 host 类型及快照中缺失的注册表会跳过。见 [Python 形状渲染](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/python/PythonProbeBackend.java#L599-L718)。
 
 > Python backend `requiresIr()` 恒为 true——只要选中 python backend（含 `/nekojs probe all`），coordinator 就构建共享 IR；`modifyType`/`assignType` 的编辑对 Python 产物同样生效。
 
@@ -335,10 +344,14 @@ probe 生成后会把以下配置**幂等合并**进每个脚本目录的 `jscon
 | `$Foo_` | 适配器输入别名（`Foo` 是目标类型名） |
 | `java:` / `@side-only` / `@special` | 模块标识符前缀 |
 
+普通 `nekojs/api/stable` 和 `nekojs/api/version` 模块导出（含 `/<modid>` 发布）使用注册的公共 Java 视图类型，不会凭空构造结构化 DTO，也不会从原始字符串推断出名义类型。Probe 把环境模块声明写入 `@side-only/<side>/bindings/api-modules.d.ts`，由 bindings 索引加载。ESM 命名导入与字面量 `require("nekojs/api/stable")` 引用同一组声明导出；未知字符串 `require` 路由返回 `unknown`。仅模块发布不会创建全局变量。应使用当前 Script Type 的产物；“stable” 不代表处处可用。参见[模块渲染](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/BindingDeclarationGenerator.java#L77-L106)、[分侧输出](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/TypeScriptProbeBackend.java#L572-L604)及 [随包 API 模块手册](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/resources/nekojs/authoring/handbook/api-modules.md)。
+
 <a id="wiki-section-17"></a>
 ### 阅读原生输入类型与配方签名
 
 `$Foo_` 只有在已注册适配器或内置集合确实定义输入合同时才存在，并非为每个主机类自动捏造的别名。集合声明区分**主机值与访客输入**：原生 `$List<$Payload>` 并不等同于元素已转换成 `$Payload_` 的列表。如果真实适配器提供 `$Payload_`，合同可能保留为 `($List<$Payload> | $Payload_[])`。只有主机与访客类型实参相同，才复用更短的 `$List_<T>` / `$Collection_<T>` / `$Iterable_<T>`。`Set` 仍只接收主机对象；Map 的对象分支保留 `Partial<Record<...>>` 及属性键限制，不会把任意主机键改成字符串。参见[规范别名与集合规则](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java#L79-L142)、[别名复用](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java#L233-L254)及[类型适配器边界](type-adapters_cn)。
+
+普通方法、回调、事件、managed API 和配方共用集合输入渲染器。规范别名从真实 Java 包模块导入（`$List_`、`$Collection_`、`$Map_` 来自 `java:java/util`；`$Iterable_` 来自 `java:java/lang`），并遵守模块局部名称。收窄的通配符捕获视图可能在 `B[]` 之外保留 `$NekoCaptureCollectionInput<B>` 等显式 host carrier；若替换为普通 `$Collection_<B>`，就会丢失其约束。这是声明投影，不是新增转换，也不保证任意 JS 对象都能充当 Java 集合。参见[别名选择](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/types/TypeAliasRegistry.java#L233-L254)、[carrier 投影](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptCaptureViews.java#L159-L170)及[导入合同测试](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/test/java/com/tkisor/nekojs/probe/ProbeGlobalCollectionAliasImportsTest.java#L31-L53)。
 
 原生配方 handler 暴露可见 Java 重载与真实泛型返回类型，不会统一伪装成某个 schema 专用 builder；未绑定 Java 变量按上界投影。由转换器负责的 schema 字段可以递归声明实际接收的输入类型，普通原生泛型适配器则保留其真正接收的主机侧实参。有字段的 schema 保留**完整命名 options 对象重载**，并与构造器导出的位置重载、必填/默认字段及规范键与别名互斥关系共同存在。命名的 `...Options` 声明共享完整对象合同，不会删去较少使用的字段。参见 [handler catalog](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/catalog/RecipeNamespaceCatalogEntry.java#L66-L94)、[schema 重载](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/RecipeEventDeclarationGenerator.java#L238-L255)及[配方调用合同](recipe-system_cn#wiki-section-8)。
 
@@ -383,6 +396,7 @@ snapshot 包含：
 - `bindings`：所有全局绑定（name + Java 类型）
 - `events`：所有事件组/事件（group + name + 事件类型 + 可取消 + dispatch 信息）
 - `adapters`：所有适配器（目标类型 + 输入形态）
+- `moduleBindings` / `moduleEvents`：分脚本侧的公共 API 模块发布
 - `recipeNamespaces`：配方命名空间 + handler 方法签名
 - `registryTypes`：注册表字面量（喂给 `@special/types`）
 - `hostExtensions`：注入到原版类的扩展方法
@@ -397,6 +411,10 @@ snapshot 包含：
 ### 绑定自带类型
 
 `registry.register("Foo", new FooJS())` —— probe 会反射 `FooJS` 的公共方法。要带 JSDoc，直接在类/方法/参数上标注 `@Doc`/`@Param`/`@Return` 注解（`TypeReflector` 消费后生成进 JSDoc），或用编程式 `registerTypeDocs`（`TypeDocsRegister.register(...)` / `registerManualDeclaration(...)`，见 [插件开发](plugin-development_cn)）。
+
+**显式输入与输出声明**
+
+反射参数上的 `@ScriptInput(Provider.class)` 会用 provider 的 `AdapterInputShape` 替换宽泛的 TypeScript 输入，不保留可绕过指定字段的宽泛 `Map` 分支。provider 实现 `ScriptInputShapeProvider` 并提供 public 无参构造器。这些元数据不会注册转换器，也不改变 Java 参数类型。方法上的 `@ScriptOutput("TypeScript expression")` 则替换 TS 输出，包括 Bean getter 和继承成员，不会把普通未标注 Map 一并放宽。外部输出类型应写成内联 `import("module").Type`；依赖必须已由 catalog 或反射闭包提供，输出注解本身不发现依赖；若返回值仍提供 Java 成员，应在交叉类型中保留 Java 类型。显式 Probe 类型槽编辑优先；两种注解都不是运行时校验，Python 保留反射得到的 Java 合同。参见[输入反射](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ir/TypeReflector.java#L673-L685)、[TS 类型槽渲染](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/probe/ir/TypeScriptClassRenderer.java#L782-L804)及[输出契约](https://github.com/NekoJS-Dev/NekoJS/blob/stonecutter/common/src/main/java/com/tkisor/nekojs/api/annotation/ScriptOutput.java#L9-L24)。
 
 <a id="wiki-section-22"></a>
 ### 注册表字面量
@@ -488,7 +506,7 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 
 | 方法 | 默认 | 何时覆盖 |
 |---|---|---|
-| `requiresIr()` | `false` | 需要共享类型 IR（`ctx.ir()`，语言中性的 `TypeDecl` 列表，已含 `probe.modifyType`/`assignType` 编辑）时返回 `true`——内置 TS/Python 都走这条路 |
+| `requiresIr()` | `false` | 需要共享类型 IR（`ctx.ir()`，语言中性的 `TypeDecl` 列表，包含 `ProbeEvents.modifyType`／`ProbeEvents.assignType` 编辑）时返回 `true`。内置 TS 与 Python backend 都返回 `true`；只有自定义 backend 默认 `false`。 |
 | `priority()` | `0` | 同语言多 backend 时高者为 `/nekojs probe <语言>` 的默认 |
 | `outputDir(paths, config)` | `<baseDir>/<语言id>`，可被 `probe.toml [languages.<id>].outputDir` 覆盖 | 特殊目录布局 |
 | `contributeEditorConfig(...)` | 空 | 让 IDE 认识你的产物（合并进 jsconfig/pyrightconfig 等，幂等） |
@@ -542,7 +560,7 @@ NeoForge 1.21.1、26.1.2、26.2.0 及 Fabric 26.1.2、26.2.0 的生成声明采�
 1. **JSDoc 覆盖取决于注解覆盖**：`@Doc`/`@Param`/`@Return` 注解文档与 `@Remap`/`@RemapByPrefix`/`@HideFromJS` 名字/可见性语义均已实现（`TypeReflector` 直接消费，与运行时 Graal remapper 口径一致）；未标注的类靠编程式 `registerTypeDocs` 或 `ProbeEvents.modifyType` 的 `setDoc` 系列补 JSDoc。
 2. **声明依赖受当前配置约束**：事件生成器只收集签名直接引用的类型（数组取组件类型），后续由 TypeScript 声明依赖闭包按当前排除和隐藏策略补齐依赖；这不等于无条件导出所有 Java 类。修改配置后应重新生成并检查目标项目的类型诊断。
 3. **第三方类参数名退化**：NekoJS 各模块已在根 build.gradle 统一以 `-parameters` 编译，自身类的声明携带真实参数名；但未开 `-parameters` 的第三方 jar 与 JDK 类（标准 JDK 的 `java.*` class 文件不含 MethodParameters 属性）仍取不到参数名，`TypeReflector` 的 `isNamePresent` 兜底会把这类参数退化为 `arg0`/`arg1`…。
-4. **版本偏差**：probe 是手动触发的，新加 mod/注册内容后类型声明会过期，需重新 `/nekojs probe`。
+4. **版本偏差**：声明是快照，不会持续刷新。手动运行或可选的 `runAtStartup` 生成不会自动同步之后的 mod/注册内容变化，需重新 `/nekojs probe`。
 5. **Python stub 泛型展平**：类型变量渲染为 `Any`，不保留泛型参数关系（够日常补全，非完整类型）。
 
 <a id="wiki-section-31"></a>

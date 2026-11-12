@@ -25,8 +25,8 @@
 
 | 特性 | PEP | 语法示例 | 对 JS 转译 | NekoJS 状态 |
 |---|---|---|---|---|
-| 结构化模式匹配 `match`/`case` | PEP 634 | `match x:\n  case 1: ...` | 中（可降级为 if/else 链） | ✅（PEP 634，字面量/通配/捕获/`\|`/序列/映射/类模式 + guard） |
-| 括号化多上下文管理器 | — | `with (a as x, b as y):` | 易（已支持多项 `with`） | ✅（等价 `with a as x, b as y:`） |
+| 结构化模式匹配 `match`/`case` | PEP 634 子集 | `match x:\n  case 1: ...` | 中（if/else 降级） | ⚠️ 已说明的模式子集；映射、OR 捕获及类模式仍有限制 |
+| 括号化多上下文管理器 | — | `with (a as x, b as y):` | 已支持不带括号的多项 | ❌ 尚不解析带括号的项列表；请使用 `with a as x, b as y:` |
 | `X \| Y` 联合类型注解 | PEP 604 | `def f(x: int \| str)` | 易（注解直接丢弃） | ✅（注解已丢弃） |
 | 更精确的错误定位（带 `^` 指示） | — | — | 与转译无关 | — |
 
@@ -90,7 +90,7 @@
 | 特性 | 语法示例 | 预期 JS 映射 | NekoJS 状态 |
 |---|---|---|---|
 | 函数 `def`（默认参数 / `*args` / `**kwargs`） | `def f(a, b=1, *args, **kw):` | `function`（`**kwargs` 触发 prologue） | ✅ |
-| 类与继承 | `class C(B):` | JS `class` / `extends` | ✅ |
+| 类与继承 | `class C(B):` | JS `class` / `extends` | ⚠️ 仅单继承；类体赋值为每实例字段，不是 Python 的共享类属性 |
 | `super()` | `super().__init__(x)` | `super(x)` / `super.m()` | ✅ |
 | `@staticmethod` / `@classmethod` | `@staticmethod` / `@classmethod` | `static` 方法；classmethod 绑 `cls=this` | ✅ |
 | 属性 `@property` | `@property\ndef x(self):` | JS getter（只读） | ✅ |
@@ -107,7 +107,7 @@
 | `return` / `break` / `continue` / `pass` | — | 同名 | ✅ |
 | `import` / `from ... import` | — | ESM `import` | ✅ |
 | 类型注解（参数 / 返回 / 变量） | `x: int = 5` | 解析后丢弃 | ✅（丢弃） |
-| `match` / `case` 模式匹配 | `match x:` | 降级 if/else 链 | ✅（字面量/通配/捕获/`\|`/序列/映射/类模式+guard） |
+| `match` / `case` 模式匹配 | `match x:` | 降级 if/else 链 | ⚠️ 已说明的子集，不是完整 PEP 634；见[Python 脚本](python-scripts_cn) |
 | `async def` / `await` / `async for` / `async with` | — | JS async/await | ❌（GraalJS 支持但价值低） |
 
 <a id="wiki-section-10"></a>
@@ -120,10 +120,10 @@
 | t-string（3.14） | `t"{x}"` | Template 对象 | ❌ |
 | 属性 / 索引 / 调用 | `a.b` / `a[i]` / `f()` | 同名 | ✅ |
 | 关键字调用 | `f(a=1, b=2)` | 尾随带标记对象 + prologue | ✅（目标需 `**kwargs` 或 print/sorted/min/max 关键字特例） |
-| 算术 / 比较 / 布尔 / 位运算 | `+ - * / // % **`、`and/or/not`、`& \| ^ ~ << >>` | 对应 JS（`//`→`Math.floor`） | ✅ |
-| 三元 `a if c else b` | — | `(c ? a : b)` | ✅ |
+| 算术 / 比较 / 布尔 / 位运算 | `+ - * / // % **`、`and/or/not`、`& \| ^ ~ << >>` | 已实现部分经算术/真值助手，其余用 JS 运算符 | ⚠️ 零除、地板除/取模及序列重复有助手；容器位运算不是 Python 集合/字典运算 |
+| 三元 `a if c else b` | — | `(__nekoTruthy(c) ? a : b)` | ✅ 使用子集真值助手 |
 | `in` / `not in` / `is` / `is not` | — | `__nekoIn` / `===` | ✅（数组、字符串、dict 自有键及 Map/Set） |
-| 链式比较 | `a < b < c` | `(a<b) && (b<c)` | ✅ |
+| 链式比较 | `a < b < c` | `(a<b) && (b<c)` | ⚠️ 会短路，但中间操作数可能重复求值；有副作用的调用应先存入变量 |
 | 切片（任意步长、负下标） | `xs[::2]`、`xs[::-1]`、`xs[-1]` | 辅助函数 / `slice` | ✅ |
 | 列表 / 元组 / 字典 / 集合字面量 | `[1,2]`、`(1,2)`、`{k:v}`、`{1,2}` | 数组 / 数组 / 对象 / `Set` | ✅ |
 | `lambda` | `lambda x: x*2` | 箭头函数 | ✅（无 `**kwargs`） |
@@ -155,7 +155,7 @@ NekoJS 已映射的内建（详见 [Python 脚本](python-scripts_cn)「内置�
 | t-string（3.14） | 🔴 低 | 太新、需 `Template` 类型 | 跳过 |
 | 类型注解求值 | 🔴 低 | 与转译目标无关（静态类型） | 永久丢弃 |
 
-> 已**完成**的高价值扩展（本轮）：生成器/yield、`with`、多层推导式、任意切片步长、f-string 格式说明符、`**kwargs`+关键字调用、`assert`/`del`/海象、`try/else`、裸 `raise`、类型注解丢弃、扩展内建函数、`match`/`case`（全部模式）、`@property`/`@classmethod`、`getattr`/`hasattr`/`setattr`/`delattr`/`iter`/`next`/`frozenset`。
+> 已**完成**的高价值扩展（本轮）：生成器/yield、`with`、多层推导式、任意切片步长、f-string 格式说明符、`**kwargs`+关键字调用、`assert`/`del`/海象、`try/else`、裸 `raise`、类型注解丢弃、扩展内建函数、`match`/`case`（已说明的模式子集）、`@property`/`@classmethod`、`getattr`/`hasattr`/`setattr`/`delattr`/`iter`/`next`/`frozenset`。
 
 ---
 
@@ -164,7 +164,7 @@ NekoJS 已映射的内建（详见 [Python 脚本](python-scripts_cn)「内置�
 
 | Python 构造 | ES 对应 | 说明 |
 |---|---|---|
-| `class` + 继承 | `class` + `extends` | 一一对应 |
+| `class` + 继承 | `class` + `extends` | 仅单继承；实例字段与构造限制不同于 Python |
 | 生成器 / `yield` / `yield from` | `function*` / `yield` / `yield*` | GraalJS 原生 |
 | `async`/`await` | `async`/`await` | GraalJS 原生（脚本侧需事件循环） |
 | `with`（上下文管理器） | 无原生 → try/finally + `__enter__`/`__exit__` | NekoJS 内联降低 |

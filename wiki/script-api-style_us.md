@@ -14,11 +14,13 @@ An event is a member of its group. Required filters/selectors, where present, pr
 
 
 ```js
-// server_scripts/welcome.js
+// server_scripts/welcome.js (NeoForge)
 PlayerEvents.loggedIn(event => {
-    event.player.sendMessage("Welcome to NekoJS!");
+    event.entity.sendMessage("Welcome to NekoJS!");
 });
 ```
+
+This login example targets NeoForge: the native PlayerEvent exposes `getEntity()` as `event.entity`. Fabric’s neutral login payload uses `event.player`; the same Script Event name does not guarantee identical payload members.
 
 Read callback data and event operations from event; use Bindings for general helpers. Consult the [event reference](event-reference_us) for timing, cancellation, Script Types and platform support instead of inferring them from names.
 

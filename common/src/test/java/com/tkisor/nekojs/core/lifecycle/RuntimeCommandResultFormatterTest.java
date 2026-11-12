@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core.lifecycle;
 import com.tkisor.nekojs.api.ScriptType;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -82,6 +83,29 @@ class RuntimeCommandResultFormatterTest {
                 new IllegalStateException("candidate failed"));
         assertFalse(report.describe().contains("java.lang.IllegalStateException"),
                 "candidate failure descriptions must also stay message-only (F2)");
+    }
+
+    @Test
+    void testRunKeepsExecutionAndAssertionOutcomesSeparate() {
+        var caughtFailure = new NekoRuntimeRoot.TestRunResult(true, true,
+                new com.tkisor.nekojs.api.testing.TestRunReport(true, true, 2, 1));
+        assertTrue(RuntimeCommandResultFormatter.testResult(caughtFailure).contains("executionSucceeded=true"));
+        assertTrue(RuntimeCommandResultFormatter.testResult(caughtFailure).contains("assertions failed"));
+        assertFalse(RuntimeCommandResultFormatter.testExecutionSucceeded(caughtFailure));
+        assertEquals("nekojs.command.test.assertions_failed", RuntimeCommandResultFormatter.testResultKey(caughtFailure));
+        var noAssertions = new NekoRuntimeRoot.TestRunResult(true, true,
+                new com.tkisor.nekojs.api.testing.TestRunReport(true, true, 0, 0));
+        assertTrue(RuntimeCommandResultFormatter.testResult(noAssertions).contains("assertions not observed"));
+        assertTrue(RuntimeCommandResultFormatter.testExecutionSucceeded(noAssertions));
+        assertEquals("nekojs.command.test.no_assertions", RuntimeCommandResultFormatter.testResultKey(noAssertions));
+        var passed = new NekoRuntimeRoot.TestRunResult(true, true,
+                new com.tkisor.nekojs.api.testing.TestRunReport(true, true, 2, 0));
+        assertTrue(RuntimeCommandResultFormatter.testResult(passed).contains("assertions passed"));
+        assertEquals("nekojs.command.test.passed", RuntimeCommandResultFormatter.testResultKey(passed));
+        var failedExecution = new NekoRuntimeRoot.TestRunResult(true, true,
+                new com.tkisor.nekojs.api.testing.TestRunReport(true, false, 1, 0));
+        assertFalse(RuntimeCommandResultFormatter.testExecutionSucceeded(failedExecution));
+        assertEquals("nekojs.command.test.execution_failed", RuntimeCommandResultFormatter.testResultKey(failedExecution));
     }
 
     @Test

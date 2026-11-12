@@ -37,7 +37,7 @@ NekoJS 是一个基于 **GraalVM/GraalJS** 的多平台 Minecraft 脚本引擎�
 <a id="wiki-section-3"></a>
 ## 模块结构
 
-引擎层是两个普通 Gradle 子项目（对外契约类型与引擎实现同住 `common`，靠包划分 + lint 边界），MC 相关代码住在一棵由 stonecutter 管理的版本共享树里。
+引擎层包含 `common` 与 `common-api-processor` 两个普通 Gradle 子项目（对外契约类型与引擎实现同住 `common`，靠包划分和 lint 边界），MC 相关代码位于 Stonecutter 管理的版本树。另有独立打包的 NeoForge 1.21.1 兼容 addon `addons/nekujs`；它不是第六个 Minecraft 节点，也没有第二套脚本运行时。
 
 ```text
 NekoJS/
@@ -52,6 +52,7 @@ NekoJS/
 │       ├── eventbus/        #   事件总线实现
 │       ├── bindings/        #   与 MC 无关的绑定类
 │       └── platform/        #   平台抽象 SPI
+├── addons/nekujs/            # 独立的 NeoForge 1.21.1 兼容 addon；不嵌入 NekoJS
 ├── buildSrc/                # 节点构建约定：nekojs.neoforge-node / nekojs.fabric-node
 ├── src/                     # 版本共享树，五个节点共用这一份
 │   ├── main/java/           #   版本差异用 //? if >=26 守卫和 replacements 表达
@@ -63,7 +64,7 @@ NekoJS/
 │   ├── 1.21.1/  26.1.2/  26.2.0/     # NeoForge 节点
 │   ├── 26.1.2-fabric/                # Fabric 26.1.2 节点
 │   └── 26.2.0-fabric/                # Fabric 26.2 节点（节点 ID：26.2.0-fabric）
-└── settings.gradle.kts      # stonecutter 版本图 + 两个引擎子项目
+└── settings.gradle.kts      # 五节点版本图 + 两个引擎子项目 + 独立 addon
 ```
 
 节点专属源码有两种用途：一是各版本的 compat 实现（`platform/compat/` 下的门面实现），二是两个时代差异大到不便用守卫表达的孪生文件——共享树放 26.x 主干，`versions/1.21.1/src/` 放同名的 1.21.1 实现，`nekojs.node-sources` 保证节点内同相对路径文件优先于共享树、raw Fabric 与生成源码，包括 active 节点。Fabric 节点显式挂载共同的原始加载器根 `src/fabric`；原跨节点 source bridge 已删除。
@@ -88,7 +89,7 @@ GraalJS Polyglot `Context` 的装配与生命周期：
 ### 2. 编译前端与模块系统（`core/compiler/`、`core/module/`）
 
 - **TypeScript**：`NekoTypeScriptCompiler` 是手写的 lexer 基础**可擦除 TS**前端，擦除类型注解、`type`/`interface`、泛型、`as`/`satisfies`，把 `enum`/`namespace` 转 IIFE。
-- **JSX**：`NekoJsxCompiler` 把 JSX lowering 到 `__nekoJsxFactory` 调用（classic runtime）。
+- **JSX**：`NekoJsxCompiler` 同时支持 classic factory 转换，以及由 `jsxAutomaticRuntime` 选择、导入 `nekojs/jsx-runtime` 的自动模式；不会因此提供 React DOM。见[配置参考](configuration_cn)与 [TypeScript 与 JSX](typescript-and-jsx_cn)。
 - **Python**：`core/compiler/python/PythonToJsCompiler` 通过 lexer → parser → JavaScript emitter 转译 Python 子集，再由 GraalJS 执行；不是 CPython 或 GraalPy。
 - **ESM**：`core/module/esm/` 提供原生 lexer/parser/linker/evaluator。`ModuleReloadCoordinator` 使受影响模块的代内 CJS/ESM 身份、链接与依赖记录失效。这是缓存操作，不是事务式运行时切换或文件监视器；仅保存文件不会激活改动。完整代重载、旧式文件重跑与独立的数据或资源重载见[命令](commands_cn)。
 - **Node shim**：`core/node/` 提供 fs/path/buffer/crypto/process/timers/util/events/assert/os/test 的 Java+JS 实现。
@@ -99,7 +100,7 @@ GraalJS Polyglot `Context` 的装配与生命周期：
 
 NekoJS 的扩展模型是**插件即 API**：
 
-- **`NekoJSPlugin`**（`api/NekoJSPlugin.java`）：~20 个 default 钩子方法的接口。内置功能（`NekoJSCorePlugin`）和第三方插件实现同一接口。
+- **`NekoJSPlugin`**（`api/NekoJSPlugin.java`）：内置功能与第三方插件共用的接口。收集型 Plugin Hook 是已有扩展点的门面，生命周期回调保留各自契约；当前通道索引见[插件开发](plugin-development_cn)。
 - **`@RegisterNekoJSPlugin`**：标记插件类，各加载器的 loader（`NeoForgePluginLoader` / `FabricPluginLoader`）扫描发现。
 - **`NekoJSBasePluginManager`**：发现、过滤（`clientOnly`/`requiredMods`）、实例化、按 priority 排序。
 - **`NekoPluginBootstrap`**：编排所有扩展点（`nekojs:bindings`、`nekojs:adapters`、`nekojs:events`、`nekojs:recipe_schemas` 等），收集后冻结注册表，发布 `NekoPluginRuntime`。
