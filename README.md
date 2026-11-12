@@ -1,242 +1,242 @@
+<div align="center">
+
+<img src="icon.png" width="128" height="128" alt="NekoJS">
+
 # NekoJS
 
-<p align="center">
-  <img src="icon.png" width="180" height="180" alt="NekoJS 图标">
-  <br>
-  <strong>告别繁琐的 Java 模组项目，用现代 JavaScript / TypeScript 轻松魔改 Minecraft</strong>
-</p>
+**用 JavaScript、TypeScript 或 Python 给 Minecraft 写脚本。**<br>
+改配方、监听事件、加物品方块、做界面，不用写 Java，改完一条命令生效。
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-LGPL--3.0-blue.svg" alt="License"></a>
-  <a href="https://www.curseforge.com/minecraft/mc-mods/graal"><img src="https://img.shields.io/badge/Graal-%E2%89%A525.1.3.7-orange.svg" alt="Graal Requirement"></a>
-  <a href="https://qm.qq.com/q/rbryak0K6k"><img src="https://img.shields.io/badge/QQ%E7%BE%A4-1158525822-brightgreen.svg" alt="QQ Group"></a>
-</p>
+[![License: LGPL-3.0](https://img.shields.io/badge/license-LGPL--3.0-blue.svg)](LICENSE)
+[![CI](https://github.com/NekoJS-Dev/NekoJS/actions/workflows/ci-build.yml/badge.svg)](https://github.com/NekoJS-Dev/NekoJS/actions/workflows/ci-build.yml)
+[![Release](https://img.shields.io/github/v/release/NekoJS-Dev/NekoJS?include_prereleases&label=release)](https://github.com/NekoJS-Dev/NekoJS/releases)
+[![Graal](https://img.shields.io/badge/Graal-%E2%89%A525.1.3.7-orange.svg)](https://www.curseforge.com/minecraft/mc-mods/graal)
+[![QQ 群](https://img.shields.io/badge/QQ%E7%BE%A4-1158525822-brightgreen.svg)](https://qm.qq.com/q/rbryak0K6k)
 
----
+[文档](wiki/home_cn.md) · [快速开始](wiki/quick-start_cn.md) · [下载](https://github.com/NekoJS-Dev/NekoJS/releases) · [问题反馈](https://github.com/NekoJS-Dev/NekoJS/issues) · [English docs](wiki/home_us.md)
 
-## 什么是 NekoJS？
-
-**NekoJS** 是一款基于 GraalJS 的高性能 Minecraft 脚本与魔改模组。
-
-无论是整合包作者还是模组开发者，都可以通过编写脚本轻松实现**修改配方、监听与处理事件、注册新物品/方块、定制 GUI 界面**等功能。
-
-如果你曾使用过 KubeJS 或 CraftTweaker，NekoJS 的目标是带来真正**现代化、原生前端水准**的开发体验：
-- **真正的现代语法**：全面支持 ES2024、原生 ESM 模块（`import` / `export`）、Top-level await。
-- **TypeScript 直接运行**：`.ts` 文件无需手动编译或打包，丢进目录就能跑。
-- **开箱即用的类型补全**：无需额外安装任何像 ProbeJS 这样的外部模组，首次启动即自动生成完整的 `.d.ts` 类型声明文件，享受极致的 IDE 代码提示。
-- **丝滑的热重载**：在游戏内输入 `/nekojs reload` 即可即时生效服务端与配方逻辑，告别频繁重启游戏的痛苦。
+</div>
 
 ---
 
-## 运行前置与支持版本
-
-1. **必要前置**：必须安装 **[Graal](https://www.curseforge.com/minecraft/mc-mods/graal) 25.1.3.7 或更高版本**（低版本缺少正则引擎，会导致脚本在处理正则表达式时报错）。
-2. **支持平台**：
-   - **NeoForge**：原生支持 1.21.1 及 26.x（具体兼容版本请参见 Release 发布页面）。
-   - **Fabric**：多版本移植正在稳步推进中。
-
----
-
-## 快速上手
-
-### 1. 安装模组
-将 `NekoJS` 以及前置 `Graal` 模组放入游戏 `.minecraft/mods` 目录，启动一次游戏。
-
-仓库构建的 NeoForge1.21.1 客户端使用普通 `.jar`，独立专服使用同版本的 `-server.jar`；每个安装目录只选一种。两种制品均由 `:1.21.1:build` 生成和检查，详见[安装说明](wiki/quick-start_cn.md)。发布下载以发布页实际列出的文件为准。
-
-### 2. 脚本目录结构
-首次启动后，游戏根目录会自动生成 `nekojs` 工作区：
-
-```text
-.minecraft/
-├── .neko_probe/            # 【自动生成】所有全局变量与事件的类型定义
-└── nekojs/
-    ├── startup_scripts/    # 启动脚本：注册新物品、方块、流体等（修改后需重启游戏）
-    ├── server_scripts/     # 服务端脚本：配方修改、玩家交互、逻辑监听（支持 /nekojs reload 热重载）
-    ├── client_scripts/     # 客户端脚本：按键绑定、自定义 GUI、粒子效果
-    ├── test_scripts/       # 测试脚本：仅在执行 /nekojs test 命令时运行
-    ├── node_modules/       # 纯 JS 的 npm 第三方依赖包
-    ├── assets/             # 虚拟资源包目录（可在脚本中动态生成材质、语言文件等）
-    ├── data/               # 虚拟数据包目录（可在脚本中动态生成战利品表、进度等）
-    └── config/             # 配置文件（如 probe.toml、engine.toml）
-```
-
-> **提示**：推荐使用 **VS Code** 直接打开游戏根目录。启动时自动生成的 `tsconfig.json` 会帮你把编辑器和 `.neko_probe/` 关联起来，打开脚本立刻拥有类型推导与自动补全。
-
-### 3. 写下你的第一个脚本
-
-在 `nekojs/server_scripts/` 目录下创建一个 `demo.ts`（或 `demo.js`）：
-
-```typescript
-// 1. 监听玩家登录事件
-PlayerEvents.loggedIn(event => {
-    const { player } = event;
-    player.tell(`欢迎来到服务器，${player.name}！祝你玩得愉快！`);
-});
-
-// 2. 移除原版某些不合理的配方，并添加自定义配方
+```javascript
+// nekojs/server_scripts/recipes.js
 ServerEvents.recipes(event => {
-    // 移除木剑配方
-    event.remove({ output: 'minecraft:wooden_sword' });
-
-    // 添加一个无序合成：9个泥土合成1个钻石（整蛊/测试）
-    event.shapeless('minecraft:diamond', [
-        '9x minecraft:dirt'
-    ]);
-});
-
-// 3. 监听每 Tick 运行的逻辑
-ServerEvents.tickPre(event => {
-    // 处理你的服务端周期逻辑
-});
+  event.remove({ output: 'minecraft:stick' })
+  event.shaped('4x minecraft:stick', ['C'], { C: 'minecraft:cobblestone' })
+})
 ```
 
-保存文件后，在游戏内输入命令：
+保存，在游戏里执行 `/nekojs reload`，一块圆石就能合成四根木棍。不用重启，也不用退出存档。
+
+## 为什么选 NekoJS
+
+如果你用过 KubeJS 或 CraftTweaker，下面这些可能是你想要的：
+
+- **现代 JavaScript。** 运行在 GraalJS 上，支持最新的 ECMAScript 语法、`import` / `export`、顶层 `await` 和动态 `import()`。
+- **TypeScript 直接运行。** `.ts`、`.tsx` 放进脚本目录就能跑，不用自己编译打包。
+- **自带代码补全。** 执行 `/nekojs probe`，NekoJS 会按你当前装的模组生成类型声明，VS Code 里能直接看到有哪些事件、方法和物品 ID。不需要另装 ProbeJS 之类的模组。
+- **也能写 Python。** 支持一个 Python 子集，不用安装 Python。
+- **出错不崩游戏。** 报错会写明文件和行号，写错方法名会提示正确的拼写。reload 时有脚本出错，会继续使用上一版正常的脚本。
+- **能用 npm 包。** 纯 JavaScript 的 npm 包放进 `nekojs/node_modules` 就能 `import`，常用的 Node.js 内置模块（`fs`、`path`、`events` 等）也可以用。
+
+## 能做什么
+
+| 想做的事 | 写在哪里 | 文档 |
+|---|---|---|
+| 添加、删除、替换配方 | `server_scripts` | [配方系统](wiki/recipe-system_cn.md) |
+| 添加物品、方块、流体、实体、创造标签页 | `startup_scripts` | [注册新内容](wiki/registering-new-content_cn.md) |
+| 在玩家登录、方块破坏、实体受伤等时机运行代码 | `server_scripts` | [事件参考](wiki/event-reference_cn.md) |
+| 添加自定义命令 | `server_scripts` | [事件参考](wiki/event-reference_cn.md) |
+| 画 HUD、做界面（JSX） | `client_scripts` | [客户端绘制](wiki/client-rendering_cn.md)、[JSX 界面](wiki/jsx-client-ui_cn.md) |
+| 修改 JEI 里显示的物品和说明 | `client_scripts` | [事件参考](wiki/event-reference_cn.md) |
+| 保存数据、同步给客户端 | 任意 | [数据与状态](wiki/data-and-state_cn.md) |
+| 调用 Java 类和其他模组的 API | 任意 | [模块系统](wiki/module-system_cn.md) |
+
+## 支持的版本
+
+| 加载器 | Minecraft | Java | 状态 |
+|---|---|---|---|
+| NeoForge | 1.21.1 | 21 | 支持 |
+| NeoForge | 26.1.2、26.2.0 | 25 | 支持，功能最全 |
+| Fabric | 26.1.2、26.2 | 25 | 支持，部分功能还没移植 |
+
+所有版本都需要前置模组 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal) **25.1.3.7 或更高**。各平台的具体差异见 [平台与兼容性](wiki/platform-compatibility_cn.md)。
+
+## 快速开始
+
+**1. 安装。** 从 [Releases](https://github.com/NekoJS-Dev/NekoJS/releases) 下载和你的 Minecraft 版本、加载器对应的 NekoJS，连同 Graal 一起放进 `mods/`，启动游戏。
+
+> NeoForge 1.21.1 的专用服务器要用文件名带 `-server` 的 jar，客户端用普通 jar，两个不要同时放。
+
+**2. 找到脚本目录。** 第一次启动后，游戏目录下会出现 `nekojs/`：
+
 ```text
-/nekojs reload
+nekojs/
+├── startup_scripts/   注册物品、方块等。改了要重启游戏
+├── server_scripts/    配方、事件、命令。改完执行 /nekojs reload
+├── client_scripts/    HUD、按键、界面。改完执行 /nekojs reload client
+├── test_scripts/      测试。执行 /nekojs test 时才运行
+├── assets/  data/     资源包和数据包内容
+└── config/            配置文件
 ```
-配方和事件监听便已瞬间更新完毕，无需退出存档！
 
----
-
-## 核心亮点与特性
-
-### 1. 现代前端开发体验
-- **原生 ESM 支持**：告别魔改脚本里的简陋加载方式，直接使用标准 `import` 与 `export` 拆分模块，支持模块循环依赖与动态 `import()`。
-- **TypeScript 直接跑**：支持接口（`interface`）、类型别名（`type`）、泛型、枚举（`enum`）、命名空间（`namespace`）等类型标注，运行时自动擦除，无需额外搭建构建打包工作流。
-- **JSX / TSX 支持**：可以直接用 JSX 语法构建 UI 组件。
-- **Python 语法支持**：如果你更熟悉 Python，在脚本目录直接写 `.py` 同样可以直接运行！
-- **Node.js 核心能力垫片**：内置支持 `fs`、`path`、`buffer`、`process`、`timers`、`util`、`events`、`assert`、`os` 等常用 Node.js 模块。
-- **引入 npm 包**：可直接将纯 JS 的 npm 模块放进 `nekojs/node_modules` 中进行引用。
-
-### 2. 告别“猜 API”：极致的类型检查与代码诊断
-- **内置类型探测（Probe）**：无需额外安装模组，NekoJS 启动时会自动扫描游戏运行时，生成精确的 TypeScript `.d.ts` 与 Python `.pyi` 声明文件。
-- **防手滑拼写纠错**：写错方法名（比如把 `Utils.randomInt` 误写成 `Utils.randmInt`）？加载期会立即弹出友好提示：*“Did you mean 'randomInt'?”*。
-- **错误集中面板**：脚本编写有误时不会无声崩溃，游戏内可通过 `/nekojs view_all_errors` 呼出面板统一查看。
-
-### 3. 全面的事件覆盖
-NekoJS 提供了涵盖游戏全生命周期的事件总线（详细类型签名请参考 IDE 补全）：
-
-| 事件分类 | 包含常用事件示例 | 触发场景说明 |
-| :--- | :--- | :--- |
-| **`ServerEvents`** | `recipes`, `tags`, `tickPre`, `tickPost` | 服务器运行、数据加载、配方修改 |
-| **`PlayerEvents`** | `loggedIn`, `chat`, `respawned`, `advancement` | 玩家进出、聊天发言、获得成就等 |
-| **`EntityEvents`** | `damagePre`, `damagePost`, `death` | 实体受伤预检、结算、死亡处理 |
-| **`BlockEvents`** | `broken`, `placed`, `rightClicked` | 方块破坏、放置与交互 |
-| **`ItemEvents`** | `rightClicked`, `tooltip`, `crafted` | 物品使用、悬浮提示信息定制 |
-| **`RegistryEvents`** | `item`, `block`, `fluid`, `creativeModeTab` | 自定义内容注册（在 `startup_scripts` 中使用） |
-| **`ClientEvents`** | `generateAssets`, `lang` | 客户端资源生成与语言包拓展 |
-
-> **支持自定义事件**：可以通过 `ScriptEvents` 自定义你自己的跨脚本、跨端自定义事件系统。
-
-### 4. 轻松注册新物品、方块、流体与创造标签页
-在 `startup_scripts/` 中，几行脚本即可添加属于你整合包的专属内容：
+**3. 写一个脚本。** 新建 `nekojs/server_scripts/welcome.js`：
 
 ```javascript
-// 注册自定义流体
-RegistryEvents.fluid(event => {
-    event.create('nekojs:molten_iron')
-        .displayName('熔融铁')
-        .density(2000)
-        .temperature(1500);
-});
-
-// 注册属于你的创造模式物品栏分组
-RegistryEvents.creativeModeTab(event => {
-    event.create('nekojs:custom_tab')
-        .title('我的魔法整合包')
-        .icon('minecraft:enchanted_golden_apple')
-        .add('minecraft:diamond')
-        .add('minecraft:nether_star');
-});
+PlayerEvents.loggedIn(event => {
+  // NeoForge 上玩家是 event.entity，Fabric 上是 event.player
+  const player = event.entity ?? event.player
+  player.displayClientMessage(Text.of('欢迎来到服务器！').gold(), false)
+})
 ```
 
-### 5. 虚拟资源包与数据包生成
-告别手动写繁琐的数据包 JSON！通过脚本即可在内存中动态生成：
+执行 `/nekojs reload`，重新进入世界就能看到欢迎消息。
+
+**4. 打开代码补全。** 在游戏里执行 `/nekojs probe`，然后用 VS Code 打开 `nekojs/server_scripts` 文件夹。
+
+完整教程见 [快速开始](wiki/quick-start_cn.md)。遇到问题先看 [常见问题](wiki/faq_cn.md)。
+
+## 示例
+
+<details>
+<summary><b>注册一个物品和创造标签页</b></summary>
 
 ```javascript
-// 动态生成数据包 JSON（如战利品表、配方）
-ServerEvents.generateData('after_mods', event => {
-    event.json('minecraft:loot_tables/blocks/stone.json', {
-        type: 'minecraft:block',
-        pools: []
-    });
-});
+// nekojs/startup_scripts/items.js
+RegistryEvents.register(event => {
+  event.item('mymod:cool_gem', item => {
+    item.maxStackSize = 16
+    item.rarity = 'rare'
+  })
 
-// 动态追加本地化文本
-ClientEvents.lang('zh_cn', event => {
-    event.add('item.nekojs.my_item', '超级猫猫之星');
-});
+  event.creativeModeTab('mymod:main', tab => {
+    tab.title = '我的整合包'
+    tab.icon = 'mymod:cool_gem'
+    tab.add('mymod:cool_gem')
+  })
+})
 ```
 
-### 6. 优雅与 Java 类交互
-如果你需要直接调用底层 Java 类或其它模组的公开 API，NekoJS 提供了简洁的 `java:` 模块化导入语法：
+重启游戏后生效。材质放在 `nekojs/assets/mymod/textures/item/cool_gem.png`。
+
+</details>
+
+<details>
+<summary><b>用 TypeScript 拆分模块</b></summary>
+
+脚本目录里的每个文件都会被加载，所以 `lib/` 里只放导出的函数和常量。
+
 
 ```typescript
-// 按包导入（懒加载代理）
-import { Integer, Math as JavaMath } from 'java:java/lang';
+// nekojs/server_scripts/lib/ores.ts
+export const ORES: string[] = ['minecraft:iron_ore', 'minecraft:gold_ore']
 
-// 直接导入具体的类
-import LevelClass from 'java:net/minecraft/world/level/Level';
+// nekojs/server_scripts/recipes.ts
+import { ORES } from './lib/ores.ts'
 
-// CommonJS require 写法同样受支持
-const { UUID } = require('java:java/util');
+ServerEvents.recipes(event => {
+  for (const ore of ORES) {
+    event.remove({ input: ore, type: 'minecraft:smelting' })
+  }
+})
 ```
 
-### 7. JEI 物品管理器联动
-内置对 JEI (Just Enough Items) 的友好集成，支持隐藏配方、屏蔽垃圾物品、补充信息提示等：
+</details>
+
+<details>
+<summary><b>调用 Java 类</b></summary>
 
 ```javascript
-// 从 JEI 中隐藏某些不可获取的测试物品
-RecipeViewerEvents.removeEntries('item', event => {
-    event.add('minecraft:barrier');
-});
+import { ArrayList } from 'java:java/util'
 
-// 为指定物品添加 JEI 说明面板
-RecipeViewerEvents.addInformation(event => {
-    event.add('minecraft:echo_shard', '§b潜声碎片可以用来制作定位指南针。');
-});
+const list = new ArrayList()
+list.add('hello')
+console.info(list.size())
 ```
 
----
+部分高风险的 Java 类默认禁止访问，见 [模块系统](wiki/module-system_cn.md)。
 
-## 安全性与运行须知
+</details>
 
-NekoJS 的脚本运行在受控的沙盒环境中：
-- **文件隔离**：文件操作限定在当前游戏目录内，防止目录逃逸。
-- **类访问黑名单**：默认禁止脚本调用线程创建、反射、底层网络与进程管理等高危 Java 接口。
-- **防卡死与死循环熔断**：内置语句执行步数限制与求值超时熔断机制，防止死循环卡死服务器主线程。
+<details>
+<summary><b>用 Python 写配方</b></summary>
 
-⚠️ **重要提醒**：由于 Java 运行时对象图的复杂性，**请勿在服务器或整合包中加载来历不明的脚本文件**。请始终确保运行的脚本来自受信任的来源。
+```python
+# nekojs/server_scripts/recipes.py
+from nekojs import *
 
----
+def on_recipes(event):
+    event.remove({'output': 'minecraft:stick'})
 
-## 插件开发（面向 Java 模组作者）
+ServerEvents.recipes(on_recipes)
+```
 
-如果你是模组作者，希望通过 Java 为 NekoJS 扩展原生功能、绑定 API 或拓展事件，只需实现 `NekoJSPlugin` 接口即可：
+`from nekojs import *` 只是给编辑器用的，执行 `/nekojs probe python` 后就有补全。见 [Python 脚本](wiki/python-scripts_cn.md)。
+
+</details>
+
+<details>
+<summary><b>修改 JEI 显示的内容</b></summary>
+
+```javascript
+// nekojs/client_scripts/jei.js（需要安装 JEI，仅 NeoForge）
+RecipeViewerEvents.removeEntries('item', event => {
+  event.add('minecraft:debug_stick')
+})
+
+RecipeViewerEvents.addInformation(event => {
+  event.add('minecraft:echo_shard', '可以用来合成追溯指针。')
+})
+```
+
+</details>
+
+## 安全须知
+
+脚本的权限很大，能访问游戏的大部分内部功能。**只运行你信任的人写的脚本。**
+
+NekoJS 默认会限制一些危险操作：脚本只能读游戏目录里的文件，只能在 `nekojs/` 里写文件，不能创建线程、使用反射或访问网络、进程等高风险的 Java 类。但这些限制不能保证挡住恶意脚本。另外，NekoJS 不会强行中断死循环，写错的循环会让游戏卡住。
+
+## 给模组作者：写插件扩展 NekoJS
+
+实现 `NekoJSPlugin` 接口，就能给脚本添加全局对象、事件、类型转换等功能：
 
 ```java
-@RegisterNekoJSPlugin(priority = 1000)
-public final class MyIntegrationPlugin implements NekoJSPlugin {
+@RegisterNekoJSPlugin
+public class MyAddonPlugin implements NekoJSPlugin {
     @Override
-    public void registerBindings(BindingRegistry registry) {
-        // 向 JS 脚本中暴露全局对象 MyModAPI
-        registry.register("MyModAPI", MyModAPI.class);
+    public void registerBinding(BindingRegistry registry) {
+        registry.register("MyHelper", new MyHelperJS());
     }
 }
 ```
 
-更多进阶内容（如自定义 Probe 类型生成器、配方生命周期拦截等），请参阅 [wiki/插件开发](wiki/插件开发.md)。
+脚本里就能直接用 `MyHelper`。完整说明见 [插件开发](wiki/plugin-development_cn.md)。
 
----
+想让 KubeJS 的附属模组（比如 KubeJS Create、KubeJS Mekanism）在 NekoJS 上运行，可以看看独立的 [NekuJS](addons/nekujs/README.md)（实验中，仅 NeoForge 1.21.1）。
 
-## 参与贡献与源码构建
+## 从源码构建
 
-欢迎提交 Issue、PR 或加入社区共同完善 NekoJS！
+需要 JDK 17 或更高（推荐 25）。各 Minecraft 版本需要的 JDK 由 Gradle 自动下载。
 
-- **源码结构与构建方式**：请参阅 [wiki/构建系统](wiki/构建系统.md)。
-- **交流群**：QQ 群 **1158525822** —— [点击加入群聊【NekoJS 交流群】](https://qm.qq.com/q/rbryak0K6k)
+```bash
+git clone https://github.com/NekoJS-Dev/NekoJS.git
+cd NekoJS
+./gradlew :26.1.2:build        # 构建一个版本
+./gradlew sandboxCheck         # 提交前的完整检查
+```
 
-## 开源协议
+构建结果在 `versions/<版本>/build/libs/`。项目结构和其他命令见 [构建系统](wiki/build-system_cn.md) 和 [项目架构](wiki/project-architecture_cn.md)。
 
-本项目采用 [LGPL-3.0](LICENSE) 协议开源。
+## 参与贡献
+
+欢迎提交 Issue 和 Pull Request。
+
+- 报告问题时，请附上 `logs/nekojs/` 里的日志、出问题的脚本，以及 Minecraft、加载器和 NekoJS 的版本。
+- 提交 PR 前请看 [PR 检查清单](.github/PULL_REQUEST_TEMPLATE.md) 和 [代码约定](docs/agents/coding.md)。
+- 交流群：QQ **1158525822**（[点击加入](https://qm.qq.com/q/rbryak0K6k)）
+
+## 许可证
+
+[LGPL-3.0](LICENSE) © Tki_sor
