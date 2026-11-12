@@ -13,13 +13,13 @@ description = '''${mod_description}'''
 modId = "kubejs"
 version = "2101.7.2-build.309"
 displayName = "NekuJS KubeJS API Provider"
-description = '''Bounded native compatibility provider backed by NekoJS. This is not the upstream KubeJS runtime.'''
+description = '''Part of NekuJS. Provides the KubeJS API that KubeJS addons need, backed by NekoJS. This is not the real KubeJS.'''
 
 [[mods]]
 modId = "rhino"
 version = "2101.2.7-build.81"
 displayName = "NekuJS Native Rhino API Provider"
-description = '''Native type and conversion facade. JavaScript executes in NekoJS Graal, not Rhino.'''
+description = '''Part of NekuJS. Provides the Rhino classes that KubeJS addons need. Scripts run in NekoJS, not Rhino.'''
 
 [[dependencies.kubejs]]
 modId = "nekujs"

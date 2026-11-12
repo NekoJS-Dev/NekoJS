@@ -2,7 +2,7 @@
 
 ## Scope
 
-The audit uses commit 6febef8b as the production baseline. All 31 existing topic pairs were assigned source-based review, including topics where no correction was needed; a new paired Configuration reference brings the catalog to 32 topics. This is a documentation delivery, not a production change, release, or live-game acceptance. Human translation review remains pending.
+The audit uses commit e9748fd3 as the production baseline. All 31 existing topic pairs were assigned source-based review, including topics where no correction was needed; a new paired Configuration reference brings the catalog to 32 topics. This is a documentation delivery, not a production change, release, or live-game acceptance. Human translation review remains pending.
 
 ## Corrections and additions
 

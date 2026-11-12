@@ -1,6 +1,6 @@
 # RecipeFilter: KubeJS and NekoJS comparison (2026-11-12)
 
-> Baseline investigation: the native findings below describe the pre-repair `d603e19e` sources and the originally supplied generated files. They are not a statement of the repaired runtime. See [the repair and verification report](2026-11-12-recipe-filter-fix.md) for the intentional migration and current evidence.
+> Baseline investigation: the native findings below describe the pre-repair `97a513bb` sources and the originally supplied generated files. They are not a statement of the repaired runtime. See [the repair and verification report](2026-11-12-recipe-filter-fix.md) for the intentional migration and current evidence.
 
 ## Scope and conclusion
 
